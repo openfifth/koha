@@ -11,7 +11,7 @@
 [% PROCESS 'html_helpers.inc' %]
 [% INCLUDE 'doc-head-open.inc' %]
 <title>[% FILTER collapse %]
-    [% tx("Course reserves for '{course_name}'", { course_name = course.course_name }) | html %] &rsaquo;
+    [% tx("Course reserves for '{course_name}'", { course_name = course.course_name }) | html %][% IF course.section %] - [% course.section | html %][%- END -%] &rsaquo;
     [% PROCESS 'library_name_title' %]
 [% END %]</title>
 [% INCLUDE 'doc-head-close.inc' %]
@@ -27,7 +27,7 @@
             <a href="/cgi-bin/koha/opac-course-reserves.pl">Course reserves</a>
         [% END %]
         [% WRAPPER breadcrumb_item bc_active= 1 %]
-            [% tx("Course reserves for '{course_name}'", { course_name = course.course_name }) | html %]
+            [% tx("Course reserves for '{course_name}'", { course_name = course.course_name }) | html %][%- IF course.section -%] - [% course.section | html %][%- END -%]
         [% END %]
     [% END #/ WRAPPER breadcrumbs %]
 
@@ -36,7 +36,7 @@
             <div class="col">
                 <div id="course_reserves" class="maincontent">
 
-                    <h1>[% tx("Course reserves for '{course_name}'", { course_name = course.course_name }) | html %]</h1>
+                    <h1>[% tx("Course reserves for '{course_name}'", { course_name = course.course_name }) | html %][%- IF course.section -%] - [% course.section | html %][%- END -%]</h1>
                     <div class="rows">
                         <ol>
                             [% IF ( course.term ) %]<li><span class="label">[% tp('Semester', 'Term:') | html %]</span> [% AuthorisedValues.GetByCode( 'TERM', course.term, 1 ) | html %]</li>[% END %]
