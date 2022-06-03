@@ -799,6 +799,7 @@
     </aside>
 </div> <!-- /.col-md-2.order-md-1 -->
 </div> <!-- /.row -->
+</div> <!-- /.main.container-fluid -->
 
 [% SET columns = ['cardnumber','name','category','branch','action'] %]
 [% PROCESS patron_search_modal columns => columns, modal_title => t("Add user") %]
