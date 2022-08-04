@@ -205,7 +205,7 @@ if ( $patron->is_expired || $patron->is_going_to_expire ) {
 my $holds         = Koha::Holds->search( { borrowernumber => $borrowernumber } );    # FIXME must be Koha::Patron->holds
 my $waiting_holds = $holds->waiting;
 $template->param(
-    holds_count  => $holds->count(),
+    holds_count  => $holds->count_holds,
     WaitingHolds => $waiting_holds,
 );
 
@@ -289,7 +289,7 @@ my $patron_lists_count = $patron->get_lists_with_patron->count();
 $template->param(
     patron                 => $patron,
     issuecount             => $patron->checkouts->count,
-    holds_count            => $patron->holds->count,
+    holds_count            => $patron->holds->count_holds,
     fines                  => $patron->account->balance,
     translated_language    => $translated_language,
     detailview             => 1,
