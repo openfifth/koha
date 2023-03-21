@@ -482,6 +482,7 @@ INSERT INTO systempreferences ( `variable`, `value` ) VALUES
 ('NotHighlightedWords','and|or|not'),
 ('NoticeBcc',''),
 ('NoticesLog','0'),
+('NoticesManagement','0'),
 ('NotifyBorrowerDeparture','30'),
 ('NotifyPasswordChange','1'),
 ('NovelistSelectEnabled','0'),
