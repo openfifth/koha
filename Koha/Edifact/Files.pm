@@ -18,6 +18,7 @@ package Koha::Edifact::Files;
 use Modern::Perl;
 
 use Koha::Database;
+use Koha::Edifact::File;
 
 use base qw(Koha::Objects);
 
@@ -26,8 +27,6 @@ use base qw(Koha::Objects);
 Koha::Edifact::Files - Koha Edifact File Object set class
 
 =head1 API
-
-=head2 Class Methods
 
 =head2 Internal methods
 
