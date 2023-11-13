@@ -53,12 +53,11 @@ if ( my $letter = TransferSlip( $session->param('branch') || $userenv->{branch},
     $slip = "Item not found";
 }
 $template->param(
-    slip       => $slip,
-    plain      => !$is_html,
-    caller     => 'cud-transfer',
-    stylesheet => C4::Context->preference("SlipCSS"),
-    style      => $style,
-    id         => 'transfer_slip',
+    slip   => $slip,
+    plain  => !$is_html,
+    caller => 'cud-transfer',
+    style  => $style,
+    id     => 'transfer_slip',
 );
 
 output_html_with_http_headers $input, $cookie, $template->output;

@@ -82,7 +82,7 @@ if ( my $letter =
 $template->{VARS}->{slip}           = $slip;
 $template->{VARS}->{plain}          = !$is_html;
 $template->{VARS}->{borrowernumber} = $patron->borrowernumber;
-$template->{VARS}->{stylesheet}     = C4::Context->preference("SlipCSS");
+$template->{VARS}->{stylesheet}     = C4::Context->preference("PrintSlipStylesheet");
 $template->{VARS}->{error}          = $error;
 
 output_html_with_http_headers $input, $cookie, $template->output;

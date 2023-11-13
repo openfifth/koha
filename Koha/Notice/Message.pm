@@ -58,15 +58,12 @@ with HTML headers and CSS includes for HTML formatted notices.
 sub html_content {
     my ($self) = @_;
 
-    my $title   = $self->subject;
-    my $content = $self->content;
+    my $title       = $self->subject;
+    my $content     = $self->content;
+    my $stylesheets = $self->stylesheets;
 
     my $wrapped;
     if ( $self->is_html ) {
-
-        my $css = C4::Context->preference("NoticeCSS") || '';
-        $css = qq{<link rel="stylesheet" type="text/css" href="$css">} if $css;
-
         $wrapped = <<EOS;
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -74,7 +71,7 @@ sub html_content {
   <head>
     <title>$title</title>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    $css
+    $stylesheets
   </head>
   <body>
   $content
@@ -122,6 +119,39 @@ sub restrict_patron_when_notice_fails {
     );
 
     return $self;
+}
+
+=head3 stylesheets
+
+  my $stylesheets = $message->stylesheets;
+
+Returns a string of all the stylesheet links for the message
+
+=cut
+
+sub stylesheets {
+    my ($self) = @_;
+    my $stylesheets = '';
+
+    my $all_stylesheets = C4::Context->preference("AllNoticeStylesheet") || '';
+    $stylesheets .= qq{<link rel="stylesheet" type="text/css" href="$all_stylesheets">\n} if $all_stylesheets;
+    my $all_style_pref = C4::Context->preference("AllNoticeCSS");
+    $stylesheets .= qq{<style type="text/css">$all_style_pref</style>} if $all_style_pref;
+    if ( $self->message_transport_type eq 'email' ) {
+        my $email_stylesheet = C4::Context->preference("EmailNoticeStylesheet") || '';
+        $stylesheets .= qq{<link rel="stylesheet" type="text/css" href="$email_stylesheet">\n} if $email_stylesheet;
+        my $email_style_pref = C4::Context->preference("EmailNoticeCSS");
+        $stylesheets .= qq{<style type="text/css">$email_style_pref</style>} if $email_style_pref;
+    }
+    if ( $self->message_transport_type eq 'print' ) {
+        my $print_stylesheet = C4::Context->preference("PrintNoticeStylesheet") || '';
+        $stylesheets .= qq{<link rel="stylesheet" type="text/css" href="$print_stylesheet">\n} if $print_stylesheet;
+        my $print_style_pref = C4::Context->preference("PrintNoticeCSS");
+        $stylesheets .= qq{<style type="text/css">$print_style_pref</style>\n} if $print_style_pref;
+    }
+    $stylesheets =~ s/\n+\z//;
+
+    return $stylesheets;
 }
 
 =head3 type
