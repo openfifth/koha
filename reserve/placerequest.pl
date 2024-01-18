@@ -167,7 +167,11 @@ if ( $op eq 'cud-placerequest' && $patron ) {
     foreach my $msg ( keys %failed_holds ) {
         push( @failed_hold_msgs, $msg );
     }
-    $redirect_url->query_form( biblionumber => [@biblionumbers], failed_holds => \@failed_hold_msgs );
+    my %params = ( biblionumber => [@biblionumbers], failed_holds => \@failed_hold_msgs );
+    if ( $input->param('closed_stack_request') ) {
+        $params{closed_stack_request} = 1;
+    }
+    $redirect_url->query_form(%params);
     print $input->redirect($redirect_url);
 } elsif ( $borrowernumber eq '' ) {
     print $input->header();

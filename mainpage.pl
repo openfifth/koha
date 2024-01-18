@@ -153,6 +153,10 @@ if ( C4::Context->preference('PatronSelfRegistrationAlert') ) {
     );
 }
 
+my $pending_closed_stack_requests =
+    Koha::Holds->search( { branchcode => C4::Context->userenv->{branch} } )->filter_by_closed_stack_requests()
+    ->search( { closed_stack_request_slip_printed => 0 } );
+
 $template->param(
     pendingcomments                => $pendingcomments,
     pendingtags                    => $pendingtags,
@@ -160,6 +164,7 @@ $template->param(
     pending_discharge_requests     => $pending_discharge_requests,
     pending_article_requests       => $pending_article_requests,
     pending_problem_reports        => $pending_problem_reports,
+    pending_closed_stack_requests  => $pending_closed_stack_requests,
 );
 
 output_html_with_http_headers $query, $cookie, $template->output;

@@ -85,6 +85,9 @@
                     <a class="circ-button" href="/cgi-bin/koha/circ/pendingreserves.pl"><i class="fa-solid fa-hand-back-fist"></i> Holds to pull</a>
                 </li>
                 <li>
+                    <a class="circ-button" href="/cgi-bin/koha/circ/closed-stack-requests.pl"><i class="fa-solid fa-hand-back-fist"></i> Closed stack requests</a>
+                </li>
+                <li>
                     <a class="circ-button" href="/cgi-bin/koha/circ/waitingreserves.pl"><i class="fa-solid fa-calendar-days"></i> Holds awaiting pickup</a>
                 </li>
                 [% IF ( Koha.Preference('CurbsidePickup') && CAN_user_circulate_manage_curbside_pickups ) %]

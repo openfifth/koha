@@ -481,6 +481,7 @@ $(document).ready(function () {
                         url: "/cgi-bin/koha/svc/holds",
                         data: function (d) {
                             d.borrowernumber = borrowernumber;
+                            d.closed_stack_request = 0;
                         },
                     },
                     bKohaAjaxSVC: true,
@@ -698,4 +699,268 @@ $(document).ready(function () {
         ];
         return toggle_suspend(this, inputs);
     });
+
+    // Don't load holds table unless it is clicked on
+    $("#closed-stack-requests-tab").on("click", function () {
+        load_closed_stack_requests_table();
+    });
+
+    // If the holds tab is preselected on load, we need to load the table
+    if ($("#closed-stack-requests-tab").parent().hasClass("active")) {
+        load_closed_stack_requests_table();
+    }
+
+    function load_closed_stack_requests_table() {
+        var holds = new Array();
+        if (!$.fn.DataTable.isDataTable($("#closed-stack-requests-table"))) {
+            var title;
+            const table = $("#closed-stack-requests-table").dataTable(
+                $.extend(true, {}, dataTablesDefaults, {
+                    bAutoWidth: false,
+                    sDom: "rt",
+                    columns: [
+                        {
+                            data: {
+                                _: "reservedate_formatted",
+                                sort: "reservedate",
+                            },
+                        },
+                        {
+                            mDataProp: function (oObj) {
+                                title =
+                                    "<a href='/cgi-bin/koha/reserve/request.pl?biblionumber=" +
+                                    oObj.biblionumber +
+                                    "'>" +
+                                    (oObj.title ? oObj.title.escapeHtml() : "");
+
+                                $.each(oObj.subtitle, function (index, value) {
+                                    title += " " + value.escapeHtml();
+                                });
+
+                                title +=
+                                    " " +
+                                    oObj.part_number +
+                                    " " +
+                                    oObj.part_name;
+
+                                if (oObj.enumchron) {
+                                    title +=
+                                        " (" +
+                                        oObj.enumchron.escapeHtml() +
+                                        ")";
+                                }
+
+                                title += "</a>";
+
+                                if (oObj.author) {
+                                    title +=
+                                        " " +
+                                        __("by _AUTHOR_").replace(
+                                            "_AUTHOR_",
+                                            oObj.author.escapeHtml()
+                                        );
+                                }
+
+                                if (oObj.itemnotes) {
+                                    var span_class = "";
+                                    if (
+                                        flatpickr.formatDate(
+                                            new Date(oObj.issuedate),
+                                            "Y-m-d"
+                                        ) == ymd
+                                    ) {
+                                        span_class = "circ-hlt";
+                                    }
+                                    title +=
+                                        " - <span class='" +
+                                        span_class +
+                                        "'>" +
+                                        oObj.itemnotes.escapeHtml() +
+                                        "</span>";
+                                }
+
+                                return title;
+                            },
+                        },
+                        {
+                            mDataProp: function (oObj) {
+                                return (
+                                    (oObj.itemcallnumber &&
+                                        oObj.itemcallnumber.escapeHtml()) ||
+                                    ""
+                                );
+                            },
+                        },
+                        {
+                            mDataProp: function (oObj) {
+                                var data = "";
+                                if (oObj.itemtype) {
+                                    data += oObj.itemtype_description;
+                                }
+                                return data;
+                            },
+                        },
+                        {
+                            mDataProp: function (oObj) {
+                                var data = "";
+                                if (oObj.barcode) {
+                                    data +=
+                                        " <a href='/cgi-bin/koha/catalogue/moredetail.pl?biblionumber=" +
+                                        oObj.biblionumber +
+                                        "&itemnumber=" +
+                                        oObj.itemnumber +
+                                        "#item" +
+                                        oObj.itemnumber +
+                                        "'>" +
+                                        oObj.barcode.escapeHtml() +
+                                        "</a>";
+                                }
+                                return data;
+                            },
+                        },
+                        {
+                            data: {
+                                _: "expirationdate_formatted",
+                                sort: "expirationdate",
+                            },
+                        },
+                        {
+                            mDataProp: function (oObj) {
+                                if (
+                                    oObj.priority &&
+                                    parseInt(oObj.priority) &&
+                                    parseInt(oObj.priority) > 0
+                                ) {
+                                    return oObj.priority;
+                                } else {
+                                    return "";
+                                }
+                            },
+                        },
+                        {
+                            bSortable: false,
+                            mDataProp: function (oObj) {
+                                return (
+                                    "<select name='rank-request'>" +
+                                    "<option value='n'>" +
+                                    __("No") +
+                                    "</option>" +
+                                    "<option value='del'>" +
+                                    __("Yes") +
+                                    "</option>" +
+                                    "</select>" +
+                                    "<input type='hidden' name='biblionumber' value='" +
+                                    oObj.biblionumber +
+                                    "'>" +
+                                    "<input type='hidden' name='borrowernumber' value='" +
+                                    borrowernumber +
+                                    "'>" +
+                                    "<input type='hidden' name='reserve_id' value='" +
+                                    oObj.reserve_id +
+                                    "'>"
+                                );
+                            },
+                        },
+                        {
+                            mDataProp: function (oObj) {
+                                var data = "";
+
+                                if (oObj.suspend == 1) {
+                                    data +=
+                                        "<p>" +
+                                        __(
+                                            "Hold is <strong>suspended</strong>"
+                                        );
+                                    if (oObj.suspend_until) {
+                                        data +=
+                                            " " +
+                                            __("until %s").format(
+                                                oObj.suspend_until_formatted
+                                            );
+                                    }
+                                    data += "</p>";
+                                }
+
+                                if (oObj.itemtype_limit) {
+                                    data += __("Next available %s item").format(
+                                        oObj.itemtype_limit
+                                    );
+                                }
+
+                                if (oObj.item_group_id) {
+                                    data += __(
+                                        "Next available item group <strong>%s</strong> item"
+                                    ).format(oObj.item_group_description);
+                                }
+
+                                if (oObj.barcode) {
+                                    data += "<em>";
+                                    if (oObj.found == "W") {
+                                        if (oObj.waiting_here) {
+                                            data += __(
+                                                "Item is <strong>waiting here</strong>"
+                                            );
+                                            if (oObj.desk_name) {
+                                                data +=
+                                                    ", " +
+                                                    __("at %s").format(
+                                                        oObj.desk_name.escapeHtml()
+                                                    );
+                                            }
+                                        } else {
+                                            data += __(
+                                                "Item is <strong>waiting</strong>"
+                                            );
+                                            data +=
+                                                " " +
+                                                __("at %s").format(
+                                                    oObj.waiting_at
+                                                );
+                                            if (oObj.desk_name) {
+                                                data +=
+                                                    ", " +
+                                                    __("at %s").format(
+                                                        oObj.desk_name.escapeHtml()
+                                                    );
+                                            }
+                                        }
+                                    } else if (oObj.transferred) {
+                                        data += __(
+                                            "Item is <strong>in transit</strong> from %s since %s"
+                                        ).format(
+                                            oObj.from_branch,
+                                            oObj.date_sent
+                                        );
+                                    } else if (oObj.not_transferred) {
+                                        data += __(
+                                            "Item hasn't been transferred yet from %s"
+                                        ).format(oObj.not_transferred_by);
+                                    }
+                                    data += "</em>";
+                                }
+                                return data;
+                            },
+                        },
+                    ],
+                    bPaginate: false,
+                    bProcessing: true,
+                    bServerSide: false,
+                    ajax: {
+                        url: "/cgi-bin/koha/svc/holds",
+                        data: function (d) {
+                            d.borrowernumber = borrowernumber;
+                            d.closed_stack_request = 1;
+                        },
+                    },
+                })
+            );
+
+            if ($("#closed-stack-requests-table").length) {
+                $("#closed-stack-requests-table_processing").position({
+                    of: $("#closed-stack-requests-table"),
+                    collision: "none",
+                });
+            }
+        }
+    }
 });

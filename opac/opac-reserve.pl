@@ -87,6 +87,9 @@ if ( !$biblionumbers ) {
     $biblionumbers = $query->param('biblionumber');
 }
 
+my $closed_stack_request = $query->param('closed_stack_request');
+$template->param( closed_stack_request => $closed_stack_request );
+
 if ( !$biblionumbers && $op ne 'cud-place_reserve' ) {
     $template->param( message => 1, no_biblionumber => 1 );
     output_html_with_http_headers $query, $cookie, $template->output, undef, { force_no_caching => 1 };
@@ -248,6 +251,10 @@ if ( $op eq 'cud-place_reserve' ) {
             }
         }
 
+        if ( $closed_stack_request && $item ) {
+            $branch = $item->holdingbranch;
+        }
+
         # if we have an item, we are placing the hold on the item's bib, in case of analytics
         if ($item) {
             $biblioNum = $item->biblionumber;
@@ -336,9 +343,10 @@ if ( $op eq 'cud-place_reserve' ) {
         }
     }
 
+    my $param = $closed_stack_request ? 'opac-user-closed-stack-requests' : 'opac-user-holds';
     print $query->redirect( "/cgi-bin/koha/opac-user.pl?"
             . ( @failed_holds ? "failed_holds=" . join( '|', @failed_holds ) : q|| )
-            . "&opac-user-holds=1" );
+            . "&$param=1" );
     exit;
 }
 
@@ -444,6 +452,7 @@ foreach my $biblioNum (@biblionumbers) {
     # it's complicated logic to analyse.
     # (before this loop was inside that sub loop so it was O(n^2) )
     foreach my $item ( @{ $biblioData->{items} } ) {
+        next if ( $closed_stack_request xor $item->is_available_for_closed_stack_request );
 
         my $item_info = $item->unblessed;
         $item_info->{holding_branch} = $item->holding_branch;
@@ -581,13 +590,19 @@ foreach my $biblioNum (@biblionumbers) {
     # patron placed a record level hold, all the holds the patron places must
     # be record level. If the patron placed an item level hold, all holds
     # the patron places must be item level
-    my $forced_hold_level = Koha::Holds->search(
-        {
-            borrowernumber => $borrowernumber,
-            biblionumber   => $biblioNum,
-            found          => undef,
-        }
-    )->forced_hold_level();
+    # Unless the biblio itself forces a specific hold level which
+    # supersedes the above rules
+    my $forced_hold_level = $biblio->forced_hold_level;
+    unless ($forced_hold_level) {
+        $forced_hold_level = Koha::Holds->search(
+            {
+                borrowernumber => $borrowernumber,
+                biblionumber   => $biblioNum,
+                found          => undef,
+            }
+        )->forced_hold_level();
+    }
+
     if ($forced_hold_level) {
         $biblioLoopIter{force_hold}        = 1 if $forced_hold_level eq 'item';
         $biblioLoopIter{force_hold}        = 0 if $forced_hold_level eq 'item_group';

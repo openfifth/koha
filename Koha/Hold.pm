@@ -435,8 +435,10 @@ This is used from the OPAC.
 sub is_cancelable_from_opac {
     my ($self) = @_;
 
-    return 1 unless $self->is_found();
-    return 0;    # if ->is_in_transit or if ->is_waiting or ->is_in_processing
+    return 0 if $self->is_found();
+    return 0 if $self->item && $self->item->is_closed_stack;
+
+    return 1;
 }
 
 =head3 cancellation_requestable_from_opac

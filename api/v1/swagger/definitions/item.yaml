@@ -207,6 +207,10 @@ properties:
       - string
       - "null"
     description: Itemtype defining the type for this item
+  is_closed_stack:
+    type:
+      - boolean
+      - "null"
   effective_item_type_id:
     type:
       - string

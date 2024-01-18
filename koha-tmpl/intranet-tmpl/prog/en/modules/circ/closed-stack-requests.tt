@@ -1,0 +1,300 @@
+[% USE raw %]
+[% USE Asset %]
+[% USE Branches %]
+[% USE To %]
+[% USE Koha %]
+[% USE KohaDates %]
+[% USE TablesSettings %]
+[% USE AuthorisedValues %]
+[%- USE Branches -%]
+[%- USE ItemTypes -%]
+[% SET footerjs = 1 %]
+[% INCLUDE 'doc-head-open.inc' %]
+<title>Closed stack requests &rsaquo; Circulation &rsaquo; Koha</title>
+[% INCLUDE 'doc-head-close.inc' %]
+</head>
+
+<body id="circ_closed_stack_requests" class="circ">
+[% WRAPPER 'header.inc' %]
+    [% INCLUDE 'circ-search.inc' %]
+[% END %]
+
+[% WRAPPER 'sub-header.inc' %]
+    [% WRAPPER breadcrumbs %]
+        [% WRAPPER breadcrumb_item %]
+            <a href="/cgi-bin/koha/circ/circulation-home.pl">Circulation</a>
+        [% END %]
+        [% WRAPPER breadcrumb_item bc_active= 1 %]
+            <span>Closed stack requests</span>
+        [% END %]
+    [% END #/ WRAPPER breadcrumbs %]
+[% END #/ WRAPPER sub-header.inc %]
+
+<div class="main container-fluid">
+    <div class="row">
+        <div class="col-md-10 order-md-2 order-sm-1">
+            <main>
+                [% FOR m IN messages %]
+                    <div class="dialog [% m.type | html %]">
+                        [% SWITCH m.code %]
+                        [% CASE 'hold_cancelled' %]
+                            <span>The hold has been correctly cancelled.</span>
+                        [% CASE %]
+                            [% m.code | html %]
+                        [% END %]
+                    </div>
+                [% END %]
+
+                <h1>Closed stack requests</h1>
+
+                [% BLOCK holds_table %]
+                    [% IF holds %]
+                        <table id="[% id | html %]">
+                            <thead>
+                                <tr>
+                                    <th>Patron</th>
+                                    <th class="anti-the">Title</th>
+                                    <th class="string-sort">Library</th>
+                                    <th>Barcode</th>
+                                    <th>Call number</th>
+                                    <th>Copy number</th>
+                                    <th>Stock number</th>
+                                    <th>Enumeration</th>
+                                    <th class="string-sort">Item type</th>
+                                    <th class="string-sort">Location</th>
+                                    <th class="string-sort">Collection</th>
+                                    <th>Hold date</th>
+                                    <th>Hold notes</th>
+                                    <th class="string-sort">Pickup location</th>
+                                    <th data-searchable="false">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                [% FOREACH hold IN holds %]
+                                    <tr>
+                                        [% SET patron = hold.patron %]
+                                        [% SET item = hold.item %]
+                                        [% SET biblio = hold.biblio %]
+
+                                        <td><a href="/cgi-bin/koha/members/moremember.pl?borrowernumber=[% patron.borrowernumber | uri %]">[% patron.firstname | html %] [% patron.surname | html %]</a></td>
+
+                                        <td>
+                                            <p> [% INCLUDE 'biblio-title.inc' biblio=biblio link = 1 %] </p>
+                                            [% IF ( biblio.author ) %]<p> by [% biblio.author | html %]</p>[% END %]
+                                            [% IF ( biblio.biblioitem.editionstatement ) %]<p>[% biblio.biblioitem.editionstatement | html %]</p>[% END %]
+                                            [% IF ( Koha.Preference('marcflavour') == 'MARC21' ) %]
+                                                [% IF ( biblio.copyrightdate ) %]<p>[% biblio.copyrightdate | html %]</p>[% END %]
+                                            [% ELSE %]
+                                                [% IF ( biblio.biblioitem.publicationyear ) %]<p>[% biblio.biblioitem.publicationyear | html %]</p>[% END %]
+                                            [% END %]
+                                        </td>
+
+                                        <td data-search="[% item.holdingbranch | html %]">[% Branches.GetName(item.holdingbranch) | html %]</td>
+
+                                        <td>[% item.barcode | html %]</td>
+
+                                        <td>[% item.itemcallnumber | html %]</td>
+
+                                        <td>[% item.copynumber | html %]</td>
+
+                                        <td>[% item.stocknumber | html %]</td>
+
+                                        <td>[% item.enumchron | html %]</td>
+
+                                        <td data-search="[% item.itype | html %]">[% ItemTypes.GetDescription(item.itype) | html %]</td>
+
+                                        <td data-search="[% item.location | html %]">[% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.location', authorised_value => item.location ) | html %] </td
+                                        ><td data-search="[% item.ccode | html %]">[% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.ccode', authorised_value => item.ccode ) | html %]</td>
+
+                                        <td data-order="[% hold.reservedate | html %]"> [% hold.reservedate | $KohaDates %] in [% Branches.GetName ( hold.branchcode ) | html %] </td>
+
+                                        <td>[% hold.reservenotes | html %]</td>
+
+                                        <td data-search="[% hold.branchcode | html %]">[% Branches.GetName ( hold.branchcode ) | html %]</td>
+
+                                        <td>
+                                            <form method="post" id="print-closed-stack-request-slip-[% hold.reserve_id | html %]" target="_blank">
+                                                [% INCLUDE 'csrf-token.inc' %]
+                                                <input type="hidden" name="op" value="cud-print_slip" />
+                                                <input type="hidden" name="reserve_id" value="[% hold.reserve_id | html %]" />
+                                                <button class="btn btn-default btn-sm print-closed-stack-request-slip" data-reserve-id="[% hold.reserve_id | html %]">Print closed stack request slip</button>
+                                            </form>
+
+                                            <form name="cancelReserve" action="/cgi-bin/koha/circ/closed-stack-requests.pl" method="post">
+                                                [% INCLUDE 'csrf-token.inc' %]
+                                                <input type="hidden" name="op" value="cud-cancel_reserve" />
+                                                <input type="hidden" name="reserve_id" value="[% hold.reserve_id | html %]" />
+
+                                                [% SET hold_cancellation = AuthorisedValues.GetAuthValueDropbox('HOLD_CANCELLATION') %]
+                                                [% IF hold_cancellation.count %]
+                                                    <div class="form-group">
+                                                        <label for="cancellation-reason">Cancellation reason:</label>
+                                                        <select class="cancellation-reason" name="cancellation-reason" id="cancellation-reason">
+                                                            <option value="">No reason given</option>
+                                                            [% FOREACH reason IN hold_cancellation %]
+                                                                <option value="[% reason.authorised_value | html %]">[% reason.lib | html %]</option>
+                                                            [% END %]
+                                                        </select>
+                                                    </div>
+                                                [% END %]
+
+                                                [% IF item.holdingbranch != item.homebranch %]
+                                                    <button class="btn btn-default btn-sm" type="submit">Cancel hold and return to : [% Branches.GetName( item.homebranch ) | html %]</button>
+                                                [% ELSE %]
+                                                    <button class="btn btn-default btn-sm" type="submit">Cancel hold</button>
+                                                [% END %]
+                                            </form>
+                                        </td>
+                                    </tr>
+                                [% END %]
+                            </tbody>
+                        </table>
+                    [% ELSE %]
+                        <strong>No items found.</strong>
+                    [% END %]
+                [% END %]
+
+                [% PROCESS 'html_helpers.inc' %]
+                [% WRAPPER tabs %]
+                    [% WRAPPER tabs_nav %]
+                        [% WRAPPER tab_item tabname="pending" bt_active=1 %]<span>Pending</span> ([% pending_holds.size || 0 | html %])[% END %]
+                        [% WRAPPER tab_item tabname="printed" %]<span>Slip printed</span> ([% printed_slip_holds.size || 0 | html %])[% END %]
+                    [% END %]
+                    [% WRAPPER tab_panels %]
+                        [% WRAPPER tab_panel tabname="pending" bt_active=1 %]
+                            <p>The following holds have not been filled. Please retrieve them and check them in.</p>
+
+                            [% INCLUDE holds_table id="holdst" holds=pending_holds %]
+                        [% END %]
+
+                        [% WRAPPER tab_panel tabname="printed" %]
+                            [% INCLUDE holds_table id="printed_slip_holds" holds=printed_slip_holds %]
+                        [% END %]
+                    [% END %]
+                [% END %]
+            </main>
+        </div>
+        <!-- /.col-sm-10.col-sm-push-2 -->
+        <div class="col-sm-2 col-sm-pull-10">
+            <aside>
+                <form>
+                    <fieldset class="brief">
+                        <h4>Filters</h4>
+                        <label for="library">Library</label>
+                        <select id="library" name="branchcode">
+                            <option value="">All</option>
+                            [% FOREACH library IN Branches.all() %]
+                                [% IF branchcode && branchcode == library.branchcode %]
+                                    <option value="[% library.branchcode | html %]" selected>[% library.branchname | html %]</option>
+                                [% ELSE %]
+                                    <option value="[% library.branchcode | html %]">[% library.branchname | html %]</option>
+                                [% END %]
+                            [% END %]
+                        </select>
+                    </fieldset>
+                    <fieldset class="action">
+                        <button class="btn btn-primary" type="submit">Filter</button>
+                    </fieldset>
+                </form>
+            </aside>
+            [% IF Koha.Preference('CircSidebar') %]
+                <aside> [% INCLUDE 'circ-nav.inc' %] </aside>
+            [% END %]
+        </div>
+        <!-- /.col-sm-2.col-sm-pull-10 -->
+    </div>
+    <!-- /.row -->
+
+    [% MACRO jsinclude BLOCK %]
+        [% INCLUDE 'calendar.inc' %]
+        [% INCLUDE 'datatables.inc' %]
+        <script>
+            function separateData ( ColumnData ){
+                var cD = ColumnData;
+                var new_array = new Array();
+                for ( j=0 ; j<cD.length ; j++ ) {
+                    var split_array = cD[j].split(/\n/gi);
+                    for ( k=0 ; k<split_array.length ; k++ ){
+                        var str = $.trim(split_array[k].replace(/[\n\r]/g, ''));
+                        if ($.inArray(str, new_array) == -1 && str.length > 0 ) {
+                            new_array.push(str);
+                        }
+                    }
+                }
+                new_array.sort();
+                return new_array;
+            }
+
+            function createSelect( data ) {
+                data = separateData(data);
+                var r='<select style="width:99%"><option value="">' + _("None") + '</option>', i, len=data.length;
+                var regex = /(<([^>]+)>)/ig; // Remove html tags
+                for ( i=0 ; i<len ; i++ ) {
+                    var cell_val = data[i].replace(regex, '');
+                    if ( cell_val.length < 1 ) continue;
+                    r += '<option value="'+cell_val+'">'+cell_val+'</option>';
+                }
+                return r+'</select>';
+            }
+
+            $(document).ready(function() {
+                const all_libraries = [% To.json(Branches.all) | $raw %];
+                const libraries_filters = all_libraries.map(l => ({
+                    _id: l.branchcode,
+                    _str: l.branchname,
+                }));
+                const all_ccodes = [% To.json(AuthorisedValues.GetDescriptionsByKohaField({ kohafield => 'items.ccode' })) | $raw %].map( av => ({
+                    _id: av.authorised_value,
+                    _str: av.lib,
+                }));
+                const all_locations = [% To.json(AuthorisedValues.GetDescriptionsByKohaField({ kohafield => 'items.location' })) | $raw %].map(av => ({
+                    _id: av.authorised_value,
+                    _str: av.lib,
+                }));
+                const all_item_types = [% To.json(ItemTypes.Get) | $raw %];
+                const item_types_filters = all_item_types.map(e => ({
+                    _id: e.itemtype,
+                    _str: e.translated_description,
+                }));
+                const filters_options = {
+                    2: () => libraries_filters,
+                    8: () => item_types_filters,
+                    9: () => all_locations,
+                    10: () => all_ccodes,
+                };
+                var table_settings = [% TablesSettings.GetTableSettings('circ', 'holds', 'closed-stack-requests', 'json') | $raw %];
+                $('#holdst, #printed_slip_holds').each(function (i, el) {
+                    const holdst = $(el).kohaTable({
+                        "sPaginationType": "full_numbers",
+                        autoWidth: false,
+                    }, table_settings, true, {}, filters_options);
+                });
+            });
+        </script>
+        <script>
+            $(document).ready(function () {
+                // Printing slip will change the reserve's status
+                // Reload the page to make the status change visible
+                $("#holdst .print-closed-stack-request-slip").on("click", function (ev) {
+                    const reserve_id = $(this).data("reserve-id");
+                    const form = document.getElementById("print-closed-stack-request-slip-" + reserve_id);
+                    if (form) {
+                        form.submit();
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1000);
+                    }
+                });
+                $("#holdst .set-waiting").on("click", function (ev) {
+                    const reserve_id = $(this).data("reserve-id");
+                    const form = document.getElementById("set-waiting-" + reserve_id);
+                    if (form) {
+                        form.submit();
+                    }
+                });
+            });
+        </script>
+    [% END %]
+
+    [% INCLUDE 'intranet-bottom.inc' %]
+</div>

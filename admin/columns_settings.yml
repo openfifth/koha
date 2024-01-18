@@ -1965,6 +1965,26 @@ modules:
             -
               columnname: print_slip
 
+      closed-stack-requests:
+        default_display_length: 20
+        default_sort_order: 0
+        columns:
+            - columnname: patron
+            - columnname: title
+            - columnname: libraries
+            - columnname: barcodes
+            - columnname: call_numbers
+            - columnname: copy_numbers
+            - columnname: stocknumber
+            - columnname: enumeration
+            - columnname: itemtypes
+            - columnname: locations
+            - columnname: collection
+            - columnname: hold_date
+            - columnname: reserve_notes
+            - columnname: pickup_location
+            - columnname: action
+
     holdsratios:
       holds-ratios:
         default_display_length: 20

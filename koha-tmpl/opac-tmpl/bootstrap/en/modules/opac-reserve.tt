@@ -10,7 +10,11 @@
     [% SET reserve_input_type = 'checkbox' %]
 [% END %]
 [% INCLUDE 'doc-head-open.inc' %]
-<title>Placing a hold &rsaquo; [% IF ( LibraryNameTitle ) %][% LibraryNameTitle | html %][% ELSE %]Koha online[% END %] catalog</title>
+[% IF closed_stack_request %]
+    <title>Closed stack request &rsaquo; [% IF ( LibraryNameTitle ) %][% LibraryNameTitle | html %][% ELSE %]Koha online[% END %] catalog</title>
+[% ELSE %]
+    <title>Placing a hold &rsaquo; [% IF ( LibraryNameTitle ) %][% LibraryNameTitle | html %][% ELSE %]Koha online[% END %] catalog</title>
+[% END %]
 [% INCLUDE 'doc-head-close.inc' %]
 [% BLOCK cssinclude %]
 [% END %]
@@ -22,13 +26,21 @@
 <div class="main">
     [% WRAPPER breadcrumbs %]
         [% WRAPPER breadcrumb_item bc_active= 1 %]
-            <span>Placing a hold</span>
+            [% IF closed_stack_request %]
+                <span>Closed stack request</span>
+            [% ELSE %]
+                <span>Placing a hold</span>
+            [% END %]
         [% END %]
     [% END #/ WRAPPER breadcrumbs %]
 
     <div class="container">
         <div id="holds" class="maincontent">
-            <h1>Placing a hold</h1>
+            [% IF closed_stack_request %]
+                <h1>Closed stack request</h1>
+            [% ELSE %]
+                <h1>Placing a hold</h1>
+            [% END %]
             [% IF ( message ) %]
                 <div id="holdmessages" class="alert">
                     <p>Sorry, you cannot place holds.</p>
@@ -133,7 +145,11 @@
 
             [% UNLESS ( message ) %]
                 [% UNLESS ( none_available ) %]
-                    <h2>Confirm holds for:[% INCLUDE 'patron-title.inc' patron = logged_in_user %] ([% logged_in_user.cardnumber | html %])</h2>
+                    [% IF closed_stack_request %]
+                        <h2>Confirm closed stack request for:[% INCLUDE 'patron-title.inc' patron = logged_in_user %] ([% logged_in_user.cardnumber | html %])</h2>
+                    [% ELSE %]
+                        <h2>Confirm holds for:[% INCLUDE 'patron-title.inc' patron = logged_in_user %] ([% logged_in_user.cardnumber | html %])</h2>
+                    [% END %]
                 [% END # / UNLESS none_available %]
 
                 [% IF ( new_reserves_allowed ) %]
@@ -144,6 +160,9 @@
                     [% INCLUDE 'csrf-token.inc' %]
                     <legend class="sr-only">Hold requests</legend>
                     <input type="hidden" name="op" value="cud-place_reserve" />
+                    [% IF closed_stack_request %]
+                        <input type="hidden" name="closed_stack_request" value="1" />
+                    [% END %]
                     <!-- These values are set dynamically by js -->
                     <input type="hidden" name="biblionumbers" id="biblionumbers" />
                     <input type="hidden" name="selecteditems" id="selections" />
@@ -153,9 +172,9 @@
                                 [% IF bibitemloo.forced_hold_level %]
                                     <div class="alert alert-info forced_hold_level">
                                         [% IF bibitemloo.forced_hold_level == 'item' %]
-                                            <span>You already have at least one item level hold on this title. All further holds must be item level.</span>
+                                            <span>Hold policy requires holds to be item level.</span>
                                         [% ELSE %]
-                                            <span>You already have at least one record level hold on this title. All further holds must be record level.</span>
+                                            <span>Hold policy requires holds to be record level.</span>
                                         [% END %]
                                     </div>
                                 [% END %]
@@ -249,7 +268,7 @@
                                                 </li>
                                             [% END %]
 
-                                            [% UNLESS ( singleBranchMode ) %]
+                                            [% UNLESS ( singleBranchMode || closed_stack_request ) %]
                                                 [% IF ( bibitemloo.holdable && Koha.Preference('OPACAllowUserToChooseBranch')) %]
                                                     <li class="branch">
                                                         <label for="branch_[% bibitemloo.biblionumber | html %]">Pick up location:</label>

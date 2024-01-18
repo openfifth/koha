@@ -32,7 +32,7 @@ sub HoldsCount {
 
     warn "HoldsCount is deprecated, you should use biblio.holds.count instead";
 
-    my $holds = Koha::Holds->search( { biblionumber => $biblionumber } );
+    my $holds = Koha::Holds->search( { 'me.biblionumber' => $biblionumber } )->filter_out_closed_stack_requests();
 
     return $holds->count();
 }

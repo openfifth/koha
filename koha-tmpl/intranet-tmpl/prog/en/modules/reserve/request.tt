@@ -125,7 +125,11 @@
                 [% INCLUDE 'biblio-title.inc' link =1 %]
             [% END %]
             [% WRAPPER breadcrumb_item bc_active= 1 %]
-                <span>Place a hold</span>
+                [% IF closed_stack_request %]
+                    <span>Closed stack request</span>
+                [% ELSE %]
+                    <span>Place a hold</span>
+                [% END %]
             [% END %]
         [% ELSE %]
             [% IF ( patron ) %]
@@ -222,7 +226,11 @@
     [% END %]
 
     [% UNLESS ( multi_hold ) %]
-        <h2>Place a hold on [% INCLUDE 'biblio-title.inc' link = 1 %] [% IF biblio.author %]by [% biblio.author | html %][% END %]</h2>
+        [% IF closed_stack_request %]
+            <h2>Closed stack request on [% INCLUDE 'biblio-title.inc' link = 1 %] [% IF biblio.author %]by [% biblio.author | html %][% END %]</h2>
+        [% ELSE %]
+            <h2>Place a hold on [% INCLUDE 'biblio-title.inc' link = 1 %] [% IF biblio.author %]by [% biblio.author | html %][% END %]</h2>
+        [% END %]
     [% ELSE %]
         <h2>
             [% IF ( patron ) %]
@@ -562,6 +570,10 @@
                     <input type="hidden" name="title" value="[% biblio.title | html %]" />
                     <input type="hidden" name="rank-request" value="[% fixedRank | html %]" />
 
+                    [% IF closed_stack_request %]
+                        <input type="hidden" name="closed_stack_request" value="1" />
+                    [% END %]
+
                     <ol>
                         <li>
                             <span class="label">Patron:</span>
@@ -613,172 +625,176 @@
                         </li>
                     </ol>
                 </fieldset>
-                <fieldset class="rows any_specific">
-                    <legend>
-                        [% IF force_hold_level == 'item' || force_hold_level == 'item_group' %]
-                            <input type="radio" id="requestany" name="request" disabled="true" />
-                        [% ELSIF force_hold_level == 'record' %]
-                            <input type="radio" id="requestany" checked="checked" value="Any" disabled="true" />
-                            <input type="hidden" name="request" value="Any" />
-                            <span class="error"><i>(Required)</i></span>
-                        [% ELSE %]
-                            <input type="radio" id="requestany" name="request" checked="checked" value="Any" />
-                        [% END %]
-                        <label for="requestany" class="inline"> Hold next available item </label>
-                    </legend>
-                    <input type="hidden" name="alreadyreserved" value="[% alreadyreserved | html %]" />
-                    <fieldset class="enable_request_any disable_request_group disable_request_specific">
-                        [% IF force_hold_level == 'item' # Patron has placed a item level hold previously for this record %]
-                            <span class="error">
-                                <i class="fa fa-times fa-lg" title="Cannot be put on hold"></i>
-                                Hold must be item level
-                            </span>
-                        [% ELSIF force_hold_level == 'item_group' # Patron has placed an item group level hold previously for this record %]
-                            <span class="error">
-                                <i class="fa fa-times fa-lg" title="Cannot be put on hold"></i>
-                                Hold must be item group level
-                            </span>
-                        [% ELSE %]
-                            <ol>
-                                <li>
-                                    <label for="pickup">Pickup at:</label>
-                                    <select name="pickup" id="pickup-next-avail" data-biblio-id="[% biblio.biblionumber | html %]" data-patron-id="[% patron.borrowernumber | html %]" data-pickup-location-source="biblio">
-                                        [% PROCESS options_for_libraries libraries => Branches.pickup_locations({ search_params => { biblio => biblionumber, patron => patron }, selected => pickup }) %]
-                                    </select>
-                                </li>
-
-                                [% IF Koha.Preference('AllowHoldItemTypeSelection') %]
-                                    <li>
-                                        <label for="itemtype">Request specific item type:</label>
-                                        <select name="itemtype" id="itemtype">
-                                            <option value="">Any item type</option>
-                                            [%- FOREACH itemtype IN available_itemtypes %]
-                                                <option value="[% itemtype | html %]">[% ItemTypes.GetDescription( itemtype ) | html %]</option>
-                                            [%- END %]
-                                        </select>
-                                    </li>
-                                [% END %]
-                                [% UNLESS remaining_holds_for_record == 1 %]
-                                    <li>
-                                        <label for="holds_to_place_count">Holds to place (count)</label>
-                                        <input type="text" inputmode="numeric" pattern="[0-9]*" id="holds_to_place_count" name="holds_to_place_count" value="1" />
-                                    </li>
-                                [% ELSE %]
-                                    <input type="hidden" name="holds_to_place_count" value="1" />
-                                [% END %]
-                            </ol>
-                        [% END %]
-
-                        <fieldset class="action">
-                            [% IF ( patron.borrowernumber ) %]
-                                [% IF ( override_required ) %]
-                                    <button type="submit" id="hold_grp_btn" class="btn btn-primary warning"><i class="fa fa-exclamation-triangle "></i> Place hold</button>
-                                [% ELSIF ( none_available ) %]
-                                    <button type="submit" id="hold_grp_btn" disabled="disabled" class="btn btn-primary btn-disabled">Place hold</button>
-                                [% ELSE %]
-                                    <button type="submit" id="hold_grp_btn" class="btn btn-primary">Place hold</button>
-                                [% END %]
-                            [% END %]
-                        </fieldset>
-                    </fieldset>
-                </fieldset>
-
-                <hr />
-
                 [% biblio_info = biblioloop.0 %]
-                <!-- ItemGroup level holds -->
-                [% IF Koha.Preference('EnableItemGroupHolds') && biblio_info.object.item_groups.count %]
+
+                [% UNLESS closed_stack_request %]
                     <fieldset class="rows any_specific">
                         <legend>
-                            [% IF force_hold_level == 'item_group' %]
-                                <input type="radio" class="requestgrp" id="requestgrp" name="request" checked="checked" disabled="true" />
+                            [% IF force_hold_level == 'item' || force_hold_level == 'item_group' %]
+                                <input type="radio" id="requestany" name="request" disabled="true" />
+                            [% ELSIF force_hold_level == 'record' %]
+                                <input type="radio" id="requestany" checked="checked" value="Any" disabled="true" />
+                                <input type="hidden" name="request" value="Any" />
                                 <span class="error"><i>(Required)</i></span>
-                            [% ELSIF force_hold_level == 'item' || force_hold_level == 'record' %]
-                                <input type="radio" class="requestgrp" id="requestgrp" name="request" disabled="true" />
                             [% ELSE %]
-                                <input type="radio" class="requestgrp" id="requestgrp" name="request" />
+                                <input type="radio" id="requestany" name="request" checked="checked" value="Any" />
                             [% END %]
-                            <label for="requestgrp" class="inline"> Hold next available item from an item group </label>
+                            <label for="requestany" class="inline"> Hold next available item </label>
                         </legend>
-
-                        <fieldset class="enable_request_group disable_request_any disable_request_specific">
-                            [% IF force_hold_level == 'record' # Patron has placed a record level hold previously for this record %]
-                                <span class="error">
-                                    <i class="fa fa-times fa-lg" title="Cannot be put on hold"></i>
-                                    Hold must be record level
-                                </span>
-                            [% ELSIF force_hold_level == 'item' # Patron has placed an item level hold previously for this record %]
+                        <input type="hidden" name="alreadyreserved" value="[% alreadyreserved | html %]" />
+                        <fieldset class="enable_request_any disable_request_group disable_request_specific">
+                            [% IF force_hold_level == 'item' # Patron has placed a item level hold previously for this record %]
                                 <span class="error">
                                     <i class="fa fa-times fa-lg" title="Cannot be put on hold"></i>
                                     Hold must be item level
                                 </span>
+                            [% ELSIF force_hold_level == 'item_group' # Patron has placed an item group level hold previously for this record %]
+                                <span class="error">
+                                    <i class="fa fa-times fa-lg" title="Cannot be put on hold"></i>
+                                    Hold must be item group level
+                                </span>
                             [% ELSE %]
-                                <ul>
+                                <ol>
                                     <li>
                                         <label for="pickup">Pickup at:</label>
-                                        <select name="pickup" id="pickup-item-group" data-biblio-id="[% biblio.biblionumber | html %]" data-patron-id="[% patron.borrowernumber | html %]" data-pickup-location-source="biblio">
+                                        <select name="pickup" id="pickup-next-avail" data-biblio-id="[% biblio.biblionumber | html %]" data-patron-id="[% patron.borrowernumber | html %]" data-pickup-location-source="biblio">
                                             [% PROCESS options_for_libraries libraries => Branches.pickup_locations({ search_params => { biblio => biblionumber, patron => patron }, selected => pickup }) %]
                                         </select>
                                     </li>
-                                    <li>
-                                        <table id="requestgroup">
-                                            <thead>
-                                                <tr>
-                                                    <th>Hold</th>
-                                                    <th>Item group</th>
-                                                    <th>Holdable items</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                [% FOREACH g IN biblio_info.object.item_groups.search({}, { order_by => ['display_order'] }) %]
-                                                    [% IF g.items.count %]
-                                                        <tr>
-                                                            <td>
-                                                                <input id="item_group_id_[% g.id | html %]" class="requestgrp" type="radio" name="item_group_id" value="[% g.id | html %]" />
-                                                            </td>
-                                                            <td>
-                                                                <label for="item_group_id_[% g.id | html %]">[% g.description | html %]</label>
-                                                            </td>
-                                                            <td>
-                                                                [% FOREACH i IN g.items %]
-                                                                    <div><a href="/cgi-bin/koha/catalogue/moredetail.pl?biblionumber=[% i.biblionumber | uri %]#item[% i.itemnumber | uri %]">[% i.barcode | html %]</a></div>
-                                                                [% END %]
-                                                            </td>
-                                                        </tr>
-                                                    [% ELSE %]
-                                                        <tr>
-                                                            <td>
-                                                                <input id="item_group_id_[% g.id | html %]" class="requestgrp" type="radio" name="item_group_id" value="[% g.id | html %]" disabled="disabled" />
-                                                            </td>
-                                                            <td>
-                                                                <label for="item_group_id_[% g.id | html %]">[% g.description | html %]</label>
-                                                            </td>
-                                                            <td>
-                                                                <div class="error">No holdable items in this item group.</div>
-                                                            </td>
-                                                        </tr>
-                                                    [% END %]
-                                                [% END %]
-                                            </tbody>
-                                        </table>
-                                    </li>
-                                </ul>
+
+                                    [% IF Koha.Preference('AllowHoldItemTypeSelection') %]
+                                        <li>
+                                            <label for="itemtype">Request specific item type:</label>
+                                            <select name="itemtype" id="itemtype">
+                                                <option value="">Any item type</option>
+                                                [%- FOREACH itemtype IN available_itemtypes %]
+                                                    <option value="[% itemtype | html %]">[% ItemTypes.GetDescription( itemtype ) | html %]</option>
+                                                [%- END %]
+                                            </select>
+                                        </li>
+                                    [% END %]
+                                    [% UNLESS remaining_holds_for_record == 1 %]
+                                        <li>
+                                            <label for="holds_to_place_count">Holds to place (count)</label>
+                                            <input type="text" inputmode="numeric" pattern="[0-9]*" id="holds_to_place_count" name="holds_to_place_count" value="1" />
+                                        </li>
+                                    [% ELSE %]
+                                        <input type="hidden" name="holds_to_place_count" value="1" />
+                                    [% END %]
+                                </ol>
                             [% END %]
+
                             <fieldset class="action">
                                 [% IF ( patron.borrowernumber ) %]
                                     [% IF ( override_required ) %]
-                                        <button type="submit" id="hold_any_btn" class="btn btn-primary warning"><i class="fa fa-exclamation-triangle "></i> Place hold</button>
+                                        <button type="submit" id="hold_grp_btn" class="btn btn-primary warning"><i class="fa fa-exclamation-triangle "></i> Place hold</button>
                                     [% ELSIF ( none_available ) %]
-                                        <button type="submit" id="hold_any_btn" disabled="disabled" class="btn btn-primary btn-disabled">Place hold</button>
+                                        <button type="submit" id="hold_grp_btn" disabled="disabled" class="btn btn-primary btn-disabled">Place hold</button>
                                     [% ELSE %]
-                                        <button type="submit" id="hold_any_btn" class="btn btn-primary">Place hold</button>
+                                        <button type="submit" id="hold_grp_btn" class="btn btn-primary">Place hold</button>
                                     [% END %]
                                 [% END %]
                             </fieldset>
                         </fieldset>
                     </fieldset>
+
+                    <hr />
+
+                    [% biblio_info = biblioloop.0 %]
+                    <!-- ItemGroup level holds -->
+                    [% IF Koha.Preference('EnableItemGroupHolds') && biblio_info.object.item_groups.count %]
+                        <fieldset class="rows any_specific">
+                            <legend>
+                                [% IF force_hold_level == 'item_group' %]
+                                    <input type="radio" class="requestgrp" id="requestgrp" name="request" checked="checked" disabled="true" />
+                                    <span class="error"><i>(Required)</i></span>
+                                [% ELSIF force_hold_level == 'item' || force_hold_level == 'record' %]
+                                    <input type="radio" class="requestgrp" id="requestgrp" name="request" disabled="true" />
+                                [% ELSE %]
+                                    <input type="radio" class="requestgrp" id="requestgrp" name="request" />
+                                [% END %]
+                                <label for="requestgrp" class="inline"> Hold next available item from an item group </label>
+                            </legend>
+
+                            <fieldset class="enable_request_group disable_request_any disable_request_specific">
+                                [% IF force_hold_level == 'record' # Patron has placed a record level hold previously for this record %]
+                                    <span class="error">
+                                        <i class="fa fa-times fa-lg" title="Cannot be put on hold"></i>
+                                        Hold must be record level
+                                    </span>
+                                [% ELSIF force_hold_level == 'item' # Patron has placed an item level hold previously for this record %]
+                                    <span class="error">
+                                        <i class="fa fa-times fa-lg" title="Cannot be put on hold"></i>
+                                        Hold must be item level
+                                    </span>
+                                [% ELSE %]
+                                    <ul>
+                                        <li>
+                                            <label for="pickup">Pickup at:</label>
+                                            <select name="pickup" id="pickup-item-group" data-biblio-id="[% biblio.biblionumber | html %]" data-patron-id="[% patron.borrowernumber | html %]" data-pickup-location-source="biblio">
+                                                [% PROCESS options_for_libraries libraries => Branches.pickup_locations({ search_params => { biblio => biblionumber, patron => patron }, selected => pickup }) %]
+                                            </select>
+                                        </li>
+                                        <li>
+                                            <table id="requestgroup">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Hold</th>
+                                                        <th>Item group</th>
+                                                        <th>Holdable items</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    [% FOREACH g IN biblio_info.object.item_groups.search({}, { order_by => ['display_order'] }) %]
+                                                        [% IF g.items.count %]
+                                                            <tr>
+                                                                <td>
+                                                                    <input id="item_group_id_[% g.id | html %]" class="requestgrp" type="radio" name="item_group_id" value="[% g.id | html %]" />
+                                                                </td>
+                                                                <td>
+                                                                    <label for="item_group_id_[% g.id | html %]">[% g.description | html %]</label>
+                                                                </td>
+                                                                <td>
+                                                                    [% FOREACH i IN g.items %]
+                                                                        <div><a href="/cgi-bin/koha/catalogue/moredetail.pl?biblionumber=[% i.biblionumber | uri %]#item[% i.itemnumber | uri %]">[% i.barcode | html %]</a></div>
+                                                                    [% END %]
+                                                                </td>
+                                                            </tr>
+                                                        [% ELSE %]
+                                                            <tr>
+                                                                <td>
+                                                                    <input id="item_group_id_[% g.id | html %]" class="requestgrp" type="radio" name="item_group_id" value="[% g.id | html %]" disabled="disabled" />
+                                                                </td>
+                                                                <td>
+                                                                    <label for="item_group_id_[% g.id | html %]">[% g.description | html %]</label>
+                                                                </td>
+                                                                <td>
+                                                                    <div class="error">No holdable items in this item group.</div>
+                                                                </td>
+                                                            </tr>
+                                                        [% END %]
+                                                    [% END %]
+                                                </tbody>
+                                            </table>
+                                        </li>
+                                    </ul>
+                                [% END %]
+                                <fieldset class="action">
+                                    [% IF ( patron.borrowernumber ) %]
+                                        [% IF ( override_required ) %]
+                                            <button type="submit" id="hold_any_btn" class="btn btn-primary warning"><i class="fa fa-exclamation-triangle "></i> Place hold</button>
+                                        [% ELSIF ( none_available ) %]
+                                            <button type="submit" id="hold_any_btn" disabled="disabled" class="btn btn-primary btn-disabled">Place hold</button>
+                                        [% ELSE %]
+                                            <button type="submit" id="hold_any_btn" class="btn btn-primary">Place hold</button>
+                                        [% END %]
+                                    [% END %]
+                                </fieldset>
+                            </fieldset>
+                        </fieldset>
+                    [% END %]
+                    <!-- /ItemGroup level holds -->
                 [% END %]
-                <!-- /ItemGroup level holds -->
 
                 <fieldset class="rows any_specific">
                     <legend>
@@ -1158,6 +1174,10 @@
                                             ><li> <strong>No items are available</strong> to be placed on hold</li></ul
                                         >
                                     [% END %]
+
+                                    [% IF itemloo.is_closed_stack %]
+                                        <br /><span>Closed stack</span>
+                                    [% END %]
                                 </td>
                             </tr>
                         [% END # /FOREACH biblioloo %]
@@ -1430,6 +1450,9 @@
     [% SET url_biblio_params = "biblionumber=" _ biblionumbers.join("&amp;biblionumber=") %]
     [% IF multi_hold %]
         [% SET url_biblio_params = url_biblio_params _ "&amp;multi_hold=1" %]
+    [% END %]
+    [% IF closed_stack_request %]
+        [% SET url_biblio_params = url_biblio_params _ "&closed_stack_request=1" %]
     [% END %]
     <script>
         $(document).ready(function () {

@@ -196,11 +196,11 @@ sub AddReserve {
 
     $resdate ||= dt_from_string;
 
+    my $item = $checkitem ? Koha::Items->find($checkitem) : undef;
+
     # if we have an item selectionned, and the pickup branch is the same as the holdingbranch
     # of the document, we force the value $priority and $found .
-    if ( $checkitem and not C4::Context->preference('ReservesNeedReturns') ) {
-        my $item = Koha::Items->find($checkitem);    # FIXME Prevent bad calls
-
+    if ( $item and not C4::Context->preference('ReservesNeedReturns') ) {
         if (
             # If item is already checked out, it cannot be set waiting
             !$item->onloan
@@ -862,14 +862,16 @@ sub CheckReserves {
     my @SkipHoldTrapOnNotForLoanValue = split( '\|', C4::Context->preference('SkipHoldTrapOnNotForLoanValue') );
     return if grep { $_ eq $item->notforloan } @SkipHoldTrapOnNotForLoanValue;
 
-    my $dont_trap = C4::Context->preference('TrapHoldsOnOrder') ? $item->notforloan > 0 : $item->notforloan;
-    if ( !$dont_trap ) {
-        my $item_type = $item->effective_itemtype;
-        if ($item_type) {
-            return if Koha::ItemTypes->find($item_type)->notforloan;
+    unless ( $item->is_closed_stack ) {
+        my $dont_trap = C4::Context->preference('TrapHoldsOnOrder') ? $item->notforloan > 0 : $item->notforloan;
+        if ( !$dont_trap ) {
+            my $item_type = $item->effective_itemtype;
+            if ($item_type) {
+                return if Koha::ItemTypes->find($item_type)->notforloan;
+            }
+        } else {
+            return;
         }
-    } else {
-        return;
     }
 
     # Find this item in the reserves
@@ -1367,12 +1369,16 @@ sub IsAvailableForItemLevelRequest {
         unless defined $itemtype;
     my $notforloan_per_itemtype = Koha::ItemTypes->find($itemtype)->notforloan;
 
+    # Closed stack items can be requested even if marked as "not for loan"
+    unless ( $item->is_closed_stack ) {
+        return 0
+            if $notforloan_per_itemtype
+            || $item->notforloan > 0;    # item with negative or zero notforloan value is holdable
+    }
+
     return 0
-        if $notforloan_per_itemtype
-        || $item->itemlost
-        || $item->notforloan > 0
-        ||    # item with negative or zero notforloan value is holdable
-        $item->withdrawn
+        if $item->itemlost
+        || $item->withdrawn
         || ( $item->damaged && !C4::Context->preference('AllowHoldsOnDamagedItems') );
 
     if ($pickup_branchcode) {
@@ -1388,29 +1394,34 @@ sub IsAvailableForItemLevelRequest {
             || $home_library->validate_hold_sibling( { branchcode => $pickup_branchcode } );
     }
 
-    my $on_shelf_holds = Koha::CirculationRules->get_onshelfholds_policy( { item => $item, patron => $patron } );
+    unless ( $item->is_closed_stack ) {
+        my $on_shelf_holds = Koha::CirculationRules->get_onshelfholds_policy( { item => $item, patron => $patron } );
 
-    if ( $on_shelf_holds == 1 ) {
-        return 1;
-    } elsif ( $on_shelf_holds == 2 ) {
+        if ( $on_shelf_holds == 1 ) {
+            return 1;
+        } elsif ( $on_shelf_holds == 2 ) {
 
-        # These calculations work at the biblio level, and can be expensive
-        # we use the in-memory cache to avoid calling once per item when looping items on a biblio
+            # These calculations work at the biblio level, and can be expensive
+            # we use the in-memory cache to avoid calling once per item when looping items on a biblio
 
-        my $memory_cache = Koha::Cache::Memory::Lite->get_instance();
-        my $cache_key    = sprintf "ItemsAnyAvailableAndNotRestricted:%s:%s", $patron->id, $item->biblionumber;
+            my $memory_cache = Koha::Cache::Memory::Lite->get_instance();
+            my $cache_key    = sprintf "ItemsAnyAvailableAndNotRestricted:%s:%s", $patron->id, $item->biblionumber;
 
-        my $any_available = $memory_cache->get_from_cache($cache_key);
-        return $any_available ? 0 : 1 if defined($any_available);
+            my $any_available = $memory_cache->get_from_cache($cache_key);
+            return $any_available ? 0 : 1 if defined($any_available);
 
-        $any_available =
-            ItemsAnyAvailableAndNotRestricted( { biblionumber => $item->biblionumber, patron => $patron } );
-        $memory_cache->set_in_cache( $cache_key, $any_available );
-        return $any_available ? 0 : 1;
+            $any_available =
+                ItemsAnyAvailableAndNotRestricted( { biblionumber => $item->biblionumber, patron => $patron } );
+            $memory_cache->set_in_cache( $cache_key, $any_available );
+            return $any_available ? 0 : 1;
 
-    } else {  # on_shelf_holds == 0 "If any unavailable" (the description is rather cryptic and could still be improved)
-        return $item->notforloan < 0 || $item->onloan || $item->holds->filter_by_found->count;
+        } else
+        {    # on_shelf_holds == 0 "If any unavailable" (the description is rather cryptic and could still be improved)
+            return $item->notforloan < 0 || $item->onloan || $item->holds->filter_by_found->count;
+        }
     }
+
+    return 1;
 }
 
 =head2 ItemsAnyAvailableAndNotRestricted

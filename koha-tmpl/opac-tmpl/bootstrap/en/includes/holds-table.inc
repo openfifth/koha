@@ -3,7 +3,8 @@
 [% USE KohaDates %]
 [% PROCESS 'i18n.inc' %]
 
-<table id="holdst" class="table table-bordered table-striped">
+[% DEFAULT table_id = 'holdst' %]
+<table id="[% table_id | html %]" class="table table-bordered table-striped">
     <caption>Holds <span class="count">([% HOLDS.count | html %] total)</span></caption>
     <!-- HOLDS TABLE ROWS -->
     <thead>

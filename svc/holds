@@ -55,6 +55,8 @@ my $sorting_direction = $input->param('sSortDir_0') || 'desc';
 my $iSortCol          = $input->param('iSortCol_0') // 0;
 my $sorting_column    = $sort_columns[$iSortCol]    // 'reservedate';
 
+my $closed_stack_request = $input->param('closed_stack_request');
+
 binmode STDOUT, ":encoding(UTF-8)";
 print $input->header( -type => 'application/json', -charset => 'UTF-8' );
 
@@ -62,6 +64,14 @@ my $holds_rs = Koha::Holds->search(
     { borrowernumber => $borrowernumber },
     { order_by       => { "-$sorting_direction" => $sorting_column } }
 );
+
+if ( defined $closed_stack_request ) {
+    if ($closed_stack_request) {
+        $holds_rs = $holds_rs->filter_by_closed_stack_requests();
+    } else {
+        $holds_rs = $holds_rs->filter_out_closed_stack_requests();
+    }
+}
 
 my @holds;
 while ( my $h = $holds_rs->next() ) {

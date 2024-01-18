@@ -198,6 +198,19 @@
                     </span>
                 [% END %]
 
+                [% IF ( closed_stack_request_count ) %]
+                    <span class="results_summary">
+                        <span class="label">Closed stack requests:</span>
+                        <span class="badge text-bg-info">
+                            [% IF CAN_user_reserveforothers_place_holds %]
+                                <a href="/cgi-bin/koha/reserve/request.pl?biblionumber=[% biblionumber | uri %]&closed_stack_request=1">[% closed_stack_request_count | html %]</a>
+                            [% ELSE %]
+                                <span>[% closed_stack_request_count | html %]</span>
+                            [% END %]
+                        </span>
+                    </span>
+                [% END %]
+
                 [% IF illrequests.count %]
                     <span class="results_summary">
                         <span class="label">ILL requests:</span>

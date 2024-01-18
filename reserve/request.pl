@@ -64,8 +64,9 @@ my ( $template, $borrowernumber, $cookie, $flags ) = get_template_and_user(
     }
 );
 
-my $showallitems = $input->param('showallitems');
-my $pickup       = $input->param('pickup');
+my $showallitems         = $input->param('showallitems');
+my $pickup               = $input->param('pickup');
+my $closed_stack_request = $input->param('closed_stack_request');
 
 my $itemtypes = {
     map {
@@ -350,6 +351,8 @@ if (   ( $findborrower && $borrowernumber_hold || $findclub && $club_hold )
             # patron placed a record level hold, all the holds the patron places must
             # be record level. If the patron placed an item level hold, all holds
             # the patron places must be item level
+            # Unless the biblio itself forces a specific hold level which
+            # supersedes the above rules
             my $holds = Koha::Holds->search(
                 {
                     borrowernumber => $patron->borrowernumber,
@@ -357,7 +360,9 @@ if (   ( $findborrower && $borrowernumber_hold || $findclub && $club_hold )
                     found          => undef,
                 }
             );
-            $template->param( force_hold_level => $holds->forced_hold_level() );
+
+            my $forced_hold_level = $biblio->forced_hold_level // $holds->forced_hold_level();
+            $template->param( force_hold_level => $forced_hold_level );
 
             # For a librarian to be able to place multiple record holds for a patron for a record,
             # we must find out what the maximum number of holds they can place for the patron is
@@ -398,6 +403,8 @@ if (   ( $findborrower && $borrowernumber_hold || $findclub && $club_hold )
             # (before this loop was inside that sub loop so it was O(n^2) )
 
             for my $item_object (@items) {
+                next if ( $closed_stack_request xor $item_object->is_available_for_closed_stack_request );
+
                 my $do_check;
                 my $item = $item_object->unblessed;
                 $item->{object} = $item_object;
@@ -618,8 +625,13 @@ if (   ( $findborrower && $borrowernumber_hold || $findclub && $club_hold )
                     )->unblessed
                 }
             };
-            my @reserves =
-                Koha::Holds->search( { biblionumber => $biblionumber }, { order_by => 'priority' } )->as_list;
+            my $holds_rs = Koha::Holds->search( { 'me.biblionumber' => $biblionumber }, { order_by => 'priority' } );
+            if ($closed_stack_request) {
+                $holds_rs = $holds_rs->filter_by_closed_stack_requests();
+            } else {
+                $holds_rs = $holds_rs->filter_out_closed_stack_requests();
+            }
+            my @reserves = $holds_rs->as_list;
             foreach my $res (
                 sort {
                     my $a_found = $a->found() || '';
@@ -739,6 +751,8 @@ $template->param( pickup => $pickup || C4::Context->userenv->{branch} );
 $template->param( borrowernumber => $borrowernumber_hold );
 
 $template->param( failed_holds => \@failed_holds );
+
+$template->param( closed_stack_request => $closed_stack_request );
 
 # printout the page
 output_html_with_http_headers $input, $cookie, $template->output;

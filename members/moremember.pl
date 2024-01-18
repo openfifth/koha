@@ -205,7 +205,6 @@ if ( $patron->is_expired || $patron->is_going_to_expire ) {
 my $holds         = Koha::Holds->search( { borrowernumber => $borrowernumber } );    # FIXME must be Koha::Patron->holds
 my $waiting_holds = $holds->waiting;
 $template->param(
-    holds_count  => $holds->count(),
     WaitingHolds => $waiting_holds,
 );
 
@@ -287,21 +286,22 @@ my $has_modifications  = Koha::Patron::Modifications->search( { borrowernumber =
 my $patron_lists_count = $patron->get_lists_with_patron->count();
 
 $template->param(
-    patron                 => $patron,
-    issuecount             => $patron->checkouts->count,
-    holds_count            => $patron->holds->count,
-    fines                  => $patron->account->balance,
-    translated_language    => $translated_language,
-    detailview             => 1,
-    was_renewed            => scalar $input->param('was_renewed') ? 1 : 0,
-    $category_type         => 1,                                           # [% IF ( I ) %] = institutional/organisation
-    housebound_role        => scalar $patron->housebound_role,
-    relatives_issues_count => $relatives_issues_count,
-    relatives_borrowernumbers => \@relatives,
-    logged_in_user            => $logged_in_user,
-    files                     => Koha::Patron::Files->new( borrowernumber => $borrowernumber )->GetFilesInfo(),
-    has_modifications         => $has_modifications,
-    patron_lists_count        => $patron_lists_count,
+    patron                      => $patron,
+    issuecount                  => $patron->checkouts->count,
+    holds_count                 => $patron->holds->filter_out_closed_stack_requests()->count,
+    closed_stack_requests_count => $patron->holds->filter_by_closed_stack_requests()->count,
+    fines                       => $patron->account->balance,
+    translated_language         => $translated_language,
+    detailview                  => 1,
+    was_renewed                 => scalar $input->param('was_renewed') ? 1 : 0,
+    $category_type              => 1,                                 # [% IF ( I ) %] = institutional/organisation
+    housebound_role             => scalar $patron->housebound_role,
+    relatives_issues_count      => $relatives_issues_count,
+    relatives_borrowernumbers   => \@relatives,
+    logged_in_user              => $logged_in_user,
+    files                       => Koha::Patron::Files->new( borrowernumber => $borrowernumber )->GetFilesInfo(),
+    has_modifications           => $has_modifications,
+    patron_lists_count          => $patron_lists_count,
 );
 
 if ( C4::Context->preference('UseRecalls') ) {

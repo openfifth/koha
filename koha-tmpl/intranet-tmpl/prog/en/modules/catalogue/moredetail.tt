@@ -355,6 +355,34 @@
                                         <li><span class="label">Withdrawn on:</span>[% ITEM_DAT.withdrawn_on | $KohaDates %]</li>
                                     [% END %]
                                 [% END %]
+
+                                <li>
+                                    <span class="label">Closed stack:</span>
+                                    [% IF ( CAN_user_circulate ) %]
+                                        <form action="updateitem.pl" method="post">
+                                            [% INCLUDE 'csrf-token.inc' %]
+                                            <input type="hidden" name="biblionumber" value="[% ITEM_DAT.biblionumber | html %]" />
+                                            <input type="hidden" name="biblioitemnumber" value="[% ITEM_DAT.biblioitemnumber | html %]" />
+                                            <input type="hidden" name="itemnumber" value="[% ITEM_DAT.itemnumber | html %]" />
+                                            <select name="is_closed_stack">
+                                                <option value="0">No</option>
+                                                [% IF ITEM_DAT.is_closed_stack %]
+                                                    <option value="1" selected>Yes</option>
+                                                [% ELSE %]
+                                                    <option value="1">Yes</option>
+                                                [% END %]
+                                            </select>
+                                            <input type="hidden" name="op" value="cud-set_is_closed_stack" />
+                                            <input type="submit" name="submit" class="btn btn-primary btn-xs" value="Set status" />
+                                        </form>
+                                    [% ELSE %]
+                                        [% IF ITEM_DAT.is_closed_stack %]
+                                            <span>Yes</span>
+                                        [% ELSE %]
+                                            <span>No</span>
+                                        [% END %]
+                                    [% END %]
+                                </li>
                             </ol>
                             <!-- /.bibliodetails -->
                         </div>

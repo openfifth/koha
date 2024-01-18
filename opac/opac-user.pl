@@ -344,11 +344,13 @@ if ($show_barcode) {
 $template->param( show_barcode => 1 ) if $show_barcode;
 
 # now the reserved items....
-my $reserves = $patron->holds->filter_out_has_cancellation_requests;
+my $reserves              = $patron->holds->filter_out_has_cancellation_requests->filter_out_closed_stack_requests;
+my $closed_stack_requests = $patron->holds->filter_out_has_cancellation_requests->filter_by_closed_stack_requests;
 
 $template->param(
-    RESERVES     => $reserves,
-    showpriority => $show_priority,
+    RESERVES              => $reserves,
+    closed_stack_requests => $closed_stack_requests,
+    showpriority          => $show_priority,
 );
 
 if ( C4::Context->preference('UseRecalls') ) {
@@ -431,6 +433,8 @@ $template->param(
     failed_holds               => scalar $query->param('failed_holds'),
     opac_user_holds            => scalar $query->param('opac-user-holds')            || 0,
     opac_user_article_requests => scalar $query->param('opac-user-article-requests') || 0,
+
+    opac_user_closed_stack_requests => scalar $query->param('opac-user-closed-stack-requests') || 0,
 );
 
 # if not an empty string this indicates to return

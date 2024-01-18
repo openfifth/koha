@@ -499,7 +499,10 @@ if ( C4::Context->preference('TagsEnabled') and $tag_quantity = C4::Context->pre
 
 #we only need to pass the number of holds to the template
 my $holds = $biblio->holds;
-$template->param( holdcount => $holds->count );
+$template->param(
+    holdcount                  => $holds->filter_out_closed_stack_requests->count,
+    closed_stack_request_count => $holds->filter_by_closed_stack_requests->count,
+);
 
 # Check if there are any ILL requests connected to the biblio
 my $illrequests =
