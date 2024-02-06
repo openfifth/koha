@@ -431,9 +431,9 @@
                         <li class="nav-item">
                             <a href="/cgi-bin/koha/opac-suggestions.pl?suggested_by_anyone=1">Purchase suggestions</a>
                         </li>
-			<li class="nav-item">
-			    <a href="/cgi-bin/koha/opac-thesis-tables.pl">Research tables</a>
-			</li>
+                        <li class="nav-item">
+                            <a href="/cgi-bin/koha/opac-thesis-tables.pl">Research tables</a>
+                        </li>
                     [% END %]
                 [% END %]
                 [% IF ( Koha.Preference('OPACShowLibraries') && AllPublicBranches.size > 0 ) %]
