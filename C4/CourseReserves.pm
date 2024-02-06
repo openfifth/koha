@@ -1026,7 +1026,7 @@ sub SearchCourses {
 
     my $term = $params{'term'};
 
-    my $enabled = $params{'enabled'} || '%';
+    my $enabled      = $params{'enabled'}      || '%';
     my $thesis_table = $params{'thesis_table'} || 'no';
 
     my @params;
@@ -1059,15 +1059,15 @@ sub SearchCourses {
     ";
 
     if ( $thesis_table eq 'no' ) {
-	$query .= "
-	    AND
-	    c.department != 'TT'
-	";
+        $query .= "
+        AND
+        c.department != 'TT'
+    ";
     } else {
-	$query .= "
-	    AND
-	    c.department = 'TT'
-	";
+        $query .= "
+        AND
+        c.department = 'TT'
+    ";
     }
 
     $query .= "
