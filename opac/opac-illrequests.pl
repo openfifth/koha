@@ -50,10 +50,17 @@ if ( ! C4::Context->preference('ILLModule') ) {
     exit;
 }
 
+my $op = Koha::ILL::Request->get_op_param_deprecation( 'opac', $params );
+
 my ( $template, $loggedinuser, $cookie ) = get_template_and_user({
     template_name   => "opac-illrequests.tt",
     query           => $query,
     type            => "opac",
+    authnotrequired => (
+        ( C4::Context->preference("ILLOpacUnauthenticatedRequest") && ( $op eq 'cud-create' || $op eq 'unauth_view' ) )
+        ? 1
+        : 0
+        )
 });
 
 # Are we able to actually work?
@@ -67,8 +74,6 @@ if ( $params->{backend} && !grep { $_ eq $params->{backend} } @$backends ) {
 
 my $backends_available = ( scalar @{$backends} > 0 );
 $template->param( backends_available => $backends_available );
-
-my $op = Koha::ILL::Request->get_op_param_deprecation( 'opac', $params );
 
 my ( $illrequest_id, $request );
 if ( $illrequest_id = $params->{illrequest_id} ) {
