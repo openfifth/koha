@@ -34,7 +34,7 @@ use Koha::Cache::Memory::Lite;
 use Koha::Database;
 use Koha::DateUtils qw( dt_from_string );
 use Koha::Exceptions::Ill;
-use Koha::I18N qw(__);
+use Koha::I18N qw(__ __x);
 use Koha::ILL::Backend::Standard;
 use Koha::ILL::Batches;
 use Koha::ILL::Comments;
@@ -1094,16 +1094,12 @@ sub backend_create {
     # ... complex case: commit!
 
     # Do we still have space for an ILL or should we queue?
-    my $permitted = $self->check_limits( { patron => $self->patron }, { librarycode => $self->branchcode } );
-
-    # Now augment our committed request.
-
-    $result->{permitted} = $permitted;    # Queue request?
-
-    # This involves...
-
-    # ...Updating status!
-    $self->status('QUEUED')->store unless ($permitted);
+    my $permitted = 1;
+    if ( $self->patron ) {
+        $permitted = $self->check_limits( { patron => $self->patron }, { librarycode => $self->branchcode } );
+        $result->{permitted} = $permitted;
+        $self->status('QUEUED')->store unless ($permitted);
+    }
 
     ## Handle Unmediated ILLs
 
@@ -1943,6 +1939,45 @@ sub attach_processors {
     }
 }
 
+=head3 append_unauthenticated_notes
+
+    append_unauthenticated_notes($metadata);
+
+Append unauthenticated details to staff and opac notes
+
+=cut
+
+sub append_unauthenticated_notes {
+    my ( $self, $metadata ) = @_;
+    my $unauthenticated_notes_text = __x(
+        "Unauthenticated request.\nFirst name: {first_name}.\nLast name: {last_name}.\nEmail: {email}.",
+        first_name => $metadata->{'unauthenticated_first_name'},
+        last_name  => $metadata->{'unauthenticated_last_name'},
+        email      => $metadata->{'unauthenticated_email'}
+    );
+    $self->append_to_note($unauthenticated_notes_text);
+    $self->notesopac($unauthenticated_notes_text)->store;
+}
+
+=head3 unauth_request_data_check
+
+    unauth_request_data_check($metadata);
+
+Checks if unauthenticated request data is present
+
+=cut
+
+sub unauth_request_data_check {
+    my ($metadata) = @_;
+
+    return 1 unless C4::Context->preference("ILLOpacUnauthenticatedRequest");
+
+    return
+           $metadata->{unauthenticated_first_name}
+        && $metadata->{unauthenticated_last_name}
+        && $metadata->{unauthenticated_email};
+}
+
 =head3 append_to_note
 
     append_to_note("Some text");
@@ -2211,8 +2246,11 @@ Patron object
 sub can_patron_place_ill_in_opac {
     my ( $self, $patron ) = @_;
 
+    return 1 if C4::Context->preference('ILLOpacUnauthenticatedRequest') && !$patron;
+
     return 0
-        unless $patron->_result->categorycode->can_place_ill_in_opac
+        unless $patron
+        && $patron->_result->categorycode->can_place_ill_in_opac
         && !( $patron->is_expired
         && $patron->category->effective_BlockExpiredPatronOpacActions_contains('ill_request') );
     return 1;

@@ -11,6 +11,10 @@
     <div class="alert alert-warning">
         <strong>Please note:</strong> Type is a mandatory field.
     </div>
+[% ELSIF whole.status == 'missing_unauth_data' %]
+    <div class="alert alert-warning">
+        <strong>Please note:</strong> Patron data (first name, last name and e-mail) are mandatory fields.
+    </div>
 [% ELSIF whole.status == 'missing_branch' %]
     <div class="alert alert-warning">
         <strong>Please note:</strong> Library is a mandatory field.
@@ -36,6 +40,11 @@
     <fieldset class="rows">
     <legend>Patron options</legend>
     <ol>
+        [% IF unauthenticated_ill && !logged_in_user%]
+          [% PROCESS ill_text_input_field required = 1 id = 'unauthenticated_first_name' label = t('First name') value = whole.value.other.unauthenticated_first_name %]
+          [% PROCESS ill_text_input_field required = 1 id = 'unauthenticated_last_name' label = t('Last name') value = whole.value.other.unauthenticated_last_name %]
+          [% PROCESS ill_text_input_field required = 1 id = 'unauthenticated_email' label = t('E-mail address') value = whole.value.other.unauthenticated_email %]
+        [% END %]
         [% WRAPPER ill_select_field required = 1 id = 'branchcode' label = t('Destination library') %]
           <option value=""></option>
           [% FOREACH branch IN branches %]

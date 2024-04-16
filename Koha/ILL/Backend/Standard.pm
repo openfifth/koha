@@ -24,6 +24,7 @@ use C4::Installer;
 
 use Koha::DateUtils qw/ dt_from_string /;
 use Koha::I18N      qw(__);
+use Koha::ILL::Request;
 use Koha::ILL::Requests;
 use Koha::ILL::Request::Attribute;
 use C4::Biblio  qw( AddBiblio );
@@ -128,7 +129,9 @@ sub capabilities {
         provides_batch_requests => sub { return 1; },
 
         # We can create ILL requests with data passed from the API
-        create_api => sub { $self->create_api(@_) }
+        create_api => sub { $self->create_api(@_) },
+
+        opac_unauthenticated_ill_requests => sub { return 1; }
     };
     return $capabilities->{$name};
 }
@@ -184,7 +187,15 @@ sub status_graph {
             next_actions   => [],
             ui_method_icon => 'fa-edit',
         },
-
+        UNAUTH => {
+            prev_actions   => [],
+            id             => 'UNAUTH',
+            name           => 'Unauthenticated',
+            ui_method_name => 0,
+            method         => 0,
+            next_actions   => [ 'REQ', 'GENREQ', 'KILL' ],
+            ui_method_icon => 0,
+        },
     };
 }
 
@@ -266,9 +277,6 @@ sub create {
         }
 
         # Received completed details of form.  Validate and create request.
-        ## Validate
-        my ( $brw_count, $brw ) =
-            _validate_borrower( $other->{'cardnumber'} );
         my $result = {
             cwd     => dirname(__FILE__),
             status  => "",
@@ -280,31 +288,37 @@ sub create {
             core    => $core_fields
         };
         my $failed = 0;
-        if ( !$other->{'type'} ) {
-            $result->{status} = "missing_type";
-            $result->{value}  = $params;
-            $failed           = 1;
-        } elsif ( !$other->{'branchcode'} ) {
-            $result->{status} = "missing_branch";
-            $result->{value}  = $params;
-            $failed           = 1;
-        } elsif ( !Koha::Libraries->find( $other->{'branchcode'} ) ) {
-            $result->{status} = "invalid_branch";
-            $result->{value}  = $params;
-            $failed           = 1;
-        } elsif ( $brw_count == 0 ) {
-            $result->{status} = "invalid_borrower";
-            $result->{value}  = $params;
-            $failed           = 1;
-        } elsif ( $brw_count > 1 ) {
 
-            # We must select a specific borrower out of our options.
-            $params->{brw}   = $brw;
-            $result->{value} = $params;
-            $result->{stage} = "borrowers";
-            $result->{error} = 0;
-            $failed          = 1;
+        my $unauthenticated_request =
+            C4::Context->preference("ILLOpacUnauthenticatedRequest") && !$other->{'cardnumber'};
+        if ($unauthenticated_request) {
+            ( $failed, $result ) = _validate_form_params( $other, $result, $params );
+            if ( !Koha::ILL::Request::unauth_request_data_check($other) ) {
+                $result->{status} = "missing_unauth_data";
+                $result->{value}  = $params;
+                $failed           = 1;
+            }
+        } else {
+            ( $failed, $result ) = _validate_form_params( $other, $result, $params );
+
+            my ( $brw_count, $brw ) =
+                _validate_borrower( $other->{'cardnumber'} );
+
+            if ( $brw_count == 0 ) {
+                $result->{status} = "invalid_borrower";
+                $result->{value}  = $params;
+                $failed           = 1;
+            } elsif ( $brw_count > 1 ) {
+
+                # We must select a specific borrower out of our options.
+                $params->{brw}   = $brw;
+                $result->{value} = $params;
+                $result->{stage} = "borrowers";
+                $result->{error} = 0;
+                $failed          = 1;
+            }
         }
+
         return $result if $failed;
 
         $self->add_request( { request => $params->{request}, other => $other } );
@@ -966,12 +980,15 @@ sub add_request {
 
     my ( $self, $params ) = @_;
 
+    my $unauthenticated_request =
+        C4::Context->preference("ILLOpacUnauthenticatedRequest") && !$params->{other}->{'cardnumber'};
+
     # ...Populate Illrequestattributes
     # generate $request_details
     my $request_details = _get_request_details( $params, $params->{other} );
 
-    my ( $brw_count, $brw ) =
-        _validate_borrower( $params->{other}->{'cardnumber'} );
+    my ( $brw_count, $brw );
+    ( $brw_count, $brw ) = _validate_borrower( $params->{other}->{'cardnumber'} ) unless $unauthenticated_request;
 
     ## Create request
 
@@ -981,9 +998,9 @@ sub add_request {
     # ...Populate Illrequest
     my $request = $params->{request};
     $request->biblio_id($biblionumber) unless $biblionumber == 0;
-    $request->borrowernumber( $brw->borrowernumber );
+    $request->borrowernumber( $brw ? $brw->borrowernumber : undef );
     $request->branchcode( $params->{other}->{branchcode} );
-    $request->status('NEW');
+    $request->status( $unauthenticated_request ? 'UNAUTH' : 'NEW' );
     $request->backend( $params->{other}->{backend} );
     $request->placed( dt_from_string() );
     $request->updated( dt_from_string() );
@@ -999,6 +1016,7 @@ sub add_request {
         }
     } keys %{$request_details};
     $request->extended_attributes( \@request_details_array );
+    $request->append_unauthenticated_notes( $params->{other} ) if $unauthenticated_request;
 
     return $request;
 }
@@ -1209,6 +1227,35 @@ sub _set_suppression {
     $record->append_fields($new942);
 
     return 1;
+}
+
+=head3 _validate_form_params
+
+    _validate_form_params( $other, $result, $params );
+
+Validate form parameters and return the validation result
+
+=cut
+
+sub _validate_form_params {
+    my ( $other, $result, $params ) = @_;
+
+    my $failed = 0;
+    if ( !$other->{'type'} ) {
+        $result->{status} = "missing_type";
+        $result->{value}  = $params;
+        $failed           = 1;
+    } elsif ( !$other->{'branchcode'} ) {
+        $result->{status} = "missing_branch";
+        $result->{value}  = $params;
+        $failed           = 1;
+    } elsif ( !Koha::Libraries->find( $other->{'branchcode'} ) ) {
+        $result->{status} = "invalid_branch";
+        $result->{value}  = $params;
+        $failed           = 1;
+    }
+
+    return ( $failed, $result );
 }
 
 =head1 AUTHORS

@@ -171,6 +171,27 @@ sub installed_backends {
     return [ grep { !/Standard/ } @{ $self->available_backends } ];
 }
 
+=head3 opac_available_backends
+
+Return a list of backends available in the OPAC
+
+=cut
+
+sub opac_available_backends {
+    my ( $self, $loggedinuser ) = @_;
+    my $reduced  = C4::Context->preference('ILLOpacbackends');
+    my $backends = $self->available_backends($reduced);
+    if ( !$loggedinuser && C4::Context->preference('ILLOpacUnauthenticatedRequest') ) {
+        $backends = [
+            grep {
+                my $loaded_b = Koha::ILL::Request->new->load_backend($_);
+                $loaded_b->_backend_capability('opac_unauthenticated_ill_requests')
+            } @$backends
+        ];
+    }
+    return $backends;
+}
+
 =head3 has_branch
 
 Return whether a 'branch' block is defined

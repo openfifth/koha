@@ -49,22 +49,29 @@ if ( !C4::Context->preference('ILLModule') ) {
     exit;
 }
 
+my $op = Koha::ILL::Request->get_op_param_deprecation( 'opac', $params );
+
 my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
     {
-        template_name => "opac-illrequests.tt",
-        query         => $query,
-        type          => "opac",
+        template_name   => "opac-illrequests.tt",
+        query           => $query,
+        type            => "opac",
+        authnotrequired => (
+            (
+                C4::Context->preference("ILLOpacUnauthenticatedRequest")
+                    && ( $op eq 'cud-create' || $op eq 'unauth_view' )
+            )
+            ? 1
+            : 0
+        )
     }
 );
 
 # Are we able to actually work?
-my $reduced            = C4::Context->preference('ILLOpacbackends');
-my $backends           = Koha::ILL::Request::Config->new->available_backends($reduced);
+my $patron             = Koha::Patrons->find($loggedinuser);
+my $backends           = Koha::ILL::Request::Config->new->opac_available_backends($patron);
 my $backends_available = ( scalar @{$backends} > 0 );
 $template->param( backends_available => $backends_available );
-my $patron = Koha::Patrons->find($loggedinuser);
-
-my $op = Koha::ILL::Request->get_op_param_deprecation( 'opac', $params );
 
 my ( $illrequest_id, $request );
 if ( $illrequest_id = $params->{illrequest_id} ) {
@@ -110,7 +117,7 @@ if ( $op eq 'list' ) {
 } elsif ( $op eq 'cud-create' ) {
     if ( !$params->{backend} ) {
         my $req = Koha::ILL::Request->new;
-        $template->param( backends => $req->available_backends );
+        $template->param( backends => $backends );
     } else {
         $params->{backend} = 'Standard' if $params->{backend} eq 'FreeForm';
         my $request = Koha::ILL::Request->new->load_backend( $params->{backend} );
@@ -148,10 +155,8 @@ if ( $op eq 'list' ) {
             exit;
         }
 
-        my $patron = Koha::Patrons->find( { borrowernumber => $loggedinuser } );
-
-        $params->{cardnumber} = $patron->cardnumber;
-        $params->{branchcode} = $patron->branchcode;
+        $params->{cardnumber} = $patron->cardnumber if $patron;
+        $params->{branchcode} = $patron->branchcode if $patron;
         $params->{opac}       = 1;
         $params->{lang}       = C4::Languages::getlanguage($query);
         my $backend_result = $request->backend_create($params);
@@ -174,8 +179,12 @@ if ( $op eq 'list' ) {
                 if ( $params->{type_disclaimer_submitted} ) {
                     $type_disclaimer->after_request_created( $params, $request );
                 }
-                print $query->redirect('/cgi-bin/koha/opac-illrequests.pl?message=2');
-                exit;
+                if ( C4::Context->preference('ILLOpacUnauthenticatedRequest') && !$patron ) {
+                    $op = 'unauth_view';
+                } else {
+                    print $query->redirect('/cgi-bin/koha/opac-illrequests.pl?message=2');
+                    exit;
+                }
             }
         }
 
@@ -183,6 +192,7 @@ if ( $op eq 'list' ) {
 }
 
 $template->param(
+    unauthenticated_ill          => C4::Context->preference('ILLOpacUnauthenticatedRequest'),
     can_patron_place_ill_in_opac => $can_patron_place_ill_in_opac,
     message                      => $params->{message},
     illrequestsview              => 1,
