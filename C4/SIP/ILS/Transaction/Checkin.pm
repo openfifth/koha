@@ -146,9 +146,11 @@ sub do_checkin {
         $self->{item}->destination_loc($messages->{WrongTransfer});
         $self->alert_type('04');            # send to other branch
     }
-    if ($messages->{NeedsTransfer}) {
-        $self->{item}->destination_loc($messages->{NeedsTransfer});
-        $self->alert_type('04');            # send to other branch
+    if ( $messages->{NeedsTransfer} ) {
+        $self->{item}->destination_loc( $messages->{NeedsTransfer} );
+        $self->alert_type('04');    # send to other branch
+        $self->screen_msg( "This item must still be transferred to " . $messages->{NeedsTransfer} . " branch." )
+            if !C4::Context->preference('AutomaticItemReturn');
     }
     if ($messages->{WasTransfered}) { # set into transit so tell unit
         $self->{item}->destination_loc($item->homebranch);
