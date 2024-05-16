@@ -805,6 +805,12 @@ Circulation:
               class: integer
             - .
         -
+            - Automatically delete items from cart when placing on hold on the
+            - pref: AutoDeleteFromCartWhenHoldPlaced
+              multiple:
+                  staff: staff interface
+                  opac: OPAC
+        -
             - In the staff interface, split the holds queue into separate tables by
             - pref: HoldsSplitQueue
               choices:

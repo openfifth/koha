@@ -100,6 +100,7 @@ INSERT INTO systempreferences ( `variable`, `value` ) VALUES
 ('autoControlNumber','OFF'),
 ('AutoCreateAuthorities','0'),
 ('AutoCreditNumber', ''),
+('AutoDeleteFromCartWhenHoldPlaced',''),
 ('AutoEmailNewUser','0'),
 ('AutoILLBackendPriority',''),
 ('AutoLinkBiblios','0'),

@@ -8,7 +8,7 @@ return {
         my ($args) = @_;
         my ( $dbh, $out ) = @$args{qw(dbh out)};
 
-        # Do you stuffs here
+        # Do your stuff here
         $dbh->do(q{});
 
         # Print useful stuff here
