@@ -284,7 +284,6 @@
             </ul>
         </div>
     [% END %]
-
     [% UNLESS ( multi_hold ) %]
         <h2>Place hold on [% INCLUDE 'biblio-title.inc' link = 1 %] [% IF biblio.author %]by [% biblio.author | html %][% END %]</h2>
 
@@ -1562,6 +1561,12 @@
     [% INCLUDE 'datatables.inc' %]
     [% INCLUDE 'calendar.inc' %]
     [% INCLUDE 'select2.inc' %]
+    <script nonce="[% Koha.CSPNonce | $raw %]">
+        hold_table_settings = [% TablesSettings.GetTableSettings( 'circ', 'holds', 'patron_holds_table', 'json' ) | $raw %];
+    </script>
+    [% Asset.js("js/holds.js") | $raw %]
+    [% Asset.js("js/hold-group.js") | $raw %]
+    [% Asset.js("js/basket.js") | $raw %]
 
     [% SET url_biblio_params = (supplyill ? "supplyill=" _ supplyill _ "&amp;" : "") _ "biblionumber=" _ biblionumbers.join("&amp;biblionumber=") %]
     [% IF multi_hold %]
@@ -2026,6 +2031,12 @@
             if (!localStorage.selectedHolds || document.referrer.replace(/\?.*/, "") !== document.location.origin + document.location.pathname) {
                 localStorage.selectedHolds = [];
             }
+            [% IF successful_holds && Koha.Preference('AutoDeleteFromCartWhenHoldPlaced').grep('staff').size %]
+                [% FOREACH success IN successful_holds.split('\|') %]
+                    delSingleRecord('[% success | html %]');
+                [% END %]
+            [% END %]
+
         });
     </script>
     [% UNLESS patron %]

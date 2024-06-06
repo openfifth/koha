@@ -81,6 +81,7 @@ if ( $op eq 'cud-placerequest' && $patron ) {
     my %failed_holds;
     my @successful_hold_ids;
 
+    my @successful_biblionumbers;
     foreach my $biblionumber ( keys %bibinfos ) {
 
         my $can_override = C4::Context->preference('AllowHoldPolicyOverride');
@@ -121,6 +122,7 @@ if ( $op eq 'cud-placerequest' && $patron ) {
                                 iso18626_payload => \%iso18626_payload,
                             }
                         );
+                        push @successful_biblionumbers, $biblionumber;
 
                         push @successful_hold_ids, $reserve_id;
                         $hold_priority++;
@@ -154,6 +156,7 @@ if ( $op eq 'cud-placerequest' && $patron ) {
                     }
                 );
                 push @successful_hold_ids, $reserve_id;
+                push @successful_biblionumbers, $biblionumber;
             }
         } else {
 
@@ -180,6 +183,7 @@ if ( $op eq 'cud-placerequest' && $patron ) {
                         }
                     );
                     push @successful_hold_ids, $reserve_id;
+                    push @successful_biblionumbers, $biblionumber;
                 }
             }
         }
@@ -195,6 +199,7 @@ if ( $op eq 'cud-placerequest' && $patron ) {
         push( @failed_hold_msgs, $msg );
     }
     $redirect_url->query_form( biblionumber => [@biblionumbers], failed_holds => \@failed_hold_msgs );
+    $redirect_url .= "&successful_holds=" . join( '|', @successful_biblionumbers );
     print $input->redirect($redirect_url);
 } elsif ( $borrowernumber eq '' ) {
     print $input->header();
