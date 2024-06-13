@@ -155,7 +155,7 @@ if ( $op eq 'cud-placerequest' && $patron ) {
                         # iso18626_payload => \%iso18626_payload,
                     }
                 );
-                push @successful_hold_ids, $reserve_id;
+                push @successful_hold_ids,      $reserve_id;
                 push @successful_biblionumbers, $biblionumber;
             }
         } else {
@@ -182,7 +182,7 @@ if ( $op eq 'cud-placerequest' && $patron ) {
                             iso18626_payload => \%iso18626_payload,
                         }
                     );
-                    push @successful_hold_ids, $reserve_id;
+                    push @successful_hold_ids,      $reserve_id;
                     push @successful_biblionumbers, $biblionumber;
                 }
             }

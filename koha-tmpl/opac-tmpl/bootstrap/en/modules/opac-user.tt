@@ -69,7 +69,6 @@
                     >
 
                     [% IF ( patronupdate ) %]<div class="alert alert-info"><h2>Thank you!</h2><p>Your corrections have been submitted to the library, and a staff member will update your record as soon as possible.</p></div>[% END %]
-
                     [% IF failed_holds %]
                         <div class="alert alert-info">
                             <h2>Notice:</h2>
@@ -1093,6 +1092,11 @@
         [% END %]
     </script>
     <script nonce="[% Koha.CSPNonce | $raw %]">
+        [% IF successful_holds && Koha.Preference('AutoDeleteFromCartWhenHoldPlaced').grep('opac').size %]
+            [% FOREACH success IN successful_holds.split('\|') %]
+                delSingleRecord('[% success | html %]');
+            [% END %]
+        [% END %]
         var AR_CAPTION_COUNT = _("(%s total)");
 
         function tableInit(tableId) {
