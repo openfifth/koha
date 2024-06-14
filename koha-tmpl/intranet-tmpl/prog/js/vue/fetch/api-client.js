@@ -16,6 +16,7 @@ import RecordSourcesAPIClient from "@fetch/record-sources-api-client";
 import SysprefAPIClient from "@fetch/system-preferences-api-client";
 import SIP2APIClient from "@fetch/sip2-api-client";
 import PreservationAPIClient from "@fetch/preservation-api-client";
+import PluginStoreAPIClient from "./plugin-store-api-client";
 
 export const APIClient = {
     booking: new BookingAPIClient(HttpClient),
@@ -32,6 +33,7 @@ export const APIClient = {
     item: new ItemAPIClient(HttpClient),
     sysprefs: new SysprefAPIClient(HttpClient),
     sip2: new SIP2APIClient(HttpClient),
+    plugin_store: new PluginStoreAPIClient(),
     preservation: new PreservationAPIClient(HttpClient),
     record_sources: new RecordSourcesAPIClient(HttpClient),
 };
