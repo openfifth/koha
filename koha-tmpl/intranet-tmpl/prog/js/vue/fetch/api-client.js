@@ -2,6 +2,7 @@ import HttpClient from "./http-client";
 
 import ERMAPIClient from "@fetch/erm-api-client";
 import PatronAPIClient from "@fetch/patron-api-client";
+import LibraryAPIClient from "@fetch/library-api-client";
 import AcquisitionAPIClient from "@fetch/acquisition-api-client";
 import AdditionalFieldsAPIClient from "@fetch/additional-fields-api-client";
 import AVAPIClient from "@fetch/authorised-values-api-client";
@@ -11,10 +12,12 @@ import RecordSourcesAPIClient from "@fetch/record-sources-api-client";
 import SysprefAPIClient from "@fetch/system-preferences-api-client";
 import SIP2APIClient from "@fetch/sip2-api-client";
 import PreservationAPIClient from "@fetch/preservation-api-client";
+import CircRuleAPIClient from "@fetch/circulation-rules-api-client";
 
 export const APIClient = {
     erm: new ERMAPIClient(HttpClient),
     patron: new PatronAPIClient(HttpClient),
+    library: new LibraryAPIClient(HttpClient),
     acquisition: new AcquisitionAPIClient(HttpClient),
     additional_fields: new AdditionalFieldsAPIClient(HttpClient),
     authorised_values: new AVAPIClient(HttpClient),
@@ -24,6 +27,7 @@ export const APIClient = {
     sip2: new SIP2APIClient(HttpClient),
     preservation: new PreservationAPIClient(HttpClient),
     record_sources: new RecordSourcesAPIClient(HttpClient),
+    circRule: new CircRuleAPIClient(HttpClient),
 };
 
 export default APIClient;
