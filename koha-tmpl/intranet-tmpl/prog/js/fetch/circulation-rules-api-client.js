@@ -1,30 +1,28 @@
-import HttpClient from "./http-client";
-
-export class CircRuleAPIClient extends HttpClient {
-    constructor() {
-        super({
-            baseURL: "/api/v1/",
+export class CircRuleAPIClient {
+    constructor(HttpClient) {
+        this.httpClient = new HttpClient({
+            baseURL: "/api/v1/circulation_rules",
         });
     }
 
     get circRules() {
         return {
             getAll: (query, params, headers) =>
-                this.getAll({
-                    endpoint: "circulation_rules",
+                this.httpClient.getAll({
+                    endpoint: "",
                     query,
                     params,
                     headers,
                 }),
             update: rule =>
-                this.put({
-                    endpoint: "circulation_rules",
+                this.httpClient.put({
+                    endpoint: "",
                     body: rule,
                 }),
             count: (query = {}) =>
-                this.count({
+                this.httpClient.count({
                     endpoint:
-                        "circulation_rules?" +
+                        "?" +
                         new URLSearchParams({
                             _page: 1,
                             _per_page: 1,
