@@ -32,7 +32,6 @@ BEGIN {
         GetBranchcodesWithOverdueRules
         get_chargeable_units
         GetOverduesForBranch
-        GetOverdueMessageTransportTypes
         parse_overdues_letter
         GetIssuesIteminfo
     );
