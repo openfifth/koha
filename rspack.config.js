@@ -22,7 +22,9 @@ module.exports = [
             acquisitions:
                 "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/acquisitions.ts",
             islands: "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/islands.ts",
-        },
+            "admin/circulation_triggers":
+            "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/admin/circulation_triggers.ts",
+    },
         output: {
             filename: "[name].js",
             path: path.resolve(
