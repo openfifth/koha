@@ -3297,8 +3297,8 @@ sub AddRenewal {
 
     $borrowernumber ||= $issue->borrowernumber;
 
-    if ( defined $datedue && ref $datedue ne 'DateTime' ) {
-        $datedue = dt_from_string($datedue, 'sql');
+    if ( $datedue && ref $datedue ne 'DateTime' ) {
+        $datedue = dt_from_string( $datedue, 'sql' );
     }
 
     my $patron = Koha::Patrons->find( $borrowernumber ) or return; # FIXME Should do more than just return
