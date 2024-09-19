@@ -178,6 +178,8 @@ sub harvest_sushi {
     my $response = _handle_sushi_request($url);
     my $result   = decode_json( $response->decoded_content );
 
+    my $result   = decode_json( $response->decoded_content );
+
     if ( $response->code >= 400 ) {
 
         return if $self->_sushi_errors($result);
