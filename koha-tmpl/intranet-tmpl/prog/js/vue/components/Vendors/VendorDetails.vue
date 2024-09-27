@@ -43,7 +43,7 @@
                     {{ vendor.fax }}
                 </span>
             </li>
-            <li v-if="vendor.url">
+            <li v-if="vendor.url" id="vendorWebsite">
                 <label>{{ $__("Website") }}:</label>
                 <a :href="vendor.url" target="_blank">{{ vendor.url }}</a>
             </li>
