@@ -160,7 +160,7 @@
 
 <script>
 import { inject } from "vue";
-import { storeToRefs } from "pinia";
+import ToolbarButton from "../ToolbarButton.vue";
 
 export default {
     props: {
@@ -191,6 +191,9 @@ export default {
         removeAlias(e) {
             this.vendor.aliases.splice(this.vendor.aliases.indexOf(e.alias), 1);
         },
+    },
+    components: {
+        ToolbarButton,
     },
 };
 </script>
