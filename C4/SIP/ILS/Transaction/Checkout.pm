@@ -155,7 +155,6 @@ sub do_checkout {
         my ( $msg, $checkout ) = ProcessOfflineIssue({
             cardnumber => $patron->cardnumber,
             barcode    => $barcode,
-            timestamp  => $no_block_due_date,
             due_date   => $no_block_due_date,
             timestamp  => dt_from_string,
         });
