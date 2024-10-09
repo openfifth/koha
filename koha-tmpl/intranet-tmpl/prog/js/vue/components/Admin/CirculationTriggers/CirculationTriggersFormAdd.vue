@@ -421,7 +421,7 @@ export default {
                 libraries => {
                     libraries.unshift({
                         library_id: "*",
-                        name: "All libraries",
+                        name: "Default rule for all libraries",
                     })
                     this.libraries = libraries
                 },
@@ -434,7 +434,7 @@ export default {
                 categories => {
                     categories.unshift({
                         patron_category_id: "*",
-                        name: "All categories",
+                        name: "Default rule for all categories",
                     })
                     this.categories = categories
                 },
@@ -447,7 +447,7 @@ export default {
                 types => {
                     types.unshift({
                         item_type_id: "*",
-                        description: "All item types",
+                        description: "Default rule for all item types",
                     })
                     this.itemTypes = types
                 },
@@ -852,9 +852,13 @@ input[type="number"] {
 }
 
 .dialog.alert
-    fieldset:not(.bg-danger):not(.bg-warning):not(.bg-info):not(.bg-success):not(.bg-primary):not(.action),
+    fieldset:not(.bg-danger):not(.bg-warning):not(.bg-info):not(
+        .bg-success
+    ):not(.bg-primary):not(.action),
 .dialog.error
-    fieldset:not(.bg-danger):not(.bg-warning):not(.bg-info):not(.bg-success):not(.bg-primary):not(.action) {
+    fieldset:not(.bg-danger):not(.bg-warning):not(.bg-info):not(
+        .bg-success
+    ):not(.bg-primary):not(.action) {
     margin: 0;
     background-color: rgba(255, 255, 255, 1);
 }
