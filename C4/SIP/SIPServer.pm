@@ -213,6 +213,33 @@ sub post_accept_hook {
     }
 }
 
+=head2 _config_up_to_date
+
+    $server->_config_up_to_date();
+
+Check if the configuration is up to date. Returns 1 if the configuration is up to date, 0 otherwise.
+
+This method is used to check if the configuration stored in the database is different from
+the one stored in the object. If the configuration in the database is newer, the method
+returns 0 and the object must be updated.
+
+=cut
+
+sub _config_up_to_date {
+    my ($self) = @_;
+
+    my $cache                       = Koha::Caches->get_instance();
+    my $sip2_resource_last_modified = $cache->get_from_cache("sip2_resource_last_modified");
+    my $sip2_config_read_timestamp  = $cache->get_from_cache("sip2_config_read_timestamp");
+
+    unless ($sip2_resource_last_modified) {
+        siplog( "LOG_WARNING", "Couldn't find config_timestamp server param, considering configuration up to date" );
+        return 1;
+    }
+    return 1 if !$sip2_resource_last_modified;
+    return $sip2_config_read_timestamp >= $sip2_resource_last_modified;
+}
+
 #
 # Child
 #
@@ -227,6 +254,9 @@ sub process_request {
     my $transport;
 
     $self->{config} = $config;
+    unless ( $self->_config_up_to_date() ) {
+        $self->{config} = C4::SIP::Sip::Configuration->get_configuration( undef, $self->{config} );
+    }
 
     # Flushing L1 to make sure the request will be processed using the correct data
     Koha::Caches->flush_L1_caches();

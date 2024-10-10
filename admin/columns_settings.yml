@@ -2676,6 +2676,49 @@ modules:
             -
                 columnname: problems
 
+  sip2:
+    institutions:
+      institutions:
+        columns:
+            -
+              columnname: sip_institution_id
+            -
+              columnname: name
+            -
+              columnname: implementation
+            -
+              columnname: checkin
+            -
+              columnname: checkout
+            -
+              columnname: renewal
+            -
+              columnname: retries
+            -
+              columnname: status_update
+            -
+              columnname: timeout
+
+    accounts:
+      accounts:
+        columns:
+            -
+              columnname: sip_account_id
+            -
+              columnname: sip_institution_id
+            -
+              columnname: login_id
+
+    system_preference_overrides:
+      system_preference_overrides:
+        columns:
+            -
+              columnname: sip_system_preference_override_id
+            -
+              columnname: variable
+            -
+              columnname: value
+
   pos:
     pay:
       invoices:
