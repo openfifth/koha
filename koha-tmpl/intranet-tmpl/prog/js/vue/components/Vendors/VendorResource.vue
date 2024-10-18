@@ -224,6 +224,14 @@ export default {
                     fallbackType: "text",
                 },
                 {
+                    name: "language",
+                    group: $__("Details"),
+                    type: "select",
+                    label: $__("Language"),
+                    avCat: "av_lang",
+                    fallbackType: "text",
+                },
+                {
                     name: "aliases",
                     type: "relationshipWidget",
                     group: $__("Aliases"),
