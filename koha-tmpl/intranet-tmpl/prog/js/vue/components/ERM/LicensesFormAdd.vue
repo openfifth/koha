@@ -156,8 +156,8 @@ export default {
             storeToRefs(AVStore);
 
         return {
-            av_license_types,
             av_license_statuses,
+            av_license_types,
             av_user_roles,
             max_allowed_packet,
         };

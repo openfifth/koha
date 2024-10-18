@@ -35,6 +35,7 @@
             const gstValues = [% To.json(gst_values) | $raw %];
             const edifact = [% To.json(edifact) | $raw %];
             const marcOrderAutomation = [% To.json(marc_orders) | $raw %];
+            const ermModule = [% To.json(erm_module) | $raw %];
         </script>
         [% Asset.js("js/vue/dist/acquisitions.js") | $raw %]
         [% INCLUDE 'select2.inc' %]

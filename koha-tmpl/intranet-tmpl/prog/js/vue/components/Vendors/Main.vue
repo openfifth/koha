@@ -63,6 +63,7 @@ export default {
             () => {
                 this.loadUserPermissions().then(() => {
                     this.config.settings.edifact = edifact;
+                    this.config.settings.ermModule = ermModule;
                     this.config.settings.marcOrderAutomation =
                         marcOrderAutomation;
                     this.vendorStore.currencies = currencies;
