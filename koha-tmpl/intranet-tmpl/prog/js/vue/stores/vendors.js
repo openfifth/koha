@@ -19,6 +19,7 @@ export const useVendorStore = defineStore("vendors", {
             av_vendor_types: "VENDOR_TYPE",
             av_vendor_interface_types: "VENDOR_INTERFACE_TYPE",
             av_vendor_payment_methods: "VENDOR_PAYMENT_METHOD",
+            av_lang: "LANG",
         },
     }),
     actions: {
