@@ -1924,6 +1924,7 @@ cy.getVendor = () => {
         list_includes_gst: false,
         name: "My Vendor",
         notes: "Sample vendor",
+        payment_method: "card",
         phone: "555-555-5555",
         postal: "567 Main St. PO Box 25 Springfield, MA 44224",
         subscriptions: [],
