@@ -737,6 +737,12 @@ export default {
                 )
             );
 
+            if (vendor.payment_method && vendor.payment_method.length > 0) {
+                vendor.payment_method = vendor.payment_method.join("|");
+            } else {
+                vendor.payment_method = null;
+            }
+
             baseResource.setWarning(errors.join("<br>"));
             if (errors.length) return false;
 
@@ -773,6 +779,10 @@ export default {
                 resource.address3 && (physical += resource.address3 + "\n");
                 resource.address4 && (physical += resource.address4 + "\n");
                 componentData.resource.value.physical = physical;
+
+                componentData.resource.payment_method = resource.payment_method
+                    ? resource.payment_method.split("|")
+                    : [];
 
                 if (!componentData.resource.value.discount)
                     componentData.resource.value.discount = 0.0;
