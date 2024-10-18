@@ -482,6 +482,16 @@ export default {
                     defaultValue: null,
                 },
                 {
+                    name: "payment_method",
+                    group: $__("Ordering information"),
+                    type: "select",
+                    label: $__("Payment method"),
+                    avCat: "av_vendor_payment_methods",
+                    defaultValue: null,
+                    multiple: true,
+                    hideIn: ["List"],
+                },
+                {
                     name: "gst",
                     group: $__("Ordering information"),
                     label: $__("Tax number registered"),
