@@ -11,12 +11,14 @@ import { useBaseResource } from "../../composables/base-resource.js";
 import { storeToRefs } from "pinia";
 import { APIClient } from "../../fetch/api-client.js";
 import { $__ } from "@koha-vue/i18n";
+import { useRoute } from "vue-router";
 
 export default {
     props: {
         routeAction: String,
     },
     setup(props) {
+        const route = useRoute();
         const format_date = $date;
         const patron_to_html = $patron_to_html;
 
@@ -403,6 +405,7 @@ export default {
             tableOptions,
             checkForm,
             onFormSave,
+            tableURL,
         };
     },
     name: "LicenseResource",
