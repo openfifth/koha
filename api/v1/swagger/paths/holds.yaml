@@ -104,6 +104,9 @@
             - cancellation_requested
             - biblio
             - pickup_library
+            - patron
+            - item
+            - item_group
         collectionFormat: csv
     produces:
       - application/json
@@ -289,11 +292,15 @@
               format: date-time
             hold_date:
               description: Hold date
-              type: string
+              type:
+                - string
+                - "null"
               format: date
             expiration_date:
               description: Hold's expiration date
-              type: string
+              type:
+                - string
+                - "null"
               format: date
           additionalProperties: false
     consumes:

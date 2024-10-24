@@ -265,9 +265,9 @@ sub edit {
         }
 
         $pickup_library_id //= $hold->branchcode;
-        my $priority        = $body->{priority}        // $hold->priority;
-        my $hold_date       = $body->{hold_date}       // $hold->reservedate;
-        my $expiration_date = $body->{expiration_date} // $hold->expirationdate;
+        my $priority        = $body->{priority} // $hold->priority;
+        my $hold_date       = exists $body->{hold_date}       ? $body->{hold_date}       : $hold->reservedate;
+        my $expiration_date = exists $body->{expiration_date} ? $body->{expiration_date} : $hold->expirationdate;
 
         # suspended_until can also be set to undef
         my $suspended_until = $body->{suspended_until} || $hold->suspend_until;

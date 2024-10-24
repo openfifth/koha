@@ -698,3 +698,854 @@ $(document).ready(function () {
         return toggle_suspend(this, inputs);
     });
 });
+
+async function load_patron_holds_table(biblio_id, split_data) {
+    const { name: split_name, value: split_value } = split_data;
+    const table_id = `#patron_holds_table_${biblio_id}_${split_value}`;
+    hold_table_settings.table = `patron_holds_table_${biblio_id}_${split_data.value}`;
+    let url = `/api/v1/holds/?q={"me.biblio_id":${biblio_id}`;
+
+    if (split_name === "branch" && split_value !== "any") {
+        url += `, "me.pickup_library_id":"${split_value}"`;
+    } else if (split_name === "itemtype" && split_value !== "any") {
+        url += `, "me.itemtype":"${split_value}"`;
+    } else if (split_name === "branch_itemtype") {
+        const [branch, itemtype] = split_value.split("_");
+        url +=
+            itemtype === "any"
+                ? `, "me.pickup_library_id":"${branch}"`
+                : `, "me.pickup_library_id":"${branch}", "me.itemtype":"${itemtype}"`;
+    }
+
+    url += "}";
+    const totalHolds = $(table_id).data("total-holds");
+    const totalHoldsSelect = parseInt(totalHolds) + 1;
+    let pageStart;
+    var holdsQueueTable = $(table_id).kohaTable(
+        {
+            ajax: {
+                url: url,
+                data: function (params) {
+                    pageStart = params.start;
+                    var query = {
+                        _per_page: params.length,
+                        _page: params.start / params.length + 1,
+                        _order_by: "priority",
+                        _match: "exact",
+                    };
+                    return query;
+                },
+            },
+            embed: ["patron", "item", "item_group"],
+            columnDefs: [
+                {
+                    targets: [2, 3],
+                    className: "dt-body-nowrap",
+                },
+                {
+                    targets: [3, 9],
+                    visible: CAN_user_reserveforothers_modify_holds_priority
+                        ? true
+                        : false,
+                },
+            ],
+            columns: [
+                {
+                    data: "hold_id",
+                    orderable: false,
+                    searchable: false,
+                    render: function (data, type, row, meta) {
+                        return (
+                            '<input type="checkbox" class="select_hold" data-id="' +
+                            data +
+                            '"/>'
+                        );
+                    },
+                },
+                {
+                    data: "priority",
+                    orderable: false,
+                    searchable: false,
+                    render: function (data, type, row, meta) {
+                        let select =
+                            '<select name="rank-request" class="rank-request" data-id="' +
+                            row.hold_id;
+                        if (
+                            CAN_user_reserveforothers_modify_holds_priority &&
+                            split_name == "any"
+                        ) {
+                            for (var i = 0; i < totalHoldsSelect; i++) {
+                                let selected;
+                                let value;
+                                let desc;
+                                if (data == i && row.status == "T") {
+                                    select += '" disabled="disabled">';
+                                    selected = " selected='selected' ";
+                                    value = "T";
+                                    desc = "In transit";
+                                } else if (data == i && row.status == "P") {
+                                    select += '" disabled="disabled">';
+                                    selected = " selected='selected' ";
+                                    value = "P";
+                                    desc = "In processing";
+                                } else if (data == i && row.status == "W") {
+                                    select += '" disabled="disabled">';
+                                    selected = " selected='selected' ";
+                                    value = "W";
+                                    desc = "Waiting";
+                                } else if (data == i && !row.status) {
+                                    select += '">';
+                                    selected = " selected='selected' ";
+                                    value = data;
+                                    desc = data;
+                                } else {
+                                    if (i != 0) {
+                                        select += '">';
+                                        value = i;
+                                        desc = i;
+                                    } else {
+                                        select += '">';
+                                    }
+                                }
+                                if (value) {
+                                    select +=
+                                        '<option value="' +
+                                        value +
+                                        '"' +
+                                        selected +
+                                        ">" +
+                                        desc +
+                                        "</option>";
+                                }
+                            }
+                        } else {
+                            if (row.status == "T") {
+                                select +=
+                                    '" disabled="disabled"><option value="T" selected="selected">In transit</option></select>';
+                            } else if (row.status == "P") {
+                                select +=
+                                    '" disabled="disabled"><option value="P" selected="selected">In processing</option></select>';
+                            } else if (row.status == "W") {
+                                select +=
+                                    '" disabled="disabled"><option value="W" selected="selected">Waiting</option></select>';
+                            } else {
+                                if (
+                                    HoldsSplitQueue !== "nothing" &&
+                                    HoldsSplitQueueNumbering === "virtual"
+                                ) {
+                                    let virtualPriority =
+                                        pageStart + meta.row + 1;
+                                    select +=
+                                        '" disabled="disabled"><option value="' +
+                                        data +
+                                        '" selected="selected">' +
+                                        virtualPriority +
+                                        "</option></select>";
+                                } else {
+                                    select +=
+                                        '" disabled="disabled"><option value="' +
+                                        data +
+                                        '" selected="selected">' +
+                                        data +
+                                        "</option></select>";
+                                }
+                            }
+                        }
+                        select += "</select>";
+                        return select;
+                    },
+                },
+                {
+                    data: "",
+                    orderable: false,
+                    searchable: false,
+                    render: function (data, type, row, meta) {
+                        if (row.status) {
+                            return null;
+                        }
+                        let buttons =
+                            '<a class="hold-arrow move-hold" title="Move hold up" href="#" data-move-hold="up" data-priority="' +
+                            row.priority +
+                            '" reserve_id="' +
+                            row.hold_id +
+                            '"><i class="fa fa-lg icon-move-hold-up" aria-hidden="true"></i></a>';
+                        buttons +=
+                            '<a class="hold-arrow move-hold" title="Move hold to top" href="#" data-move-hold="top" data-priority="' +
+                            row.priority +
+                            '" reserve_id="' +
+                            row.hold_id +
+                            '"><i class="fa fa-lg icon-move-hold-top" aria-hidden="true"></i></a>';
+                        buttons +=
+                            '<a class="hold-arrow move-hold" title="Move hold to bottom" href="#" data-move-hold="bottom" data-priority="' +
+                            row.priority +
+                            '" reserve_id="' +
+                            row.hold_id +
+                            '"><i class="fa fa-lg icon-move-hold-bottom" aria-hidden="true"></i></a>';
+                        buttons +=
+                            '<a class="hold-arrow move-hold" title="Move hold down" href="#" data-move-hold="down" data-priority="' +
+                            row.priority +
+                            '" reserve_id="' +
+                            row.hold_id +
+                            '"><i class="fa fa-lg icon-move-hold-down" aria-hidden="true"></i></a>';
+                        return buttons;
+                    },
+                },
+                {
+                    data: "patron.cardnumber",
+                    orderable: false,
+                    searchable: true,
+                    render: function (data, type, row, meta) {
+                        if (data == null) {
+                            let library = libraries.find(
+                                library => library._id == row.pickup_library_id
+                            );
+                            return __("A patron from library %s").format(
+                                library.name
+                            );
+                        } else {
+                            return (
+                                '<a href="/cgi-bin/koha/members/moremember.pl?borrowernumber=' +
+                                row.patron.patron_id +
+                                '">' +
+                                data +
+                                "</a>"
+                            );
+                        }
+                    },
+                },
+                {
+                    data: "notes",
+                    orderable: false,
+                    searchable: false,
+                    render: function (data, type, row, meta) {
+                        return data;
+                    },
+                },
+                {
+                    data: "hold_date",
+                    orderable: false,
+                    searchable: false,
+                    render: function (data, type, row, meta) {
+                        if (AllowHoldDateInFuture) {
+                            return (
+                                '<input type="text" class="holddate" value="' +
+                                $date(data, { dateformat: "rfc3339" }) +
+                                '" size="10" name="hold_date" data-id="' +
+                                row.hold_id +
+                                '" data-current-date="' +
+                                data +
+                                '"/>'
+                            );
+                        } else {
+                            return $date(data);
+                        }
+                    },
+                },
+                {
+                    data: "expiration_date",
+                    orderable: false,
+                    searchable: false,
+                    render: function (data, type, row, meta) {
+                        return (
+                            '<input type="text" class="expirationdate" value="' +
+                            $date(data, { dateformat: "rfc3339" }) +
+                            '" size="10" name="expiration_date" data-id="' +
+                            row.hold_id +
+                            '" data-current-date="' +
+                            data +
+                            '"/>'
+                        );
+                    },
+                },
+                {
+                    data: "pickup_library_id",
+                    orderable: false,
+                    searchable: false,
+                    render: function (data, type, row, meta) {
+                        var branchSelect =
+                            "<select priority=" +
+                            row.priority +
+                            ' class="hold_location_select" data-id="' +
+                            row.hold_id +
+                            '" reserve_id="' +
+                            row.hold_id +
+                            '" name="pick-location" data-pickup-location-source="hold">';
+                        var libraryname;
+                        for (var i = 0; i < libraries.length; i++) {
+                            var selectedbranch;
+                            var setbranch;
+                            if (libraries[i]._id == data) {
+                                selectedbranch = " selected='selected' ";
+                                setbranch = __(" (current) ");
+                                libraryname = libraries[i]._str;
+                            } else if (libraries[i].pickup_location == false) {
+                                continue;
+                            } else {
+                                selectedbranch = "";
+                                setbranch = "";
+                            }
+                            branchSelect +=
+                                '<option value="' +
+                                libraries[i]._id.escapeHtml() +
+                                '"' +
+                                selectedbranch +
+                                ">" +
+                                libraries[i]._str.escapeHtml() +
+                                setbranch +
+                                "</option>";
+                        }
+                        branchSelect += "</select>";
+                        if (row.status == "T") {
+                            return __(
+                                "Item being transferred to <strong>%s</strong>"
+                            ).format(libraryname);
+                        } else if (row.status == "P") {
+                            return __(
+                                "Item being processed at <strong>%s</strong>"
+                            ).format(libraryname);
+                        } else if (row.status == "W") {
+                            return __(
+                                "Item waiting at <strong>%s</strong> since %s"
+                            ).format(libraryname, $date(row.waiting_date));
+                        } else {
+                            return branchSelect;
+                        }
+                    },
+                },
+                {
+                    data: "",
+                    orderable: false,
+                    searchable: false,
+                    render: function (data, type, row, meta) {
+                        if (row.item_id) {
+                            return (
+                                '<a href="/cgi-bin/koha/catalogue/moredetail.pl?biblionumber=' +
+                                row.biblio_id +
+                                "&itemnumber=" +
+                                row.item_id +
+                                '">' +
+                                row.item.external_id +
+                                "</a>"
+                            );
+                        } else if (row.item_group_id) {
+                            return __(
+                                "Next available item from group <strong>%s</strong>"
+                            ).format(row.item_group.description);
+                        } else {
+                            if (row.non_priority) {
+                                return (
+                                    "<em>" +
+                                    __("Next available") +
+                                    "</em><br/><i>" +
+                                    __("Non priority hold") +
+                                    "</i>"
+                                );
+                            } else {
+                                return "<em>" + __("Next available") + "</em>";
+                            }
+                        }
+                    },
+                },
+                {
+                    data: "",
+                    orderable: false,
+                    searchable: false,
+                    render: function (data, type, row, meta) {
+                        if (row.item_id) {
+                            return null;
+                        } else {
+                            if (row.lowest_priority) {
+                                return (
+                                    '<a class="hold-arrow toggle-lowest-priority" title="Remove lowest priority" href="#" data-op="cud-setLowestPriority" data-borrowernumber="' +
+                                    row.patron_id +
+                                    '" data-biblionumber="' +
+                                    biblio_id +
+                                    '" data-reserve_id="' +
+                                    row.hold_id +
+                                    '" data-date="' +
+                                    row.hold_date +
+                                    '"><i class="fa fa-lg fa-rotate-90 icon-unset-lowest" aria-hidden="true"></i></a>'
+                                );
+                            } else {
+                                return (
+                                    '<a class="hold-arrow toggle-lowest-priority" title="Set lowest priority" href="#" data-op="cud-setLowestPriority" data-borrowernumber="' +
+                                    row.patron_id +
+                                    '" data-biblionumber="' +
+                                    biblio_id +
+                                    '" data-reserve_id="' +
+                                    row.hold_id +
+                                    '" data-date="' +
+                                    row.hold_date +
+                                    '"><i class="fa fa-lg fa-rotate-90 icon-set-lowest" aria-hidden="true"></i></a>'
+                                );
+                            }
+                        }
+                    },
+                },
+                {
+                    data: "hold_id",
+                    orderable: false,
+                    searchable: false,
+                    render: function (data, type, row, meta) {
+                        return (
+                            '<a class="cancel-hold" title="Cancel hold" reserve_id="' +
+                            data +
+                            '" href="#"><i class="fa fa-trash" aria-label="Cancel hold"></i></a>'
+                        );
+                    },
+                },
+                {
+                    data: "hold_id",
+                    orderable: false,
+                    searchable: false,
+                    render: function (data, type, row, meta) {
+                        if (row.status) {
+                            var link_value =
+                                row.status == "T"
+                                    ? __("Revert transit status")
+                                    : __("Revert waiting status");
+                            return (
+                                '<a class="btn btn-default submit-form-link" href="#" id="revert_hold_' +
+                                data +
+                                '" data-op="cud-move" data-where="down" data-first_priority="1" data-last_priority="' +
+                                totalHolds +
+                                '" data-prev_priority="0" data-next_priority="1" data-borrowernumber="' +
+                                row.patron_id +
+                                '" data-biblionumber="' +
+                                biblio_id +
+                                '" data-itemnumber="' +
+                                row.item_id +
+                                '" data-reserve_id="' +
+                                row.hold_id +
+                                '" data-date="' +
+                                row.hold_date +
+                                '" data-action="request.pl" data-method="post">' +
+                                link_value +
+                                "</a>"
+                            );
+                        } else {
+                            let td = "";
+                            if (SuspendHoldsIntranet) {
+                                td +=
+                                    '<button class="btn btn-default btn-xs toggle-suspend" data-id="' +
+                                    data +
+                                    '" data-biblionumber="' +
+                                    biblio_id +
+                                    '" data-suspended="' +
+                                    row.suspended +
+                                    '">';
+                                if (row.suspended) {
+                                    td +=
+                                        '<i class="fa fa-play" aria-hidden="true"></i> ' +
+                                        __("Resume") +
+                                        "</button>";
+                                } else {
+                                    td +=
+                                        '<i class="fa fa-pause" aria-hidden="true"></i> ' +
+                                        __("Suspend") +
+                                        "</button>";
+                                }
+                                if (AutoResumeSuspendedHolds) {
+                                    if (row.suspended) {
+                                        td +=
+                                            '<label for="suspend_until_' +
+                                            data +
+                                            '">' +
+                                            __("Suspend on") +
+                                            " </label>";
+                                    } else {
+                                        td +=
+                                            '<label for="suspend_until_' +
+                                            data +
+                                            '">' +
+                                            __("Suspend until") +
+                                            " </label>";
+                                    }
+                                    td +=
+                                        '<input type="text" name="suspend_until_' +
+                                        data +
+                                        '" data-id="' +
+                                        data +
+                                        '" size="10" value="' +
+                                        $date(row.suspended_until, {
+                                            dateformat: "rfc3339",
+                                        }) +
+                                        '" class="suspenddate" data-flatpickr-futuredate="true" data-suspend-date="' +
+                                        row.suspended_until +
+                                        '" />';
+                                }
+                                return td;
+                            } else {
+                                return null;
+                            }
+                        }
+                    },
+                },
+                {
+                    data: "hold_id",
+                    orderable: false,
+                    searchable: false,
+                    render: function (data, type, row, meta) {
+                        if (row.status == "W" || row.status == "T") {
+                            return (
+                                '<a class="btn btn-default btn-xs printholdslip" data-reserve_id="' +
+                                data +
+                                '">' +
+                                __("Print slip") +
+                                "</a>"
+                            );
+                        } else {
+                            return "";
+                        }
+                    },
+                },
+            ],
+        },
+        hold_table_settings
+    );
+    $(table_id).on("draw.dt", function () {
+        // Remove the search box. Don't know why it isn't working in the table settings
+        $(this).parent().find(".pager .table_controls .dt-search").remove();
+        $(this)
+            .parent()
+            .find(".pager .table_controls .dt-buttons .dt_button_clear_filter")
+            .remove();
+        var MSG_CANCEL_SELECTED = _("Cancel selected (%s)");
+        $(".cancel_selected_holds").html(
+            MSG_CANCEL_SELECTED.format(
+                $(".holds_table .select_hold:checked").length
+            )
+        );
+        $(".holds_table .select_hold").each(function () {
+            if (
+                localStorage.selectedHolds &&
+                localStorage.selectedHolds.includes($(this).data("id"))
+            ) {
+                $(this).prop("checked", true);
+            }
+        });
+        $(".holds_table .select_hold_all").on("click", function () {
+            var table = $(this).parents(".holds_table");
+            var count = $(".select_hold:checked", table).length;
+            $(".select_hold", table).prop("checked", !count);
+            $(this).prop("checked", !count);
+            $(this).parent().parent().toggleClass("selected");
+            $(".cancel_selected_holds").html(
+                MSG_CANCEL_SELECTED.format(
+                    $(".holds_table .select_hold:checked").length
+                )
+            );
+            localStorage.selectedHolds = $(".holds_table .select_hold:checked")
+                .toArray()
+                .map(el => $(el).data("id"));
+        });
+        $(".holds_table .select_hold").on("click", function () {
+            var table = $(this).parents(".holds_table");
+            var count = $(".select_hold:not(:checked)", table).length;
+            $(".select_hold_all", table).prop("checked", !count);
+            $(this).parent().parent().toggleClass("selected");
+            $(".cancel_selected_holds").html(
+                MSG_CANCEL_SELECTED.format(
+                    $(".holds_table .select_hold:checked").length
+                )
+            );
+            localStorage.selectedHolds = $(".holds_table .select_hold:checked")
+                .toArray()
+                .map(el => $(el).data("id"));
+        });
+        $(".cancel-hold").on("click", function (e) {
+            e.preventDefault;
+            var res_id = $(this).attr("reserve_id");
+            $(".select_hold").prop("checked", false);
+            $(".select_hold_all").prop("checked", false);
+            $(".cancel_selected_holds").html(MSG_CANCEL_SELECTED.format(0));
+            $("#cancelModal")
+                .modal("show")
+                .find("#cancelModalConfirmBtn")
+                .attr("data-id", res_id);
+            delete localStorage.selectedHolds;
+        });
+        $(".cancel_selected_holds").on("click", function (e) {
+            e.preventDefault();
+            if ($(".holds_table .select_hold:checked").length) {
+                delete localStorage.selectedHolds;
+                $("#cancelModal").modal("show");
+            }
+            return false;
+        });
+        // Remove any previously attached handlers
+        $("#cancelModalConfirmBtn").off("click");
+        // Attach the handler to the button
+        $("#cancelModalConfirmBtn").one("click", function (e) {
+            e.preventDefault();
+            let hold_ids;
+            const hold_id = $("#cancelModal")
+                .modal("show")
+                .find("#cancelModalConfirmBtn")
+                .attr("data-id");
+            let reason = $("#modal-cancellation-reason").val();
+            if (hold_id) {
+                hold_ids = [hold_id];
+            } else {
+                hold_ids = $(".holds_table .select_hold:checked")
+                    .toArray()
+                    .map(el => $(el).data("id"));
+            }
+            $("#cancelModal")
+                .find(".modal-footer #cancelModalConfirmBtn")
+                .before(
+                    '<img src="/intranet-tmpl/prog/img/spinner-small.gif" alt="" style="padding-right: 10px;"/>'
+                );
+            deleteHolds(hold_ids, reason);
+            $("#cancelModal")
+                .modal("show")
+                .find("#cancelModalConfirmBtn")
+                .attr("data-id", "");
+        });
+        async function deleteHolds(hold_ids, reason) {
+            for (const hold_id of hold_ids) {
+                await deleteHold(hold_id, reason);
+                $("#cancelModal")
+                    .find(".modal-body")
+                    .append(
+                        '<p class="hold-cancelled">' +
+                            __("Hold") +
+                            " " +
+                            hold_id +
+                            " " +
+                            __("cancelled") +
+                            "</p>"
+                    );
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+
+            holdsQueueTable.api().ajax.reload(null, false);
+            setTimeout(() => {
+                $("#cancelModal").modal("hide");
+                $("#cancelModal")
+                    .find(".modal-footer #cancelModalConfirmBtn")
+                    .prev("img")
+                    .remove();
+                $("#cancelModal")
+                    .find(".modal-body")
+                    .find(".hold-cancelled")
+                    .remove();
+            });
+        }
+        async function deleteHold(hold_id, reason) {
+            try {
+                await $.ajax({
+                    method: "DELETE",
+                    url: "/api/v1/holds/" + encodeURIComponent(hold_id),
+                    data: JSON.stringify(reason),
+                });
+            } catch (error) {
+                console.error("Error when deleting hold: " + hold_id);
+            }
+        }
+        $(".holddate, .expirationdate").flatpickr({
+            onReady: function (selectedDates, dateStr, instance) {
+                $(instance.altInput)
+                    .wrap("<span class='flatpickr_wrapper'></span>")
+                    .after(
+                        $("<a/>")
+                            .attr("href", "#")
+                            .addClass("clear_date")
+                            .addClass("fa fa-times")
+                            .addClass("ps-2")
+                            .on("click", function (e) {
+                                e.preventDefault();
+                                instance.clear();
+                            })
+                            .attr("aria-hidden", true)
+                    );
+            },
+            onChange: function (selectedDates, dateStr, instance) {
+                let hold_id = $(instance.input).attr("data-id");
+                let fieldname = $(instance.input).attr("name");
+                let current_date = $(instance.input).attr("data-current-date");
+                dateStr = dateStr ? dateStr : null;
+                let req =
+                    fieldname == "hold_date"
+                        ? { hold_date: dateStr }
+                        : { expiration_date: dateStr };
+                if (current_date != dateStr) {
+                    $.ajax({
+                        method: "PATCH",
+                        url: "/api/v1/holds/" + encodeURIComponent(hold_id),
+                        contentType: "application/json",
+                        data: JSON.stringify(req),
+                        success: function (data) {
+                            holdsQueueTable.api().ajax.reload(null, false);
+                        },
+                        error: function (jqXHR, textStatus, errorThrown) {
+                            holdsQueueTable.api().ajax.reload(null, false);
+                        },
+                    });
+                }
+            },
+        });
+        $(".suspenddate").flatpickr({
+            onReady: function (selectedDates, dateStr, instance) {
+                $(instance.altInput)
+                    .wrap("<span class='flatpickr_wrapper'></span>")
+                    .after(
+                        $("<a/>")
+                            .attr("href", "#")
+                            .addClass("clear_date")
+                            .addClass("fa fa-times")
+                            .addClass("ps-2")
+                            .on("click", function (e) {
+                                e.preventDefault();
+                                instance.clear();
+                            })
+                            .attr("aria-hidden", true)
+                    );
+            },
+        });
+        $(".toggle-suspend").one("click", function (e) {
+            e.preventDefault();
+            const hold_id = $(this).data("id");
+            const suspended = $(this).attr("data-suspended");
+            const input = $(`.suspenddate[data-id="${hold_id}"]`);
+            const method = suspended == "true" ? "DELETE" : "POST";
+            let end_date = input.val() && method == "POST" ? input.val() : null;
+            let params =
+                end_date !== null && end_date !== ""
+                    ? JSON.stringify({ end_date: end_date })
+                    : null;
+            $.ajax({
+                method: method,
+                url:
+                    "/api/v1/holds/" +
+                    encodeURIComponent(hold_id) +
+                    "/suspension",
+                contentType: "application/json",
+                data: params,
+                success: function (data) {
+                    holdsQueueTable.api().ajax.reload(null, false);
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    holdsQueueTable.api().ajax.reload(null, false);
+                    alert(
+                        "There was an error:" + textStatus + " " + errorThrown
+                    );
+                },
+            });
+        });
+        $(".rank-request").on("change", function (e) {
+            e.preventDefault();
+            const hold_id = $(this).data("id");
+            let priority = e.target.value;
+            $.ajax({
+                method: "PUT",
+                url:
+                    "/api/v1/holds/" +
+                    encodeURIComponent(hold_id) +
+                    "/priority",
+                data: JSON.stringify(priority),
+                success: function (data) {
+                    holdsQueueTable.api().ajax.reload(null, false);
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    alert(
+                        "There was an error:" + textStatus + " " + errorThrown
+                    );
+                },
+            });
+        });
+        $(".move-hold").one("click", function (e) {
+            e.preventDefault();
+            let toPosition = $(this).attr("data-move-hold");
+            let priority = $(this).attr("data-priority");
+            var res_id = $(this).attr("reserve_id");
+            var moveTo;
+            if (toPosition == "up") {
+                moveTo = parseInt(priority) - 1;
+            }
+            if (toPosition == "down") {
+                moveTo = parseInt(priority) + 1;
+            }
+            if (toPosition == "top") {
+                moveTo = 1;
+            }
+            if (toPosition == "bottom") {
+                moveTo = totalHolds;
+            }
+            $.ajax({
+                method: "PUT",
+                url:
+                    "/api/v1/holds/" + encodeURIComponent(res_id) + "/priority",
+                data: JSON.stringify(moveTo),
+                success: function (data) {
+                    holdsQueueTable.api().ajax.reload(null, false);
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    alert(
+                        "There was an error:" + textStatus + " " + errorThrown
+                    );
+                },
+            });
+        });
+        $(".toggle-lowest-priority").one("click", function (e) {
+            e.preventDefault();
+            var res_id = $(this).attr("data-reserve_id");
+            $.ajax({
+                method: "PUT",
+                url:
+                    "/api/v1/holds/" +
+                    encodeURIComponent(res_id) +
+                    "/lowest_priority",
+                success: function (data) {
+                    holdsQueueTable.api().ajax.reload(null, false);
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    alert(
+                        "There was an error:" + textStatus + " " + errorThrown
+                    );
+                },
+            });
+        });
+        $(".hold_location_select").on("change", function () {
+            $(this).prop("disabled", true);
+            var cur_select = $(this);
+            var res_id = $(this).attr("reserve_id");
+            $(this).after(
+                '<div id="updating_reserveno' +
+                    res_id +
+                    '" class="waiting"><img src="/intranet-tmpl/prog/img/spinner-small.gif" alt="" /><span class="waiting_msg"></span></div>'
+            );
+            let api_url =
+                "/api/v1/holds/" +
+                encodeURIComponent(res_id) +
+                "/pickup_location";
+            $.ajax({
+                method: "PUT",
+                url: api_url,
+                data: JSON.stringify({ pickup_library_id: $(this).val() }),
+                headers: { "x-koha-override": "any" },
+                success: function (data) {
+                    holdsQueueTable.api().ajax.reload(null, false);
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    alert(
+                        "There was an error:" + textStatus + " " + errorThrown
+                    );
+                    cur_select.prop("disabled", false);
+                    $("#updating_reserveno" + res_id).remove();
+                    cur_select.val(
+                        cur_select.children('option[selected="selected"]').val()
+                    );
+                },
+            });
+        });
+        $(".printholdslip").one("click", function () {
+            var reserve_id = $(this).attr("data-reserve_id");
+            window.open(
+                "/cgi-bin/koha/circ/hold-transfer-slip.pl?reserve_id=" +
+                    reserve_id
+            );
+            return false;
+        });
+    });
+}

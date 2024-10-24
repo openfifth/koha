@@ -123,6 +123,16 @@ properties:
       - object
       - "null"
     description: The item
+  item_group:
+    type:
+      - object
+      - "null"
+    description: The item group
+  patron:
+    type:
+      - object
+      - "null"
+    description: The patron
   pickup_library:
     type:
       - object
