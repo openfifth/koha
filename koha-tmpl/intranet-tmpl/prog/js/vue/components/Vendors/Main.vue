@@ -37,8 +37,15 @@ import { APIClient } from "../../fetch/api-client.js";
 export default {
     setup() {
         const vendorStore = inject("vendorStore");
-        const { config, authorisedValues } = storeToRefs(vendorStore);
-        const { loadAuthorisedValues } = vendorStore;
+        const {
+            config,
+            authorisedValues,
+            user,
+            currencies,
+            libraryGroups,
+            gstValues,
+        } = storeToRefs(vendorStore);
+        const { loadAuthorisedValues, setLibraryGroups } = vendorStore;
 
         const mainStore = inject("mainStore");
         const { loading, loaded, setError } = mainStore;
@@ -55,6 +62,11 @@ export default {
             config,
             loadAuthorisedValues,
             authorisedValues,
+            user,
+            currencies,
+            libraryGroups,
+            gstValues,
+            setLibraryGroups,
         };
     },
     beforeCreate() {
@@ -63,19 +75,29 @@ export default {
         this.loadAuthorisedValues(this.authorisedValues, this.vendorStore).then(
             () => {
                 this.loadUserPermissions().then(() => {
-                    this.config.settings.edifact = edifact;
-                    this.config.settings.ermModule = ermModule;
-                    this.config.settings.marcOrderAutomation =
-                        marcOrderAutomation;
-                    this.vendorStore.currencies = currencies;
-                    this.vendorStore.gstValues = gstValues.map(gv => {
-                        return {
-                            label: `${Number(gv.option * 100).format_price()}%`,
-                            value: gv.option,
-                        };
-                    });
-                    this.loaded();
-                    this.initialized = true;
+                    const libraryClient = APIClient.libraries;
+                    libraryClient.libraryGroups.getAll().then(
+                        libraryGroups => {
+                            this.setLibraryGroups(libraryGroups);
+                            this.config.settings.edifact = edifact;
+                            this.config.settings.ermModule = ermModule;
+                            this.config.settings.marcOrderAutomation =
+                                marcOrderAutomation;
+                            this.vendorStore.currencies = currencies;
+                            this.user.loggedInUser = loggedInUser;
+                            this.user.loggedInUser.loggedInBranch =
+                                loggedInBranch.branchcode;
+                            this.vendorStore.gstValues = gstValues.map(gv => {
+                                return {
+                                    label: `${Number(gv.option * 100).format_price()}%`,
+                                    value: gv.option,
+                                };
+                            });
+                            this.loaded();
+                            this.initialized = true;
+                        },
+                        error => {}
+                    );
                 });
             }
         );

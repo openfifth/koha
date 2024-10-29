@@ -39,11 +39,12 @@ my ( $template, $loggedinuser, $cookie, $userflags ) = get_template_and_user(
 my @gst_values = map { option => $_ + 0.0 }, split( '\|', C4::Context->preference("TaxRates") );
 
 $template->param(
-    currencies  => Koha::Acquisition::Currencies->search->unblessed,
-    gst_values  => \@gst_values,
-    edifact     => C4::Context->preference('EDIFACT'),
-    marc_orders => C4::Context->preference('MarcOrderingAutomation'),
-    erm_module  => C4::Context->preference('ERMModule')
+    currencies       => Koha::Acquisition::Currencies->search->unblessed,
+    gst_values       => \@gst_values,
+    edifact          => C4::Context->preference('EDIFACT'),
+    marc_orders      => C4::Context->preference('MarcOrderingAutomation'),
+    erm_module       => C4::Context->preference('ERMModule'),
+    logged_in_branch => { branchcode => C4::Context::mybranch },
 );
 
 output_html_with_http_headers $query, $cookie, $template->output;
