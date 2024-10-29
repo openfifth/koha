@@ -19,4 +19,10 @@ properties:
   erm_module:
     type: boolean
     description: ERMModule system preference value
+  logged_in_user:
+    type: object
+    description: The patron logged in to this session
+  logged_in_branch:
+    type: string
+    description: The branch that the patron has logged in to this session
 additionalProperties: false

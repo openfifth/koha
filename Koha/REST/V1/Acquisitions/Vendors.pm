@@ -226,12 +226,14 @@ sub config {
     return $c->render(
         status  => 200,
         openapi => {
-            permissions => $permissions,
-            currencies  => Koha::Acquisition::Currencies->search->unblessed,
-            gst_values  => \@gst_values,
-            edifact     => C4::Context->preference('EDIFACT'),
-            marc_orders => C4::Context->preference('MarcOrderingAutomation'),
-            erm_module  => C4::Context->preference('ERMModule'),
+            permissions      => $permissions,
+            currencies       => Koha::Acquisition::Currencies->search->unblessed,
+            gst_values       => \@gst_values,
+            edifact          => C4::Context->preference('EDIFACT'),
+            marc_orders      => C4::Context->preference('MarcOrderingAutomation'),
+            erm_module       => C4::Context->preference('ERMModule'),
+            logged_in_user   => $patron,
+            logged_in_branch => C4::Context::mybranch,
         },
     );
 }
