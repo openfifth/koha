@@ -156,6 +156,7 @@ export default {
             additionalToolbarButtons,
             defaultToolbarButtons,
             stickyToolbar: ["Form"],
+            extendedAttributesResourceType: "vendor",
             resourceAttrs: [
                 {
                     name: "id",
