@@ -19,6 +19,11 @@
             <VendorContacts :vendor="vendor" />
             <VendorInterfaces :vendor="vendor" />
             <VendorOrderingInformation :vendor="vendor" />
+            <AdditionalFieldsEntry
+                resource_type="vendor"
+                :additional_field_values="vendor.extended_attributes"
+                @additional-fields-changed="additionalFieldsChanged"
+            />
         </form>
     </template>
 </template>
@@ -33,6 +38,7 @@ import VendorOrderingInformation from "./VendorOrderingInformation.vue";
 import VendorInterfaces from "./VendorInterfaces.vue";
 import Toolbar from "../Toolbar.vue";
 import ToolbarButton from "../ToolbarButton.vue";
+import AdditionalFieldsEntry from "../AdditionalFieldsEntry.vue";
 
 export default {
     data() {
@@ -66,6 +72,7 @@ export default {
                 aliases: [],
                 contacts: [],
                 interfaces: [],
+                extended_attributes: [],
             },
             initialized: false,
         };
@@ -118,6 +125,7 @@ export default {
             }
             delete vendor.physical;
             delete vendor.subscriptions_count;
+            delete vendor._strings;
 
             vendor.contacts = this.checkContactOrInterface(
                 vendor.contacts.map(
@@ -168,6 +176,9 @@ export default {
                 return acc;
             }, []);
         },
+        additionalFieldsChanged(additionalFieldValues) {
+            this.vendor.extended_attributes = additionalFieldValues;
+        },
     },
     components: {
         ButtonSubmit,
@@ -177,6 +188,7 @@ export default {
         VendorInterfaces,
         Toolbar,
         ToolbarButton,
+        AdditionalFieldsEntry,
     },
     name: "VendorFormAdd",
 };
