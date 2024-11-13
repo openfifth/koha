@@ -1,4 +1,4 @@
-package Koha::BiblioFramework;
+package Koha::BiblioFrameworkMarcMatcher;
 
 # This file is part of Koha.
 #
@@ -23,7 +23,7 @@ use base qw(Koha::Object);
 
 =head1 NAME
 
-Koha::BiblioFramework - Koha BiblioFramework Object class
+Koha::BiblioFrameworkMarcMatcher
 
 =head1 API
 
@@ -31,29 +31,12 @@ Koha::BiblioFramework - Koha BiblioFramework Object class
 
 =cut
 
-=head3 delete
-
-See L<Koha::Object/delete>
-
-=cut
-
-sub delete {
-    my ($self) = @_;
-
-    my $biblio_framework_marc_matcher = Koha::BiblioFrameworkMarcMatchers->find( $self->frameworkcode );
-    if ($biblio_framework_marc_matcher) {
-        $biblio_framework_marc_matcher->delete();
-    }
-
-    $self->SUPER::delete();
-}
-
 =head3 type
 
 =cut
 
 sub _type {
-    return 'BiblioFramework';
+    return 'BiblioFrameworkMarcMatcher';
 }
 
 1;
