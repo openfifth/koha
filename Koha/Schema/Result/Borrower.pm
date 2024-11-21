@@ -1376,6 +1376,51 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 fiscal_periods
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::FiscalPeriod>
+
+=cut
+
+__PACKAGE__->has_many(
+  "fiscal_periods",
+  "Koha::Schema::Result::FiscalPeriod",
+  { "foreign.owner_id" => "self.borrowernumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+=head2 fund_allocations
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::FundAllocation>
+
+=cut
+
+__PACKAGE__->has_many(
+  "fund_allocations",
+  "Koha::Schema::Result::FundAllocation",
+  { "foreign.owner_id" => "self.borrowernumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+=head2 funds
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::Fund>
+
+=cut
+
+__PACKAGE__->has_many(
+  "funds",
+  "Koha::Schema::Result::Fund",
+  { "foreign.owner_id" => "self.borrowernumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 hold_fill_targets
 
 Type: has_many
@@ -1568,6 +1613,21 @@ __PACKAGE__->has_many(
   "items_last_borrowers",
   "Koha::Schema::Result::ItemsLastBorrower",
   { "foreign.borrowernumber" => "self.borrowernumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+=head2 ledgers
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::Ledger>
+
+=cut
+
+__PACKAGE__->has_many(
+  "ledgers",
+  "Koha::Schema::Result::Ledger",
+  { "foreign.owner_id" => "self.borrowernumber" },
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
@@ -1889,6 +1949,21 @@ __PACKAGE__->belongs_to(
     on_delete     => "SET NULL",
     on_update     => "CASCADE",
   },
+);
+
+=head2 sub_funds
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::SubFund>
+
+=cut
+
+__PACKAGE__->has_many(
+  "sub_funds",
+  "Koha::Schema::Result::SubFund",
+  { "foreign.owner_id" => "self.borrowernumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
 );
 
 =head2 subscriptionroutinglists
