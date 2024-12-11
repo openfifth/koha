@@ -539,6 +539,7 @@ __PACKAGE__->set_primary_key("itemnumber");
 __PACKAGE__->add_columns(
     '+bookable'                          => { is_boolean => 1 },
     '+exclude_from_local_holds_priority' => { is_boolean => 1 },
+    '+is_closed_stack'                   => { is_boolean => 1 },
 );
 
 sub koha_objects_class {

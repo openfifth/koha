@@ -1032,6 +1032,7 @@ __PACKAGE__->belongs_to(
 __PACKAGE__->add_columns(
     '+bookable'                          => { is_boolean => 1 },
     '+exclude_from_local_holds_priority' => { is_boolean => 1 },
+    '+is_closed_stack'                   => { is_boolean => 1 },
 );
 
 # Relationship with orders via the aqorders_item table that not have foreign keys
