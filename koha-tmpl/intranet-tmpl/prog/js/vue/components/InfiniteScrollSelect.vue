@@ -10,6 +10,7 @@
         @option:selected="onSelected"
         @search="searchFilter($event)"
         ref="select"
+        :disabled="disabled"
     >
         <template v-if="required" #search="{ attributes, events }">
             <input
@@ -43,6 +44,10 @@ export default {
         dataIdentifier: String,
         label: String,
         required: Boolean,
+        apiClient: String,
+        filters: Object,
+        headers: Object,
+        disabled: Boolean,
     },
     emits: ["update:modelValue"],
     setup(props, { emit }) {
@@ -50,9 +55,11 @@ export default {
         const limit = ref(null);
         const searchString = ref("");
         const scrollPage = ref(null);
-        const data = ref([props.selectedData]);
+        const data = ref([...(props.selectedData ? [props.selectedData] : [])]);
         const paginationRequired = ref(false);
-        const selectedOptionLabel = ref(props.selectedData[props.label]);
+        const selectedOptionLabel = ref(
+            props.selectedData ? props.selectedData[props.label] : null
+        );
 
         const model = computed({
             get() {
@@ -78,16 +85,18 @@ export default {
         const loadingBlock = useTemplateRef("load");
         const select = useTemplateRef("select");
 
-        const fetchInitialData = async dataType => {
-            const client = APIClient.erm;
+        const fetchInitialData = async (dataType, filters) => {
+            const filterOptions = filters || {};
+            const client = APIClient[props.apiClient];
             await client[dataType]
                 .getAll(
-                    {},
+                    filterOptions,
                     {
                         _page: 1,
                         _per_page: 20,
                         _match: "contains",
-                    }
+                    },
+                    props.headers
                 )
                 .then(
                     items => {
@@ -105,9 +114,9 @@ export default {
                 observer.value.disconnect();
                 data.value = [];
                 searchString.value = e;
-                const client = APIClient.erm;
+                const client = APIClient[props.apiClient];
                 const attribute = "me." + props.label;
-                const q = {};
+                const q = props.filters || {};
                 q[attribute] = { like: `%${e}%` };
                 await client[props.dataType]
                     .getAll(q, {
@@ -125,7 +134,7 @@ export default {
         };
         const onOpen = async () => {
             paginationRequired.value = true;
-            await fetchInitialData(props.dataType);
+            await fetchInitialData(props.dataType, props.filters);
             if (hasNextPage.value) {
                 await nextTick();
                 observer.value.observe(loadingBlock.value);
@@ -139,16 +148,18 @@ export default {
                     limit.value += 20;
                     scrollPage.value++;
                     await nextTick();
-                    const client = APIClient.erm;
+                    const filterOptions = props.filters || {};
+                    const client = APIClient[props.apiClient];
                     ul.scrollTop = scrollTop;
                     await client[props.dataType]
                         .getAll(
-                            {},
+                            filterOptions,
                             {
                                 _page: scrollPage,
                                 _per_page: 20,
                                 _match: "contains",
-                            }
+                            },
+                            props.headers
                         )
                         .then(
                             items => {
@@ -163,7 +174,7 @@ export default {
         };
         const resetSelect = async () => {
             if (select.value.open) {
-                await fetchInitialData(props.dataType);
+                await fetchInitialData(props.dataType, props.filters);
                 if (hasNextPage.value) {
                     await nextTick();
                     observer.value.observe(loadingBlock.value);
