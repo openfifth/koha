@@ -300,6 +300,8 @@ __PACKAGE__->add_columns(
   { data_type => "tinyint", default_value => 0, is_nullable => 0 },
   "non_priority",
   { data_type => "tinyint", default_value => 0, is_nullable => 0 },
+  "closed_stack_request_slip_printed",
+  { data_type => "tinyint", default_value => 0, is_nullable => 0 },
 );
 
 =head1 PRIMARY KEY
