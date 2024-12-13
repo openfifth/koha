@@ -176,18 +176,18 @@
 </template>
 
 <script>
-import flatPickr from "vue-flatpickr-component"
-import { inject } from "vue"
-import { storeToRefs } from "pinia"
-import { APIClient } from "../../../fetch/api-client.js"
-import { setMessage, setWarning } from "../../../messages"
-import ButtonSubmit from "../../ButtonSubmit.vue"
+import flatPickr from "vue-flatpickr-component";
+import { inject } from "vue";
+import { storeToRefs } from "pinia";
+import { APIClient } from "../../../fetch/api-client.js";
+import { setMessage, setWarning } from "../../../messages";
+import ButtonSubmit from "../../ButtonSubmit.vue";
 
 export default {
     setup() {
-        const acquisitionsStore = inject("acquisitionsStore")
+        const acquisitionsStore = inject("acquisitionsStore");
         const { libraryGroups, getVisibleGroups, getOwners } =
-            storeToRefs(acquisitionsStore)
+            storeToRefs(acquisitionsStore);
 
         const {
             isUserPermitted,
@@ -195,7 +195,7 @@ export default {
             filterOwnersBasedOnGroup,
             resetOwnersAndVisibleGroups,
             formatLibraryGroupIds,
-        } = acquisitionsStore
+        } = acquisitionsStore;
 
         return {
             isUserPermitted,
@@ -206,7 +206,7 @@ export default {
             resetOwnersAndVisibleGroups,
             getVisibleGroups,
             getOwners,
-        }
+        };
     },
     data() {
         return {
@@ -227,80 +227,79 @@ export default {
                 end_date: undefined,
                 spend_limit: 0,
             },
-        }
+        };
     },
     beforeRouteEnter(to, from, next) {
         next(vm => {
             if (to.params.fiscal_period_id) {
-                vm.getFiscalPeriod(to.params.fiscal_period_id)
+                vm.getFiscalPeriod(to.params.fiscal_period_id);
             } else {
-                vm.initialized = true
+                vm.initialized = true;
             }
-        })
+        });
     },
     methods: {
         async getFiscalPeriod(fiscal_period_id) {
-            const client = APIClient.acquisition
+            const client = APIClient.acquisition;
             client.fiscalPeriods.get(fiscal_period_id).then(fiscal_period => {
-                this.fiscal_period = fiscal_period
+                this.fiscal_period = fiscal_period;
                 this.fiscal_period.lib_group_visibility =
                     this.formatLibraryGroupIds(
                         fiscal_period.lib_group_visibility
-                    )
-                this.initialized = true
-            })
+                    );
+                this.initialized = true;
+            });
         },
         onSubmit(e) {
-            e.preventDefault()
+            e.preventDefault();
 
             if (!this.isUserPermitted("createFiscalPeriods")) {
                 setWarning(
                     this.$__(
                         "You do not have the required permissions to create fiscal periods."
                     )
-                )
-                return
+                );
+                return;
             }
 
-            const fiscal_period = JSON.parse(JSON.stringify(this.fiscal_period))
-            const fiscal_period_id = fiscal_period.fiscal_period_id
+            const fiscal_period = JSON.parse(
+                JSON.stringify(this.fiscal_period)
+            );
+            const fiscal_period_id = fiscal_period.fiscal_period_id;
 
-            const visibility = fiscal_period.lib_group_visibility.join("|")
-            fiscal_period.lib_group_visibility = visibility || null
-
-            delete fiscal_period.fiscal_period_id
+            delete fiscal_period.fiscal_period_id;
 
             if (fiscal_period_id) {
-                const acq_client = APIClient.acquisition
+                const acq_client = APIClient.acquisition;
                 acq_client.fiscalPeriods
                     .update(fiscal_period, fiscal_period_id)
                     .then(
                         success => {
-                            setMessage(this.$__("Fiscal period updated"))
-                            this.$router.push({ name: "FiscalPeriodList" })
+                            setMessage(this.$__("Fiscal period updated"));
+                            this.$router.push({ name: "FiscalPeriodList" });
                         },
                         error => {}
-                    )
+                    );
             } else {
-                const acq_client = APIClient.acquisition
+                const acq_client = APIClient.acquisition;
                 acq_client.fiscalPeriods.create(fiscal_period).then(
                     success => {
-                        setMessage(this.$__("Fiscal period created"))
-                        this.$router.push({ name: "FiscalPeriodList" })
+                        setMessage(this.$__("Fiscal period created"));
+                        this.$router.push({ name: "FiscalPeriodList" });
                     },
                     error => {}
-                )
+                );
             }
         },
     },
     unmounted() {
-        this.resetOwnersAndVisibleGroups()
+        this.resetOwnersAndVisibleGroups();
     },
     components: {
         flatPickr,
         ButtonSubmit,
     },
-}
+};
 </script>
 
 <style scoped></style>

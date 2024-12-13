@@ -219,18 +219,18 @@
 </template>
 
 <script>
-import { inject } from "vue"
-import { storeToRefs } from "pinia"
-import { APIClient } from "../../../fetch/api-client.js"
-import { setMessage, setWarning } from "../../../messages"
-import InfiniteScrollSelect from "../../InfiniteScrollSelect.vue"
-import ButtonSubmit from "../../ButtonSubmit.vue"
+import { inject } from "vue";
+import { storeToRefs } from "pinia";
+import { APIClient } from "../../../fetch/api-client.js";
+import { setMessage, setWarning } from "../../../messages";
+import InfiniteScrollSelect from "../../InfiniteScrollSelect.vue";
+import ButtonSubmit from "../../ButtonSubmit.vue";
 
 export default {
     setup() {
-        const acquisitionsStore = inject("acquisitionsStore")
+        const acquisitionsStore = inject("acquisitionsStore");
         const { libraryGroups, getVisibleGroups, getOwners } =
-            storeToRefs(acquisitionsStore)
+            storeToRefs(acquisitionsStore);
 
         const {
             isUserPermitted,
@@ -238,10 +238,10 @@ export default {
             filterOwnersBasedOnGroup,
             resetOwnersAndVisibleGroups,
             formatLibraryGroupIds,
-        } = acquisitionsStore
+        } = acquisitionsStore;
 
-        const AVStore = inject("AVStore")
-        const { acquire_fund_types } = storeToRefs(AVStore)
+        const AVStore = inject("AVStore");
+        const { acquire_fund_types } = storeToRefs(AVStore);
 
         return {
             isUserPermitted,
@@ -253,7 +253,7 @@ export default {
             getVisibleGroups,
             getOwners,
             acquire_fund_types,
-        }
+        };
     },
     data() {
         return {
@@ -282,92 +282,92 @@ export default {
             ledgers: [],
             ledgerGroups: [],
             fundGroupOptions: [],
-        }
+        };
     },
     beforeRouteEnter(to, from, next) {
         next(vm => {
-            vm.getDataRequiredForPageLoad(to.params.fund_id)
-        })
+            vm.getDataRequiredForPageLoad(to.params.fund_id);
+        });
     },
     methods: {
         async getDataRequiredForPageLoad(fund_id) {
             this.getFundGroups().then(() => {
                 if (fund_id) {
                     this.getFund(fund_id).then(() => {
-                        this.getFiscalPeriod(this.fund.fiscal_period_id)
-                    })
+                        this.getFiscalPeriod(this.fund.fiscal_period_id);
+                    });
                 } else {
-                    this.initialized = true
+                    this.initialized = true;
                 }
-            })
+            });
         },
         async getFund(fund_id) {
-            const client = APIClient.acquisition
+            const client = APIClient.acquisition;
             await client.funds.get(fund_id).then(fund => {
-                this.fund = fund
+                this.fund = fund;
                 this.fund.lib_group_visibility = this.formatLibraryGroupIds(
                     fund.lib_group_visibility
-                )
-                this.filterLedgersBySelectedFiscalPeriod(fund.fiscal_period_id)
-            })
+                );
+                this.filterLedgersBySelectedFiscalPeriod(fund.fiscal_period_id);
+            });
         },
         async getFundGroups() {
-            const client = APIClient.acquisition
+            const client = APIClient.acquisition;
             await client.fundGroups.getAll().then(fundGroups => {
-                this.fundGroups = fundGroups
-            })
+                this.fundGroups = fundGroups;
+            });
         },
         async getFiscalPeriod(fiscal_period_id) {
-            const client = APIClient.acquisition
+            const client = APIClient.acquisition;
             await client.fiscalPeriods
                 .get(fiscal_period_id, { "x-koha-embed": "ledgers" })
                 .then(
                     fiscalPeriod => {
-                        this.fiscalPeriod = fiscalPeriod
+                        this.fiscalPeriod = fiscalPeriod;
                         this.filterLibGroupsAndFundGroupsBySelectedLedger(
                             this.fund.ledger_id
-                        )
-                        this.initialized = true
+                        );
+                        this.initialized = true;
                     },
                     error => {}
-                )
+                );
         },
         filterLedgersBySelectedFiscalPeriod(e) {
             if (!e) {
-                this.ledgers = []
-                this.fund.ledger_id = null
-                this.fund.lib_group_visibility = []
-                return
+                this.ledgers = [];
+                this.fund.ledger_id = null;
+                this.fund.lib_group_visibility = [];
+                return;
             }
 
             this.getFiscalPeriod(e).then(() => {
-                const { ledgers: ledgers } = this.fiscalPeriod
+                const { ledgers: ledgers } = this.fiscalPeriod;
                 if (!ledgers || ledgers.length === 0) {
                     setWarning(
                         this.$__(
                             "There are no ledgers attached to this fiscal period. Please create one or select a different fiscal period."
                         )
-                    )
-                    this.ledger.fiscal_period_id = null
-                    return
+                    );
+                    this.ledger.fiscal_period_id = null;
+                    return;
                 }
-                this.ledgers = ledgers
-            })
+                this.ledgers = ledgers;
+            });
             if (e !== this.fund.fiscal_period_id) {
-                this.fund.ledger_id = null
-                this.fund.lib_group_visibility = []
+                this.fund.ledger_id = null;
+                this.fund.lib_group_visibility = [];
             }
         },
         filterLibGroupsAndFundGroupsBySelectedLedger(e) {
             const selectedLedger = this.fiscalPeriod.ledgers.find(
                 ledger => ledger.ledger_id === e
-            )
+            );
             if (selectedLedger) {
                 const applicableGroups = this.formatLibraryGroupIds(
                     selectedLedger.lib_group_visibility
-                )
-                this.ledgerGroups = applicableGroups
-                this.resetOwnersAndVisibleGroups(applicableGroups)
+                );
+                this.ledgerGroups = applicableGroups;
+                this.resetOwnersAndVisibleGroups(applicableGroups);
 
                 const fundGroupsWithMatchingCurrencyAndVisibility =
                     this.fundGroups
@@ -377,70 +377,67 @@ export default {
                         .map(group => {
                             const groupVisibility = this.formatLibraryGroupIds(
                                 group.lib_group_visibility
-                            )
+                            );
                             const matchFound = groupVisibility.some(item =>
                                 applicableGroups.includes(item)
-                            )
+                            );
                             if (matchFound) {
-                                return group
+                                return group;
                             } else {
-                                return null
+                                return null;
                             }
                         })
-                        .filter(group => group !== null)
+                        .filter(group => group !== null);
                 this.fundGroupOptions =
-                    fundGroupsWithMatchingCurrencyAndVisibility
+                    fundGroupsWithMatchingCurrencyAndVisibility;
             }
         },
         onSubmit(e) {
-            e.preventDefault()
+            e.preventDefault();
 
             if (!this.isUserPermitted("createFund")) {
                 setWarning(
                     this.$__(
                         "You do not have the required permissions to create funds."
                     )
-                )
-                return
+                );
+                return;
             }
 
-            const fund = JSON.parse(JSON.stringify(this.fund))
-            const fund_id = fund.fund_id
+            const fund = JSON.parse(JSON.stringify(this.fund));
+            const fund_id = fund.fund_id;
 
-            const visibility = fund.lib_group_visibility.join("|")
-            fund.lib_group_visibility = visibility || null
-
-            delete fund.fund_id
+            delete fund.fund_id;
 
             if (fund_id) {
-                const acq_client = APIClient.acquisition
+                const acq_client = APIClient.acquisition;
                 acq_client.funds.update(fund, fund_id).then(
                     success => {
-                        setMessage(this.$__("Fund updated"))
-                        this.$router.push({ name: "FundList" })
+                        setMessage(this.$__("Fund updated"));
+                        this.$router.push({ name: "FundList" });
                     },
                     error => {}
-                )
+                );
             } else {
-                const acq_client = APIClient.acquisition
+                const acq_client = APIClient.acquisition;
                 acq_client.funds.create(fund).then(
                     success => {
-                        setMessage(this.$__("Fund created"))
-                        this.$router.push({ name: "FundList" })
+                        setMessage(this.$__("Fund created"));
+                        this.$router.push({ name: "FundList" });
                     },
                     error => {}
-                )
+                );
             }
         },
     },
     unmounted() {
-        this.resetOwnersAndVisibleGroups()
+        this.resetOwnersAndVisibleGroups();
     },
     components: {
         InfiniteScrollSelect,
         ButtonSubmit,
     },
-}
+};
 </script>
 
 <style scoped>

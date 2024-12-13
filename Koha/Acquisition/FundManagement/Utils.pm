@@ -44,16 +44,15 @@ sub cascade_lib_group_visibility {
         my @groups_to_delete = ();
 
         foreach my $group (@child_groups) {
-            push( @groups_to_keep,   $group ) if grep( /^$group$/,  @parent_groups );
-            push( @groups_to_delete, $group ) if !grep( /^$group$/, @parent_groups );
+            push( @groups_to_keep,   $group ) if grep( /^$group$/,  @parent_groups ) && $group ne '';
+            push( @groups_to_delete, $group ) if !grep( /^$group$/, @parent_groups ) && $group ne '';
         }
 
         if ( scalar(@groups_to_delete) == 0 ) {
             $change_detected = 0;
         } else {
-            my $new_visibility = scalar(@groups_to_keep) > 0 ? join( "|", @groups_to_keep ) : "";
             $change_detected = 1;
-            $child->lib_group_visibility($new_visibility);
+            $child->set_lib_group_visibility( { new_visibility => \@groups_to_keep } );
         }
     }
     return $change_detected;
@@ -69,8 +68,8 @@ This only applies to a parent being set to "inactive". Activating a parent objec
 sub cascade_status {
     my ( $self, $args ) = @_;
 
-    my $parent_status = $args->{parent_status};
-    my $child         = $args->{child};
+    my $parent_status   = $args->{parent_status};
+    my $child           = $args->{child};
     my $change_detected = 0;
 
     if ( $child->status != $parent_status && $parent_status == 0 ) {
@@ -79,7 +78,6 @@ sub cascade_status {
     }
     return $change_detected;
 }
-
 
 =head3 cascade_data
 
@@ -94,7 +92,7 @@ sub cascade_data {
     my $change_detected = 0;
 
     foreach my $property (@$properties) {
-        if( looks_like_number($property) ) {
+        if ( looks_like_number($property) ) {
             if ( $child->$property != $parent->$property ) {
                 $child->$property( $parent->$property );
                 $change_detected = 1;
