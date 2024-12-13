@@ -43,16 +43,21 @@ class HttpClient {
                 if (!response.ok) {
                     return response.text().then(text => {
                         let message;
+                        let errorResponse = {};
                         if (text) {
                             let json = JSON.parse(text);
                             message =
                                 json.error ||
                                 json.errors.map(e => e.message).join("\n") ||
                                 json;
+                            errorResponse = {
+                                message,
+                                ...json,
+                            };
                         } else {
                             message = response.statusText;
                         }
-                        throw new Error(message);
+                        throwDetailedError(message, errorResponse);
                     });
                 }
                 return return_response ? response : response.json();
@@ -61,8 +66,14 @@ class HttpClient {
                 res = result;
             })
             .catch(err => {
-                error = err;
-                setError(err);
+                if (err.dialog_confirm) {
+                    error = err.message;
+                    if (mark_submitting) submitted();
+                    throwDetailedError(err.message, err);
+                } else {
+                    error = err.message;
+                    setError(err.message);
+                }
             })
             .then(() => {
                 if (mark_submitting) submitted();
@@ -198,3 +209,12 @@ class HttpClient {
 }
 
 export default HttpClient;
+
+const throwDetailedError = (message, errorData) => {
+    let errorDetails = new Error(message);
+    errorDetails = {
+        ...errorDetails,
+        ...errorData,
+    };
+    throw errorDetails;
+};
