@@ -18,7 +18,7 @@ package Koha::Acquisition::FundManagement::SubFund;
 # along with Koha; if not, see <http://www.gnu.org/licenses>.
 
 use Modern::Perl;
-use base qw(Koha::Acquisition::FundManagement::Funds);
+use base qw(Koha::Object Koha::Object::Limit::LibraryGroup);
 
 use Koha::Acquisition::FundManagement::FiscalPeriod;
 use Koha::Acquisition::FundManagement::Ledger;
@@ -71,12 +71,13 @@ This method cascades changes to the values of the "lib_group_visibility" and "st
 =cut
 
 sub cascade_to_fund_allocations {
+
     # TODO: Needs to cascade to sub funds from parent fund and to FAs
     my ( $self, $args ) = @_;
 
-    my @fund_allocations = $self->fund_allocations->as_list;
-    my $lib_group_visibility       = $self->lib_group_visibility;
-    my $status           = $self->status;
+    my @fund_allocations     = $self->fund_allocations->as_list;
+    my $lib_group_visibility = $self->lib_group_visibility;
+    my $status               = $self->status;
 
     foreach my $fund_allocation (@fund_allocations) {
         my $visibility_updated = Koha::Acquisition::FundManagement::Utils->cascade_lib_group_visibility(
@@ -113,7 +114,7 @@ sub update_sub_fund_total {
     foreach my $allocation (@allocations) {
         $total += $allocation->allocation_amount;
     }
-    $self->sub_fund_value($total)->store({ no_cascade => 1 });
+    $self->sub_fund_value($total)->store( { no_cascade => 1 } );
 
     my $fund = $self->fund;
     $fund->update_fund_value;
@@ -168,7 +169,6 @@ sub fund_allocations {
     my $fund_allocation_rs = $self->_result->fund_allocations;
     return Koha::Acquisition::FundManagement::FundAllocations->_new_from_dbic($fund_allocation_rs);
 }
-
 
 =head3 owner
 

@@ -322,18 +322,18 @@
 </template>
 
 <script>
-import { inject } from "vue"
-import { storeToRefs } from "pinia"
-import { APIClient } from "../../../fetch/api-client.js"
-import { setMessage, setWarning } from "../../../messages"
-import InfiniteScrollSelect from "../../InfiniteScrollSelect.vue"
-import ButtonSubmit from "../../ButtonSubmit.vue"
+import { inject } from "vue";
+import { storeToRefs } from "pinia";
+import { APIClient } from "../../../fetch/api-client.js";
+import { setMessage, setWarning } from "../../../messages";
+import InfiniteScrollSelect from "../../InfiniteScrollSelect.vue";
+import ButtonSubmit from "../../ButtonSubmit.vue";
 
 export default {
     setup() {
-        const acquisitionsStore = inject("acquisitionsStore")
+        const acquisitionsStore = inject("acquisitionsStore");
         const { libraryGroups, getVisibleGroups, getOwners, currencies } =
-            storeToRefs(acquisitionsStore)
+            storeToRefs(acquisitionsStore);
 
         const {
             isUserPermitted,
@@ -341,7 +341,7 @@ export default {
             filterOwnersBasedOnGroup,
             resetOwnersAndVisibleGroups,
             formatLibraryGroupIds,
-        } = acquisitionsStore
+        } = acquisitionsStore;
 
         return {
             isUserPermitted,
@@ -353,7 +353,7 @@ export default {
             getVisibleGroups,
             getOwners,
             currencies,
-        }
+        };
     },
     data() {
         return {
@@ -386,112 +386,113 @@ export default {
             },
             fiscal_period: null,
             fiscal_period_groups: [],
-        }
+        };
     },
     beforeRouteEnter(to, from, next) {
         next(vm => {
-            vm.getDataRequiredForPageLoad(to.params.ledger_id)
-        })
+            vm.getDataRequiredForPageLoad(to.params.ledger_id);
+        });
     },
     methods: {
         async getDataRequiredForPageLoad(ledger_id) {
             if (ledger_id) {
                 this.getLedger(ledger_id).then(() => {
-                    this.getFiscalPeriod(this.ledger.fiscal_period_id)
-                })
+                    this.getFiscalPeriod(this.ledger.fiscal_period_id);
+                });
             } else {
-                this.initialized = true
+                this.initialized = true;
             }
         },
         async getLedger(ledger_id) {
-            const client = APIClient.acquisition
+            const client = APIClient.acquisition;
             await client.ledgers.get(ledger_id).then(ledger => {
-                this.ledger = ledger
-                this.ledger.oe_warning_percent = ledger.oe_warning_percent * 100
+                this.ledger = ledger;
+                this.ledger.oe_warning_percent =
+                    ledger.oe_warning_percent * 100;
                 this.ledger.lib_group_visibility = this.formatLibraryGroupIds(
                     ledger.lib_group_visibility
-                )
-                this.filterGroupsBySelectedFiscalPeriod(ledger.fiscal_period_id)
-            })
+                );
+                this.filterGroupsBySelectedFiscalPeriod(
+                    ledger.fiscal_period_id
+                );
+            });
         },
         async getFiscalPeriod(fiscal_period_id) {
-            const client = APIClient.acquisition
+            const client = APIClient.acquisition;
             await client.fiscalPeriods.get(fiscal_period_id).then(
                 fiscal_period => {
-                    this.fiscal_period = fiscal_period
-                    this.initialized = true
+                    this.fiscal_period = fiscal_period;
+                    this.initialized = true;
                 },
                 error => {}
-            )
+            );
         },
         filterGroupsBySelectedFiscalPeriod(e) {
             if (!e) {
-                this.fiscal_period_groups = []
-                this.ledger.lib_group_visibility = []
-                return
+                this.fiscal_period_groups = [];
+                this.ledger.lib_group_visibility = [];
+                return;
             }
             this.getFiscalPeriod(e).then(() => {
                 const applicableGroups = this.formatLibraryGroupIds(
                     this.fiscal_period.lib_group_visibility
-                )
-                this.fiscal_period_groups = applicableGroups
-                this.resetOwnersAndVisibleGroups(applicableGroups)
-            })
+                );
+                this.fiscal_period_groups = applicableGroups;
+                this.resetOwnersAndVisibleGroups(applicableGroups);
+            });
             if (e !== this.ledger.fiscal_period_id) {
-                this.ledger.lib_group_visibility = []
+                this.ledger.lib_group_visibility = [];
             }
         },
         onSubmit(e) {
-            e.preventDefault()
+            e.preventDefault();
 
             if (!this.isUserPermitted("createLedger")) {
                 setWarning(
                     this.$__(
                         "You do not have the required permissions to create ledgers."
                     )
-                )
-                return
+                );
+                return;
             }
 
-            const ledger = JSON.parse(JSON.stringify(this.ledger))
-            const ledger_id = ledger.ledger_id
+            const ledger = JSON.parse(JSON.stringify(this.ledger));
+            const ledger_id = ledger.ledger_id;
 
-            const visibility = ledger.lib_group_visibility.join("|")
-            ledger.lib_group_visibility = visibility || null
-            const oe_warning_percent = ledger.oe_warning_percent
-            ledger.oe_warning_percent = oe_warning_percent / 100
+            const oe_warning_percent = ledger.oe_warning_percent;
+            ledger.oe_warning_percent = oe_warning_percent / 100;
 
-            delete ledger.ledger_id
+            delete ledger.ledger_id;
 
             if (ledger_id) {
-                const acq_client = APIClient.acquisition
+                const acq_client = APIClient.acquisition;
                 acq_client.ledgers.update(ledger, ledger_id).then(
                     success => {
-                        setMessage(this.$__("Ledger updated"))
-                        this.$router.push({ name: "LedgerList" })
+                        setMessage(this.$__("Ledger updated"));
+                        this.$router.push({ name: "LedgerList" });
                     },
                     error => {}
-                )
+                );
             } else {
-                const acq_client = APIClient.acquisition
+                const acq_client = APIClient.acquisition;
                 acq_client.ledgers.create(ledger).then(
                     success => {
-                        setMessage(this.$__("Ledger created"))
-                        this.$router.push({ name: "LedgerList" })
+                        setMessage(this.$__("Ledger created"));
+                        this.$router.push({ name: "LedgerList" });
                     },
                     error => {}
-                )
+                );
             }
         },
     },
     unmounted() {
-        this.resetOwnersAndVisibleGroups()
+        this.resetOwnersAndVisibleGroups();
     },
     components: {
         InfiniteScrollSelect,
         ButtonSubmit,
     },
-}
+};
 </script>
 
 <style scoped>

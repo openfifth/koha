@@ -87,29 +87,29 @@
 </template>
 
 <script>
-import { inject } from "vue"
-import { storeToRefs } from "pinia"
-import { APIClient } from "../../../fetch/api-client.js"
-import { setMessage, setWarning } from "../../../messages"
-import InfiniteScrollSelect from "../../InfiniteScrollSelect.vue"
+import { inject } from "vue";
+import { storeToRefs } from "pinia";
+import { APIClient } from "../../../fetch/api-client.js";
+import { setMessage, setWarning } from "../../../messages";
+import InfiniteScrollSelect from "../../InfiniteScrollSelect.vue";
 
 export default {
     setup() {
-        const acquisitionsStore = inject("acquisitionsStore")
-        const { getVisibleGroups } = storeToRefs(acquisitionsStore)
+        const acquisitionsStore = inject("acquisitionsStore");
+        const { getVisibleGroups } = storeToRefs(acquisitionsStore);
 
         const {
             isUserPermitted,
             resetOwnersAndVisibleGroups,
             formatLibraryGroupIds,
-        } = acquisitionsStore
+        } = acquisitionsStore;
 
         return {
             isUserPermitted,
             formatLibraryGroupIds,
             resetOwnersAndVisibleGroups,
             getVisibleGroups,
-        }
+        };
     },
     data() {
         return {
@@ -120,89 +120,86 @@ export default {
                 lib_group_visibility: [],
             },
             currencies: [],
-        }
+        };
     },
     beforeRouteEnter(to, from, next) {
         next(vm => {
-            vm.getDataRequiredForPageLoad(to.params.fund_group_id)
-        })
+            vm.getDataRequiredForPageLoad(to.params.fund_group_id);
+        });
     },
     methods: {
         async getDataRequiredForPageLoad(fund_group_id) {
             this.getCurrencies().then(() => {
                 if (fund_group_id) {
-                    this.getFundGroup(fund_group_id)
+                    this.getFundGroup(fund_group_id);
                 } else {
-                    this.initialized = true
+                    this.initialized = true;
                 }
-            })
+            });
         },
         async getFundGroup(fund_group_id) {
-            const client = APIClient.acquisition
+            const client = APIClient.acquisition;
             await client.fundGroups.get(fund_group_id).then(fundGroup => {
-                this.fundGroup = fundGroup
+                this.fundGroup = fundGroup;
                 this.fundGroup.lib_group_visibility =
-                    this.formatLibraryGroupIds(fundGroup.lib_group_visibility)
-                this.initialized = true
-            })
+                    this.formatLibraryGroupIds(fundGroup.lib_group_visibility);
+                this.initialized = true;
+            });
         },
         async getCurrencies() {
-            const client = APIClient.acquisition
+            const client = APIClient.acquisition;
             await client.currencies.getAll().then(
                 currencies => {
-                    this.currencies = currencies
+                    this.currencies = currencies;
                 },
                 error => {}
-            )
+            );
         },
         onSubmit(e) {
-            e.preventDefault()
+            e.preventDefault();
 
             if (!this.isUserPermitted("createFundGroup")) {
                 setWarning(
                     this.$__(
                         "You do not have the required permissions to create fund groups."
                     )
-                )
-                return
+                );
+                return;
             }
 
-            const fundGroup = JSON.parse(JSON.stringify(this.fundGroup))
-            const fund_group_id = fundGroup.fund_group_id
+            const fundGroup = JSON.parse(JSON.stringify(this.fundGroup));
+            const fund_group_id = fundGroup.fund_group_id;
 
-            const visibility = fundGroup.lib_group_visibility.join("|")
-            fundGroup.lib_group_visibility = visibility
-
-            delete fundGroup.fund_group_id
+            delete fundGroup.fund_group_id;
 
             if (fund_group_id) {
-                const acq_client = APIClient.acquisition
+                const acq_client = APIClient.acquisition;
                 acq_client.fundGroups.update(fundGroup, fund_group_id).then(
                     success => {
-                        setMessage(this.$__("Fund group updated"))
-                        this.$router.push({ name: "FundGroupList" })
+                        setMessage(this.$__("Fund group updated"));
+                        this.$router.push({ name: "FundGroupList" });
                     },
                     error => {}
-                )
+                );
             } else {
-                const acq_client = APIClient.acquisition
+                const acq_client = APIClient.acquisition;
                 acq_client.fundGroups.create(fundGroup).then(
                     success => {
-                        setMessage(this.$__("Fund group created"))
-                        this.$router.push({ name: "FundGroupList" })
+                        setMessage(this.$__("Fund group created"));
+                        this.$router.push({ name: "FundGroupList" });
                     },
                     error => {}
-                )
+                );
             }
         },
     },
     unmounted() {
-        this.resetOwnersAndVisibleGroups()
+        this.resetOwnersAndVisibleGroups();
     },
     components: {
         InfiniteScrollSelect,
     },
-}
+};
 </script>
 
 <style scoped>
