@@ -674,20 +674,21 @@ export default {
                             e["_str"] = e["name"];
                             return e;
                         }),
-                    3: () => this.map_av_dt_filter("av_agreement_statuses"),
-                    4: () =>
+                    4: () => this.map_av_dt_filter("av_agreement_statuses"),
+                    5: () =>
                         this.map_av_dt_filter("av_agreement_closure_reasons"),
-                    5: [
+                    6: [
                         { _id: 0, _str: this.$__("No") },
                         { _id: 1, _str: this.$__("Yes") },
                     ],
-                    6: () =>
+                    7: () =>
                         this.map_av_dt_filter(
                             "av_agreement_renewal_priorities"
                         ),
                 },
                 actions: {
                     0: ["show"],
+                    1: ["show"],
                     "-1": this.embedded
                         ? [
                               {
@@ -859,6 +860,19 @@ export default {
 
             return [
                 {
+                    title: __("ID"),
+                    data: "me.agreement_id",
+                    searchable: true,
+                    orderable: true,
+                    render: function (data, type, row, meta) {
+                        return (
+                            '<a role="button" class="show">' +
+                            escape_str(`${row.agreement_id}`) +
+                            "</a>"
+                        );
+                    },
+                },
+                {
                     title: __("Name"),
                     data: "me.name:me.agreement_id",
                     searchable: true,
@@ -866,7 +880,7 @@ export default {
                     render: function (data, type, row, meta) {
                         return (
                             '<a role="button" class="show">' +
-                            escape_str(`${row.name} (#${row.agreement_id})`) +
+                            escape_str(row.name) +
                             "</a>"
                         );
                     },
