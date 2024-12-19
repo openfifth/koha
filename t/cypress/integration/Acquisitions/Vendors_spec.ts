@@ -309,7 +309,7 @@ describe("Library group limits", () => {
         cy.visit("/cgi-bin/koha/vendors");
 
         cy.contains("New vendor").click();
-        cy.get("#vendor_add h2").contains("New vendor");
+        cy.get("h1").contains("Add vendor");
 
         cy.get("#lib_group_visibility .vs__open-indicator").click();
         cy.get("#lib_group_visibility ul.vs__dropdown-menu").should(
