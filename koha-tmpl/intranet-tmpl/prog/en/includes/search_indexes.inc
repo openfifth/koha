@@ -2,11 +2,8 @@
 [% UNLESS index %]
     [% SET index = 0 %]
 [% END %]
-[% IF refiner %]
-    <select class="advsearch" name="idx" id="refiner_idx_[% index | html %]">
-[% ELSE %]
-    <select class="advsearch" name="idx" id="idx_[% index | html %]">
-[% END %]
+[% SET select_id = refiner ? 'refiner_idx_' _ index : 'idx_' _ index %]
+<select class="advsearch" name="idx" id="[% select_id | html %]">
     [% IF ms_kw %]
         <option selected="selected" value="kw">Keyword</option>
     [% ELSE %]
