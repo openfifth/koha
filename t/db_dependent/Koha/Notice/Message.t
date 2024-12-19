@@ -145,7 +145,7 @@ subtest 'html_content() tests' => sub {
         }
     );
 
-    t::lib::Mocks::mock_preference( 'NoticeCSS', '' );
+    t::lib::Mocks::mock_preference( 'AllNoticeStylesheet', '' );
     my $css_import      = '';
     my $message         = Koha::Notice::Messages->find($message_id);
     my $wrapped_compare = <<"WRAPPED";
@@ -166,7 +166,7 @@ WRAPPED
     is( $message->html_content, $wrapped_compare, "html_content returned the correct html wrapped letter" );
 
     my $css_sheet = 'https://localhost/shiny.css';
-    t::lib::Mocks::mock_preference( 'NoticeCSS', $css_sheet );
+    t::lib::Mocks::mock_preference( 'AllNoticeStylesheet', $css_sheet );
     $css_import = qq{<link rel="stylesheet" type="text/css" href="$css_sheet">};
 
     $wrapped_compare = <<"WRAPPED";
