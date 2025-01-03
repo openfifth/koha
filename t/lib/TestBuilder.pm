@@ -476,6 +476,7 @@ sub _buildColumnValue {
             return;
         }
     }
+
     return $retvalue;
 }
 
@@ -728,6 +729,12 @@ sub _gen_default_values {
             renewal_priority => undef,
             vendor_id        => undef,
         },
+        FiscalPeriod   => { lib_group_visibility => undef },
+        Ledger         => { lib_group_visibility => undef },
+        Fund           => { lib_group_visibility => undef },
+        SubFund        => { lib_group_visibility => undef },
+        FundAllocation => { lib_group_visibility => undef },
+        FundGroup      => { lib_group_visibility => undef },
     };
 }
 
