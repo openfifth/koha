@@ -536,7 +536,7 @@ subtest 'Returning passwords tests' => sub {
 };
 
 subtest 'get_columns' => sub {
-    plan tests => 8;
+    plan tests => 9;
     $schema->storage->txn_begin;
     my $area    = 'foo';
     my $success = eval { C4::Reports::Guided::get_columns($area) };

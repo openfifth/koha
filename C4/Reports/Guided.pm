@@ -215,13 +215,10 @@ sub _get_columns {
     return [
         map {
             my $column_name = $_->{Field};
-            my $forbidden   = Koha::Report->new->check_columns( undef, [$column_name] );
-            $forbidden ? () : (
-                {
-                    name        => sprintf( "%s.%s", $table_name, $column_name ),
-                    description => $all_columns->{$table_name}->{$column_name},
-                }
-            );
+            {
+                name        => sprintf( "%s.%s", $table_name, $column_name ),
+                description => $all_columns->{$table_name}->{$column_name},
+            };
         } @$columns
     ];
 }
