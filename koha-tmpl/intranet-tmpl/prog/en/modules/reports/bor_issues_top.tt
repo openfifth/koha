@@ -99,15 +99,19 @@
 			</tr>
 				[% FOREACH loopro IN mainloo.looprow %]
 				<tr>
-					[% IF ( loopro.hilighted ) %]<td>[% ELSE %]<td>[% END %]
+                    <td>
 					[% loopro.rowtitle | html %]</td>
+                    <td>
+                        [% IF ( loopro.reference ) %]
+                            <a href="/cgi-bin/koha/members/moremember.pl?borrowernumber=[% loopro.reference | uri %]">
+                                [% IF ( loopro.patron ) %][% loopro.patron | html %][% END %]
+                            </a>
+                        [% ELSE %]
+                            [% IF ( loopro.patron ) %][% loopro.patron | html %][% END %]
+                        [% END %]
+                    </td>
 					[% FOREACH loopcel IN loopro.loopcell %]
-						[% IF ( loopcel.hilighted ) %]<td>[% ELSE %]<td>[% END %]
-                            [% IF ( loopcel.reference ) %]<a href="/cgi-bin/koha/members/moremember.pl?borrowernumber=[% loopcel.reference | uri %]">[% END %]
-							[% IF ( loopcel.value ) %][% loopcel.value | html %][% END %]
-							[% IF ( loopcel.reference ) %]</a>[% END %]
-						</td>
-						[% IF ( loopcel.hilighted ) %]<td>[% ELSE %]<td>[% END %]
+                        <td>
 						[% IF ( loopcel.count ) %][% loopcel.count | html %][% END %]
 						</td>
 					[% END %]
