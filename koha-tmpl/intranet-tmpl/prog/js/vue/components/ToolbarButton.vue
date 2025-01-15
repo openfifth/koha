@@ -7,10 +7,7 @@
     >
         <font-awesome-icon v-if="icon" :icon="icon" /> {{ title }}
     </a>
-    <router-link
-        v-else
-        :to="to"
-        class="btn btn-default"
+    <router-link v-else :to="to" class="btn btn-default"
         ><font-awesome-icon v-if="icon" :icon="icon" /> {{ title }}</router-link
     >
 </template>

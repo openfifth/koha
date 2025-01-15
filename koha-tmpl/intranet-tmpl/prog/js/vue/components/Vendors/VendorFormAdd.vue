@@ -1,28 +1,26 @@
 <template>
     <div v-if="!initialized">{{ $__("Loading") }}</div>
-    <div v-else id="vendor_add">
+    <template v-else>
         <h1 v-if="vendor.id">
             {{ $__("Edit vendor #%s").format(vendor.id) }}
         </h1>
         <h1 v-else>{{ $__("Add vendor") }}</h1>
-        <div>
-            <form @submit="onSubmit($event)">
-                <VendorDetails :vendor="vendor" />
-                <VendorContacts :vendor="vendor" />
-                <VendorInterfaces :vendor="vendor" />
-                <VendorOrderingInformation :vendor="vendor" />
-                <fieldset class="action">
-                    <ButtonSubmit />
-                    <router-link
-                        :to="{ name: 'VendorList' }"
-                        role="button"
-                        class="cancel"
-                        >{{ $__("Cancel") }}</router-link
-                    >
-                </fieldset>
-            </form>
-        </div>
-    </div>
+        <form @submit="onSubmit($event)" id="add_vendor">
+            <Toolbar :sticky="true">
+                <ButtonSubmit :text="$__('Save')" />
+                <ToolbarButton
+                    :to="{ name: 'VendorList' }"
+                    :title="$__('Cancel')"
+                    icon="times"
+                >
+                </ToolbarButton>
+            </Toolbar>
+            <VendorDetails :vendor="vendor" />
+            <VendorContacts :vendor="vendor" />
+            <VendorInterfaces :vendor="vendor" />
+            <VendorOrderingInformation :vendor="vendor" />
+        </form>
+    </template>
 </template>
 
 <script>
@@ -33,6 +31,8 @@ import VendorDetails from "./VendorDetails.vue";
 import VendorContacts from "./VendorContacts.vue";
 import VendorOrderingInformation from "./VendorOrderingInformation.vue";
 import VendorInterfaces from "./VendorInterfaces.vue";
+import Toolbar from "../Toolbar.vue";
+import ToolbarButton from "../ToolbarButton.vue";
 
 export default {
     data() {
@@ -164,6 +164,8 @@ export default {
         VendorContacts,
         VendorOrderingInformation,
         VendorInterfaces,
+        Toolbar,
+        ToolbarButton,
     },
     name: "VendorFormAdd",
 };

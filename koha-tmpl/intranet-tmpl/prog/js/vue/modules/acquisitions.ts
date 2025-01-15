@@ -10,11 +10,12 @@ import {
     faTrash,
     faSpinner,
     faInbox,
+    faTimes,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import vSelect from "vue-select";
 
-library.add(faPlus, faMinus, faPencil, faTrash, faSpinner, faInbox);
+library.add(faPlus, faMinus, faPencil, faTrash, faSpinner, faInbox, faTimes);
 
 import App from "../components/Vendors/Main.vue";
 
