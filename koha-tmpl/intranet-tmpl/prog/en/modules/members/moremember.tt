@@ -280,8 +280,8 @@
                                             </li>
                                         [% END %]
                                     </ol>
-                                </div> [% # /div.rows %]
-                            </div> [% # /div#patron-information %]
+                                </div> [%# /div.rows %]
+                            </div> [%# /div#patron-information %]
 
                             [% IF Koha.Preference('HouseboundModule') %]
                                 <div id="houseboundroles" class="patroninfo-section">
@@ -320,7 +320,7 @@
                                             [% END %]
                                         </div>
                                     [% END %]
-                                </div> [% #/ div#houseboundroles %]
+                                </div> [%#/ div#houseboundroles %]
                             [% END %]
 
                             [% IF Koha.Preference('ExtendedPatronAttributes') %]
@@ -365,7 +365,7 @@
                                                 [% END %]
                                             </div>
                                         [% END %]
-                                    </div> [% # /div#patron-extended-attributes %]
+                                    </div> [%# /div#patron-extended-attributes %]
                                 [% END %]
                             [% END %]
 
@@ -396,7 +396,7 @@
                                             </ol>
                                         </div>
                                     [% END %]
-                                </div> [% # /div#patron-messaging-prefs %]
+                                </div> [%# /div#patron-messaging-prefs %]
                             [% END %]
 
                         </div> <!-- /.col-sm-6 -->
@@ -570,8 +570,8 @@
                                             [% END %]
                                         </li>
                                     </ol>
-                                </div> [% # /div.rows %]
-                            </div> [% # /div#patron-library-details %]
+                                </div> [%# /div.rows %]
+                            </div> [%# /div#patron-library-details %]
 
                             <div id="patron-alternate-address" class="patroninfo-section">
                                 [% IF ( patron.B_phone || patron.B_email || patron.contactnote || patron.B_address || patron.B_address2 || patron.B_city || patron.B_zipcode || patron.B_country ) %]
@@ -618,7 +618,7 @@
                                         [% END %]
                                     </div>
                                 [% END %]
-                            </div> [% # /div#patron-alternate-address %]
+                            </div> [%# /div#patron-alternate-address %]
 
                             <div id="patron-alternative-contact" class="patroninfo-section">
                                 [% IF ( patron.altcontactsurname || patron.altcontactfirstname || patron.altcontactaddress1 || patron.altcontactaddress2 || patron.altcontactaddress3 || patron.altcontactstate || patron.altcontactzipcode || patron.altcontactcountry || patron.altcontactphone ) %]
@@ -686,7 +686,7 @@
                                                 </li>
                                             [% END %]
                                         </ol>
-                                    </div> [% # /div.rows %]
+                                    </div> [%# /div.rows %]
                                 [% ELSE %]
                                     <div class="patroninfo-heading">
                                         <h3>Alternative contact</h3>
@@ -695,7 +695,7 @@
                                         [% END %]
                                     </div>
                                 [% END %]
-                            </div> [% # /div#patron-alternative-contact %]
+                            </div> [%# /div#patron-alternative-contact %]
 
                             [% IF Koha.Preference('EnableBorrowerFiles') %]
                                 <div id="patron-files" class="patroninfo-section">
