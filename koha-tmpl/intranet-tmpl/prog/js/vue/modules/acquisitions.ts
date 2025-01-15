@@ -61,6 +61,10 @@ app.mount("#__vendors");
 
 const { removeMessages } = mainStore;
 router.beforeEach((to, from) => {
+    if (from.fullPath === to.fullPath) {
+        to.fullPath = to.fullPath.split("?")[0];
+        window.location.href = to.fullPath;
+    }
     navigationStore.$patch({ current: to.matched, params: to.params || {} });
     removeMessages(); // This will actually flag the messages as displayed already
 });
