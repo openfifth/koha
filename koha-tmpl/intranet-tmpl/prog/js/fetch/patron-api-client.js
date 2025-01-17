@@ -13,6 +13,15 @@ export class PatronAPIClient {
                 }),
         };
     }
+
+    get userPermissions() {
+        return {
+            get: () =>
+                this.httpClient.get({
+                    endpoint: "user_permissions",
+                }),
+        };
+    }
 }
 
 export default PatronAPIClient;

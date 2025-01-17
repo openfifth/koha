@@ -184,6 +184,8 @@ definitions:
     $ref: ./definitions/ticket_update.yaml
   transfer_limit:
     $ref: ./definitions/transfer_limit.yaml
+  user_permission:
+    $ref: ./definitions/user_permission.yaml
   vendor:
     $ref: ./definitions/vendor.yaml
   vendor_issue:
@@ -455,6 +457,8 @@ paths:
     $ref: ./paths/oauth.yaml#/~1oauth~1token
   /patrons:
     $ref: ./paths/patrons.yaml#/~1patrons
+  "/patrons/user_permissions":
+    $ref: "./paths/user_permissions.yaml#/~1patrons~1user_permissions"
   "/patrons/{patron_id}":
     $ref: "./paths/patrons.yaml#/~1patrons~1{patron_id}"
   "/patrons/{patron_id}/account":
