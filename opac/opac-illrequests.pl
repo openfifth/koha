@@ -127,7 +127,7 @@ if ( $op eq 'list' ) {
     if (!$params->{backend}) {
         my $req = Koha::ILL::Request->new;
         $template->param(
-            backends    => $req->available_backends
+            backends    => $backends
         );
     } else {
         my $request = Koha::ILL::Request->new
