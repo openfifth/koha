@@ -274,6 +274,7 @@ export default {
             const fiscal_period_id = fiscal_period.fiscal_period_id;
 
             delete fiscal_period.fiscal_period_id;
+            delete fiscal_period.last_updated;
 
             if (fiscal_period_id) {
                 const acq_client = APIClient.acquisition;
