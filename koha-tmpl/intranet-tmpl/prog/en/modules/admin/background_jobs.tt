@@ -243,6 +243,10 @@
                 '_str': '[% job_type.str | html_entity %]'
             },
             [% END %]
+            {
+                '_id': 'file_transport_test',
+                '_str': _("File transport connection test")
+            }
         ];
 
         function get_job_type (job_type) {
