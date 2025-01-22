@@ -4,6 +4,7 @@ import { $__ } from "../i18n";
 import { useMainStore } from "../stores/main";
 import { useNavigationStore } from "../stores/navigation";
 import { useVendorStore } from "../stores/vendors";
+import vSelect from "vue-select";
 
 /**
  * Represents a web component with an import function and optional configuration.
@@ -14,7 +15,11 @@ import { useVendorStore } from "../stores/vendors";
  */
 type WebComponentDynamicImport = {
     importFn: () => Promise<Component>;
-    config?: Record<"stores", Array<string>>;
+    config?: WebComponentConfig;
+};
+type WebComponentConfig = {
+    stores: Array<string>;
+    components: Array<string>;
 };
 
 /**
@@ -72,6 +77,22 @@ export const componentRegistry: Map<string, WebComponentDynamicImport> =
                 },
             },
         ],
+        [
+            "fund-select",
+            {
+                importFn: async () => {
+                    const module = await import(
+                        /* webpackChunkName: "fund-select" */
+                        "../components/Islands/FundSelect.vue"
+                    );
+                    return module.default;
+                },
+                config: {
+                    stores: [],
+                    components: ["v-select"],
+                },
+            },
+        ],
     ]);
 
 /**
@@ -85,6 +106,9 @@ export function hydrate(): void {
             mainStore: useMainStore(pinia),
             navigationStore: useNavigationStore(pinia),
             vendorStore: useVendorStore(pinia),
+        };
+        const childComponents = {
+            "v-select": vSelect,
         };
 
         const islandTagNames = Array.from(componentRegistry.keys()).join(", ");
@@ -111,6 +135,14 @@ export function hydrate(): void {
                                 app.use(pinia);
                                 config.stores.forEach(store => {
                                     app.provide(store, storesMatrix[store]);
+                                });
+                            }
+                            if (config.components?.length > 0) {
+                                config.components.forEach(component => {
+                                    app.component(
+                                        component,
+                                        childComponents[component]
+                                    );
                                 });
                             }
                             app.config.globalProperties.$__ = $__;
