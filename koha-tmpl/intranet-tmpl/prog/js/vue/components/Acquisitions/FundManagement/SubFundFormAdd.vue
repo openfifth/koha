@@ -204,17 +204,17 @@
 </template>
 
 <script>
-import { inject } from "vue"
-import { storeToRefs } from "pinia"
-import { APIClient } from "../../../fetch/api-client.js"
-import { setMessage, setWarning } from "../../../messages"
-import InfiniteScrollSelect from "../../InfiniteScrollSelect.vue"
+import { inject } from "vue";
+import { storeToRefs } from "pinia";
+import { APIClient } from "../../../fetch/api-client.js";
+import { setMessage, setWarning } from "../../../messages";
+import InfiniteScrollSelect from "../../InfiniteScrollSelect.vue";
 
 export default {
     setup() {
-        const acquisitionsStore = inject("acquisitionsStore")
+        const acquisitionsStore = inject("acquisitionsStore");
         const { libraryGroups, getVisibleGroups, getOwners } =
-            storeToRefs(acquisitionsStore)
+            storeToRefs(acquisitionsStore);
 
         const {
             isUserPermitted,
@@ -222,10 +222,10 @@ export default {
             filterOwnersBasedOnGroup,
             resetOwnersAndVisibleGroups,
             formatLibraryGroupIds,
-        } = acquisitionsStore
+        } = acquisitionsStore;
 
-        const AVStore = inject("AVStore")
-        const { acquire_fund_types } = storeToRefs(AVStore)
+        const AVStore = inject("AVStore");
+        const { acquire_fund_types } = storeToRefs(AVStore);
 
         return {
             isUserPermitted,
@@ -237,7 +237,7 @@ export default {
             getVisibleGroups,
             getOwners,
             acquire_fund_types,
-        }
+        };
     },
     data() {
         return {
@@ -245,6 +245,10 @@ export default {
             statusOptions: [
                 { description: this.$__("Active"), value: true },
                 { description: this.$__("Inactive"), value: false },
+            ],
+            allowedOptions: [
+                { description: this.$__("Allowed"), value: true },
+                { description: this.$__("Not allowed"), value: false },
             ],
             sub_fund: {
                 fiscal_period_id: null,
@@ -259,95 +263,96 @@ export default {
                 lib_group_visibility: [],
             },
             fund: null,
-        }
+        };
     },
     beforeRouteEnter(to, from, next) {
         next(vm => {
-            vm.getDataRequiredForPageLoad(to.params)
-        })
+            vm.getDataRequiredForPageLoad(to.params);
+        });
     },
     methods: {
         async getDataRequiredForPageLoad(params) {
             this.getFund(params.fund_id).then(() => {
                 if (params.sub_fund_id) {
-                    this.getSubFund(params.sub_fund_id)
+                    this.getSubFund(params.sub_fund_id);
                 } else {
-                    this.initialized = true
+                    this.initialized = true;
                 }
-            })
+            });
         },
         async getFund(fund_id) {
-            const client = APIClient.acquisition
+            const client = APIClient.acquisition;
             await client.funds.get(fund_id).then(fund => {
-                this.fund = fund
-                this.sub_fund.fund_id = fund.fund_id
-                this.sub_fund.ledger_id = fund.ledger_id
-                this.sub_fund.fiscal_period_id = fund.fiscal_period_id
-                this.sub_fund.sub_fund_type = fund.fund_type
-                this.sub_fund.currency = fund.currency
-                this.sub_fund.owner_id = fund.owner_id
-                this.sub_fund.lib_group_visibility = fund.lib_group_visibility
-            })
+                this.fund = fund;
+                this.sub_fund.fund_id = fund.fund_id;
+                this.sub_fund.ledger_id = fund.ledger_id;
+                this.sub_fund.fiscal_period_id = fund.fiscal_period_id;
+                this.sub_fund.sub_fund_type = fund.fund_type;
+                this.sub_fund.currency = fund.currency;
+                this.sub_fund.owner_id = fund.owner_id;
+                this.sub_fund.lib_group_visibility = fund.lib_group_visibility;
+            });
         },
         async getSubFund(sub_fund_id) {
-            const client = APIClient.acquisition
+            const client = APIClient.acquisition;
             await client.subFunds.get(sub_fund_id).then(sub_fund => {
-                this.sub_fund = sub_fund
-                this.sub_fund.status = sub_fund.status
-                this.initialized = true
-            })
+                this.sub_fund = sub_fund;
+                this.sub_fund.status = sub_fund.status;
+                this.initialized = true;
+            });
         },
         onSubmit(e) {
-            e.preventDefault()
+            e.preventDefault();
 
             if (!this.isUserPermitted("createFund")) {
                 setWarning(
                     this.$__(
                         "You do not have the required permissions to create sub funds."
                     )
-                )
-                return
+                );
+                return;
             }
 
-            const sub_fund = JSON.parse(JSON.stringify(this.sub_fund))
-            const sub_fund_id = sub_fund.sub_fund_id
+            const sub_fund = JSON.parse(JSON.stringify(this.sub_fund));
+            const sub_fund_id = sub_fund.sub_fund_id;
 
-            delete sub_fund.sub_fund_id
+            delete sub_fund.sub_fund_id;
+            delete sub_fund.last_updated;
 
             if (sub_fund_id) {
-                const acq_client = APIClient.acquisition
+                const acq_client = APIClient.acquisition;
                 acq_client.subFunds.update(sub_fund, sub_fund_id).then(
                     success => {
-                        setMessage(this.$__("Sub fund updated"))
+                        setMessage(this.$__("Sub fund updated"));
                         this.$router.push({
                             name: "FundShow",
                             params: { fund_id: sub_fund.fund_id },
-                        })
+                        });
                     },
                     error => {}
-                )
+                );
             } else {
-                const acq_client = APIClient.acquisition
+                const acq_client = APIClient.acquisition;
                 acq_client.subFunds.create(sub_fund).then(
                     success => {
-                        setMessage(this.$__("Sub fund created"))
+                        setMessage(this.$__("Sub fund created"));
                         this.$router.push({
                             name: "FundShow",
                             params: { fund_id: sub_fund.fund_id },
-                        })
+                        });
                     },
                     error => {}
-                )
+                );
             }
         },
     },
     unmounted() {
-        this.resetOwnersAndVisibleGroups()
+        this.resetOwnersAndVisibleGroups();
     },
     components: {
         InfiniteScrollSelect,
     },
-}
+};
 </script>
 
 <style scoped>
