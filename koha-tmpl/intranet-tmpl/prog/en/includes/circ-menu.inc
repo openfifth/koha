@@ -200,6 +200,11 @@
                     </li>
                 [% END %]
             [% END %]
+            [% IF patron.category.category_type == 'I' %]
+                <li [% IF ( quotaview ) %]class="active"[% END %]>
+                    <a href="/cgi-bin/koha/members/circulation_quota.pl?borrowernumber=[% patron.borrowernumber | uri %]">Circulation quota</a>
+                </li>
+            [% END %]
             [% IF ( CAN_user_tools_view_system_logs ) %]
                 [% IF ( logview ) %]<li class="active">[% ELSE %]<li>[% END %]
                     <a href="/cgi-bin/koha/tools/viewlog.pl?do_it=1&amp;modules=MEMBERS&amp;modules=CIRCULATION&amp;object=[% patron.borrowernumber | uri %]&amp;src=circ">Modification log</a>
