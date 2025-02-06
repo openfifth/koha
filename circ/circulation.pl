@@ -186,6 +186,7 @@ if ( $restoreduedatespec && $restoreduedatespec eq "highholds_empty" ) {
 my $issueconfirmed = $query->param('issueconfirmed');
 my $cancelreserve  = $query->param('cancelreserve');
 my $cancel_recall  = $query->param('cancel_recall');
+my $selected_quota_id = $query->param('selected_quota_id');
 my $recall_id      = $query->param('recall_id');
 my $debt_confirmed = $query->param('debt_confirmed') || 0;     # Don't show the debt error dialog twice
 my $charges        = $query->param('charges')        || q{};
@@ -548,6 +549,9 @@ if ( @$barcodes && $op eq 'cud-checkout' ) {
                         onsite_checkout        => $onsite_checkout,        auto_renew => $session->param('auto_renew'),
                         switch_onsite_checkout => $switch_onsite_checkout, cancel_recall => $cancel_recall,
                         recall_id              => $recall_id,
+                        confirmations          => [ grep { /^[A-Z_]+$/ } keys %{$needsconfirmation} ],
+                        forced                 => [ keys %{$issuingimpossible} ],
+                        selected_quota_id      => $selected_quota_id
                     }
                 );
                 $template_params->{issue} = $issue;
