@@ -187,6 +187,7 @@ if ( $restoreduedatespec && $restoreduedatespec eq "highholds_empty" ) {
 my $issueconfirmed = $query->param('issueconfirmed');
 my $cancelreserve  = $query->param('cancelreserve');
 my $cancel_recall  = $query->param('cancel_recall');
+my $selected_quota_id = $query->param('selected_quota_id');
 my $recall_id      = $query->param('recall_id');
 my $debt_confirmed = $query->param('debt_confirmed') || 0;     # Don't show the debt error dialog twice
 my $charges        = $query->param('charges')        || q{};
@@ -547,6 +548,7 @@ if ( @$barcodes && $op eq 'cud-checkout' ) {
                 if ( my $booked = $needsconfirmation->{BOOKED_EARLY} // $alerts->{BOOKED} ) {
                     $datedue = $booked->end_date;
                 }
+                $needsconfirmation->{'DEBT'} = $needsconfirmationDEBT if ($debt_confirmed);
 
                 # If renewing an item on hold, use renewonholdduedate (similar to renew.pl)
                 # This handles the same issue as Bug 37966 for circ/renew.pl
@@ -558,7 +560,8 @@ if ( @$barcodes && $op eq 'cud-checkout' ) {
                         $datedue = $query->param('renewonholdduedate');
                     }
                 }
-                $needsconfirmation->{'DEBT'} = $needsconfirmationDEBT if ($debt_confirmed);
+
+
                 my $issue = AddIssue(
                     $patron, $barcode, $datedue,
                     $cancelreserve,
@@ -570,7 +573,8 @@ if ( @$barcodes && $op eq 'cud-checkout' ) {
                         cancel_recall          => $cancel_recall,
                         recall_id              => $recall_id,
                         confirmations          => [ grep { /^[A-Z_]+$/ } keys %{$needsconfirmation} ],
-                        forced                 => [ keys %{$issuingimpossible} ]
+                        forced                 => [ keys %{$issuingimpossible} ],
+                        selected_quota_id      => $selected_quota_id
                     }
                 );
                 $template_params->{issue} = $issue;
