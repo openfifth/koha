@@ -455,11 +455,38 @@ __PACKAGE__->has_many(
     { cascade_copy       => 0, cascade_delete => 0 },
 );
 
+=head2 quota_usages
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::PatronQuotaUsage>
+
+=cut
+
+__PACKAGE__->has_many(
+    'quota_usages' => 'Koha::Schema::Result::PatronQuotaUsage',
+    'issue_id'
+);
+
+=head2 patron_quotas
+
+Type: many_to_many
+
+Related object: L<Koha::Schema::Result::PatronQuota>
+
+=cut
+
+__PACKAGE__->many_to_many(
+    'patron_quotas' => 'quota_usages',
+    'patron_quota'
+);
+
 =head2 koha_object_class
 
 Missing POD for koha_object_class.
 
 =cut
+
 
 sub koha_object_class {
     'Koha::Checkout';
