@@ -2,6 +2,7 @@ package Koha::Patron::Quotas;
 
 use base qw(Koha::Objects);
 use Modern::Perl;
+
 use Koha::Patron::Quota;
 use Koha::Patrons;
 
@@ -62,6 +63,16 @@ Returns the package name for koha patron quota objects
 =cut
 
 sub object_class {
+    return 'Koha::Patron::Quota';
+}
+
+=head3 koha_object_class
+
+Returns the package name for patron quota objects
+
+=cut
+
+sub koha_object_class {
     return 'Koha::Patron::Quota';
 }
 
