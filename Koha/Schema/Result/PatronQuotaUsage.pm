@@ -146,8 +146,7 @@ __PACKAGE__->belongs_to(
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:hxeHkoIaFwVoiLReL04/4A
 
 
-
-=head2 issue
+=head2 checkout
 
 Type: belongs_to
 
@@ -156,12 +155,12 @@ Related object: L<Koha::Schema::Result::Issue>
 =cut
 
 __PACKAGE__->belongs_to(
-    issue => 'Koha::Schema::Result::Issue',
+    checkout => 'Koha::Schema::Result::Issue',
     'issue_id',
     { join_type => 'left' }
 );
 
-=head2 old_issue
+=head2 old_checkout
 
 Type: belongs_to
 
@@ -170,7 +169,7 @@ Related object: L<Koha::Schema::Result::OldIssue>
 =cut
 
 __PACKAGE__->belongs_to(
-    old_issue => 'Koha::Schema::Result::OldIssue',
+    old_checkout => 'Koha::Schema::Result::OldIssue',
     'issue_id',
     { join_type => 'left' }
 );
