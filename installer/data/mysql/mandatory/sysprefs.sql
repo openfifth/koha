@@ -248,6 +248,7 @@ INSERT INTO systempreferences ( `variable`, `value`, `options`, `explanation`, `
 ('EmailSMSSendDriverFromAddress', '', '', 'Email SMS send driver from address override', 'Free'),
 ('EnableAdvancedCatalogingEditor','0','','Enable the Rancor advanced cataloging editor','YesNo'),
 ('EnableBorrowerFiles','0',NULL,'If enabled, allows librarians to upload and attach arbitrary files to a borrower record.','YesNo'),
+('EnableCirculationQuotas','0','','Enable or disable the circulation quotas feature','YesNo'),
 ('EnableExpiredPasswordReset', '0', NULL, 'Enable ability for patrons with expired password to reset their password directly', 'YesNo'),
 ('EnableItemGroupHolds','0','','Enable item groups holds feature','YesNo'),
 ('EnableItemGroups','0','','Enable the item groups feature','YesNo'),
