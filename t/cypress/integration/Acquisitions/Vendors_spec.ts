@@ -94,10 +94,10 @@ describe("Vendor CRUD operations", () => {
         // Click the button in the toolbar
         cy.visit("/cgi-bin/koha/vendors");
         cy.contains("New vendor").click();
-        cy.get("#vendor_add h2").contains("New vendor");
+        cy.get("h1").contains("Add vendor");
 
         // Fill in the form for normal attributes
-        cy.get("#vendor_add").contains("Submit").click();
+        cy.get("#toolbar").contains("Save").click();
         cy.get("input:invalid,textarea:invalid,select:invalid").should(
             "have.length",
             1
@@ -173,7 +173,7 @@ describe("Vendor CRUD operations", () => {
             statusCode: 201,
             body: vendor,
         });
-        cy.get("#vendor_add").contains("Submit").click();
+        cy.get("#add_vendor").contains("Save").click();
         cy.get("main div[class='alert alert-info']").contains("Vendor created");
     });
 
@@ -189,7 +189,7 @@ describe("Vendor CRUD operations", () => {
         cy.get("#vendors_list table tbody tr:first").contains("Edit").click();
         cy.wait("@get-vendor");
         cy.wait(500); // Cypress is too fast! Vue hasn't populated the form yet!
-        cy.get("#vendor_add h2").contains("Edit vendor");
+        cy.get("h1").contains("Edit vendor");
 
         // Form has been correctly filled in
         cy.get("#vendor_name").should("have.value", vendor.name);
@@ -197,12 +197,12 @@ describe("Vendor CRUD operations", () => {
         cy.get("#alias0").should("have.text", vendor.aliases[0].alias);
         cy.get("#activestatus_active").should("be.checked");
 
-        // Submit the form, success!
+        // Save the form, success!
         cy.intercept("PUT", "/api/v1/acquisitions/vendors/*", {
             statusCode: 200,
             body: vendor,
         });
-        cy.get("#vendor_add").contains("Submit").click();
+        cy.get("#add_vendor").contains("Save").click();
         cy.get("main div[class='alert alert-info']").contains("Vendor updated");
     });
 
