@@ -145,6 +145,33 @@ __PACKAGE__->belongs_to(
 # Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-11-06 17:47:10
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:hxeHkoIaFwVoiLReL04/4A
 
+=head2 issue
+
+Type: belongs_to
+
+Related object: L<Koha::Schema::Result::Issue>
+
+=cut
+
+__PACKAGE__->belongs_to(
+    issue => 'Koha::Schema::Result::Issue',
+    'issue_id',
+    { join_type => 'left' }
+);
+
+=head2 old_issue
+
+Type: belongs_to
+
+Related object: L<Koha::Schema::Result::OldIssue>
+
+=cut
+
+__PACKAGE__->belongs_to(
+    old_issue => 'Koha::Schema::Result::OldIssue',
+    'issue_id',
+    { join_type => 'left' }
+);
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration
 1;
