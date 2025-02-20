@@ -186,9 +186,11 @@
             fetchBatch();
             isUpdate = true;
             setModalHeading();
+            createButton.style.display = "none";
         } else {
             batch.data = emptyBatch;
             setModalHeading();
+            finishButton.style.display = "none";
         }
         fetchStatuses();
         finishButtonEventListener();
@@ -200,8 +202,9 @@
     };
 
     function initPostCreate() {
-        disableCreateButton();
+        hideCreateButton();
         cancelButton.innerHTML = ill_batch_create_cancel_button;
+        finishButton.style.display = "block";
     };
 
     function setFinishButton() {
@@ -736,9 +739,8 @@
         processButton.setAttribute('aria-disabled', true);
     }
 
-    function disableCreateButton() {
-        createButton.setAttribute('disabled', true);
-        createButton.setAttribute('aria-disabled', true);
+    function hideCreateButton() {
+        createButton.remove();
     }
 
     async function populateMetadata(identifier) {
