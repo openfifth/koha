@@ -49,12 +49,12 @@
                                     <textarea id="identifiers_input" placeholder="Enter identifiers, one per line"></textarea>
                                 </li>
                                 <li id="process-button">
-                                    <button id="process_button" disabled aria-disabled="true" type="button">Process identifiers</button>
+                                    <button id="process_button" class="btn btn-primary" disabled aria-disabled="true" type="button">Process identifiers</button>
                                 </li>
                             </ol>
                         </fieldset>
                     </form>
-                    <div id="create-progress" class="alert alert-info" role="alert" style="display:none">
+                    <div id="create-progress" role="alert" style="display:none">
                         <span id="progress-label"><strong></strong></span> -
                         Items processed: <span id="processed_count">0</span> out of <span id="processed_total">0</span>.
                         Items failed: <span id="processed_failed">0</span>.
@@ -87,13 +87,9 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <div id="lhs">
-                    <button class="btn btn-default" data-bs-dismiss="modal" aria-hidden="false">Cancel</button>
-                </div>
-                <div id="rhs">
-                    <button id="button_create_batch" class="btn btn-default" aria-hidden="true" disabled>Continue</button>
-                    <button id="button_finish" disabled type="button" class="btn btn-default" aria-hidden="true">Finish and view batch</button>
-                </div>
+                <button id="button_create_batch" class="btn btn-primary" aria-hidden="true" disabled>Continue</button>
+                <button id="button_finish" disabled type="button" class="btn btn-primary" aria-hidden="true">Finish and view batch</button>
+                <button id="button_cancel_batch" class="btn btn-default" data-bs-dismiss="modal" aria-hidden="false">Cancel</button>
             </div>
         </div>
     </div>
