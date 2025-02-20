@@ -995,7 +995,15 @@
     }
 
     function createActions(x, y, data) {
-        return '<button type="button" aria-label='+ ill_button_remove + (data.requestId ? ' disabled aria-disabled="true"' : '') + ' class="btn btn-xs btn-danger remove-row">' + ill_button_remove + '</button>';
+        return (
+            '<button type="button" aria-label=' +
+            ill_button_remove +
+            (data.requestId ? ' disabled aria-disabled="true"' : "") +
+            ' class="btn btn-xs btn-default remove-row">' +
+            '<i class="fa fa-trash-can" aria-hidden="true" style="pointer-events:none"></i> ' +
+            ill_button_remove +
+            "</button>"
+        );
     }
 
     // Redraw the table
