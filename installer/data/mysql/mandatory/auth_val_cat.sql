@@ -106,3 +106,9 @@ VALUES
 INSERT IGNORE INTO authorised_value_categories (category_name, is_system)
 VALUES
     ('BOOKING_CANCELLATION', 1);
+
+-- For locations of HTML blocks
+INSERT IGNORE INTO authorised_value_categories (category_name, is_system) VALUES
+    ('ADD_CONT_HTML_OPAC_SYSTEM', 1),
+    ('ADD_CONT_HTML_STAFF_SYSTEM', 1),
+    ('ADD_CONT_HTML_CUSTOM', 0);
