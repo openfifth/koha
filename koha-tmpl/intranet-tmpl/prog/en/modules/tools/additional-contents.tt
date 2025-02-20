@@ -2,6 +2,7 @@
 [% USE Asset %]
 [% USE Koha %]
 [% USE KohaDates %]
+[% USE AuthorisedValues %]
 [% USE Branches %]
 [% PROCESS 'i18n.inc' %]
 [% SET footerjs = 1 %]
@@ -532,23 +533,35 @@
             [% END %]
         [% END %]
     [% ELSE %]
-        [% SET opac_available_options = [ 'OpacNavRight', 'opacheader', 'OpacCustomSearch', 'OpacMainUserBlock', 'opaccredits', 'OpacLoginInstructions', 'OpacNav', 'OpacNavBottom', 'OpacSuggestionInstructions', 'ArticleRequestsDisclaimerText', 'OpacMoreSearches', 'OpacMySummaryNote', 'OpacLibraryInfo', 'OpacMaintenanceNotice', 'OPACResultsSidebar', 'OpacSuppressionMessage', 'SCOMainUserBlock', 'SelfCheckInMainUserBlock', 'SelfCheckHelpMessage', 'CatalogConcernHelp', 'CatalogConcernTemplate', 'CookieConsentBar', 'CookieConsentPopup', 'PatronSelfRegistrationAdditionalInstructions', 'ILLModuleCopyrightClearance' ] %]
+        [%# NOTE: Since bug 31642 you can add new options (i.e. block locations) via Authorised Values %}
+        [%# Use the three AV categories: ADD_CONT_HTML_OPAC_SYSTEM, ADD_CONT_HTML_STAFF_SYSTEM or ADD_CONT_HTML_CUSTOM %]
+        [% SET opac_available_options = AuthorisedValues.Get('ADD_CONT_HTML_OPAC_SYSTEM') %]
         <optgroup label="OPAC">
-            [% FOREACH l IN opac_available_options.sort %]
-                [% IF l == location %]
-                    <option value="[% l | html %]" selected="selected">[% l | html %]</option>
+            [% FOREACH l IN opac_available_options %]
+                [% IF l.authorised_value == location %]
+                    <option value="[% l.authorised_value | html %]" selected="selected">[% l.authorised_value | html %]</option>
                 [% ELSE %]
-                    <option value="[% l | html %]">[% l | html %]</option>
+                    <option value="[% l.authorised_value | html %]">[% l.authorised_value | html %]</option>
                 [% END %]
             [% END %]
         </optgroup>
-        [% SET staff_available_options = [ 'IntranetmainUserblock', 'RoutingListNote', 'StaffAcquisitionsHome', 'StaffAuthoritiesHome', 'StaffCataloguingHome', 'StaffListsHome', 'StaffLoginInstructions', 'StaffPatronsHome', 'StaffPOSHome', 'StaffSerialsHome' ] %]
+        [% SET staff_available_options = AuthorisedValues.Get('ADD_CONT_HTML_STAFF_SYSTEM') %]
         <optgroup label="Staff interface">
-            [% FOREACH l IN staff_available_options.sort %]
-                [% IF l == location %]
-                    <option value="[% l | html %]" selected="selected">[% l | html %]</option>
+            [% FOREACH l IN staff_available_options %]
+                [% IF l.authorised_value == location %]
+                    <option value="[% l.authorised_value | html %]" selected="selected">[% l.authorised_value | html %]</option>
                 [% ELSE %]
-                    <option value="[% l | html %]">[% l | html %]</option>
+                    <option value="[% l.authorised_value | html %]">[% l.authorised_value | html %]</option>
+                [% END %]
+            [% END %]
+        </optgroup>
+        [% SET custom_available_options = AuthorisedValues.Get('ADD_CONT_HTML_CUSTOM') %]
+        <optgroup label="Custom">
+            [% FOREACH l IN custom_available_options %]
+                [% IF l.authorised_value == location %]
+                    <option value="[% l.authorised_value | html %]" selected="selected">[% l.authorised_value | html %]</option>
+                [% ELSE %]
+                    <option value="[% l.authorised_value | html %]">[% l.authorised_value | html %]</option>
                 [% END %]
             [% END %]
         </optgroup>
