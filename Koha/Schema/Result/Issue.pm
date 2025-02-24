@@ -483,10 +483,9 @@ __PACKAGE__->many_to_many(
 
 =head2 koha_object_class
 
-Missing POD for koha_object_class.
+Returns the Koha object class for this result.
 
 =cut
-
 
 sub koha_object_class {
     'Koha::Checkout';
@@ -494,7 +493,7 @@ sub koha_object_class {
 
 =head2 koha_objects_class
 
-Missing POD for koha_objects_class.
+Returns the Koha objects class for this result.
 
 =cut
 

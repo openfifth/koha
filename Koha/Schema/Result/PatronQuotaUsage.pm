@@ -177,23 +177,22 @@ __PACKAGE__->belongs_to(
 
 =head2 koha_object_class
 
-Missing POD for koha_object_class.
+Returns the Koha object class for this result.
 
 =cut
 
 sub koha_object_class {
-    'Koha::Patron::Quota::Usage';
+    return 'Koha::Patron::Quota::Usage';
 }
 
 =head2 koha_objects_class
 
-Missing POD for koha_objects_class.
+Returns the Koha objects class for this result.
 
 =cut
 
 sub koha_objects_class {
-    'Koha::Patron::Quota::Usages';
+    return 'Koha::Patron::Quota::Usages';
 }
 
-# You can replace this text with custom code or comments, and it will be preserved on regeneration
 1;
