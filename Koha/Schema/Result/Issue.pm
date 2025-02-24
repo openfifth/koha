@@ -438,9 +438,22 @@ __PACKAGE__->has_many(
     'issue_id'
 );
 
+=head2 koha_object_class
+
+Returns the Koha object class for this result.
+
+=cut
+
 sub koha_object_class {
     'Koha::Checkout';
 }
+
+=head2 koha_objects_class
+
+Returns the Koha objects class for this result.
+
+=cut
+
 sub koha_objects_class {
     'Koha::Checkouts';
 }

@@ -145,6 +145,25 @@ __PACKAGE__->has_many(
 # Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-01-30 16:04:36
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:KG/MIjPSLcpeSlPypwli2Q
 
+=head2 koha_object_class
 
-# You can replace this text with custom code or comments, and it will be preserved on regeneration
+Returns the Koha object class for this result.
+
+=cut
+
+sub koha_object_class {
+    return 'Koha::Patron::Quota';
+}
+
+=head2 koha_objects_class
+
+Returns the Koha objects class for this result.
+
+=cut
+
+sub koha_objects_class {
+    return 'Koha::Patron::Quotas';
+}
+
+
 1;
