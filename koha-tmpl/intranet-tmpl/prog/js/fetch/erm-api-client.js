@@ -447,6 +447,15 @@ export class ERMAPIClient {
                 }),
         };
     }
+
+    get counts() {
+        return {
+            get: () =>
+                this.httpClient.get({
+                    endpoint: "counts",
+                }),
+        };
+    }
 }
 
 export default ERMAPIClient;
