@@ -904,6 +904,7 @@ sub mark_completed {
     my ($self) = @_;
     $self->status('COMP')->store;
     $self->completed( dt_from_string() )->store;
+    $self->after_completed();
     return {
         error   => 0,
         status  => '',
@@ -2050,6 +2051,58 @@ sub store {
     }
 
     return $ret;
+}
+
+=head3 after_completed
+
+    $request->after_completed;
+
+Actions to be done after the request has been completed
+
+=cut
+
+sub after_completed {
+    my ($self) = @_;
+
+    C4::Stats::UpdateStats(
+        {
+            borrowernumber => $self->borrowernumber // undef,
+            branch         => $self->branchcode,
+            categorycode   => $self->patron ? $self->patron->categorycode : undef,
+            ccode          => undef,
+            illrequest_id  => $self->illrequest_id,
+            itemnumber     => undef,
+            itemtype       => undef,
+            location       => undef,
+            type           => 'illreq_comp',
+        }
+    );
+}
+
+=head3 after_created
+
+    $request->after_created;
+
+Actions to be done after the request has been fully created
+
+=cut
+
+sub after_created {
+    my ($self) = @_;
+
+    C4::Stats::UpdateStats(
+        {
+            borrowernumber => $self->borrowernumber // undef,
+            branch         => $self->branchcode,
+            categorycode   => $self->patron ? $self->patron->categorycode : undef,
+            ccode          => undef,
+            illrequest_id  => $self->illrequest_id,
+            itemnumber     => undef,
+            itemtype       => undef,
+            location       => undef,
+            type           => 'illreq_created',
+        }
+    );
 }
 
 =head3 requested_partners
