@@ -450,6 +450,12 @@
 
 [% BLOCK category_descriptions %]
     [% SWITCH code_category %]
+    [% CASE 'ADD_CONT_HTML_CUSTOM' %]
+        <p>Custom display locations for HTML customizations</p>
+    [% CASE 'ADD_CONT_HTML_OPAC_SYSTEM' %]
+        <p>OPAC display locations for HTML customizations</p>
+    [% CASE 'ADD_CONT_HTML_STAFF_SYSTEM' %]
+        <p>Staff interface display locations for HTML customizations</p>
     [% CASE 'Asort1' %]
         <p>Used for acquisitions statistical purposes</p>
     [% CASE 'Asort2' %]
