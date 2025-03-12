@@ -44,6 +44,7 @@ use C4::Search      qw( enabled_staff_search_views );
 use Koha::Biblios;
 use Koha::Checkouts;
 use Koha::Holds;
+use Koha::Hold;
 use Koha::CirculationRules;
 use Koha::Items;
 use Koha::ItemTypes;
@@ -90,6 +91,7 @@ my $exceeded_maxreserves;
 my $exceeded_holds_per_record;
 my @failed_holds   = $input->multi_param('failed_holds');
 my $form_submitted = $input->param('form_submitted');
+my @biblionumbers  = $input->multi_param('biblionumber');
 
 my $op = $input->param('op') || q{};
 
@@ -109,6 +111,60 @@ if ( $op eq 'cud-move' ) {
             $next_priority, $first_priority, $last_priority
         );
     }
+} elsif ( $op eq 'cud-move_hold_item' or $op eq 'cud-move_hold_biblio' ) {
+    my @hold_ids              = $input->multi_param('hold_id');
+    my $original_biblionumber = $input->param('original_biblionumber');
+    my @moving_holds          = Koha::Holds->search(
+        { reserve_id => \@hold_ids },
+        { order_by   => { -asc => 'priority' } }
+    )->as_list;
+
+    my $new_biblionumber = $input->param('new_biblionumber');
+    my $target_biblio    = Koha::Biblios->find($new_biblionumber);
+
+    my %args = (
+        new_biblionumber => $new_biblionumber,
+    );
+
+    # Only pass new_itemnumber if this is an item level move
+    if ( $op eq 'cud-move_hold_item' ) {
+        $args{new_itemnumber} = $input->param('new_itemnumber');
+    }
+
+    my @success_messages;
+    my @error_messages;
+
+    foreach my $hold (@moving_holds) {
+        my $original_biblio = Koha::Biblios->find( $hold->biblionumber );
+
+        my $result = $hold->move_hold( \%args );
+
+        if ( $result->{success} ) {
+            push @success_messages, {
+                hold_id         => $hold->id,
+                success         => 1,
+                original_biblio => $original_biblio,
+                target_biblio   => $target_biblio,
+            };
+        } else {
+            push @error_messages, {
+                hold_id         => $hold->id,
+                success         => 0,
+                original_biblio => $original_biblio,
+                target_biblio   => $target_biblio,
+                error           => $result->{error},
+            };
+        }
+    }
+
+    #Fix the priority on the original record
+    C4::Reserves::_FixPriority( { biblionumber => $original_biblionumber } );
+
+    $template->param(
+        hold_move_successes => \@success_messages,
+        hold_move_failures  => \@error_messages,
+    );
+
 } elsif ( $op eq 'cud-cancel' ) {
     my $reserve_id          = $input->param('reserve_id');
     my $cancellation_reason = $input->param("cancellation-reason");
@@ -171,8 +227,6 @@ if ($form_submitted) {
         $template->param( clubs => \@clubs );
     }
 }
-
-my @biblionumbers = $input->multi_param('biblionumber');
 
 my $multi_hold = @biblionumbers > 1;
 $template->param(
