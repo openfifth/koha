@@ -29,5 +29,5 @@ return {
             # Either the column doesn't exist or it's already been converted
             say $out, "No conversion needed for record_id column.";
         }
-    },
+    }
 };
