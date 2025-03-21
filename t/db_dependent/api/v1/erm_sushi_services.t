@@ -72,6 +72,7 @@ subtest 'get() tests' => sub {
         "requestor_id_info",
         "requestor_id_required",
         "url",
+        "last_audit",
     );
 
     my $librarian = $builder->build_object(
