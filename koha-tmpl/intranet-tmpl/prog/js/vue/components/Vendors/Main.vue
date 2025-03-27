@@ -43,14 +43,14 @@ export default {
         const { loading, loaded, setError } = mainStore;
 
         const permissionsStore = inject("permissionsStore");
-        const { userPermissions } = storeToRefs(permissionsStore);
+        const { loadUserPermissions } = permissionsStore;
 
         return {
             vendorStore,
             setError,
             loading,
             loaded,
-            userPermissions,
+            loadUserPermissions,
             config,
             loadAuthorisedValues,
             authorisedValues,
@@ -61,18 +61,20 @@ export default {
 
         this.loadAuthorisedValues(this.authorisedValues, this.vendorStore).then(
             () => {
-                this.userPermissions = userPermissions;
-                this.config.settings.edifact = edifact;
-                this.config.settings.marcOrderAutomation = marcOrderAutomation;
-                this.vendorStore.currencies = currencies;
-                this.vendorStore.gstValues = gstValues.map(gv => {
-                    return {
-                        label: `${Number(gv.option * 100).format_price()}%`,
-                        value: gv.option,
-                    };
+                this.loadUserPermissions().then(() => {
+                    this.config.settings.edifact = edifact;
+                    this.config.settings.marcOrderAutomation =
+                        marcOrderAutomation;
+                    this.vendorStore.currencies = currencies;
+                    this.vendorStore.gstValues = gstValues.map(gv => {
+                        return {
+                            label: `${Number(gv.option * 100).format_price()}%`,
+                            value: gv.option,
+                        };
+                    });
+                    this.loaded();
+                    this.initialized = true;
                 });
-                this.loaded();
-                this.initialized = true;
             }
         );
     },
