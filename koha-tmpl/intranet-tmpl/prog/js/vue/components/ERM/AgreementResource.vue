@@ -807,6 +807,7 @@ export default {
                     componentProps: {
                         disabled: {
                             resourceProperty: "by_expired",
+                            qualifier: "!",
                         },
                     },
                     value: "",
