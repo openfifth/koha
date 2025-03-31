@@ -160,6 +160,7 @@ export default {
                             requiredKey: "agreement_id",
                             selectLabel: "name",
                             required: true,
+                            indexRequired: true,
                         },
                     ],
                 },
