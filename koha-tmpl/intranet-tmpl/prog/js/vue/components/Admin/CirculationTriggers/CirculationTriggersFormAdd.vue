@@ -287,7 +287,7 @@
                     :to="{
                         name: 'CirculationTriggersList',
                     }"
-                    >Cancel</router-link
+                    >{{ $__("Cancel") }}</router-link
                 >
             </div>
         </form>
@@ -422,7 +422,7 @@ export default {
                 libraries => {
                     libraries.unshift({
                         library_id: "*",
-                        name: "Default rule for all libraries",
+                        name: this.$__("Default rule for all libraries"),
                     })
                     this.libraries = libraries
                 },
@@ -435,7 +435,7 @@ export default {
                 categories => {
                     categories.unshift({
                         patron_category_id: "*",
-                        name: "Default rule for all categories",
+                        name: this.$__("Default rule for all categories"),
                     })
                     this.categories = categories
                 },
@@ -448,7 +448,9 @@ export default {
                 types => {
                     types.unshift({
                         item_type_id: "*",
-                        description: "Default rule for all item types",
+                        description: this.$__(
+                            "Default rule for all item types"
+                        ),
                     })
                     this.itemTypes = types
                 },
