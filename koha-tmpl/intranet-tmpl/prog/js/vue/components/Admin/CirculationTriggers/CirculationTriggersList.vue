@@ -10,37 +10,79 @@
         />
     </Toolbar>
     <div v-if="initialized">
-        <h1>Circulation triggers</h1>
+        <h1>{{ $__("Circulation triggers") }}</h1>
         <div class="page-section bg-info">
             <p>
-                Rules are applied from most specific to less specific, using the
-                first found in this order:
+                {{
+                    $__(
+                        "Rules are applied from most specific to less specific, using the first found in this order"
+                    )
+                }}:
             </p>
             <ul>
-                <li>same library, same patron category, same item type</li>
-                <li>same library, same patron category, all item types</li>
-                <li>same library, all patron categories, same item type</li>
-                <li>same library, all patron categories, all item types</li>
                 <li>
-                    default (all libraries), same patron category, same item
-                    type
+                    {{
+                        $__(
+                            "same library, same patron category, same item type"
+                        )
+                    }}
                 </li>
                 <li>
-                    default (all libraries), same patron category, all item
-                    types
+                    {{
+                        $__(
+                            "same library, same patron category, all item types"
+                        )
+                    }}
                 </li>
                 <li>
-                    default (all libraries), all patron categories, same item
-                    type
+                    {{
+                        $__(
+                            "same library, all patron categories, same item type"
+                        )
+                    }}
                 </li>
                 <li>
-                    default (all libraries), all patron categories, all item
-                    types
+                    {{
+                        $__(
+                            "same library, all patron categories, all item types"
+                        )
+                    }}
+                </li>
+                <li>
+                    {{
+                        $__(
+                            "default (all libraries), same patron category, same item type"
+                        )
+                    }}
+                </li>
+                <li>
+                    {{
+                        $__(
+                            "default (all libraries), same patron category, all item types"
+                        )
+                    }}
+                </li>
+                <li>
+                    {{
+                        $__(
+                            "default (all libraries), all patron categories, same item type"
+                        )
+                    }}
+                </li>
+                <li>
+                    {{
+                        $__(
+                            "default (all libraries), all patron categories, all item types"
+                        )
+                    }}
                 </li>
             </ul>
             <p>
-                The system is currently set to match based on the
-                {{ from_branch }}.
+                {{
+                    $__(
+                        "The system is currently set to match based on the %s"
+                    ).format(from_branch)
+                }}
             </p>
         </div>
         <div class="page-section" v-if="initialized">
