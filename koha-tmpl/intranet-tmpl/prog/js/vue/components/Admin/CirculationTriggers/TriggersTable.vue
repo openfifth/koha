@@ -262,7 +262,7 @@
                             }"
                             class="btn btn-default btn-xs"
                             ><i class="fa-solid fa-pencil"></i>
-                            Edit</router-link
+                            {{ $__("Edit") }}</router-link
                         >
                     </td>
                 </tr>
@@ -284,7 +284,8 @@
                                 },
                             }"
                             class="btn btn-default btn-xs"
-                            ><i class="fa-solid fa-pencil"></i> Add</router-link
+                            ><i class="fa-solid fa-pencil"></i>
+                            {{ $__("Add") }}</router-link
                         >
                     </td>
                 </tr>
