@@ -65,6 +65,14 @@ export default {
         return {
             resourceAttrs: [
                 {
+                    name: this.idAttr,
+                    label: __("ID"),
+                    type: "text",
+                    hideInForm: true,
+                    hideInShow: true,
+                    showInTable: true,
+                },
+                {
                     name: "name",
                     required: true,
                     type: "text",
@@ -617,7 +625,7 @@ export default {
                 table_settings: this.agreement_table_settings,
                 add_filters: true,
                 filters_options: {
-                    1: () =>
+                    2: () =>
                         this.vendors.map(e => {
                             e["_id"] = e["id"];
                             e["_str"] = e["name"];

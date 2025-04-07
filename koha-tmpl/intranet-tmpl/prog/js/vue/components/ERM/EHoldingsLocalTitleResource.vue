@@ -63,6 +63,14 @@ export default {
         return {
             resourceAttrs: [
                 {
+                    name: this.idAttr,
+                    label: __("ID"),
+                    type: "text",
+                    hideInForm: true,
+                    hideInShow: true,
+                    showInTable: true,
+                },
+                {
                     name: "publication_title",
                     required: true,
                     type: "text",
@@ -399,11 +407,12 @@ export default {
                 table_settings: this.eholdings_titles_table_settings,
                 add_filters: true,
                 filters_options: {
-                    2: () =>
+                    4: () =>
                         this.map_av_dt_filter("av_title_publication_types"),
                 },
                 actions: {
                     0: ["show"],
+                    1: ["show"],
                     "-1": ["edit", "delete"],
                 },
             },
