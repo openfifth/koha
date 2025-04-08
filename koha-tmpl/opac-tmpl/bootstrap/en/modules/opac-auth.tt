@@ -58,14 +58,14 @@
                             [% IF ( timed_out ) %]
                                 <!-- This is what is displayed if login has timed out -->
                                 <div class="alert alert-info">
-                                    <p>Sorry, your session has timed out. Please log in again.</p>
+                                    <p aria-live="assertive" role="alert">Sorry, your session has timed out. Please log in again.</p>
                                 </div>
                             [% END %]
 
                             [% IF ( different_ip ) %]
                                 <!-- This is what is displayed if user doesn't have permission -->
                                 <div class="alert alert-info">
-                                    <p>You are logging from a different IP address. Please log in again.</p>
+                                    <p aria-live="assertive" role="alert">You are logging from a different IP address. Please log in again.</p>
                                 </div>
                             [% END %]
 
@@ -73,13 +73,13 @@
                             [% IF invalid_username_or_password || too_many_login_attempts %]
                                 <!-- This is what is displayed if user doesn't have permission or account is locked. (Do not expose more information than needed.) -->
                                 <div class="alert alert-info">
-                                    <p>You entered an incorrect username or password. Please try again! But note that passwords are case sensitive[% IF Koha.Preference('FailedLoginAttempts') %] and that your account will be locked out after a fixed number of failed login attempts[% END %]. Please contact a library staff member if you continue to have problems.</p>
+                                    <p aria-live="assertive" role="alert">You entered an incorrect username or password. Please try again! But note that passwords are case sensitive[% IF Koha.Preference('FailedLoginAttempts') %] and that your account will be locked out after a fixed number of failed login attempts[% END %]. Please contact a library staff member if you continue to have problems.</p>
                                 </div>
                             [% END %]
 
                             [% IF auth_error %]
                                 <div class="alert alert-info">
-                                    <p>There was an error authenticating to external identity provider</p>
+                                    <p aria-live="assertive" role="alert">There was an error authenticating to external identity provider</p>
                                     <p>[% auth_error | html %]</p>
                                 </div>
                             [% END %]
@@ -88,12 +88,12 @@
                                 [% IF ( invalidShibLogin ) %]
                                     <!-- This is what is displayed if shibboleth login has failed to match a koha user -->
                                     <div class="alert alert-info">
-                                        <p class="shib_invalid">Sorry, your Shibboleth identity does not match a valid library identity.</p>
+                                        <p aria-live="assertive" role="alert" class="shib_invalid">Sorry, your Shibboleth identity does not match a valid library identity.</p>
                                         [% UNLESS ( Koha.Preference('OPACShibOnly') ) %]
                                             [% IF ( casAuthentication ) %]
                                                 [% IF ( invalidCasLogin ) %]
                                                     <!-- This is what is displayed if cas login has failed -->
-                                                    <p class="cas_invalid">Sorry, the CAS login also failed. If you have a local login you may use that below.</p>
+                                                    <p class="cas_invalid" role="alert" aria-live="assertive">Sorry, the CAS login also failed. If you have a local login you may use that below.</p>
                                                 [% ELSE %]
                                                     <p>If you have a CAS account, you may use that below.</p>
                                                 [% END %]
@@ -136,7 +136,7 @@
                                     [% IF ( invalidCasLogin ) %]
                                         <div class="alert alert-info">
                                             <!-- This is what is displayed if cas login has failed -->
-                                            <p class="cas_invalid">Sorry, the CAS login failed.</p>
+                                            <p class="cas_invalid" role="alert" aria-live="assertive">Sorry, the CAS login failed.</p>
                                         </div>
                                     [% END %]
 
@@ -197,18 +197,18 @@
 
                         [% IF !(invalid_username_or_password || too_many_login_attempts) and is_anonymous_patron %]
                             <div class="alert alert-info">
-                                <p><strong>Error: </strong>You can't log in as the anonymous patron!</p>
+                                <p aria-live="assertive" role="alert"><strong>Error: </strong>You can't log in as the anonymous patron!</p>
                             </div>
                         [% END %]
 
                         [% IF !(invalid_username_or_password || too_many_login_attempts) and password_has_expired %]
                             [% IF date_enrolled == password_expiration_date %]
                                 <div class="alert alert-info">
-                                    <p><strong>Error: </strong>It's your first login! You need to reset your password.</p>
+                                    <p aria-live="assertive" role="alert"><strong>Error: </strong>It's your first login! You need to reset your password.</p>
                                 </div>
                             [% ELSE %]
                                 <div class="alert alert-info">
-                                    <p><strong>Error: </strong>Your password has expired!</p>
+                                    <p aria-live="assertive" role="alert"><strong>Error: </strong>Your password has expired!</p>
                                 </div>
                             [% END %]
                             [% IF Koha.Preference('EnableExpiredPasswordReset') %]
