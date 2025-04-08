@@ -887,6 +887,11 @@ OPAC:
             - '<br>If you choose <a href="/cgi-bin/koha/admin/preferences.pl?op=search&searchfield=EmailAddressForPatronRegistrations">EmailAddressForPatronRegistrations</a> you have to enter a valid email address: '
             - pref: EmailAddressForPatronRegistrations
               class: email
+        -
+            - "Patron's maximum age when registering: "
+            - pref: PatronSelfRegistrationAgeRestriction
+              class: integer
+            - "<br />Note: If empty, do not restrict patron's age during self registration"
     Suggestions:
         -
             - pref: OpacSuggestionManagedBy
