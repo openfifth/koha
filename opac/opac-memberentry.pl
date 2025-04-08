@@ -226,11 +226,13 @@ if ( $op eq 'cud-create' ) {
         }
         else {
             $borrower{password}         ||= Koha::AuthUtils::generate_password(Koha::Patron::Categories->find($borrower{categorycode}));
-            my $consent_dt = delete $borrower{gdpr_proc_consent};
+            my $consent_dt            = delete $borrower{gdpr_proc_consent};
+            my $consent_newsletter_dt = delete $borrower{newsletter_proc_consent};
             my $patron;
             try {
                 $patron = Koha::Patron->new( \%borrower )->store;
                 Koha::Patron::Consent->new({ borrowernumber => $patron->borrowernumber, type => 'GDPR_PROCESSING', given_on => $consent_dt })->store if $patron && $consent_dt;
+                Koha::Patron::Consent->new({ borrowernumber => $patron->borrowernumber, type => 'NEWSLETTER', given_on => $consent_newsletter_dt })->store if $patron && $consent_newsletter_dt;
                 C4::Members::Messaging::SetMessagingPreferencesFromDefaults(
                     { borrowernumber => $patron->borrowernumber, categorycode => $patron->categorycode } );
             } catch {
@@ -439,6 +441,7 @@ sub GetMandatoryFields {
 
     my @fields = split( /\|/, $BorrowerMandatoryField );
     push @fields, 'gdpr_proc_consent' if C4::Context->preference('PrivacyPolicyConsent') && $op eq 'cud-create';
+    push @fields, 'newsletter_proc_consent' if $op eq 'cud-create';
 
     foreach (@fields) {
         $mandatory_fields{$_} = 1;
@@ -555,6 +558,7 @@ sub ParseCgiForBorrower {
 
     # Replace checkbox 'agreed' by datetime in gdpr_proc_consent
     $borrower{gdpr_proc_consent} = dt_from_string if  $borrower{gdpr_proc_consent} && $borrower{gdpr_proc_consent} eq 'agreed';
+    $borrower{newsletter_proc_consent} = dt_from_string if $borrower{newsletter_proc_consent} && $borrower{newsletter_proc_consent} eq 'agreed';
 
     delete $borrower{$_} for qw/borrowernumber date_renewed debarred debarredcomment flags privacy privacy_guarantor_fines privacy_guarantor_checkouts checkprevcheckout updated_on lastseen login_attempts overdrive_auth_token anonymized/; # See also members/memberentry.pl
     delete $borrower{$_} for qw/dateenrolled dateexpiry borrowernotes opacnote sort1 sort2 sms_provider_id autorenew_checkouts gonenoaddress lost relationship/; # On OPAC only

@@ -1053,6 +1053,24 @@
                         </div> <!-- /.row -->
                     [% END %]
 
+                    <div class="row">
+                        <div class="col">
+                            <fieldset class="rows" id="memberentry_newsletter_consent">
+                                <legend>Newsletter consent</legend>
+                                <ol>
+                                <li>
+                                    <div class="label"></div>
+                                    <label class="checkbox-label" for="borrower_newsletter_proc_consent">
+                                        <input type="checkbox" name="borrower_newsletter_proc_consent" id="borrower_newsletter_proc_consent" value="agreed">
+                                        <span>We would like to send you our regular newsletters. Please signify if you would like these bulletins delivered to your inbox.</span>
+                                    </label>
+                                    <label class="error" for="borrower_newsletter_proc_consent" style="display: none;"></label>
+                                </li>
+                                </ol>
+                            </fieldset>
+                        </div> <!-- /.col -->
+                    </div> <!-- /.row -->
+
                     [% IF Koha.Preference('PrivacyPolicyConsent') && op != 'edit' %]
                         <div class="row">
                             <div class="col">
