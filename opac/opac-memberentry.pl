@@ -544,6 +544,16 @@ sub CheckForInvalidFields {
           }
     }
 
+    if ( $borrower->{'dateofbirth'} ) {
+        my $patron           = Koha::Patron->new( { dateofbirth => $borrower->{'dateofbirth'} } );
+        my $age              = $patron->get_age;
+        my $borrowercategory = Koha::Patron::Categories->find( $borrower->{'categorycode'} );
+        my $upper_registration_age_restriction = C4::Context->preference("PatronSelfRegistrationAgeRestriction");
+        if ( $upper_registration_age_restriction && $age > $upper_registration_age_restriction ) {
+            push @invalidFields, 'age_limitations_self_registration';
+        }
+    }
+
     return \@invalidFields;
 }
 
