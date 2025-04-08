@@ -229,6 +229,18 @@ OPAC:
               class: multi
             - (separate columns with |).
         -
+            - pref: OpacFacetAccordion
+              choices:
+                  1: "Use"
+                  0: "Don't use"
+            - "the facet accordions."
+        -
+            - pref: OpacFacetAccordionExpandedByDefault
+              choices:
+                  1: "Expand"
+                  0: "Don't expand"
+            - "the facet accordions by default."
+        -
             - Use the image at
             - pref: OpacFavicon
               class: url

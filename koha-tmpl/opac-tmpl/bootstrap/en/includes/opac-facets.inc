@@ -6,8 +6,8 @@
 [% SET OPACResultsSidebar = AdditionalContents.get( location => "OPACResultsSidebar", lang => lang, library => logged_in_user.branchcode || default_branch ) %]
 [% IF ( opacfacets && facets_loop && total ) %]
     <div id="search-facets">
-        <h2><a href="#" class="menu-collapse-toggle">Refine your search</a></h2>
-        <ul class="menu-collapse">
+        <h2>Refine your search</h2>
+        <ul>
             [% IF Koha.Preference("SavedSearchFilters") && search_filters.size > 0 %]
                 <li id="search-filters">
                     <h3 id="filter_facets">Custom search filters</h3>

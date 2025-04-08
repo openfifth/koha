@@ -22,6 +22,8 @@
 [% SET OpenLibraryCovers = Koha.Preference('OpenLibraryCovers') %]
 [% SET BakerTaylorEnabled = Koha.Preference('BakerTaylorEnabled') %]
 [% SET OPACCoce = ( Koha.Preference('OPACCoce') && Koha.Preference('CoceProviders') ) %]
+[% SET OpacFacetAccordion = Koha.Preference('OpacFacetAccordion') %]
+[% SET OpacFacetAccordionExpandedByDefault = Koha.Preference('OpacFacetAccordionExpandedByDefault') %]
 [% IF ( CoverImagePlugins || OPACLocalCoverImages || OPACAmazonCoverImages || SyndeticsCoverImages || GoogleJackets || OpenLibraryCovers || BakerTaylorEnabled || OPACCoce || OPACCustomCoverImages ) %]
     [% SET CoverImages = 1 %]
     [% SET OPACCustomCoverImages = ( Koha.Preference('OPACCustomCoverImages') && Koha.Preference('CustomCoverImagesURL') ) %]
@@ -674,11 +676,79 @@
             }
         }
 
+        function facet_accordions() {
+            // change the labels to be links
+            var clickToExpand   = _('Click to expand');
+            var clickToCollapse = _('Click to collapse');
+            var showOnlyAvail   = _('Showing only records with available items');
+
+            $('#search-facets ul h3').each(function () {
+                // vars
+                var currentText = $(this).text();
+
+                [% IF ( OpacFacetAccordionExpandedByDefault ) %]
+                    $(this).html('<a href="\#expandFacet"\>' + currentText + ' <span class=\"sr-only\">(' + clickToCollapse + ')<\/span><i class=\"fa fa-chevron-left\" aria-hidden=\"true\"><\/i><\/a>');
+                [% ELSE %]
+                    $(this).html('<a href="\#expandFacet"\>' + currentText + ' <span class=\"sr-only\">(' + clickToExpand + ')<\/span><i class=\"fa fa-chevron-down\" aria-hidden=\"true\"><\/i><\/a>');
+                [% END %]
+            });
+
+            // remove the display:none and collapsible facet
+            $('#search-facets .collapsible-facet').each(function () {
+                $(this).removeAttr('style');
+                $(this).removeAttr('class');
+            });
+
+            // remove the toggle links
+            $('#search-facets .moretoggle').each(function () {
+                $(this).remove();
+            });
+
+            // hide the lists
+            [% UNLESS ( OpacFacetAccordionExpandedByDefault ) %]
+                $('#search-facets ul ul').each(function () {
+                    $(this).hide();
+                });
+            [% END %]
+
+            // facet link handler
+            $('a[href="#expandFacet"]').on('click', function (event) {
+                event.preventDefault();
+
+                if ($(this).parents('h3').siblings('ul').css('display') == 'none') {
+                    $(this).parents('h3').siblings('ul').show(); // unhide
+                    $(this).find('span.sr-only').text(clickToCollapse);
+                } else {
+                    $(this).parents('h3').siblings('ul').hide(); // else hide
+                    $(this).find('span.sr-only').text(clickToExpand);
+                }
+
+                $(this).find('i.fa').toggleClass('fa-chevron-down'); // swap the chevrons
+                $(this).find('i.fa').toggleClass('fa-chevron-left');
+            });
+
+            // unhide anything that has been selected
+            [% UNLESS ( OpacFacetAccordionExpandedByDefault ) %]
+                $('#search-facets ul li').find('li:contains("[x]")').each(function () {
+                    $(this).parents('li').find('h3 a').click();
+                });
+                $('#search-facets ul li').find('li:contains("' + showOnlyAvail +'")').each(function () {
+                    $(this).parents('li').find('h3 a').click();
+                });
+            [% END %]
+
+            return;
+        } /* /facet_accordions */
+
         $(window).load(function() {
             wait_for_images(verify_cover_images);
         });
 
         $(document).ready(function(){
+
+            [% IF ( OpacFacetAccordion ) %]
+                facet_accordions();
+            [% END %]
 
             $(".moretoggle").click(function(e){
                 e.preventDefault();
