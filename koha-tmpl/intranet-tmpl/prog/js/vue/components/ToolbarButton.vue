@@ -1,21 +1,12 @@
 <template>
-    <a
-        v-if="action === 'add'"
-        @click="$emit('go-to-add-resource')"
-        class="btn btn-default"
+    <a v-if="action === 'add'" class="btn btn-default"
         ><font-awesome-icon icon="plus" /> {{ title }}</a
     >
-    <a
-        v-else-if="action === 'delete'"
-        @click="$emit('delete-resource')"
-        class="btn btn-default"
-        ><font-awesome-icon icon="trash" /> {{ $__("Delete") }}</a
+    <a v-else-if="action === 'delete'" class="btn btn-default"
+        ><font-awesome-icon icon="trash" /> {{ title }}</a
     >
-    <a
-        v-else-if="action === 'edit'"
-        @click="$emit('go-to-edit-resource')"
-        class="btn btn-default"
-        ><font-awesome-icon icon="pencil" /> {{ $__("Edit") }}</a
+    <a v-else-if="action === 'edit'" class="btn btn-default"
+        ><font-awesome-icon icon="pencil" /> {{ title }}</a
     >
     <router-link
         v-else-if="action === undefined && to"
@@ -43,7 +34,6 @@ export default {
             type: String,
         },
     },
-    emits: ["go-to-add-resource", "go-to-edit-resource", "delete-resource"],
     name: "Toolbar",
 };
 </script>
