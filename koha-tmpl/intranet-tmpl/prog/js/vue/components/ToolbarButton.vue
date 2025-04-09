@@ -14,6 +14,12 @@
         class="btn btn-default"
         ><font-awesome-icon v-if="icon" :icon="icon" /> {{ title }}</router-link
     >
+    <a
+        v-else-if="action === undefined && onclick"
+        @click="onclick"
+        class="btn btn-default"
+        ><font-awesome-icon v-if="icon" :icon="icon" /> {{ title }}</a
+    >
     <span v-else>{{ $__("Unknown action %s").format(action) }}</span>
 </template>
 
@@ -22,10 +28,13 @@ export default {
     props: {
         action: {
             type: String,
+            required: false,
         },
         to: {
             type: [String, Object],
+            required: false,
         },
+        onclick: { type: Function, required: false },
         icon: {
             type: String,
             required: false,
