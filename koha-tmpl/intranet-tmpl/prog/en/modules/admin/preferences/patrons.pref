@@ -482,6 +482,11 @@ Patrons:
          - a strong password for staff and patrons
          - (must contain at least one digit, one lowercase and one uppercase).
      -
+         - Check against the last
+         - pref: PasswordHistoryCount
+           class: integer
+         - previous passwords when changing password.
+     -
          - pref: EnableExpiredPasswordReset
            choices:
                1: "Enable"
