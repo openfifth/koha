@@ -71,6 +71,8 @@ use Koha::Result::Boolean;
 use Koha::Subscription::Routinglists;
 use Koha::Token;
 use Koha::Virtualshelves;
+use Koha::PatronPasswordHistory;
+use Koha::PatronPasswordHistories;
 
 use base qw(Koha::Object);
 
@@ -1059,6 +1061,17 @@ sub set_password {
     my $action   = $args->{action} || "CHANGE PASS";
 
     unless ( $args->{skip_validation} ) {
+        # Check password history first
+        if (Koha::PatronPasswordHistories->has_used_password({
+            borrowernumber => $self->borrowernumber,
+            password => $password,
+            current_password => $self->password
+        })) {
+            Koha::Exceptions::Password::UsedBefore->throw(
+                error => 'Password has been used before'
+            );
+        }
+        
         my ( $is_valid, $error ) = Koha::AuthUtils::is_password_valid( $password, $self->category );
 
         if ( !$is_valid ) {
@@ -1138,6 +1151,20 @@ sub set_password {
                 }
             }
         }
+    }
+
+    # Store old password in history if there is one and it's different from the new one
+    if ($self->password && $self->in_storage) {
+        # Get the old password before it's replaced
+        my $old_password = $self->get_from_storage->password;
+        my $history_count = C4::Context->preference('PasswordHistoryCount') || 0;
+        
+        # Always store the old password, regardless of current preference
+        # This ensures we maintain history if the preference is increased later
+        my $history_record = Koha::PatronPasswordHistory->new({
+            borrowernumber => $self->borrowernumber,
+            password => $old_password,
+        })->store();
     }
 
     my $digest = Koha::AuthUtils::hash_password($password);
