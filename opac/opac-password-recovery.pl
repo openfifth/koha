@@ -180,6 +180,8 @@ elsif ( $op eq 'cud-reset_password' ) {
             }
             elsif ( $_->isa('Koha::Exceptions::Password::TooWeak') ) {
                 $error = 'password_too_weak';
+            } elsif ($_->isa('Koha::Exceptions::Password::UsedBefore')) {
+                $error = 'password_used_before';
             }
         };
     }
