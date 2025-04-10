@@ -58,6 +58,10 @@
                                 [% IF password_has_whitespaces %]
                                     <span>Password must not contain leading or trailing whitespaces.</span>
                                 [% END %]
+                                
+                                [% IF password_used_before %]
+                                    <span>This password has been used before. You cannot reuse any of your last [% password_history_count | html %] passwords.</span>
+                                [% END %]
 
                                 [% IF ( WrongPass ) %]
                                    <span>Your current password was entered incorrectly. If this problem persists, please ask a librarian to reset your password for you.</span>

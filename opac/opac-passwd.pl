@@ -69,6 +69,10 @@ if ( $patron->category->effective_change_password ) {
                         if $_->isa('Koha::Exceptions::Password::TooWeak');
                     $error = 'password_has_whitespaces'
                         if $_->isa('Koha::Exceptions::Password::WhitespaceCharacters');
+                    if ($_->isa('Koha::Exceptions::Password::UsedBefore')) {
+                        $error = 'password_used_before';
+                        $template->param( 'password_history_count' => C4::Context->preference('PasswordHistoryCount') );
+                    }
                 };
             }
         }
