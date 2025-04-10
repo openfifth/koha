@@ -48,7 +48,10 @@ use Exception::Class (
     'Koha::Exceptions::Password::NoCategoryProvided' => {
         isa         => 'Koha::Exceptions::Password',
         description => 'You must provide a patron\'s category to validate password\'s strength and length'
-    }
+    },
+    'Koha::Exceptions::Password::UsedBefore' => {
+        isa => 'Koha::Exceptions::Password',
+    },
 );
 
 sub full_message {
