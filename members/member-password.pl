@@ -81,6 +81,10 @@ if ( $op eq 'cud-update' && defined($newpassword) and not @errors ) {
             push @errors, 'ERROR_password_too_weak';
         } elsif ( $_->isa('Koha::Exceptions::Password::Plugin') ) {
             push @errors, 'ERROR_from_plugin';
+        } elsif ( $_->isa('Koha::Exceptions::Password::UsedBefore') ) {
+            my $count = C4::Context->preference('PasswordHistoryCount') || 0;
+            push @errors, 'ERROR_password_used_before';
+            $template->param( 'password_history_count' => $count );
         } else {
             push( @errors, 'BADUSERID' );
         }
