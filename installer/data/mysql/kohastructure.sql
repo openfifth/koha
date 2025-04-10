@@ -1819,6 +1819,7 @@ CREATE TABLE `categories` (
   `can_be_guarantee` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'if patrons of this category can be guarantees',
   `reset_password` tinyint(1) DEFAULT NULL COMMENT 'if patrons of this category can do the password reset flow,',
   `change_password` tinyint(1) DEFAULT NULL COMMENT 'if patrons of this category can change their passwords in the OAPC',
+  `password_history_count` smallint(6) DEFAULT NULL COMMENT 'Number of previous passwords to check against when changing password for this patron type',
   `min_password_length` smallint(6) DEFAULT NULL COMMENT 'set minimum password length for patrons in this category',
   `require_strong_password` tinyint(1) DEFAULT NULL COMMENT 'set required password strength for patrons in this category',
   `force_password_reset_when_set_by_staff` tinyint(1) DEFAULT NULL COMMENT 'if patrons of this category are required to reset password after being created by a staff member',
@@ -7095,6 +7096,25 @@ CREATE TABLE `zebraqueue` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+--
+-- Table structure for table `borrower_password_history`
+--
+
+DROP TABLE IF EXISTS `borrower_password_history`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE IF NOT EXISTS borrower_password_history (
+    id int(11) NOT NULL AUTO_INCREMENT,
+    borrowernumber int(11) NOT NULL,
+    password varchar(128) NOT NULL,
+    created_on timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY borrowernumber (borrowernumber),
+    CONSTRAINT borrower_password_history_ibfk_1 FOREIGN KEY (borrowernumber) REFERENCES borrowers(borrowernumber) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
 /*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
