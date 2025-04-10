@@ -48,6 +48,7 @@ use Koha::Patron::HouseboundRoles;
 use Koha::Policy::Patrons::Cardnumber;
 use Koha::Plugins;
 use Koha::SMS::Providers;
+use Koha::PatronPasswordHistories;
 
 my $input = CGI->new;
 my %data;
@@ -377,14 +378,29 @@ if ($op eq 'cud-save' || $op eq 'cud-insert'){
   my $password2 = $input->param('password2');
   push @errors, "ERROR_password_mismatch" if ( $password ne $password2 );
 
-  if ( $password and $password ne '****' ) {
-      my ( $is_valid, $error ) = Koha::AuthUtils::is_password_valid( $password, $category );
-      unless ( $is_valid ) {
-          push @errors, 'ERROR_password_too_short' if $error eq 'too_short';
-          push @errors, 'ERROR_password_too_weak' if $error eq 'too_weak';
-          push @errors, 'ERROR_password_has_whitespaces' if $error eq 'has_whitespaces';
-      }
-  }
+    if ( $password and $password ne '****' ) {
+        my ( $is_valid, $error ) = Koha::AuthUtils::is_password_valid( $password, $category );
+        unless ($is_valid) {
+            push @errors, 'ERROR_password_too_short'       if $error eq 'too_short';
+            push @errors, 'ERROR_password_too_weak'        if $error eq 'too_weak';
+            push @errors, 'ERROR_password_has_whitespaces' if $error eq 'has_whitespaces';
+        }
+        
+        # Check password history
+        if ($patron && $is_valid) {  # Only check if other validations passed and we have a patron
+            my $is_used = Koha::PatronPasswordHistories->has_used_password({
+                borrowernumber => $patron->borrowernumber,
+                password => $password,
+                current_password => $patron->password
+            });
+            
+            if ($is_used) {
+                push @errors, 'ERROR_password_used_before';
+                my $count = C4::Context->preference('PasswordHistoryCount') || 0;
+                $template->param( password_history_count => $count );
+            }
+        }
+    }
 
   # Validate emails
   my $emailprimary = $input->param('email');
@@ -588,10 +604,10 @@ if ((!$nok) and $nodouble and ($op eq 'cud-insert' or $op eq 'cud-save')){
                 }
             }
 
-            # should never raise an exception as password validity is checked above
+            # password validity has been checked above 
             my $password = $newdata{password};
-            if ( $password and $password ne '****' ) {
-                $patron->set_password({ password => $password });
+            if ( $password and $password ne '****' and $success ) {
+                $patron->set_password( { password => $password } );
             }
 
             add_guarantors( $patron, $input );

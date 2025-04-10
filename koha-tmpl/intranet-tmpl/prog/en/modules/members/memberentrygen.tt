@@ -224,6 +224,9 @@ legend.collapsed i.fa.fa-caret-down::before {
                                     [% IF ( ERROR_invalid_relationship ) %]
                                         <li id="ERROR_invalid_relationship">Guarantor relationship cannot be left blank according to configuration.</li>
                                     [% END %]
+                                    [% IF ( ERROR_password_used_before ) %]
+                                        <li id="ERROR_used_before">This password has been used before. You cannot reuse any of your last [% password_history_count | html %] passwords.</li>
+                                    [% END %]
                                 </ul>
                             </div>
                         [% END %]
@@ -1365,6 +1368,9 @@ legend.collapsed i.fa.fa-caret-down::before {
                                                     [% END %]
                                                     [% IF ( ERROR_password_has_whitespaces ) %]
                                                         <span class="required">Password has leading or trailing whitespaces</span>
+                                                    [% END %]
+                                                    [% IF ( ERROR_password_used_before ) %]
+                                                        <span class="required">Password has been used before</span>
                                                     [% END %]
                                                     <div class="hint">Minimum password length: [% patron.category.effective_min_password_length | html %]</div>
                                                 </li>
