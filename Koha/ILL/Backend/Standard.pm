@@ -149,7 +149,8 @@ sub metadata {
     my $attrs    = $request->extended_attributes;
     my $metadata = {};
     my @ignore   = (
-        'requested_partners', 'type', 'type_disclaimer_value', 'type_disclaimer_date', 'copyrightclearance_confirmed', 'unauthenticated_first_name', 'unauthenticated_last_name', 'unauthenticated_email'
+        'requested_partners', 'type', 'type_disclaimer_value', 'type_disclaimer_date', 'copyrightclearance_confirmed',
+        'unauthenticated_first_name', 'unauthenticated_last_name', 'unauthenticated_email', 'historycheck_requests'
     );
     my $core_fields = _get_core_fields();
     while ( my $attr = $attrs->next ) {
