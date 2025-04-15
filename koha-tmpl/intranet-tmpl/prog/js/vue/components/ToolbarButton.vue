@@ -1,11 +1,11 @@
 <template>
-    <a v-if="action === 'add'" class="btn btn-default"
+    <a v-if="action === 'add'" class="btn btn-default" @click="onClick"
         ><font-awesome-icon icon="plus" /> {{ title }}</a
     >
-    <a v-else-if="action === 'delete'" class="btn btn-default"
+    <a v-else-if="action === 'delete'" class="btn btn-default" @click="onClick"
         ><font-awesome-icon icon="trash" /> {{ title }}</a
     >
-    <a v-else-if="action === 'edit'" class="btn btn-default"
+    <a v-else-if="action === 'edit'" class="btn btn-default" @click="onClick"
         ><font-awesome-icon icon="pencil" /> {{ title }}</a
     >
     <router-link
@@ -15,8 +15,8 @@
         ><font-awesome-icon v-if="icon" :icon="icon" /> {{ title }}</router-link
     >
     <a
-        v-else-if="action === undefined && onclick"
-        @click="onclick"
+        v-else-if="action === undefined && onClick"
+        @click="onClick"
         class="btn btn-default"
         ><font-awesome-icon v-if="icon" :icon="icon" /> {{ title }}</a
     >
@@ -34,7 +34,7 @@ export default {
             type: [String, Object],
             required: false,
         },
-        onclick: { type: Function, required: false },
+        onClick: { type: Function, required: false },
         icon: {
             type: String,
             required: false,
