@@ -30,7 +30,6 @@ use POSIX qw( strftime );
 use Koha::ILL::Request::Config;
 use Koha::ILL::Requests;
 use Koha::ILL::Request;
-use Koha::ILL::Backends;
 use Koha::Libraries;
 use Koha::Patrons;
 use Koha::ILL::Request::Workflow::Availability;
@@ -66,7 +65,7 @@ my ( $template, $loggedinuser, $cookie ) = get_template_and_user({
 
 # Are we able to actually work?
 my $patron = Koha::Patrons->find($loggedinuser);
-my $backends = Koha::ILL::Backends->opac_available_backends($patron);
+my $backends = Koha::ILL::Request::Config->new->opac_available_backends($patron);
 my $backends_available = ( scalar @{$backends} > 0 );
 $template->param( backends_available => $backends_available );
 
