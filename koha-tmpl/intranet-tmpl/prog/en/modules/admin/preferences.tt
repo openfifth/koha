@@ -190,7 +190,7 @@
                                 [% END # FOREACH ill_backend %]
                             </ul> <!-- / ul.sortable -->
                         [% ELSE %]
-                            <p><strong>No available backends</strong></p>
+                            <p><strong>Only the Standard backend is available. Additional backends are required to use this feature.</strong></p>
                         [% END # IF ( CHUNK.ill_backends ) %]
                     [% ELSIF ( CHUNK.type_languages ) %]
                         <ul class="sortable">
