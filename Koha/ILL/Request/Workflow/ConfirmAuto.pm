@@ -103,7 +103,7 @@ sub get_priority_backends {
     my ( $self, $ui_context ) = @_;
 
     my $opac_backends;
-    $opac_backends = Koha::ILL::Backends->opac_available_backends() if $ui_context eq 'opac';
+    $opac_backends = Koha::ILL::Request::Config->new->opac_available_backends() if $ui_context eq 'opac';
 
     my @backends;
     my @priority_enabled_backends = split ",", C4::Context->preference('AutoILLBackendPriority');
