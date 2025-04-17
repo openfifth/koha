@@ -9,5 +9,6 @@ export const usePreservationStore = defineStore("preservation", {
                 not_for_loan_default_train_in: 0,
             },
         },
+        itemsRecentlyAddedToWaitingList: [],
     }),
 });
