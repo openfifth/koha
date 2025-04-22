@@ -1948,12 +1948,22 @@
                 column.cannot_be_toggled = 1;
             [% END %]
 
+            [% IF ( Koha.Preference('OPACTableColExpandedByDefault') ) %]
+                var responsive_display = DataTable.Responsive.display.childRowImmediate;
+            [% ELSE %]
+                var responsive_display = DataTable.Responsive.display.childRow;
+            [% END %]
+
             $("#holdingst").kohaTable(
                 {
                     dom: '<"clearfix">t',
                     bKohaColumnsUseNames: true,
                     responsive: {
-                        details: { type: "column", target: -1 },
+                        details: {
+                            display: responsive_display,
+                            type: "column",
+                            target: -1
+                        },
                     },
                 },
                 holdingst_table_settings,
@@ -1963,7 +1973,11 @@
                     dom: '<"clearfix">t',
                     bKohaColumnsUseNames: true,
                     responsive: {
-                        details: { type: "column", target: -1 },
+                        details: {
+                            display: responsive_display,
+                            type: "column",
+                            target: -1
+                        },
                     },
                 },
                 otherholdingst_table_settings,
@@ -1977,7 +1991,11 @@
                     order: [[1, "desc"]],
                     bKohaColumnsUseNames: true,
                     responsive: {
-                        details: { type: "column", target: -1 },
+                        details: {
+                            display: responsive_display,
+                            type: "column",
+                            target: -1
+                        },
                     },
                 },
                 serial_table_settings
