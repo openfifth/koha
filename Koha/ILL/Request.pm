@@ -483,16 +483,21 @@ sub load_backend {
         logger => Koha::ILL::Request::Logger->new
     };
 
-    # Find plugin implementing the backend for the request
-    my $backend_plugin = $self->get_backend_plugin($backend_name);
+    my $plugin;
+    if ( $backend_name ne 'Standard' ) {
+
+        # Find plugin implementing the backend for the request
+        $plugin = $self->get_backend_plugin($backend_name);
+    }
 
     if ( $backend_name eq 'Standard' ) {
 
         # Load the Standard core backend
         $self->{_my_backend} = Koha::ILL::Backend::Standard->new($backend_params);
-    } elsif ($backend_plugin) {
+    } elsif ($plugin) {
 
-        $self->{_my_backend} = $backend_plugin->new_ill_backend($backend_params);
+        $self->{_my_backend} = $plugin->new_ill_backend($backend_params);
+        $self->{_plugin}     = $plugin;
     } elsif ($backend_name) {
 
         # Fallback to loading through backend_dir config
@@ -1156,11 +1161,9 @@ sub expand_template {
     my $backend_dir;
     my $backend_tmpl;
 
-    my $backend_plugin = $self->get_backend_plugin( $self->_backend->name );
-    if ($backend_plugin) {
+    if ( $self->{_plugin} ) {
 
-        # New way of loading backends: Through plugins
-        $backend_dir  = $backend_plugin->bundle_path;
+        $backend_dir  = $self->{_plugin}->bundle_path;
         $backend_tmpl = $backend_dir;
 
     } elsif ( $backend eq 'Standard' ) {
