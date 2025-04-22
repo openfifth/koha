@@ -76,6 +76,13 @@
     <script>
         $(document).ready(function() {
             table_settings = [% TablesSettings.GetTableSettings( 'opac', 'course_list', 'course_reserves_table', 'json' ) | $raw %]
+
+            [% IF ( Koha.Preference('OPACTableColExpandedByDefault') ) %]
+                var responsive_display = DataTable.Responsive.display.childRowImmediate;
+            [% ELSE %]
+                var responsive_display = DataTable.Responsive.display.childRow;
+            [% END %]
+
             KohaTable("#course_reserves_table", {
                 "dom": '<"top"<"table_controls"f>>rt<"clear">',
                 "sorting": [[ 1, "asc" ]],
@@ -87,7 +94,11 @@
                     "searchPlaceholder": _("Search courses")
                 },
                 "responsive": {
-                    "details": { "type": 'column',"target": -1 }
+                    "details": {
+                        "display": responsive_display,
+                        "type": "column",
+                        "target": -1
+                    },
                 },
                 "cColumnDefs": [
                     { "className": 'dtr-control', "orderable": false, "targets": -1 },
