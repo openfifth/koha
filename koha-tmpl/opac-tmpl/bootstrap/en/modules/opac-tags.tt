@@ -259,6 +259,12 @@
             }
         });
 
+        [% IF ( Koha.Preference('OPACTableColExpandedByDefault') ) %]
+            var responsive_display = DataTable.Responsive.display.childRowImmediate;
+        [% ELSE %]
+            var responsive_display = DataTable.Responsive.display.childRow;
+        [% END %]
+
         $("#mytagst").dataTable($.extend(true, {}, dataTablesDefaults, {
             "sorting": [[ 2, "asc" ]],
             "columnDefs": [
@@ -268,13 +274,13 @@
                 { responsivePriority: 1, targets: 2 }
             ],
             "responsive": {
-                details: {
-                    type: 'column',
-                    target: -1
+                "details": {
+                    "display": responsive_display,
+                    "type": 'column',
+                    "target": -1
                 }
             },
         }));
     });
-
 </script>
 [% END %]
