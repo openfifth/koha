@@ -295,6 +295,12 @@
                 }
             });
 
+            [% IF ( Koha.Preference('OPACTableColExpandedByDefault') ) %]
+                var responsive_display = DataTable.Responsive.display.childRowImmediate;
+            [% ELSE %]
+                var responsive_display = DataTable.Responsive.display.childRow;
+            [% END %]
+
             $("#mytagst").kohaTable({
                 sorting: [[2, "asc"]],
                 columnDefs: [
@@ -303,6 +309,7 @@
                 ],
                 responsive: {
                     details: {
+                        display: responsive_display,
                         type: "column",
                         target: -1,
                     },

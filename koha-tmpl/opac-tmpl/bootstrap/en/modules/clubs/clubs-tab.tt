@@ -96,6 +96,12 @@
         return false;
     }
 
+    [% IF ( Koha.Preference('OPACTableColExpandedByDefault') ) %]
+        var responsive_display = DataTable.Responsive.display.childRowImmediate;
+    [% ELSE %]
+        var responsive_display = DataTable.Responsive.display.childRow;
+    [% END %]
+
         var Tables = $("#clubs-table-enrolled,#clubs-table-unenrolled");
         Tables.each(function(){
             $(this).kohaTable({
@@ -103,7 +109,11 @@
                 paging: false,
                 info: false,
                 responsive: {
-                    details: { type: "column", target: -1 },
+                    details: {
+                        display: responsive_display,
+                        type: "column",
+                        target: -1
+                    },
                 },
                 columnDefs: [
                     { className: "dtr-control", orderable: false, targets: -1 },

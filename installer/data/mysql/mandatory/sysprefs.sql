@@ -574,6 +574,7 @@ INSERT INTO systempreferences ( `variable`, `value`, `options`, `explanation`, `
 ('OpacSuppression','0','','Turn ON the OPAC Suppression feature, requires further setup, ask your system administrator for details','YesNo'),
 ('OpacSuppressionByIPRange','','','Restrict the suppression to IP adresses outside of the IP range','free'),
 ('OpacSuppressionRedirect','1','Redirect the opac detail page for suppressed records to an explanatory page (otherwise redirect to 404 error page)','','YesNo'),
+('OPACTableColExpandedByDefault','0',NULL,'Determines whether or not table rows are expanded by default on mobile','YesNo'),
 ('opacthemes','bootstrap','','Define the current theme for the OPAC interface.','Themes'),
 ('OpacTopissue','0',NULL,'If ON, enables the \'most popular items\' link on OPAC. Warning, this is an EXPERIMENTAL feature, turning ON may overload your server','YesNo'),
 ('OpacTrustedCheckout', '0', NULL, 'Allow logged in OPAC users to check out to themselves', 'YesNo'),

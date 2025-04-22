@@ -228,6 +228,12 @@
                 $('#sortform').submit();
             });
 
+            [% IF ( Koha.Preference('OPACTableColExpandedByDefault') ) %]
+                var responsive_display = DataTable.Responsive.display.childRowImmediate;
+            [% ELSE %]
+                var responsive_display = DataTable.Responsive.display.childRow;
+            [% END %]
+
             var table = $("#readingrec").kohaTable(
                 {
                     dom: '<"top"<"table_entries"i><"table_controls"fB>>t',
@@ -236,7 +242,11 @@
                         searchPlaceholder: _("Search"),
                     },
                     responsive: {
-                        details: { type: "column", target: -1 },
+                        details: {
+                            display: responsive_display,
+                            type: "column",
+                            target: -1
+                        },
                     },
                     columnDefs: [
                         { className: "dtr-control", orderable: false, targets: [-1] },

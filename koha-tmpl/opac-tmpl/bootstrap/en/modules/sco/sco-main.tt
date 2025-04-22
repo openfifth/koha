@@ -460,6 +460,12 @@
                     dofocus();
                     [% IF ( patronid ) %]sco_init();[% END %]
 
+                    [% IF ( Koha.Preference('OPACTableColExpandedByDefault') ) %]
+                        var responsive_display = DataTable.Responsive.display.childRowImmediate;
+                    [% ELSE %]
+                        var responsive_display = DataTable.Responsive.display.childRow;
+                    [% END %]
+
                     var dTables = $("#loanTable, #holdst, #finestable");
                     dTables.each(function(){
                         var thIndex = $(this).find("th.psort").index();
@@ -477,6 +483,7 @@
                             },
                             responsive: {
                                 details: {
+                                    display: responsive_display,
                                     type: "column",
                                     target: -1,
                                 },

@@ -19,6 +19,12 @@ OPAC:
               choices: opac-templates
             - theme on the OPAC.
         -
+            - pref: OPACTableColExpandedByDefault
+              choices:
+                  1: Expand
+                  0: Don't expand
+            - tables on the OPAC by default, when zoomed in or viewed on a mobile screen.
+        -
             - Use the
             - pref: OPACFallback
               choices:
