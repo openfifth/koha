@@ -1755,6 +1755,12 @@
 
             var table_settings = [% TablesSettings.GetTableSettings( 'opac', 'biblio-detail', 'holdingst', 'json' ) | $raw %];
 
+            [% IF ( Koha.Preference('OPACTableColExpandedByDefault') ) %]
+                var responsive_display = DataTable.Responsive.display.childRowImmediate;
+            [% ELSE %]
+                var responsive_display = DataTable.Responsive.display.childRow;
+            [% END %]
+
             KohaTable("#holdingst", {
                 dom: '<"clearfix">t',
                 "columnDefs": [
@@ -1762,7 +1768,11 @@
                 ],
                 "bKohaColumnsUseNames": true,
                 "responsive": {
-                    "details": { "type": 'column', "target": -1 }
+                    "details": {
+                        "display": responsive_display,
+                        "type": "column",
+                        "target": -1
+                    },
                 }
             }, table_settings);
 
@@ -1773,7 +1783,11 @@
                 ],
                 "bKohaColumnsUseNames": true,
                 "responsive": {
-                    "details": { "type": 'column', "target": -1 }
+                    "details": {
+                        "display": responsive_display,
+                        "type": "column",
+                        "target": -1
+                    },
                 }
             }, table_settings);
 
@@ -1784,7 +1798,11 @@
                 "sorting": [[ 1, "desc" ]],
                 "bKohaColumnsUseNames": true,
                 "responsive": {
-                    "details": { "type": 'column', "target": -1 }
+                    "details": {
+                        "display": responsive_display,
+                        "type": "column",
+                        "target": -1
+                    },
                 },
                 "columnDefs": [
                     { "className": "dtr-control", "orderable": false, "targets": -1 }
