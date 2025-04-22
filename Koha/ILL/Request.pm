@@ -22,7 +22,7 @@ use Modern::Perl;
 use Clone     qw(clone);
 use Try::Tiny qw(catch try);
 use DateTime;
-
+use Time::HiRes qw(gettimeofday);
 use C4::Letters;
 use Mojo::Util     qw(deprecated);
 use File::Basename qw(dirname);
@@ -472,6 +472,8 @@ Require "Base.pm" from the relevant ILL backend.
 sub load_backend {
     my ( $self, $backend_id ) = @_;
 
+    my $start_time = gettimeofday;
+
     my $backend_name = $backend_id || $self->backend;
 
     unless ( defined $backend_name && $backend_name ne '' ) {
@@ -507,6 +509,12 @@ sub load_backend {
         require $location;
         $self->{_my_backend} = $backend_class->new($backend_params);
     }
+
+    my $end_time     = gettimeofday;
+    my $elapsed_time = $end_time - $start_time;
+
+    use Data::Dumper; $Data::Dumper::Maxdepth = 2;
+    warn Dumper("load_backend took $elapsed_time seconds to execute\n");
 
     return $self;
 }
