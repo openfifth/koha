@@ -324,13 +324,23 @@
             existingPickupMoments[pickup.branchcode].push(pickupMoment);
         });
 
+        [% IF ( Koha.Preference('OPACTableColExpandedByDefault') ) %]
+            var responsive_display = DataTable.Responsive.display.childRowImmediate;
+        [% ELSE %]
+            var responsive_display = DataTable.Responsive.display.childRow;
+        [% END %]
+
         $(document).ready(function() {
             $("#pickups-table").kohaTable({
                 searching: false,
                 paging: false,
                 info: false,
                 responsive: {
-                    details: { type: "column", target: -1 },
+                    details: {
+                        display: responsive_display,
+                        type: "column",
+                        target: -1
+                    },
                 },
                 columnDefs: [{ className: "dtr-control", orderable: false, targets: -1 }],
             });
