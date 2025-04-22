@@ -147,11 +147,18 @@
     [% INCLUDE 'datatables.inc' %]
     <script>
         $(function () {
+            [% IF ( Koha.Preference('OPACTableColExpandedByDefault') ) %]
+                var responsive_display = DataTable.Responsive.display.childRowImmediate;
+            [% ELSE %]
+                var responsive_display = DataTable.Responsive.display.childRow;
+            [% END %]
+
             $("#topissuest").kohaTable({
                 sorting: [[3, "desc"]],
                 columnDefs: [{ className: "dtr-control", orderable: false, targets: -1 }],
                 responsive: {
                     details: {
+                        display: responsive_display,
                         type: "column",
                         target: -1,
                     },
