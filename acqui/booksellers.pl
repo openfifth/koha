@@ -62,7 +62,6 @@ my ( $template, $loggedinuser, $cookie, $userflags ) = get_template_and_user(
 #parameters
 my $booksellerid = $query->param('booksellerid');
 my $allbaskets   = $query->param('allbaskets') || 0;
-my @suppliers;
 
 my $vendor;
 my $loop_suppliers = [];
