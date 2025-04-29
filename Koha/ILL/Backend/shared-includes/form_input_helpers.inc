@@ -2,9 +2,9 @@
     <li>
         <label for="[% id | html %]">[% label | html %]:</label>
         [% IF opac %]
-            <input class="form-control input-fluid" type="text" name="[% id | html %]" id="[% id | html%]" value="[% value | html %]" />
+            <input [% IF required %]required[% END %] class="form-control input-fluid" type="text" name="[% id | html %]" id="[% id | html%]" value="[% value | html %]" />
         [% ELSE %]
-            <input type="text" name="[% id | html %]" id="[% id | html%]" value="[% value | html %]" />
+            <input [% IF required %]required[% END %] type="text" name="[% id | html %]" id="[% id | html%]" value="[% value | html %]" />
         [% END %]
         [% IF required %]
             <div class="required_label required">Required</div>
@@ -17,9 +17,9 @@
     <li>
         <label for="[% id | html %]">[% label | html %]:</label>
         [% IF opac %]
-            <select class="form-select input-fluid" name="[% id | html %]" id="[% id | html %]">
+            <select [% IF required %]required[% END %] class="form-select input-fluid" name="[% id | html %]" id="[% id | html %]">
         [% ELSE %]
-            <select name="[% id | html %]" id="[% id | html %]">
+            <select [% IF required %]required[% END %] name="[% id | html %]" id="[% id | html %]">
         [% END %]
             [% content | $raw %]
         </select>
