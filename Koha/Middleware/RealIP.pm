@@ -51,14 +51,15 @@ sub call {
     my $self = shift;
     my $env  = shift;
 
-    if ( $env->{HTTP_X_FORWARDED_FOR} ) {
-        my @trusted_proxy = $self->trusted_proxy ? @{ $self->trusted_proxy } : undef;
+    # If no reverse_proxy_ip_header, just use HTTP_X_FORWARDED_FOR as the header to check, simplifies logic and is a bit faster that way
+    my $reverse_proxy_ip_header = C4::Context->config('reverse_proxy_ip_header') || 'HTTP_X_FORWARDED_FOR';
 
-        if (@trusted_proxy) {
-            my $addr = get_real_ip( $env->{REMOTE_ADDR}, $env->{HTTP_X_FORWARDED_FOR}, \@trusted_proxy );
-            $ENV{REMOTE_ADDR} = $addr;
-            $env->{REMOTE_ADDR} = $addr;
-        }
+    # Check the env for the custom header, if the custom header is not set, fall back to HTTP_X_FORWARDED_FOR
+    my $header = $env->{$reverse_proxy_ip_header} || $env->{'HTTP_X_FORWARDED_FOR'};
+    if ($header) {
+        my $addr = get_real_ip( $env->{REMOTE_ADDR}, $header );
+        $ENV{REMOTE_ADDR} = $addr;
+        $env->{REMOTE_ADDR} = $addr;
     }
 
     return $self->app->($env);
@@ -75,6 +76,9 @@ determines the correct external ip address, and returns it.
 
 sub get_real_ip {
     my ( $remote_addr, $header ) = @_;
+
+    my $enable_trusted_proxy_for_headers = C4::Context->config('enable_trusted_proxy_for_headers') // 1;
+    return $remote_addr unless $enable_trusted_proxy_for_headers;
 
     my @forwarded_for = $header =~ /([^,\s]+)/g;
     return $remote_addr unless @forwarded_for;

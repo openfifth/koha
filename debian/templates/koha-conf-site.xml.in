@@ -341,8 +341,11 @@ __END_SRU_PUBLICSERVER__
  <plack_workers>2</plack_workers>
 
  <!-- Configuration for X-Forwarded-For -->
+ <!-- Set enable_trusted_proxy_for_headers to 0 to never trust proxy headers, always use given REMOTE_ADDRESS -->
  <!--
  <koha_trusted_proxies>1.2.3.4 2.3.4.5 3.4.5.6</koha_trusted_proxies>
+ <reverse_proxy_ip_header>HTTP_X_FORWARDED_FOR</reverse_proxy_ip_header>
+ <enable_trusted_proxy_for_headers>1</enable_trusted_proxy_for_headers>
  -->
 
  <!-- Elasticsearch Configuration -->

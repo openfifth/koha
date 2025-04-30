@@ -906,7 +906,12 @@ variable to be set correctly.
 sub set_remote_address {
     if ( C4::Context->config('koha_trusted_proxies') ) {
         require CGI;
-        my $header = CGI->http('HTTP_X_FORWARDED_FOR');
+
+        # If no reverse_proxy_ip_header, just use HTTP_X_FORWARDED_FOR as the header to check, simplifies logic and is a bit faster that way
+        my $reverse_proxy_ip_header = C4::Context->config('reverse_proxy_ip_header') || 'HTTP_X_FORWARDED_FOR';
+
+        # Check the cgi for the custom header, if the custom header is not set, fall back to HTTP_X_FORWARDED_FOR
+        my $header = CGI->http($reverse_proxy_ip_header) || CGI->http('HTTP_X_FORWARDED_FOR');
 
         if ($header) {
             require Koha::Middleware::RealIP;
