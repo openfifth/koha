@@ -51,11 +51,12 @@ sub call {
     my $self = shift;
     my $env  = shift;
 
-    if ( $env->{HTTP_X_FORWARDED_FOR} ) {
+    my $reverse_proxy_ip_header = C4::Context->config('reverse_proxy_ip_header');
+    if ( $reverse_proxy_ip_header && $env->{$reverse_proxy_ip_header} ) {
         my @trusted_proxy = $self->trusted_proxy ? @{ $self->trusted_proxy } : undef;
 
         if (@trusted_proxy) {
-            my $addr = get_real_ip( $env->{REMOTE_ADDR}, $env->{HTTP_X_FORWARDED_FOR}, \@trusted_proxy );
+            my $addr = get_real_ip( $env->{REMOTE_ADDR}, $env->{$reverse_proxy_ip_header}, \@trusted_proxy );
             $ENV{REMOTE_ADDR} = $addr;
             $env->{REMOTE_ADDR} = $addr;
         }

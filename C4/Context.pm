@@ -880,11 +880,13 @@ variable to be set correctly.
 sub set_remote_address {
     if ( C4::Context->config('koha_trusted_proxies') ) {
         require CGI;
-        my $header = CGI->http('HTTP_X_FORWARDED_FOR');
+        if ( my $reverse_proxy_ip_header = C4::Context->config('reverse_proxy_ip_header') ) {    # Updated here
+            my $header = CGI->http($reverse_proxy_ip_header);
 
-        if ($header) {
-            require Koha::Middleware::RealIP;
-            $ENV{REMOTE_ADDR} = Koha::Middleware::RealIP::get_real_ip( $ENV{REMOTE_ADDR}, $header );
+            if ($header) {
+                require Koha::Middleware::RealIP;
+                $ENV{REMOTE_ADDR} = Koha::Middleware::RealIP::get_real_ip( $ENV{REMOTE_ADDR}, $header );
+            }
         }
     }
 }

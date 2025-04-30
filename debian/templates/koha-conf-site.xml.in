@@ -343,6 +343,7 @@ __END_SRU_PUBLICSERVER__
  <!-- Configuration for X-Forwarded-For -->
  <!--
  <koha_trusted_proxies>1.2.3.4 2.3.4.5 3.4.5.6</koha_trusted_proxies>
+ <reverse_proxy_ip_header>HTTP_X_FORWARDED_FOR</reverse_proxy_ip_header>
  -->
 
  <!-- Elasticsearch Configuration -->
