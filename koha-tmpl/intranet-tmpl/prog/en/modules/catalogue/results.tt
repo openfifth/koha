@@ -485,7 +485,7 @@
             [% IF ( LocalCoverImages && SEARCH_RESULT.has_local_cover_image ) %]
                 <div id="local-coverimg-[% SEARCH_RESULT.biblionumber | html %]" class="cover-image local-coverimg">
                     <a href="[% PROCESS biblio_a_href biblionumber => SEARCH_RESULT.biblionumber %]">
-                        <img src="/cgi-bin/koha/catalogue/image.pl?thumbnail=1&amp;biblionumber=[% SEARCH_RESULT.biblionumber | uri %]" alt="Local cover image" />
+                        <img src="/cgi-bin/koha/catalogue/image.pl?thumbnail=1&amp;biblionumber=[% SEARCH_RESULT.biblionumber | uri %]" alt="" />
                     </a>
                     <div class="hint">Local cover image</div>
                 </div>
@@ -494,7 +494,7 @@
             [% IF ( AmazonCoverImages && SEARCH_RESULT.normalized_isbn ) %]
                 <div id="amazon-bookcoverimg-[% SEARCH_RESULT.biblionumber | html %]" class="cover-image amazon-bookcoverimg">
                     <a href="[% PROCESS biblio_a_href biblionumber => SEARCH_RESULT.biblionumber %]">
-                        <img src="https://images-na.ssl-images-amazon.com/images/P/[% SEARCH_RESULT.normalized_isbn | html %].01.TZZZZZZZ.jpg" alt="Cover image from Amazon.com" />
+                        <img src="https://images-na.ssl-images-amazon.com/images/P/[% SEARCH_RESULT.normalized_isbn | html %].01.TZZZZZZZ.jpg" alt="" />
                     </a>
                     <div class="hint">Amazon cover image</div>
                 </div>
@@ -504,7 +504,7 @@
                     [% IF ( SEARCH_RESULT.normalized_isbn || SEARCH_RESULT.normalized_upc || SEARCH_RESULT.normalized_oclc ) %]
                         <div id="syndetics-bookcoverimg-[% SEARCH_RESULT.biblionumber | html %]" class="cover-image syndetics-bookcoverimg">
                             <a href="/cgi-bin/koha/catalogue/detail.pl?biblionumber=[% SEARCH_RESULT.biblionumber | uri %]">
-                                <img src="https://secure.syndetics.com/index.aspx?isbn=[% SEARCH_RESULT.normalized_isbn | html %]/[% SyndeticsCoverImageSize | uri %].GIF&amp;client=[% Koha.Preference('SyndeticsClientCode') | html %]&amp;type=xw10&amp;upc=[% SEARCH_RESULT.normalized_upc | html %]&amp;oclc=[% SEARCH_RESULT.normalized_oclc | html %]" alt="Cover from Syndetics" />
+                                <img src="https://secure.syndetics.com/index.aspx?isbn=[% SEARCH_RESULT.normalized_isbn | html %]/[% SyndeticsCoverImageSize | uri %].GIF&amp;client=[% Koha.Preference('SyndeticsClientCode') | html %]&amp;type=xw10&amp;upc=[% SEARCH_RESULT.normalized_upc | html %]&amp;oclc=[% SEARCH_RESULT.normalized_oclc | html %]" alt="" />
                             </a>
                             <div class="hint">Syndetics cover image</div>
                         </div>
@@ -528,7 +528,7 @@
                 [% IF custom_cover_image_url %]
                     <div id="custom-coverimg-[% SEARCH_RESULT.biblionumber | html %]" class="cover-image custom-coverimg">
                         <a class="custom_cover_image" href="[% custom_cover_image_url | url %]">
-                            <img alt="Custom cover image" src="[% custom_cover_image_url | url %]" />
+                            <img alt="" src="[% custom_cover_image_url | url %]" />
                         </a>
                         <div class="hint">Custom cover image</div>
                     </div>
@@ -546,7 +546,7 @@
                                                 [% IF ( !item_level_itypes ) || Koha.Preference('BiblioItemtypeInfo') %]
                                                     <div class="result-biblio-itemtype">
                                                         [% IF !noItemTypeImages && SEARCH_RESULT.imageurl %]
-                                                            <img class="itemtype-image" src="[% SEARCH_RESULT.imageurl | html %]" alt="[%  SEARCH_RESULT.description | html %]" />
+                                                            <img class="itemtype-image" src="[% SEARCH_RESULT.imageurl | html %]" alt="" />
                                                         [% END %]
                                                         <span class="itypetext">[% SEARCH_RESULT.description | html %]</span>
                                                     </div>
@@ -634,7 +634,7 @@
                                                                     [% FOREACH items_loo IN SEARCH_RESULT.${items_loop} %]
                                                                         [% IF item_level_itypes && !noItemTypeImages && items_loo.imageurl %]
                                                                             <li class="result_itype_image [% items_loo.branchcode | html %]">
-                                                                                <img class="itemtype-image" src="[% items_loo.imageurl | html %]" title="[% items_loo.description | html %]" alt="[% items_loo.description | html %]" />
+                                                                                <img class="itemtype-image" src="[% items_loo.imageurl | html %]" title="[% items_loo.description | html %]" alt="" />
                                                                         [% ELSE %]
                                                                             <li class="[% items_loo.branchcode | html %]">
                                                                         [% END %]

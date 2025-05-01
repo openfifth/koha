@@ -64,7 +64,7 @@
                                     [% FOREACH image IN localimages %]
                                         <div class="cover-image local-coverimg">
                                             <a href="/cgi-bin/koha/opac-image.pl?imagenumber=[% image.imagenumber | uri %]" title="Local cover image">
-                                                <img src="/cgi-bin/koha/opac-image.pl?thumbnail=1&amp;imagenumber=[% image.imagenumber | uri %]" alt="Local cover image" data-link="/cgi-bin/koha/opac-imageviewer.pl?biblionumber=[% biblionumber | uri %]&amp;imagenumber=[% image.imagenumber | uri %]" />
+                                                <img src="/cgi-bin/koha/opac-image.pl?thumbnail=1&amp;imagenumber=[% image.imagenumber | uri %]" alt="" data-link="/cgi-bin/koha/opac-imageviewer.pl?biblionumber=[% biblionumber | uri %]&amp;imagenumber=[% image.imagenumber | uri %]" />
                                             </a>
                                             <div class="hint">Local cover image</div>
                                         </div>
@@ -75,7 +75,7 @@
                             [% IF ( OPACAmazonCoverImages && normalized_isbn) %]
                                 <div class="cover-image" id="amazon-bookcoverimg">
                                     <a href="https://images-na.ssl-images-amazon.com/images/P/[% normalized_isbn | uri %].01.LZZZZZZZ.jpg" title="Amazon cover image">
-                                        <img src="https://images-na.ssl-images-amazon.com/images/P/[% normalized_isbn | uri %].01.MZZZZZZZ.jpg" alt="Amazon cover image" data-link="http://www.amazon[% AmazonTld | uri %]/gp/reader/[% normalized_isbn | uri %][% AmazonAssocTag | uri %]#reader-link"/>
+                                        <img src="https://images-na.ssl-images-amazon.com/images/P/[% normalized_isbn | uri %].01.MZZZZZZZ.jpg" alt="" data-link="http://www.amazon[% AmazonTld | uri %]/gp/reader/[% normalized_isbn | uri %][% AmazonAssocTag | uri %]#reader-link"/>
                                     </a>
                                     <div class="hint">Image from Amazon.com</div>
                                 </div>
@@ -85,7 +85,7 @@
                                 [% IF ( content_identifier_exists ) %]
                                     <div class="cover-image" id="syndetics-coverimg">
                                         <a href="https://secure.syndetics.com/index.aspx?isbn=[% normalized_isbn | uri %]/[% SyndeticsCoverImageSize | uri %].GIF&amp;client=[% SyndeticsClientCode | uri %]&amp;type=xw10&amp;upc=[% normalized_upc | uri %]&amp;oclc=[% normalized_oclc | uri %]" title="Syndetics cover image">
-                                            <img src="https://secure.syndetics.com/index.aspx?isbn=[% normalized_isbn | uri %]/[% SyndeticsCoverImageSize | uri %].GIF&amp;client=[% SyndeticsClientCode | uri %]&amp;type=xw10&amp;upc=[% normalized_upc | uri %]&amp;oclc=[% normalized_oclc | uri %]" alt="Syndetics cover image" />
+                                            <img src="https://secure.syndetics.com/index.aspx?isbn=[% normalized_isbn | uri %]/[% SyndeticsCoverImageSize | uri %].GIF&amp;client=[% SyndeticsClientCode | uri %]&amp;type=xw10&amp;upc=[% normalized_upc | uri %]&amp;oclc=[% normalized_oclc | uri %]" alt="" />
                                         </a>
                                         <div class="hint">Image from Syndetics</div>
                                     </div>
@@ -137,7 +137,7 @@
                                 [% IF custom_cover_image_url %]
                                     <div class="cover-image" id="custom-coverimg">
                                         <a class="custom_cover_image" href="[% custom_cover_image_url | url %]" title="Custom cover image">
-                                            <img id="custom-img" alt="Custom cover image" src="[% custom_cover_image_url | url %]" />
+                                            <img id="custom-img" alt="" src="[% custom_cover_image_url | url %]" />
                                         </a>
                                         <div class="hint">Custom cover image</div>
                                     </div>
@@ -939,7 +939,7 @@
                                 <p>Click on an image to view it in the image viewer</p>
                                 [% FOREACH image IN localimages %]
                                     <a href="/cgi-bin/koha/opac-imageviewer.pl?biblionumber=[% biblio.biblionumber | uri %]&amp;imagenumber=[% image.imagenumber | uri %]" title="Local cover image">
-                                        <img src="/cgi-bin/koha/opac-image.pl?thumbnail=1&amp;imagenumber=[% image.imagenumber | uri %]" alt="Local cover image" />
+                                        <img src="/cgi-bin/koha/opac-image.pl?thumbnail=1&amp;imagenumber=[% image.imagenumber | uri %]" alt="" />
                                     </a>
                                 [% END %]
                             [% END # /tab_panel#images %]
@@ -1237,7 +1237,7 @@
                                 [% FOR image IN ITEM_RESULT.cover_images %]
                                     <div class="cover-image local-coverimg">
                                         <a href="/cgi-bin/koha/opac-image.pl?itemnumber=[% image.itemnumber | uri %]&amp;imagenumber=[% image.imagenumber | uri %]" title="Local cover image">
-                                            <img src="/cgi-bin/koha/opac-image.pl?thumbnail=1&amp;imagenumber=[% image.imagenumber | uri %]" alt="Local cover image" />
+                                            <img src="/cgi-bin/koha/opac-image.pl?thumbnail=1&amp;imagenumber=[% image.imagenumber | uri %]" alt="" />
                                         </a>
                                     </div>
                                 [% END %]
@@ -1250,7 +1250,7 @@
                     <td class="itype">
                         [% UNLESS ( Koha.Preference('OpacNoItemTypeImages') ) %]
                             [% IF ( ITEM_RESULT.imageurl ) %]
-                                <img class="itemtype-image" src="[% ITEM_RESULT.imageurl | html %]" title="[% ITEM_RESULT.description | html %]" alt="[% ITEM_RESULT.description | html %]" />
+                                <img class="itemtype-image" src="[% ITEM_RESULT.imageurl | html %]" title="[% ITEM_RESULT.description | html %]" alt="" />
                             [% END %]
                         [% END %]
                        <span class="itypetext">[% ITEM_RESULT.description | html %]</span>
