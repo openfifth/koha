@@ -59,7 +59,7 @@
                                             [% SET number_of_public_shelves = number_of_public_shelves + 1 %]
                                             [% IF number_of_public_shelves >= 10 %][% LAST %][% END %]
                                         [% END %]
-                                    [% IF some_public_shelves.count > 10 %]
+                                        [% IF some_public_shelves.count > 10 %]
                                             <a class="dropdown-item listmenulink" href="/cgi-bin/koha/opac-shelves.pl?op=list&amp;public=1" tabindex="0" role="menuitem">View all</a>
                                         [% END %]
                                     [% END %]
@@ -76,7 +76,7 @@
                                                     [% SET number_of_private_shelves = number_of_private_shelves + 1 %]
                                                     [% IF number_of_private_shelves >= 10 %][% LAST %][% END %]
                                                 [% END %]
-                                            [% IF some_private_shelves.count > 10 %]
+                                                [% IF some_private_shelves.count > 10 %]
                                                     <a class="dropdown-item listmenulink" href="/cgi-bin/koha/opac-shelves.pl?op=list&amp;public=0" tabindex="0" role="menuitem">View all</a>
                                                 [% END %]
                                             [% ELSE %]
@@ -398,7 +398,7 @@
 
     [% IF ( Koha.Preference( 'opacuserlogin' ) == 1 ) %]
         <!-- Login form hidden by default, used for modal window -->
-        <div id="loginModal" class="modal" tabindex="-1" role="dialog" aria-labelledby="modalLoginLabel" aria-hidden="true">
+        <div id="loginModal" class="modal" tabindex="0" role="dialog" aria-labelledby="modalLoginLabel" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -496,7 +496,7 @@
                 </div>
             </div> <!-- /#cookieConsentBar -->
         <!-- Cookie consent modal -->
-        <div id="cookieConsentModal" class="modal" tabindex="-1" role="dialog" aria-labelledby="cookieConsentModalLabel" aria-hidden="true">
+        <div id="cookieConsentModal" class="modal" tabindex="0" role="dialog" aria-labelledby="cookieConsentModalLabel" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
