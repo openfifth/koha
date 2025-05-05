@@ -184,6 +184,8 @@ if ( $tab eq 'about' ) {
         mysqlVersion              => $versions{'mysqlVersion'},
         apacheVersion             => $versions{'apacheVersion'},
         memcached_running         => Koha::Caches->get_instance->memcached_cache,
+        reverse_proxy_ip_header   => C4::Context->config('reverse_proxy_ip_header'),
+        koha_trusted_proxies      => C4::Context->config('koha_trusted_proxies'),
     );
 
 }
