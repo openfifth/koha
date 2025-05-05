@@ -269,6 +269,14 @@
                     [% END %]
                 </td>
             </tr>
+            <tr>
+                <th scope="row">Trusted proxy IP addresses</th>
+                <td>[% koha_trusted_proxies | html %]</td>
+            </tr>
+            <tr>
+                <th scope="row">Reverse proxy IP header</th>
+                <td>[% reverse_proxy_ip_header | html %]</td>
+            </tr>
         </table>
     [% END # tab=about %]
 [% END %]
