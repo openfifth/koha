@@ -190,6 +190,16 @@ sub move_hold {
     my $original              = $self;
     my $original_biblionumber = $self->biblionumber;
 
+    my $found = $original->found // '';
+
+    if ( $found eq 'W' ) {
+        return { success => 0, error => 'Cannot move a waiting hold' };
+    }
+
+    if ( $found eq 'T' ) {
+        return { success => 0, error => 'Cannot move a hold in transit' };
+    }
+
     my $patron = Koha::Patrons->find( { borrowernumber => $self->borrowernumber } );
     return { success => 0, error => 'Missing patron or target' } unless $patron;
 

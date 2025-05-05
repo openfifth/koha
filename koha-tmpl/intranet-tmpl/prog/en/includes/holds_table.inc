@@ -54,6 +54,8 @@
                         data-item_level_hold="[% hold.item_level_hold | html %]"
                         data-itemnumber="[% hold.itemnumber | html %]"
                         data-biblionumber="[% hold.biblionumber | html %]"
+                        data-waiting="[% hold.atdestination | html %]"
+                        data-intransit="[% hold.intransit | html %]"
                 /></td>
                 <td>
                     <input type="hidden" name="reserve_id" value="[% hold.reserve_id | html %]" />
