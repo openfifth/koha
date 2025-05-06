@@ -191,4 +191,9 @@ properties:
       - boolean
       - "null"
     description: archived (processed) suggestion
+  suggester:
+    type:
+      - object
+      - "null"
+    description: suggester details
 additionalProperties: false
