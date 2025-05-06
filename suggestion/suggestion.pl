@@ -476,6 +476,12 @@ if ( $op eq 'else' ) {
         }
 
         $search_params->{archived} = 0 if !$filter_archived;
+        foreach my $key ( keys %$search_params ) {
+            if ( $key eq 'branchcode' ) {
+                my $branch_param = delete $search_params->{$key};
+                $search_params->{"me.branchcode"} = $branch_param;
+            }
+        }
         my @suggestions = Koha::Suggestions->search_limited($search_params)->as_list;
 
         push @allsuggestions,
@@ -484,6 +490,7 @@ if ( $op eq 'else' ) {
             "suggestiontypelabel" => GetCriteriumDesc( $criteriumvalue, $displayby ) || "",
             'suggestions'         => \@suggestions,
             'reasonsloop'         => $reasonsloop,
+            'search_params'       => $search_params,
             }
             if scalar @suggestions > 0;
 
