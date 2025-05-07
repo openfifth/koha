@@ -89,6 +89,7 @@
 [%        CASE 'ACQUISITION ORDER' %]<span>Acquisition order</span>
 [%        CASE 'OVERDUE' %]<span>Overdue</span>
 [%        CASE 'EXPIRE'  %]<span>Expire</span>
+[%        CASE 'MODIFY_CARDNUMBER' %]<span>Modify cardnumber</span>
 [%        CASE %][% action | html %]
 [%    END %]
 [% END %]
