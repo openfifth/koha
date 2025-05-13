@@ -51,15 +51,15 @@ sub call {
     my $self = shift;
     my $env  = shift;
 
-    my $reverse_proxy_ip_header = C4::Context->config('reverse_proxy_ip_header');
-    if ( $reverse_proxy_ip_header && $env->{$reverse_proxy_ip_header} ) {
-        my @trusted_proxy = $self->trusted_proxy ? @{ $self->trusted_proxy } : undef;
+    # If no reverse_proxy_ip_header, just use HTTP_X_FORWARDED_FOR as the header to check, simplifies logic and is a bit faster that way
+    my $reverse_proxy_ip_header = C4::Context->config('reverse_proxy_ip_header') || 'HTTP_X_FORWARDED_FOR';
 
-        if (@trusted_proxy) {
-            my $addr = get_real_ip( $env->{REMOTE_ADDR}, $env->{$reverse_proxy_ip_header}, \@trusted_proxy );
-            $ENV{REMOTE_ADDR} = $addr;
-            $env->{REMOTE_ADDR} = $addr;
-        }
+    # Check the env for the custom header, if the custom header is not set, fall back to HTTP_X_FORWARDED_FOR
+    my $header = $env->{$reverse_proxy_ip_header} || $env->{'HTTP_X_FORWARDED_FOR'};
+    if ($header) {
+        my $addr = get_real_ip( $env->{REMOTE_ADDR}, $header );
+        $ENV{REMOTE_ADDR} = $addr;
+        $env->{REMOTE_ADDR} = $addr;
     }
 
     return $self->app->($env);
