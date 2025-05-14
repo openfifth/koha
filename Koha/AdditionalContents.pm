@@ -38,6 +38,26 @@ Koha::AdditionalContents - Koha Additional content object set class
 
 =cut
 
+=head3 get_public_query_search_params
+
+    my $public_query_search_params = $self->get_public_query_search_params($params);
+
+=cut
+
+sub get_public_query_search_params {
+    my ($params) = @_;
+
+    my $search_params;
+    $search_params->{'additional_content.id'} = $params->{id} if $params->{id};
+    $search_params->{location}                = $params->{location};
+    $search_params->{branchcode}              = $params->{library_id} ? [ $params->{library_id}, undef ] : undef;
+    $search_params->{published_on}   = { '<=' => \'CAST(NOW() AS DATE)' }                   unless $params->{id};
+    $search_params->{expirationdate} = [ '-or', { '>=' => \'CAST(NOW() AS DATE)' }, undef ] unless $params->{id};
+    $search_params->{category}       = $params->{category} if $params->{category};
+
+    return $search_params;
+}
+
 =head3 search_for_display
 
 my $contents = Koha::AdditionalContents->search_for_display({
@@ -80,15 +100,9 @@ sub search_for_display {
     my $subquery =
         qq|(SELECT COUNT(*) FROM additional_contents_localizations WHERE lang='$lang' AND additional_content_id=me.additional_content_id)=0|;
 
-    my $search_params;
-    $search_params->{'additional_content.id'} = $params->{id} if $params->{id};
-    $search_params->{location}                = $params->{location};
-    $search_params->{branchcode}              = $params->{library_id} ? [ $params->{library_id}, undef ] : undef;
-    $search_params->{published_on}   = { '<=' => \'CAST(NOW() AS DATE)' }                   unless $params->{id};
-    $search_params->{expirationdate} = [ '-or', { '>=' => \'CAST(NOW() AS DATE)' }, undef ] unless $params->{id};
-    $search_params->{category}       = $params->{category} if $params->{category};
-    $search_params->{lang}           = 'default'           if !$lang || $lang eq 'default';
-    $search_params->{-or}            = [ { 'lang' => $lang }, '-and' => [ 'lang', 'default', \$subquery ] ]
+    my $search_params = get_public_query_search_params($params);
+    $search_params->{lang} = 'default' if !$lang || $lang eq 'default';
+    $search_params->{-or} = [ { 'lang' => $lang }, '-and' => [ 'lang', 'default', \$subquery ] ]
         if !$search_params->{lang};
 
     my $attribs = { prefetch => 'additional_content', order_by => 'additional_content.number' };
@@ -137,6 +151,39 @@ sub find_best_match {
         $alt3 = $rec if !$alt3;
     }
     return $alt1 // $alt2 // $alt3;
+}
+
+=head3 get_html_customizations_options
+
+    Koha::AdditionalContents->get_html_customizations_options('opac');
+
+=cut
+
+sub get_html_customizations_options {
+    my ($interface) = @_;
+
+    if ( $interface eq 'opac' ) {
+        return [
+            'OpacNavRight',                  'opacheader',       'OpacCustomSearch', 'OpacMainUserBlock', 'opaccredits',
+            'OpacLoginInstructions',         'OpacNav',          'OpacNavBottom',     'OpacSuggestionInstructions',
+            'ArticleRequestsDisclaimerText', 'OpacMoreSearches', 'OpacMySummaryNote', 'OpacLibraryInfo',
+            'OpacMaintenanceNotice',         'OPACResultsSidebar',   'OpacSuppressionMessage', 'SCOMainUserBlock',
+            'SelfCheckInMainUserBlock',      'SelfCheckHelpMessage', 'CatalogConcernHelp',     'CatalogConcernTemplate',
+            'CookieConsentBar',              'CookieConsentPopup',   'PatronSelfRegistrationAdditionalInstructions',
+            'ILLModuleCopyrightClearance'
+        ];
+    }
+
+    if ( $interface eq 'staff' ) {
+        return [
+            'IntranetmainUserblock', 'RoutingListNote', 'StaffAcquisitionsHome',  'StaffAuthoritiesHome',
+            'StaffCataloguingHome',  'StaffListsHome',  'StaffLoginInstructions', 'StaffPatronsHome', 'StaffPOSHome',
+            'StaffSerialsHome'
+        ];
+    }
+
+    return [];
+
 }
 
 =head3 _type
