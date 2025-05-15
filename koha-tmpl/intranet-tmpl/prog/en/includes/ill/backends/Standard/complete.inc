@@ -11,16 +11,18 @@
         [% proceed_url = base_url _ "?method=mark_completed&stage=complete" _ "&illrequest_id=" _ request.illrequest_id %]
         <form action="[% proceed_url | url %]" method="get">
             <select name="status_alias">
-                <option value="">Select status alias</option>
-                <option value="alias1">Alias 1</option>
-                <option value="alias2">Alias 2</option>
-                <option value="alias3">Alias 3</option>
+                <option value="" selected></option>
+                [% FOREACH alias IN AuthorisedValues.Get('ILL_STATUS_ALIAS') %]
+                    <option value="[% alias.authorised_value | html %]" > [% alias.lib | html %] </option>
+                [% END %]
             </select>
             <input type="hidden" name="method" value="mark_completed">
             <input type="hidden" name="stage" value="complete">
             <input type="hidden" name="illrequest_id" value="[% request.illrequest_id %]">
-            <button type="submit" class="btn btn-sm btn-primary">Complete request</button>
-            <a class="btn btn-sm btn-default cancel" href="[% base_url | url %]">Cancel</a>
+            <fieldset class="action">
+                <button type="submit" class="btn btn-sm btn-primary">Complete request</button>
+                <a class="btn btn-sm btn-default cancel" href="[% base_url | url %]">Cancel</a>
+            </fieldset>
         </form>
     </p>
 [% ELSE %]

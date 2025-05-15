@@ -1,3 +1,4 @@
+[% USE AuthorisedValues %]
 [% IF whole.error %]
     <p>Unhandled error</p>
 [% END %]

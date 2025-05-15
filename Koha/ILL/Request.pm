@@ -914,8 +914,9 @@ sub mark_completed {
 
     my $stage = $params->{stage};
 
-    #TODO: Only enter this if if ILL_STATUS_ALIAS authorised value category has at least one entry
-    if ( !$stage || $stage eq 'init' ) {
+    my $status_aliases_exists = Koha::AuthorisedValues->search( { category => 'ILL_STATUS_ALIAS' } )->count;
+
+    if ( ( !$stage || $stage eq 'init' ) && $status_aliases_exists ) {
         return $self->expand_template(
             {
                 method => 'complete',
@@ -923,7 +924,7 @@ sub mark_completed {
                 value  => $params,
             }
         );
-    } elsif ( $stage eq 'complete' ) {
+    } elsif ( !$stage || $stage eq 'complete' ) {
 
         $self->status('COMP')->store;
         $self->completed( dt_from_string() )->store;
