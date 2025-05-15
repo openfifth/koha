@@ -910,17 +910,43 @@ Mark a request as completed (status = COMP).
 =cut
 
 sub mark_completed {
-    my ($self) = @_;
-    $self->status('COMP')->store;
-    $self->completed( dt_from_string() )->store;
-    return {
-        error   => 0,
-        status  => '',
-        message => '',
-        method  => 'mark_completed',
-        stage   => 'commit',
-        next    => 'illview',
-    };
+    my ( $self, $params ) = @_;
+
+    my $stage = $params->{stage};
+
+    #TODO: Only enter this if if ILL_STATUS_ALIAS authorised value category has at least one entry
+    if ( !$stage || $stage eq 'init' ) {
+        return $self->expand_template(
+            {
+                method => 'complete',
+                stage  => 'complete',
+                value  => $params,
+            }
+        );
+    } elsif ( $stage eq 'complete' ) {
+
+        $self->status('COMP')->store;
+        $self->completed( dt_from_string() )->store;
+        return {
+            error   => 0,
+            status  => '',
+            message => '',
+            method  => 'mark_completed',
+            stage   => 'commit',
+            next    => 'illview',
+        };
+    } else {
+
+        # Invalid stage, return error.
+        return {
+            error   => 1,
+            status  => 'unknown_stage',
+            message => '',
+            method  => 'confirm',
+            stage   => $params->{stage},
+            value   => {},
+        };
+    }
 }
 
 =head2 backend_illview
