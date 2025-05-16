@@ -1,0 +1,20 @@
+[
+  {
+    "library_id": "1",
+    "name": "Main Library",
+    "needs_override": false,
+    "pickup_items": [
+      789,
+      790
+    ]
+  },
+  {
+    "library_id": "2",
+    "name": "Branch Library",
+    "needs_override": false,
+    "pickup_items": [
+      789,
+      791
+    ]
+  }
+]

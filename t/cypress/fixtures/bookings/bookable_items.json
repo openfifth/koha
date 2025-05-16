@@ -1,0 +1,29 @@
+[
+  {
+    "item_id": "789",
+    "external_id": "BARCODE789",
+    "effective_item_type_id": "BK",
+    "item_type": {
+      "item_type_id": "BK",
+      "description": "Book"
+    }
+  },
+  {
+    "item_id": "790",
+    "external_id": "BARCODE790",
+    "effective_item_type_id": "BK",
+    "item_type": {
+      "item_type_id": "BK",
+      "description": "Book"
+    }
+  },
+  {
+    "item_id": "791",
+    "external_id": "BARCODE791",
+    "effective_item_type_id": "DVD",
+    "item_type": {
+      "item_type_id": "DVD",
+      "description": "DVD"
+    }
+  }
+]
