@@ -146,19 +146,13 @@ that we do not consider to be metadata
 
 sub metadata {
     my ( $self, $request ) = @_;
-    my $attrs    = $request->extended_attributes;
-    my $metadata = {};
-    my @ignore   = (
-        'requested_partners', 'type', 'type_disclaimer_value', 'type_disclaimer_date', 'unauthenticated_first_name',
-        'unauthenticated_last_name', 'unauthenticated_email', 'historycheck_requests'
-    );
+    my $attrs       = $request->extended_attributes->search( { backend => 'Standard' } );
+    my $metadata    = {};
     my $core_fields = _get_core_fields();
     while ( my $attr = $attrs->next ) {
         my $type = $attr->type;
-        if ( !grep { $_ eq $type } @ignore ) {
-            my $name;
-            $name = $core_fields->{$type} || ucfirst($type);
-            $metadata->{$name} = $attr->value;
+        if ( $core_fields->{$type} ) {
+            $metadata->{ $core_fields->{$type} } = $attr->value;
         }
     }
     return $metadata;
