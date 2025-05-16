@@ -914,9 +914,9 @@ sub mark_completed {
 
     my $stage = $params->{stage};
 
-    my $status_aliases_exists = Koha::AuthorisedValues->search( { category => 'ILL_STATUS_ALIAS' } )->count;
+    my $status_aliases_exist = Koha::AuthorisedValues->search( { category => 'ILL_STATUS_ALIAS' } )->count;
 
-    if ( ( !$stage || $stage eq 'init' ) && $status_aliases_exists ) {
+    if ( ( !$stage || $stage eq 'init' ) && $status_aliases_exist ) {
         return $self->expand_template(
             {
                 method => 'complete',
@@ -926,8 +926,10 @@ sub mark_completed {
         );
     } elsif ( !$stage || $stage eq 'complete' ) {
 
-        $self->status('COMP')->store;
-        $self->completed( dt_from_string() )->store;
+        $self->status('COMP');
+        $self->status_alias( $params->{status_alias} ) if $params->{status_alias};
+        $self->completed( dt_from_string() );
+        $self->store;
         return {
             error   => 0,
             status  => '',
