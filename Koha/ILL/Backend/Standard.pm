@@ -145,7 +145,7 @@ that we do not consider to be metadata
 
 sub metadata {
     my ( $self, $request ) = @_;
-    my $attrs    = $request->extended_attributes;
+    my $attrs    = $request->extended_attributes->search( { backend => 'Standard' } );
     my $metadata = {};
     my @ignore   = (
         'requested_partners', 'type', 'type_disclaimer_value', 'type_disclaimer_date', 'unauthenticated_first_name',
