@@ -1,0 +1,32 @@
+[
+  {
+    "booking_id": "1001",
+    "biblio_id": "123",
+    "patron_id": "456",
+    "item_id": "789",
+    "pickup_library_id": "1",
+    "start_date": "2025-05-01T00:00:00.000Z",
+    "end_date": "2025-05-05T23:59:59.999Z",
+    "status": "pending"
+  },
+  {
+    "booking_id": "1002",
+    "biblio_id": "123",
+    "patron_id": "457",
+    "item_id": "790",
+    "pickup_library_id": "1",
+    "start_date": "2025-05-06T00:00:00.000Z",
+    "end_date": "2025-05-10T23:59:59.999Z",
+    "status": "pending"
+  },
+  {
+    "booking_id": "1003",
+    "biblio_id": "123",
+    "patron_id": "458",
+    "item_id": null,
+    "pickup_library_id": "1",
+    "start_date": "2025-05-20T00:00:00.000Z",
+    "end_date": "2025-05-25T23:59:59.999Z",
+    "status": "pending"
+  }
+]

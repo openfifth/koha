@@ -1,0 +1,9 @@
+[
+  {
+    "bookings_lead_period": 2,
+    "bookings_trail_period": 1,
+    "issuelength": 14,
+    "renewalsallowed": 2,
+    "renewalperiod": 7
+  }
+]

@@ -1,0 +1,12 @@
+{
+  "patron_id": "456",
+  "surname": "Doe",
+  "firstname": "John",
+  "cardnumber": "12345",
+  "library_id": "1",
+  "library": {
+    "name": "Main Library"
+  },
+  "category_id": "1",
+  "date_of_birth": "1990-01-01"
+}

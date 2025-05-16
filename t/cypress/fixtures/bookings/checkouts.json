@@ -1,0 +1,9 @@
+[
+  {
+    "checkout_id": "5001",
+    "biblio_id": "123",
+    "item_id": "791",
+    "patron_id": "459",
+    "due_date": "2025-05-30T23:59:59.999Z"
+  }
+]
