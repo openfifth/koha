@@ -45,6 +45,8 @@
                 <span>Manage request [% request.id_prefix _ request.illrequest_id | html %]</span>
             [% ELSIF op == 'confirm' %]
                 <span>Confirm request [% request.id_prefix _ request.illrequest_id | html %]</span>
+            [% ELSIF op == 'mark_completed' %]
+                <span>Complete request request [% request.id_prefix _ request.illrequest_id | html %]</span>
             [% ELSIF op == 'delete_confirm' %]
                 <span>Delete request [% request.id_prefix _ request.illrequest_id | html %]</span>
             [% ELSIF op == 'generic_confirm' %]
@@ -114,6 +116,9 @@
                 [% PROCESS $whole.template %]
             [% ELSIF op == 'confirm' %]
                 <h1>Confirm ILL request</h1>
+                [% PROCESS $whole.template %]
+            [% ELSIF op == 'mark_completed' %]
+                <h1>Complete ILL request</h1>
                 [% PROCESS $whole.template %]
             [% ELSIF op == 'cud-cancel' and !whole.error %]
                 <h1>Cancel a confirmed request</h1>

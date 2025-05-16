@@ -3,9 +3,9 @@
 [% END %]
 
 [% IF whole.stage == "complete" %]
-    <h2>Complete manual request</h2>
+    <h2>Complete request</h2>
     <p>Proceeding with this action will set this request to 'Completed'.</p>
-    <p>You may pick a status alias from the dropdown</p>
+    <p>You can select a status alias from the available options:</p>
     <p>
         [% base_url = "/cgi-bin/koha/ill/ill-requests.pl" %]
         [% proceed_url = base_url _ "?method=mark_completed&stage=complete" _ "&illrequest_id=" _ request.illrequest_id %]
