@@ -152,7 +152,7 @@ sub metadata {
     );
 
     # Use database-level filtering instead of manual iteration
-    my $attrs = $request->extended_attributes->search( { type => { '-not_in' => \@ignore } } );
+    my $attrs = $request->extended_attributes->search( { type => { '-not_in' => \@ignore }, backend => $self->name } );
 
     my $core_fields = _get_core_fields();
     my $metadata    = {};
