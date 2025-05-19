@@ -26,6 +26,7 @@
 
 // Import Select2 helpers
 import "./select2";
+import "./flatpickr.js";
 
 function get_fallback_login_value(param) {
     var env_var = param == "username" ? "KOHA_USER" : "KOHA_PASS";
