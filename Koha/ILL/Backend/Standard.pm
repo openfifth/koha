@@ -706,7 +706,8 @@ sub migrate {
         $new_request->updated( dt_from_string() );
         $new_request->store;
 
-        my @default_attributes = (qw/title type author year volume isbn issn article_title article_author pages/);
+        my %core_fields        = %{ _get_core_fields() };
+        my @default_attributes = keys %core_fields;
         my $original_attributes =
             $original_request->extended_attributes->search( { type => { '-in' => \@default_attributes } } );
 
