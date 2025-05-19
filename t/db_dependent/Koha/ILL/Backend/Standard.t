@@ -19,7 +19,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 3;
+use Test::More tests => 4;
 use Test::MockModule;
 use Test::NoWarnings;
 
@@ -116,12 +116,12 @@ subtest 'edititem() tests' => sub {
 
 subtest 'metadata() tests' => sub {
 
-    plan tests => 9;
+    plan tests => 14;
 
     $schema->storage->txn_begin;
 
     # Create a test ILL request
-    my $request = $builder->build_object( { class => 'Koha::ILL::Requests' } );
+    my $request = $builder->build_sample_ill_request( { backend => 'Standard' } );
 
     # Add various attributes including some that should be ignored
     $request->add_or_update_attributes(
@@ -158,6 +158,105 @@ subtest 'metadata() tests' => sub {
     # Check that ignored attributes are excluded
     ok( !exists $metadata->{Requested_partners},           'requested_partners excluded from metadata' );
     ok( !exists $metadata->{Copyrightclearance_confirmed}, 'copyrightclearance_confirmed excluded from metadata' );
+
+    my $new_request = $builder->build_sample_ill_request( { backend => 'Standard' } );
+
+    is(
+        scalar %{ $new_request->metadata }, 0,
+        'metadata() returns empty if no metadata is set'
+    );
+
+    $builder->build_object(
+        {
+            class => 'Koha::ILL::Request::Attributes',
+            value => {
+                illrequest_id => $new_request->illrequest_id,
+                type          => 'title',
+                value         => 'The Hobbit',
+                backend       => 'Standard',
+            }
+        }
+    );
+
+    is(
+        scalar %{ $new_request->metadata }, 1,
+        'metadata() returns non-empty if metadata is set'
+    );
+
+    $builder->build_object(
+        {
+            class => 'Koha::ILL::Request::Attributes',
+            value => {
+                illrequest_id => $new_request->illrequest_id,
+                type          => 'author',
+                value         => 'JRR Tolkien',
+                backend       => 'Other_backend',
+            }
+        }
+    );
+
+    is(
+        scalar %{ $new_request->metadata }, 1,
+        'metadata() only returns attributes from Standard'
+    );
+
+    is(
+        $new_request->metadata->{'Title'}, 'The Hobbit',
+        'metadata() only returns attributes from Standard'
+    );
+
+    is(
+        $new_request->metadata->{'Author'}, undef,
+        'metadata() only returns attributes from Standard'
+    );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'migrate() tests' => sub {
+
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    my $request = $builder->build_sample_ill_request( { backend => 'Other_backend' } );
+
+    # Add attribute that Standard does not consider metadata
+    $builder->build_object(
+        {
+            class => 'Koha::ILL::Request::Attributes',
+            value => {
+                illrequest_id => $request->illrequest_id,
+                type          => 'Not_Standard_field',
+                value         => 'test',
+                backend       => 'Other_backend',
+            }
+        }
+    );
+
+    # Add attribute that Standard considers metadata
+    $builder->build_object(
+        {
+            class => 'Koha::ILL::Request::Attributes',
+            value => {
+                illrequest_id => $request->illrequest_id,
+                type          => 'DOI',
+                value         => '123/abc',
+                backend       => 'Other_backend',
+            }
+        }
+    );
+
+    my $test = $request->backend_migrate(
+        {
+            backend       => 'Standard',
+            illrequest_id => $request->illrequest_id
+        }
+    );
+
+    is( $request->metadata->{'Not_Standard_field'}, undef, 'Non standard field not migrated' );
+
+    is( $request->metadata->{'DOI'}, '123/abc', 'Standard field migrated' );
 
     $schema->storage->txn_rollback;
 };
