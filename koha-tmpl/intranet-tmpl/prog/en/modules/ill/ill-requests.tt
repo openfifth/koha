@@ -459,6 +459,9 @@
                         <fieldset class="rows">
                             <legend>Request details</legend>
                             <ol>
+                                [% IF request.status == 'UNAUTH' %]
+                                    <div class="alert alert-info">Please note: Adding a patron to this unauthenticated request will automatically change the request status to "NEW".</div>
+                                [% END %]
                                 [% type = request.get_type %]
                                 <li class="borrowernumber">
                                     <label for="borrowernumber">Patron ID:</label>
