@@ -133,6 +133,7 @@ if ( $backends_available ) {
     } elsif ( $op eq 'cud-create' ) {
         # Load the ILL backend
         my $request = Koha::ILL::Request->new->load_backend( $params->{backend} );
+        $params = $request->trim_form_params($params);
 
         # Before request creation operations - Preparation
         my $history_check =
