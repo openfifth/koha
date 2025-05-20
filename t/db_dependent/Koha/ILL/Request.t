@@ -19,7 +19,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 5;
+use Test::More tests => 6;
 use Test::MockModule;
 
 use Koha::ILL::Requests;
@@ -192,6 +192,46 @@ subtest 'get_backend_plugin() tests' => sub {
     is(
         $request->get_backend_plugin, undef,
         'get_backend_plugin returns undef if plugins are disabled'
+    );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'trim_form_params() tests' => sub {
+
+    plan tests => 4;
+
+    $schema->storage->txn_begin;
+
+    my $request = $builder->build_sample_ill_request();
+
+    my $params = {
+        'pubmedid' => '',
+        'doi'      => ' abc',
+        'type'     => 'article',
+        'backend'  => 'Standard',
+    };
+
+    my $trimmed_params = $request->trim_form_params($params);
+
+    is(
+        $trimmed_params->{doi}, 'abc',
+        'param with leading white space is correctly trimmed'
+    );
+
+    is(
+        $trimmed_params->{pubmedid}, '',
+        'empty param remains empty'
+    );
+
+    is(
+        $trimmed_params->{nonexistent}, undef,
+        'undef param remains undef'
+    );
+
+    is(
+        $trimmed_params->{type}, $trimmed_params->{type},
+        'already trimmed param remains unchanged'
     );
 
     $schema->storage->txn_rollback;
