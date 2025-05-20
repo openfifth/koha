@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 8;
+use Test::More tests => 9;
 use Test::MockModule;
 
 use Koha::ILL::Requests;
@@ -234,6 +234,7 @@ subtest 'copyright clearance methods tests' => sub {
     $schema->storage->txn_rollback;
 };
 
+<<<<<<< HEAD
 subtest 'add_or_update_attributes() tests' => sub {
 
     plan tests => 13;
@@ -296,6 +297,46 @@ subtest 'add_or_update_attributes() tests' => sub {
     is( $empty_attr, undef, 'Empty value skipped' );
     is( $undef_attr, undef, 'Undefined value skipped' );
     ok( $valid_attr, 'Valid value processed' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'trim_form_params() tests' => sub {
+
+    plan tests => 4;
+
+    $schema->storage->txn_begin;
+
+    my $request = $builder->build_sample_ill_request();
+
+    my $params = {
+        'pubmedid' => '',
+        'doi'      => ' abc',
+        'type'     => 'article',
+        'backend'  => 'Standard',
+    };
+
+    my $trimmed_params = $request->trim_form_params($params);
+
+    is(
+        $trimmed_params->{doi}, 'abc',
+        'param with leading white space is correctly trimmed'
+    );
+
+    is(
+        $trimmed_params->{pubmedid}, '',
+        'empty param remains empty'
+    );
+
+    is(
+        $trimmed_params->{nonexistent}, undef,
+        'undef param remains undef'
+    );
+
+    is(
+        $trimmed_params->{type}, $trimmed_params->{type},
+        'already trimmed param remains unchanged'
+    );
 
     $schema->storage->txn_rollback;
 };
