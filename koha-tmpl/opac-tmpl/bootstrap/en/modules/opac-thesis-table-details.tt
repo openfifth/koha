@@ -6,31 +6,30 @@
 [% USE ItemTypes %]
 [% USE Branches %]
 [% USE TablesSettings %]
+[% USE HtmlScrubber %]
+[% PROCESS 'i18n.inc' %]
+[% PROCESS 'html_helpers.inc' %]
 [% INCLUDE 'doc-head-open.inc' %]
-<title>[% IF ( LibraryNameTitle ) %][% LibraryNameTitle | html %][% ELSE %]Koha online[% END %] catalog &rsaquo; Reserves for [% course.course_name | html %][%- IF course.section -%] - [% course.section | html %][%- END -%]</title>
+<title>[% FILTER collapse %]
+    [% tx("Reserves for '{course_name}'", { course_name = course.course_name }) | html %][% IF course.section %] - [% course.section | html %][%- END -%] &rsaquo;
+    [% PROCESS 'library_name_title' %]
+[% END %]</title>
 [% INCLUDE 'doc-head-close.inc' %]
-[% BLOCK cssinclude %]
-    [% Asset.css("css/datatables.css") | $raw %]
-[% END %]
+[% BLOCK cssinclude %][% END %]
 
 </head>
 [% INCLUDE 'bodytag.inc' bodyid='opac-course-details' %]
 [% INCLUDE 'masthead.inc' %]
 
 <div class="main">
-    <nav aria-label="breadcrumb">
-        <ul class="breadcrumb">
-            <li class="breadcrumb-item">
-                <a href="/cgi-bin/koha/opac-main.pl">Home</a>
-            </li>
-            <li class="breadcrumb-item">
-                <a href="/cgi-bin/koha/opac-thesis-tables.pl">Research tables</a>
-            </li>
-            <li class="breadcrumb-item" aria-current="page">
-                Reserves for &nbsp;<em>[% course.course_name | html %][%- IF course.section -%] - [% course.section | html %][%- END -%]</em>
-            </li>
-        </ul>
-    </nav>
+    [% WRAPPER breadcrumbs %]
+        [% WRAPPER breadcrumb_item %]
+            <a href="/cgi-bin/koha/opac-thesis-tables.pl">Research tables</a>
+        [% END %]
+        [% WRAPPER breadcrumb_item bc_active= 1 %]
+            [% tx("Reserves for '{course_name}'", { course_name = course.course_name }) | html %][%- IF course.section -%] - [% course.section | html %][%- END -%]
+        [% END %]
+    [% END #/ WRAPPER breadcrumbs %]
 
     <div class="container-fluid">
         <div class="row">
@@ -40,6 +39,10 @@
                     <h2>Reserves for <em>[% course.course_name | html %][%- IF course.section -%] - [% course.section | html %][%- END -%]</em></h2>
                     <div class="rows">
                         <ol>
+                            [% IF ( course.term ) %]<li><span class="label">[% tp('Semester', 'Term:') | html %]</span> [% AuthorisedValues.GetByCode( 'TERM', course.term, 1 ) | html %]</li>[% END %]
+                            <li><span class="label">Department:</span> [% AuthorisedValues.GetByCode( 'DEPARTMENT', course.department, 1 ) | html %]</li>
+                            [% IF ( course.course_number ) %]<li><span class="label">Course number:</span> [% course.course_number | html %]</li>[% END %]
+                            [% IF ( course.section ) %]<li><span class="label">Section:</span> [% course.section | html %]</li>[% END %]
                             [% IF ( course.instructors ) %]
                                 <li><span class="label">Researcher:</span>
                                     <ul>
@@ -49,12 +52,13 @@
                                     </ul>
                                 </li>
                             [% END %]
-                            [% IF ( course.public_note ) %]<li><span class="label">Notes:</span> [% course.public_note | $raw %]</li>[% END %]
+                            [% IF ( course.public_note ) %]<li><span class="label">Notes:</span> [% course.public_note | scrub_html_type => 'note' | $raw %]</li>[% END %]
                         </ol>
                     </div>
 
                     [% IF ( course_reserves ) %]
                         <table id="thesis-table-items-table" class="table table-bordered table-striped table-condensed">
+                        <caption class="sr-only">Research tables</caption>
                             <thead>
                                 <tr>
                                     <th class="anti-the">Title</th>
@@ -65,9 +69,10 @@
                                     <th>Call number</th>
                                     <th>Copy number</th>
                                     <th>Status</th>
-                                    <th class="title-string">Date due</th>
+                                    <th>Date due</th>
                                     <th>Notes</th>
                                     <th>Link</th>
+                                    <th></th>
                                 </tr>
                             </thead>
 
@@ -81,12 +86,16 @@
                                         <td>[% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.ccode', authorised_value => cr.item.ccode, opac => 1 ) | html %]</td>
                                         <td>[% cr.item.itemcallnumber | html %]</td>
                                         <td>[% cr.item.copynumber | html %]</td>
-                                        <td>[% INCLUDE 'item-status.inc' item=cr.item issue=cr.issue %]</td>
-                                        <td><span title="[% cr.issue.date_due | html %]">[% cr.issue.date_due | $KohaDates  as_due_date => 1 %]</span></td>
+                                        <td>
+                                            [% IF cr.item %]
+                                                [% INCLUDE 'item-status.inc' item=cr.item issue=cr.issue show_recall_link=Koha.Preference('UseRecalls') %]
+                                            [% END %]
+                                        </td>
+                                        <td data-order="[% cr.issue.date_due | html %]"><span title="[% cr.issue.date_due | html %]">[% cr.issue.date_due | $KohaDates  as_due_date => 1 %]</span></td>
                                         <td>[% IF ( cr.public_note ) %]
-                                                [% cr.public_note | $raw %]
+                                                [% cr.public_note | scrub_html_type => 'note' | $raw %]
                                             [% ELSIF ( cr.item.itemnotes ) %]
-                                                [% cr.item.itemnotes | $raw %]
+                                                [% cr.item.itemnotes | scrub_html_type => 'note' | $raw %]
                                             [% END %]
                                         </td>
                                         <td>[% IF (cr.item.uri) %]
@@ -95,6 +104,7 @@
                                                 <a href="[% cr.biblioitem.url | url %]">Record URL</a>
                                             [% END %]
                                         </td>
+                                        <td></td>
                                     </tr>
                                 [% END %]
                             </tbody>
@@ -116,12 +126,21 @@
     [% INCLUDE 'columns_settings.inc' %]
     <script>
         $(document).ready(function() {
-            columns_settings = [% TablesSettings.GetColumns( 'opac', 'biblio-detail', 'thesis-table-items-table', 'json' ) | $raw %];
+            table_settings = [% TablesSettings.GetTableSettings( 'opac', 'biblio-detail', 'thesis-table-items-table', 'json' ) | $raw %];
             KohaTable("#thesis-table-items-table", {
-                "dom": '<"top"f>rt<"clear">',
+                "dom": '<"top"<"table_controls"f>>t',
                 "sorting": [[ 1, "asc" ]],
-                "autoWidth": false,
-            }, columns_settings );
+                "language": {
+                    "search": "_INPUT_",
+                    "searchPlaceholder": _("Search research tables")
+                },
+                "responsive": {
+                    "details": { "type": 'column',"target": -1 }
+                },
+                "columnDefs": [
+                    { "className": 'dtr-control', "orderable": false, "targets": -1 },
+                ],
+            }, table_settings );
         });
     </script>
 [% END %]
