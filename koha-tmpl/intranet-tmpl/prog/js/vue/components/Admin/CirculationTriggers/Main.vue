@@ -51,7 +51,7 @@ export default {
 form .v-select {
     display: inline-block;
     background-color: white;
-    width: 30%;
+    width: 50%;
 }
 
 .v-select,
