@@ -293,6 +293,7 @@ if ($backends_available) {
                     request => $request,
                 );
             } else {
+                $request->status('NEW') if $request->status eq 'UNAUTH' && $params->{borrowernumber};
                 $request->borrowernumber( $params->{borrowernumber} );
                 $request->biblio_id( $params->{biblio_id} );
                 $request->batch_id( $params->{batch_id} );
