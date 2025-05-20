@@ -3,29 +3,27 @@
 [% USE Koha %]
 [% USE AuthorisedValues %]
 [% USE TablesSettings %]
-
+[% PROCESS 'i18n.inc' %]
+[% PROCESS 'html_helpers.inc' %]
 [% INCLUDE 'doc-head-open.inc' %]
-<title>[% IF ( LibraryNameTitle ) %][% LibraryNameTitle | html %][% ELSE %]Koha online[% END %] catalog &rsaquo; Research tables</title>
+[% USE HtmlScrubber %]
+<title>[% FILTER collapse %]
+    [% t("Research tables") | html %] &rsaquo;
+    [% PROCESS 'library_name_title' %]
+[% END %]</title>
 [% INCLUDE 'doc-head-close.inc' %]
-[% BLOCK cssinclude %]
-    [% Asset.css("css/datatables.css") | $raw %]
-[% END %]
+[% BLOCK cssinclude %][% END %]
 
 </head>
 [% INCLUDE 'bodytag.inc' bodyid='opac-thesis-tables' %]
 [% INCLUDE 'masthead.inc' %]
 
 <div class="main">
-    <nav aria-label="breadcrumb">
-        <ul class="breadcrumb">
-            <li class="breadcrumb-item">
-                <a href="/cgi-bin/koha/opac-main.pl">Home</a>
-            </li>
-            <li class="breadcrumb-item" aria-current="page">
-                <a href="#">Research tables</a>
-            </li>
-        </ul>
-    </nav>
+    [% WRAPPER breadcrumbs %]
+        [% WRAPPER breadcrumb_item bc_active= 1 %]
+            <span>Research tables</span>
+        [% END %]
+    [% END #/ WRAPPER breadcrumbs %]
 
     <div class="container-fluid">
         <div class="row">
@@ -40,6 +38,7 @@
                                 <th>Table #</th>
                                 <th>Researcher</th>
                                 <th>Topic</th>
+                                <th></th>
                             </tr>
                         </thead>
 
@@ -53,7 +52,8 @@
                                           <div class="instructor"><span class="inst_surname">[% i.surname | html %]</span>[% IF i.firstname %]<span class="instr_separator">, </span><span class="instr_firstname">[% i.firstname | html %]</span>[% END %]</div>
                                       [% END %]
                                     </td>
-                                    <td>[% c.public_note | $raw %]</td>
+                                    <td>[% c.public_note | scrub_html_type => 'note' | $raw %]</td>
+                                    <td></td>
                             [% END %]
                         </tbody>
                     </table>
@@ -68,19 +68,24 @@
     [% INCLUDE 'columns_settings.inc' %]
     <script>
         $(document).ready(function() {
-            columns_settings = [% TablesSettings.GetColumns( 'opac', 'biblio-detail', 'thesis_tables_table', 'json' ) | $raw %]
+            table_settings = [% TablesSettings.GetTableSettings( 'opac', 'biblio-detail', 'thesis_tables_table', 'json' ) | $raw %]
             KohaTable("#thesis_tables_table", {
-                "dom": '<"top"f>rt<"clear">',
+                "dom": '<"top"<"table_controls"f>>rt<"clear">',
                 "sorting": [[ 1, "asc" ]],
-                "autoWidth": false,
                 "asColumnDefs": [
                     { "aTargets": [ 1 ], "sType": "nsb-nse" },
                 ],
                 "language": {
                     "search": "_INPUT_",
-                    "searchPlaceholder": "Search courses"
-                }
-            }, columns_settings );
+                    "searchPlaceholder": _("Search courses")
+                },
+                "responsive": {
+                    "details": { "type": 'column',"target": -1 }
+                },
+                "cColumnDefs": [
+                    { "className": 'dtr-control', "orderable": false, "targets": -1 },
+                ],
+            }, table_settings );
         });
     </script>
 [% END %]
