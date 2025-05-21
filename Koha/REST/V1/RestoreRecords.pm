@@ -59,6 +59,14 @@ sub restore_item {
         if ($result->{success}) {
             return $c->render( status => 200, openapi => { success => 1 } );
         } else {
+            # Return 409 Conflict if the biblio doesn't exist
+            if ($result->{error} =~ /associated bibliographic record does not exist/) {
+                return $c->render(
+                    status => 409,
+                    openapi => { error => $result->{error} }
+                );
+            }
+            # Return 404 for other cases (like item not found)
             return $c->render(
                 status => 404,
                 openapi => { error => $result->{error} || 'Failed to restore item' }
