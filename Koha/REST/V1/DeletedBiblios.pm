@@ -120,6 +120,9 @@ sub list {
     my $rs      = Koha::Old::Biblios->search( undef, { prefetch => \@prefetch } );
     my $biblios = $c->objects->search_rs( $rs, [ ( sub { $rs->api_query_fixer( $_[0], '', $_[1] ) } ) ] );
 
+    # Add pagination headers
+    $c->add_pagination_headers();
+
     return try {
 
         if ( $c->req->headers->accept =~ m/application\/json(;|,.*)?$/ ) {
