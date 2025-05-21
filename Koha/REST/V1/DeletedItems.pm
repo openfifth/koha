@@ -48,9 +48,11 @@ sub list {
         }
 
         my $items = Koha::Old::Items->search($query, { order_by => { -desc => 'timestamp' } });
+        my $items_with_embed = $c->objects->search($items);
+        
         return $c->render(
             status  => 200,
-            openapi => $items
+            openapi => $items_with_embed
         );
     } catch {
         $c->unhandled_exception($_);
@@ -72,9 +74,10 @@ sub get {
         return $c->render_resource_not_found("Deleted item")
             unless $item;
 
+        my $item_with_embed = $c->objects->to_api($item);
         return $c->render(
             status  => 200,
-            openapi => $item
+            openapi => $item_with_embed
         );
     } catch {
         $c->unhandled_exception($_);

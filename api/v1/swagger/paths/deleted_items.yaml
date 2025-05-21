@@ -17,6 +17,16 @@
         required: false
         type: integer
         description: Filter by biblionumber
+      - name: x-koha-embed
+        in: header
+        required: false
+        description: Embed list sent as a request header
+        type: array
+        items:
+          type: string
+          enum:
+            - biblio
+        collectionFormat: csv
       - $ref: "../swagger.yaml#/parameters/page"
       - $ref: "../swagger.yaml#/parameters/per_page"
       - $ref: "../swagger.yaml#/parameters/match"
@@ -75,6 +85,16 @@
         description: Internal item identifier
         required: true
         type: integer
+      - name: x-koha-embed
+        in: header
+        required: false
+        description: Embed list sent as a request header
+        type: array
+        items:
+          type: string
+          enum:
+            - biblio
+        collectionFormat: csv
     produces:
       - application/json
     responses:

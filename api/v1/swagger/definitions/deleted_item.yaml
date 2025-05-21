@@ -245,4 +245,9 @@ properties:
       - boolean
       - "null"
     description: Exclude this item from local holds priority
+  biblio:
+    type:
+      - object
+      - "null"
+    description: Bibliographic record (x-koha-embed)
 additionalProperties: false

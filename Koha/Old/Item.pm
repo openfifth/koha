@@ -18,6 +18,8 @@ package Koha::Old::Item;
 use Modern::Perl;
 
 use base qw(Koha::Object);
+use Koha::Biblios;
+use Koha::Old::Biblios;
 
 =head1 NAME
 
@@ -35,6 +37,28 @@ Koha::Old::Item - Koha Old Item Object class
 
 sub _type {
     return 'Deleteditem';
+}
+
+=head3 biblio
+
+    my $biblio = $item->biblio;
+
+Returns the related biblio object for this item. Checks both the regular biblio table
+and the deletedbiblio table, returning whichever one contains the record.
+
+=cut
+
+sub biblio {
+    my ($self) = @_;
+    my $biblionumber = $self->_result->biblionumber;
+    return unless $biblionumber;
+
+    # First check if the biblio exists in the regular biblio table
+    my $biblio = Koha::Biblios->find($biblionumber);
+    return $biblio if $biblio;
+
+    # If not found in regular biblio table, check deletedbiblio
+    return Koha::Old::Biblios->find($biblionumber);
 }
 
 1;
