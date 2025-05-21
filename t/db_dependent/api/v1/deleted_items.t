@@ -29,6 +29,7 @@ use Koha::Items;
 use Koha::Biblios;
 use C4::Context;
 use Koha::Old::Items;
+use C4::Biblio qw( DelBiblio );
 
 my $schema  = Koha::Database->new->schema;
 my $builder = t::lib::TestBuilder->new;
@@ -45,7 +46,7 @@ my $library = $builder->build_object(
     }
 );
 
-plan tests => 3;  # 2 subtests + 1 NoWarnings test
+plan tests => 4;  # 3 subtests + 1 NoWarnings test
 
 subtest 'get() tests' => sub {
     plan tests => 6;
@@ -209,6 +210,82 @@ subtest 'list() tests' => sub {
       ->status_is(200)
       ->json_has('/0')
       ->json_hasnt('/1');
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'embed tests' => sub {
+    plan tests => 15;
+
+    $schema->storage->txn_begin;
+
+    # Create a patron with catalogue permissions
+    my $patron = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => {
+                flags => 4,  # catalogue permissions
+                branchcode => 'CPL'
+            }
+        }
+    );
+    my $password = 'thePassword123';
+    $patron->set_password( { password => $password, skip_validation => 1 } );
+    $patron->discard_changes;
+    my $userid = $patron->userid;
+
+    # Set up userenv
+    t::lib::Mocks::mock_userenv({
+        branchcode => 'CPL',
+        flags => 4,  # catalogue permissions
+        id => $patron->borrowernumber
+    });
+
+    # Create a bibliographic record
+    my $biblio = $builder->build_sample_biblio(
+        {
+            title  => 'Test title for embedding',
+            author => 'Test author'
+        }
+    );
+
+    # Create an item
+    my $item = $builder->build_sample_item(
+        {
+            biblionumber => $biblio->biblionumber,
+            barcode      => 'TEST_BC_EMBED',
+            homebranch   => 'CPL',
+            holdingbranch => 'CPL'
+        }
+    );
+
+    # Delete the item
+    my $itemnumber = $item->itemnumber;
+    $item->safe_delete();
+
+    # Test embedding biblio for a single item
+    $t->get_ok( "//$userid:$password@/api/v1/deleted/items/$itemnumber" => { 'x-koha-embed' => 'biblio' } )
+      ->status_is(200)
+      ->json_has('/biblio')
+      ->json_is('/biblio/title', 'Test title for embedding')
+      ->json_is('/biblio/author', 'Test author');
+
+    # Test embedding biblio in list endpoint
+    $t->get_ok( "//$userid:$password@/api/v1/deleted/items" => { 'x-koha-embed' => 'biblio' } )
+      ->status_is(200)
+      ->json_has('/0/biblio')
+      ->json_is('/0/biblio/title', 'Test title for embedding')
+      ->json_is('/0/biblio/author', 'Test author');
+
+    # Now delete the biblio and test embedding again
+    DelBiblio($biblio->biblionumber);
+
+    # Test embedding deleted biblio for a single item
+    $t->get_ok( "//$userid:$password@/api/v1/deleted/items/$itemnumber" => { 'x-koha-embed' => 'biblio' } )
+      ->status_is(200)
+      ->json_has('/biblio')
+      ->json_is('/biblio/title', 'Test title for embedding')
+      ->json_is('/biblio/author', 'Test author');
 
     $schema->storage->txn_rollback;
 };
