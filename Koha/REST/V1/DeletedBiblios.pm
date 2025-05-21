@@ -122,30 +122,30 @@ sub list {
 
     return try {
 
-        if ( $c->req->headers->accept =~ m/application\/json(;.*)?$/ ) {
+        if ( $c->req->headers->accept =~ m/application\/json(;|,.*)?$/ ) {
             return $c->render(
                 status => 200,
                 json   => $c->objects->to_api($biblios),
             );
-        } elsif ( $c->req->headers->accept =~ m/application\/marcxml\+xml(;.*)?$/ ) {
+        } elsif ( $c->req->headers->accept =~ m/application\/marcxml\+xml(;|,.*)?$/ ) {
             $c->res->headers->add( 'Content-Type', 'application/marcxml+xml' );
             return $c->render(
                 status => 200,
                 text   => $biblios->print_collection('marcxml')
             );
-        } elsif ( $c->req->headers->accept =~ m/application\/marc-in-json(;.*)?$/ ) {
+        } elsif ( $c->req->headers->accept =~ m/application\/marc-in-json(;|,.*)?$/ ) {
             $c->res->headers->add( 'Content-Type', 'application/marc-in-json' );
             return $c->render(
                 status => 200,
                 data   => $biblios->print_collection('mij')
             );
-        } elsif ( $c->req->headers->accept =~ m/application\/marc(;.*)?$/ ) {
+        } elsif ( $c->req->headers->accept =~ m/application\/marc(;|,.*)?$/ ) {
             $c->res->headers->add( 'Content-Type', 'application/marc' );
             return $c->render(
                 status => 200,
                 text   => $biblios->print_collection('marc')
             );
-        } elsif ( $c->req->headers->accept =~ m/text\/plain(;.*)?$/ ) {
+        } elsif ( $c->req->headers->accept =~ m/text\/plain(;|,.*)?$/ ) {
             return $c->render(
                 status => 200,
                 text   => $biblios->print_collection('txt')
