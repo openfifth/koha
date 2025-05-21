@@ -117,5 +117,42 @@ subtest 'restore_item' => sub {
         'Item was restored with correct barcode' );
 };
 
+# Test restoring item when biblio is deleted
+subtest 'restore_item_with_deleted_biblio' => sub {
+    plan tests => 4;
+
+    # Create a new biblio and item
+    my $biblio3 = $builder->build_sample_biblio({
+        title  => 'Test biblio for deletion',
+        author => 'Test Author'
+    });
+
+    my $item3 = $builder->build_sample_item({
+        biblionumber => $biblio3->biblionumber,
+        barcode      => 'RESTORE_TEST_789',
+        homebranch   => 'CPL',
+        holdingbranch => 'CPL'
+    });
+
+    # Delete both item and biblio
+    $item3->safe_delete;
+    C4::Biblio::DelBiblio($biblio3->biblionumber);
+
+    # Verify both are deleted
+    ok( !Koha::Biblios->find($biblio3->biblionumber), 'Biblio successfully deleted' );
+    ok( !Koha::Items->find($item3->itemnumber), 'Item successfully deleted' );
+
+    # Try to restore the item
+    my $restorer = Koha::RestoreRecords->new;
+    my $result = $restorer->restore_item($item3->itemnumber);
+    is( $result->{success}, 0, 'Item restore should fail when biblio is deleted' );
+    like( $result->{error}, qr/associated bibliographic record does not exist/, 
+        'Error message indicates biblio does not exist' );
+
+    # Verify item is still in deleted items table
+    my $deleted_item = $schema->resultset('Deleteditem')->find($item3->itemnumber);
+    ok( $deleted_item, 'Item still exists in deleted items table after failed restore' );
+};
+
 # Rollback the transaction
 $schema->storage->txn_rollback;
