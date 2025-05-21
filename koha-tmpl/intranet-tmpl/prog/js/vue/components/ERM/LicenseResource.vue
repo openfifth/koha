@@ -56,7 +56,7 @@ export default {
             resourceAttrs: [
                 {
                     name: this.idAttr,
-                    label: __("ID"),
+                    label: this.$__("ID"),
                     type: "text",
                     hideInForm: true,
                     hideInShow: true,
@@ -66,13 +66,13 @@ export default {
                     name: "name",
                     required: true,
                     type: "text",
-                    label: __("License name"),
+                    label: this.$__("License name"),
                     showInTable: true,
                 },
                 {
                     name: "vendor_id",
                     type: "vendor",
-                    label: __("Vendor"),
+                    label: this.$__("Vendor"),
                     showInTable: true,
                     showElement: {
                         type: "text",
@@ -90,7 +90,7 @@ export default {
                     type: "textarea",
                     textAreaRows: 10,
                     textAreaCols: 50,
-                    label: __("Description"),
+                    label: this.$__("Description"),
                     showInTable: true,
                     required: true,
                 },
@@ -98,7 +98,7 @@ export default {
                     name: "type",
                     required: true,
                     type: "select",
-                    label: __("Type"),
+                    label: this.$__("Type"),
                     showInTable: true,
                     avCat: "av_license_types",
                 },
@@ -106,14 +106,14 @@ export default {
                     name: "status",
                     required: true,
                     type: "select",
-                    label: __("Status"),
+                    label: this.$__("Status"),
                     showInTable: true,
                     avCat: "av_license_statuses",
                 },
                 {
                     name: "started_on",
                     type: "date",
-                    label: __("Start date"),
+                    label: this.$__("Start date"),
                     showInTable: true,
                     showElement: {
                         type: "text",
@@ -130,7 +130,7 @@ export default {
                 {
                     name: "ended_on",
                     type: "date",
-                    label: __("End date"),
+                    label: this.$__("End date"),
                     showInTable: true,
                     showElement: {
                         type: "text",
@@ -146,20 +146,20 @@ export default {
                 {
                     name: "user_roles",
                     type: "relationshipWidget",
-                    group: __("Users"),
+                    group: this.$__("Users"),
                     showElement: {
                         type: "table",
                         columnData: "user_roles",
                         hidden: license => !!license.user_roles?.length,
-                        label: __("License users"),
+                        label: this.$__("License users"),
                         columns: [
                             {
-                                name: __("Name"),
+                                name: this.$__("Name"),
                                 value: "patron",
                                 format: this.patron_to_html,
                             },
                             {
-                                name: __("Role"),
+                                name: this.$__("Role"),
                                 value: "role",
                                 av: "av_user_roles",
                             },
@@ -170,9 +170,9 @@ export default {
                             resourceProperty: "user_roles",
                         },
                         relationshipStrings: {
-                            nameLowerCase: __("user"),
-                            nameUpperCase: __("License user"),
-                            namePlural: __("users"),
+                            nameLowerCase: this.$__("user"),
+                            nameUpperCase: this.$__("License user"),
+                            namePlural: this.$__("users"),
                         },
                         newRelationshipDefaultAttrs: {
                             type: "object",
@@ -187,7 +187,7 @@ export default {
                         {
                             name: "user_id",
                             type: "component",
-                            label: __("User"),
+                            label: this.$__("User"),
                             componentPath: "./PatronSearch.vue",
                             required: true,
                             indexRequired: true,
@@ -206,14 +206,14 @@ export default {
                                 },
                                 label: {
                                     type: "string",
-                                    value: __("User"),
+                                    value: this.$__("User"),
                                 },
                             },
                         },
                         {
                             name: "role",
                             type: "select",
-                            label: __("Role"),
+                            label: this.$__("Role"),
                             avCat: "av_user_roles",
                             required: true,
                             indexRequired: true,
@@ -223,7 +223,7 @@ export default {
                 {
                     name: "documents",
                     type: "relationshipWidget",
-                    group: __("Documents"),
+                    group: this.$__("Documents"),
                     showElement: {
                         type: "component",
                         hidden: license => !!license.documents?.length,
@@ -240,9 +240,9 @@ export default {
                             resourceProperty: "documents",
                         },
                         relationshipStrings: {
-                            nameLowerCase: __("document"),
-                            nameUpperCase: __("Document"),
-                            namePlural: __("documents"),
+                            nameLowerCase: this.$__("document"),
+                            nameUpperCase: this.$__("Document"),
+                            namePlural: this.$__("documents"),
                         },
                         newRelationshipDefaultAttrs: {
                             type: "object",
@@ -262,7 +262,7 @@ export default {
                             name: "document",
                             type: "component",
                             componentPath: "./DocumentSelect.vue",
-                            label: __("File"),
+                            label: this.$__("File"),
                             componentProps: {
                                 counter: {
                                     type: "string",
@@ -279,21 +279,21 @@ export default {
                             name: "physical_location",
                             required: false,
                             type: "text",
-                            label: __("Physical location"),
+                            label: this.$__("Physical location"),
                             indexRequired: true,
                         },
                         {
                             name: "uri",
                             required: false,
                             type: "text",
-                            label: __("URI"),
+                            label: this.$__("URI"),
                             indexRequired: true,
                         },
                         {
                             name: "notes",
                             required: false,
                             type: "text",
-                            label: __("Notes"),
+                            label: this.$__("Notes"),
                             indexRequired: true,
                         },
                     ],

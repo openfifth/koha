@@ -61,9 +61,9 @@ export default {
                     name: "name",
                     required: true,
                     type: "text",
-                    label: __("Package name"),
+                    label: this.$__("Package name"),
                     showInTable: {
-                        title: __("Package name"),
+                        title: this.$__("Package name"),
                         data: "name:package_id",
                         searchable: true,
                         orderable: true,
@@ -81,7 +81,7 @@ export default {
                 {
                     name: "vendor_id",
                     type: "vendor",
-                    label: __("Vendor"),
+                    label: this.$__("Vendor"),
                     showInTable: true,
                     showElement: {
                         type: "text",
@@ -97,21 +97,21 @@ export default {
                 {
                     name: "package_type",
                     type: "select",
-                    label: __("Type"),
+                    label: this.$__("Type"),
                     showInTable: true,
                     avCat: "av_package_types",
                 },
                 {
                     name: "content_type",
                     type: "select",
-                    label: __("Content type"),
+                    label: this.$__("Content type"),
                     showInTable: true,
                     avCat: "av_package_content_types",
                 },
                 {
                     name: "created_on",
                     type: "date",
-                    label: __("Created on"),
+                    label: this.$__("Created on"),
                     showInTable: true,
                     hideInForm: true,
                     showElement: {
@@ -124,7 +124,7 @@ export default {
                     name: "notes",
                     required: false,
                     type: "text",
-                    label: __("Notes"),
+                    label: this.$__("Notes"),
                     showInTable: true,
                 },
                 {
@@ -135,7 +135,7 @@ export default {
                 {
                     name: "package_agreements",
                     type: "relationshipWidget",
-                    group: __("Agreements"),
+                    group: this.$__("Agreements"),
                     showElement: {
                         type: "table",
                         columnData: "package_agreements",
@@ -143,7 +143,7 @@ export default {
                             !!erm_package.package_agreements?.length,
                         columns: [
                             {
-                                name: __("Agreement name"),
+                                name: this.$__("Agreement name"),
                                 value: "agreement.name",
                                 link: {
                                     name: "AgreementsShow",
@@ -166,9 +166,9 @@ export default {
                             resourceProperty: "package_agreements",
                         },
                         relationshipStrings: {
-                            nameLowerCase: __("agreement"),
-                            nameUpperCase: __("Agreement"),
-                            namePlural: __("agreements"),
+                            nameLowerCase: this.$__("agreement"),
+                            nameUpperCase: this.$__("Agreement"),
+                            namePlural: this.$__("agreements"),
                         },
                         fetchOptions: {
                             type: "boolean",
@@ -179,7 +179,7 @@ export default {
                         {
                             name: "agreement_id",
                             type: "select",
-                            label: __("Agreement"),
+                            label: this.$__("Agreement"),
                             requiredKey: "agreement_id",
                             selectLabel: "name",
                             required: true,
@@ -286,7 +286,7 @@ export default {
             return [
                 {
                     type: "component",
-                    name: __("Titles"),
+                    name: this.$__("Titles"),
                     hidden: erm_package => erm_package,
                     componentPath: "./RelationshipTableDisplay.vue",
                     componentProps: {
@@ -295,7 +295,7 @@ export default {
                             value: {
                                 columns: [
                                     {
-                                        title: __("Name"),
+                                        title: this.$__("Name"),
                                         data: "title.publication_title",
                                         searchable: true,
                                         orderable: true,
@@ -317,7 +317,7 @@ export default {
                                         },
                                     },
                                     {
-                                        title: __("Publication type"),
+                                        title: this.$__("Publication type"),
                                         data: "title.publication_type",
                                         searchable: true,
                                         orderable: true,
