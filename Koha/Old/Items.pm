@@ -17,21 +17,20 @@ package Koha::Old::Items;
 
 use Modern::Perl;
 
-use base qw(Koha::Objects);
-
+use Koha::Database;
 use Koha::Old::Item;
+
+use base qw(Koha::Objects);
 
 =head1 NAME
 
-Koha::Old::Items - Koha Old::Item Object set class
+Koha::Old::Items - Koha Old Items Object class
 
 =head1 API
 
 =head2 Class Methods
 
 =cut
-
-=head2 Internal Methods
 
 =head3 _type
 
@@ -42,8 +41,6 @@ sub _type {
 }
 
 =head3 object_class
-
-Single object class
 
 =cut
 

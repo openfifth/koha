@@ -1,0 +1,94 @@
+---
+/restore_records/biblio/{biblionumber}:
+  post:
+    x-mojo-to: RestoreRecords#restore_biblio
+    operationId: restoreBiblio
+    tags:
+      - bibliographic_records
+    summary: Restore a deleted bibliographic record
+    description: |
+      Restores a deleted bibliographic record and its associated items from the deletion tables.
+      Requires the 'restore_records' permission.
+    parameters:
+      - name: biblionumber
+        in: path
+        required: true
+        type: integer
+        description: The biblionumber of the record to restore
+    produces:
+      - application/json
+    responses:
+      "200":
+        description: Record successfully restored
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: true
+      "401":
+        description: Unauthorized - User not authenticated
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Forbidden - User lacks required permission
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Record not found in deletion tables
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: Internal server error
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        parameters: restore_records
+
+/restore_records/item/{itemnumber}:
+  post:
+    x-mojo-to: RestoreRecords#restore_item
+    operationId: restoreItem
+    tags:
+      - items
+    summary: Restore a deleted item
+    description: |
+      Restores a deleted item from the deletion tables.
+      Requires the 'restore_records' permission.
+    parameters:
+      - name: itemnumber
+        in: path
+        required: true
+        type: integer
+        description: The itemnumber of the item to restore
+    produces:
+      - application/json
+    responses:
+      "200":
+        description: Item successfully restored
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: true
+      "401":
+        description: Unauthorized - User not authenticated
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Forbidden - User lacks required permission
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Item not found in deletion tables
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: Internal server error
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        parameters: restore_records

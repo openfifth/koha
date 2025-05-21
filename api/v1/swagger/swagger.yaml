@@ -46,6 +46,8 @@ definitions:
     $ref: ./definitions/credit.yaml
   debit:
     $ref: ./definitions/debit.yaml
+  deleted_item:
+    $ref: ./definitions/deleted_item.yaml
   desk:
     $ref: ./definitions/desk.yaml
   edifact_file:
@@ -333,6 +335,10 @@ paths:
     $ref: "./paths/deleted_biblios.yaml#/~1deleted~1biblios"
   "/deleted/biblios/{biblio_id}":
     $ref: "./paths/deleted_biblios.yaml#/~1deleted~1biblios~1{biblio_id}"
+  "/deleted/items":
+    $ref: "./paths/deleted_items.yaml#/~1deleted~1items"
+  "/deleted/items/{item_id}":
+    $ref: "./paths/deleted_items.yaml#/~1deleted~1items~1{item_id}"
   /erm/config:
     $ref: ./paths/erm_config.yaml#/~1erm~1config
   /erm/agreements:
@@ -577,6 +583,10 @@ paths:
     $ref: ./paths/record_sources.yaml#/~1record_sources
   "/record_sources/{record_source_id}":
     $ref: ./paths/record_sources.yaml#/~1record_sources~1{record_source_id}
+  "/restore_records/biblio/{biblionumber}":
+    $ref: "./paths/restore_records.yaml#/~1restore_records~1biblio~1{biblionumber}"
+  "/restore_records/item/{itemnumber}":
+    $ref: "./paths/restore_records.yaml#/~1restore_records~1item~1{itemnumber}"
   /return_claims:
     $ref: ./paths/return_claims.yaml#/~1return_claims
   "/return_claims/{claim_id}":
