@@ -61,7 +61,9 @@ sub restore_biblio {
     my $schema = Koha::Database->new->schema;
 
     # Check if deleted biblio exists
-    my $deleted_biblio = $schema->resultset('Deletedbiblio')->find($biblionumber);
+    my $deleted_biblio = $schema->resultset('Deletedbiblio')
+        ->search({ biblionumber => $biblionumber }, { order_by => { -desc => 'timestamp' } })
+        ->next;
     return { success => 0, error => 'Deleted record not found' } unless $deleted_biblio;
 
     # Begin transaction
@@ -139,7 +141,9 @@ sub restore_item {
     my $schema = Koha::Database->new->schema;
 
     # Check if deleted item exists
-    my $deleted_item = $schema->resultset('Deleteditem')->find($itemnumber);
+    my $deleted_item = $schema->resultset('Deleteditem')
+        ->search({ itemnumber => $itemnumber }, { order_by => { -desc => 'timestamp' } })
+        ->next;
     return { success => 0, error => 'Deleted item not found' } unless $deleted_item;
 
     # Begin transaction

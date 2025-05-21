@@ -15,7 +15,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 use Modern::Perl;
-use Test::More tests => 4;
+use Test::More tests => 11;
 use Test::Warn;
 use t::lib::TestBuilder;
 use t::lib::Mocks;
@@ -25,6 +25,11 @@ use Koha::Database;
 use Koha::RestoreRecords;
 use C4::Context;
 use C4::Biblio qw( DelBiblio );
+
+# Suppress DBIx::Class warnings about multiple rows
+local $SIG{__WARN__} = sub {
+    warn @_ unless $_[0] =~ /Query returned more than one row/;
+};
 
 BEGIN {
     use_ok('Koha::REST::V1::RestoreRecords');
@@ -46,8 +51,8 @@ my $biblio = $builder->build_sample_biblio({
 });
 
 # Create biblioitem using build
-my $biblioitem = $builder->build({
-    source => 'Biblioitem',
+my $biblioitem = $builder->build_object({
+    class => 'Koha::Biblioitems',
     value => {
         biblionumber => $biblio->biblionumber,
         isbn => '1234567890',
@@ -57,29 +62,49 @@ my $biblioitem = $builder->build({
 
 # Verify biblioitem was created
 ok($biblioitem, 'Biblioitem was created successfully');
-ok($biblioitem->{biblionumber} == $biblio->biblionumber, 'Biblioitem has correct biblionumber');
+ok($biblioitem->biblionumber == $biblio->biblionumber, 'Biblioitem has correct biblionumber');
 
 my $item = $builder->build_sample_item({
     biblionumber => $biblio->biblionumber,
     barcode => '123456',
 });
 
+# Store IDs before deletion
+my $biblioitemnumber = $biblioitem->biblioitemnumber;
+my $itemnumber = $item->itemnumber;
+
 # Mock userenv for safe_delete
 t::lib::Mocks::mock_userenv({ branchcode => 'CPL', flags => 1, id => 1 });
 
 # Delete the records in the correct order
 ok($item->safe_delete(), 'Item was successfully deleted');
-ok($biblioitem->delete(), 'Biblioitem was successfully deleted');
-ok(DelBiblio($biblio->biblionumber), 'Biblio was successfully deleted');
+my $del_biblio_result = DelBiblio($biblio->biblionumber);
+diag("DelBiblio result for biblionumber " . $biblio->biblionumber . ": " . ($del_biblio_result ? $del_biblio_result : 'undef'));
+ok(!defined($del_biblio_result), 'Biblio was successfully deleted');
 
 # Verify records exist in deleted tables
-my $deleted_biblio = $schema->resultset('Deletedbiblio')->find($biblio->biblionumber);
+my $deleted_biblio_rs = $schema->resultset('Deletedbiblio')->search({ biblionumber => $biblio->biblionumber });
+diag("Deletedbiblio rows for biblionumber " . $biblio->biblionumber . ":");
+while (my $row = $deleted_biblio_rs->next) {
+    diag("  - biblionumber: " . $row->biblionumber . ", title: " . $row->title);
+}
+my $deleted_biblio = $deleted_biblio_rs->reset->next;
 ok($deleted_biblio, 'Deleted biblio exists');
 
-my $deleted_biblioitem = $schema->resultset('Deletedbiblioitem')->find($biblioitem->{biblioitemnumber});
+my $deleted_biblioitem_rs = $schema->resultset('Deletedbiblioitem')->search({ biblioitemnumber => $biblioitemnumber });
+diag("Deletedbiblioitem rows for biblioitemnumber $biblioitemnumber:");
+while (my $row = $deleted_biblioitem_rs->next) {
+    diag("  - biblioitemnumber: " . $row->biblioitemnumber . ", biblionumber: " . $row->biblionumber);
+}
+my $deleted_biblioitem = $deleted_biblioitem_rs->reset->next;
 ok($deleted_biblioitem, 'Deleted biblioitem exists');
 
-my $deleted_item = $schema->resultset('Deleteditem')->find($item->itemnumber);
+my $deleted_item_rs = $schema->resultset('Deleteditem')->search({ itemnumber => $itemnumber });
+diag("Deleteditem rows for itemnumber $itemnumber:");
+while (my $row = $deleted_item_rs->next) {
+    diag("  - itemnumber: " . $row->itemnumber . ", biblionumber: " . $row->biblionumber . ", barcode: " . $row->barcode);
+}
+my $deleted_item = $deleted_item_rs->reset->next;
 ok($deleted_item, 'Deleted item exists');
 
 # Create a superlibrarian patron (with all permissions)
@@ -126,7 +151,12 @@ subtest 'restore_biblio endpoint' => sub {
       ->json_is('/success', 1);
 
     # Verify biblio was restored
-    my $restored_biblio = $schema->resultset('Biblio')->find($biblio->biblionumber);
+    my $restored_biblio_rs = $schema->resultset('Biblio')->search({ biblionumber => $biblio->biblionumber });
+    diag("Restored biblio rows for biblionumber " . $biblio->biblionumber . ":");
+    while (my $row = $restored_biblio_rs->next) {
+        diag("  - biblionumber: " . $row->biblionumber . ", title: " . $row->title);
+    }
+    my $restored_biblio = $restored_biblio_rs->reset->next;
     is($restored_biblio->title, $biblio->title, 'Biblio title restored correctly');
 };
 
@@ -157,7 +187,12 @@ subtest 'restore_item endpoint' => sub {
       ->json_is('/success', 1);
 
     # Verify item was restored
-    my $restored_item = $schema->resultset('Item')->find($item2->itemnumber);
+    my $restored_item_rs = $schema->resultset('Item')->search({ itemnumber => $item2->itemnumber });
+    diag("Restored item rows for itemnumber " . $item2->itemnumber . ":");
+    while (my $row = $restored_item_rs->next) {
+        diag("  - itemnumber: " . $row->itemnumber . ", biblionumber: " . $row->biblionumber . ", barcode: " . $row->barcode);
+    }
+    my $restored_item = $restored_item_rs->reset->next;
     is($restored_item->barcode, $item2->barcode, 'Item barcode restored correctly');
 };
 
