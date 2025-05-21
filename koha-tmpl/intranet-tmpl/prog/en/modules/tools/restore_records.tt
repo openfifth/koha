@@ -31,7 +31,7 @@
     <h1>Restore records</h1>
 
     <div class="row">
-        <div class="col-sm-6">
+        <div class="col-sm-12">
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <h3 class="panel-title">Restore bibliographic records</h3>
@@ -43,6 +43,10 @@
                                 <th>ID</th>
                                 <th>Title</th>
                                 <th>Author</th>
+                                <th>ISBN/ISSN</th>
+                                <th>Publisher</th>
+                                <th>Publication year</th>
+                                <th>Framework</th>
                                 <th>Deleted date</th>
                                 <th>Actions</th>
                             </tr>
@@ -52,7 +56,10 @@
                 </div>
             </div>
         </div>
-        <div class="col-sm-6">
+    </div>
+
+    <div class="row" style="margin-top: 20px;">
+        <div class="col-sm-12">
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <h3 class="panel-title">Restore items</h3>
@@ -64,6 +71,12 @@
                                 <th>ID</th>
                                 <th>Barcode</th>
                                 <th>Title</th>
+                                <th>ISBN/ISSN</th>
+                                <th>Location</th>
+                                <th>Item type</th>
+                                <th>Call number</th>
+                                <th>Collection</th>
+                                <th>Copy number</th>
                                 <th>Deleted date</th>
                                 <th>Actions</th>
                             </tr>
@@ -79,16 +92,9 @@
 [% MACRO jsinclude BLOCK %]
     [% INCLUDE 'js_includes.inc' %]
     [% INCLUDE 'datatables.inc' %]
-    [% Asset.js("js/restore_records.js") | $raw %]
     <script>
         $(document).ready(function() {
-            console.log('Document ready');
-            console.log('jQuery version:', $.fn.jquery);
-            console.log('DataTables version:', $.fn.dataTable.version);
-            console.log('jQuery plugins:', Object.keys($.fn));
-            
             if (typeof $.fn.kohaTable === 'undefined') {
-                console.error('kohaTable function is not available');
                 return;
             }
             
@@ -110,13 +116,32 @@
                     },
                     "beforeSend": function(xhr) {
                         xhr.setRequestHeader("Accept", "application/json;charset=UTF-8");
+                    },
+                    "dataSrc": function(json) {
+                        return Array.isArray(json) ? json : [];
                     }
                 },
                 "columns": [
                     { "data": "biblio_id" },
                     { "data": "title" },
                     { "data": "author" },
-                    { "data": "deleted_date" },
+                    { 
+                        "data": null,
+                        "render": function(data, type, row) {
+                            if (row.isbn) return row.isbn;
+                            if (row.issn) return row.issn;
+                            return '';
+                        }
+                    },
+                    { "data": "publisher" },
+                    { "data": "publication_year" },
+                    { "data": "framework_id" },
+                    { 
+                        "data": "deleted_on",
+                        "render": function(data) {
+                            return data ? new Date(data).toLocaleString() : '';
+                        }
+                    },
                     { 
                         "data": null,
                         "orderable": false,
@@ -135,21 +160,73 @@
 
             $("#item_table").kohaTable({
                 "ajax": {
-                    "url": "/api/v1/deleted/items"
+                    "url": "/api/v1/deleted/items",
+                    "headers": {
+                        "Accept": "application/json;charset=UTF-8"
+                    },
+                    "dataSrc": function(json) {
+                        return Array.isArray(json) ? json : [];
+                    }
                 },
+                "embed": "biblio",
                 "columns": [
-                    { "data": "item_id" },
+                    { "data": "itemnumber" },
                     { "data": "barcode" },
-                    { "data": "title" },
-                    { "data": "deleted_date" },
+                    { 
+                        "data": "biblio",
+                        "render": function(data, type, row) {
+                            if (data && data.title) {
+                                return data.title;
+                            }
+                            return "Biblio #" + row.biblionumber;
+                        }
+                    },
+                    { 
+                        "data": "biblio",
+                        "render": function(data, type, row) {
+                            if (data) {
+                                if (data.isbn) return data.isbn;
+                                if (data.issn) return data.issn;
+                            }
+                            return '';
+                        }
+                    },
+                    { 
+                        "data": "location",
+                        "render": function(data, type, row) {
+                            var location = data || row.permanent_location || '';
+                            var homebranch = row.homebranch || '';
+                            var holdingbranch = row.holdingbranch || '';
+                            var branches = [];
+                            if (homebranch) branches.push('Home: ' + homebranch);
+                            if (holdingbranch && holdingbranch !== homebranch) branches.push('Holding: ' + holdingbranch);
+                            return location + (branches.length ? ' (' + branches.join(', ') + ')' : '');
+                        }
+                    },
+                    { "data": "itype" },
+                    { "data": "itemcallnumber" },
+                    { "data": "ccode" },
+                    { "data": "copynumber" },
+                    { 
+                        "data": "deleted_on",
+                        "render": function(data) {
+                            return data ? new Date(data).toLocaleString() : '';
+                        }
+                    },
                     { 
                         "data": null,
                         "orderable": false,
                         "render": function(data, type, row) {
-                            return '<button class="btn btn-default btn-sm restore-item" data-itemnumber="' + row.item_id + '">Restore</button>';
+                            return '<button class="btn btn-default btn-sm restore-item" data-itemnumber="' + row.itemnumber + '">Restore</button>';
                         }
                     }
-                ]
+                ],
+                "order": [[ 0, "desc" ]],
+                "language": {
+                    "emptyTable": "No deleted items found"
+                },
+                "dom": '<"top"<"table_entries"><"table_controls"fB>>t<"bottom"<"table_entries"i><"table_controls"p>>',
+                "buttons": ['clearFilter', 'copy', 'csv', 'print']
             });
         });
     </script>
