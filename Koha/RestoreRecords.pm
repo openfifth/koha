@@ -12,6 +12,9 @@ use Koha::Biblios;
 use Koha::Biblio;
 use Koha::Items;
 use Koha::Database;
+use C4::Biblio qw( ModBiblioMarc );
+use MARC::Record;
+use MARC::File::XML;
 
 =head1 NAME
 
@@ -77,6 +80,29 @@ sub restore_biblio {
         # Convert to storage hash for restoration
         my $biblio_data = { $deleted_biblio->get_columns };
 
+        # Get the MARC record from deletedbiblio_metadata
+        my $deleted_metadata = $schema->resultset('DeletedbiblioMetadata')
+            ->search({ biblionumber => $biblionumber })
+            ->next;
+        unless ($deleted_metadata) {
+            die "No MARC record found in deletedbiblio_metadata for biblio $biblionumber";
+        }
+
+        # Parse the MARC record
+        my $marc_record;
+        eval {
+            if ($deleted_metadata->format eq 'marcxml') {
+                $marc_record = MARC::Record::new_from_xml($deleted_metadata->metadata, 'UTF-8');
+            } else {
+                $marc_record = MARC::Record::new_from_usmarc($deleted_metadata->metadata);
+            }
+            unless ($marc_record) {
+                die "Failed to parse MARC record";
+            }
+        } or do {
+            die "Failed to parse MARC record: $@";
+        };
+
         # Restore biblio
         $schema->resultset('Biblio')->create($biblio_data);
 
@@ -92,24 +118,14 @@ sub restore_biblio {
             $schema->resultset('Item')->create($item_data);
         }
 
+        # Restore MARC record
+        ModBiblioMarc($marc_record, $biblionumber, { skip_record_index => 1 });
+
         # Delete from deleted tables
         $deleted_biblio->delete;
         $_->delete for @deleted_biblioitems;
         $_->delete for @deleted_items;
-
-        # Reindex the record
-        my $biblio = Koha::Biblios->find($biblionumber);
-        if ($biblio) {
-            # Use the correct search engine initialization
-            if (C4::Context->preference('SearchEngine') eq 'Elasticsearch') {
-                my $indexer = Koha::SearchEngine::Elasticsearch::Indexer->new({ index => $Koha::SearchEngine::BIBLIOS_INDEX });
-                $indexer->index_records($biblionumber, "specialUpdate", "biblioserver");
-            } else {
-                # Properly initialize the Zebra indexer
-                my $indexer = Koha::SearchEngine::Zebra::Indexer->new();
-                $indexer->index_records($biblionumber, "specialUpdate", "biblioserver");
-            }
-        }
+        $deleted_metadata->delete;
 
         # Commit the transaction
         $guard->commit;
@@ -122,7 +138,30 @@ sub restore_biblio {
     # Verify the biblio was actually restored
     my $biblio = Koha::Biblios->find($biblionumber);
     unless ($biblio) {
-        return { success => 0, error => "Failed to restore biblio" };
+        return { success => 0, error => "Failed to restore biblio - record not found after restoration" };
+    }
+
+    # Reindex the record after transaction is committed
+    if ($biblio) {
+        # Use the correct search engine initialization
+        if (C4::Context->preference('SearchEngine') eq 'Elasticsearch') {
+            my $indexer = Koha::SearchEngine::Elasticsearch::Indexer->new({ index => $Koha::SearchEngine::BIBLIOS_INDEX });
+            eval {
+                $indexer->index_records($biblionumber, "specialUpdate", "biblioserver");
+            };
+            if ($@) {
+                return { success => 0, error => "Failed to index biblio with Elasticsearch: $@" };
+            }
+        } else {
+            # Properly initialize the Zebra indexer
+            my $indexer = Koha::SearchEngine::Zebra::Indexer->new();
+            eval {
+                $indexer->index_records($biblionumber, "specialUpdate", "biblioserver");
+            };
+            if ($@) {
+                return { success => 0, error => "Failed to index biblio with Zebra: $@" };
+            }
+        }
     }
 
     return { success => 1 };
@@ -146,14 +185,20 @@ sub restore_item {
         ->next;
     return { success => 0, error => 'Deleted item not found' } unless $deleted_item;
 
+    # Get item data and check if biblio exists
+    my $item_data = { $deleted_item->get_columns };
+    my $biblionumber = $item_data->{biblionumber};
+    
+    # Check if biblio exists
+    my $biblio = Koha::Biblios->find($biblionumber);
+    unless ($biblio) {
+        return { success => 0, error => 'Cannot restore item: associated bibliographic record does not exist' };
+    }
+
     # Begin transaction
     my $guard = $schema->txn_scope_guard;
 
     eval {
-        # Get item data
-        my $item_data = { $deleted_item->get_columns };
-        my $biblionumber = $item_data->{biblionumber};
-
         # Restore the item
         $schema->resultset('Item')->create($item_data);
 
@@ -161,7 +206,6 @@ sub restore_item {
         $deleted_item->delete;
 
         # Reindex the record
-        my $biblio = Koha::Biblios->find($biblionumber);
         if ($biblio) {
             # Use the correct search engine initialization
             if (C4::Context->preference('SearchEngine') eq 'Elasticsearch') {
