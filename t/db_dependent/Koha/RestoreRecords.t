@@ -16,7 +16,7 @@
 # along with Koha; if not, see <http://www.gnu.org/licenses>.
 
 use Modern::Perl;
-use Test::More tests => 6;
+use Test::More tests => 7;
 use Test::Warn;
 use t::lib::TestBuilder;
 use t::lib::Mocks;
@@ -68,7 +68,7 @@ ok( !Koha::Items->find($itemnumber), 'Item successfully deleted' );
 
 # Test restore_biblio
 subtest 'restore_biblio' => sub {
-    plan tests => 3;
+    plan tests => 4;
 
     my $restorer = Koha::RestoreRecords->new;
     my $deleted_biblio = $schema->resultset('Deletedbiblio')->find($biblionumber);
@@ -78,6 +78,7 @@ subtest 'restore_biblio' => sub {
     my $restored_biblio = Koha::Biblios->find($biblionumber);
     ok( $restored_biblio && $restored_biblio->title eq 'Test biblio for restoration',
         'Biblio was restored with correct title' );
+    ok( !Koha::Items->find($itemnumber), 'Item was not automatically restored' );
 };
 
 # --- ITEM RESTORE TEST ---
@@ -119,7 +120,7 @@ subtest 'restore_item' => sub {
 
 # Test restoring item when biblio is deleted
 subtest 'restore_item_with_deleted_biblio' => sub {
-    plan tests => 4;
+    plan tests => 5;
 
     # Create a new biblio and item
     my $biblio3 = $builder->build_sample_biblio({

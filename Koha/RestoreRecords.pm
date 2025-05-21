@@ -73,9 +73,8 @@ sub restore_biblio {
     my $guard = $schema->txn_scope_guard;
 
     eval {
-        # Get deleted biblioitems and items
+        # Get deleted biblioitems
         my @deleted_biblioitems = $schema->resultset('Deletedbiblioitem')->search({ biblionumber => $biblionumber })->all;
-        my @deleted_items = $schema->resultset('Deleteditem')->search({ biblionumber => $biblionumber })->all;
 
         # Convert to storage hash for restoration
         my $biblio_data = { $deleted_biblio->get_columns };
@@ -112,19 +111,12 @@ sub restore_biblio {
             $schema->resultset('Biblioitem')->create($biblioitem_data);
         }
 
-        # Restore items
-        foreach my $item (@deleted_items) {
-            my $item_data = { $item->get_columns };
-            $schema->resultset('Item')->create($item_data);
-        }
-
         # Restore MARC record
         ModBiblioMarc($marc_record, $biblionumber, { skip_record_index => 1 });
 
         # Delete from deleted tables
         $deleted_biblio->delete;
         $_->delete for @deleted_biblioitems;
-        $_->delete for @deleted_items;
         $deleted_metadata->delete;
 
         # Commit the transaction
