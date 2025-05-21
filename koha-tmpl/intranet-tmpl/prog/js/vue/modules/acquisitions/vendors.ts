@@ -31,15 +31,15 @@ library.add(
     faSave
 );
 
-import App from "../components/Vendors/Main.vue";
+import App from "../../components/Acquisitions/Vendors/Main.vue";
 
 import "../../../css/vue.css";
 
-import { routes as routesDef } from "../routes/acquisitions";
+import { routes as routesDef } from "../../routes/acquisitions/vendors";
 
-import { useMainStore } from "../stores/main";
-import { useVendorStore } from "../stores/vendors";
-import { useNavigationStore } from "../stores/navigation";
+import { useMainStore } from "../../stores/main";
+import { useVendorStore } from "../../stores/vendors";
+import { useNavigationStore } from "../../stores/navigation";
 import i18n from "@koha-vue/i18n";
 
 const pinia = createPinia();
