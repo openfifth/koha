@@ -100,22 +100,13 @@
             
             // Initialize tables
             $("#biblio_table").kohaTable({
+                "serverSide": true,
+                "processing": true,
+                "pagingType": "full_numbers",
                 "ajax": {
                     "url": "/api/v1/deleted/biblios",
                     "headers": {
                         "Accept": "application/json;charset=UTF-8"
-                    },
-                    "data": function(d) {
-                        return {
-                            _page: (d.start / d.length) + 1,
-                            _per_page: d.length,
-                            _order_by: d.order ? d.order.map(function(order) {
-                                return d.columns[order.column].data + " " + order.dir;
-                            }) : []
-                        };
-                    },
-                    "beforeSend": function(xhr) {
-                        xhr.setRequestHeader("Accept", "application/json;charset=UTF-8");
                     },
                     "dataSrc": function(json) {
                         return Array.isArray(json) ? json : [];
@@ -169,6 +160,9 @@
                     }
                 },
                 "embed": "biblio",
+                "serverSide": true,
+                "processing": true,
+                "pagingType": "full_numbers",
                 "columns": [
                     { "data": "itemnumber" },
                     { "data": "barcode" },
