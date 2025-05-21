@@ -33,7 +33,7 @@
         <script>
             const vendorTableSettings = [% TablesSettings.GetTableSettings( 'acqui', 'vendors', 'vendors', 'json' ) | $raw %];
         </script>
-        [% Asset.js("js/vue/dist/acquisitions.js") | $raw %]
+        [% Asset.js("js/vue/dist/acquisitions/vendors.js") | $raw %]
         [% INCLUDE 'select2.inc' %]
     [% END %]
     [% INCLUDE 'intranet-bottom.inc' %]</div

@@ -66,7 +66,7 @@
 
 <script>
 import { inject, ref } from "vue";
-import Link from "../Link.vue";
+import Link from "../../Link.vue";
 
 export default {
     props: {

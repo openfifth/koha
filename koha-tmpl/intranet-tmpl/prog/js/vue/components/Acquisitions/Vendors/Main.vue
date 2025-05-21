@@ -26,13 +26,13 @@
 
 <script>
 import { inject, onBeforeMount, ref } from "vue";
-import Breadcrumbs from "../Breadcrumbs.vue";
-import Help from "../Help.vue";
-import LeftMenu from "../LeftMenu.vue";
-import Dialog from "../Dialog.vue";
+import Breadcrumbs from "../../Breadcrumbs.vue";
+import Help from "../../Help.vue";
+import LeftMenu from "../../LeftMenu.vue";
+import Dialog from "../../Dialog.vue";
 import "vue-select/dist/vue-select.css";
 import { storeToRefs } from "pinia";
-import { APIClient } from "../../fetch/api-client.js";
+import { APIClient } from "../../../fetch/api-client.js";
 
 export default {
     setup() {
