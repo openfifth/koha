@@ -40,26 +40,17 @@ sub list {
 
     return try {
         my $query = {};
-        $query->{biblionumber} = $c->param('biblionumber') if $c->param('biblionumber');
-        $query->{barcode} = $c->param('barcode') if $c->param('barcode');
+        if ($c->param('biblionumber')) {
+            $query->{biblionumber} = $c->param('biblionumber');
+        }
+        if ($c->param('barcode')) {
+            $query->{barcode} = $c->param('barcode');
+        }
 
-        return Koha::Database->new->schema->txn_do(
-            sub {
-                my $rs = Koha::Old::Items->search($query, { order_by => { -desc => 'timestamp' } });
-                my $items = [];
-                while (my $item = $rs->next) {
-                    my $item_data = $c->objects->to_api($item);
-                    $item_data->{itemnumber} = $item->itemnumber;
-                    $item_data->{biblionumber} = $item->biblionumber;
-                    $item_data->{barcode} = $item->barcode;
-                    push @$items, $item_data;
-                }
-                warn "DeletedItems.pm list() returning: " . Data::Dumper::Dumper($items);
-                return $c->render(
-                    status  => 200,
-                    openapi => $items
-                );
-            }
+        my $items = Koha::Old::Items->search($query, { order_by => { -desc => 'timestamp' } });
+        return $c->render(
+            status  => 200,
+            openapi => $items
         );
     } catch {
         $c->unhandled_exception($_);
@@ -75,17 +66,19 @@ Controller function that handles retrieving a single deleted item
 sub get {
     my $c = shift->openapi->valid_input or return;
 
-    $c->app->log->debug("TEST LOGGING: get method called");  # Using Mojolicious logging
+    return try {
+        my $item_id = $c->param('item_id');
+        my $item = Koha::Old::Items->find($item_id);
+        return $c->render_resource_not_found("Deleted item")
+            unless $item;
 
-    # Log all deleted items
-    my $all_items = Koha::Old::Items->search;
-    $c->app->log->debug("DEBUG: All deleted items: " . Dumper($all_items->as_list));
-
-    my $item = Koha::Old::Items->find($c->param('item_id'));
-    $c->app->log->debug("DEBUG: Item object: " . Dumper($item));
-    my $result = $c->objects->find($item, $c->param('item_id'));
-    $c->app->log->debug("DEBUG: Find result: " . Dumper($result));
-    return $result;
+        return $c->render(
+            status  => 200,
+            openapi => $item
+        );
+    } catch {
+        $c->unhandled_exception($_);
+    };
 }
 
 1;

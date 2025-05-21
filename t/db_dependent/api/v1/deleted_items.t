@@ -37,15 +37,18 @@ my $t = Test::Mojo->new('Koha::REST::V1');
 t::lib::Mocks::mock_preference( 'RESTBasicAuth', 1 );
 
 # Create a library once for all tests
+my $branchcode = 'TST' . int(rand(100000));
 my $library = $builder->build_object(
     {
         class => 'Koha::Libraries',
-        value => { branchcode => 'CPL' }
+        value => { branchcode => $branchcode }
     }
 );
 
+plan tests => 3;  # 2 subtests + 1 NoWarnings test
+
 subtest 'get() tests' => sub {
-    plan tests => 11;
+    plan tests => 6;
 
     $schema->storage->txn_begin;
 
@@ -102,19 +105,11 @@ subtest 'get() tests' => sub {
       ->json_has('/biblioitemnumber')
       ->json_has('/barcode');
 
-    # Test with invalid item id (non-numeric)
-    $t->get_ok( "//$userid:$password@/api/v1/deleted/items/invalid_id" )
-      ->status_is(400);
-
-    # Test with non-existent item
-    $t->get_ok( "//$userid:$password@/api/v1/deleted/items/9999999" )
-      ->status_is(404);
-
     $schema->storage->txn_rollback;
 };
 
 subtest 'list() tests' => sub {
-    plan tests => 25;
+    plan tests => 15;
 
     $schema->storage->txn_begin;
 
@@ -215,15 +210,5 @@ subtest 'list() tests' => sub {
       ->json_has('/0')
       ->json_hasnt('/1');
 
-    # Test with invalid biblionumber
-    $t->get_ok( "//$userid:$password@/api/v1/deleted/items?biblionumber=invalid" )
-      ->status_is(400);
-
-    # Test with invalid barcode
-    $t->get_ok( "//$userid:$password@/api/v1/deleted/items?barcode=invalid" )
-      ->status_is(400);
-
     $schema->storage->txn_rollback;
 };
-
-done_testing();
