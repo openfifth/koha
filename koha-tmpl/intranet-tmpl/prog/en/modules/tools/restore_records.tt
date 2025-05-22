@@ -178,11 +178,11 @@
                         }
                     }
                 ],
-                "order": [[ 0, "desc" ]],
+                "order": [[ 7, "desc" ]],
                 "language": {
                     "emptyTable": "No deleted bibliographic records found"
                 },
-                "dom": '<"top"<"table_entries"><"table_controls"fB>>t<"bottom"<"table_entries"i><"table_controls"p>>',
+                "dom": '<"top"<"table_entries"><"table_controls"B>>t<"bottom"<"table_entries"i><"table_controls"p>>',
                 "buttons": ['clearFilter', 'copy', 'csv', 'print']
             });
 
@@ -252,11 +252,11 @@
                         }
                     }
                 ],
-                "order": [[ 0, "desc" ]],
+                "order": [[ 9, "desc" ]],
                 "language": {
                     "emptyTable": "No deleted items found"
                 },
-                "dom": '<"top"<"table_entries"><"table_controls"fB>>t<"bottom"<"table_entries"i><"table_controls"p>>',
+                "dom": '<"top"<"table_entries"><"table_controls"B>>t<"bottom"<"table_entries"i><"table_controls"p>>',
                 "buttons": ['clearFilter', 'copy', 'csv', 'print']
             });
 
