@@ -142,12 +142,6 @@ export default {
                     hideIn: ["List"],
                 },
                 {
-                    name: "additional_fields",
-                    extended_attributes_resource_type:
-                        this.extendedAttributesResourceType,
-                    hideIn: ["List"],
-                },
-                {
                     name: "periods",
                     type: "relationshipWidget",
                     showElement: {
