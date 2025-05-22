@@ -60,20 +60,17 @@ export default {
                     type: "text",
                     hideInForm: true,
                     hideInShow: true,
-                    showInTable: true,
                 },
                 {
                     name: "name",
                     required: true,
                     type: "text",
                     label: this.$__("License name"),
-                    showInTable: true,
                 },
                 {
                     name: "vendor_id",
                     type: "vendor",
                     label: this.$__("Vendor"),
-                    showInTable: true,
                     showElement: {
                         type: "text",
                         value: "vendor.name",
@@ -91,7 +88,6 @@ export default {
                     textAreaRows: 10,
                     textAreaCols: 50,
                     label: this.$__("Description"),
-                    showInTable: true,
                     required: true,
                 },
                 {
@@ -99,7 +95,6 @@ export default {
                     required: true,
                     type: "select",
                     label: this.$__("Type"),
-                    showInTable: true,
                     avCat: "av_license_types",
                 },
                 {
@@ -107,14 +102,12 @@ export default {
                     required: true,
                     type: "select",
                     label: this.$__("Status"),
-                    showInTable: true,
                     avCat: "av_license_statuses",
                 },
                 {
                     name: "started_on",
                     type: "date",
                     label: this.$__("Start date"),
-                    showInTable: true,
                     showElement: {
                         type: "text",
                         value: "started_on",
@@ -131,7 +124,6 @@ export default {
                     name: "ended_on",
                     type: "date",
                     label: this.$__("End date"),
-                    showInTable: true,
                     showElement: {
                         type: "text",
                         value: "ended_on",
@@ -142,6 +134,7 @@ export default {
                     name: "additional_fields",
                     extended_attributes_resource_type:
                         this.extendedAttributesResourceType,
+                    hideInTable: true,
                 },
                 {
                     name: "user_roles",
@@ -219,6 +212,7 @@ export default {
                             indexRequired: true,
                         },
                     ],
+                    hideInTable: true,
                 },
                 {
                     name: "documents",
@@ -297,6 +291,7 @@ export default {
                             indexRequired: true,
                         },
                     ],
+                    hideInTable: true,
                 },
             ],
             tableOptions: {

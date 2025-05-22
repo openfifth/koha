@@ -74,20 +74,17 @@ export default {
                     type: "text",
                     hideInForm: true,
                     hideInShow: true,
-                    showInTable: true,
                 },
                 {
                     name: "name",
                     required: true,
                     type: "text",
                     label: this.$__("Agreement name"),
-                    showInTable: true,
                 },
                 {
                     name: "vendor_id",
                     type: "vendor",
                     label: this.$__("Vendor"),
-                    showInTable: true,
                     showElement: {
                         type: "text",
                         value: "vendor.name",
@@ -105,14 +102,12 @@ export default {
                     textAreaRows: 10,
                     textAreaCols: 50,
                     label: this.$__("Description"),
-                    showInTable: true,
                 },
                 {
                     name: "status",
                     required: true,
                     type: "select",
                     label: this.$__("Status"),
-                    showInTable: true,
                     avCat: "av_agreement_statuses",
                     onSelected: resource => {
                         if (resource.status !== "closed") {
@@ -125,7 +120,6 @@ export default {
                     name: "closure_reason",
                     type: "select",
                     label: this.$__("Closure reason"),
-                    showInTable: true,
                     avCat: "av_agreement_closure_reasons",
                     disabled: agreement => agreement.status !== "closed",
                 },
@@ -133,13 +127,11 @@ export default {
                     name: "is_perpetual",
                     type: "boolean",
                     label: this.$__("Is perpetual"),
-                    showInTable: true,
                 },
                 {
                     name: "renewal_priority",
                     type: "select",
                     label: this.$__("Renewal priority"),
-                    showInTable: true,
                     avCat: "av_agreement_renewal_priorities",
                 },
                 {
@@ -148,11 +140,13 @@ export default {
                     textAreaRows: 2,
                     textAreaCols: 50,
                     label: this.$__("License info"),
+                    hideInTable: true,
                 },
                 {
                     name: "additional_fields",
                     extended_attributes_resource_type:
                         this.extendedAttributesResourceType,
+                    hideInTable: true,
                 },
                 {
                     name: "periods",
@@ -244,6 +238,7 @@ export default {
                             indexRequired: true,
                         },
                     ],
+                    hideInTable: true,
                 },
                 {
                     name: "user_roles",
@@ -320,6 +315,7 @@ export default {
                             indexRequired: true,
                         },
                     ],
+                    hideInTable: true,
                 },
                 {
                     name: "agreement_licenses",
@@ -447,6 +443,7 @@ export default {
                             indexRequired: true,
                         },
                     ],
+                    hideInTable: true,
                 },
                 {
                     name: "agreement_relationships",
@@ -523,6 +520,7 @@ export default {
                             indexRequired: true,
                         },
                     ],
+                    hideInTable: true,
                 },
                 {
                     name: "agreement_packages",
@@ -540,6 +538,7 @@ export default {
                             },
                         },
                     },
+                    hideInTable: true,
                 },
                 {
                     name: "documents",
@@ -619,6 +618,7 @@ export default {
                             indexRequired: true,
                         },
                     ],
+                    hideInTable: true,
                 },
             ],
             tableOptions: {
