@@ -58,8 +58,7 @@ export default {
                     name: this.idAttr,
                     label: this.$__("ID"),
                     type: "text",
-                    hideInForm: true,
-                    hideInShow: true,
+                    hideIn: ["Form", "Show"],
                 },
                 {
                     name: "name",
@@ -134,7 +133,7 @@ export default {
                     name: "additional_fields",
                     extended_attributes_resource_type:
                         this.extendedAttributesResourceType,
-                    hideInTable: true,
+                    hideIn: ["List"],
                 },
                 {
                     name: "user_roles",
@@ -212,7 +211,7 @@ export default {
                             indexRequired: true,
                         },
                     ],
-                    hideInTable: true,
+                    hideIn: ["List"],
                 },
                 {
                     name: "documents",
@@ -291,7 +290,7 @@ export default {
                             indexRequired: true,
                         },
                     ],
-                    hideInTable: true,
+                    hideIn: ["List"],
                 },
             ],
             tableOptions: {

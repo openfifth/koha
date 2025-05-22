@@ -109,12 +109,12 @@ export default {
                     name: "created_on",
                     type: "date",
                     label: this.$__("Created on"),
-                    hideInForm: true,
                     showElement: {
                         type: "text",
                         value: "created_on",
                         format: this.format_date,
                     },
+                    hideIn: ["Form"],
                 },
                 {
                     name: "notes",
@@ -126,7 +126,7 @@ export default {
                     name: "additional_fields",
                     extended_attributes_resource_type:
                         this.extendedAttributesResourceType,
-                    hideInTable: true,
+                    hideIn: ["List"],
                 },
                 {
                     name: "package_agreements",
@@ -182,7 +182,7 @@ export default {
                             indexRequired: true,
                         },
                     ],
-                    hideInTable: true,
+                    hideIn: ["List"],
                 },
             ],
             tableOptions: {

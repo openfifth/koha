@@ -72,8 +72,7 @@ export default {
                     name: this.idAttr,
                     label: this.$__("ID"),
                     type: "text",
-                    hideInForm: true,
-                    hideInShow: true,
+                    hideIn: ["Form", "Show"],
                 },
                 {
                     name: "name",
@@ -140,13 +139,13 @@ export default {
                     textAreaRows: 2,
                     textAreaCols: 50,
                     label: this.$__("License info"),
-                    hideInTable: true,
+                    hideIn: ["List"],
                 },
                 {
                     name: "additional_fields",
                     extended_attributes_resource_type:
                         this.extendedAttributesResourceType,
-                    hideInTable: true,
+                    hideIn: ["List"],
                 },
                 {
                     name: "periods",
@@ -238,7 +237,7 @@ export default {
                             indexRequired: true,
                         },
                     ],
-                    hideInTable: true,
+                    hideIn: ["List"],
                 },
                 {
                     name: "user_roles",
@@ -315,7 +314,7 @@ export default {
                             indexRequired: true,
                         },
                     ],
-                    hideInTable: true,
+                    hideIn: ["List"],
                 },
                 {
                     name: "agreement_licenses",
@@ -443,7 +442,7 @@ export default {
                             indexRequired: true,
                         },
                     ],
-                    hideInTable: true,
+                    hideIn: ["List"],
                 },
                 {
                     name: "agreement_relationships",
@@ -520,7 +519,7 @@ export default {
                             indexRequired: true,
                         },
                     ],
-                    hideInTable: true,
+                    hideIn: ["List"],
                 },
                 {
                     name: "agreement_packages",
@@ -538,7 +537,7 @@ export default {
                             },
                         },
                     },
-                    hideInTable: true,
+                    hideIn: ["List", "Form"],
                 },
                 {
                     name: "documents",
@@ -618,7 +617,7 @@ export default {
                             indexRequired: true,
                         },
                     ],
-                    hideInTable: true,
+                    hideIn: ["List"],
                 },
             ],
             tableOptions: {
