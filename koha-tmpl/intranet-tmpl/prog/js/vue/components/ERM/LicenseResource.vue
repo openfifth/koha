@@ -84,8 +84,6 @@ export default {
                 {
                     name: "description",
                     type: "textarea",
-                    textAreaRows: 10,
-                    textAreaCols: 50,
                     label: this.$__("Description"),
                     required: true,
                 },
