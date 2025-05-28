@@ -670,19 +670,15 @@
                                 }
                             }
 
-                            if (Koha.prefs.UseRecalls) {
-                                if (row.recall && row.item_id === row.recall.item_id) {
-                                    if (row.recall.waiting_date) {
-                                        nodes += '<span class="holding_status recallwaiting">%s</span>'.format(
-                                            _("Waiting recall at %s since %s").format(escape_str(row.recall._strings.pickup_library_id.str), $date(row.recall.waiting_date))
-                                        );
-                                    } else {
-                                        // Hacky for patron_to_html in case we simply want to display the patron's library name
-                                        row.recall.patron.library = { name: libraries_names.get(row.recall.patron.library_id) };
+                            if (status == "recalled" && row.recall && row.item_id === row.recall.item_id) {
+                                if (row.recall.waiting_date) {
+                                    nodes += '<span class="holding_status recallwaiting">%s</span>'.format(_("Waiting recall at %s since %s").format(escape_str(row.recall._strings.pickup_library_id.str), $date(row.recall.waiting_date)));
+                                } else {
+                                    // Hacky for patron_to_html in case we simply want to display the patron's library name
+                                    row.recall.patron.library = { name: libraries_names.get(row.recall.patron.library_id) };
 
-                                        let patron_to_html = $patron_to_html(row.recall.patron, { url: true, display_cardnumber: true, hide_patron_name });
-                                        nodes += '<span class="holding_status recalledby">%s</span>'.format(_("Recalled by %s on %s").format(patron_to_html, $date(row.recall.created_date)));
-                                    }
+                                    let patron_to_html = $patron_to_html(row.recall.patron, { url: true, display_cardnumber: true, hide_patron_name });
+                                    nodes += '<span class="holding_status recalledby">%s</span>'.format(_("Recalled by %s on %s").format(patron_to_html, $date(row.recall.created_date)));
                                 }
                             }
                             if (status == "available") {

@@ -2625,6 +2625,9 @@ sub recall {
                 return $recall;
             }
         }
+        if ( $recall->item_id == $self->itemnumber ) {
+            return $recall;
+        }
     }
     if ($item_level_recall) {
 

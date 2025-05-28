@@ -165,7 +165,11 @@ sub add_recall {
         }
 
         # get itemnumber of most relevant checkout if a biblio-level recall
-        unless ( $recall->item_level ) { $itemnumber = $checkout->itemnumber; }
+        # allocate item to biblio-level recall
+        unless ( $recall->item_level ) {
+            $itemnumber = $checkout->itemnumber;
+            $recall->update( { item_id => $itemnumber } );
+        }
 
         # send notice to user with recalled item checked out
         my $letter = C4::Letters::GetPreparedLetter(
