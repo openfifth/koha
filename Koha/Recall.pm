@@ -118,7 +118,7 @@ sub checkout {
         foreach (@items) {
             my $recalls_allowed = Koha::CirculationRules->get_effective_rule(
                 {
-                    branchcode   => C4::Context->userenv->{'branch'},
+                    branchcode   => $self->pickup_library_id,
                     categorycode => $self->patron->categorycode,
                     itemtype     => $_->effective_itemtype,
                     rule_name    => 'recalls_allowed',
