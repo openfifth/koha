@@ -24,10 +24,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     );
     $('#type').change(function() {
-        $('#create_form').prepend(
-            '<input type="hidden" name="change_type" value="1" />'
-        );
-        $('#create_form').submit();
+        $('#create_form, #standard_edit_form').first().submit(function() {
+            $(this).prepend('<input type="hidden" name="change_type" value="1" />');
+        }).submit();
     });
     $('#standard-fields').on('keyup', '.custom-name', function() {
         var val = $(this).val();
