@@ -1164,6 +1164,8 @@ sub expand_template {
         $backend_tmpl = join "/", $backend_dir, $backend;
     }
 
+    ( $params, $backend_tmpl ) = _edititem_tmpl_override( $params, $backend_tmpl );
+
     my $intra_tmpl =  join "/", $backend_tmpl, "intra-includes",
         ( $params->{method}//q{} ) . ".inc";
     my $opac_tmpl =  join "/", $backend_tmpl, "opac-includes",
@@ -1172,6 +1174,28 @@ sub expand_template {
     $params->{template} = $intra_tmpl;
     $params->{opac_template} = $opac_tmpl;
     return $params;
+}
+
+=head3 _edititem_tmpl_override
+
+    $backend_tmpl = _edititem_tmpl_override( $params, $backend_tmpl );
+
+Overwrites template path and cwd (current working directory) with core Standard's to present the same
+form when editing a request's item metadata using AutoILLBackendPriority mode, regardless of backend.
+
+=cut
+
+sub _edititem_tmpl_override {
+    my ( $params, $backend_tmpl ) = @_;
+
+    return ( $params, $backend_tmpl ) unless $params->{method} eq 'edititem'
+        && C4::Context->preference("AutoILLBackendPriority");
+
+    $backend_tmpl  = dirname(__FILE__) . '/Backend';
+    if (exists $params->{cwd}) {
+        $params->{cwd} = $backend_tmpl;
+    }
+    return ($params, $backend_tmpl);
 }
 
 #### Abstract Imports
