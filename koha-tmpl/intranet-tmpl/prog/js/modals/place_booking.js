@@ -93,29 +93,29 @@ $("#placeBookingModal").on("show.bs.modal", function (e) {
             let $patron = $("<span></span>")
                 .append(
                     "" +
-                        (patron.surname
-                            ? escape_str(patron.surname) + ", "
-                            : "") +
-                        (patron.firstname
-                            ? escape_str(patron.firstname) + " "
-                            : "") +
-                        (patron.cardnumber
-                            ? " (" + escape_str(patron.cardnumber) + ")"
-                            : "") +
-                        "<small>" +
-                        (patron.date_of_birth
-                            ? ' <span class="age_years">' +
-                              $get_age(patron.date_of_birth) +
-                              " " +
-                              __("years") +
-                              "</span>"
-                            : "") +
-                        (patron.library
-                            ? ' <span class="ac-library">' +
-                              escape_str(patron.library.name) +
-                              "</span>"
-                            : "") +
-                        "</small>"
+                    (patron.surname
+                        ? escape_str(patron.surname) + ", "
+                        : "") +
+                    (patron.firstname
+                        ? escape_str(patron.firstname) + " "
+                        : "") +
+                    (patron.cardnumber
+                        ? " (" + escape_str(patron.cardnumber) + ")"
+                        : "") +
+                    "<small>" +
+                    (patron.date_of_birth
+                        ? ' <span class="age_years">' +
+                        $get_age(patron.date_of_birth) +
+                        " " +
+                        __("years") +
+                        "</span>"
+                        : "") +
+                    (patron.library
+                        ? ' <span class="ac-library">' +
+                        escape_str(patron.library.name) +
+                        "</span>"
+                        : "") +
+                    "</small>"
                 )
                 .addClass(loggedInClass);
             return $patron;
@@ -170,6 +170,7 @@ $("#placeBookingModal").on("show.bs.modal", function (e) {
                     if (changed) {
                         periodPicker.clear();
                     }
+                    periodPicker.set("disable", periodPicker.config.disable);
                     periodPicker.redraw();
 
                     // Enable flatpickr now we have data we need
@@ -211,10 +212,10 @@ $("#placeBookingModal").on("show.bs.modal", function (e) {
             ) {
                 let option = $(
                     '<option value="' +
-                        pickup_location.library_id +
-                        '">' +
-                        pickup_location.name +
-                        "</option>"
+                    pickup_location.library_id +
+                    '">' +
+                    pickup_location.name +
+                    "</option>"
                 );
 
                 option.attr(
@@ -413,8 +414,8 @@ $("#placeBookingModal").on("show.bs.modal", function (e) {
                     if (
                         !$("#booking_itemtype").find(
                             "option[value='" +
-                                item.item_type.item_type_id +
-                                "']"
+                            item.item_type.item_type_id +
+                            "']"
                         ).length
                     ) {
                         // Create a DOM Option and de-select by default
@@ -458,7 +459,7 @@ $("#placeBookingModal").on("show.bs.modal", function (e) {
                             }
 
                             // iterate existing bookings
-                            for (booking of bookings) {
+                            for (let booking of bookings) {
                                 // Skip if we're editing this booking
                                 if (
                                     booking_id &&
@@ -752,7 +753,7 @@ $("#placeBookingModal").on("show.bs.modal", function (e) {
                                 for (let i = 0; i < renewalsAllowed; i++) {
                                     nextDate.setDate(
                                         nextDate.getDate() +
-                                            parseInt(renewalLength)
+                                        parseInt(renewalLength)
                                     );
                                     boldDates.push(new Date(nextDate));
                                 }
@@ -932,8 +933,8 @@ $("#placeBookingModal").on("show.bs.modal", function (e) {
                             );
                             const startDate = periodPicker.selectedDates[0]
                                 ? dayjs(periodPicker.selectedDates[0]).startOf(
-                                      "day"
-                                  )
+                                    "day"
+                                )
                                 : null;
 
                             const leadStart = startDate
@@ -959,7 +960,7 @@ $("#placeBookingModal").on("show.bs.modal", function (e) {
                                     dayElem.classList.toggle(
                                         "leadRange",
                                         elemDate.isSameOrAfter(leadStart) &&
-                                            elemDate.isBefore(leadEnd)
+                                        elemDate.isBefore(leadEnd)
                                     );
                                     dayElem.classList.toggle(
                                         "leadRangeEnd",
@@ -972,7 +973,7 @@ $("#placeBookingModal").on("show.bs.modal", function (e) {
                                     dayElem.classList.toggle(
                                         "trailRange",
                                         elemDate.isAfter(trailStart) &&
-                                            elemDate.isSameOrBefore(trailEnd)
+                                        elemDate.isSameOrBefore(trailEnd)
                                     );
                                     dayElem.classList.toggle(
                                         "trailRangeEnd",
@@ -1195,8 +1196,8 @@ $("#placeBookingForm").on("submit", function (e) {
             // Set feedback
             $("#transient_result").replaceWith(
                 '<div id="transient_result" class="alert alert-info">' +
-                    __("Booking successfully placed") +
-                    "</div>"
+                __("Booking successfully placed") +
+                "</div>"
             );
 
             // Close modal
@@ -1206,8 +1207,8 @@ $("#placeBookingForm").on("submit", function (e) {
         posting.fail(function (data) {
             $("#booking_result").replaceWith(
                 '<div id="booking_result" class="alert alert-danger">' +
-                    __("Failure") +
-                    "</div>"
+                __("Failure") +
+                "</div>"
             );
         });
     } else {
@@ -1264,8 +1265,8 @@ $("#placeBookingForm").on("submit", function (e) {
             // Set feedback
             $("#transient_result").replaceWith(
                 '<div id="transient_result" class="alert alert-info">' +
-                    __("Booking successfully updated") +
-                    "</div>"
+                __("Booking successfully updated") +
+                "</div>"
             );
 
             // Close modal
@@ -1275,8 +1276,8 @@ $("#placeBookingForm").on("submit", function (e) {
         putting.fail(function (data) {
             $("#booking_result").replaceWith(
                 '<div id="booking_result" class="alert alert-danger">' +
-                    __("Failure") +
-                    "</div>"
+                __("Failure") +
+                "</div>"
             );
         });
     }
