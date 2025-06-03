@@ -52,7 +52,7 @@
                                     </ul>
                                 </li>
                             [% END %]
-                            [% IF ( course.public_note ) %]<li><span class="label">Notes:</span> [% course.public_note | scrub_html_type => 'note' | $raw %]</li>[% END %]
+                            [% IF ( course.public_note ) %]<li><span class="label">Notes:</span> [% course.public_note | scrub_html type => 'note' | $raw %]</li>[% END %]
                         </ol>
                     </div>
 
@@ -93,9 +93,9 @@
                                         </td>
                                         <td data-order="[% cr.issue.date_due | html %]"><span title="[% cr.issue.date_due | html %]">[% cr.issue.date_due | $KohaDates  as_due_date => 1 %]</span></td>
                                         <td>[% IF ( cr.public_note ) %]
-                                                [% cr.public_note | scrub_html_type => 'note' | $raw %]
+                                                [% cr.public_note | scrub_html type => 'note' | $raw %]
                                             [% ELSIF ( cr.item.itemnotes ) %]
-                                                [% cr.item.itemnotes | scrub_html_type => 'note' | $raw %]
+                                                [% cr.item.itemnotes | scrub_html type => 'note' | $raw %]
                                             [% END %]
                                         </td>
                                         <td>[% IF (cr.item.uri) %]
