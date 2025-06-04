@@ -524,7 +524,10 @@ $template->param(
     backends => $backends,
     types    => [ "Book", "Article", "Journal" ],
     op       => $op,
-    branches => Koha::Libraries->search,
+    branches => Koha::Libraries->search(
+         { pickup_location => 1 },
+         { order_by        => ['branchname'] }
+    )
 );
 
 output_html_with_http_headers( $cgi, $cookie, $template->output );
