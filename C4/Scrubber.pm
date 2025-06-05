@@ -30,7 +30,7 @@ my %scrubbertypes = (
     default => {},    # place holder, default settings are below as fallbacks in call to constructor
     tag     => {},    # uses defaults
     comment => { allow => [qw( br b i em big small strong )], },
-    note    => { allow => [qw[ br b i em big small strong u hr span div p ]] },
+    note    => { allow => [qw[ br b i em big small strong u hr span div p ul li ]] },
     staff   => {
         default => [ 1 => { '*' => 1 } ],
         comment => 1,
@@ -50,7 +50,6 @@ sub new {
         rules   => exists $settings->{rules}   ? $settings->{rules}   : [],
         default => exists $settings->{default} ? $settings->{default} : [ 0 => { '*' => 0 } ],
         comment => exists $settings->{comment} ? $settings->{comment} : 0,
-        note    => exists $settings->{note}    ? $settings->{note}    : 0,
         process => 0,
     );
     return $scrubber;
