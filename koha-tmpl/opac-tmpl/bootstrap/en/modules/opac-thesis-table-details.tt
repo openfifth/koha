@@ -57,6 +57,7 @@
                     </div>
 
                     [% IF ( course_reserves ) %]
+                    <div class="rows">
                         <table id="thesis-table-items-table" class="table table-bordered table-striped table-condensed">
                             <caption class="sr-only">[% course_type_display | html %]</caption>
                             <thead>
@@ -110,6 +111,7 @@
                                 [% END %]
                             </tbody>
                         </table>
+                    </div>
                     [% ELSE %]
                         <br style="clear:both;" />
                         <div class="alert alert-info">
