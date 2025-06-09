@@ -113,6 +113,7 @@ requires 'Test', '1.25';
 requires 'Test::Harness', '2.56';
 requires 'Test::MockModule', '0.05';
 requires 'Test::More', '1.302073';
+requires 'Test::NoWarnings', '1.06';
 requires 'Text::Bidi', '0.03';
 requires 'Text::CSV', '0.01';
 requires 'Text::CSV::Encoded', '0.09';
