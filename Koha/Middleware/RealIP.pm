@@ -51,13 +51,32 @@ sub call {
     my $self = shift;
     my $env  = shift;
 
-    # If no reverse_proxy_ip_header, just use HTTP_X_FORWARDED_FOR as the header to check, simplifies logic and is a bit faster that way
     my $reverse_proxy_ip_header = C4::Context->config('reverse_proxy_ip_header') || 'HTTP_X_FORWARDED_FOR';
+    my $require_trusted         = C4::Context->config('require_trusted_proxy_for_headers');
 
-    # Check the env for the custom header, if the custom header is not set, fall back to HTTP_X_FORWARDED_FOR
     my $header = $env->{$reverse_proxy_ip_header} || $env->{'HTTP_X_FORWARDED_FOR'};
+    my $addr   = $env->{REMOTE_ADDR};
+
     if ($header) {
-        my $addr = get_real_ip( $env->{REMOTE_ADDR}, $header );
+        if ($require_trusted) {
+
+            # Only trust header if REMOTE_ADDR is a trusted proxy
+            my $trusted_proxies = get_trusted_proxies();
+            my $is_trusted      = 0;
+            foreach my $netmask (@$trusted_proxies) {
+                if ( $netmask->match($addr) ) {
+                    $is_trusted = 1;
+                    last;
+                }
+            }
+            if ($is_trusted) {
+                $addr = get_real_ip( $env->{REMOTE_ADDR}, $header );
+            }
+        } else {
+
+            # Always trust the header
+            $addr = get_real_ip( $env->{REMOTE_ADDR}, $header );
+        }
         $ENV{REMOTE_ADDR} = $addr;
         $env->{REMOTE_ADDR} = $addr;
     }
@@ -80,21 +99,10 @@ sub get_real_ip {
     my @forwarded_for = $header =~ /([^,\s]+)/g;
     return $remote_addr unless @forwarded_for;
 
-    my $trusted_proxies = get_trusted_proxies();
-
     #X-Forwarded-For: <client>, <proxy1>, <proxy2>
-    my $real_ip     = shift @forwarded_for;
-    my @unconfirmed = ( @forwarded_for, $remote_addr );
-
-    while ( my $addr = pop @unconfirmed ) {
-        my $has_matched = 0;
-        foreach my $netmask (@$trusted_proxies) {
-            $has_matched++, last if $netmask->match($addr);
-        }
-        $real_ip = $addr, last unless $has_matched;
-    }
-
-    return $real_ip;
+    my $real_ip = shift @forwarded_for;
+    return $real_ip if $real_ip;
+    return $remote_addr;
 }
 
 =head2 get_trusted_proxies
