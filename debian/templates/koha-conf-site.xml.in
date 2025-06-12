@@ -265,7 +265,7 @@ __END_SRU_PUBLICSERVER__
  <authorityserver>authorities</authorityserver>
  <authorityservershadow>1</authorityservershadow>
  <pluginsdir>__PLUGINS_DIR__</pluginsdir> <!-- This entry can be repeated to use multiple directories -->
- <enable_plugins>0</enable_plugins>
+ <enable_plugins>1</enable_plugins>
  <upload_path>__UPLOAD_PATH__</upload_path>
  <tmp_path>__TMP_PATH__</tmp_path>
  <intranetdir>/usr/share/koha/intranet/cgi-bin</intranetdir>
@@ -415,7 +415,7 @@ __END_SRU_PUBLICSERVER__
       developers use it to catch bugs related to strict SQL modes -->
  <dev_install>0</dev_install>
  <strict_sql_modes>0</strict_sql_modes>
- <plugins_restricted>1</plugins_restricted>
+ <plugins_restricted>0</plugins_restricted>
  <plugins_restart>1</plugins_restart>
  <plugin_repos>
     <!--
@@ -489,7 +489,7 @@ __END_SRU_PUBLICSERVER__
      <!-- Like: <domain><name>hotmail.com</name><belongs_to>outlook.com</belongs_to></domain> -->
  </message_domain_limits>
 
- <mfa_range>1</mfa_range><!-- Number of 30 second iterations to allow for MFA code checking -->
+ <mfa_range>2</mfa_range><!-- Number of 30 second iterations to allow for MFA code checking -->
 
  <auto_renew_cronjob>
    <parallel_loops_count>1</parallel_loops_count>
