@@ -381,6 +381,14 @@ GetOptions(
 pod2usage(1)               if $help;
 pod2usage( -verbose => 2 ) if $man;
 
+warn "========================================================\n";
+warn "Warning: this script will be deprecated and replaced by\n";
+warn "         circultation_triggers.pl. Configuration options\n";
+warn "         for circultation_triggers.pl are available at\n";
+warn "         /cgi-bin/koha/admin/circulation_triggers.\n";
+warn "========================================================\n";
+
+
 if ( defined $csvfilename && $csvfilename =~ /^-/ ) {
     warn qq(using "$csvfilename" as filename, that seems odd);
 }

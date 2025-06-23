@@ -140,6 +140,9 @@ if ($list_itemtypes) {
 
 WARNING:  Flippant use of this script could set all or most of the items in your catalog to Lost and charge your
           patrons for them!
+          
+WARNING:  This script will be deprecated and replaced by circultation_triggers.pl. Configuration options
+           for circultation_triggers.pl are available at /cgi-bin/koha/admin/circulation_triggers.
 
 WARNING:  This script is known to be faulty.  It is NOT recommended to use multiple --lost options.
           See http://bugs.koha-community.org/bugzilla3/show_bug.cgi?id=2883
