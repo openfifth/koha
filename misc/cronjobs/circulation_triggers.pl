@@ -9,10 +9,10 @@
 # TODO: set and test sys prefs, amend accordingly
 # TODO: add test for Koha::Checkouts->filter_by_overdue()
 # DONE: modernized GetOverduesBy() to use filter_by_overdue() with SQL::Abstract syntax
-# TODO: output everything to a file instead of the message queue - effectively works like a dryrun if combined --test in overdue_notices.pl -> we need a --dryrun flag
-# TODO: upgrade to UI later
-# TODO: address the following questions
-#           - should account for 'DefaultLongOverduePatronCategories';?
+# TODO: address the following questions:
+#           - do we need a 'nomail' option ?
+#           - how much logging to we want to do throughout the script?
+#           - should account for 'DefaultLongOverduePatronCategories';
 #           - should update and then use LostItem()? (+update tests)
 #           - should account for WhenLostChargeReplacementFee ?
 
