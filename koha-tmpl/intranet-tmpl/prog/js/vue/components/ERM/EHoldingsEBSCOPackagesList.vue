@@ -67,6 +67,7 @@ import { APIClient } from "../../fetch/api-client.js";
 import { build_url_params, build_url } from "../../composables/datatables";
 import KohaTable from "../KohaTable.vue";
 import { useRoute, useRouter } from "vue-router";
+import { $__ } from "@k/i18n";
 
 export default {
     setup() {
@@ -95,7 +96,7 @@ export default {
 
             return [
                 {
-                    title: __("Name"),
+                    title: $__("Name"),
                     data: "me.package_id:me.name",
                     searchable: false,
                     orderable: false,
@@ -110,14 +111,14 @@ export default {
                             node +=
                                 " " +
                                 '<i class="fa fa-check-square" style="color: green; float: right;" title="' +
-                                __("Is selected") +
+                                $__("Is selected") +
                                 '" />';
                         }
                         return node;
                     },
                 },
                 {
-                    title: __("Vendor"),
+                    title: $__("Vendor"),
                     data: "vendor_id",
                     searchable: false,
                     orderable: false,
@@ -126,7 +127,7 @@ export default {
                     },
                 },
                 {
-                    title: __("Type"),
+                    title: $__("Type"),
                     data: "package_type",
                     searchable: false,
                     orderable: false,
@@ -140,7 +141,7 @@ export default {
                     },
                 },
                 {
-                    title: __("Content type"),
+                    title: $__("Content type"),
                     searchable: false,
                     orderable: false,
                     render: function (data, type, row, meta) {
