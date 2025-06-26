@@ -164,7 +164,7 @@ export default {
                 },
                 error => {}
             );
-            this.clearForm();
+            clearForm();
         };
         const clearForm = () => {
             file.value = {
