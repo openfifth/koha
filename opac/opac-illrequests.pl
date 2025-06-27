@@ -178,6 +178,14 @@ if ( $op eq 'list' ) {
                 if ( $params->{type_disclaimer_submitted} ) {
                     $type_disclaimer->after_request_created( $params, $request );
                 }
+                $request->extended_attributes(
+                    [
+                        {
+                            type  => 'copyrightclearance_confirmed',
+                            value => 1,
+                        }
+                    ]
+                ) if $params->{copyrightclearance_confirmed};
                 print $query->redirect('/cgi-bin/koha/opac-illrequests.pl?message=2');
                 exit;
             }
