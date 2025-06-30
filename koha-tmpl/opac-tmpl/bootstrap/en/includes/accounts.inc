@@ -25,6 +25,7 @@
         [%- CASE 'RENT_DAILY_RENEW' -%]<span>Renewal of daily rental item</span>
         [%- CASE 'RESERVE'          -%]<span>Hold fee</span>
         [%- CASE 'RESERVE_EXPIRED'  -%]<span>Hold waiting too long</span>
+        [%- CASE 'PRINT_NOTICE'     -%]<span>Print notice charge</span>
         [%- CASE 'PAYOUT'           -%]<span>Payment from library to patron</span>
         [%- CASE 'VOID'             -%]<span>Credit has been voided</span>
         [%- CASE -%]

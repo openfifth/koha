@@ -23,6 +23,7 @@
  [%- CASE 'RENT_DAILY_RENEW' -%]<span>Renouvellement d'une location quotidienne</span>
  [%- CASE 'RESERVE'          -%]<span>Frais de réservation</span>
  [%- CASE 'RESERVE_EXPIRED'  -%]<span>Réservation en attente depuis trop longtemps</span>
+ [%- CASE 'PRINT_NOTICE'     -%]<span>Frais d'avis imprimé</span>
  [%- CASE 'PAYOUT'           -%]<span>Paiement de la bibliothèque à l'utilisateur</span>
  [%- CASE 'VOID'             -%]<span>Le crédit a été annulé</span>
  [%- CASE                    -%]<span>[% debit_type.description | html %]</span>
