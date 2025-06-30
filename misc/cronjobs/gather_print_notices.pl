@@ -205,7 +205,7 @@ sub print_notices {
         if ( $send ) {
             foreach my $message ( @$branch_messages ) {
                 # Apply print notice charges if enabled
-                if (!$skip_charges && C4::Context->preference('PrintNoticeCharging')) {
+                if (!$skip_charges) {
                     apply_print_notice_charge($message);
                 }
 
@@ -382,8 +382,7 @@ sub apply_print_notice_charge {
     }
 
     eval {
-        my $account = Koha::Account->new({ patron_id => $patron->borrowernumber });
-        $account->add_print_notice_charge({
+        my $result = $patron->add_print_notice_charge_if_needed({
             notice_code => $message->{letter_code},
             library_id  => $message->{branchcode},
         });
