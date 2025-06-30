@@ -33,7 +33,7 @@ edi_process_service_charges.pl - Process MOA+203 service charges from EDI invoic
 
 =head1 SYNOPSIS
 
-edi_process_service_charges.pl [--dry-run] [--help] [--verbose]
+edi_process_service_charges.pl [--confirm|--execute] [--dry-run] [--help] [--verbose]
 
 =head1 DESCRIPTION
 
@@ -49,7 +49,11 @@ handled by the standard EDI processing.
 
 =item B<--dry-run>
 
-Don't actually create invoice adjustments, just show what would be done.
+Don't actually create invoice adjustments, just show what would be done. This is the default mode.
+
+=item B<--confirm> or B<--execute>
+
+Actually create invoice adjustments. Required to make database changes.
 
 =item B<--verbose>
 
@@ -67,14 +71,21 @@ use Getopt::Long;
 use Pod::Usage;
 
 my $help    = 0;
-my $dry_run = 0;
+my $dry_run = 1;  # Default to dry-run mode
+my $confirm = 0;
 my $verbose = 0;
 
 GetOptions(
-    'help|?'  => \$help,
-    'dry-run' => \$dry_run,
-    'verbose' => \$verbose,
+    'help|?'           => \$help,
+    'dry-run'          => \$dry_run,
+    'confirm|execute'  => \$confirm,
+    'verbose'          => \$verbose,
 ) or pod2usage(2);
+
+# If --confirm is specified, disable dry-run mode
+if ($confirm) {
+    $dry_run = 0;
+}
 
 pod2usage(1) if $help;
 
@@ -83,7 +94,11 @@ die "Syspref 'EDIFACT' is disabled" unless C4::Context->preference('EDIFACT');
 my $schema = Koha::Database->new()->schema();
 my $logger = Koha::Logger->get( { interface => 'edi', prefix => 0 } );
 
-print "Processing EDI service charges..." . ( $dry_run ? " (DRY RUN)" : "" ) . "\n" if $verbose;
+if ($dry_run) {
+    print "Processing EDI service charges (DRY RUN - use --confirm to make actual changes)\n" if $verbose;
+} else {
+    print "Processing EDI service charges (LIVE MODE - making database changes)\n" if $verbose;
+}
 
 # Find invoice messages that have been received but not yet processed for service charges
 my @invoice_messages = $schema->resultset('EdifactMessage')->search(
@@ -144,6 +159,12 @@ sub process_invoice_service_charges {
             my $koha_invoice = find_koha_invoice_for_message($invoice_message);
 
             if ($koha_invoice) {
+                # Get vendor name and map to budget ID
+                my $vendor_name = get_vendor_name_from_message($invoice_message);
+                my $budget_id = map_vendor_to_budget_id($vendor_name);
+                
+                print "  Vendor: $vendor_name -> Budget: $budget_id\n" if $verbose && $vendor_name;
+                
                 my $reason   = $type eq 'charge' ? 'EDI_CHARGE' : 'EDI_ALLOWANCE';
                 my $existing = $schema->resultset('AqinvoiceAdjustment')->search(
                     {
@@ -168,6 +189,7 @@ sub process_invoice_service_charges {
                             invoiceid     => $koha_invoice->invoiceid,
                             adjustment    => $amount,
                             reason        => $reason,
+                            budget_id     => $budget_id,
                             note          => $note,
                             encumber_open => 1,
                         }
@@ -216,7 +238,7 @@ sub process_invoice_service_charges {
                         invoiceid  => $koha_invoice->invoiceid,
                         reason     => $reason,
                         adjustment => $amount,
-                        note       => { 'LIKE' => "%Line: " . $line->line_item_number . "%" }
+                        note       => { 'LIKE' => "%EDI Line: " . $line->line_item_number . "%" }
                     }
                 )->first;
 
@@ -226,13 +248,19 @@ sub process_invoice_service_charges {
                     next;
                 }
 
-                if ( !$dry_run ) {
+                # Get vendor name and map to budget ID
+                my $vendor_name = get_vendor_name_from_message($invoice_message);
+                my $budget_id = map_vendor_to_budget_id($vendor_name);
+                
+                print "  Vendor: $vendor_name -> Budget: $budget_id\n" if $verbose && $vendor_name;
 
-                    # Create the invoice adjustment
+                if ( !$dry_run ) {
+                    # Create the invoice adjustment with enhanced order linkage
+                    my $ordernumber = $line->ordernumber();
                     my $note = sprintf(
-                        '%s from EDI invoice (ALC+%s, MOA+8) - Line: %s, Service: %s%s',
+                        'EDI %s: Order #%s | EDI Line: %s | Service: %s%s',
                         ucfirst($type),
-                        ( $type eq 'charge' ? 'C' : 'A' ),
+                        $ordernumber || 'Unknown',
                         $line->line_item_number,
                         $service_code,
                         $description ? " ($description)" : ''
@@ -243,6 +271,7 @@ sub process_invoice_service_charges {
                             invoiceid     => $koha_invoice->invoiceid,
                             adjustment    => $amount,
                             reason        => $reason,
+                            budget_id     => $budget_id,
                             note          => $note,
                             encumber_open => 1,
                         }
@@ -251,7 +280,7 @@ sub process_invoice_service_charges {
                     print "  Created adjustment ID " . $adjustment->adjustment_id . " for $amount\n" if $verbose;
                     $logger->info( "Created $type adjustment for invoice " . $koha_invoice->invoiceid . ": $amount" );
                 } else {
-                    print "  Would create $type adjustment for invoice " . $koha_invoice->invoiceid . ": $amount\n";
+                    print "  Would create $type adjustment for invoice " . $koha_invoice->invoiceid . ": $amount (Budget: $budget_id)\n";
                 }
 
                 $adjustments_created++;
@@ -260,12 +289,12 @@ sub process_invoice_service_charges {
     }
 
     if ( !$dry_run ) {
-        my $status = 'post-' . $invoice_message->status;
+        my $status = 'processed';
         $invoice_message->status($status);
         $invoice_message->update;
-        print "Updated invoice message status to post-" . $invoice_message->status . "\n" if $verbose;
+        print "Updated invoice message status to processed\n" if $verbose;
     } else {
-        print "Would update invoice message status to post-" . $invoice_message->status . "\n";
+        print "Would update invoice message status to processed\n";
     }
 
     return $adjustments_created;
@@ -347,6 +376,40 @@ sub get_line_allowances_charges {
     return \@allowances_charges;
 }
 
+sub get_vendor_name_from_message {
+    my ($invoice_message) = @_;
+    
+    return '' unless $invoice_message;
+    
+    # Try direct vendor relationship first
+    if ($invoice_message->vendor) {
+        return $invoice_message->vendor->name;
+    }
+    
+    # Fall back to EDI account relationship
+    if ($invoice_message->edi_acct && $invoice_message->edi_acct->vendor) {
+        return $invoice_message->edi_acct->vendor->name;
+    }
+    
+    return '';
+}
+
+sub map_vendor_to_budget_id {
+    my ($vendor_name) = @_;
+    
+    return '' unless $vendor_name;
+    
+    # Map vendor names to budget IDs
+    if ($vendor_name =~ /^WCC\b/i) {
+        return '104'; #'WCHG';
+    } elsif ($vendor_name =~ /^RBKC\b/i) {
+        return '76'; #KCHG';
+    }
+    
+    # Default fallback - could be made configurable
+    return '';
+}
+
 sub find_koha_invoice_for_line {
     my ( $line, $invoice_message ) = @_;
 
@@ -376,8 +439,11 @@ sub find_koha_invoice_for_line {
    - Add value: EDI_CHARGE with description "EDI Charge (ALC+C)"
    - Add value: EDI_ALLOWANCE with description "EDI Allowance (ALC+A)"
 
-3. Test with dry-run first:
-   ./edi_process_service_charges.pl --dry-run --verbose
+3. Test with dry-run first (default behavior):
+   ./edi_process_service_charges.pl --verbose
+   
+4. When ready to make actual changes:
+   ./edi_process_service_charges.pl --confirm --verbose
 
 =head1 AUTHOR
 
