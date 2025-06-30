@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 9;
+use Test::More tests => 10;
 
 use t::lib::TestBuilder;
 use t::lib::Mocks;
@@ -359,6 +359,54 @@ subtest 'can_make_suggestions' => sub {
         !$category_1->can_make_suggestions && !$category_2->can_make_suggestions,
         'suggestions disabled, no matter what the value of suggestionPatronCategoryExceptions is'
     );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'print_notice_charge attribute tests' => sub {
+
+    plan tests => 6;
+
+    $schema->storage->txn_begin;
+
+    # Test creation with default value (0 = disabled)
+    my $category_default = $builder->build_object(
+        {
+            class => 'Koha::Patron::Categories',
+            value => { print_notice_charge => 0 }
+        }
+    );
+
+    cmp_ok( $category_default->print_notice_charge, '==', 0, 'Default print_notice_charge is 0 (disabled)' );
+
+    # Test creation with custom value
+    my $category_custom = $builder->build_object(
+        {
+            class => 'Koha::Patron::Categories',
+            value => { print_notice_charge => 1.50 }
+        }
+    );
+
+    cmp_ok( $category_custom->print_notice_charge, '==', 1.50, 'Custom print_notice_charge value set correctly' );
+
+    # Test updating the value
+    $category_custom->print_notice_charge(2.25)->store;
+    cmp_ok( $category_custom->print_notice_charge, '==', 2.25, 'print_notice_charge updated correctly' );
+
+    # Test zero value (disabled)
+    $category_custom->print_notice_charge(0.00)->store;
+    cmp_ok( $category_custom->print_notice_charge, '==', 0.00, 'print_notice_charge can be set to zero (disabled)' );
+
+    # Test decimal precision handling
+    $category_custom->print_notice_charge(0.123456)->store;
+    cmp_ok(
+        $category_custom->print_notice_charge, '==', 0.123456,
+        'print_notice_charge handles decimal precision correctly'
+    );
+
+    # Test null/undef handling
+    $category_custom->print_notice_charge(undef)->store;
+    is( $category_custom->print_notice_charge, undef, 'print_notice_charge can be set to undef' );
 
     $schema->storage->txn_rollback;
 };
