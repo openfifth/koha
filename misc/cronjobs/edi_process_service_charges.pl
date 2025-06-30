@@ -166,6 +166,7 @@ sub process_invoice_service_charges {
                 print "  Vendor: $vendor_name -> Budget: $budget_id\n" if $verbose && $vendor_name;
                 
                 my $reason   = $type eq 'charge' ? 'EDI_CHARGE' : 'EDI_ALLOWANCE';
+                $amount = $amount * -1 if ( $type ne 'charge' );
                 my $existing = $schema->resultset('AqinvoiceAdjustment')->search(
                     {
                         invoiceid  => $koha_invoice->invoiceid,
@@ -233,6 +234,7 @@ sub process_invoice_service_charges {
 
                 # Check if we already have this adjustment
                 my $reason              = $type eq 'charge' ? 'EDI_CHARGE' : 'EDI_ALLOWANCE';
+                $amount = $amount * -1 if ( $type ne 'charge' );
                 my $existing_adjustment = $schema->resultset('AqinvoiceAdjustment')->search(
                     {
                         invoiceid  => $koha_invoice->invoiceid,
