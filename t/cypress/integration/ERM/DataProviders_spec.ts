@@ -636,7 +636,7 @@ describe("Data provider tab options", () => {
             }
         );
 
-        cy.get("#files > form > fieldset > input[type=submit]").click();
+        cy.get("#files > form > fieldset > button[type=submit]").click();
 
         cy.get("main div[class='alert alert-info']").should(
             "have.text",
@@ -740,7 +740,7 @@ describe("Data providers action buttons", () => {
                 },
             }
         );
-        cy.get("#confirmation_input_begin_date+input").click();
+        cy.get("#begin_date+input").click();
         cy.get(".flatpickr-current-month select")
             .invoke("val")
             .then(month => {
