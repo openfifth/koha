@@ -16,6 +16,8 @@ use Koha::DateUtils qw( dt_from_string output_pref );
 use Koha::Email;
 use Koha::Util::OpenDocument qw( generate_ods );
 use Koha::SMTP::Servers;
+use Koha::Account;
+use Koha::Patrons;
 
 my (
     $help,
@@ -27,6 +29,7 @@ my (
     @letter_codes,
     $send,
     @emails,
+    $skip_charges,
 );
 
 my $command_line_options = join( " ", @ARGV );
@@ -43,6 +46,7 @@ GetOptions(
     'letter_code:s' => \@letter_codes,
     'send!'         => \$send,
     'e|email:s'     => \@emails,
+    'skip-charges'  => \$skip_charges,
 ) || pod2usage(1);
 
 pod2usage(0) if $help;
@@ -198,8 +202,13 @@ sub print_notices {
             );
         }
 
-        if ($send) {
-            foreach my $message (@$branch_messages) {
+        if ( $send ) {
+            foreach my $message ( @$branch_messages ) {
+                # Apply print notice charges if enabled
+                if (!$skip_charges && C4::Context->preference('PrintNoticeCharging')) {
+                    apply_print_notice_charge($message);
+                }
+
                 C4::Letters::_set_message_status(
                     {
                         message_id => $message->{'message_id'},
@@ -344,6 +353,53 @@ sub send_files {
 
 }
 
+=head2 apply_print_notice_charge
+
+Apply a print notice charge to the patron's account
+
+=cut
+
+sub apply_print_notice_charge {
+    my ($message) = @_;
+
+    # Check for valid message data
+    unless ($message && ref($message) eq 'HASH') {
+        warn "Invalid message data passed to apply_print_notice_charge";
+        return;
+    }
+
+    # Check for borrowernumber
+    unless ($message->{borrowernumber}) {
+        warn "No borrowernumber in message for print notice charge";
+        return;
+    }
+
+    # Skip if patron not found
+    my $patron = Koha::Patrons->find($message->{borrowernumber});
+    unless ($patron) {
+        warn "Patron " . $message->{borrowernumber} . " not found for print notice charge";
+        return;
+    }
+
+    eval {
+        my $account = Koha::Account->new({ patron_id => $patron->borrowernumber });
+        $account->add_print_notice_charge({
+            notice_code => $message->{letter_code},
+            library_id  => $message->{branchcode},
+        });
+
+        cronlogaction({
+            action => 'Print notice charge',
+            info   => "Applied charge for patron " . $message->{borrowernumber} .
+                     " notice " . ($message->{letter_code} || 'unknown')
+        });
+    };
+
+    if ($@) {
+        warn "Error applying print notice charge for patron " . $patron->borrowernumber . ": $@";
+    }
+}
+
 =head1 NAME
 
 gather_print_notices - Print waiting print notices
@@ -405,6 +461,11 @@ Several letter_code parameters can be given.
 
 Repeatable.
 E-mail address to send generated files to.
+
+=item B<--skip-charges>
+
+Skip applying charges for print notices, even if patron category has print notice charging enabled.
+Useful for testing or administrative runs.
 
 =item B<-h|--help>
 
