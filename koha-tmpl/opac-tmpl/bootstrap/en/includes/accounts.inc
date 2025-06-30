@@ -26,6 +26,8 @@
         <span>New card</span>
     [%- CASE 'OVERDUE' -%]
         <span>Fine</span>
+    [%- CASE 'PRINT_NOTICE' -%]
+        <span>Print notice charge</span>
     [%- CASE 'PROCESSING' -%]
         <span>Lost item processing fee</span>
     [%- CASE 'RENT' -%]
