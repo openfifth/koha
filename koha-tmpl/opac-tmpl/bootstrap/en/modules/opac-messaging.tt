@@ -1,5 +1,6 @@
 [% USE raw %]
 [% USE Koha %]
+[% USE Price %]
 [% USE AdditionalContents %]
 [% SET OpacNav = AdditionalContents.get( location => "OpacNav", lang => lang, library => logged_in_user.branchcode || default_branch, blocktitle => 0 ) %]
 [% SET OpacNavBottom = AdditionalContents.get( location => "OpacNavBottom", lang => lang, library => logged_in_user.branchcode || default_branch, blocktitle => 0 ) %]
@@ -201,7 +202,8 @@
                             [% IF print_notice_charging %]
                                 <div class="alert alert-info">
                                     <h5><i class="fa fa-info-circle"></i> About Print Notice Charges</h5>
-                                    <p>Print notices incur a charge of [% print_notice_charge_amount | $Price %]
+                                    <p>Print notices incur a charge of
+                                       [% IF print_notice_charge_amount %][% print_notice_charge_amount | $Price %][% ELSE %]0.00[% END %]
                                        each to cover postage and processing costs.</p>
                                     <p><strong>To avoid these charges:</strong></p>
                                     <ul>

@@ -4,6 +4,7 @@
 [% USE Koha %]
 [% USE KohaDates %]
 [% USE Branches %]
+[% USE Price %]
 [% PROCESS 'member-main-address-style.inc' %]
 [% PROCESS 'member-alt-address-style.inc' %]
 [% PROCESS 'member-alt-contact-style.inc' %]
