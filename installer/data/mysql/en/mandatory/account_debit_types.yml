@@ -74,6 +74,13 @@ tables:
           default_amount: ~
           is_system: "1"
 
+        - code: "PRINT_NOTICE"
+          description: "Print notice charge"
+          can_be_invoiced: "0"
+          can_be_sold: "0"
+          default_amount: ~
+          is_system: "1"
+
         - code: "PROCESSING"
           description: "Lost item processing fee"
           can_be_invoiced: "0"
