@@ -365,8 +365,7 @@ sub apply_print_notice_charge {
     }
 
     eval {
-        my $account = Koha::Account->new({ patron_id => $patron->borrowernumber });
-        $account->add_print_notice_charge({
+        my $result = $patron->add_print_notice_charge_if_needed({
             notice_code => $message->{letter_code},
             library_id  => $message->{branchcode},
         });
