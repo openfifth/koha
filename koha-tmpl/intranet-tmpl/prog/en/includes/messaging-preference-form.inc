@@ -11,6 +11,18 @@
             [% IF Koha.Preference('SMSSendDriver') %]<th>SMS</th>[% END %]
             [% IF Koha.Preference('TalkingTechItivaPhoneNotification') || Koha.Preference('PhoneNotification') %]<th>Phone</th>[% END %]
             <th>Email</th>
+            [% SET has_print_transport = 0 %]
+            [% FOREACH pref IN messaging_preferences %]
+                [% IF pref.transport_print %][% SET has_print_transport = 1 %][% LAST %][% END %]
+            [% END %]
+            [% IF has_print_transport %]
+                <th>
+                    Print
+                    [% IF patron.category.print_notice_charge > 0 %]
+                        ([% patron.category.print_notice_charge | $Price %] charge)
+                    [% END %]
+                </th>
+            [% END %]
             <th
                 >Digests only
                 <i id="info_digests" data-bs-toggle="tooltip" title="You can ask for a digest to reduce the number of messages. Messages will be saved and sent as a single message." data-bs-placement="right" class="fa fa-info-circle"></i
@@ -247,6 +259,59 @@
                     </td>
                 [% ELSE %]
                     <td>-</td>
+                [% END %]
+
+                [% IF has_print_transport %]
+                    [% IF ( messaging_preference.transport_print ) %]
+                        <td>
+                            [% IF ( messaging_form_inactive ) %]
+                                [% IF ( messaging_preference.transports_print ) %]
+                                    <input
+                                        type="checkbox"
+                                        id="print[% messaging_preference.message_attribute_id | html %]"
+                                        name="[% messaging_preference.message_attribute_id | html %]"
+                                        value="print"
+                                        class="pmp_print"
+                                        checked="checked"
+                                        disabled="disabled"
+                                    />
+                                [% ELSE %]
+                                    <input type="checkbox" id="print[% messaging_preference.message_attribute_id | html %]" name="[% messaging_preference.message_attribute_id | html %]" value="print" class="pmp_print" disabled="disabled" />
+                                [% END %]
+                            [% ELSE %]
+                                [% IF patron.category.print_notice_charge > 0 %]
+                                    <div class="print-notice-warning">
+                                        <small class="text-warning">
+                                            <i class="fa fa-exclamation-triangle"></i>
+                                            [% patron.category.print_notice_charge | $Price %] charge per notice
+                                        </small>
+                                    </div>
+                                [% END %]
+                                [% IF ( messaging_preference.transports_print ) %]
+                                    <input
+                                        type="checkbox"
+                                        id="print[% messaging_preference.message_attribute_id | html %]"
+                                        name="[% messaging_preference.message_attribute_id | html %]"
+                                        value="print"
+                                        checked="checked"
+                                        class="pmp_print active_notify"
+                                        data-attr-id="[% messaging_preference.message_attribute_id | html %]"
+                                    />
+                                [% ELSE %]
+                                    <input
+                                        type="checkbox"
+                                        id="print[% messaging_preference.message_attribute_id | html %]"
+                                        name="[% messaging_preference.message_attribute_id | html %]"
+                                        value="print"
+                                        class="pmp_print active_notify"
+                                        data-attr-id="[% messaging_preference.message_attribute_id | html %]"
+                                    />
+                                [% END %]
+                            [% END %]
+                        </td>
+                    [% ELSE %]
+                        <td>-</td>
+                    [% END %]
                 [% END %]
 
                 [% IF ( messaging_preference.has_digest ) %]
