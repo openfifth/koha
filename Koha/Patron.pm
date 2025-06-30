@@ -20,9 +20,9 @@ package Koha::Patron;
 
 use Modern::Perl;
 
+use JSON               qw( encode_json decode_json to_json );
 use List::MoreUtils    qw( any none uniq notall zip6);
-use JSON               qw( to_json );
-use Scalar::Util       qw(looks_like_number);
+use Scalar::Util       qw( looks_like_number );
 use Unicode::Normalize qw( NFKD );
 use Try::Tiny;
 use DateTime ();
@@ -1780,6 +1780,52 @@ sub add_enrolment_fee_if_needed {
         );
     }
     return $enrolment_fee || 0;
+}
+
+=head3 add_print_notice_charge_if_needed
+
+my $result = $patron->add_print_notice_charge_if_needed($params);
+
+Add a print notice charge for a patron if needed.
+
+$params - hash reference containing:
+  - amount: charge amount (optional, uses system preference if not provided)
+  - notice_code: the notice code for the charge description
+  - library_id: library branch for the charge (optional)
+
+Returns the account line object if a charge was added, undef otherwise.
+
+=cut
+
+sub add_print_notice_charge_if_needed {
+    my ( $self, $params ) = @_;
+
+    return unless $params && ref($params) eq 'HASH';
+
+    # Get charge amount from patron category (0 = disabled)
+    my $charge_amount = defined $params->{amount} ? $params->{amount} : $self->category->print_notice_charge;
+
+    # Return early for invalid amounts
+    return unless defined $charge_amount;
+    return unless Scalar::Util::looks_like_number($charge_amount);
+    return unless $charge_amount > 0;
+
+    my $userenv = C4::Context->userenv;
+    my $library_id = $params->{library_id} || ($userenv ? $userenv->{branch} : undef);
+
+    my $result;
+    try {
+        $result = $self->account->add_debit({
+            amount      => $charge_amount,
+            type        => 'PRINT_NOTICE',
+            interface   => C4::Context->interface,
+            library_id  => $library_id,
+        });
+    } catch {
+        return;
+    };
+
+    return $result;
 }
 
 =head3 checkouts
