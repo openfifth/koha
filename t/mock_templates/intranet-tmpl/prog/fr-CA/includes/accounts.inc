@@ -24,6 +24,8 @@
         <span>Nouvelle carte</span>
     [%- CASE 'OVERDUE' -%]
         <span>Amende</span>
+    [%- CASE 'PRINT_NOTICE' -%]
+        <span>Frais d'avis imprimé</span>
     [%- CASE 'PROCESSING' -%]
         <span>Frais de traitement pour exemplaire perdu</span>
     [%- CASE 'RENT' -%]
