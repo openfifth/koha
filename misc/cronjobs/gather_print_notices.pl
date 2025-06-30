@@ -188,7 +188,7 @@ sub print_notices {
         if ( $send ) {
             foreach my $message ( @$branch_messages ) {
                 # Apply print notice charges if enabled
-                if (!$skip_charges && C4::Context->preference('PrintNoticeCharging')) {
+                if (!$skip_charges) {
                     apply_print_notice_charge($message);
                 }
 
