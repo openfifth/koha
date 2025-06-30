@@ -1535,9 +1535,8 @@
                                     [% IF print_notice_charging && !patron_has_email %]
                                         <div class="alert alert-warning">
                                             <i class="fa fa-exclamation-triangle"></i>
-                                            <strong>Notice:</strong> This patron has no email address.
-                                            Print notices will incur a charge of [% print_notice_charge_amount | $Price %] each.
-                                            Consider encouraging the patron to provide an email address to avoid these charges.
+                                            <strong>Notice:</strong> This patron has no email address. Print notices will incur a charge of [% print_notice_charge_amount | $Price %] each. Consider encouraging the patron to provide an email
+                                            address to avoid these charges.
                                         </div>
                                     [% END %]
                                     <div class="messaging_prefs">

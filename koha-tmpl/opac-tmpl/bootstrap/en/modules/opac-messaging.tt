@@ -1,5 +1,6 @@
 [% USE raw %]
 [% USE Koha %]
+[% USE Price %]
 [% USE AdditionalContents %]
 [% PROCESS 'i18n.inc' %]
 [% PROCESS 'html_helpers.inc' %]
@@ -43,6 +44,20 @@
                                 ><p><strong>Settings updated</strong></p></div
                             >
                         [% END %]
+                        [% IF print_notice_charging && !patron_has_email %]
+                            <div class="alert alert-warning">
+                                <h4><i class="fa fa-exclamation-triangle"></i> Print Notice Charges</h4>
+                                <p><strong>Important:</strong> Print notices incur a charge of
+                                   [% print_notice_charge_amount | $Price %] each to cover postage and processing costs.</p>
+                                <p>To avoid these charges, please:</p>
+                                <ul>
+                                    <li>Provide an email address in your <a href="/cgi-bin/koha/opac-memberentry.pl">account details</a></li>
+                                    <li>Select email delivery for your notice preferences below</li>
+                                    <li>Uncheck any print notice options if they are enabled</li>
+                                </ul>
+                            </div>
+                        [% END %]
+
                         <form action="/cgi-bin/koha/opac-messaging.pl" method="post" name="opacmessaging">
                             [% INCLUDE 'csrf-token.inc' %]
                             <input type="hidden" name="op" value="cud-modify" />
@@ -274,6 +289,28 @@
                                         [% END # / FOREACH messaging_preferences %]
                                     </tbody>
                                 </table>
+                            [% END %]
+
+                            [% IF print_notice_charging %]
+                                <div class="alert alert-info">
+                                    <h5><i class="fa fa-info-circle"></i> About Print Notice Charges</h5>
+                                    <p>Print notices incur a charge of
+                                       [% IF print_notice_charge_amount %][% print_notice_charge_amount | $Price %][% ELSE %]0.00[% END %]
+                                       each to cover postage and processing costs.</p>
+                                    <p><strong>To avoid these charges:</strong></p>
+                                    <ul>
+                                        [% IF !patron_has_email %]
+                                            <li><strong>Add an email address</strong> to your <a href="/cgi-bin/koha/opac-memberentry.pl">account details</a></li>
+                                        [% END %]
+                                        <li>Select "Email" instead of any print options for your notice preferences above</li>
+                                        <li>Ask library staff to disable print notices for your account</li>
+                                    </ul>
+                                    [% IF patron_has_email %]
+                                        <p class="text-success">✓ You have an email address on file. Make sure to select email delivery for notices to avoid print charges.</p>
+                                    [% ELSE %]
+                                        <p class="text-warning"><strong>⚠ Important:</strong> You don't have an email address on file. Print notices may be automatically selected for your account.</p>
+                                    [% END %]
+                                </div>
                             [% END %]
 
                             [% IF ( SMSSendDriver || Koha.Preference('TranslateNotices') ) %]
