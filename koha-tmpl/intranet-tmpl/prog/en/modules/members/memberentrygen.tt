@@ -5,6 +5,7 @@
 [% USE KohaDates %]
 [% USE HtmlScrubber %]
 [% USE Branches %]
+[% USE Price %]
 [% PROCESS 'member-main-address-style.inc' %]
 [% PROCESS 'member-alt-address-style.inc' %]
 [% PROCESS 'member-alt-contact-style.inc' %]
@@ -1532,6 +1533,14 @@
                                         <i class="fa fa-caret-down" aria-hidden="true"></i>
                                         Patron messaging preferences
                                     </legend>
+                                    [% IF print_notice_charging && !patron_has_email %]
+                                        <div class="alert alert-warning">
+                                            <i class="fa fa-exclamation-triangle"></i>
+                                            <strong>Notice:</strong> This patron has no email address.
+                                            Print notices will incur a charge of [% print_notice_charge_amount | $Price %] each.
+                                            Consider encouraging the patron to provide an email address to avoid these charges.
+                                        </div>
+                                    [% END %]
                                     <div class="messaging_prefs">
                                         <div id="messaging_prefs_loading" class="form-message" style="display:none"> <img src="[% interface | html %]/[% theme | html %]/img/spinner-small.gif" alt="" /> Loading new messaging defaults </div>
                                         <input type="hidden" name="setting_messaging_prefs" value="1" />
