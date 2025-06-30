@@ -368,13 +368,25 @@ sub apply_print_notice_charge {
         return;
     }
 
-    # Check for borrowernumber
-    unless ($message->{borrowernumber}) {
-        warn "No borrowernumber in message for print notice charge";
+    # Validate borrowernumber is numeric to prevent injection
+    unless ($message->{borrowernumber} && $message->{borrowernumber} =~ /^\d+$/) {
+        warn "Invalid or missing borrowernumber in message for print notice charge";
         return;
     }
 
-    # Skip if patron not found
+    # Validate branchcode format if present
+    if (defined $message->{branchcode} && $message->{branchcode} !~ /^[A-Za-z0-9_-]*$/) {
+        warn "Invalid branchcode format in message: " . $message->{branchcode};
+        return;
+    }
+
+    # Validate letter_code format if present
+    if (defined $message->{letter_code} && $message->{letter_code} !~ /^[A-Za-z0-9_-]*$/) {
+        warn "Invalid letter_code format in message: " . $message->{letter_code};
+        return;
+    }
+
+    # Skip if patron not found (using validated borrowernumber)
     my $patron = Koha::Patrons->find($message->{borrowernumber});
     unless ($patron) {
         warn "Patron " . $message->{borrowernumber} . " not found for print notice charge";
@@ -387,11 +399,15 @@ sub apply_print_notice_charge {
             library_id  => $message->{branchcode},
         });
 
+        # Log successful charge application
+        if ($result) {
         cronlogaction({
             action => 'Print notice charge',
             info   => "Applied charge for patron " . $message->{borrowernumber} .
-                     " notice " . ($message->{letter_code} || 'unknown')
+                         " notice " . ($message->{letter_code} || 'unknown') .
+                         " (charge ID: " . $result->id . ")"
         });
+        }
     };
 
     if ($@) {
