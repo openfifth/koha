@@ -34,7 +34,7 @@ $(document).ready(function () {
                 function (data) {
                     $.each(data.messaging_preferences, function (i, item) {
                         var attrid = item.message_attribute_id;
-                        var transports = ["email", "rss", "sms"];
+                        var transports = ["email", "rss", "sms","print"];
                         $.each(transports, function (j, transport) {
                             if (item["transports_" + transport] == 1) {
                                 $("#" + transport + attrid).prop(
@@ -105,5 +105,8 @@ $(document).ready(function () {
     });
     $(".pmp_phone").click(function () {
         toggle_digest(Number($(this).attr("id").replace("phone", "")));
+    });
+    $(".pmp_print").click(function () {
+        toggle_digest(Number($(this).attr("id").replace("print", "")));
     });
 });
