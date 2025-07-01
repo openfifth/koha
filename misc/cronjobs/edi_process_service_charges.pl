@@ -149,6 +149,13 @@ sub process_invoice_service_charges {
 
     foreach my $msg ( @{$messages} ) {
 
+        # Find the Koha invoice for this message (all lines belong to the same invoice)
+        my $koha_invoice = find_koha_invoice_for_message($invoice_message);
+        if ( !$koha_invoice ) {
+            print "  WARNING: Could not find Koha invoice for message " . $invoice_message->id . "\n";
+            next;
+        }
+
         # First, handle message-level allowances and charges
         my $message_alcs = get_message_allowances_charges($msg);
         foreach my $alc_data (@$message_alcs) {
@@ -159,61 +166,54 @@ sub process_invoice_service_charges {
 
             print "  Found invoice-level $type: $amount ($service_code)\n" if $verbose;
 
-            # Find the Koha invoice for this message
-            my $koha_invoice = find_koha_invoice_for_message($invoice_message);
+            # Get vendor name and map to budget ID
+            my $vendor_name = get_vendor_name_from_message($invoice_message);
+            my $budget_id   = map_vendor_to_budget_id($vendor_name);
 
-            if ($koha_invoice) {
+            print "  Vendor: $vendor_name -> Budget: $budget_id\n" if $verbose && $vendor_name;
 
-                # Get vendor name and map to budget ID
-                my $vendor_name = get_vendor_name_from_message($invoice_message);
-                my $budget_id   = map_vendor_to_budget_id($vendor_name);
-
-                print "  Vendor: $vendor_name -> Budget: $budget_id\n" if $verbose && $vendor_name;
-
-                my $reason = $type eq 'charge' ? 'EDI_CHARGE' : 'EDI_ALLOWANCE';
-                $amount = $amount * -1 if ( $type ne 'charge' );
-                my $existing = $schema->resultset('AqinvoiceAdjustment')->search(
-                    {
-                        invoiceid  => $koha_invoice->invoiceid,
-                        reason     => $reason,
-                        adjustment => $amount,
-                        note       => { 'LIKE' => "%Invoice-level%" }
-                    }
-                )->first;
-
-                if ( !$existing && !$dry_run ) {
-                    my $note = sprintf(
-                        'Invoice-level %s from EDI (ALC+%s, MOA+8) - Service: %s%s',
-                        $type,
-                        ( $type eq 'charge' ? 'C' : 'A' ),
-                        $service_code,
-                        $description ? " ($description)" : ''
-                    );
-
-                    my $adjustment = $schema->resultset('AqinvoiceAdjustment')->create(
-                        {
-                            invoiceid     => $koha_invoice->invoiceid,
-                            adjustment    => $amount,
-                            reason        => $reason,
-                            budget_id     => $budget_id,
-                            note          => $note,
-                            encumber_open => 1,
-                        }
-                    );
-
-                    print "  Created invoice-level adjustment ID " . $adjustment->adjustment_id . " for $amount\n"
-                        if $verbose;
-                    $adjustments_created++;
-                } elsif ( !$existing ) {
-                    print "  Would create invoice-level $type adjustment: $amount\n";
-                    $adjustments_created++;
+            my $reason = $type eq 'charge' ? 'EDI_CHARGE' : 'EDI_ALLOWANCE';
+            $amount = $amount * -1 if ( $type ne 'charge' );
+            my $existing = $schema->resultset('AqinvoiceAdjustment')->search(
+                {
+                    invoiceid  => $koha_invoice->invoiceid,
+                    reason     => $reason,
+                    adjustment => $amount,
+                    note       => { 'LIKE' => "%Invoice-level%" }
                 }
+            )->first;
+
+            if ( !$existing && !$dry_run ) {
+                my $note = sprintf(
+                    'Invoice-level %s from EDI (ALC+%s, MOA+8) - Service: %s%s',
+                    $type,
+                    ( $type eq 'charge' ? 'C' : 'A' ),
+                    $service_code,
+                    $description ? " ($description)" : ''
+                );
+
+                my $adjustment = $schema->resultset('AqinvoiceAdjustment')->create(
+                    {
+                        invoiceid     => $koha_invoice->invoiceid,
+                        adjustment    => $amount,
+                        reason        => $reason,
+                        budget_id     => $budget_id,
+                        note          => $note,
+                        encumber_open => 1,
+                    }
+                );
+
+                print "  Created invoice-level adjustment ID " . $adjustment->adjustment_id . " for $amount\n"
+                    if $verbose;
+                $adjustments_created++;
+            } elsif ( !$existing ) {
+                print "  Would create invoice-level $type adjustment: $amount\n";
+                $adjustments_created++;
             }
         }
 
         # Then handle line-level allowances and charges
         my $lines = $msg->lineitems();
-
         foreach my $line ( @{$lines} ) {
 
             # Get all allowances and charges for this line
@@ -228,14 +228,6 @@ sub process_invoice_service_charges {
                 my $description  = $alc_data->{description}  || '';
 
                 print "  Found $type: $amount ($service_code) for line " . $line->line_item_number . "\n" if $verbose;
-
-                # Find the corresponding invoice in Koha
-                my $koha_invoice = find_koha_invoice_for_line( $line, $invoice_message );
-
-                if ( !$koha_invoice ) {
-                    print "  WARNING: Could not find Koha invoice for line " . $line->line_item_number . "\n";
-                    next;
-                }
 
                 # Check if we already have this adjustment
                 my $reason = $type eq 'charge' ? 'EDI_CHARGE' : 'EDI_ALLOWANCE';
@@ -358,6 +350,7 @@ sub find_koha_invoice_for_message {
     my ($invoice_message) = @_;
 
     # Find invoice by message_id in aqinvoices table
+    # One EDI message creates one Koha invoice, so all lines belong to the same invoice
     my $schema = Koha::Database->new()->schema();
     return $schema->resultset('Aqinvoice')->search( { message_id => $invoice_message->id } )->first;
 }
@@ -429,19 +422,6 @@ sub map_vendor_to_budget_id {
 
     # Default fallback - could be made configurable
     return '';
-}
-
-sub find_koha_invoice_for_line {
-    my ( $line, $invoice_message ) = @_;
-
-    my $ordernumber = $line->ordernumber();
-    return unless $ordernumber;
-
-    # Find the invoice via the ordernumber
-    my $order = $schema->resultset('Aqorder')->find($ordernumber);
-    return unless $order && $order->get_column('invoiceid');
-
-    return $schema->resultset('Aqinvoice')->find( $order->get_column('invoiceid') );
 }
 
 sub adjust_orderline_for_service_charge {
