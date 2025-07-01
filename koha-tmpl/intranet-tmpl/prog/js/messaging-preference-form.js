@@ -46,6 +46,7 @@ $(document).ready(function () {
                                             "email",
                                             "rss",
                                             "sms",
+                                            "print",
                                         ];
                                         $.each(
                                             transports,
@@ -135,5 +136,8 @@ $(document).ready(function () {
     });
     $(".pmp_phone").click(function () {
         toggle_digest(Number($(this).attr("id").replace("phone", "")));
+    });
+    $(".pmp_print").click(function () {
+        toggle_digest(Number($(this).attr("id").replace("print", "")));
     });
 });
