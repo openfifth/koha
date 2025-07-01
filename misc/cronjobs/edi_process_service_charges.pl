@@ -29,7 +29,7 @@ use Koha::Acquisition::Invoice::Adjustments;
 
 =head1 NAME
 
-edi_process_service_charges.pl - Process MOA+203 service charges from EDI invoices
+edi_process_service_charges.pl - Process MOA+8 service charges from EDI invoices
 
 =head1 SYNOPSIS
 
@@ -38,10 +38,14 @@ edi_process_service_charges.pl [--confirm|--execute] [--dry-run] [--help] [--ver
 =head1 DESCRIPTION
 
 This script processes EDI invoice messages that have been received and creates
-invoice adjustments for any MOA+203 service charges found in the EDIFACT data.
+invoice adjustments for any MOA+8 service charges found in the EDIFACT data.
 
 It should be run after edi_cron.pl to capture service charges that are not 
 handled by the standard EDI processing.
+
+IMPORTANT: Since MOA+128/203 totals are inclusive of service charges, this script
+also reduces the orderline unit prices to avoid double-counting when service 
+charges are extracted as separate adjustments.
 
 =head1 OPTIONS
 
@@ -71,15 +75,15 @@ use Getopt::Long;
 use Pod::Usage;
 
 my $help    = 0;
-my $dry_run = 1;  # Default to dry-run mode
+my $dry_run = 1;    # Default to dry-run mode
 my $confirm = 0;
 my $verbose = 0;
 
 GetOptions(
-    'help|?'           => \$help,
-    'dry-run'          => \$dry_run,
-    'confirm|execute'  => \$confirm,
-    'verbose'          => \$verbose,
+    'help|?'          => \$help,
+    'dry-run'         => \$dry_run,
+    'confirm|execute' => \$confirm,
+    'verbose'         => \$verbose,
 ) or pod2usage(2);
 
 # If --confirm is specified, disable dry-run mode
@@ -159,13 +163,14 @@ sub process_invoice_service_charges {
             my $koha_invoice = find_koha_invoice_for_message($invoice_message);
 
             if ($koha_invoice) {
+
                 # Get vendor name and map to budget ID
                 my $vendor_name = get_vendor_name_from_message($invoice_message);
-                my $budget_id = map_vendor_to_budget_id($vendor_name);
-                
+                my $budget_id   = map_vendor_to_budget_id($vendor_name);
+
                 print "  Vendor: $vendor_name -> Budget: $budget_id\n" if $verbose && $vendor_name;
-                
-                my $reason   = $type eq 'charge' ? 'EDI_CHARGE' : 'EDI_ALLOWANCE';
+
+                my $reason = $type eq 'charge' ? 'EDI_CHARGE' : 'EDI_ALLOWANCE';
                 $amount = $amount * -1 if ( $type ne 'charge' );
                 my $existing = $schema->resultset('AqinvoiceAdjustment')->search(
                     {
@@ -233,7 +238,7 @@ sub process_invoice_service_charges {
                 }
 
                 # Check if we already have this adjustment
-                my $reason              = $type eq 'charge' ? 'EDI_CHARGE' : 'EDI_ALLOWANCE';
+                my $reason = $type eq 'charge' ? 'EDI_CHARGE' : 'EDI_ALLOWANCE';
                 $amount = $amount * -1 if ( $type ne 'charge' );
                 my $existing_adjustment = $schema->resultset('AqinvoiceAdjustment')->search(
                     {
@@ -252,14 +257,15 @@ sub process_invoice_service_charges {
 
                 # Get vendor name and map to budget ID
                 my $vendor_name = get_vendor_name_from_message($invoice_message);
-                my $budget_id = map_vendor_to_budget_id($vendor_name);
-                
+                my $budget_id   = map_vendor_to_budget_id($vendor_name);
+
                 print "  Vendor: $vendor_name -> Budget: $budget_id\n" if $verbose && $vendor_name;
 
                 if ( !$dry_run ) {
+
                     # Create the invoice adjustment with enhanced order linkage
                     my $ordernumber = $line->ordernumber();
-                    my $note = sprintf(
+                    my $note        = sprintf(
                         'EDI %s: Order #%s | EDI Line: %s | Service: %s%s',
                         ucfirst($type),
                         $ordernumber || 'Unknown',
@@ -281,8 +287,21 @@ sub process_invoice_service_charges {
 
                     print "  Created adjustment ID " . $adjustment->adjustment_id . " for $amount\n" if $verbose;
                     $logger->info( "Created $type adjustment for invoice " . $koha_invoice->invoiceid . ": $amount" );
+
+                    # Adjust the orderline to avoid double-counting service charges
+                    # Service charges are included in MOA+128/203 totals but we're extracting them separately
+                    if ( $type eq 'charge' && $ordernumber ) {
+                        adjust_orderline_for_service_charge( $ordernumber, $amount, $verbose );
+                    }
                 } else {
-                    print "  Would create $type adjustment for invoice " . $koha_invoice->invoiceid . ": $amount (Budget: $budget_id)\n";
+                    print "  Would create $type adjustment for invoice "
+                        . $koha_invoice->invoiceid
+                        . ": $amount (Budget: $budget_id)\n";
+                    if ( $type eq 'charge' ) {
+                        my $ordernumber = $line->ordernumber();
+                        print "  Would reduce orderline $ordernumber by $amount to avoid double-counting\n"
+                            if $ordernumber;
+                    }
                 }
 
                 $adjustments_created++;
@@ -380,34 +399,34 @@ sub get_line_allowances_charges {
 
 sub get_vendor_name_from_message {
     my ($invoice_message) = @_;
-    
+
     return '' unless $invoice_message;
-    
+
     # Try direct vendor relationship first
-    if ($invoice_message->vendor) {
+    if ( $invoice_message->vendor ) {
         return $invoice_message->vendor->name;
     }
-    
+
     # Fall back to EDI account relationship
-    if ($invoice_message->edi_acct && $invoice_message->edi_acct->vendor) {
+    if ( $invoice_message->edi_acct && $invoice_message->edi_acct->vendor ) {
         return $invoice_message->edi_acct->vendor->name;
     }
-    
+
     return '';
 }
 
 sub map_vendor_to_budget_id {
     my ($vendor_name) = @_;
-    
+
     return '' unless $vendor_name;
-    
+
     # Map vendor names to budget IDs
-    if ($vendor_name =~ /^WCC\b/i) {
-        return '104'; #'WCHG';
-    } elsif ($vendor_name =~ /^RBKC\b/i) {
-        return '76'; #KCHG';
+    if ( $vendor_name =~ /^WCC\b/i ) {
+        return '104';    #'WCHG';
+    } elsif ( $vendor_name =~ /^RBKC\b/i ) {
+        return '76';     #KCHG';
     }
-    
+
     # Default fallback - could be made configurable
     return '';
 }
@@ -423,6 +442,40 @@ sub find_koha_invoice_for_line {
     return unless $order && $order->get_column('invoiceid');
 
     return $schema->resultset('Aqinvoice')->find( $order->get_column('invoiceid') );
+}
+
+sub adjust_orderline_for_service_charge {
+    my ( $ordernumber, $service_charge_amount, $verbose ) = @_;
+
+    my $order = $schema->resultset('Aqorder')->find($ordernumber);
+    return unless $order;
+
+    # Calculate the per-unit service charge reduction
+    # Service charges in MOA+8 are for the entire line quantity
+    my $quantity           = $order->quantity || 1;
+    my $per_unit_reduction = $service_charge_amount / $quantity;
+
+    # Reduce the order's unitprice_tax_included and unitprice_tax_excluded by the per-unit service charge amount
+    # to avoid double-counting since the service charge is already included in the MOA+128/203 totals
+    my $current_price_inc = $order->unitprice_tax_included || 0;
+    my $current_price_exc = $order->unitprice_tax_excluded || 0;
+
+    my $new_price_inc = $current_price_inc - $per_unit_reduction;
+    my $new_price_exc = $current_price_exc - $per_unit_reduction;
+
+    $order->update(
+        {
+            unitprice_tax_included => $new_price_inc,
+            unitprice_tax_excluded => $new_price_exc,
+        }
+    );
+
+    print
+        "  Reduced order $ordernumber unit price from $current_price_inc to $new_price_inc (qty: $quantity, total service charge: $service_charge_amount, per-unit: $per_unit_reduction)\n"
+        if $verbose;
+    $logger->info(
+        "Adjusted order $ordernumber to remove service charge double-counting: total=$service_charge_amount, per-unit=$per_unit_reduction"
+    );
 }
 
 =head1 SETUP INSTRUCTIONS
