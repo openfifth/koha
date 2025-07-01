@@ -29,7 +29,7 @@ use Koha::Acquisition::Invoice::Adjustments;
 
 =head1 NAME
 
-edi_process_service_charges.pl - Process MOA+8 service charges from EDI invoices
+edi_process_service_charges.pl - Process MOA+8 service charges (ALC+C) from EDI invoices
 
 =head1 SYNOPSIS
 
@@ -38,7 +38,8 @@ edi_process_service_charges.pl [--confirm|--execute] [--dry-run] [--help] [--ver
 =head1 DESCRIPTION
 
 This script processes EDI invoice messages that have been received and creates
-invoice adjustments for any MOA+8 service charges found in the EDIFACT data.
+invoice adjustments for any MOA+8 service charges (ALC+C) found in the EDIFACT data.
+Allowances (ALC+A) are skipped as they don't require separate adjustments.
 
 It should be run after edi_cron.pl to capture service charges that are not 
 handled by the standard EDI processing.
@@ -166,14 +167,19 @@ sub process_invoice_service_charges {
 
             print "  Found invoice-level $type: $amount ($service_code)\n" if $verbose;
 
+            # Skip allowances - only process charges
+            if ($type eq 'allowance') {
+                print "  Skipping allowance - not creating adjustment\n" if $verbose;
+                next;
+            }
+
             # Get vendor name and map to budget ID
             my $vendor_name = get_vendor_name_from_message($invoice_message);
             my $budget_id   = map_vendor_to_budget_id($vendor_name);
 
             print "  Vendor: $vendor_name -> Budget: $budget_id\n" if $verbose && $vendor_name;
 
-            my $reason = $type eq 'charge' ? 'EDI_CHARGE' : 'EDI_ALLOWANCE';
-            $amount = $amount * -1 if ( $type ne 'charge' );
+            my $reason = 'EDI_CHARGE';  # Only processing charges now
             my $existing = $schema->resultset('AqinvoiceAdjustment')->search(
                 {
                     invoiceid  => $koha_invoice->invoiceid,
@@ -229,9 +235,14 @@ sub process_invoice_service_charges {
 
                 print "  Found $type: $amount ($service_code) for line " . $line->line_item_number . "\n" if $verbose;
 
+                # Skip allowances - only process charges
+                if ($type eq 'allowance') {
+                    print "  Skipping line-level allowance - not creating adjustment\n" if $verbose;
+                    next;
+                }
+
                 # Check if we already have this adjustment
-                my $reason = $type eq 'charge' ? 'EDI_CHARGE' : 'EDI_ALLOWANCE';
-                $amount = $amount * -1 if ( $type ne 'charge' );
+                my $reason = 'EDI_CHARGE';  # Only processing charges now
                 my $existing_adjustment = $schema->resultset('AqinvoiceAdjustment')->search(
                     {
                         invoiceid  => $koha_invoice->invoiceid,
@@ -510,7 +521,6 @@ sub adjust_orderline_for_service_charge {
    - Go to Administration > Authorised Values
    - Add category ADJ_REASON if it doesn't exist
    - Add value: EDI_CHARGE with description "EDI Charge (ALC+C)"
-   - Add value: EDI_ALLOWANCE with description "EDI Allowance (ALC+A)"
 
 3. Test with dry-run first (default behavior):
    ./edi_process_service_charges.pl --verbose
