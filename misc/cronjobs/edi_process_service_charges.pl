@@ -432,6 +432,10 @@ sub adjust_orderline_for_service_charge {
 
     # Find the received/completed order that was created for this invoice
     # When orders are split, we need to adjust the received order, not the original
+    
+    # First get the parent_ordernumber from the original order to find all related orders
+    my $parent_ordernumber = $original_order->parent_ordernumber || $ordernumber;
+    
     my $order_to_adjust = $schema->resultset('Aqorder')->search({
         -and => [
             { invoiceid => $koha_invoice->invoiceid },
@@ -439,9 +443,12 @@ sub adjust_orderline_for_service_charge {
                 -or => [
                     # Either the original order if it was fully received
                     { ordernumber => $ordernumber },
-                    # Or find the received order copy if it was partially received
-                    # The received order will have parent_ordernumber pointing to original
-                    { parent_ordernumber => $ordernumber, orderstatus => 'complete' }
+                    # Or find any split order from the same parent that was receipted on this invoice
+                    { 
+                        parent_ordernumber => $parent_ordernumber,
+                        ordernumber => { '!=' => $ordernumber },
+                        orderstatus => 'complete'
+                    }
                 ]
             }
         ]
@@ -453,6 +460,12 @@ sub adjust_orderline_for_service_charge {
     }
 
     my $actual_ordernumber = $order_to_adjust->ordernumber;
+    
+    if ($verbose && $actual_ordernumber != $ordernumber) {
+        print "  Found split order: EDI references $ordernumber, adjusting received order $actual_ordernumber (parent: $parent_ordernumber)\n";
+    } elsif ($verbose) {
+        print "  Using original order $ordernumber (no split occurred)\n";
+    }
     
     # Calculate the per-unit service charge reduction
     # Service charges in MOA+8 are for the entire received quantity
