@@ -283,7 +283,7 @@ sub process_invoice_service_charges {
                     # Adjust the orderline to avoid double-counting service charges
                     # Service charges are included in MOA+128/203 totals but we're extracting them separately
                     if ( $type eq 'charge' && $ordernumber ) {
-                        adjust_orderline_for_service_charge( $ordernumber, $amount, $verbose );
+                        adjust_orderline_for_service_charge( $ordernumber, $amount, $verbose, $koha_invoice );
                     }
                 } else {
                     print "  Would create $type adjustment for invoice "
@@ -425,36 +425,61 @@ sub map_vendor_to_budget_id {
 }
 
 sub adjust_orderline_for_service_charge {
-    my ( $ordernumber, $service_charge_amount, $verbose ) = @_;
+    my ( $ordernumber, $service_charge_amount, $verbose, $koha_invoice ) = @_;
 
-    my $order = $schema->resultset('Aqorder')->find($ordernumber);
-    return unless $order;
+    my $original_order = $schema->resultset('Aqorder')->find($ordernumber);
+    return unless $original_order;
 
+    # Find the received/completed order that was created for this invoice
+    # When orders are split, we need to adjust the received order, not the original
+    my $order_to_adjust = $schema->resultset('Aqorder')->search({
+        -and => [
+            { invoiceid => $koha_invoice->invoiceid },
+            { 
+                -or => [
+                    # Either the original order if it was fully received
+                    { ordernumber => $ordernumber },
+                    # Or find the received order copy if it was partially received
+                    # The received order will have parent_ordernumber pointing to original
+                    { parent_ordernumber => $ordernumber, orderstatus => 'complete' }
+                ]
+            }
+        ]
+    })->first;
+
+    unless ($order_to_adjust) {
+        print "  WARNING: Could not find received order for original order $ordernumber on invoice " . $koha_invoice->invoiceid . "\n" if $verbose;
+        return;
+    }
+
+    my $actual_ordernumber = $order_to_adjust->ordernumber;
+    
     # Calculate the per-unit service charge reduction
-    # Service charges in MOA+8 are for the entire line quantity
-    my $quantity           = $order->quantity || 1;
+    # Service charges in MOA+8 are for the entire received quantity
+    my $quantity           = $order_to_adjust->quantityreceived || $order_to_adjust->quantity || 1;
     my $per_unit_reduction = $service_charge_amount / $quantity;
 
     # Reduce the order's unitprice_tax_included and unitprice_tax_excluded by the per-unit service charge amount
     # to avoid double-counting since the service charge is already included in the MOA+128/203 totals
-    my $current_price_inc = $order->unitprice_tax_included || 0;
-    my $current_price_exc = $order->unitprice_tax_excluded || 0;
+    my $current_price_inc = $order_to_adjust->unitprice_tax_included || 0;
+    my $current_price_exc = $order_to_adjust->unitprice_tax_excluded || 0;
 
     my $new_price_inc = $current_price_inc - $per_unit_reduction;
     my $new_price_exc = $current_price_exc - $per_unit_reduction;
 
-    $order->update(
+    $order_to_adjust->update(
         {
             unitprice_tax_included => $new_price_inc,
             unitprice_tax_excluded => $new_price_exc,
         }
     );
 
+    my $order_type = ($actual_ordernumber != $ordernumber) ? "received order $actual_ordernumber (split from $ordernumber)" : "order $actual_ordernumber";
     print
-        "  Reduced order $ordernumber unit price from $current_price_inc to $new_price_inc (qty: $quantity, total service charge: $service_charge_amount, per-unit: $per_unit_reduction)\n"
+        "  Reduced $order_type unit price from $current_price_inc to $new_price_inc (qty: $quantity, total service charge: $service_charge_amount, per-unit: $per_unit_reduction)\n"
         if $verbose;
     $logger->info(
-        "Adjusted order $ordernumber to remove service charge double-counting: total=$service_charge_amount, per-unit=$per_unit_reduction"
+        "Adjusted $order_type to remove service charge double-counting: total=$service_charge_amount, per-unit=$per_unit_reduction"
     );
 }
 
