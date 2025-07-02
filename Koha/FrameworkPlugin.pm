@@ -211,8 +211,11 @@ sub _error {
 sub _load {
     my ( $self ) = @_;
 
-    # Try to find the class that can handle this plugin
-    my @plugins = Koha::Plugins->new()->get_valuebuilders_installed();
+    # Try to find the class that can handle this plugin - but only if plugins are enabled
+    my @plugins;
+    if ( C4::Context->config("enable_plugins") ) {
+        @plugins = Koha::Plugins->new()->get_valuebuilders_installed();
+    }
 
     foreach my $vb (@plugins) {
         my $plugin = $vb->{plugin};
