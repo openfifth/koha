@@ -66,8 +66,8 @@ my $user           = $input->remote_user;
 my $library_id = C4::Context->userenv->{'branch'};
 my $total_due  = $account->outstanding_debits->total_outstanding;
 
-my $total_paid      = $input->param('paid');
-my $total_collected = $input->param('collected');
+my $total_paid     = $input->param('paid');
+my $total_tendered = $input->param('tendered');
 
 my $selected_lines = $input->param('selected'); # comes from pay.pl
 my $pay_individual   = $input->param('pay_individual');
@@ -143,7 +143,7 @@ if ( $total_paid and $total_paid ne '0.00' ) {
             error_over => 1,
             total_due => $total_due
         );
-    } elsif ( $total_collected < $total_paid && !( $writeoff_individual || $type eq 'WRITEOFF' ) ) {
+    } elsif ( $total_tendered < $total_paid && !( $writeoff_individual || $type eq 'WRITEOFF' ) ) {
         $template->param(
             error_under => 1,
             total_paid => $total_paid
@@ -263,7 +263,7 @@ if ( $total_paid and $total_paid ne '0.00' ) {
         }
         my $append = scalar @renew_result ? '&' . join('&', @renew_result) : '';
 
-        $url .= "?borrowernumber=$borrowernumber&payment_id=$payment_id&change_given=$change_given&tendered=$total_collected";
+        $url .= "?borrowernumber=$borrowernumber&payment_id=$payment_id&change_given=$change_given&tendered=$total_tendered";
 	$url .= $append;
 
         print $input->redirect($url);

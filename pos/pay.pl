@@ -79,7 +79,7 @@ if ( $total_paid and $total_paid ne '0.00' ) {
 
     $template->param(
         payment_id => $payment->accountlines_id,
-        collected  => scalar $input->param('collected'),
+        tendered  => scalar $input->param('tendered'),
         change     => scalar $input->param('change')
     );
 }
@@ -87,7 +87,7 @@ if ( $total_paid and $total_paid ne '0.00' ) {
 if ( $action eq 'send' ) {
     my $payment_id = $input->param('payment_id');
     my $change     = $input->param('change');
-    my $collected  = $input->param('collected');
+    my $tendered   = $input->param('tendered');
     my $toaddr     = $input->param('toaddr');
 
     # Create our letter from the template
@@ -100,8 +100,8 @@ if ( $action eq 'send' ) {
             credits => $payment_id,
         },
         substitute => {
-            collected => $collected,
-            change    => $change
+            tendered => $tendered,
+            change   => $change
         }
     );
 
@@ -121,7 +121,7 @@ if ( $action eq 'send' ) {
     # Set variables for template to allow printing still
     $template->param(
         payment_id => $payment_id,
-        collected  => $collected,
+        tendered   => $tendered,
         change     => $change
     );
 }
