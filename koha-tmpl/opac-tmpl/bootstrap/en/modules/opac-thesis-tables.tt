@@ -82,7 +82,7 @@
                 "responsive": {
                     "details": { "type": 'column',"target": -1 }
                 },
-                "cColumnDefs": [
+                "columnDefs": [
                     { "className": 'dtr-control', "orderable": false, "targets": -1 },
                 ],
             }, table_settings );
