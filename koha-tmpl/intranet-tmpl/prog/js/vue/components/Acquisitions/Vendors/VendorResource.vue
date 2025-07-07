@@ -6,10 +6,10 @@
 </template>
 <script>
 import { inject } from "vue";
-import BaseResource from "../BaseResource.vue";
-import { useBaseResource } from "../../composables/base-resource.js";
+import BaseResource from "../../BaseResource.vue";
+import { useBaseResource } from "../../../composables/base-resource.js";
 import { storeToRefs } from "pinia";
-import { APIClient } from "../../fetch/api-client.js";
+import { APIClient } from "../../../fetch/api-client.js";
 import { $__ } from "@koha-vue/i18n";
 
 export default {

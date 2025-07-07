@@ -31,7 +31,6 @@ import App from "../../components/Acquisitions/FundManagement/Main.vue";
 import { routes as routesDef } from "../../routes/acquisitions/fundManagement.js";
 import { useMainStore } from "../../stores/main";
 import { useNavigationStore } from "../../stores/navigation";
-import { usePermissionsStore } from "../../stores/permissions";
 import { useAcquisitionsStore } from "../../stores/acquisitions";
 import i18n from "../../i18n";
 
@@ -39,7 +38,6 @@ const pinia = createPinia();
 const mainStore = useMainStore(pinia);
 const acquisitionsStore = useAcquisitionsStore(pinia);
 const navigationStore = useNavigationStore(pinia);
-const permissionsStore = usePermissionsStore(pinia);
 const routes = navigationStore.setRoutes(routesDef);
 
 const router = createRouter({

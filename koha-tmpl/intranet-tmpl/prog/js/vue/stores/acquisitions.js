@@ -1,8 +1,9 @@
 import { defineStore } from "pinia";
 import { permissionsMatrix } from "../data/permissionsMatrix";
+import { reactive } from "vue";
 
-export const useAcquisitionsStore = defineStore("acquisitions", {
-    state: () => ({
+export const useAcquisitionsStore = defineStore("acquisitions", () => {
+    const store = reactive({
         user: {
             loggedInUser: null,
             userflags: null,
@@ -19,8 +20,8 @@ export const useAcquisitionsStore = defineStore("acquisitions", {
         },
         permissionsMatrix: permissionsMatrix,
         currencies: [],
-    }),
-    actions: {
+    });
+    const actions = {
         determineBranch(code) {
             if (code) {
                 return code;
@@ -305,8 +306,8 @@ export const useAcquisitionsStore = defineStore("acquisitions", {
             });
             return groupInfo;
         },
-    },
-    getters: {
+    };
+    const getters = {
         modulesEnabled() {
             const modulesEnabled = this.settings.modulesEnabled;
             return modulesEnabled.value ? modulesEnabled.value : "";
@@ -319,5 +320,11 @@ export const useAcquisitionsStore = defineStore("acquisitions", {
         getOwners() {
             return this.owners;
         },
-    },
+    };
+
+    return {
+        ...toRefs(store),
+        ...actions,
+        ...getters,
+    };
 });

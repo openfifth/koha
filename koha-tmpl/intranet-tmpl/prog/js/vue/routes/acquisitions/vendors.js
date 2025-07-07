@@ -1,7 +1,7 @@
 import { markRaw } from "vue";
 
-import Home from "../components/Vendors/Home.vue";
-import ResourceWrapper from "../components/ResourceWrapper.vue";
+import Home from "../../components/Acquisitions/Vendors/Home.vue";
+import ResourceWrapper from "../../components/ResourceWrapper.vue";
 
 import { $__ } from "@koha-vue/i18n";
 
