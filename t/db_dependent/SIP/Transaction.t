@@ -1027,8 +1027,10 @@ subtest do_checkout_with_noblock => sub {
       $ils->checkout( $patron->cardnumber, $item->barcode, undef, undef,
         $server->{account}, '19990102    030405' );
 
-    is( $patron->checkouts->count,
-        1, 'No Block checkout was performed for debarred patron' );
+    is(
+        $patron->checkouts->count,
+        1, 'No Block checkout was performed for debarred patron'
+    );
 
     # Test Bug 32934: SIP checkout with no_block_due_date should honor the specified due date
     $sip_patron = C4::SIP::ILS::Patron->new( $patron->cardnumber );
