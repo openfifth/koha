@@ -33,9 +33,10 @@ import Breadcrumbs from "../../Breadcrumbs.vue"
 import Help from "../../Help.vue"
 import Dialog from "../../Dialog.vue"
 import "vue-select/dist/vue-select.css"
-import { inject } from "vue"
+import { inject, onBeforeMount, ref } from "vue"
 import { storeToRefs } from "pinia"
 import { APIClient } from "../../../fetch/api-client.js"
+import { useRoute } from 'vue-router'
 
 export default {
     components: {
@@ -48,14 +49,13 @@ export default {
         const mainStore = inject("mainStore")
         const { loading, loaded, setError } = mainStore
 
-        const AVStore = inject("AVStore")
-
         const acquisitionsStore = inject("acquisitionsStore")
         const {
             filterUsersByPermissions,
             filterLibGroupsByUsersBranchcode,
             convertSettingsToObject,
             setLibraryGroups,
+            loadAuthorisedValues
         } = acquisitionsStore
         const {
             user,
@@ -66,7 +66,55 @@ export default {
             visibleGroups,
             owners,
             currencies,
+            authorisedValues
         } = storeToRefs(acquisitionsStore)
+
+        const initialized = ref(false);
+        const userPermitted = ref(false);
+
+        const route = useRoute()
+        onBeforeMount(() => {
+            loading();
+
+            const libraryClient = APIClient.libraries
+            libraryClient.libraryGroups.getAll().then(
+                libraryGroups => {
+                    setLibraryGroups(libraryGroups)
+                },
+                error => {}
+            )
+
+            loadAuthorisedValues(authorisedValues.value, acquisitionsStore).then(() => {
+                permittedUsers.value = permitted_patrons
+                const { permission } = route.meta.self
+                const permissionRequired = permission ? permission : null
+                user.value.loggedInUser = logged_in_user
+                user.value.loggedInUser.loggedInBranch =
+                    logged_in_branch.branchcode
+                user.value.userflags = userflags
+                currencies.value = currencies
+                const { acquisition, superlibrarian } = user.value.userflags
+                if (!acquisition && !superlibrarian) {
+                    return setError(
+                        $__(
+                            "You do not have permission to access this module. Please contact your system administrator."
+                        ),
+                        false
+                    )
+                }
+                owners.value =
+                    filterUsersByPermissions(permissionRequired)
+                visibleGroups.value = filterLibGroupsByUsersBranchcode()
+                settings.value = {
+                    modulesEnabled: {
+                        value: "funds",
+                    },
+                }
+                userPermitted.value = true
+                loaded()
+                initialized.value = true
+            })
+        })
 
         return {
             setError,
@@ -82,85 +130,13 @@ export default {
             filterUsersByPermissions,
             filterLibGroupsByUsersBranchcode,
             convertSettingsToObject,
-            AVStore,
             currencies,
             setLibraryGroups,
+            initialized,
+            userPermitted,
+            authorisedValues
         }
-    },
-    data() {
-        return {
-            initialized: false,
-            userPermitted: false,
-        }
-    },
-    beforeCreate() {
-        this.loading()
-
-        const libraryClient = APIClient.libraries
-        libraryClient.libraryGroups.getAll().then(
-            libraryGroups => {
-                this.setLibraryGroups(libraryGroups)
-            },
-            error => {}
-        )
-
-        const fetch_config = async () => {
-            const authorised_values = {
-                acquire_fund_types: "ACQUIRE_FUND_TYPE",
-            }
-            const av_cat_array = Object.keys(authorised_values).map(function (
-                av_cat
-            ) {
-                return '"' + authorised_values[av_cat] + '"'
-            })
-            const av_client = APIClient.authorised_values
-            await av_client.values
-                .getCategoriesWithValues(av_cat_array)
-                .then(av_categories => {
-                    Object.entries(authorised_values).forEach(
-                        ([av_var, av_cat]) => {
-                            const av_match = av_categories.find(
-                                element => element.category_name == av_cat
-                            )
-                            this.AVStore[av_var] = av_match.authorised_values
-                        }
-                    )
-                })
-                .then(() => {
-                    this.permittedUsers = permitted_patrons
-                    const { permission } = this.$route.meta.self
-                    const permissionRequired = permission ? permission : null
-                    this.user.loggedInUser = logged_in_user
-                    this.user.loggedInUser.loggedInBranch =
-                        logged_in_branch.branchcode
-                    this.user.userflags = userflags
-                    // this.libraryGroups = library_groups
-                    this.currencies = currencies
-                    const { acquisition, superlibrarian } = this.user.userflags
-                    if (!acquisition && !superlibrarian) {
-                        return this.setError(
-                            this.$__(
-                                "You do not have permission to access this module. Please contact your system administrator."
-                            ),
-                            false
-                        )
-                    }
-                    this.owners =
-                        this.filterUsersByPermissions(permissionRequired)
-                    this.visibleGroups = this.filterLibGroupsByUsersBranchcode()
-                    this.settings = {
-                        modulesEnabled: {
-                            value: "funds",
-                        },
-                    }
-                    this.userPermitted = true
-                    this.loaded()
-                    this.initialized = true
-                })
-        }
-
-        fetch_config()
-    },
+    }
 }
 </script>
 

@@ -58,7 +58,7 @@
                         id="fund_fund_type"
                         v-model="filters.fund_type"
                         :reduce="av => av.value"
-                        :options="acquire_fund_types"
+                        :options="authorisedValues.acquire_fund_types"
                         label="description"
                     >
                         <template #search="{ attributes, events }">
@@ -188,10 +188,7 @@ export default {
     setup() {
         const acquisitionsStore = inject("acquisitionsStore")
         const { isUserPermitted } = acquisitionsStore
-        const { getOwners } = storeToRefs(acquisitionsStore)
-
-        const AVStore = inject("AVStore")
-        const { acquire_fund_types } = storeToRefs(AVStore)
+        const { getOwners, authorisedValues } = storeToRefs(acquisitionsStore)
 
         const ledgersTable = ref()
         const fundsTable = ref()
@@ -200,7 +197,7 @@ export default {
             isUserPermitted,
             ledgersTable,
             fundsTable,
-            acquire_fund_types,
+            authorisedValues,
             getOwners,
         }
     },

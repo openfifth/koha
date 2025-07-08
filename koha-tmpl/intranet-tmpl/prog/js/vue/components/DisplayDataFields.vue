@@ -33,8 +33,8 @@ export default {
         },
     },
     setup() {
-        const AVStore = inject("AVStore")
-        const { get_lib_from_av } = AVStore
+        const acquisitionsStore = inject("acquisitionsStore")
+        const { get_lib_from_av } = acquisitionsStore
 
         return {
             get_lib_from_av,
