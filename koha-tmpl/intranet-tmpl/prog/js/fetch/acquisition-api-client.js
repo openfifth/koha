@@ -78,14 +78,14 @@ export class AcquisitionAPIClient {
     get fiscalPeriods() {
         return {
             get: (id, headers) =>
-                this.get({
+                this.httpClient.get({
                     endpoint: "fiscal_periods/" + id,
                     ...(headers && {
                         headers,
                     }),
                 }),
             getAll: (query, params, headers) =>
-                this.getAll({
+                this.httpClient.getAll({
                     endpoint: "fiscal_periods",
                     query,
                     params,
@@ -94,21 +94,21 @@ export class AcquisitionAPIClient {
                     }),
                 }),
             delete: id =>
-                this.delete({
+                this.httpClient.delete({
                     endpoint: "fiscal_periods/" + id,
                 }),
             create: fiscal_period =>
-                this.post({
+                this.httpClient.post({
                     endpoint: "fiscal_periods",
                     body: fiscal_period,
                 }),
             update: (fiscal_period, id) =>
-                this.put({
+                this.httpClient.put({
                     endpoint: "fiscal_periods/" + id,
                     body: fiscal_period,
                 }),
             count: (query = {}) =>
-                this.count({
+                this.httpClient.count({
                     endpoint:
                         "fiscal_periods?" +
                         new URLSearchParams({
@@ -123,12 +123,12 @@ export class AcquisitionAPIClient {
     get ledgers() {
         return {
             get: (id, headers) =>
-                this.get({
+                this.httpClient.get({
                     endpoint: "ledgers/" + id,
                     ...(headers && { headers }),
                 }),
             getAll: (query, params, headers) =>
-                this.getAll({
+                this.httpClient.getAll({
                     endpoint: "ledgers",
                     query,
                     params,
@@ -137,21 +137,21 @@ export class AcquisitionAPIClient {
                     }),
                 }),
             delete: id =>
-                this.delete({
+                this.httpClient.delete({
                     endpoint: "ledgers/" + id,
                 }),
             create: ledger =>
-                this.post({
+                this.httpClient.post({
                     endpoint: "ledgers",
                     body: ledger,
                 }),
             update: (ledger, id) =>
-                this.put({
+                this.httpClient.put({
                     endpoint: "ledgers/" + id,
                     body: ledger,
                 }),
             count: (query = {}) =>
-                this.count({
+                this.httpClient.count({
                     endpoint:
                         "ledgers?" +
                         new URLSearchParams({
@@ -166,12 +166,12 @@ export class AcquisitionAPIClient {
     get funds() {
         return {
             get: (id, headers) =>
-                this.get({
+                this.httpClient.get({
                     endpoint: "funds/" + id,
                     ...(headers && { headers }),
                 }),
             getAll: (query, params, headers) =>
-                this.getAll({
+                this.httpClient.getAll({
                     endpoint: "funds",
                     query,
                     params,
@@ -180,21 +180,21 @@ export class AcquisitionAPIClient {
                     }),
                 }),
             delete: id =>
-                this.delete({
+                this.httpClient.delete({
                     endpoint: "funds/" + id,
                 }),
             create: fund =>
-                this.post({
+                this.httpClient.post({
                     endpoint: "funds",
                     body: fund,
                 }),
             update: (fund, id) =>
-                this.put({
+                this.httpClient.put({
                     endpoint: "funds/" + id,
                     body: fund,
                 }),
             count: (query = {}) =>
-                this.count({
+                this.httpClient.count({
                     endpoint:
                         "funds?" +
                         new URLSearchParams({
@@ -204,7 +204,7 @@ export class AcquisitionAPIClient {
                         }),
                 }),
             getFundGroup: (query, params, headers) =>
-                this.getAll({
+                this.httpClient.getAll({
                     endpoint: "fund_groups",
                     query,
                     params,
@@ -218,12 +218,12 @@ export class AcquisitionAPIClient {
     get subFunds() {
         return {
             get: (id, headers) =>
-                this.get({
+                this.httpClient.get({
                     endpoint: "sub_funds/" + id,
                     ...(headers && { headers }),
                 }),
             getAll: (query, params, headers) =>
-                this.getAll({
+                this.httpClient.getAll({
                     endpoint: "sub_funds",
                     query,
                     params,
@@ -232,21 +232,21 @@ export class AcquisitionAPIClient {
                     }),
                 }),
             delete: id =>
-                this.delete({
+                this.httpClient.delete({
                     endpoint: "sub_funds/" + id,
                 }),
             create: fund =>
-                this.post({
+                this.httpClient.post({
                     endpoint: "sub_funds",
                     body: fund,
                 }),
             update: (fund, id) =>
-                this.put({
+                this.httpClient.put({
                     endpoint: "sub_funds/" + id,
                     body: fund,
                 }),
             count: (query = {}) =>
-                this.count({
+                this.httpClient.count({
                     endpoint:
                         "sub_funds?" +
                         new URLSearchParams({
@@ -261,14 +261,14 @@ export class AcquisitionAPIClient {
     get fundAllocations() {
         return {
             get: (id, headers) =>
-                this.get({
+                this.httpClient.get({
                     endpoint: "fund_allocations/" + id,
                     ...(headers && {
                         headers,
                     }),
                 }),
             getAll: (query, params, headers) =>
-                this.getAll({
+                this.httpClient.getAll({
                     endpoint: "fund_allocations",
                     query,
                     params,
@@ -277,26 +277,26 @@ export class AcquisitionAPIClient {
                     }),
                 }),
             delete: id =>
-                this.delete({
+                this.httpClient.delete({
                     endpoint: "fund_allocations/" + id,
                 }),
             create: fund_allocation =>
-                this.post({
+                this.httpClient.post({
                     endpoint: "fund_allocations",
                     body: fund_allocation,
                 }),
             transfer: fund_allocation =>
-                this.post({
+                this.httpClient.post({
                     endpoint: "fund_allocations/transfer",
                     body: fund_allocation,
                 }),
             update: (fund_allocation, id) =>
-                this.put({
+                this.httpClient.put({
                     endpoint: "fund_allocations/" + id,
                     body: fund_allocation,
                 }),
             count: (query = {}) =>
-                this.count({
+                this.httpClient.count({
                     endpoint:
                         "fund_allocations?" +
                         new URLSearchParams({
@@ -311,14 +311,14 @@ export class AcquisitionAPIClient {
     get fundGroups() {
         return {
             get: (id, headers) =>
-                this.get({
+                this.httpClient.get({
                     endpoint: "fund_groups/" + id,
                     ...(headers && {
                         headers,
                     }),
                 }),
             getAll: (query, params, headers) =>
-                this.getAll({
+                this.httpClient.getAll({
                     endpoint: "fund_groups",
                     query,
                     params,
@@ -327,21 +327,21 @@ export class AcquisitionAPIClient {
                     }),
                 }),
             delete: id =>
-                this.delete({
+                this.httpClient.delete({
                     endpoint: "fund_groups/" + id,
                 }),
             create: fund_allocation =>
-                this.post({
+                this.httpClient.post({
                     endpoint: "fund_groups",
                     body: fund_allocation,
                 }),
             update: (fund_allocation, id) =>
-                this.put({
+                this.httpClient.put({
                     endpoint: "fund_groups/" + id,
                     body: fund_allocation,
                 }),
             count: (query = {}) =>
-                this.count({
+                this.httpClient.count({
                     endpoint:
                         "fund_groups?" +
                         new URLSearchParams({

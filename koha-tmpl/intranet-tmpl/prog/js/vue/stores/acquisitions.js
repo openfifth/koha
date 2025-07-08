@@ -1,6 +1,9 @@
 import { defineStore } from "pinia";
 import { permissionsMatrix } from "../data/permissionsMatrix";
 import { reactive } from "vue";
+import { toRefs } from "vue";
+import { withAuthorisedValueActions } from "../composables/authorisedValues";
+import { permissionsActions } from "../composables/permissions";
 
 export const useAcquisitionsStore = defineStore("acquisitions", () => {
     const store = reactive({
@@ -20,8 +23,13 @@ export const useAcquisitionsStore = defineStore("acquisitions", () => {
         },
         permissionsMatrix: permissionsMatrix,
         currencies: [],
+        authorisedValues: {
+            acquire_fund_types: "ACQUIRE_FUND_TYPE",
+        }
     });
     const actions = {
+        ...withAuthorisedValueActions(store),
+        ...permissionsActions(store),
         determineBranch(code) {
             if (code) {
                 return code;

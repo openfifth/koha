@@ -52,9 +52,7 @@ app.use(pinia);
 app.use(i18n);
 app.provide("navigationStore", navigationStore);
 app.provide("acquisitionsStore", acquisitionsStore);
-app.provide("permissionsStore", permissionsStore);
 app.provide("mainStore", mainStore);
-app.provide("AVStore", AVStore);
 app.component("v-select", vSelect);
 app.component("font-awesome-icon", FontAwesomeIcon);
 
@@ -103,7 +101,9 @@ const loadRouterAndMount = async () => {
     try {
         await router.isReady();
         app.mount("#__fundManagement");
-    } catch (err) {}
+    } catch (err) {
+        console.log(err)
+    }
 };
 
 loadRouterAndMount();
