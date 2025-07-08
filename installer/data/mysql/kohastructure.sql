@@ -6670,6 +6670,7 @@ CREATE TABLE `vendor_edi_accounts` (
   `auto_orders` tinyint(1) NOT NULL DEFAULT 0,
   `shipment_budget` int(11) DEFAULT NULL,
   `plugin` varchar(256) NOT NULL DEFAULT '',
+  `po_is_basketname` tinyint(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `vendorid` (`vendor_id`),
   KEY `shipmentbudget` (`shipment_budget`),
