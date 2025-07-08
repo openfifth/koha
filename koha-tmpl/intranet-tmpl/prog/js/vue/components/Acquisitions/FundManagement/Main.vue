@@ -28,15 +28,15 @@
 </template>
 
 <script>
-import LeftMenu from "../../LeftMenu.vue"
-import Breadcrumbs from "../../Breadcrumbs.vue"
-import Help from "../../Help.vue"
-import Dialog from "../../Dialog.vue"
-import "vue-select/dist/vue-select.css"
-import { inject, onBeforeMount, ref } from "vue"
-import { storeToRefs } from "pinia"
-import { APIClient } from "../../../fetch/api-client.js"
-import { useRoute } from 'vue-router'
+import LeftMenu from "../../LeftMenu.vue";
+import Breadcrumbs from "../../Breadcrumbs.vue";
+import Help from "../../Help.vue";
+import Dialog from "../../Dialog.vue";
+import "vue-select/dist/vue-select.css";
+import { inject, onBeforeMount, ref } from "vue";
+import { storeToRefs } from "pinia";
+import { APIClient } from "../../../fetch/api-client.js";
+import { useRoute } from "vue-router";
 
 export default {
     components: {
@@ -46,17 +46,17 @@ export default {
         Help,
     },
     setup() {
-        const mainStore = inject("mainStore")
-        const { loading, loaded, setError } = mainStore
+        const mainStore = inject("mainStore");
+        const { loading, loaded, setError } = mainStore;
 
-        const acquisitionsStore = inject("acquisitionsStore")
+        const acquisitionsStore = inject("acquisitionsStore");
         const {
             filterUsersByPermissions,
             filterLibGroupsByUsersBranchcode,
             convertSettingsToObject,
             setLibraryGroups,
-            loadAuthorisedValues
-        } = acquisitionsStore
+            loadAuthorisedValues,
+        } = acquisitionsStore;
         const {
             user,
             settings,
@@ -66,55 +66,63 @@ export default {
             visibleGroups,
             owners,
             currencies,
-            authorisedValues
-        } = storeToRefs(acquisitionsStore)
+            authorisedValues,
+            userPermissions,
+        } = storeToRefs(acquisitionsStore);
 
         const initialized = ref(false);
         const userPermitted = ref(false);
 
-        const route = useRoute()
+        const route = useRoute();
         onBeforeMount(() => {
             loading();
 
-            const libraryClient = APIClient.libraries
+            const libraryClient = APIClient.libraries;
             libraryClient.libraryGroups.getAll().then(
                 libraryGroups => {
-                    setLibraryGroups(libraryGroups)
+                    setLibraryGroups(libraryGroups);
                 },
                 error => {}
-            )
+            );
 
-            loadAuthorisedValues(authorisedValues.value, acquisitionsStore).then(() => {
-                permittedUsers.value = permitted_patrons
-                const { permission } = route.meta.self
-                const permissionRequired = permission ? permission : null
-                user.value.loggedInUser = logged_in_user
-                user.value.loggedInUser.loggedInBranch =
-                    logged_in_branch.branchcode
-                user.value.userflags = userflags
-                currencies.value = currencies
-                const { acquisition, superlibrarian } = user.value.userflags
-                if (!acquisition && !superlibrarian) {
-                    return setError(
-                        $__(
-                            "You do not have permission to access this module. Please contact your system administrator."
-                        ),
-                        false
-                    )
-                }
-                owners.value =
-                    filterUsersByPermissions(permissionRequired)
-                visibleGroups.value = filterLibGroupsByUsersBranchcode()
-                settings.value = {
-                    modulesEnabled: {
-                        value: "funds",
-                    },
-                }
-                userPermitted.value = true
-                loaded()
-                initialized.value = true
-            })
-        })
+            loadAuthorisedValues(
+                authorisedValues.value,
+                acquisitionsStore
+            ).then(() => {
+                const client = APIClient.acquisition;
+                client.config.get("fund_management").then(result => {
+                    userPermissions.value = result.permissions;
+                    permittedUsers.value = permitted_patrons;
+                    const { permission } = route.meta.self;
+                    const permissionRequired = permission ? permission : null;
+                    user.value.loggedInUser = logged_in_user;
+                    user.value.loggedInUser.loggedInBranch =
+                        logged_in_branch.branchcode;
+                    user.value.userflags = userflags;
+                    currencies.value = currencies;
+                    const { acquisition, superlibrarian } =
+                        user.value.userflags;
+                    if (!acquisition && !superlibrarian) {
+                        return setError(
+                            $__(
+                                "You do not have permission to access this module. Please contact your system administrator."
+                            ),
+                            false
+                        );
+                    }
+                    owners.value = filterUsersByPermissions(permissionRequired);
+                    visibleGroups.value = filterLibGroupsByUsersBranchcode();
+                    settings.value = {
+                        modulesEnabled: {
+                            value: "funds",
+                        },
+                    };
+                    userPermitted.value = true;
+                    loaded();
+                    initialized.value = true;
+                });
+            });
+        });
 
         return {
             setError,
@@ -134,10 +142,10 @@ export default {
             setLibraryGroups,
             initialized,
             userPermitted,
-            authorisedValues
-        }
-    }
-}
+            authorisedValues,
+        };
+    },
+};
 </script>
 
 <style>
@@ -154,7 +162,9 @@ form .v-select {
 }
 
 .v-select,
-input:not([type="submit"]):not([type="search"]):not([type="button"]):not([type="checkbox"]),
+input:not([type="submit"]):not([type="search"]):not([type="button"]):not(
+        [type="checkbox"]
+    ):not([type="radio"]),
 textarea {
     border-color: rgba(60, 60, 60, 0.26);
     border-width: 1px;

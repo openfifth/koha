@@ -1,0 +1,38 @@
+---
+/acquisitions/fund_management/config:
+  get:
+    x-mojo-to: Acquisitions::FundManagement::Config#config
+    operationId: getFundManagementConfig
+    description: This resource returns a list of options needed for the fund management app
+    summary: get the fund management config
+    tags:
+      - fund_management_config
+    produces:
+      - application/json
+    responses:
+      200:
+        description: The fund management config
+        schema:
+          $ref: "../swagger.yaml#/definitions/fund_management_config"
+      400:
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      403:
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      500:
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      503:
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: 1
