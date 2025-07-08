@@ -31,7 +31,7 @@ export const routes = [
                 icon: "fa fa-shopping-cart",
                 is_end_node: true,
                 breadcrumbFormat: vendorSearchBreadcrumb,
-                resource: "Vendors/VendorResource.vue",
+                resource: "Acquisitions/Vendors/VendorResource.vue",
                 children: [
                     {
                         path: "",
