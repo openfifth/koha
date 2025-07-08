@@ -184,6 +184,22 @@ sub supplier_ean {
 
 }
 
+sub purchase_order_number {
+    my $self = shift;
+    foreach my $s ( @{ $self->{datasegs} } ) {
+        if ( $s->tag eq 'LIN' ) {
+            last;
+        }
+        if ( $s->tag eq 'RFF' ) {
+            my $qualifier = $s->elem( 0, 0 );
+            if ( $qualifier eq 'ON' ) {
+                return $s->elem( 0, 1 );
+            }
+        }
+    }
+    return;
+}
+
 sub lineitems {
     my $self = shift;
     if ( $self->{quotation_lines} ) {
@@ -235,6 +251,62 @@ Class modelling an Edifact Message for parsing
 
    Passed an array of segments extracts message level info
    and parses lineitems as Line objects
+
+=head2 message_refno
+
+Missing POD for message_refno.
+
+=head2 function
+
+Missing POD for function.
+
+=head2 message_reference_number
+
+Missing POD for message_reference_number.
+
+=head2 message_type
+
+Missing POD for message_type.
+
+=head2 message_code
+
+Missing POD for message_code.
+
+=head2 docmsg_number
+
+Missing POD for docmsg_number.
+
+=head2 message_date
+
+Missing POD for message_date.
+
+=head2 tax_point_date
+
+Missing POD for tax_point_date.
+
+=head2 expiry_date
+
+Missing POD for expiry_date.
+
+=head2 shipment_charge
+
+Missing POD for shipment_charge.
+
+=head2 buyer_ean
+
+Missing POD for buyer_ean.
+
+=head2 supplier_ean
+
+Missing POD for supplier_ean.
+
+=head2 purchase_order_number
+
+Missing POD for purchase_order_number.
+
+=head2 lineitems
+
+Missing POD for lineitems.
 
 =head1 AUTHOR
 
