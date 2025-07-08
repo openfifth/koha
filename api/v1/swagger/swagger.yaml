@@ -94,6 +94,8 @@ definitions:
     $ref: ./definitions/extended_attribute_type.yaml
   extended_attribute_value:
     $ref: ./definitions/extended_attribute_value.yaml
+  fund_management_config:
+    $ref: ./definitions/fund_management_config.yaml
   fiscal_period:
     $ref: ./definitions/fiscal_period.yaml
   fund:
@@ -229,6 +231,8 @@ paths:
     $ref: ./paths/fiscal_periods.yaml#/~1acquisitions~1fiscal_periods
   "/acquisitions/fiscal_periods/{fiscal_period_id}":
     $ref: ./paths/fiscal_periods.yaml#/~1acquisitions~1fiscal_periods~1{fiscal_period_id}
+  /acquisitions/fund_management/config:
+    $ref: ./paths/acquisitions_fund_management_config.yaml#/~1acquisitions~1fund_management~1config
   /acquisitions/funds:
     $ref: ./paths/funds.yaml#/~1acquisitions~1funds
   "/acquisitions/funds/{fund_id}":
