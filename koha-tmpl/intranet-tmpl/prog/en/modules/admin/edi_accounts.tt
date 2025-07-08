@@ -86,10 +86,10 @@
 [% IF acct_form %]
 <form action="/cgi-bin/koha/admin/edi_accounts.pl" name="Actform" method="post">
     [% INCLUDE 'csrf-token.inc' %]
-  <input type="hidden" name="op" value="cud-save" />
-  [% IF account %]
-  <input type="hidden" name="id" value="[% account.id | html %]" />
-  [% END %]
+    <input type="hidden" name="op" value="cud-save" />
+    [% IF account %]
+        <input type="hidden" name="id" value="[% account.id | html %]" />
+    [% END %]
     <h1>
         [% IF account %]
             [% tx("Modify account '{edi_account}' for vendor '{vendor}'", { edi_account = account.description, vendor = account.vendor.name }) %]
@@ -97,180 +97,254 @@
             <span>New account</span>
         [% END %]
     </h1>
-  <fieldset class="rows">
-    <legend class="sr-only">Account details</legend>
 
-  <ol>
-  <li>
-     <label for="vendor_id">Vendor: </label>
-     <select name="vendor_id" id="vendor_id">
-     [% FOREACH vendor IN vendors %]
-       [% IF account.vendor_id == vendor.id %]
-          <option value="[% vendor.id | html %]" selected="selected">[% vendor.name | html %]</option>
-       [% ELSE %]
-          <option value="[% vendor.id | html %]">[% vendor.name | html %]</option>
-       [% END %]
-     [% END %]
-     </select>
-  </li>
-  [% IF plugins %]
-  <li>
-     <label for="plugin">Plugin: </label>
-     <select name="plugin" id="plugin">
-        <option value="">Do not use plugin</option>
-        [% FOREACH plugin IN plugins %]
-            [% IF account.plugin == plugin.class %]
-                <option value="[% plugin.class | html %]" selected="selected">[% plugin.metadata.name | html %]</option>
+    <!-- Basic Information -->
+    <fieldset class="rows">
+        <legend>Basic Information</legend>
+        <ol>
+            <li>
+                <label for="vendor_id">Vendor: </label>
+                <select name="vendor_id" id="vendor_id">
+                    [% FOREACH vendor IN vendors %]
+                        [% IF account.vendor_id == vendor.id %]
+                            <option value="[% vendor.id | html %]" selected="selected">[% vendor.name | html %]</option>
+                        [% ELSE %]
+                            <option value="[% vendor.id | html %]">[% vendor.name | html %]</option>
+                        [% END %]
+                    [% END %]
+                </select>
+            </li>
+            <li>
+                <label for="description">Description: </label>
+                <input type="text" name="description" id="description" size="20" value="[% account.description | html %]" />
+            </li>
+            [% IF plugins %]
+                <li>
+                    <label for="plugin">Plugin: </label>
+                    <select name="plugin" id="plugin">
+                        <option value="">Do not use plugin</option>
+                        [% FOREACH plugin IN plugins %]
+                            [% IF account.plugin == plugin.class %]
+                                <option value="[% plugin.class | html %]" selected="selected">[% plugin.metadata.name | html %]</option>
+                            [% ELSE %]
+                                <option value="[% plugin.class | html %]">[% plugin.metadata.name | html %]</option>
+                            [% END %]
+                        [% END %]
+                    </select>
+                </li>
             [% ELSE %]
-                <option value="[% plugin.class | html %]">[% plugin.metadata.name | html %]</option>
+                <input type="hidden" name="plugin" value="" />
             [% END %]
-        [% END %]
-     </select>
-  </li>
-  [% ELSE %]
-  <input type="hidden" name="plugin" value="" />
-  [% END %]
-  <li>
-     <label for="description">Description: </label>
-     <input type="text" name="description" id="description" size="20" value="[% account.description | html %]" />
-  </li>
-  <li>
-     [% transport_types = [ 'FTP', 'SFTP', 'FILE' ] %]
-     <label for="transport">Transport: </label>
-     <select name="transport" title="valid types of transport are FTP and SFTP"
-      id="transport">
-      [% FOREACH transport_type IN transport_types %]
-           [% IF transport_type == account.transport %]
-              <option value="[% transport_type | html %]" selected="selected">[% transport_type | html %]</option>
-           [% ELSE %]
-              <option value="[% transport_type | html %]">[% transport_type | html %]</option>
-           [% END %]
-       [% END %]
-     </select>
-  </li>
-  <li>
-     <label for="host">Remote host: </label>
-     <input type="text" name="host" id="host" size="20" maxlength="40" value="[% account.host | html %]" />
-  </li>
-  <li>
-     <label for="username">Username: </label>
-     <input type="text" name="username" id="username" size="20" maxlength="40" value="[% account.username | html %]" />
-  </li>
-  <li>
-     <label for="password">Password: </label>
-     <input type="text" name="password" id="password" size="20" maxlength="40" value="[% account.password | html %]" />
-  </li>
-  <li>
-     <label for="upload_port">Upload port: </label>
-     <input type="text" name="upload_port" id="upload_port" size="20" maxlength="40" value="[% account.upload_port | html %]" />
-     <div class="hint">The upload port will default to 22 (for SFTP) or 21 (for FTP) if not set.</div>
-  </li>
-  <li>
-     <label for="download_port">Download port: </label>
-     <input type="text" name="download_port" id="download_port" size="20" maxlength="40" value="[% account.download_port | html %]" />
-     <div class="hint">The download port will default to 22 (for SFTP) or 21 (for FTP) if not set.</div>
-  </li>
-  <li>
-     <label for="download_directory">Download directory: </label>
-     <input type="text" name="download_directory" id="download_directory" size="20" value="[% account.download_directory | html %]" />
-        <div class="hint">The download directory specifies the directory on the ftp site from which quotes and invoices are downloaded.</div>
-  </li>
-  <li>
-     <label for="upload_directory">Upload directory: </label>
-     <input type="text" name="upload_directory" id="upload_directory" size="20" value="[% account.upload_directory | html %]" />
-        <div class="hint">The upload directory specifies the directory on the ftp site to which orders are uploaded.</div>
-  </li>
-  <li>
-     <label for="id_code_qualifier">Qualifier:</label>
-     <select name="id_code_qualifier" id="id_code_qualifier">
-     [% FOREACH qualifier IN code_qualifiers %]
-        [% IF qualifier.code == account.id_code_qualifier %]
-           <option value="[% qualifier.code | html %]" selected="selected">
-               [% qualifier.description | html %] ([% qualifier.code | html %])
-           </option>
-        [% ELSE %]
-           <option value="[% qualifier.code | html %]">
-              [% qualifier.description | html %] ([% qualifier.code | html %])
-           </option>
-        [% END %]
-     [% END %]
-   </select>
-  </li>
-  <li>
-     <label for="san">SAN: </label>
-     <input type="text" name="san" id="san" size="20" maxlength="20" value="[% account.san | html %]" />
-  </li>
-  <li>
-     <label for="standard">Standard:</label>
-     <select name="standard" id="standard">
-     [% FOREACH standard IN standards %]
-        [% IF standard == 'BIC' %]
-        [% SET description = 'BiC' %]
-        [% ELSE %]
-        [% SET description = 'EDItEUR' %]
-        [% END %]
-        [% IF standard == account.standard %]
-           <option value="[% standard | html %]" selected="selected">
-               [% description | html %]
-           </option>
-        [% ELSE %]
-           <option value="[% standard | html %]">
-              [% description | html %]
-           </option>
-        [% END %]
-     [% END %]
-   </select>
-  </li>
-  <li>
-     <label for="quotes_enabled">Quotes enabled: </label>
-      [% IF account.quotes_enabled %]
-     <input type="checkbox" name="quotes_enabled" id="quotes_enabled" value="1" checked="checked" />
-      [% ELSE %]
-     <input type="checkbox" name="quotes_enabled" id="quotes_enabled" value="1" />
-      [% END %]
-  </li>
-  <li>
-     <label for="orders_enabled">Orders enabled: </label>
-[% IF account.orders_enabled %]
-     <input type="checkbox" name="orders_enabled" id="orders_enabled" value="1" checked="checked" />
-[% ELSE %]
-     <input type="checkbox" name="orders_enabled" id="orders_enabled" value="1" />
-[% END %]
-  </li>
-  <li>
-     <label for="invoices_enabled">Invoices enabled: </label>
-[% IF account.invoices_enabled %]
-     <input type="checkbox" name="invoices_enabled" id="invoices_enabled" value="1" checked="checked" />
-[% ELSE %]
-     <input type="checkbox" name="invoices_enabled" id="invoices_enabled" value="1" />
-[% END %]
-  </li>
-  <li>
-     <label for="responses_enabled">Responses enabled: </label>
-[% IF account.responses_enabled %]
-     <input type="checkbox" name="responses_enabled" id="responses_enabled" value="1" checked="checked" />
-[% ELSE %]
-     <input type="checkbox" name="responses_enabled" id="responses_enabled" value="1" />
-[% END %]
-  </li>
-  <li>
-     <label for="auto_orders">Automatic ordering: </label>
-[% IF account.auto_orders %]
-     <input type="checkbox" name="auto_orders" id="auto_orders" value="1" checked="checked" />
-[% ELSE %]
-     <input type="checkbox" name="auto_orders" id="auto_orders" value="1" />
-[% END %]
-    <div class="hint">
-        With automatic ordering quotes generate orders without staff intervention.
-    </div>
-  </li>
-  </ol>
-  </fieldset>
+            <li>
+               <label for="id_code_qualifier">Qualifier:</label>
+               <select name="id_code_qualifier" id="id_code_qualifier">
+               [% FOREACH qualifier IN code_qualifiers %]
+                  [% IF qualifier.code == account.id_code_qualifier %]
+                     <option value="[% qualifier.code | html %]" selected="selected">
+                         [% qualifier.description | html %] ([% qualifier.code | html %])
+                     </option>
+                  [% ELSE %]
+                     <option value="[% qualifier.code | html %]">
+                        [% qualifier.description | html %] ([% qualifier.code | html %])
+                     </option>
+                  [% END %]
+               [% END %]
+             </select>
+            </li>
+            <li>
+               <label for="san">SAN: </label>
+               <input type="text" name="san" id="san" size="20" maxlength="20" value="[% account.san | html %]" />
+            </li>
+            <li>
+               <label for="standard">Standard:</label>
+               <select name="standard" id="standard">
+               [% FOREACH standard IN standards %]
+                  [% IF standard == 'BIC' %]
+                  [% SET description = 'BiC' %]
+                  [% ELSE %]
+                  [% SET description = 'EDItEUR' %]
+                  [% END %]
+                  [% IF standard == account.standard %]
+                     <option value="[% standard | html %]" selected="selected">
+                         [% description | html %]
+                     </option>
+                  [% ELSE %]
+                     <option value="[% standard | html %]">
+                        [% description | html %]
+                     </option>
+                  [% END %]
+               [% END %]
+             </select>
+            </li>
+            <li>
+               <label for="quotes_enabled">Quotes enabled: </label>
+                [% IF account.quotes_enabled %]
+               <input type="checkbox" name="quotes_enabled" id="quotes_enabled" value="1" checked="checked" />
+                [% ELSE %]
+               <input type="checkbox" name="quotes_enabled" id="quotes_enabled" value="1" />
+                [% END %]
+            </li>
+            <li>
+               <label for="orders_enabled">Orders enabled: </label>
+          [% IF account.orders_enabled %]
+               <input type="checkbox" name="orders_enabled" id="orders_enabled" value="1" checked="checked" />
+          [% ELSE %]
+               <input type="checkbox" name="orders_enabled" id="orders_enabled" value="1" />
+          [% END %]
+            </li>
+            <li>
+               <label for="invoices_enabled">Invoices enabled: </label>
+          [% IF account.invoices_enabled %]
+               <input type="checkbox" name="invoices_enabled" id="invoices_enabled" value="1" checked="checked" />
+          [% ELSE %]
+               <input type="checkbox" name="invoices_enabled" id="invoices_enabled" value="1" />
+          [% END %]
+            </li>
+            <li>
+               <label for="responses_enabled">Responses enabled: </label>
+          [% IF account.responses_enabled %]
+               <input type="checkbox" name="responses_enabled" id="responses_enabled" value="1" checked="checked" />
+          [% ELSE %]
+               <input type="checkbox" name="responses_enabled" id="responses_enabled" value="1" />
+          [% END %]
+            </li>
+            <li>
+              <label for="auto_orders">Automatic ordering: </label>
+          [% IF account.auto_orders %]
+              <input type="checkbox" name="auto_orders" id="auto_orders" value="1" checked="checked" />
+          [% ELSE %]
+              <input type="checkbox" name="auto_orders" id="auto_orders" value="1" />
+          [% END %]
+              <div class="hint">
+                  With automatic ordering quotes generate orders without staff intervention.
+              </div>
+            </li>
+        </ol>
+    </fieldset>
 
-  <fieldset class="action">
-    <input type="submit" class="btn btn-primary" value="Submit" />
-    <a href="/cgi-bin/koha/admin/edi_accounts.pl" class="cancel">Cancel</a>
-  </fieldset>
+    <!-- Transport Settings -->
+    <fieldset class="rows">
+        <legend>Transport Settings</legend>
+        <ol>
+            <li>
+                [% transport_types = [ 'FTP', 'SFTP', 'FILE' ] %]
+                <label for="transport">Transport: </label>
+                <select name="transport" title="valid types of transport are FTP and SFTP" id="transport">
+                    [% FOREACH transport_type IN transport_types %]
+                        [% IF transport_type == account.transport %]
+                            <option value="[% transport_type | html %]" selected="selected">[% transport_type | html %]</option>
+                        [% ELSE %]
+                            <option value="[% transport_type | html %]">[% transport_type | html %]</option>
+                        [% END %]
+                    [% END %]
+                </select>
+            </li>
+            <li>
+                <label for="host">Remote host: </label>
+                <input type="text" name="host" id="host" size="20" maxlength="40" value="[% account.host | html %]" />
+            </li>
+            <li>
+                <label for="username">Username: </label>
+                <input type="text" name="username" id="username" size="20" maxlength="40" value="[% account.username | html %]" />
+            </li>
+            <li>
+                <label for="password">Password: </label>
+                <input type="text" name="password" id="password" size="20" maxlength="40" value="[% account.password | html %]" />
+            </li>
+            <li>
+                <label for="upload_port">Upload port: </label>
+                <input type="text" name="upload_port" id="upload_port" size="20" maxlength="40" value="[% account.upload_port | html %]" />
+                <div class="hint">The upload port will default to 22 (for SFTP) or 21 (for FTP) if not set.</div>
+            </li>
+            <li>
+                <label for="download_port">Download port: </label>
+                <input type="text" name="download_port" id="download_port" size="20" maxlength="40" value="[% account.download_port | html %]" />
+                <div class="hint">The download port will default to 22 (for SFTP) or 21 (for FTP) if not set.</div>
+            </li>
+            <li>
+                <label for="download_directory">Download directory: </label>
+                <input type="text" name="download_directory" id="download_directory" size="20" value="[% account.download_directory | html %]" />
+                <div class="hint">The download directory specifies the directory on the ftp site from which quotes and invoices are downloaded.</div>
+            </li>
+            <li>
+                <label for="upload_directory">Upload directory: </label>
+                <input type="text" name="upload_directory" id="upload_directory" size="20" value="[% account.upload_directory | html %]" />
+                <div class="hint">The upload directory specifies the directory on the ftp site to which orders are uploaded.</div>
+            </li>
+        </ol>
+    </fieldset>
+
+    <!-- Message Types -->
+    <fieldset class="rows">
+        <legend>Message Types</legend>
+        <ol>
+            <li>
+                <label for="quotes_enabled">Quotes enabled: </label>
+                [% IF account.quotes_enabled %]
+                    <input type="checkbox" name="quotes_enabled" id="quotes_enabled" value="1" checked="checked" />
+                [% ELSE %]
+                    <input type="checkbox" name="quotes_enabled" id="quotes_enabled" value="1" />
+                [% END %]
+            </li>
+            <li>
+                <label for="orders_enabled">Orders enabled: </label>
+                [% IF account.orders_enabled %]
+                    <input type="checkbox" name="orders_enabled" id="orders_enabled" value="1" checked="checked" />
+                [% ELSE %]
+                    <input type="checkbox" name="orders_enabled" id="orders_enabled" value="1" />
+                [% END %]
+            </li>
+            <li>
+                <label for="invoices_enabled">Invoices enabled: </label>
+                [% IF account.invoices_enabled %]
+                    <input type="checkbox" name="invoices_enabled" id="invoices_enabled" value="1" checked="checked" />
+                [% ELSE %]
+                    <input type="checkbox" name="invoices_enabled" id="invoices_enabled" value="1" />
+                [% END %]
+            </li>
+            <li>
+                <label for="responses_enabled">Responses enabled: </label>
+                [% IF account.responses_enabled %]
+                    <input type="checkbox" name="responses_enabled" id="responses_enabled" value="1" checked="checked" />
+                [% ELSE %]
+                    <input type="checkbox" name="responses_enabled" id="responses_enabled" value="1" />
+                [% END %]
+            </li>
+        </ol>
+    </fieldset>
+
+    <!-- Functional Switches -->
+    <fieldset class="rows">
+        <legend>Functional Switches</legend>
+        <ol>
+            <li>
+                <label for="auto_orders">Automatic ordering: </label>
+                [% IF account.auto_orders %]
+                    <input type="checkbox" name="auto_orders" id="auto_orders" value="1" checked="checked" />
+                [% ELSE %]
+                    <input type="checkbox" name="auto_orders" id="auto_orders" value="1" />
+                [% END %]
+                <div class="hint"> With automatic ordering quotes generate orders without staff intervention. </div>
+            </li>
+            <li>
+                <label for="po_is_basketname">Use purchase order numbers: </label>
+                [% IF account.po_is_basketname %]
+                    <input type="checkbox" name="po_is_basketname" id="po_is_basketname" value="1" checked="checked" />
+                [% ELSE %]
+                    <input type="checkbox" name="po_is_basketname" id="po_is_basketname" value="1" />
+                [% END %]
+                <div class="hint">
+                    When enabled, basket names are used as purchase order numbers. <br />For received QUOTE messages, we will use the RFF+ON field to populate the basket name. <br />For generated ORDER messages, we will use the
+                    basket name to populate the BGM segment.</div
+                >
+            </li>
+        </ol>
+    </fieldset>
+
+    <fieldset class="action">
+        <input type="submit" class="btn btn-primary" value="Submit" />
+        <a href="/cgi-bin/koha/admin/edi_accounts.pl" class="cancel">Cancel</a>
+    </fieldset>
 </form>
 
 [% END %]
@@ -407,3 +481,4 @@
     [% Asset.js("js/admin-menu.js") | $raw %]
 [% END %]
 [% INCLUDE 'intranet-bottom.inc' %]
+
