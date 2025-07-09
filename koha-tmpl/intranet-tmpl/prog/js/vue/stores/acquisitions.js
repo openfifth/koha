@@ -106,10 +106,10 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
         //         return failedChecks > 0 ? false : true;
         //     }
         // },
-        filterGroupsBasedOnOwner(e, data, groups) {
+        filterGroupsBasedOnOwner(e, data) {
             const libGroups = this.filterLibGroupsByUsersBranchcode(
                 null,
-                groups
+                store.visibleGroups
             );
             const permittedUsers = this.filterUsersByPermissions(
                 store.currentPermission
@@ -124,14 +124,14 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
                 );
                 store.visibleGroups = this.filterLibGroupsByUsersBranchcode(
                     branchcode,
-                    groups
+                    store.visibleGroups
                 );
             }
         },
-        filterOwnersBasedOnGroup(e, data, groups) {
+        filterOwnersBasedOnGroup(e, data) {
             const libGroups = this.filterLibGroupsByUsersBranchcode(
                 null,
-                groups
+                store.visibleGroups
             );
             const permittedUsers = this.filterUsersByPermissions(
                 store.currentPermission
@@ -182,17 +182,18 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
             });
             return settingsObject;
         },
-        formatValueWithCurrency(currency, value) {
+        formatValueWithCurrency(value, currency) {
             const { symbol } = store.currencies.find(
                 curr => curr.currency === currency
             );
-            if (!value) {
+            const formattedPrice = value.format_price();
+            if (!formattedPrice) {
                 return `${symbol}0`;
             }
-            if (value < 0) {
-                return `-${symbol}${-value}`;
+            if (formattedPrice < 0) {
+                return `-${symbol}${-formattedPrice}`;
             }
-            return `${symbol}${value}`;
+            return `${symbol}${formattedPrice}`;
         },
     };
     const getters = {

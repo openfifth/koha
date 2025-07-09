@@ -99,7 +99,7 @@ export default {
                     user.value.loggedInUser.loggedInBranch =
                         logged_in_branch.branchcode;
                     user.value.userflags = userflags;
-                    currencies.value = currencies;
+                    currencies.value = currencyList;
                     const { acquisition, superlibrarian } =
                         user.value.userflags;
                     if (!acquisition && !superlibrarian) {
