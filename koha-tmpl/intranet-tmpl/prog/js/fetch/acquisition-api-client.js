@@ -99,9 +99,10 @@ export class AcquisitionAPIClient {
             get: (id, headers) =>
                 this.httpClient.get({
                     endpoint: "fiscal_periods/" + id,
-                    ...(headers && {
-                        headers,
-                    }),
+                    headers: {
+                        "x-koha-embed": "owner,lib_group_limits",
+                        ...headers,
+                    },
                 }),
             getAll: (query, params, headers) =>
                 this.httpClient.getAll({

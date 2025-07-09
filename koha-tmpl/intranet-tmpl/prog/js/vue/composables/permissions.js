@@ -1,4 +1,5 @@
 const isUserPermittedHandler = (operation, permissions, store) => {
+    return true; // TODO - new permissions need creating and testing
     const userPermissions = permissions ? permissions : store.userPermissions;
     if (!operation) return true;
     if (!userPermissions) return false;

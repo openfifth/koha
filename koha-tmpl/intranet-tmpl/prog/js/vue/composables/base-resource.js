@@ -593,11 +593,17 @@ export function useBaseResource(resourceConfig) {
                     return acc;
                 }
                 if (["text", "textarea", "select"].includes(attr.type)) {
+                    if (attr.type === "select" && attr.allowMultipleChoices) {
+                        acc[attr.name] = [];
+                        return acc;
+                    }
                     acc[attr.name] = "";
                     return acc;
                 }
                 if (["boolean", "checkbox"].includes(attr.type)) {
-                    acc[attr.name] = false;
+                    acc[attr.name] = attr.defaultValue
+                        ? attr.defaultValue
+                        : false;
                     return acc;
                 }
                 if (attr.type === "relationshipWidget") {

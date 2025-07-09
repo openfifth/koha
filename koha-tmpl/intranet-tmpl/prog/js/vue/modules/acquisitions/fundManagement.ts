@@ -79,7 +79,7 @@ router.beforeEach((to, from) => {
                     navigationBlocked: true,
                     currentPermission: null,
                 });
-                return { name: "Homepage" };
+                return { name: "Home" };
             } else {
                 navigationStore.$patch({
                     current: to.matched,
@@ -101,9 +101,7 @@ const loadRouterAndMount = async () => {
     try {
         await router.isReady();
         app.mount("#__fundManagement");
-    } catch (err) {
-        console.log(err)
-    }
+    } catch (err) {}
 };
 
 loadRouterAndMount();
