@@ -12,6 +12,9 @@
         v-model="resource[name]"
         :disabled="shouldBeDisabled"
         :placeholder="!relatedResourcesLoaded ? $__('Loading...') : ''"
+        @update:modelValue="
+            onSelected && onSelected($event, relatedResourcesOptions, resource)
+        "
     >
         <template v-slot:option="relatedResource">
             {{ relatedResource[relationshipOptionLabelAttr] }}
@@ -39,6 +42,7 @@ export default {
         relationshipRequiredKey: String | null,
         disabled: Boolean | false,
         required: Boolean | false,
+        onSelected: Function | null,
         query: {
             type: Object,
             default: {},

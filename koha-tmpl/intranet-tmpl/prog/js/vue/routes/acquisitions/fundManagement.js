@@ -89,31 +89,33 @@ export const routes = [
                         path: "ledger",
                         title: "Ledgers",
                         is_navigation_item: false,
+                        resource:
+                            "Acquisitions/FundManagement/LedgerResource.vue",
                         children: [
                             {
                                 path: "",
-                                component: markRaw(LedgerList),
+                                component: markRaw(ResourceWrapper),
                                 name: "LedgerList",
                                 title: "List ledgers",
                                 permission: "manageLedgers",
                             },
                             {
                                 path: ":ledger_id",
-                                component: markRaw(LedgerShow),
+                                component: markRaw(ResourceWrapper),
                                 name: "LedgerShow",
                                 title: "Show ledger",
                                 permission: "manageLedgers",
                             },
                             {
                                 path: "add",
-                                component: markRaw(LedgerFormAdd),
+                                component: markRaw(ResourceWrapper),
                                 name: "LedgerFormAdd",
                                 title: "Add ledger",
                                 permission: "createLedger",
                             },
                             {
                                 path: "edit/:ledger_id",
-                                component: markRaw(LedgerFormAdd),
+                                component: markRaw(ResourceWrapper),
                                 name: "LedgerFormAddEdit",
                                 title: "Edit ledger",
                                 permission: "editLedger",
