@@ -105,6 +105,8 @@
                                                      <input type="hidden" name="basketno" value="[% basketno | html %]">
                                                 </form>
                                             </div>
+
+
                                         [% END %]
 
                                         [% PROCESS csv_export %]
@@ -282,6 +284,47 @@
 
                                 [% IF ( basketno ) %]
                                     <div id="acqui_basket_summary" class="row">
+                                            [% IF edifact_enabled && edifact_errors.size > 0 %]
+                                                <div class="col-md-12 col-sm-12">
+                                                    <div class="page-section">
+                                                        <h2>EDIFACT parsing errors</h2>
+                
+                                                        [% SET errors_by_message = {} %]
+                                                        [% FOR error IN edifact_errors %]
+                                                            [% SET msg_id = error.message_id %]
+                                                            [% IF !errors_by_message.$msg_id %]
+                                                                [% errors_by_message.$msg_id = [] %]
+                                                            [% END %]
+                                                            [% errors_by_message.$msg_id.push(error) %]
+                                                        [% END %]
+                
+                                                        [% FOR message IN edifact_messages %]
+                                                            [% SET msg_id = message.id %]
+                                                            [% IF errors_by_message.$msg_id %]
+                                                                <div class="alert alert-warning">
+                                                                    <h4><i class="fa fa-exclamation-triangle"></i> [% message.message_type | html %] message ([% message.transfer_date | $KohaDates %])</h4>
+                                                                    [% IF message.filename %]
+                                                                        <p><strong>Filename:</strong> [% message.filename | html %]</p>
+                                                                    [% END %]
+                                                                    <ul>
+                                                                        [% FOR error IN errors_by_message.$msg_id %]
+                                                                            <li>
+                                                                                <strong>[% error.details | html %]</strong>
+                                                                                [% IF error.section %]
+                                                                                    <br /><pre class="mt-1 mb-0 small text-muted">[% error.section | html %] section</pre>
+                                                                                [% END %]
+                                                                            </li>
+                                                                        [% END %]
+                                                                    </ul>
+                                                                </div>
+                                                            [% END %]
+                                                        [% END %]
+                                                    </div>
+                                                    <!-- /.page-section -->
+                                                </div>
+                                                <!-- /.col-md-12 col-sm-12 -->
+                                            [% END %]
+
                                             <div class="col-md-6 col-sm-12">
                                                 <div class="page-section rows">
                                                     <h2>General information</h2>
@@ -1029,6 +1072,10 @@
         </div> <!-- /.modal-dialog -->
     </div> <!-- /.modal#dateEditor -->
 
+[% IF edifact_enabled && edifact_messages.size > 0 %]
+    [% INCLUDE 'modals/edifact-modal.inc' %]
+[% END %]
+
 [% MACRO jsinclude BLOCK %]
     [% Asset.js("js/acquisitions-menu.js") | $raw %]
     [% INCLUDE 'datatables.inc' %]
@@ -1257,6 +1304,10 @@
     [% SET filter = 'baskets_managers' %]
     [% PROCESS patron_search_modal columns => columns, modal_title => t("Add user") %]
     [% PROCESS patron_search_js columns => columns, actions => ["add"], preview_on_name_click => 1 %]
+
+    [% IF edifact_enabled && edifact_messages.size > 0 %]
+        [% Asset.js("js/modals/edifact-modal.js") | $raw %]
+    [% END %]
 [% END %]
 
 [% INCLUDE 'intranet-bottom.inc' %]
