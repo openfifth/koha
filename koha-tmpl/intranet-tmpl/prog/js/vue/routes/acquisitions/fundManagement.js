@@ -19,6 +19,8 @@ import FundAllocationShow from "../../components/Acquisitions/FundManagement/Fun
 import FundAllocationFormAdd from "../../components/Acquisitions/FundManagement/FundAllocationFormAdd.vue";
 import TransferFunds from "../../components/Acquisitions/FundManagement/TransferFunds.vue";
 
+import ResourceWrapper from "../../components/ResourceWrapper.vue";
+
 import { $__ } from "../../i18n";
 
 export const routes = [
@@ -50,31 +52,33 @@ export const routes = [
                         path: "fiscal_period",
                         title: "Fiscal periods",
                         is_navigation_item: false,
+                        resource:
+                            "Acquisitions/FundManagement/FiscalPeriodResource.vue",
                         children: [
                             {
                                 path: "",
-                                component: markRaw(FiscalPeriodList),
+                                component: markRaw(ResourceWrapper),
                                 name: "FiscalPeriodList",
                                 title: "List fiscal periods",
                                 permission: "manageFiscalPeriods",
                             },
                             {
                                 path: ":fiscal_period_id",
-                                component: markRaw(FiscalPeriodShow),
+                                component: markRaw(ResourceWrapper),
                                 name: "FiscalPeriodShow",
                                 title: "Show fiscal period",
                                 permission: "manageFiscalPeriods",
                             },
                             {
                                 path: "add",
-                                component: markRaw(FiscalPeriodFormAdd),
+                                component: markRaw(ResourceWrapper),
                                 name: "FiscalPeriodFormAdd",
                                 title: "Add fiscal period",
                                 permission: "createFiscalPeriods",
                             },
                             {
                                 path: "edit/:fiscal_period_id",
-                                component: markRaw(FiscalPeriodFormAdd),
+                                component: markRaw(ResourceWrapper),
                                 name: "FiscalPeriodFormAddEdit",
                                 title: "Edit fiscal period",
                                 permission: "editFiscalPeriod",
