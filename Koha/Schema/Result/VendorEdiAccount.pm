@@ -153,6 +153,12 @@ __PACKAGE__->table("vendor_edi_accounts");
   is_nullable: 0
   size: 256
 
+=head2 po_is_basketname
+
+  data_type: 'tinyint'
+  default_value: 0
+  is_nullable: 0
+
 =cut
 
 __PACKAGE__->add_columns(
@@ -200,6 +206,8 @@ __PACKAGE__->add_columns(
   { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
   "plugin",
   { data_type => "varchar", default_value => "", is_nullable => 0, size => 256 },
+  "po_is_basketname",
+  { data_type => "tinyint", default_value => 0, is_nullable => 0 },
 );
 
 =head1 PRIMARY KEY
@@ -272,9 +280,17 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07049 @ 2024-04-19 16:25:44
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:jenUF3Wx7J7F5270mLQMbw
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-07-11 14:34:08
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:xOaWr6e68TXLc0RWuL+UHw
 
+__PACKAGE__->add_columns(
+    '+auto_orders'       => { is_boolean => 1 },
+    '+invoices_enabled'  => { is_boolean => 1 },
+    '+orders_enabled'    => { is_boolean => 1 },
+    '+po_is_basketname'  => { is_boolean => 1 },
+    '+quotes_enabled'    => { is_boolean => 1 },
+    '+responses_enabled' => { is_boolean => 1 },
+);
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration
 1;
