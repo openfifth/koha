@@ -354,7 +354,7 @@ sub is_spend_limit_breached {
         return { within_limit => 1 } if $over_spend_allowed;
     }
 
-    my $new_allocation             = $args->{new_allocation};
+    my $new_allocation = $args->{new_allocation};
 
     my $previous_allocation_amount = $args->{previous_allocation_amount} || 0;
     my $new_allocation_amount =
@@ -382,18 +382,20 @@ sub is_spend_limit_breached {
     my $oe_warning_percent = $self->oe_warning_percent > 0 ? $self->oe_warning_percent : 1;
     my $oe_limit_amount    = $self->oe_limit_amount > 0    ? $self->oe_limit_amount    : $self->spend_limit;
     my $os_warning_sum     = $self->os_warning_sum > 0     ? $self->os_warning_sum     : $self->spend_limit;
-    my $os_limit_sum       = $self->os_limit_sum > 0       ? $self->os_limit_sum       : $self->spend_limit;
-
-    my $oe_warning = $total_allocations - ($oe_warning_percent * $spend_limit);
+    my $os_limit_sum =
+          $self->os_limit_sum > 0
+        ? $self->os_limit_sum
+        : $self->spend_limit;
+    my $oe_warning = $total_allocations - ( $oe_warning_percent * $spend_limit );
     my $oe_limit   = $total_allocations - $oe_limit_amount;
     my $os_warning = $total_spent - $os_warning_sum;
     my $os_limit   = $total_spent - $os_limit_sum;
 
     my $warnings = {
-        oe_warning => $oe_warning > 0 ? $oe_warning : 0, 
-        oe_limit   => $oe_limit > 0 ? $oe_limit : 0, 
-        os_warning => $os_warning > 0 ? $os_warning : 0, 
-        os_limit   => $os_limit > 0 ? $os_limit : 0, 
+        oe_warning => $oe_warning >= 0 ? 1         : 0,
+        oe_limit   => $oe_limit > 0    ? $oe_limit : 0,
+        os_warning => $os_warning >= 0 ? 1         : 0,
+        os_limit   => $os_limit > 0    ? $os_limit : 0,
     };
 
     return { within_limit => 1, %$warnings } if !$overspent;

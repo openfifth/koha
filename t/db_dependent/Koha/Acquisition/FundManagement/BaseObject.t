@@ -74,7 +74,6 @@ subtest 'cascade_lib_group_visibility' => sub {
 
     $schema->storage->txn_rollback;
 };
-
 subtest 'cascade_status' => sub {
 
     plan tests => 2;
@@ -587,7 +586,7 @@ subtest 'add_accounting_values' => sub {
             status               => $fiscal_period->status,
             currency             => 'GBP',
             owner_id             => '1',
-            spend_limit          => 100
+            spend_limit          => 100,
         }
     )->store();
     my $fund = Koha::Acquisition::FundManagement::Fund->new(
@@ -772,7 +771,12 @@ subtest 'handle_spending_block_changes' => sub {
             currency             => 'GBP',
             owner_id             => '1',
             spend_limit          => 100,
-            over_spend_allowed   => 1,
+            over_spend_allowed   => 0,
+            oe_warning_percent   => 0.50,
+            oe_limit_amount      => 85,
+            os_warning_sum       => 75,
+            os_limit_sum         => 90
+
         }
     )->store();
 
