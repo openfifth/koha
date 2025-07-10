@@ -196,22 +196,18 @@ return {
         $dbh->do(
             q{
                 INSERT IGNORE INTO authorised_value_categories(  category_name, is_system  ) VALUES
-                ('ACQUIRE_FUND_TYPE', 1),
-                ('ACQUIRE_FUND_GROUP', 1);
+                ('FUND_TYPE', 1);
                 }
         );
-        say_success( $out, "Added new categories 'ACQUIRE_FUND_TYPE' and 'ACQUIRE_FUND_GROUP'" );
+        say_success( $out, "Added new category 'FUND_TYPE''" );
 
         $dbh->do(
             q{
                 INSERT IGNORE INTO authorised_values(  category, authorised_value, lib  ) VALUES
-                ('ACQUIRE_FUND_TYPE', "PRINT", "Print materials"),
-                ('ACQUIRE_FUND_TYPE', "ELECTRONIC", "Electronic materials"),
-                ('ACQUIRE_FUND_TYPE', "SUBSCRIPTION", "Subscription materials"),
-                ('ACQUIRE_FUND_TYPE', "MISC", "Miscellaneous expenses"),
-                ('ACQUIRE_FUND_GROUP', "BUSINESS", "Business"),
-                ('ACQUIRE_FUND_GROUP', "ACADEMIC", "Academic"),
-                ('ACQUIRE_FUND_GROUP', "MISC", "Misc");
+                ('FUND_TYPE', "PRINT", "Print materials"),
+                ('FUND_TYPE', "ELECTRONIC", "Electronic materials"),
+                ('FUND_TYPE', "SUBSCRIPTION", "Subscription materials"),
+                ('FUND_TYPE', "MISC", "Miscellaneous expenses");
                 }
         );
         say_success( $out, "Added new authorised values to those categories" );

@@ -172,6 +172,7 @@
     <template v-else-if="attr.type == 'relationshipSelect'">
         <FormRelationshipSelect
             v-bind="attr"
+            :disabled="disabled"
             :resource="resource"
         ></FormRelationshipSelect>
     </template>

@@ -31,7 +31,7 @@
 </template>
 
 <script>
-import { computed, onBeforeMount, ref } from "vue";
+import { computed, onBeforeMount, ref, watch } from "vue";
 export default {
     props: {
         relationshipOptionLabelAttr: String | null,
@@ -51,10 +51,11 @@ export default {
     setup(props) {
         const relatedResources = ref(null);
         const relatedResourcesLoaded = ref(false);
+        const queryParameters = ref(props.query);
 
         onBeforeMount(() => {
             const relatedResourcesClient = props.relationshipAPIClient;
-            relatedResourcesClient.getAll(props.query).then(
+            relatedResourcesClient.getAll(queryParameters.value).then(
                 result => {
                     relatedResources.value = result;
                     relatedResourcesLoaded.value = true;
@@ -80,12 +81,29 @@ export default {
             );
         };
 
+        watch(
+            () => queryParameters.value,
+            () => {
+                relatedResources.value = null;
+                relatedResourcesLoaded.value = false;
+                const relatedResourcesClient = props.relationshipAPIClient;
+                relatedResourcesClient.getAll(queryParameters.value).then(
+                    result => {
+                        relatedResources.value = result;
+                        relatedResourcesLoaded.value = true;
+                    },
+                    error => {}
+                );
+            }
+        );
+
         return {
             relatedResources,
             relatedResourcesLoaded,
             relatedResourcesOptions,
             shouldBeDisabled,
             filterRelatedResourcesOptions,
+            queryParameters,
         };
     },
 };
