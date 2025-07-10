@@ -126,31 +126,33 @@ export const routes = [
                         path: "fund",
                         title: "Funds",
                         is_navigation_item: false,
+                        resource:
+                            "Acquisitions/FundManagement/FundResource.vue",
                         children: [
                             {
                                 path: "",
-                                component: markRaw(FundList),
+                                component: markRaw(ResourceWrapper),
                                 name: "FundList",
                                 title: "List funds",
                                 permission: "manageFunds",
                             },
                             {
                                 path: ":fund_id",
-                                component: markRaw(FundShow),
+                                component: markRaw(ResourceWrapper),
                                 name: "FundShow",
                                 title: "Show fund",
                                 permission: "manageFunds",
                             },
                             {
                                 path: "add",
-                                component: markRaw(FundFormAdd),
+                                component: markRaw(ResourceWrapper),
                                 name: "FundFormAdd",
                                 title: "Add fund",
                                 permission: "createFund",
                             },
                             {
                                 path: "edit/:fund_id",
-                                component: markRaw(FundFormAdd),
+                                component: markRaw(ResourceWrapper),
                                 name: "FundFormAddEdit",
                                 title: "Edit fund",
                                 permission: "editFund",

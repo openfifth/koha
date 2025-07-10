@@ -136,6 +136,7 @@ export default {
                     requiredKey: "currency",
                     options: currencies.value,
                     defaultValue: null,
+                    required: true,
                     hideIn: ["List"],
                 },
                 {
@@ -338,6 +339,6 @@ export default {
     },
     components: { BaseResource },
     emits: ["select-resource"],
-    name: "FiscalPeriodResource",
+    name: "LedgerResource",
 };
 </script>

@@ -167,6 +167,7 @@
     <template v-else-if="attr.type == 'relationshipSelect'">
         <FormRelationshipSelect
             v-bind="attr"
+            :disabled="disabled"
             :resource="resource"
         ></FormRelationshipSelect>
     </template>
@@ -262,10 +263,10 @@ export default {
             return props.options;
         });
         const disabled = computed(() => {
-            if (typeof props.disabled === "function") {
-                return props.disabled(props.resource);
+            if (typeof props.attr.disabled === "function") {
+                return props.attr.disabled(props.resource);
             } else {
-                return props.disabled || false;
+                return props.attr.disabled || false;
             }
         });
 

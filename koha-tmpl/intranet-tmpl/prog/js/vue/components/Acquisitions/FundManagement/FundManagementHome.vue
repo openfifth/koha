@@ -58,7 +58,7 @@
                         id="fund_fund_type"
                         v-model="filters.fund_type"
                         :reduce="av => av.value"
-                        :options="authorisedValues.acquire_fund_types"
+                        :options="authorisedValues.av_fund_type"
                         label="description"
                     >
                         <template #search="{ attributes, events }">
@@ -176,22 +176,22 @@
 </template>
 
 <script>
-import Toolbar from "../../Toolbar.vue"
-import ToolbarLink from "../../ToolbarLink.vue"
-import KohaTable from "../../KohaTable.vue"
-import InfiniteScrollSelect from "../../InfiniteScrollSelect.vue"
-import { inject, ref } from "vue"
-import { storeToRefs } from "pinia"
-import { APIClient } from "../../../fetch/api-client.js"
+import Toolbar from "../../Toolbar.vue";
+import ToolbarLink from "../../ToolbarLink.vue";
+import KohaTable from "../../KohaTable.vue";
+import InfiniteScrollSelect from "../../InfiniteScrollSelect.vue";
+import { inject, ref } from "vue";
+import { storeToRefs } from "pinia";
+import { APIClient } from "../../../fetch/api-client.js";
 
 export default {
     setup() {
-        const acquisitionsStore = inject("acquisitionsStore")
-        const { isUserPermitted } = acquisitionsStore
-        const { getOwners, authorisedValues } = storeToRefs(acquisitionsStore)
+        const acquisitionsStore = inject("acquisitionsStore");
+        const { isUserPermitted } = acquisitionsStore;
+        const { getOwners, authorisedValues } = storeToRefs(acquisitionsStore);
 
-        const ledgersTable = ref()
-        const fundsTable = ref()
+        const ledgersTable = ref();
+        const fundsTable = ref();
 
         return {
             isUserPermitted,
@@ -199,7 +199,7 @@ export default {
             fundsTable,
             authorisedValues,
             getOwners,
-        }
+        };
     },
     data() {
         return {
@@ -235,43 +235,43 @@ export default {
             ],
             fundGroups: [],
             initialized: false,
-        }
+        };
     },
     computed: {
         filterLimitations() {
-            const filterLimitations = {}
+            const filterLimitations = {};
             Object.keys(this.filters)
                 .filter(key => !["fund_type", "fund_group"].includes(key))
                 .forEach(key => {
                     if (this.filters[key]) {
-                        filterLimitations[key] = this.filters[key]
+                        filterLimitations[key] = this.filters[key];
                     }
-                })
-            return filterLimitations
+                });
+            return filterLimitations;
         },
     },
     beforeRouteEnter(to, from, next) {
         next(vm => {
-            vm.getFundGroups()
-        })
+            vm.getFundGroups();
+        });
     },
     methods: {
         async getFundGroups() {
-            const client = APIClient.acquisition
+            const client = APIClient.acquisition;
             await client.fundGroups.getAll().then(
                 fundGroups => {
-                    this.fundGroups = fundGroups
-                    this.initialized = true
+                    this.fundGroups = fundGroups;
+                    this.initialized = true;
                 },
                 error => {}
-            )
+            );
         },
         tableUrl(type, query) {
-            let url = `/api/v1/acquisitions/${type}`
+            let url = `/api/v1/acquisitions/${type}`;
             if (query) {
-                url = url + "?q=" + JSON.stringify(query)
+                url = url + "?q=" + JSON.stringify(query);
             }
-            return url
+            return url;
         },
         getTableColumns: function (dataType) {
             return [
@@ -281,14 +281,14 @@ export default {
                     searchable: true,
                     orderable: true,
                     render: function (data, type, row, meta) {
-                        const key = `${dataType}_id`
+                        const key = `${dataType}_id`;
                         return (
                             `<a href="/cgi-bin/koha/fund_management/${dataType}/` +
                             row[key] +
                             '" class="show">' +
                             escape_str(`${row.name}`) +
                             "</a>"
-                        )
+                        );
                     },
                 },
                 {
@@ -297,23 +297,23 @@ export default {
                     searchable: true,
                     orderable: true,
                 },
-            ]
+            ];
         },
         filterTables() {
-            const filters = JSON.parse(JSON.stringify(this.filters))
+            const filters = JSON.parse(JSON.stringify(this.filters));
             Object.keys(filters).forEach(key => {
                 if (filters[key] === null) {
-                    delete filters[key]
+                    delete filters[key];
                 }
-            })
-            this.$refs.fundsTable.redraw(this.tableUrl("funds", filters))
+            });
+            this.$refs.fundsTable.redraw(this.tableUrl("funds", filters));
             if (filters.hasOwnProperty("fund_type")) {
-                delete filters.fund_type
+                delete filters.fund_type;
             }
             if (filters.hasOwnProperty("fund_group")) {
-                delete filters.fund_group
+                delete filters.fund_group;
             }
-            this.$refs.ledgersTable.redraw(this.tableUrl("ledgers", filters))
+            this.$refs.ledgersTable.redraw(this.tableUrl("ledgers", filters));
         },
         clearFilters() {
             this.filters = {
@@ -322,7 +322,7 @@ export default {
                 owner_id: null,
                 fiscal_period_id: null,
                 ledger_id: null,
-            }
+            };
         },
     },
     components: {
@@ -331,7 +331,7 @@ export default {
         KohaTable,
         InfiniteScrollSelect,
     },
-}
+};
 </script>
 
 <style scoped>
@@ -361,7 +361,9 @@ export default {
     min-width: 25%;
 }
 .v-select,
-input:not([type="submit"]):not([type="search"]):not([type="button"]):not([type="checkbox"]),
+input:not([type="submit"]):not([type="search"]):not([type="button"]):not(
+        [type="checkbox"]
+    ),
 textarea {
     border-color: rgba(60, 60, 60, 0.26);
     border-width: 1px;

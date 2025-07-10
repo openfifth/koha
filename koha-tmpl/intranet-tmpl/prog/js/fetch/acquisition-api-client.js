@@ -90,9 +90,10 @@ export class AcquisitionAPIClient {
                     endpoint: "fiscal_periods",
                     query,
                     params,
-                    ...(headers && {
-                        headers,
-                    }),
+                    headers: {
+                        "x-koha-embed": "ledgers",
+                        ...headers,
+                    },
                 }),
             delete: id =>
                 this.httpClient.delete({
