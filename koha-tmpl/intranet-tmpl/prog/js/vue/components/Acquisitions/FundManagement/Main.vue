@@ -53,7 +53,6 @@ export default {
         const {
             filterUsersByPermissions,
             filterLibGroupsByUsersBranchcode,
-            convertSettingsToObject,
             setLibraryGroups,
             loadAuthorisedValues,
         } = acquisitionsStore;
@@ -137,7 +136,6 @@ export default {
             owners,
             filterUsersByPermissions,
             filterLibGroupsByUsersBranchcode,
-            convertSettingsToObject,
             currencies,
             setLibraryGroups,
             initialized,
