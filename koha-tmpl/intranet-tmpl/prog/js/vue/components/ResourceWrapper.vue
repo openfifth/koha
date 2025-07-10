@@ -22,15 +22,16 @@ export default {
         };
 
         const componentProps = computed(() => {
+            const routeProps = { route };
             const routeName = route.meta.self.name;
             if (routeName.includes("Show")) {
-                return { routeAction: "show" };
+                return { ...routeProps, routeAction: "show" };
             } else if (routeName.includes("Edit")) {
-                return { routeAction: "edit" };
+                return { ...routeProps, routeAction: "edit" };
             } else if (routeName.includes("Add")) {
-                return { routeAction: "add" };
+                return { ...routeProps, routeAction: "add" };
             } else {
-                return { routeAction: "list" };
+                return { ...routeProps, routeAction: "list" };
             }
         });
         return {

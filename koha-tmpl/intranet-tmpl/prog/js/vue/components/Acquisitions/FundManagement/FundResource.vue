@@ -18,22 +18,20 @@ export default {
         routeAction: String,
         embedded: { type: Boolean, default: false },
         embedEvent: Function,
+        route: Object,
     },
     setup(props) {
+        const isSubFund = ref(
+            props.route.path.includes("sub_fund") ? true : false
+        );
+
         const patron_to_html = $patron_to_html;
 
         const acquisitionsStore = inject("acquisitionsStore");
-        const {
-            getVisibleGroups,
-            getOwners,
-            libraryGroups,
-            visibleGroups,
-            currencies,
-        } = storeToRefs(acquisitionsStore);
+        const { getVisibleGroups, libraryGroups, visibleGroups } =
+            storeToRefs(acquisitionsStore);
 
         const {
-            filterGroupsBasedOnOwner,
-            filterOwnersBasedOnGroup,
             resetOwnersAndVisibleGroups,
             formatLibraryGroupIds,
             formatValueWithCurrency,
@@ -49,6 +47,18 @@ export default {
             options,
             resource
         ) => {
+            if (!e && resource.ledger_id) {
+                fundGroupsQuery.value = {
+                    currency: resource.currency,
+                    lib_group_visibility: resource.lib_group_visibility,
+                };
+                const applicableGroups = formatLibraryGroupIds(
+                    resource.ledger.lib_group_visibility
+                );
+                visibleGroups.value = applicableGroups;
+                resetOwnersAndVisibleGroups(applicableGroups);
+                return;
+            }
             const selectedLedger = options.find(
                 ledger => ledger.ledger_id === e
             );
@@ -67,6 +77,12 @@ export default {
         };
 
         const filterLedgersBySelectedFiscalPeriod = (e, options, resource) => {
+            if (!e && resource.fiscal_period_id) {
+                ledgersQuery.value = {
+                    fiscal_period_id: resource.fiscal_period_id,
+                };
+                return;
+            }
             if (!e) {
                 ledgersQuery.value = {};
                 resource.ledger_id = null;
@@ -94,16 +110,37 @@ export default {
             }
         };
 
+        const additionalToolbarButtons = resource => {
+            return {
+                ...(isSubFund.value && {
+                    show: [
+                        {
+                            to: { name: "SubFundFormAdd" },
+                            icon: "plus",
+                            title: $__("Add sub fund"),
+                        },
+                    ],
+                }),
+            };
+        };
+
         const baseResource = useBaseResource({
-            resourceName: "fund",
+            resourceName: isSubFund.value ? "sub_fund" : "fund",
             nameAttr: "name",
-            idAttr: "fund_id",
-            showComponent: "FundShow",
+            idAttr: isSubFund.value ? "sub_fund_id" : "fund_id",
+            showComponent: isSubFund.value ? "SubFundShow" : "FundShow",
             listComponent: "FundList",
-            addComponent: "FundFormAdd",
-            editComponent: "FundFormAddEdit",
-            apiClient: APIClient.acquisition.funds,
-            resourceTableUrl: APIClient.acquisition._baseURL + "funds",
+            addComponent: isSubFund.value ? "SubFundFormAdd" : "FundFormAdd",
+            editComponent: isSubFund.value
+                ? "SubFundFormAddEdit"
+                : "FundFormAddEdit",
+            apiClient: isSubFund.value
+                ? APIClient.acquisition.subFunds
+                : APIClient.acquisition.funds,
+            resourceTableUrl:
+                APIClient.acquisition._baseURL + isSubFund.value
+                    ? "sub_funds"
+                    : "funds",
             i18n: {
                 deleteConfirmationMessage: $__(
                     "Are you sure you want to remove this fund?"
@@ -112,17 +149,31 @@ export default {
                 displayName: $__("Fund"),
                 editLabel: $__("Edit fund #%s"),
                 emptyListMessage: $__("There are no funds defined"),
-                newLabel: $__("New fund"),
+                newLabel: isSubFund.value
+                    ? $__("New sub fund")
+                    : $__("New fund"),
             },
             moduleStore: "acquisitionsStore",
             props,
+            additionalToolbarButtons,
             resourceAttrs: [
-                {
-                    name: "fund_id",
-                    label: $__("ID"),
-                    type: "text",
-                    hideIn: ["Form", "Show"],
-                },
+                ...(isSubFund.value
+                    ? [
+                          {
+                              name: "sub_fund_id",
+                              label: $__("ID"),
+                              type: "text",
+                              hideIn: ["Form", "Show"],
+                          },
+                      ]
+                    : [
+                          {
+                              name: "fund_id",
+                              label: $__("ID"),
+                              type: "text",
+                              hideIn: ["Form", "Show"],
+                          },
+                      ]),
                 {
                     name: "name",
                     required: true,
@@ -141,48 +192,85 @@ export default {
                     type: "text",
                     label: $__("Code"),
                 },
+                ...(!isSubFund.value
+                    ? [
+                          {
+                              name: "fiscal_period_id",
+                              required: true,
+                              type: "relationshipSelect",
+                              label: $__("Fiscal period"),
+                              relationshipAPIClient:
+                                  APIClient.acquisition.fiscalPeriods,
+                              relationshipOptionLabelAttr: "code",
+                              relationshipRequiredKey: "fiscal_period_id",
+                              onSelected: filterLedgersBySelectedFiscalPeriod,
+                              hideIn: ["List"],
+                          },
+                      ]
+                    : []),
+                ...(!isSubFund.value
+                    ? [
+                          {
+                              name: "ledger_id",
+                              required: true,
+                              type: "relationshipSelect",
+                              label: $__("Ledger"),
+                              relationshipAPIClient:
+                                  APIClient.acquisition.ledgers,
+                              relationshipOptionLabelAttr: "name",
+                              relationshipRequiredKey: "ledger_id",
+                              onSelected:
+                                  filterLibGroupsAndFundGroupsBySelectedLedger,
+                              query: getLedgersQuery,
+                              disabled: resource => !resource.fiscal_period_id,
+                              hideIn: ["List"],
+                          },
+                      ]
+                    : []),
+                ...(!isSubFund.value
+                    ? [
+                          {
+                              name: "fund_group_id",
+                              type: "relationshipSelect",
+                              label: $__("Fund group"),
+                              relationshipAPIClient:
+                                  APIClient.acquisition.fundGroups,
+                              relationshipOptionLabelAttr: "title",
+                              relationshipRequiredKey: "fund_group_id",
+                              onSelected:
+                                  filterLibGroupsAndFundGroupsBySelectedLedger,
+                              query: getFundGroupsQuery,
+                              disabled: resource => !resource.ledger_id,
+                              hideIn: ["List"],
+                          },
+                      ]
+                    : []),
                 {
-                    name: "fiscal_period_id",
-                    required: true,
-                    type: "relationshipSelect",
-                    label: $__("Fiscal period"),
-                    relationshipAPIClient: APIClient.acquisition.fiscalPeriods,
-                    relationshipOptionLabelAttr: "code",
-                    relationshipRequiredKey: "fiscal_period_id",
-                    onSelected: filterLedgersBySelectedFiscalPeriod,
-                    hideIn: ["List"],
+                    name: "owner_id",
+                    label: $__("Owner"),
+                    showElement: {
+                        name: "owner",
+                        type: "select",
+                        format: patron_to_html,
+                    },
+                    hideIn: ["List", "Form"],
                 },
+                ...(isSubFund.value
+                    ? []
+                    : [
+                          {
+                              name: "fund_type",
+                              type: "select",
+                              label: $__("Fund type"),
+                              avCat: "av_fund_type",
+                              fallbackType: "text",
+                          },
+                      ]),
                 {
-                    name: "ledger_id",
-                    required: true,
-                    type: "relationshipSelect",
-                    label: $__("Ledger"),
-                    relationshipAPIClient: APIClient.acquisition.ledgers,
-                    relationshipOptionLabelAttr: "name",
-                    relationshipRequiredKey: "ledger_id",
-                    onSelected: filterLibGroupsAndFundGroupsBySelectedLedger,
-                    query: getLedgersQuery,
-                    disabled: resource => !resource.fiscal_period_id,
-                    hideIn: ["List"],
-                },
-                {
-                    name: "fund_group_id",
-                    type: "relationshipSelect",
-                    label: $__("Fund group"),
-                    relationshipAPIClient: APIClient.acquisition.fundGroups,
-                    relationshipOptionLabelAttr: "title",
-                    relationshipRequiredKey: "fund_group_id",
-                    onSelected: filterLibGroupsAndFundGroupsBySelectedLedger,
-                    query: getFundGroupsQuery,
-                    disabled: resource => !resource.ledger_id,
-                    hideIn: ["List"],
-                },
-                {
-                    name: "fund_type",
+                    name: "currency",
                     type: "select",
-                    label: $__("Fund type"),
-                    avCat: "av_fund_type",
-                    fallbackType: "text",
+                    label: $__("Currency"),
+                    hideIn: ["List", "Form"],
                 },
                 {
                     name: "status",
@@ -278,13 +366,17 @@ export default {
 
         const tableURL = () => {
             if (props.embedded) {
-                const id = baseResource.route.params.ledger_id;
-                const query = {
-                    "me.ledger_id": id,
-                };
-                return "/api/v1/acquisitions/funds?q=" + JSON.stringify(query);
+                const id = isSubFund.value
+                    ? baseResource.route.params.fund_id
+                    : baseResource.route.params.ledger_id;
+                const query = {};
+                query["me." + (isSubFund.value ? "fund_id" : "ledger_id")] = id;
+                return (
+                    `/api/v1/acquisitions/${isSubFund.value ? "sub_funds" : "funds"}?q=` +
+                    JSON.stringify(query)
+                );
             }
-            return "/api/v1/acquisitions/funds";
+            return `/api/v1/acquisitions/${isSubFund.value ? "sub_funds" : "funds"}`;
         };
 
         const tableOptions = {
@@ -321,32 +413,41 @@ export default {
             }
 
             const fund = JSON.parse(JSON.stringify(fundToSave));
-            const fund_id = fund.fund_id;
+            const fund_id = isSubFund.value ? fund.sub_fund_id : fund.fund_id;
 
             const oe_warning_percent = fund.oe_warning_percent;
             fund.oe_warning_percent = oe_warning_percent / 100;
 
-            delete fund.fund_id;
+            if (!isSubFund.value) {
+                delete fund.fund_id;
+            } else {
+                delete fund.sub_fund_id;
+                fund.fund_id = baseResource.route.params.fund_id;
+            }
             delete fund.last_updated;
 
             if (fund_id) {
                 const acq_client = APIClient.acquisition;
-                acq_client.funds.update(fund, fund_id).then(
-                    success => {
-                        baseResource.setMessage($__("Fund updated"));
-                        baseResource.router.push({ name: "FundList" });
-                    },
-                    error => {}
-                );
+                acq_client[isSubFund.value ? "subFunds" : "funds"]
+                    .update(fund, fund_id)
+                    .then(
+                        success => {
+                            baseResource.setMessage($__("Fund updated"));
+                            baseResource.router.push({ name: "FundList" });
+                        },
+                        error => {}
+                    );
             } else {
                 const acq_client = APIClient.acquisition;
-                acq_client.funds.create(fund).then(
-                    success => {
-                        baseResource.setMessage($__("Fund created"));
-                        baseResource.router.push({ name: "FundList" });
-                    },
-                    error => {}
-                );
+                acq_client[isSubFund.value ? "subFunds" : "funds"]
+                    .create(fund)
+                    .then(
+                        success => {
+                            baseResource.setMessage($__("Fund created"));
+                            baseResource.router.push({ name: "FundList" });
+                        },
+                        error => {}
+                    );
             }
         };
 
@@ -356,9 +457,14 @@ export default {
             if (caller === "form") {
                 componentData.resource.value.lib_group_visibility =
                     formatLibraryGroupIds(resource.lib_group_visibility);
-                filterGroupsBySelectedFiscalPeriod(
-                    resource.fiscal_period_id,
-                    componentData.instancedResource.libraryGroups,
+                filterLedgersBySelectedFiscalPeriod(
+                    null,
+                    null,
+                    componentData.resource.value
+                );
+                filterLibGroupsAndFundGroupsBySelectedLedger(
+                    null,
+                    null,
                     componentData.resource.value
                 );
             }
@@ -375,10 +481,11 @@ export default {
             afterResourceFetch,
             fundGroupsQuery,
             ledgersQuery,
+            isSubFund,
         };
     },
     components: { BaseResource },
     emits: ["select-resource"],
-    name: "FiscalPeriodResource",
+    name: "FundResource",
 };
 </script>

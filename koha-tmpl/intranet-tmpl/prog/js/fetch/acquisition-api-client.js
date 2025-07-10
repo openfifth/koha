@@ -192,7 +192,10 @@ export class AcquisitionAPIClient {
             get: (id, headers) =>
                 this.httpClient.get({
                     endpoint: "funds/" + id,
-                    ...(headers && { headers }),
+                    headers: {
+                        "x-koha-embed": "owner,lib_group_limits,ledger",
+                        ...headers,
+                    },
                 }),
             getAll: (query, params, headers) =>
                 this.httpClient.getAll({
