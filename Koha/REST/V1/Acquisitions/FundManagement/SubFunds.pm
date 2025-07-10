@@ -81,6 +81,8 @@ sub add {
             sub {
 
                 my $body = $c->req->json;
+                $body = _inherit_from_parent_fund($body);
+
                 delete $body->{lib_groups} if $body->{lib_groups};
 
                 if ( $body->{spend_limit} ) {
@@ -193,4 +195,16 @@ sub delete {
     };
 }
 
+sub _inherit_from_parent_fund {
+    my ($sub_fund) = @_;
+
+    my $parent_fund = Koha::Acquisition::FundManagement::Funds->find( $sub_fund->{fund_id} );
+    $sub_fund->{ledger_id}            = $parent_fund->ledger_id;
+    $sub_fund->{fiscal_period_id}     = $parent_fund->fiscal_period_id;
+    $sub_fund->{sub_fund_type}        = $parent_fund->fund_type;
+    $sub_fund->{currency}             = $parent_fund->currency;
+    $sub_fund->{owner_id}             = $parent_fund->owner_id;
+    $sub_fund->{lib_group_visibility} = $parent_fund->lib_group_visibility;
+    return $sub_fund;
+}
 1;
