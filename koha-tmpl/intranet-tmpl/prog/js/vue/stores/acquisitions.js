@@ -166,22 +166,6 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
                 groups
             );
         },
-        getSetting(input) {
-            if (typeof input === "string") {
-                return store.settings[input];
-            } else {
-                return input.map(setting => {
-                    return store.settings[setting];
-                });
-            }
-        },
-        convertSettingsToObject(settings) {
-            const settingsObject = {};
-            settings.forEach(setting => {
-                settingsObject[setting.variable] = setting;
-            });
-            return settingsObject;
-        },
         formatValueWithCurrency(value, currency) {
             const { symbol } = store.currencies.find(
                 curr => curr.currency === currency
