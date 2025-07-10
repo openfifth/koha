@@ -1,22 +1,10 @@
-[%~ IF ( biblio.title ) ~%]
-    [%~ biblio.title | html ~%]
-[%~ ELSE ~%]
-    No title
-[%~ END ~%]
-[%~ biblio.medium | html ~%]
-[%~ SET subtitles = biblio.subtitle.split(' \| ') ~%]
-[%~ FOREACH subtitle IN subtitles ~%][%~ IF Koha.Preference('marcflavour')=='UNIMARC' ~%],[%~ END ~%]
-    [%~ subtitle | html ~%]
-[%~ END ~%]
-[%~ part_numbers = biblio.part_number.split(' \\| ') ~%]
-[%~ part_names = biblio.part_name.split(' \\| ') ~%]
-[%~ i = 0 ~%]
-[%~ WHILE ( part_numbers.$i.defined || part_names.$i.defined ) ~%]
-    [%~ IF ( part_numbers.$i.defined ) ~%]
-        [%~ part_numbers.$i | html ~%]
-    [%~ END ~%]
-    [%~ IF ( part_names.$i.defined ) ~%]
-        [%~ part_names.$i | html ~%]
-    [%~ END ~%]
-    [%~ i = i + 1 ~%]
-[%~ END ~%]
+[%~ IF ( biblio.title ) ~%] [%~ biblio.title | html ~%] [%~ ELSE ~%] No title
+[%~ END ~%] [%~ biblio.medium | html ~%] [%~ SET subtitles =
+biblio.subtitle.split(' \| ') ~%] [%~ FOREACH subtitle IN subtitles ~%][%~ IF
+Koha.Preference('marcflavour')=='UNIMARC' ~%],[%~ END ~%] [%~ subtitle | html
+~%] [%~ END ~%] [%~ part_numbers = biblio.part_number.split(' \\| ') ~%] [%~
+part_names = biblio.part_name.split(' \\| ') ~%] [%~ i = 0 ~%] [%~ WHILE (
+part_numbers.$i.defined || part_names.$i.defined ) ~%] [%~ IF (
+part_numbers.$i.defined ) ~%] [%~ part_numbers.$i | html ~%] [%~ END ~%] [%~ IF
+( part_names.$i.defined ) ~%] [%~ part_names.$i | html ~%] [%~ END ~%] [%~ i = i
++ 1 ~%] [%~ END ~%]

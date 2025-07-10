@@ -51,10 +51,10 @@ Any attempt to set a rule with a nonsensical scope (for instance, setting the C<
 
 our $RULE_KINDS = {
     lostreturn => {
-        scope => [ 'branchcode' ],
+        scope => ['branchcode'],
     },
     processingreturn => {
-        scope => [ 'branchcode' ],
+        scope => ['branchcode'],
     },
     patron_maxissueqty => {
         scope => [ 'branchcode', 'categorycode' ],
@@ -67,15 +67,15 @@ our $RULE_KINDS = {
     },
 
     holdallowed => {
-        scope => [ 'branchcode', 'itemtype' ],
+        scope        => [ 'branchcode', 'itemtype' ],
         can_be_blank => 0,
     },
     hold_fulfillment_policy => {
-        scope => [ 'branchcode', 'itemtype' ],
+        scope        => [ 'branchcode', 'itemtype' ],
         can_be_blank => 0,
     },
     returnbranch => {
-        scope => [ 'branchcode', 'itemtype' ],
+        scope        => [ 'branchcode', 'itemtype' ],
         can_be_blank => 0,
     },
 
@@ -83,7 +83,7 @@ our $RULE_KINDS = {
         scope => [ 'branchcode', 'categorycode', 'itemtype' ],
     },
     article_request_fee => {
-        scope => [ 'branchcode', 'categorycode' ],
+        scope       => [ 'branchcode', 'categorycode' ],
         is_monetary => 1,
     },
     open_article_requests_limit => {
@@ -179,7 +179,7 @@ our $RULE_KINDS = {
         scope => [ 'branchcode', 'categorycode', 'itemtype' ],
     },
     rentaldiscount => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope        => [ 'branchcode', 'categorycode', 'itemtype' ],
         can_be_blank => 0,
     },
     reservesallowed => {
@@ -188,7 +188,7 @@ our $RULE_KINDS = {
     suspension_chargeperiod => {
         scope => [ 'branchcode', 'categorycode', 'itemtype' ],
     },
-    note => { # This is not really a rule. Maybe we will want to separate this later.
+    note => {    # This is not really a rule. Maybe we will want to separate this later.
         scope => [ 'branchcode', 'categorycode', 'itemtype' ],
     },
     decreaseloanholds => {
@@ -207,7 +207,7 @@ our $RULE_KINDS = {
         scope => [ 'branchcode', 'categorycode', 'itemtype' ],
     },
     recall_overdue_fine => {
-        scope => [ 'branchcode', 'categorycode', 'itemtype' ],
+        scope       => [ 'branchcode', 'categorycode', 'itemtype' ],
         is_monetary => 1,
     },
     recall_shelf_time => {
@@ -222,6 +222,7 @@ our $RULE_KINDS = {
     bookings_trail_period => {
         scope => [ 'branchcode', 'itemtype' ],
     },
+
     # Not included (deprecated?):
     #   * accountsent
     #   * reservecharge
@@ -260,29 +261,27 @@ sub get_effective_rule {
     my $itemtype     = $params->{itemtype};
     my $branchcode   = $params->{branchcode};
 
-    Koha::Exceptions::MissingParameter->throw(
-        "Required parameter 'rule_name' missing")
-      unless $rule_name;
+    Koha::Exceptions::MissingParameter->throw("Required parameter 'rule_name' missing")
+        unless $rule_name;
 
     for my $v ( $branchcode, $categorycode, $itemtype ) {
         $v = undef if $v and $v eq '*';
     }
 
-    my $order_by = $params->{order_by}
-      // { -desc => [ 'branchcode', 'categorycode', 'itemtype' ] };
+    my $order_by = $params->{order_by} // { -desc => [ 'branchcode', 'categorycode', 'itemtype' ] };
 
     my $search_params;
     $search_params->{rule_name} = $rule_name;
 
     $search_params->{categorycode} = defined $categorycode ? [ $categorycode, undef ] : undef;
-    $search_params->{itemtype}     = defined $itemtype     ? [ $itemtype, undef ] : undef;
+    $search_params->{itemtype}     = defined $itemtype     ? [ $itemtype,     undef ] : undef;
     $search_params->{branchcode}   = defined $branchcode   ? [ $branchcode,   undef ] : undef;
 
     my $rule = $self->search(
         $search_params,
         {
             order_by => $order_by,
-            rows => 1,
+            rows     => 1,
         }
     )->single;
 
@@ -316,15 +315,15 @@ sub get_effective_rule_value {
     my $branchcode   = $params->{branchcode};
 
     my $memory_cache = Koha::Cache::Memory::Lite->get_instance;
-    my $cache_key = sprintf "CircRules:%s:%s:%s:%s", $rule_name // q{},
-      $categorycode // q{}, $branchcode // q{}, $itemtype // q{};
+    my $cache_key    = sprintf "CircRules:%s:%s:%s:%s", $rule_name // q{},
+        $categorycode // q{}, $branchcode // q{}, $itemtype // q{};
 
-    my $cached       = $memory_cache->get_from_cache($cache_key);
+    my $cached = $memory_cache->get_from_cache($cache_key);
     return $cached if $cached;
 
     my $rule = $self->get_effective_rule($params);
 
-    my $value= $rule ? $rule->rule_value : undef;
+    my $value = $rule ? $rule->rule_value : undef;
     $memory_cache->set_in_cache( $cache_key, $value );
     return $value;
 }
@@ -365,19 +364,17 @@ sub get_effective_rules {
 sub set_rule {
     my ( $self, $params ) = @_;
 
-    for my $mandatory_parameter (qw( rule_name rule_value ) ) {
-        Koha::Exceptions::MissingParameter->throw(
-            "Required parameter '$mandatory_parameter' missing")
-          unless exists $params->{$mandatory_parameter};
+    for my $mandatory_parameter (qw( rule_name rule_value )) {
+        Koha::Exceptions::MissingParameter->throw("Required parameter '$mandatory_parameter' missing")
+            unless exists $params->{$mandatory_parameter};
     }
 
     my $kind_info = $RULE_KINDS->{ $params->{rule_name} };
-    Koha::Exceptions::MissingParameter->throw(
-        "set_rule given unknown rule '$params->{rule_name}'!")
+    Koha::Exceptions::MissingParameter->throw("set_rule given unknown rule '$params->{rule_name}'!")
         unless defined $kind_info;
 
     # Enforce scope; a rule should be set for its defined scope, no more, no less.
-    foreach my $scope_level ( qw( branchcode categorycode itemtype ) ) {
+    foreach my $scope_level (qw( branchcode categorycode itemtype )) {
         if ( grep /$scope_level/, @{ $kind_info->{scope} } ) {
             croak "set_rule needs '$scope_level' to set '$params->{rule_name}'!"
                 unless exists $params->{$scope_level};
@@ -414,12 +411,10 @@ sub set_rule {
         if ( defined $rule_value ) {
             $rule->rule_value($rule_value);
             $rule->update();
-        }
-        else {
+        } else {
             $rule->delete();
         }
-    }
-    else {
+    } else {
         if ( defined $rule_value ) {
             $rule = Koha::CirculationRule->new(
                 {
@@ -450,18 +445,18 @@ sub set_rules {
     my ( $self, $params ) = @_;
 
     my %set_params;
-    $set_params{branchcode} = $params->{branchcode} if exists $params->{branchcode};
+    $set_params{branchcode}   = $params->{branchcode}   if exists $params->{branchcode};
     $set_params{categorycode} = $params->{categorycode} if exists $params->{categorycode};
-    $set_params{itemtype} = $params->{itemtype} if exists $params->{itemtype};
-    my $rules        = $params->{rules};
+    $set_params{itemtype}     = $params->{itemtype}     if exists $params->{itemtype};
+    my $rules = $params->{rules};
 
     my $rule_objects = [];
     while ( my ( $rule_name, $rule_value ) = each %$rules ) {
         my $rule_object = Koha::CirculationRules->set_rule(
             {
                 %set_params,
-                rule_name    => $rule_name,
-                rule_value   => $rule_value,
+                rule_name  => $rule_name,
+                rule_value => $rule_value,
             }
         );
         push( @$rule_objects, $rule_object );
@@ -477,9 +472,9 @@ Delete a set of circulation rules, needed for cleaning up when deleting issuingr
 =cut
 
 sub delete {
-    my ( $self ) = @_;
+    my ($self) = @_;
 
-    while ( my $rule = $self->next ){
+    while ( my $rule = $self->next ) {
         $rule->delete;
     }
 }
@@ -493,7 +488,7 @@ Clone a set of circulation rules to another branch
 sub clone {
     my ( $self, $to_branch ) = @_;
 
-    while ( my $rule = $self->next ){
+    while ( my $rule = $self->next ) {
         $rule->clone($to_branch);
     }
 }
@@ -524,12 +519,12 @@ sub get_return_branch_policy {
     my $pref = C4::Context->preference('CircControlReturnsBranch');
 
     my $branchcode =
-        $pref eq 'ItemHomeLibrary'     ? $item->homebranch
-      : $pref eq 'ItemHoldingLibrary' ? $item->holdingbranch
-      : $pref eq 'CheckInLibrary'      ? C4::Context->userenv
-          ? C4::Context->userenv->{branch}
-          : $item->homebranch
-      : $item->homebranch;
+          $pref eq 'ItemHomeLibrary'    ? $item->homebranch
+        : $pref eq 'ItemHoldingLibrary' ? $item->holdingbranch
+        : $pref eq 'CheckInLibrary'     ? C4::Context->userenv
+            ? C4::Context->userenv->{branch}
+            : $item->homebranch
+        : $item->homebranch;
 
     my $itemtype = $item->effective_itemtype;
 
@@ -543,7 +538,6 @@ sub get_return_branch_policy {
 
     return $rule ? $rule->rule_value : 'homebranch';
 }
-
 
 =head3 get_opacitemholds_policy
 
@@ -583,10 +577,10 @@ sub get_opacitemholds_policy {
 
 sub get_onshelfholds_policy {
     my ( $class, $params ) = @_;
-    my $item = $params->{item};
+    my $item     = $params->{item};
     my $itemtype = $item->effective_itemtype;
-    my $patron = $params->{patron};
-    my $rule = Koha::CirculationRules->get_effective_rule(
+    my $patron   = $params->{patron};
+    my $rule     = Koha::CirculationRules->get_effective_rule(
         {
             categorycode => ( $patron ? $patron->categorycode : undef ),
             itemtype     => $itemtype,
@@ -635,25 +629,25 @@ processing return return values are:
 sub get_lostreturn_policy {
     my ( $class, $params ) = @_;
 
-    my $item   = $params->{item};
+    my $item = $params->{item};
 
-    my $behaviour = C4::Context->preference( 'RefundLostOnReturnControl' ) // 'CheckinLibrary';
+    my $behaviour         = C4::Context->preference('RefundLostOnReturnControl') // 'CheckinLibrary';
     my $behaviour_mapping = {
         CheckinLibrary    => $params->{'return_branch'} // $item->homebranch,
         ItemHomeBranch    => $item->homebranch,
         ItemHoldingBranch => $item->holdingbranch
     };
 
-    my $branch = $behaviour_mapping->{ $behaviour };
+    my $branch = $behaviour_mapping->{$behaviour};
 
     my $rules = Koha::CirculationRules->get_effective_rules(
         {
             branchcode => $branch,
-            rules  => ['lostreturn','processingreturn']
+            rules      => [ 'lostreturn', 'processingreturn' ]
         }
     );
 
-    $rules->{lostreturn} //= 'refund';
+    $rules->{lostreturn}       //= 'refund';
     $rules->{processingreturn} //= 'refund';
     return $rules;
 }
@@ -672,11 +666,13 @@ sub article_requestable_rules {
     my $category = $params->{categorycode};
 
     return if !C4::Context->preference('ArticleRequests');
-    return $class->search({
-        $category ? ( categorycode => [ $category, undef ] ) : (),
-        rule_name => 'article_requests',
-        rule_value => { '!=' => 'no' },
-    });
+    return $class->search(
+        {
+            $category ? ( categorycode => [ $category, undef ] ) : (),
+            rule_name  => 'article_requests',
+            rule_value => { '!=' => 'no' },
+        }
+    );
 }
 
 =head3 guess_article_requestable_itemtypes
@@ -700,25 +696,27 @@ sub article_requestable_rules {
 sub guess_article_requestable_itemtypes {
     my ( $class, $params ) = @_;
     my $category = $params->{categorycode};
-    return {} if !C4::Context->preference('ArticleRequests');
+    return {}           if !C4::Context->preference('ArticleRequests');
     return { '*' => 1 } if C4::Context->preference('ArticleRequestsLinkControl') eq 'always';
 
-    my $cache = Koha::Caches->get_instance;
+    my $cache                            = Koha::Caches->get_instance;
     my $last_article_requestable_guesses = $cache->get_from_cache(GUESSED_ITEMTYPES_KEY);
-    my $key = $category || '*';
+    my $key                              = $category || '*';
     return $last_article_requestable_guesses->{$key}
         if $last_article_requestable_guesses && exists $last_article_requestable_guesses->{$key};
 
-    my $res = {};
-    my $rules = $class->article_requestable_rules({
-        $category ? ( categorycode => $category ) : (),
-    });
+    my $res   = {};
+    my $rules = $class->article_requestable_rules(
+        {
+            $category ? ( categorycode => $category ) : (),
+        }
+    );
     return $res if !$rules;
     foreach my $rule ( $rules->as_list ) {
         $res->{ $rule->itemtype // '*' } = 1;
     }
     $last_article_requestable_guesses->{$key} = $res;
-    $cache->set_in_cache(GUESSED_ITEMTYPES_KEY, $last_article_requestable_guesses);
+    $cache->set_in_cache( GUESSED_ITEMTYPES_KEY, $last_article_requestable_guesses );
     return $res;
 }
 
@@ -732,9 +730,9 @@ If not defined (or empty string), the value of the system preference useDaysMode
 sub get_effective_daysmode {
     my ( $class, $params ) = @_;
 
-    my $categorycode     = $params->{categorycode};
-    my $itemtype         = $params->{itemtype};
-    my $branchcode       = $params->{branchcode};
+    my $categorycode = $params->{categorycode};
+    my $itemtype     = $params->{itemtype};
+    my $branchcode   = $params->{branchcode};
 
     my $daysmode_rule = $class->get_effective_rule(
         {
@@ -745,13 +743,11 @@ sub get_effective_daysmode {
         }
     );
 
-    return ( defined($daysmode_rule)
-          and $daysmode_rule->rule_value ne '' )
-      ? $daysmode_rule->rule_value
-      : C4::Context->preference('useDaysMode');
+    return ( defined($daysmode_rule) and $daysmode_rule->rule_value ne '' )
+        ? $daysmode_rule->rule_value
+        : C4::Context->preference('useDaysMode');
 
 }
-
 
 =head3 type
 

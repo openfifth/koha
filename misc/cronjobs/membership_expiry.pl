@@ -153,7 +153,7 @@ any field from the branches table
 
 use Modern::Perl;
 use Getopt::Long qw( GetOptions );
-use Pod::Usage qw( pod2usage );
+use Pod::Usage   qw( pod2usage );
 
 use Koha::Script -cron;
 use C4::Context;
@@ -163,9 +163,9 @@ use C4::Log qw( cronlogaction );
 use Koha::Patrons;
 
 # These are defaults for command line options.
-my $confirm;                              # -c: Confirm that the user has read and configured this script.
-my $nomail;                               # -n: No mail. Will not send any emails.
-my $verbose = 0;                           # -v: verbose
+my $confirm;        # -c: Confirm that the user has read and configured this script.
+my $nomail;         # -n: No mail. Will not send any emails.
+my $verbose = 0;    # -v: verbose
 my $help    = 0;
 my $man     = 0;
 my $before  = 0;
@@ -178,8 +178,8 @@ my $renew;
 my $letter_expiry;
 my $letter_renew;
 
-my $command_line_options = join(" ",@ARGV);
-cronlogaction({ info => $command_line_options });
+my $command_line_options = join( " ", @ARGV );
+cronlogaction( { info => $command_line_options } );
 
 GetOptions(
     'help|?'         => \$help,
@@ -201,7 +201,7 @@ $letter_expiry = 'MEMBERSHIP_EXPIRY'  if !$letter_expiry;
 $letter_renew  = 'MEMBERSHIP_RENEWED' if !$letter_renew;
 
 pod2usage( -verbose => 2 ) if $man;
-pod2usage(1) if $help || !$confirm;
+pod2usage(1)               if $help || !$confirm;
 
 # Check active/inactive. Note that passing no value or zero is a no-op.
 if ( !C4::Context->preference('TrackLastPatronActivityTriggers')
@@ -228,7 +228,8 @@ if ( !C4::Context->preference('TrackLastPatronActivityTriggers')
 }
 
 my $expdays = C4::Context->preference('MembershipExpiryDaysNotice');
-if( !$expdays ) {
+if ( !$expdays ) {
+
     #If the pref is not set, we will exit
     warn 'Exiting membership_expiry.pl: MembershipExpiryDaysNotice not set'
         if $verbose;
@@ -271,7 +272,7 @@ while ( my $recent = $upcoming_mem_expires->next ) {
     }
 
     my $from_address = $recent->library->from_email_address;
-    my $letter =  C4::Letters::GetPreparedLetter(
+    my $letter       = C4::Letters::GetPreparedLetter(
         module      => 'members',
         letter_code => $which_notice,
         branchcode  => $recent->branchcode,
@@ -283,19 +284,21 @@ while ( my $recent = $upcoming_mem_expires->next ) {
     );
     last if !$letter;    # Letters.pm already warned, just exit
     if ($nomail) {
-        print $letter->{'content'}."\n";
+        print $letter->{'content'} . "\n";
         next;
     }
 
-    C4::Letters::EnqueueLetter({
-        letter                 => $letter,
-        borrowernumber         =>  $recent->borrowernumber,
-        from_address           => $from_address,
-        message_transport_type => 'email',
-    });
+    C4::Letters::EnqueueLetter(
+        {
+            letter                 => $letter,
+            borrowernumber         => $recent->borrowernumber,
+            from_address           => $from_address,
+            message_transport_type => 'email',
+        }
+    );
     $count_enqueued++;
 
-    if ($recent->smsalertnumber) {
+    if ( $recent->smsalertnumber ) {
         my $smsletter = C4::Letters::GetPreparedLetter(
             module      => 'members',
             letter_code => $which_notice,
@@ -308,11 +311,13 @@ while ( my $recent = $upcoming_mem_expires->next ) {
             message_transport_type => 'sms',
         );
         if ($smsletter) {
-            C4::Letters::EnqueueLetter({
-                letter                 => $smsletter,
-                borrowernumber         => $recent->borrowernumber,
-                message_transport_type => 'sms',
-            });
+            C4::Letters::EnqueueLetter(
+                {
+                    letter                 => $smsletter,
+                    borrowernumber         => $recent->borrowernumber,
+                    message_transport_type => 'sms',
+                }
+            );
         }
     }
 }
@@ -324,4 +329,4 @@ if ($verbose) {
     print "Skipped $count_skipped active patrons\n"   if $inactive;
 }
 
-cronlogaction({ action => 'End', info => "COMPLETED" });
+cronlogaction( { action => 'End', info => "COMPLETED" } );

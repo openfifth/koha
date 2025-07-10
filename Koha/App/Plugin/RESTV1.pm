@@ -24,10 +24,10 @@ use Mojo::Base 'Mojolicious::Plugin';
 use Koha::REST::V1;
 
 sub register {
-    my ($self, $app) = @_;
+    my ( $self, $app ) = @_;
 
     my $v1 = Koha::REST::V1->new( config => { route => '/v1' } );
-    $app->routes->any('/api')->partial(1)->to(app => $v1);
+    $app->routes->any('/api')->partial(1)->to( app => $v1 );
 }
 
 1;

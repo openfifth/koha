@@ -1,11 +1,7 @@
-[% USE raw %]
-[% USE scalar %]
-[% USE Koha %]
-[% USE Categories %]
+[% USE raw %] [% USE scalar %] [% USE Koha %] [% USE Categories %]
 <!-- str/members-menu.inc -->
-[% IF ( Koha.Preference('patronimages') ) %]
-    [% Asset.js("js/patron-webcam.js") | $raw %]
-[% END %]
+[% IF ( Koha.Preference('patronimages') ) %] [% Asset.js("js/patron-webcam.js")
+| $raw %] [% END %]
 <script>
     var advsearch = "[% advsearch | html %]";
     var destination = "[% destination | html %]";

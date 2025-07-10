@@ -63,8 +63,8 @@ subtest 'request() tests' => sub {
     is( $ar->status, Koha::ArticleRequest::Status::Requested );
     ok( defined $ar->created_on, 'created_on is set' );
 
-    is( $ar->debit_id, undef, 'No fee linked' );
-    is( $patron->account->balance, 0, 'No outstanding fees' );
+    is( $ar->debit_id,             undef, 'No fee linked' );
+    is( $patron->account->balance, 0,     'No outstanding fees' );
     $patron->discard_changes;
     is( $patron->lastseen, undef, 'Patron activity not tracked when article is not a valid trigger' );
 
@@ -103,7 +103,7 @@ subtest 'set_pending() tests' => sub {
 
     $schema->storage->txn_begin;
 
-    my $patron = $builder->build_object({ class => 'Koha::Patrons' });
+    my $patron = $builder->build_object( { class => 'Koha::Patrons' } );
     my $biblio = $builder->build_sample_biblio;
 
     my $ar_module = mock_article_request_module();
@@ -135,7 +135,8 @@ subtest 'process() tests' => sub {
     my $ar_module = mock_article_request_module();
 
     my $ar = $builder->build_object(
-        {   class => 'Koha::ArticleRequests',
+        {
+            class => 'Koha::ArticleRequests',
             value => { status => Koha::ArticleRequest::Status::Requested }
         }
     );
@@ -156,7 +157,8 @@ subtest 'complete() tests' => sub {
     my $ar_module = mock_article_request_module();
 
     my $ar = $builder->build_object(
-        {   class => 'Koha::ArticleRequests',
+        {
+            class => 'Koha::ArticleRequests',
             value => { status => Koha::ArticleRequest::Status::Requested }
         }
     );
@@ -179,7 +181,7 @@ subtest 'cancel() tests' => sub {
     my $patron_mock = Test::MockModule->new('Koha::Patron');
     $patron_mock->mock( 'article_request_fee', sub { return $amount; } );
 
-    my $patron = $builder->build_object({ class => 'Koha::Patrons' });
+    my $patron = $builder->build_object( { class => 'Koha::Patrons' } );
     my $item   = $builder->build_sample_item;
 
     my $ar_module = mock_article_request_module();
@@ -203,17 +205,17 @@ subtest 'cancel() tests' => sub {
     is( $patron->account->balance, $amount, 'Outstanding fees with the right value' );
 
     my $payed_amount = 5;
-    $patron->account->pay({ amount => $payed_amount, interface => 'intranet', lines => [ $ar->debit ] });
+    $patron->account->pay( { amount => $payed_amount, interface => 'intranet', lines => [ $ar->debit ] } );
     is( $patron->account->balance, $amount - $payed_amount, 'Outstanding fees with the right value' );
 
     my $reason = "Hey, ho";
     my $notes  = "Let's go!";
 
-    $ar->cancel({ cancellation_reason => $reason, notes => $notes })->discard_changes;
+    $ar->cancel( { cancellation_reason => $reason, notes => $notes } )->discard_changes;
 
-    is( $ar->status, Koha::ArticleRequest::Status::Canceled );
+    is( $ar->status,              Koha::ArticleRequest::Status::Canceled );
     is( $ar->cancellation_reason, $reason, 'Cancellation reason stored correctly' );
-    is( $ar->notes, $notes, 'Notes stored correctly' );
+    is( $ar->notes,               $notes,  'Notes stored correctly' );
 
     is( $patron->account->balance, -$payed_amount, 'The patron has a credit balance' );
 

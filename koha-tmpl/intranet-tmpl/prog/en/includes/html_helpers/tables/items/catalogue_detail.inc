@@ -1,100 +1,220 @@
-[% USE To %]
-[% USE tojson = To %]
-[% USE Koha %]
-[% USE Branches %]
-[% USE AuthorisedValues %]
-[% USE ItemTypes %]
-[% USE raw %]
-
-[% BLOCK build_table %]
-    <table class="items_table" id="[% tab | html %]_table">
-        <thead>
-            <tr>
-            <th id="[% tab | html %]_checkbox" data-colname="checkbox" class="NoSort"></th>
+[% USE To %] [% USE tojson = To %] [% USE Koha %] [% USE Branches %] [% USE
+AuthorisedValues %] [% USE ItemTypes %] [% USE raw %] [% BLOCK build_table %]
+<table class="items_table" id="[% tab | html %]_table">
+    <thead>
+        <tr>
+            <th
+                id="[% tab | html %]_checkbox"
+                data-colname="checkbox"
+                class="NoSort"
+            ></th>
             [% IF Koha.Preference('LocalCoverImages') %]
-                <th id="[% tab | html %]_cover_image" data-colname="cover_image">Cover image</th>
+            <th id="[% tab | html %]_cover_image" data-colname="cover_image">
+                Cover image
+            </th>
+            [% END %] [% IF ( item_level_itypes ) %]
+            <th id="[% tab | html %]_itype" data-colname="itype">Item type</th>
             [% END %]
-            [% IF ( item_level_itypes ) %]<th id="[% tab | html %]_itype" data-colname="itype">Item type</th>[% END %]
-            <th id="[% tab | html %]_holdingbranch" data-colname="holdingbranch">Current library</th>
-            <th id="[% tab | html %]_homebranch" data-colname="homebranch">Home library</th>
+            <th
+                id="[% tab | html %]_holdingbranch"
+                data-colname="holdingbranch"
+            >
+                Current library
+            </th>
+            <th id="[% tab | html %]_homebranch" data-colname="homebranch">
+                Home library
+            </th>
             <th id="[% tab | html %]_ccode" data-colname="ccode">Collection</th>
             [% IF Koha.Preference('EnableItemGroups') %]
-                <th id="[% tab | html %]_item_group" data-colname="item_group">Item group</th>
+            <th id="[% tab | html %]_item_group" data-colname="item_group">
+                Item group
+            </th>
             [% END %]
-            <th id="[% tab | html %]_itemcallnumber" data-colname="itemcallnumber">Call number</th>
-            <th id="[% tab | html %]_enumchron" data-colname="enumchron">Serial enumeration / chronology</th>
+            <th
+                id="[% tab | html %]_itemcallnumber"
+                data-colname="itemcallnumber"
+            >
+                Call number
+            </th>
+            <th id="[% tab | html %]_enumchron" data-colname="enumchron">
+                Serial enumeration / chronology
+            </th>
             <th id="[% tab | html %]_status" data-colname="status">Status</th>
-            <th id="[% tab | html %]_lastseen" data-colname="lastseen">Last seen</th>
-            <th id="[% tab | html %]_issues" data-colname="issues">Checkouts</th>
-            <th id="[% tab | html %]_renewals" data-colname="renewals">Renewals</th>
-            <th id="[% tab | html %]_localuse" data-colname="localuse">Local uses</th>
-            <th id="[% tab | html %]_dateaccessioned" data-colname="dateaccessioned">Date accessioned</th>
-            <th id="[% tab | html %]_datelastborrowed" data-colname="datelastborrowed">Date last borrowed</th>
-            <th id="[% tab | html %]_booksellerid" data-colname="booksellerid">Source of acquisition</th>
-            <th id="[% tab | html %]_barcode" data-colname="barcode">Barcode</th>
+            <th id="[% tab | html %]_lastseen" data-colname="lastseen">
+                Last seen
+            </th>
+            <th id="[% tab | html %]_issues" data-colname="issues">
+                Checkouts
+            </th>
+            <th id="[% tab | html %]_renewals" data-colname="renewals">
+                Renewals
+            </th>
+            <th id="[% tab | html %]_localuse" data-colname="localuse">
+                Local uses
+            </th>
+            <th
+                id="[% tab | html %]_dateaccessioned"
+                data-colname="dateaccessioned"
+            >
+                Date accessioned
+            </th>
+            <th
+                id="[% tab | html %]_datelastborrowed"
+                data-colname="datelastborrowed"
+            >
+                Date last borrowed
+            </th>
+            <th id="[% tab | html %]_booksellerid" data-colname="booksellerid">
+                Source of acquisition
+            </th>
+            <th id="[% tab | html %]_barcode" data-colname="barcode">
+                Barcode
+            </th>
             <th id="[% tab | html %]_uri" data-colname="uri">URL</th>
-            <th id="[% tab | html %]_copynumber" data-colname="copynumber">Copy number</th>
-            <th id="[% tab | html %]_stocknumber" data-colname="stocknumber">Inventory number</th>
-            <th id="[% tab | html %]_materials" data-colname="materials">Materials specified</th>
-            <th id="[% tab | html %]_itemnotes" data-colname="itemnotes">Public notes</th>
-            <th id="[% tab | html %]_itemnotes_nonpublic" data-colname="itemnotes_nonpublic">Non-public notes</th>
-            [% IF Koha.Preference('EasyAnalyticalRecords') %]<th id="[% tab | html %]_hostrecord" data-colname="hostrecord">Host records</th>[% END %]
-            [% IF ( analyze ) %]<th id="[% tab | html %]_usedin" data-colname="usedin">Used in</th><th></th>[% END %]
-            [% IF Koha.Preference('UseCourseReserves') %]<th id="[% tab | html %]_course_reserves" data-colname="course_reserves">Course reserves</th>[% END %]
-            [% IF ( SpineLabelShowPrintOnBibDetails ) %]<th id="[% tab | html %]_spinelabel" data-colname="spinelabel" class="NoSort">Spine label</th>[% END %]
-            [% IF ( CAN_user_editcatalogue_edit_items ) %]<th id="[% tab | html %]_actions" data-colname="actions" class="NoSort noExport">&nbsp;</th>[% END %]
-            </tr>
-        </thead>
-    </table>
-[% END %]
-[% BLOCK items_table %]
-    <div class="[% tab | html %]_table_table_controls">
-        <span class="show_hide_filters">
-            [% IF Koha.Preference('AlwaysShowHoldingsTableFilters') %]
-                <button class="btn btn-link show_filters" data-tab="[% tab | html %]" style="display: none;"><i class="fa fa-filter"></i> Show filters</button>
-                <button class="btn btn-link hide_filters" data-tab="[% tab | html %]"><i class="fa fa-filter"></i> Hide filters</button>
-            [% ELSE %]
-                <button class="btn btn-link show_filters" data-tab="[% tab | html %]"><i class="fa fa-filter"></i> Show filters</button>
-                <button class="btn btn-link hide_filters" data-tab="[% tab | html %]" style="display: none;"><i class="fa fa-filter"></i> Hide filters</button>
+            <th id="[% tab | html %]_copynumber" data-colname="copynumber">
+                Copy number
+            </th>
+            <th id="[% tab | html %]_stocknumber" data-colname="stocknumber">
+                Inventory number
+            </th>
+            <th id="[% tab | html %]_materials" data-colname="materials">
+                Materials specified
+            </th>
+            <th id="[% tab | html %]_itemnotes" data-colname="itemnotes">
+                Public notes
+            </th>
+            <th
+                id="[% tab | html %]_itemnotes_nonpublic"
+                data-colname="itemnotes_nonpublic"
+            >
+                Non-public notes
+            </th>
+            [% IF Koha.Preference('EasyAnalyticalRecords') %]
+            <th id="[% tab | html %]_hostrecord" data-colname="hostrecord">
+                Host records
+            </th>
+            [% END %] [% IF ( analyze ) %]
+            <th id="[% tab | html %]_usedin" data-colname="usedin">Used in</th>
+            <th></th>
+            [% END %] [% IF Koha.Preference('UseCourseReserves') %]
+            <th
+                id="[% tab | html %]_course_reserves"
+                data-colname="course_reserves"
+            >
+                Course reserves
+            </th>
+            [% END %] [% IF ( SpineLabelShowPrintOnBibDetails ) %]
+            <th
+                id="[% tab | html %]_spinelabel"
+                data-colname="spinelabel"
+                class="NoSort"
+            >
+                Spine label
+            </th>
+            [% END %] [% IF ( CAN_user_editcatalogue_edit_items ) %]
+            <th
+                id="[% tab | html %]_actions"
+                data-colname="actions"
+                class="NoSort noExport"
+            >
+                &nbsp;
+            </th>
             [% END %]
-        </span>
-        <button class="btn btn-link SelectAll" data-tab="[% tab | html %]"><i class="fa fa-check"></i> Select all</button>
-        <button class="btn btn-link ClearAll" data-tab="[% tab | html %]"><i class="fa fa-times"></i> Clear all</button>
-        <span class="itemselection_actions">
-          | Actions:
-          [% IF CAN_user_tools_items_batchdel %]
-              <form class="itemselection_action_delete_form" method="post" action="/cgi-bin/koha/tools/batchMod.pl">
-                  [% INCLUDE 'csrf-token.inc' %]
-                  <input name='src' type='hidden' value='CATALOGUING' />
-                  <input name='biblionumber' type='hidden' value="[% biblionumber | html %]" />
-                  <input name='op' type='hidden' value='cud-show' />
-                  <input name='del' type='hidden' value='1' />
-                  <button type="submit" class="itemselection_action_delete btn btn-link"><i class="fa fa-trash-can"></i> Delete selected items</button>
-              </form>
-          [% END %]
-          [% IF CAN_user_tools_items_batchmod %]
-              <form class="itemselection_action_modify_form" method="post" action="/cgi-bin/koha/tools/batchMod.pl">
-                  [% INCLUDE 'csrf-token.inc' %]
-                  <input name='src' type='hidden' value='CATALOGUING' />
-                  <input name='biblionumber' type='hidden' value="[% biblionumber | html %]" />
-                  <input name='op' type='hidden' value='cud-show' />
-                  <button type="submit" class="itemselection_action_modify btn btn-link"><i class="fa-solid fa-pencil"></i> Modify selected items</button>
-              </form>
-          [% END %]
-          [% IF CAN_user_editcatalogue_manage_item_groups && biblio.item_groups.count %]
-            <a class="itemselection_action_item_group_set" href="#"><i class="fa fa-book"></i> Add/move to item group</a>
-            <a class="itemselection_action_item_group_unset" href="#"><i class="fa fa-unlink"></i> Remove from item group</a>
-          [% END %]
-        </span>
-    </div>
+        </tr>
+    </thead>
+</table>
+[% END %] [% BLOCK items_table %]
+<div class="[% tab | html %]_table_table_controls">
+    <span class="show_hide_filters">
+        [% IF Koha.Preference('AlwaysShowHoldingsTableFilters') %]
+        <button
+            class="btn btn-link show_filters"
+            data-tab="[% tab | html %]"
+            style="display: none"
+        >
+            <i class="fa fa-filter"></i> Show filters
+        </button>
+        <button class="btn btn-link hide_filters" data-tab="[% tab | html %]">
+            <i class="fa fa-filter"></i> Hide filters
+        </button>
+        [% ELSE %]
+        <button class="btn btn-link show_filters" data-tab="[% tab | html %]">
+            <i class="fa fa-filter"></i> Show filters
+        </button>
+        <button
+            class="btn btn-link hide_filters"
+            data-tab="[% tab | html %]"
+            style="display: none"
+        >
+            <i class="fa fa-filter"></i> Hide filters
+        </button>
+        [% END %]
+    </span>
+    <button class="btn btn-link SelectAll" data-tab="[% tab | html %]">
+        <i class="fa fa-check"></i> Select all
+    </button>
+    <button class="btn btn-link ClearAll" data-tab="[% tab | html %]">
+        <i class="fa fa-times"></i> Clear all
+    </button>
+    <span class="itemselection_actions">
+        | Actions: [% IF CAN_user_tools_items_batchdel %]
+        <form
+            class="itemselection_action_delete_form"
+            method="post"
+            action="/cgi-bin/koha/tools/batchMod.pl"
+        >
+            [% INCLUDE 'csrf-token.inc' %]
+            <input name="src" type="hidden" value="CATALOGUING" />
+            <input
+                name="biblionumber"
+                type="hidden"
+                value="[% biblionumber | html %]"
+            />
+            <input name="op" type="hidden" value="cud-show" />
+            <input name="del" type="hidden" value="1" />
+            <button
+                type="submit"
+                class="itemselection_action_delete btn btn-link"
+            >
+                <i class="fa fa-trash-can"></i> Delete selected items
+            </button>
+        </form>
+        [% END %] [% IF CAN_user_tools_items_batchmod %]
+        <form
+            class="itemselection_action_modify_form"
+            method="post"
+            action="/cgi-bin/koha/tools/batchMod.pl"
+        >
+            [% INCLUDE 'csrf-token.inc' %]
+            <input name="src" type="hidden" value="CATALOGUING" />
+            <input
+                name="biblionumber"
+                type="hidden"
+                value="[% biblionumber | html %]"
+            />
+            <input name="op" type="hidden" value="cud-show" />
+            <button
+                type="submit"
+                class="itemselection_action_modify btn btn-link"
+            >
+                <i class="fa-solid fa-pencil"></i> Modify selected items
+            </button>
+        </form>
+        [% END %] [% IF CAN_user_editcatalogue_manage_item_groups &&
+        biblio.item_groups.count %]
+        <a class="itemselection_action_item_group_set" href="#"
+            ><i class="fa fa-book"></i> Add/move to item group</a
+        >
+        <a class="itemselection_action_item_group_unset" href="#"
+            ><i class="fa fa-unlink"></i> Remove from item group</a
+        >
+        [% END %]
+    </span>
+</div>
 
-    [% PROCESS build_table tab => tab %]
-[% END %][%# end of block items_table %]
-
-
-[% BLOCK build_items_table_js %]
+[% PROCESS build_table tab => tab %] [% END %][%# end of block items_table %] [%
+BLOCK build_items_table_js %]
 <script>
-
     let hide_patron_name = [% IF Koha.Preference('HidePatronName') %]true[% ELSE %]false[% END %];
 
     let items_selection = {};

@@ -29,27 +29,26 @@ push @js_files, `git ls-files 'koha-tmpl/intranet-tmpl/prog/js/vue/*.js'`;
 push @js_files, `git ls-files 'koha-tmpl/intranet-tmpl/prog/js/vue/*.ts'`;
 push @js_files, `git ls-files 't/cypress/integration/*.ts'`;
 
-
 my @not_tidy;
 foreach my $filepath (@vue_files) {
     chomp $filepath;
-    my $tidy = qx{yarn --silent run prettier --trailing-comma es5 --semi false --arrow-parens avoid $filepath};
+    my $tidy    = qx{yarn --silent run prettier --trailing-comma es5 --semi false --arrow-parens avoid $filepath};
     my $content = read_file $filepath;
     if ( $content ne $tidy ) {
         push @not_tidy, $filepath;
     }
 }
 
-is(scalar(@not_tidy), 0, 'No .vue file should be messy') or diag Dumper \@not_tidy;
+is( scalar(@not_tidy), 0, 'No .vue file should be messy' ) or diag Dumper \@not_tidy;
 
 @not_tidy = ();
 foreach my $filepath (@js_files) {
     chomp $filepath;
-    my $tidy = qx{yarn --silent run prettier --trailing-comma es5 --arrow-parens avoid $filepath};
+    my $tidy    = qx{yarn --silent run prettier --trailing-comma es5 --arrow-parens avoid $filepath};
     my $content = read_file $filepath;
     if ( $content ne $tidy ) {
         push @not_tidy, $filepath;
     }
 }
 
-is(scalar(@not_tidy), 0, 'No js file from vue directory should be messy') or diag Dumper \@not_tidy;
+is( scalar(@not_tidy), 0, 'No js file from vue directory should be messy' ) or diag Dumper \@not_tidy;

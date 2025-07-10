@@ -65,15 +65,14 @@ sub new {
     }, $class;
 }
 
-
 sub Preference {
     my ( $self, $pref ) = @_;
-    return C4::Context->preference( $pref );
+    return C4::Context->preference($pref);
 }
 
 sub MultivaluePreference {
     my ( $self, $pref ) = @_;
-    return C4::Context->multivalue_preference( $pref );
+    return C4::Context->multivalue_preference($pref);
 }
 
 =head3 CSVDelimiter

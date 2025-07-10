@@ -4,7 +4,6 @@
 #written 2/8/04
 #by oleonard@athenscounty.lib.oh.us
 
-
 # Copyright 2000-2002 Katipo Communications
 # Parts copyright 2010 BibLibre
 #
@@ -26,27 +25,26 @@
 use Modern::Perl;
 use Try::Tiny;
 
-use CGI qw ( -utf8 );
+use CGI      qw ( -utf8 );
 use C4::Auth qw( checkauth );
 use C4::Context;
 use C4::Members;
 use Koha::Patrons;
 
-
 my $input = CGI->new;
 
-my ( $loggedinuserid ) = checkauth($input, 0, { borrowers => 'edit_borrowers' }, 'intranet');
+my ($loggedinuserid) = checkauth( $input, 0, { borrowers => 'edit_borrowers' }, 'intranet' );
 
-my $destination = $input->param("destination") || '';
-my $borrowernumber=$input->param('borrowernumber');
-my $status = $input->param('status');
+my $destination    = $input->param("destination") || '';
+my $borrowernumber = $input->param('borrowernumber');
+my $status         = $input->param('status');
 my $reregistration = $input->param('reregistration') || '';
 
 my $dbh = C4::Context->dbh;
 my $dateexpiry;
 
-my $logged_in_user = Koha::Patrons->find( { userid =>  $loggedinuserid } );
-my $patron         = Koha::Patrons->find( $borrowernumber );
+my $logged_in_user = Koha::Patrons->find( { userid => $loggedinuserid } );
+my $patron         = Koha::Patrons->find($borrowernumber);
 
 my $cannot_renew = '0';
 
@@ -55,9 +53,10 @@ my $cannot_renew = '0';
 # But a librarian is not supposed to hack the system
 if ( $logged_in_user->can_see_patron_infos($patron) ) {
     if ( $reregistration eq 'y' ) {
+
         # re-reregistration function to automatic calcul of date expiry
         try {
-        $dateexpiry = $patron->renew_account;
+            $dateexpiry = $patron->renew_account;
         } catch {
             if ( ref($_) eq 'Koha::Exceptions::Patron::Relationship::NoGuarantor' ) {
                 $cannot_renew = '1';
@@ -72,7 +71,7 @@ if ( $logged_in_user->can_see_patron_infos($patron) ) {
     }
 }
 
-if($destination eq "circ"){
+if ( $destination eq "circ" ) {
     if ($cannot_renew) {
         print $input->redirect("/cgi-bin/koha/circ/circulation.pl?borrowernumber=$borrowernumber&noguarantor=1");
     } elsif ($dateexpiry) {

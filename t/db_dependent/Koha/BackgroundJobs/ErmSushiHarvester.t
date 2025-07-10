@@ -51,7 +51,7 @@ $ua->mock(
             'code',
             sub {
                 return 200;
-                }
+            }
         );
         $response->mock(
             'is_error',

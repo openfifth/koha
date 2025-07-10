@@ -24,7 +24,7 @@ use C4::Auth qw(checkpw_internal);
 use Koha::Patrons;
 
 use Scalar::Util qw( blessed );
-use Try::Tiny qw( catch try );
+use Try::Tiny    qw( catch try );
 
 =head1 NAME
 
@@ -60,11 +60,10 @@ sub set {
     return try {
 
         ## Change password
-        $patron->set_password({ password => $password });
+        $patron->set_password( { password => $password } );
 
         return $c->render( status => 200, openapi => "" );
-    }
-    catch {
+    } catch {
         if ( blessed $_ and $_->isa('Koha::Exceptions::Password') ) {
             return $c->render(
                 status  => 400,

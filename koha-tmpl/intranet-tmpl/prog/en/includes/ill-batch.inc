@@ -16,8 +16,7 @@
                 <th scope="col"></th>
             </tr>
         </thead>
-        <tbody id="ill-batch-body">
-        </tbody>
+        <tbody id="ill-batch-body"></tbody>
     </table>
 </div>
 [% END %]

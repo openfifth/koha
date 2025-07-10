@@ -16,23 +16,25 @@
     var ill_button_remove = _("Remove");
     var ill_batch_create_api_fail = _("Unable to create batch request");
     var ill_batch_update_api_fail = _("Unable to update batch request");
-    var ill_batch_item_remove = _("Are you sure you want to remove this item from the batch?");
+    var ill_batch_item_remove = _(
+        "Are you sure you want to remove this item from the batch?"
+    );
     var ill_batch_create_cancel_button = _("Close");
     var ill_batch_metadata_more = _("More");
     var ill_batch_metadata_less = _("Less");
     var ill_batch_available_via = _("Available via");
     var ill_batch_metadata = {
-        'doi': _("DOI"),
-        'pmid': _("PubMed ID"),
-        'issn': _("ISSN"),
-        'title': _("Title"),
-        'year': _("Year"),
-        'issue': _("Issue"),
-        'pages': _("Pages"),
-        'publisher': _("Publisher"),
-        'article_title': _("Article title"),
-        'article_author': _("Article author"),
-        'volume': _("Volume")
+        doi: _("DOI"),
+        pmid: _("PubMed ID"),
+        issn: _("ISSN"),
+        title: _("Title"),
+        year: _("Year"),
+        issue: _("Issue"),
+        pages: _("Pages"),
+        publisher: _("Publisher"),
+        article_title: _("Article title"),
+        article_author: _("Article author"),
+        volume: _("Volume"),
     };
 </script>
 <!-- / ill-batch-table-strings.inc -->

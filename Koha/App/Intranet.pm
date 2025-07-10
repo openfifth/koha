@@ -27,8 +27,8 @@ use Koha::Cache::Memory::Lite;
 sub startup {
     my ($self) = @_;
 
-    push @{$self->plugins->namespaces}, 'Koha::App::Plugin';
-    push @{$self->static->paths}, $self->home->rel_file('koha-tmpl');
+    push @{ $self->plugins->namespaces }, 'Koha::App::Plugin';
+    push @{ $self->static->paths },       $self->home->rel_file('koha-tmpl');
 
     # Create route for all CGI scripts, need to be loaded first because of
     # CGI::Compile
@@ -39,12 +39,12 @@ sub startup {
 
     $self->plugin('CSRF');
 
-    $self->hook(before_dispatch => \&_before_dispatch);
-    $self->hook(around_action => \&_around_action);
+    $self->hook( before_dispatch => \&_before_dispatch );
+    $self->hook( around_action   => \&_around_action );
 
     my $r = $self->routes;
 
-    $r->any('/')->to(cb => sub { shift->redirect_to('/cgi-bin/koha/mainpage.pl') });
+    $r->any('/')->to( cb => sub { shift->redirect_to('/cgi-bin/koha/mainpage.pl') } );
 }
 
 sub _before_dispatch {
@@ -59,7 +59,7 @@ sub _before_dispatch {
 }
 
 sub _around_action {
-    my ($next, $c, $action, $last) = @_;
+    my ( $next, $c, $action, $last ) = @_;
 
     # Flush memory caches before every request
     Koha::Caches->flush_L1_caches();

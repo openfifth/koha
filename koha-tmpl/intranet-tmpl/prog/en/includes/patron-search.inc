@@ -1,305 +1,346 @@
-[% USE Koha %]
-[% USE I18N %]
-[% USE Branches %]
-[% USE ExtendedAttributeTypes %]
-[% USE Categories %]
-[% USE raw %]
-[% USE Asset %]
-[% USE To %]
-[% USE AuthorisedValues %]
-[% SET search_results_block_id = 'searchresults' %]
-[% SET av_bsort1 = AuthorisedValues.Get('Bsort1') %]
-[% SET av_bsort2 = AuthorisedValues.Get('Bsort2') %]
-
-[%# Display a simple form %]
-[% BLOCK patron_search_filters_simple  %]
-    <form method="get" class="patron_search_form">
-        <div class="hint">Enter patron card number or partial name:</div>
-        <input type="text" size="40" id="search_patron_filter_simple" class="search_patron_filter focus" autocomplete="off" />
-        <input type="submit" class="btn btn-primary" value="Search" />
-    </form>
-[% END %]
-
-[%# Display a complex patron search form %]
-[%# - Search: input %]
-[%# You can then pass a list of filters %]
-[%# - branch: select library list %]
-[%# - category: select patron category list %]
-[%# - sort1: select patron sort1 field %]
-[%# - sort2: select patron sort2 field %]
-[%# - search_field: select patron field list %]
-[%# - search_type: select 'contains' or 'starts with' %]
+[% USE Koha %] [% USE I18N %] [% USE Branches %] [% USE ExtendedAttributeTypes
+%] [% USE Categories %] [% USE raw %] [% USE Asset %] [% USE To %] [% USE
+AuthorisedValues %] [% SET search_results_block_id = 'searchresults' %] [% SET
+av_bsort1 = AuthorisedValues.Get('Bsort1') %] [% SET av_bsort2 =
+AuthorisedValues.Get('Bsort2') %] [%# Display a simple form %] [% BLOCK
+patron_search_filters_simple %]
+<form method="get" class="patron_search_form">
+    <div class="hint">Enter patron card number or partial name:</div>
+    <input
+        type="text"
+        size="40"
+        id="search_patron_filter_simple"
+        class="search_patron_filter focus"
+        autocomplete="off"
+    />
+    <input type="submit" class="btn btn-primary" value="Search" />
+</form>
+[% END %] [%# Display a complex patron search form %] [%# - Search: input %] [%#
+You can then pass a list of filters %] [%# - branch: select library list %] [%#
+- category: select patron category list %] [%# - sort1: select patron sort1
+field %] [%# - sort2: select patron sort2 field %] [%# - search_field: select
+patron field list %] [%# - search_type: select 'contains' or 'starts with' %]
 [%- searchtype = searchtype || Koha.Preference('DefaultPatronSearchMethod') -%]
-[% BLOCK patron_search_filters %]
-    [% SET has_patron_search_filters_block = 1 %]
-    <aside>
-        <form method="get" class="patron_search_form">
-            <fieldset class="brief">
-                <h3>Search for patron</h3>
-                <ol>
-                    <li>
-                        <label>Search:</label>
-                        <input type="text" id="search_patron_filter" class="search_patron_filter focus" value="[% search_filter | html %]" />
-                    </li>
+[% BLOCK patron_search_filters %] [% SET has_patron_search_filters_block = 1 %]
+<aside>
+    <form method="get" class="patron_search_form">
+        <fieldset class="brief">
+            <h3>Search for patron</h3>
+            <ol>
+                <li>
+                    <label>Search:</label>
+                    <input
+                        type="text"
+                        id="search_patron_filter"
+                        class="search_patron_filter focus"
+                        value="[% search_filter | html %]"
+                    />
+                </li>
 
-                    [% FOR f IN filters %]
-                        [% SWITCH f %]
-                        [% CASE 'branch' %]
-                            <li>
-                                <label>Library:</label>
-                                <select class="branchcode_filter">
-                                    [% SET libraries = Branches.all( only_from_group => 1 ) %]
-                                    [% IF libraries.size != 1 %]
-                                        <option value="">Any</option>
-                                    [% END %]
-                                    [% FOREACH l IN libraries %]
-                                        [% IF (l.branchcode == branchcode_filter) %]
-                                            <option value="[% l.branchcode | html %]" selected="selected">[% l.branchname | html %]</option>
-                                        [% ELSE %]
-                                            <option value="[% l.branchcode | html %]">[% l.branchname | html %]</option>
-                                        [% END %]
-                                    [% END %]
-                                </select>
-                            </li>
-                        [% CASE 'category' %]
-                            <li>
-                                <label>Category:</label>
-                                <select class="categorycode_filter">
-                                    <option value="">Any</option>
-                                    [% FOREACH category IN Categories.limited.unblessed %]
-                                        [% IF ( category.categorycode == categorycode_filter ) %]
-                                            <option value="[% category.categorycode | html %]" selected="selected">[% category.description | html %]</option>
-                                        [% ELSE %]
-                                            <option value="[% category.categorycode | html %]">[% category.description | html %]</option>
-                                        [% END %]
-                                    [% END %]
-                                </select>
-                            </li>
-                        [% CASE 'sort1' %]
-                            <li>
-                                <label>Sort 1:</label>
-                                [% PROCESS 'av-build-dropbox.inc' no_id => 1, name="sort1_filter", category="Bsort1", empty=1, size = 20 %]
-                            </li>
-                        [% CASE 'sort2' %]
-                            <li>
-                                <label>Sort 2:</label>
-                                    [% PROCESS 'av-build-dropbox.inc' no_id => 1, name="sort2_filter", category="Bsort2", empty=1, size = 20 %]
-                            </li>
-                        [% CASE 'search_field' %]
-                            <li>
-                                [% INCLUDE patron_fields_dropdown %]
-                            </li>
-                        [% CASE 'search_type' %]
-                            <li>
-                                <label>Search type:</label>
-                                <select name="searchtype" class="searchtype_filter">
-                                    [% IF searchtype == "starts_with" %]
-                                        <option value='starts_with' selected="selected">Starts with</option>
-                                        <option value="contains">Contains</option>
-                                    [% ELSE %]
-                                        <option value='starts_with'>Starts with</option>
-                                        <option value="contains" selected="selected">Contains</option>
-                                    [% END %]
-                                </select>
-                            </li>
+                [% FOR f IN filters %] [% SWITCH f %] [% CASE 'branch' %]
+                <li>
+                    <label>Library:</label>
+                    <select class="branchcode_filter">
+                        [% SET libraries = Branches.all( only_from_group => 1 )
+                        %] [% IF libraries.size != 1 %]
+                        <option value="">Any</option>
+                        [% END %] [% FOREACH l IN libraries %] [% IF
+                        (l.branchcode == branchcode_filter) %]
+                        <option
+                            value="[% l.branchcode | html %]"
+                            selected="selected"
+                        >
+                            [% l.branchname | html %]
+                        </option>
+                        [% ELSE %]
+                        <option value="[% l.branchcode | html %]">
+                            [% l.branchname | html %]
+                        </option>
+                        [% END %] [% END %]
+                    </select>
+                </li>
+                [% CASE 'category' %]
+                <li>
+                    <label>Category:</label>
+                    <select class="categorycode_filter">
+                        <option value="">Any</option>
+                        [% FOREACH category IN Categories.limited.unblessed %]
+                        [% IF ( category.categorycode == categorycode_filter )
+                        %]
+                        <option
+                            value="[% category.categorycode | html %]"
+                            selected="selected"
+                        >
+                            [% category.description | html %]
+                        </option>
+                        [% ELSE %]
+                        <option value="[% category.categorycode | html %]">
+                            [% category.description | html %]
+                        </option>
+                        [% END %] [% END %]
+                    </select>
+                </li>
+                [% CASE 'sort1' %]
+                <li>
+                    <label>Sort 1:</label>
+                    [% PROCESS 'av-build-dropbox.inc' no_id => 1,
+                    name="sort1_filter", category="Bsort1", empty=1, size = 20
+                    %]
+                </li>
+                [% CASE 'sort2' %]
+                <li>
+                    <label>Sort 2:</label>
+                    [% PROCESS 'av-build-dropbox.inc' no_id => 1,
+                    name="sort2_filter", category="Bsort2", empty=1, size = 20
+                    %]
+                </li>
+                [% CASE 'search_field' %]
+                <li>[% INCLUDE patron_fields_dropdown %]</li>
+                [% CASE 'search_type' %]
+                <li>
+                    <label>Search type:</label>
+                    <select name="searchtype" class="searchtype_filter">
+                        [% IF searchtype == "starts_with" %]
+                        <option value="starts_with" selected="selected">
+                            Starts with
+                        </option>
+                        <option value="contains">Contains</option>
+                        [% ELSE %]
+                        <option value="starts_with">Starts with</option>
+                        <option value="contains" selected="selected">
+                            Contains
+                        </option>
                         [% END %]
-                    [% END %]
-                </ol>
-            </fieldset>
-            <fieldset class="action">
-                <input type="submit" class="btn btn-primary" value="Search" />
-                <input type="button" value="Clear" class="btn btn-default clear_search" />
-            </fieldset>
-        </form>
-    </aside>
+                    </select>
+                </li>
+                [% END %] [% END %]
+            </ol>
+        </fieldset>
+        <fieldset class="action">
+            <input type="submit" class="btn btn-primary" value="Search" />
+            <input
+                type="button"
+                value="Clear"
+                class="btn btn-default clear_search"
+            />
+        </fieldset>
+    </form>
+</aside>
+[% END %] [%# Display the table with: %] [%# - At the top a hint about a
+possible filter %] [%# - Browse by last name %] [%# - The table %] [%# Get the
+following parameters: %] [%# - filter: can be 'suggestions_managers',
+'orders_managers', 'funds_owners', 'funds_users' or 'erm_users' to filter
+patrons on their permissions %] [%# - table_id: the ID of the table %] [%#
+open_on_row_click: See patron_search_js %] [%# columns: See patron_search_js %]
+[% BLOCK patron_search_table %] [% UNLESS table_id %] [% SET table_id =
+"memberresultst" %] [% END %] [% IF filter == 'suggestions_managers' %]
+<div class="alert alert-info">
+    Only staff with superlibrarian or full suggestions permissions are returned
+    in the search results
+</div>
+[% ELSIF filter == 'orders_managers' OR filter == 'baskets_managers' %]
+<div class="alert alert-info">
+    Only staff with superlibrarian or acquisitions permissions (or order_manage
+    permission if granular permissions are enabled) are returned in the search
+    results
+</div>
+[% ELSIF filter == 'funds_owners' OR filter == 'funds_users' %]
+<div class="alert alert-info">
+    Only staff with superlibrarian or acquisitions permissions (or budget_modify
+    permission if granular permissions are enabled) are returned in the search
+    results
+</div>
+[% ELSIF filter == 'erm_users' %]
+<div class="alert alert-info">
+    Only staff with superlibrarian or ERM permissions are returned in the search
+    results
+</div>
 [% END %]
 
-[%# Display the table with: %]
-[%# - At the top a hint about a possible filter %]
-[%# - Browse by last name %]
-[%# - The table %]
-[%# Get the following parameters: %]
-[%# - filter: can be 'suggestions_managers', 'orders_managers', 'funds_owners', 'funds_users' or 'erm_users' to filter patrons on their permissions %]
-[%# - table_id: the ID of the table %]
-[%# open_on_row_click: See patron_search_js %]
-[%# columns: See patron_search_js %]
-[% BLOCK patron_search_table %]
-
-    [% UNLESS table_id %]
-        [% SET table_id = "memberresultst" %]
+<div class="browse">
+    Browse by last name: [% SET alphabet = Koha.Preference('alphabet').split('
+    ') %] [% UNLESS alphabet.size %] [% alphabet = ['A' .. 'Z'] %] [% END %] [%
+    FOREACH letter IN alphabet %]
+    <a href="#" class="filterByLetter">[% letter | html %]</a>
     [% END %]
+</div>
 
-    [% IF filter == 'suggestions_managers' %]
-        <div class="alert alert-info">Only staff with superlibrarian or full suggestions permissions are returned in the search results</div>
-    [% ELSIF filter == 'orders_managers' OR filter == 'baskets_managers' %]
-        <div class="alert alert-info">Only staff with superlibrarian or acquisitions permissions (or order_manage permission if granular permissions are enabled) are returned in the search results</div>
-    [% ELSIF filter == 'funds_owners' OR filter == 'funds_users' %]
-        <div class="alert alert-info">Only staff with superlibrarian or acquisitions permissions (or budget_modify permission if granular permissions are enabled) are returned in the search results</div>
-    [% ELSIF filter == 'erm_users' %]
-        <div class="alert alert-info">Only staff with superlibrarian or ERM permissions are returned in the search results</div>
-    [% END %]
+<h3 style="display: none">
+    Patrons found for: <span class="searchpattern"></span>
+</h3>
 
-    <div class="browse">
-        Browse by last name:
-        [% SET alphabet = Koha.Preference('alphabet').split(' ') %]
-        [% UNLESS alphabet.size %]
-            [% alphabet = ['A' .. 'Z'] %]
-        [% END %]
-        [% FOREACH letter IN alphabet %]
-            <a href="#" class="filterByLetter">[% letter | html %]</a>
-        [% END %]
-    </div>
+<div id="[% table_id | html %]_search_results" style="display: none">
+    <div
+        class="info alert alert-info"
+        style="display: none; margin: 1em 0"
+    ></div>
+    <div
+        class="error alert alert-warning"
+        style="display: none; margin: 1em 0"
+    ></div>
 
-    <h3 style="display: none;">Patrons found for: <span class="searchpattern"></span></h3>
-
-    <div id="[% table_id | html %]_search_results" style="display:none;">
-
-        <div class="info alert alert-info" style="display: none; margin: 1em 0;"></div>
-        <div class="error alert alert-warning" style="display: none; margin: 1em 0"></div>
-
-        <input type="hidden" class="firstletter_filter" value="" />
-        [% SET table_class = open_on_row_click ? 'selections-table' : '' %]
-        <table id="[% table_id | html %]" class="[% table_class | html %]">
-            <thead>
-                <tr>
-                    [% FOR column IN columns %]
-                        [% SWITCH column %]
-                            [% CASE 'checkbox' %]<th class="noExport"></th>
-                            [% CASE 'cardnumber' %]<th>Card</th>
-                            [% CASE 'dateofbirth' %]<th>Date of birth</th>
-                            [% CASE 'name' %]<th>Name</th>
-                            [% CASE 'name-address' %]<th>Name</th>
-                            [% CASE 'address' %]<th>Address</th>
-                            [% CASE 'address-library' %]<th>Address</th>
-                            [% CASE 'branch' %]<th data-filter="libraries">Library</th>
-                            [% CASE 'category' %]<th data-filter="categories">Category</th>
-                            [% CASE 'dateexpiry' %]<th>Expires on</th>
-                            [% CASE 'borrowernotes' %]<th>Notes</th>
-                            [% CASE 'phone' %]<th>Phone</th>
-                            [% CASE 'checkouts' %]<th>Checkouts</th>
-                            [% CASE 'account_balance' %]<th>Fines</th>
-                            [% CASE 'sort1' %]
-                                [% IF av_bsort1.size %]
-                                    <th data-filter="av_bsort1">Sort 1</th>
-                                [% ELSE %]
-                                    <th>Sort 1</th>
-                                [% END %]
-                            [% CASE 'sort2' %]
-                                [% IF av_bsort2.size %]
-                                    <th data-filter="av_bsort2">Sort 2</th>
-                                [% ELSE %]
-                                    <th>Sort 2</th>
-                                [% END %]
-                            [% CASE 'action' %]<th class="noExport">&nbsp;</th>
-                        [% END %]
-                    [% END %]
-                </tr>
-              </thead>
-            <tbody></tbody>
-        </table>
-    </div>
+    <input type="hidden" class="firstletter_filter" value="" />
+    [% SET table_class = open_on_row_click ? 'selections-table' : '' %]
+    <table id="[% table_id | html %]" class="[% table_class | html %]">
+        <thead>
+            <tr>
+                [% FOR column IN columns %] [% SWITCH column %] [% CASE
+                'checkbox' %]
+                <th class="noExport"></th>
+                [% CASE 'cardnumber' %]
+                <th>Card</th>
+                [% CASE 'dateofbirth' %]
+                <th>Date of birth</th>
+                [% CASE 'name' %]
+                <th>Name</th>
+                [% CASE 'name-address' %]
+                <th>Name</th>
+                [% CASE 'address' %]
+                <th>Address</th>
+                [% CASE 'address-library' %]
+                <th>Address</th>
+                [% CASE 'branch' %]
+                <th data-filter="libraries">Library</th>
+                [% CASE 'category' %]
+                <th data-filter="categories">Category</th>
+                [% CASE 'dateexpiry' %]
+                <th>Expires on</th>
+                [% CASE 'borrowernotes' %]
+                <th>Notes</th>
+                [% CASE 'phone' %]
+                <th>Phone</th>
+                [% CASE 'checkouts' %]
+                <th>Checkouts</th>
+                [% CASE 'account_balance' %]
+                <th>Fines</th>
+                [% CASE 'sort1' %] [% IF av_bsort1.size %]
+                <th data-filter="av_bsort1">Sort 1</th>
+                [% ELSE %]
+                <th>Sort 1</th>
+                [% END %] [% CASE 'sort2' %] [% IF av_bsort2.size %]
+                <th data-filter="av_bsort2">Sort 2</th>
+                [% ELSE %]
+                <th>Sort 2</th>
+                [% END %] [% CASE 'action' %]
+                <th class="noExport">&nbsp;</th>
+                [% END %] [% END %]
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
 
 <!-- Patron preview modal -->
-<div class="modal" id="patronPreview" tabindex="-1" role="dialog" aria-labelledby="patronPreviewLabel">
+<div
+    class="modal"
+    id="patronPreview"
+    tabindex="-1"
+    role="dialog"
+    aria-labelledby="patronPreviewLabel"
+>
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-body">
                 <div id="loading">
-                    <img src="[% interface | html %]/[% theme | html %]/img/spinner-small.gif" alt="" /> Loading
+                    <img
+                        src="[% interface | html %]/[% theme | html %]/img/spinner-small.gif"
+                        alt=""
+                    />
+                    Loading
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+[% END %] [%# Integrate all the JS code, outside of a script tag %] [%# Get the
+following parameters: %] [%# - redirect_if_one_result: Redirect to the patron if
+the search returns only one result, note that it will not redirect if filters of
+the DT are used (this is a feature) %] [%# - redirect_url: The URL to use, the
+borrowernumber parameter will be added %] [%# - redirect_if_attribute_equal:
+Name of the attribute to use for the redirect. Query using this attribute,
+before the normal search %] [%# filter: Same as patron_search_table %] [%#
+open_on_row_click: boolean, default off. Will allow to select a patron by
+clicking on the whole tr element %] [%# columns: list of columns that will be
+displayed. Possible values are: 'checkbox', 'cardnumber', 'dateofbirth',
+'address', 'name', 'name-address', 'branch', 'category', 'dateexpiry',
+'borrowernotes, 'phone', 'checkouts', 'account_balance', 'sort1', 'sort2',
+'action' %] [%# preview_on_name_click: Open a modal window with patron's info
+when the name is clicked %] [%# actions: list of buttons to display in the
+action column. Possible values are: 'select', 'add', 'edit', 'checkout' %] [%#
+callback: name of the JS function that will be called when a patron is selected.
+Only work with action=select %] [%# display_search_description: boolean, default
+off. Display the description of the search %] [%# adjust_history: boolean,
+default off. Change the current url when a first letter is selected %] [%#
+defer_loading: boolean, default on. If true, it will not load the table until a
+search is triggered %] [% BLOCK patron_search_js %] [% IF redirect_if_one_result
+&& !redirect_url %]
+<script>
+    console.log("Wrong call of patron_search_js - missing redirect_url");
+</script>
 [% END %]
+<script>
+    [% SET libraries = Branches.all %]
+    [% SET categories = Categories.all.unblessed %]
+    var categories = [% To.json(categories) | $raw %].map(e => {
+        e['_id'] = e.categorycode.toLowerCase();
+        e['_str'] = e.description;
+        return e;
+    });
+    var categories_map = categories.reduce((map, e) => {
+        map[e._id] = e;
+        return map;
+    }, {});
+    var libraries  = [% To.json(libraries) | $raw %].map(e => {
+        e['_id'] = e.branchcode;
+        e['_str'] = e.branchname;
+        return e;
+    });
+    var libraries_map = libraries.reduce((map, e) => {
+        map[e._id] = e;
+        return map;
+    }, {});
 
-[%# Integrate all the JS code, outside of a script tag %]
-[%# Get the following parameters: %]
-[%# - redirect_if_one_result: Redirect to the patron if the search returns only one result, note that it will not redirect if filters of the DT are used (this is a feature) %]
-[%# - redirect_url: The URL to use, the borrowernumber parameter will be added %]
-[%# - redirect_if_attribute_equal: Name of the attribute to use for the redirect. Query using this attribute, before the normal search %]
-[%# filter: Same as patron_search_table %]
-[%# open_on_row_click: boolean, default off. Will allow to select a patron by clicking on the whole tr element %]
-[%# columns: list of columns that will be displayed. Possible values are: 'checkbox', 'cardnumber', 'dateofbirth', 'address', 'name', 'name-address', 'branch', 'category', 'dateexpiry', 'borrowernotes, 'phone', 'checkouts', 'account_balance', 'sort1', 'sort2', 'action' %]
-[%# preview_on_name_click: Open a modal window with patron's info when the name is clicked %]
-[%# actions: list of buttons to display in the action column. Possible values are: 'select', 'add', 'edit', 'checkout' %]
-[%# callback: name of the JS function that will be called when a patron is selected. Only work with action=select %]
-[%# display_search_description: boolean, default off. Display the description of the search %]
-[%# adjust_history: boolean, default off. Change the current url when a first letter is selected %]
-[%# defer_loading: boolean, default on. If true, it will not load the table until a search is triggered %]
-[% BLOCK patron_search_js %]
 
-    [% IF redirect_if_one_result && !redirect_url %]
-        <script>console.log("Wrong call of patron_search_js - missing redirect_url");</script>
+    var av_bsort1= [% To.json(av_bsort1) | $raw %].map( e => {
+        e['_id'] = e.authorised_value;
+        e['_str'] = e.lib;
+        return e;
+    });
+    var av_bsort1_map = av_bsort1.reduce((map, e) => {
+        map[e._id] = e;
+        return map;
+    }, {});
+    var av_bsort2= [% To.json(av_bsort2) | $raw %].map( e => {
+        e['_id'] = e.authorised_value;
+        e['_str'] = e.lib;
+        return e;
+    });
+    var av_bsort2_map = av_bsort2.reduce((map, e) => {
+        map[e._id] = e;
+        return map;
+    }, {});
+
+    [% IF Koha.Preference('ExtendedPatronAttributes') %]
+        [% SET extended_attribute_types = ExtendedAttributeTypes.codes( staff_searchable => 1, searched_by_default => 1 ) %]
+        [% IF ( extended_attribute_types ) %][% extended_attribute_types = [ extended_attribute_types ]  %][% END %]
+        var extended_attribute_types = [% To.json(extended_attribute_types || []) | $raw %];
     [% END %]
 
-    <script>
-        [% SET libraries = Branches.all %]
-        [% SET categories = Categories.all.unblessed %]
-        var categories = [% To.json(categories) | $raw %].map(e => {
-            e['_id'] = e.categorycode.toLowerCase();
-            e['_str'] = e.description;
-            return e;
+    $(document).on("shown.bs.modal", function(){
+        $('select[name="sort1_filter"]').select2({allowClear:true});
+        $('select[name="sort2_filter"]').select2({allowClear:true});
+    }).on("hidden.bs.modal", function(){
+        ["sort1_filter", "sort2_filter"].forEach(function(item){
+            if( $('select[name=' +  item + ']').data("select2") ){
+                $('select[name=' +  item + ']').select2("destroy");
+            }
         });
-        var categories_map = categories.reduce((map, e) => {
-            map[e._id] = e;
-            return map;
-        }, {});
-        var libraries  = [% To.json(libraries) | $raw %].map(e => {
-            e['_id'] = e.branchcode;
-            e['_str'] = e.branchname;
-            return e;
-        });
-        var libraries_map = libraries.reduce((map, e) => {
-            map[e._id] = e;
-            return map;
-        }, {});
-
-
-        var av_bsort1= [% To.json(av_bsort1) | $raw %].map( e => {
-            e['_id'] = e.authorised_value;
-            e['_str'] = e.lib;
-            return e;
-        });
-        var av_bsort1_map = av_bsort1.reduce((map, e) => {
-            map[e._id] = e;
-            return map;
-        }, {});
-        var av_bsort2= [% To.json(av_bsort2) | $raw %].map( e => {
-            e['_id'] = e.authorised_value;
-            e['_str'] = e.lib;
-            return e;
-        });
-        var av_bsort2_map = av_bsort2.reduce((map, e) => {
-            map[e._id] = e;
-            return map;
-        }, {});
-
-        [% IF Koha.Preference('ExtendedPatronAttributes') %]
-            [% SET extended_attribute_types = ExtendedAttributeTypes.codes( staff_searchable => 1, searched_by_default => 1 ) %]
-            [% IF ( extended_attribute_types ) %][% extended_attribute_types = [ extended_attribute_types ]  %][% END %]
-            var extended_attribute_types = [% To.json(extended_attribute_types || []) | $raw %];
-        [% END %]
-
-        $(document).on("shown.bs.modal", function(){
-            $('select[name="sort1_filter"]').select2({allowClear:true});
-            $('select[name="sort2_filter"]').select2({allowClear:true});
-        }).on("hidden.bs.modal", function(){
-            ["sort1_filter", "sort2_filter"].forEach(function(item){
-                if( $('select[name=' +  item + ']').data("select2") ){
-                    $('select[name=' +  item + ']').select2("destroy");
-                }
-            });
-        });
-    </script>
-
-    [% INCLUDE 'datatables.inc' %]
-    [% INCLUDE 'js-patron-get-age.inc' %]
-    [% INCLUDE 'js-patron-format.inc' %]
-    [% INCLUDE 'js-patron-format-address.inc' %]
-
-    <script>
+    });
+</script>
+[% INCLUDE 'datatables.inc' %] [% INCLUDE 'js-patron-get-age.inc' %] [% INCLUDE
+'js-patron-format.inc' %] [% INCLUDE 'js-patron-format-address.inc' %]
+<script>
     {
 
         function get_patron_search_form(){
@@ -970,78 +1011,114 @@
             }
         }
     }
-    </script>
-[% END %]
+</script>
+[% END %] [% BLOCK patron_search_modal %] [% UNLESS patron_search_modal_id %] [%
+patron_search_modal_id = "patron_search_modal" %] [% END %] [% UNLESS table_id
+%] [% table_id = "memberresultst" %] [% END %] [% search_results_block_id =
+patron_search_modal_id _ '_searchresults' %]
 
+<div
+    id="[% patron_search_modal_id | html %]"
+    class="modal modal-full patron_search_modal"
+    tabindex="-1"
+    role="dialog"
+    aria-labelledby="patronSearchLabel"
+    aria-hidden="true"
+    data-backdrop=""
+>
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title" id="patronSearchLabel">
+                    [% modal_title | html %]
+                </h1>
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                ></button>
+            </div>
+            <div class="modal-body">
+                [% PROCESS patron_search_filters filters =>
+                ['branch','category','sort1','sort2'] %]
 
-[% BLOCK patron_search_modal %]
-    [% UNLESS patron_search_modal_id %]
-        [% patron_search_modal_id = "patron_search_modal" %]
-    [% END %]
-    [% UNLESS table_id %]
-        [% table_id = "memberresultst" %]
-    [% END %]
-
-    [% search_results_block_id = patron_search_modal_id _ '_searchresults' %]
-
-    <div id="[% patron_search_modal_id | html %]" class="modal modal-full patron_search_modal" tabindex="-1" role="dialog" aria-labelledby="patronSearchLabel" aria-hidden="true" data-backdrop="">
-        <div class="modal-dialog modal-xl">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h1 class="modal-title" id="patronSearchLabel">[% modal_title | html %]</h1>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    [% PROCESS patron_search_filters filters => ['branch','category','sort1','sort2'] %]
-
-                    <div id="[% search_results_block_id | html %]" class="search_results_block"> <!-- FIXME removed style from #searchresults, is that bad? -->
-                        [% IF columns.grep('checkbox').size %]
-                            <div class="searchheader fh-fixedHeader" style="display:none;">
-                                <div>
-                                    <a href="#" class="btn btn-link select_all"><i class="fa fa-check"></i> Select all</a>
-                                    |
-                                    <a href="#" class="btn btn-link clear_all"><i class="fa fa-remove"></i> Clear all</a>
-                                    <button class="add-selected btn btn-sm btn-default" type="submit">Add selected patrons</button>
-                                </div>
-                            </div>
-                        [% END %]
-                        [% PROCESS patron_search_table table_id => table_id, columns => columns %]
+                <div
+                    id="[% search_results_block_id | html %]"
+                    class="search_results_block"
+                >
+                    <!-- FIXME removed style from #searchresults, is that bad? -->
+                    [% IF columns.grep('checkbox').size %]
+                    <div
+                        class="searchheader fh-fixedHeader"
+                        style="display: none"
+                    >
+                        <div>
+                            <a href="#" class="btn btn-link select_all"
+                                ><i class="fa fa-check"></i> Select all</a
+                            >
+                            |
+                            <a href="#" class="btn btn-link clear_all"
+                                ><i class="fa fa-remove"></i> Clear all</a
+                            >
+                            <button
+                                class="add-selected btn btn-sm btn-default"
+                                type="submit"
+                            >
+                                Add selected patrons
+                            </button>
+                        </div>
                     </div>
+                    [% END %] [% PROCESS patron_search_table table_id =>
+                    table_id, columns => columns %]
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-default cancel" data-bs-dismiss="modal">Close</button>
-                </div>
+            </div>
+            <div class="modal-footer">
+                <button
+                    type="button"
+                    class="btn btn-default cancel"
+                    data-bs-dismiss="modal"
+                >
+                    Close
+                </button>
             </div>
         </div>
     </div>
-    <div id="patron_preview_modal" class="basicModal"></div>
+</div>
+<div id="patron_preview_modal" class="basicModal"></div>
+<script>
+    $(document).ready(function () {
+        let parent_block = $("#[% search_results_block_id | html %]");
+        parent_block.find(".select_all").on("click", function (e) {
+            e.preventDefault();
+            parent_block.find(".selection").prop("checked", true).change();
+        });
+        parent_block.find(".clear_all").on("click", function (e) {
+            e.preventDefault();
+            parent_block.find(".selection").prop("checked", false).change();
+        });
+        parent_block.find(".searchheader").hide();
+        parent_block.find(".clear_search").on("click", function (e) {
+            $("#searchheader").hide();
+        });
 
-    <script>
-        $(document).ready(function() {
-            let parent_block = $("#[% search_results_block_id | html %]");
-            parent_block.find(".select_all").on("click",function(e){
-                e.preventDefault();
-                parent_block.find(".selection").prop("checked", true).change();
-            });
-            parent_block.find(".clear_all").on("click",function(e){
-                e.preventDefault();
-                parent_block.find(".selection").prop("checked", false).change();
-            });
-            parent_block.find(".searchheader").hide();
-            parent_block.find(".clear_search").on("click",function(e){$("#searchheader").hide();});
-
-            parent_block.find('.add-selected').on('click', function(e) {
-                e.preventDefault();
-                var counter = 0;
-                parent_block.find('tr:has(.selection:checked) .add_user').each(function(){
-                    var borrowernumber = $(this).data('borrowernumber');
-                    var firstname = $(this).data('firstname');
-                    var surname = $(this).data('surname');
-                    add_user( borrowernumber, firstname + ' ' + surname );
+        parent_block.find(".add-selected").on("click", function (e) {
+            e.preventDefault();
+            var counter = 0;
+            parent_block
+                .find("tr:has(.selection:checked) .add_user")
+                .each(function () {
+                    var borrowernumber = $(this).data("borrowernumber");
+                    var firstname = $(this).data("firstname");
+                    var surname = $(this).data("surname");
+                    add_user(borrowernumber, firstname + " " + surname);
                     counter++;
                 });
-                parent_block.find('.info').html(_("%s Patrons added.").format(counter)).show();
-            });
+            parent_block
+                .find(".info")
+                .html(_("%s Patrons added.").format(counter))
+                .show();
         });
-    </script>
+    });
+</script>
 [% END %]

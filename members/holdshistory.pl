@@ -19,7 +19,7 @@ use Modern::Perl;
 
 use CGI qw ( -utf8 );
 
-use C4::Auth qw( get_template_and_user );
+use C4::Auth   qw( get_template_and_user );
 use C4::Output qw( output_html_with_http_headers );
 
 use Koha::Patrons;
@@ -39,7 +39,7 @@ my $cardnumber     = $input->param('cardnumber');
 my $borrowernumber = $input->param('borrowernumber');
 my $patron         = Koha::Patrons->find( $cardnumber ? { cardnumber => $cardnumber } : $borrowernumber );
 
-unless ( $patron ) {
+unless ($patron) {
     print $input->redirect("/cgi-bin/koha/circ/circulation.pl?borrowernumber=$borrowernumber");
     exit;
 }

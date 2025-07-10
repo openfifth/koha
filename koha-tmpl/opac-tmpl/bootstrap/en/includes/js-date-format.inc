@@ -1,15 +1,11 @@
-[% USE Koha %]
-[% USE raw %]
-[% USE Asset %]
-[% USE KohaDates %]
-[% Asset.js("lib/dayjs/dayjs.min.js") | $raw %]
-[% Asset.js("lib/dayjs/plugin/timezone.js") | $raw %]
-[% Asset.js("lib/dayjs/plugin/utc.js") | $raw %]
+[% USE Koha %] [% USE raw %] [% USE Asset %] [% USE KohaDates %] [%
+Asset.js("lib/dayjs/dayjs.min.js") | $raw %] [%
+Asset.js("lib/dayjs/plugin/timezone.js") | $raw %] [%
+Asset.js("lib/dayjs/plugin/utc.js") | $raw %]
 <script>
     dayjs.extend(window.dayjs_plugin_utc);
     dayjs.extend(window.dayjs_plugin_timezone);
 </script>
-
 <!-- js-date-format.inc -->
 <script>
     (function() {

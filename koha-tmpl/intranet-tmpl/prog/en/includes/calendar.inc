@@ -1,6 +1,4 @@
-[% USE Asset %]
-[% USE Koha %]
-[% USE raw %]
+[% USE Asset %] [% USE Koha %] [% USE raw %]
 <!-- calendar.inc -->
 [% FILTER collapse %]
 <script>
@@ -37,11 +35,11 @@
     var flatpickr_timeformat = [% IF Koha.Preference('TimeFormat') == '12hr' %]false[% ELSE %]true[% END %];
 </script>
 <!-- / calendar.inc -->
-[% Asset.js("js/calendar.js") | $raw %]
-[% Asset.js("lib/flatpickr/flatpickr.min.js") | $raw %]
-[% Asset.js("lib/flatpickr/shortcut-buttons-flatpickr.min.js") | $raw %]
-[% Asset.js("lib/maskito/maskito.core.js") | $raw %]
-[% Asset.js("lib/maskito/maskito.kit.js") | $raw %]
+[% Asset.js("js/calendar.js") | $raw %] [%
+Asset.js("lib/flatpickr/flatpickr.min.js") | $raw %] [%
+Asset.js("lib/flatpickr/shortcut-buttons-flatpickr.min.js") | $raw %] [%
+Asset.js("lib/maskito/maskito.core.js") | $raw %] [%
+Asset.js("lib/maskito/maskito.kit.js") | $raw %]
 <script>
     flatpickr.l10ns.default.weekdays = flatpickr_weekdays;
     flatpickr.l10ns.default.months   = flatpickr_months;

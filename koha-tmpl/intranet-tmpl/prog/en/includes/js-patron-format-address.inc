@@ -1,7 +1,5 @@
 <!-- js-patron-format-address.inc -->
-[% USE raw %]
-[% USE To %]
-[% USE AuthorisedValues %]
+[% USE raw %] [% USE To %] [% USE AuthorisedValues %]
 <script>
     (function() {
 

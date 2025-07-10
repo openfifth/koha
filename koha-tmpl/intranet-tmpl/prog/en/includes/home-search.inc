@@ -1,54 +1,37 @@
-[% USE raw %]
-[% USE Koha %]
-[% PROCESS 'html_helpers.inc' %]
+[% USE raw %] [% USE Koha %] [% PROCESS 'html_helpers.inc' %]
 
 <!-- home-search.inc -->
-[% WRAPPER tabs id="header_search" %]
-    [% WRAPPER tab_panels %]
-        [% IF ( CAN_user_circulate_circulate_remaining_permissions ) %]
-            [% circ_active_tab = 1 %]
-            [% circ_active = "active" %]
-        [% ELSIF ( CAN_user_borrowers_edit_borrowers ) || ( CAN_user_borrowers_list_borrowers ) %]
-            [% patrons_active_tab = 1 %]
-            [% patrons_active = "active" %]
-        [% ELSIF ( CAN_user_catalogue ) %]
-            [% search_active_tab = 1 %]
-            [% search_active = "active" %]
-        [% END %]
-        [% IF ( CAN_user_circulate_circulate_remaining_permissions ) %]
-            [% INCLUDE 'patron-search-box.inc' bs_tab_active= circ_active_tab %]
-            [% INCLUDE 'checkin-search-box.inc' %]
-            [% INCLUDE 'renew-search-box.inc' %]
-        [% END %]
-        [% IF ( CAN_user_borrowers_edit_borrowers ) %]
-            [% INCLUDE 'member-search-box.inc' bs_tab_active= patrons_active_tab %]
-        [% END %]
-        [% IF ( CAN_user_catalogue ) %]
-            [% INCLUDE 'catalogue-search-box.inc' bs_tab_active= search_active_tab %]
-        [% END %]
-    [% END # /tab_panels %]
-    [% WRAPPER tabs_nav %]
-        [% IF ( CAN_user_circulate_circulate_remaining_permissions ) %]
-            [% WRAPPER tab_item tabname= "circ_search" bt_active= circ_active_tab %]
-                <i class="fa fa-fw fa-upload" aria-hidden="true"></i> <span class="tab-title">Check out</span>
-            [% END %]
-            [% WRAPPER tab_item tabname= "checkin_search" bt_active= patrons_active_tab %]
-                <i class="fa fa-fw fa-download" aria-hidden="true"></i> <span class="tab-title">Check in</span>
-            [% END %]
-            [% WRAPPER tab_item tabname= "renew_search" %]
-                <i class="fa fa-fw fa-retweet" aria-hidden="true"></i> <span class="tab-title">Renew</span>
-            [% END %]
-        [% END %]
-        [% IF ( CAN_user_borrowers_edit_borrowers ) %]
-            [% WRAPPER tab_item tabname= "patron_search" bt_active= search_active_tab %]
-                <i class="fa fa-fw fa-id-card" aria-hidden="true"></i> <span class="tab-title">Search patrons</span>
-            [% END %]
-        [% END %]
-        [% IF ( CAN_user_catalogue ) %]
-            [% WRAPPER tab_item tabname= "catalog_search" %]
-                <i class="fa fa-fw fa-search" aria-hidden="true"></i> <span class="tab-title">Search catalog</span>
-            [% END %]
-        [% END %]
-    [% END # /tabs_nav %]
-[% END # /WRAPPER tabs %]
+[% WRAPPER tabs id="header_search" %] [% WRAPPER tab_panels %] [% IF (
+CAN_user_circulate_circulate_remaining_permissions ) %] [% circ_active_tab = 1
+%] [% circ_active = "active" %] [% ELSIF ( CAN_user_borrowers_edit_borrowers )
+|| ( CAN_user_borrowers_list_borrowers ) %] [% patrons_active_tab = 1 %] [%
+patrons_active = "active" %] [% ELSIF ( CAN_user_catalogue ) %] [%
+search_active_tab = 1 %] [% search_active = "active" %] [% END %] [% IF (
+CAN_user_circulate_circulate_remaining_permissions ) %] [% INCLUDE
+'patron-search-box.inc' bs_tab_active= circ_active_tab %] [% INCLUDE
+'checkin-search-box.inc' %] [% INCLUDE 'renew-search-box.inc' %] [% END %] [% IF
+( CAN_user_borrowers_edit_borrowers ) %] [% INCLUDE 'member-search-box.inc'
+bs_tab_active= patrons_active_tab %] [% END %] [% IF ( CAN_user_catalogue ) %]
+[% INCLUDE 'catalogue-search-box.inc' bs_tab_active= search_active_tab %] [% END
+%] [% END # /tab_panels %] [% WRAPPER tabs_nav %] [% IF (
+CAN_user_circulate_circulate_remaining_permissions ) %] [% WRAPPER tab_item
+tabname= "circ_search" bt_active= circ_active_tab %]
+<i class="fa fa-fw fa-upload" aria-hidden="true"></i>
+<span class="tab-title">Check out</span>
+[% END %] [% WRAPPER tab_item tabname= "checkin_search" bt_active=
+patrons_active_tab %]
+<i class="fa fa-fw fa-download" aria-hidden="true"></i>
+<span class="tab-title">Check in</span>
+[% END %] [% WRAPPER tab_item tabname= "renew_search" %]
+<i class="fa fa-fw fa-retweet" aria-hidden="true"></i>
+<span class="tab-title">Renew</span>
+[% END %] [% END %] [% IF ( CAN_user_borrowers_edit_borrowers ) %] [% WRAPPER
+tab_item tabname= "patron_search" bt_active= search_active_tab %]
+<i class="fa fa-fw fa-id-card" aria-hidden="true"></i>
+<span class="tab-title">Search patrons</span>
+[% END %] [% END %] [% IF ( CAN_user_catalogue ) %] [% WRAPPER tab_item tabname=
+"catalog_search" %]
+<i class="fa fa-fw fa-search" aria-hidden="true"></i>
+<span class="tab-title">Search catalog</span>
+[% END %] [% END %] [% END # /tabs_nav %] [% END # /WRAPPER tabs %]
 <!-- /home-search.inc -->
