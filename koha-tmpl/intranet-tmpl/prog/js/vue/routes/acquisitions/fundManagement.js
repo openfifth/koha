@@ -21,7 +21,7 @@ import TransferFunds from "../../components/Acquisitions/FundManagement/Transfer
 
 import ResourceWrapper from "../../components/ResourceWrapper.vue";
 
-import { $__ } from "../../i18n";
+import { $__ } from "@koha-vue/i18n";
 
 export const routes = [
     {

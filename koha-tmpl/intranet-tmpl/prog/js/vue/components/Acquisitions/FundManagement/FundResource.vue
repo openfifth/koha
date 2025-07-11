@@ -9,7 +9,7 @@
 import BaseResource from "../../BaseResource.vue";
 import { APIClient } from "../../../fetch/api-client.js";
 import { useBaseResource } from "../../../composables/base-resource";
-import { $__ } from "../../../i18n";
+import { $__ } from "@koha-vue/i18n";
 import { computed, inject, onUnmounted, ref } from "vue";
 import { storeToRefs } from "pinia";
 
