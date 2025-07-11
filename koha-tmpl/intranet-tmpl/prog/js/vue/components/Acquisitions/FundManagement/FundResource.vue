@@ -344,6 +344,7 @@ export default {
                 },
                 {
                     name: "lib_group_visibility",
+                    requiredKey: "id",
                     selectLabel: "title",
                     type: "select",
                     label: $__("Visible to"),
@@ -353,6 +354,15 @@ export default {
                         "List",
                         ...(!libraryGroups.value ? ["Form", "Show"] : []),
                     ],
+                    showElement: {
+                        type: "table",
+                        columnData: "lib_group_limits",
+                        columns: [
+                            { name: $__("ID"), value: "id" },
+                            { name: $__("Title"), value: "title" },
+                        ],
+                        hidden: resource => resource.lib_group_limits.length,
+                    },
                     allowMultipleChoices: true,
                 },
                 {
