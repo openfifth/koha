@@ -522,7 +522,8 @@ export function useBaseResource(instancedResource) {
             )
                 ? instancedResource.defaultToolbarButtons(
                       defaultButtons,
-                      resource || {}
+                      resource || {},
+                      router
                   )
                 : defaultButtons;
             const additionalButtons = instancedResource.hasOwnProperty(

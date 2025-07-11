@@ -132,4 +132,24 @@ properties:
   lib_group_limits:
     type: array
     description: Library groups this vendor belongs to
+  allocation_decrease:
+    type:
+      - integer
+      - "null"
+    description: The amount that has been removed from this fund
+  allocation_increase:
+    type:
+      - integer
+      - "null"
+    description: The amount that has been allocated to this fund
+  net_transfers:
+    type:
+      - integer
+      - "null"
+    description: The amount that has been transferred in and out of this fund
+  total_allocation:
+    type:
+      - integer
+      - "null"
+    description: The total value of the fund
 additionalProperties: false

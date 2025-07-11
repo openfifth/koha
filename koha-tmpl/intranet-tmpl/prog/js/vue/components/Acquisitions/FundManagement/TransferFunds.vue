@@ -94,11 +94,13 @@
                     </ol>
                 </fieldset>
                 <fieldset class="action">
-                    <input
+                    <button
+                        class="btn btn-primary"
                         type="submit"
-                        value="Submit"
                         :disabled="stopSubmit"
-                    />
+                    >
+                        {{ $__("Submit") }}
+                    </button>
                     <router-link
                         :to="{
                             name: 'FundShow',
@@ -115,22 +117,22 @@
 </template>
 
 <script>
-import { inject } from "vue"
-import { APIClient } from "../../../fetch/api-client.js"
-import { setMessage, setWarning } from "../../../messages"
-import InfiniteScrollSelect from "../../InfiniteScrollSelect.vue"
+import { inject } from "vue";
+import { APIClient } from "../../../fetch/api-client.js";
+import { setMessage, setWarning } from "../../../messages";
+import InfiniteScrollSelect from "../../InfiniteScrollSelect.vue";
 
 export default {
     setup() {
-        const acquisitionsStore = inject("acquisitionsStore")
-        const { isUserPermitted } = acquisitionsStore
+        const acquisitionsStore = inject("acquisitionsStore");
+        const { isUserPermitted } = acquisitionsStore;
 
         return {
             isUserPermitted,
-        }
+        };
     },
     data() {
-        const { sub_fund_id, fund_id } = this.$route.query
+        const { sub_fund_id, fund_id } = this.$route.query;
         const fund_transfer = {
             fund_id_from: null,
             sub_fund_id_from: null,
@@ -139,10 +141,10 @@ export default {
             reference: "",
             note: "",
             transfer_amount: null,
-        }
-        if (sub_fund_id) fund_transfer.sub_fund_id_from = parseInt(sub_fund_id)
+        };
+        if (sub_fund_id) fund_transfer.sub_fund_id_from = parseInt(sub_fund_id);
         if (fund_id && !sub_fund_id)
-            fund_transfer.fund_id_from = parseInt(fund_id)
+            fund_transfer.fund_id_from = parseInt(fund_id);
 
         return {
             initialized: true,
@@ -150,67 +152,69 @@ export default {
             subFunds: [],
             noSubFunds: true,
             stopSubmit: false,
-        }
+        };
     },
     methods: {
         async getFund(fund_id) {
-            const client = APIClient.acquisition
+            const client = APIClient.acquisition;
             await client.funds
                 .get(fund_id, { "x-koha-embed": "sub_funds" })
                 .then(
                     fund => {
-                        this.selectedFund = fund
+                        this.selectedFund = fund;
                         if (fund.sub_funds && fund.sub_funds.length > 0) {
-                            this.noSubFunds = false
-                            this.subFunds = fund.sub_funds
+                            this.noSubFunds = false;
+                            this.subFunds = fund.sub_funds;
                         }
                     },
                     error => {}
-                )
+                );
         },
         async handleSubFunds() {
-            this.stopSubmit = true
-            await this.getFund(this.fund_transfer.fund_id_to)
+            this.stopSubmit = true;
+            await this.getFund(this.fund_transfer.fund_id_to);
 
             if (
                 this.selectedFund.sub_funds &&
                 this.selectedFund.sub_funds.length > 0
             ) {
-                this.noSubFunds = false
+                this.noSubFunds = false;
             }
-            this.stopSubmit = false
+            this.stopSubmit = false;
         },
         onSubmit(e) {
-            e.preventDefault()
+            e.preventDefault();
 
             if (!this.isUserPermitted("createFundAllocation")) {
                 setWarning(
                     this.$__(
                         "You do not have the required permissions to transfer between funds."
                     )
-                )
-                return
+                );
+                return;
             }
 
-            const fund_transfer = JSON.parse(JSON.stringify(this.fund_transfer))
+            const fund_transfer = JSON.parse(
+                JSON.stringify(this.fund_transfer)
+            );
 
-            const acq_client = APIClient.acquisition
+            const acq_client = APIClient.acquisition;
             acq_client.fundAllocations.transfer(fund_transfer).then(
                 success => {
-                    setMessage(this.$__("Funds successfully transferred"))
+                    setMessage(this.$__("Funds successfully transferred"));
                     this.$router.push({
                         name: "FundShow",
                         params: { fund_id: this.$route.query.fund_id },
-                    })
+                    });
                 },
                 error => {}
-            )
+            );
         },
     },
     components: {
         InfiniteScrollSelect,
     },
-}
+};
 </script>
 
 <style scoped>
