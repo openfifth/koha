@@ -101,7 +101,8 @@ export function useBaseResource(resourceConfig) {
             )
                 ? resourceConfig.defaultToolbarButtons(
                       defaultButtons,
-                      resource || {}
+                      resource || {},
+                      router
                   )
                 : defaultButtons;
             const additionalButtons = resourceConfig.hasOwnProperty(

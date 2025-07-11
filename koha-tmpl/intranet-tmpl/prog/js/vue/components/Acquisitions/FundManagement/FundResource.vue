@@ -47,6 +47,7 @@ export default {
             options,
             resource
         ) => {
+            if (isSubFund.value) return;
             if (!e && resource.ledger_id) {
                 fundGroupsQuery.value = {
                     currency: resource.currency,
@@ -110,17 +111,59 @@ export default {
             }
         };
 
+        const defaultToolbarButtons = (defaultButtons, resource, router) => {
+            return {
+                list: defaultButtons.list,
+                show: defaultButtons.show.map(button => {
+                    if (!isSubFund.value) return button;
+                    if (button.action === "edit") {
+                        return {
+                            action: "edit",
+                            onClick: () => {
+                                router.push({
+                                    name: "SubFundFormAddEdit",
+                                    params: {
+                                        fund_id: resource.fund_id,
+                                        sub_fund_id: resource.sub_fund_id,
+                                    },
+                                });
+                            },
+                            title: $__("Edit"),
+                            index: 0,
+                        };
+                    }
+                    return button;
+                }),
+            };
+        };
+
         const additionalToolbarButtons = resource => {
             return {
-                ...(isSubFund.value && {
-                    show: [
-                        {
-                            to: { name: "SubFundFormAdd" },
-                            icon: "plus",
-                            title: $__("Add sub fund"),
+                show: [
+                    ...(!isSubFund.value &&
+                    resource?.fund_allocations?.length === 0
+                        ? [
+                              {
+                                  to: { name: "SubFundFormAdd" },
+                                  icon: "plus",
+                                  title: $__("Add sub fund"),
+                              },
+                          ]
+                        : []),
+                    {
+                        to: {
+                            name: "TransferFunds",
+                            query: {
+                                fund_id: resource.fund_id,
+                                ...(isSubFund.value && {
+                                    sub_fund_id: resource.sub_fund_id,
+                                }),
+                            },
                         },
-                    ],
-                }),
+                        icon: "arrow-right-arrow-left",
+                        title: $__("Transfer funds"),
+                    },
+                ],
             };
         };
 
@@ -142,12 +185,16 @@ export default {
                     ? "sub_funds"
                     : "funds",
             i18n: {
-                deleteConfirmationMessage: $__(
-                    "Are you sure you want to remove this fund?"
-                ),
-                deleteSuccessMessage: $__("Fund %s deleted"),
-                displayName: $__("Fund"),
-                editLabel: $__("Edit fund #%s"),
+                deleteConfirmationMessage: isSubFund.value
+                    ? $__("Are you sure you want to remove this sub fund?")
+                    : $__("Are you sure you want to remove this fund?"),
+                deleteSuccessMessage: isSubFund.value
+                    ? $__("Sub fund %s deleted")
+                    : $__("Fund %s deleted"),
+                displayName: isSubFund.value ? $__("Sub fund") : $__("Fund"),
+                editLabel: isSubFund.value
+                    ? $__("Edit sub fund #%s")
+                    : $__("Edit fund #%s"),
                 emptyListMessage: $__("There are no funds defined"),
                 newLabel: isSubFund.value
                     ? $__("New sub fund")
@@ -155,6 +202,7 @@ export default {
             },
             moduleStore: "acquisitionsStore",
             props,
+            defaultToolbarButtons,
             additionalToolbarButtons,
             resourceAttrs: [
                 ...(isSubFund.value
@@ -470,6 +518,259 @@ export default {
             }
         };
 
+        const appendToShow = componentData => {
+            const { resource } = componentData;
+            let formatValueWithCurrencyHandler = formatValueWithCurrency;
+            return [
+                ...(resource.fund_allocations?.length
+                    ? [
+                          {
+                              type: "component",
+                              name: $__("Allocations"),
+                              hidden: fund => fund.fund_id,
+                              componentPath: "./RelationshipTableDisplay.vue",
+                              componentProps: {
+                                  tableOptions: {
+                                      type: "object",
+                                      value: {
+                                          columns: [
+                                              {
+                                                  title: __("Date"),
+                                                  data: "last_updated",
+                                                  searchable: true,
+                                                  orderable: true,
+                                                  render: function (
+                                                      data,
+                                                      type,
+                                                      row,
+                                                      meta
+                                                  ) {
+                                                      return row.last_updated.substring(
+                                                          0,
+                                                          10
+                                                      );
+                                                  },
+                                              },
+                                              {
+                                                  title: __("Amount"),
+                                                  data: "allocation_amount",
+                                                  searchable: true,
+                                                  orderable: true,
+                                                  render: function (
+                                                      data,
+                                                      type,
+                                                      row,
+                                                      meta
+                                                  ) {
+                                                      const symbol =
+                                                          row.allocation_amount >=
+                                                          0
+                                                              ? "+"
+                                                              : "";
+                                                      const colour =
+                                                          row.allocation_amount >=
+                                                          0
+                                                              ? "green"
+                                                              : "red";
+                                                      return (
+                                                          '<span style="color:' +
+                                                          colour +
+                                                          ';">' +
+                                                          symbol +
+                                                          row.allocation_amount +
+                                                          "</span>"
+                                                      );
+                                                  },
+                                              },
+                                              {
+                                                  title: __("New fund total"),
+                                                  data: "new_fund_value",
+                                                  searchable: true,
+                                                  orderable: true,
+                                                  render: function (
+                                                      data,
+                                                      type,
+                                                      row,
+                                                      meta
+                                                  ) {
+                                                      return formatValueWithCurrencyHandler(
+                                                          row.new_fund_value,
+                                                          row.currency
+                                                      );
+                                                  },
+                                              },
+                                              {
+                                                  title: __("Reference"),
+                                                  data: "reference",
+                                                  searchable: true,
+                                                  orderable: true,
+                                              },
+                                              {
+                                                  title: __("Note"),
+                                                  data: "note",
+                                                  searchable: true,
+                                                  orderable: true,
+                                              },
+                                          ],
+                                          url:
+                                              APIClient.acquisition.httpClient
+                                                  ._baseURL +
+                                              "fund_allocations",
+                                          table_settings: null,
+                                          add_filters: true,
+                                          actions: {
+                                              0: ["show"],
+                                          },
+                                      },
+                                  },
+                                  apiClient: {
+                                      type: "object",
+                                      value: APIClient.acquisition
+                                          .fundAllocations,
+                                  },
+                                  filters: {
+                                      type: "filter",
+                                      keys: {
+                                          ...(isSubFund.value
+                                              ? {
+                                                    sub_fund_id: {
+                                                        property: "sub_fund_id",
+                                                    },
+                                                }
+                                              : {
+                                                    fund_id: {
+                                                        property: "fund_id",
+                                                    },
+                                                }),
+                                      },
+                                  },
+                                  resource: {
+                                      type: "resource",
+                                  },
+                                  resourceName: {
+                                      type: "string",
+                                      value: "allocation",
+                                  },
+                                  resourceNamePlural: {
+                                      type: "string",
+                                      value: "allocations",
+                                  },
+                              },
+                          },
+                      ]
+                    : []),
+                ...(resource.sub_funds?.length
+                    ? [
+                          {
+                              type: "component",
+                              name: $__("Sub funds"),
+                              hidden: fund => fund.fund_id,
+                              componentPath: "./RelationshipTableDisplay.vue",
+                              componentProps: {
+                                  tableOptions: {
+                                      type: "object",
+                                      value: {
+                                          columns: [
+                                              {
+                                                  title: __("Name"),
+                                                  data: "name:sub_fund_id",
+                                                  searchable: true,
+                                                  orderable: true,
+                                                  render: function (
+                                                      data,
+                                                      type,
+                                                      row,
+                                                      meta
+                                                  ) {
+                                                      return (
+                                                          '<a href="/cgi-bin/koha/fund_management/fund/sub_fund/' +
+                                                          row.sub_fund_id +
+                                                          '" class="show">' +
+                                                          escape_str(
+                                                              `${row.name}`
+                                                          ) +
+                                                          "</a>"
+                                                      );
+                                                  },
+                                              },
+                                              {
+                                                  title: __("Code"),
+                                                  data: "code",
+                                                  searchable: true,
+                                                  orderable: true,
+                                              },
+                                              {
+                                                  title: __("Status"),
+                                                  data: "status",
+                                                  searchable: true,
+                                                  orderable: true,
+                                                  render: function (
+                                                      data,
+                                                      type,
+                                                      row,
+                                                      meta
+                                                  ) {
+                                                      return row.status
+                                                          ? __("Active")
+                                                          : __("Inactive");
+                                                  },
+                                              },
+                                              {
+                                                  title: __("Fund value"),
+                                                  data: "sub_fund_value",
+                                                  searchable: true,
+                                                  orderable: true,
+                                                  render: function (
+                                                      data,
+                                                      type,
+                                                      row,
+                                                      meta
+                                                  ) {
+                                                      return formatValueWithCurrency(
+                                                          row.sub_fund_value,
+                                                          row.currency
+                                                      );
+                                                  },
+                                              },
+                                          ],
+                                          url:
+                                              APIClient.acquisition.httpClient
+                                                  ._baseURL + "sub_funds",
+                                          table_settings: null,
+                                          add_filters: true,
+                                          actions: {
+                                              0: ["show"],
+                                          },
+                                      },
+                                  },
+                                  apiClient: {
+                                      type: "object",
+                                      value: APIClient.acquisition.subFunds,
+                                  },
+                                  filters: {
+                                      type: "filter",
+                                      keys: {
+                                          fund_id: { property: "fund_id" },
+                                      },
+                                  },
+                                  resource: {
+                                      type: "resource",
+                                  },
+                                  resourceName: {
+                                      type: "string",
+                                      value: "sub fund",
+                                  },
+                                  resourceNamePlural: {
+                                      type: "string",
+                                      value: "sub funds",
+                                  },
+                              },
+                          },
+                      ]
+                    : []),
+            ];
+        };
+
         onUnmounted(() => {
             resetOwnersAndVisibleGroups();
         });
@@ -482,6 +783,7 @@ export default {
             fundGroupsQuery,
             ledgersQuery,
             isSubFund,
+            appendToShow,
         };
     },
     components: { BaseResource },
