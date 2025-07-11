@@ -32,7 +32,7 @@ import { routes as routesDef } from "../../routes/acquisitions/fundManagement.js
 import { useMainStore } from "../../stores/main";
 import { useNavigationStore } from "../../stores/navigation";
 import { useAcquisitionsStore } from "../../stores/acquisitions";
-import i18n from "../../i18n";
+import i18n from "@koha-vue/i18n";
 
 const pinia = createPinia();
 const mainStore = useMainStore(pinia);
