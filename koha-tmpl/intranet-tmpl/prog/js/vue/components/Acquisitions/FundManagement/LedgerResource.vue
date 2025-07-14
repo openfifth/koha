@@ -58,6 +58,26 @@ export default {
             }
         };
 
+        const additionalToolbarButtons = (resource, componentData) => {
+            const { instancedResource } = componentData;
+            return {
+                show: [
+                    {
+                        to: {
+                            name: "FundFormAdd",
+                            query: {
+                                ledger_id: resource.ledger_id,
+                                fiscal_period_id: resource.fiscal_period_id,
+                            },
+                        },
+                        title: $__("Add fund"),
+                        icon: "plus",
+                        index: -1,
+                    },
+                ],
+            };
+        };
+
         const baseResource = useBaseResource({
             resourceName: "ledger",
             nameAttr: "name",
@@ -80,6 +100,7 @@ export default {
             },
             moduleStore: "acquisitionsStore",
             props,
+            additionalToolbarButtons,
             resourceAttrs: [
                 {
                     name: "ledger_id",
@@ -336,6 +357,15 @@ export default {
             }
         };
 
+        const afterNewResourceCreate = (resource, componentData) => {
+            if (componentData.route.query.fiscal_period_id) {
+                resource.fiscal_period_id = parseInt(
+                    componentData.route.query.fiscal_period_id
+                );
+            }
+            return resource;
+        };
+
         onUnmounted(() => {
             resetOwnersAndVisibleGroups();
         });
@@ -345,6 +375,7 @@ export default {
             tableOptions,
             onSubmit,
             afterResourceFetch,
+            afterNewResourceCreate,
         };
     },
     components: { BaseResource },
