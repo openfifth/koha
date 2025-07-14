@@ -39,7 +39,7 @@ export const routes = [
             {
                 path: "/cgi-bin/koha/fund_management",
                 moduleName: "funds",
-                title: "Funds and ledgers",
+                title: $__("Fund management"),
                 icon: "fa fa-money-check-dollar",
                 children: [
                     {
@@ -212,31 +212,33 @@ export const routes = [
                         path: "fund_group",
                         title: "Fund groups",
                         is_navigation_item: false,
+                        resource:
+                            "Acquisitions/FundManagement/FundGroupResource.vue",
                         children: [
                             {
                                 path: "",
-                                component: markRaw(FundGroupList),
+                                component: markRaw(ResourceWrapper),
                                 name: "FundGroupList",
                                 title: "List fund groups",
                                 permission: "manageFundGroups",
                             },
                             {
                                 path: ":fund_group_id",
-                                component: markRaw(FundGroupShow),
+                                component: markRaw(ResourceWrapper),
                                 name: "FundGroupShow",
                                 title: "Show fund group",
                                 permission: "manageFundGroups",
                             },
                             {
                                 path: "add",
-                                component: markRaw(FundGroupFormAdd),
+                                component: markRaw(ResourceWrapper),
                                 name: "FundGroupFormAdd",
                                 title: "Add fund group",
                                 permission: "createFundGroup",
                             },
                             {
                                 path: "edit/:fund_group_id",
-                                component: markRaw(FundGroupFormAdd),
+                                component: markRaw(ResourceWrapper),
                                 name: "FundGroupFormAddEdit",
                                 title: "Edit fund group",
                                 permission: "editFundGroup",
