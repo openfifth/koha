@@ -90,19 +90,6 @@ export default {
                 resource.lib_group_visibility = [];
                 return;
             }
-
-            const chosenFP = options.find(fp => fp.fiscal_period_id === e);
-
-            const { ledgers } = chosenFP;
-            if (!ledgers || ledgers.length === 0) {
-                setWarning(
-                    $__(
-                        "There are no ledgers attached to this fiscal period. Please create one or select a different fiscal period."
-                    )
-                );
-                resource.fiscal_period_id = null;
-                return;
-            }
             ledgersQuery.value = { fiscal_period_id: e };
 
             if (e !== resource.fiscal_period_id) {
@@ -252,6 +239,7 @@ export default {
                               relationshipOptionLabelAttr: "code",
                               relationshipRequiredKey: "fiscal_period_id",
                               onSelected: filterLedgersBySelectedFiscalPeriod,
+                              query: { "ledgers.ledger_id": { "!=": null } },
                               hideIn: ["List"],
                           },
                       ]
