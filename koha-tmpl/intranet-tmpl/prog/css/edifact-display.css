@@ -1,0 +1,334 @@
+/* EDIFACT Display Styles */
+/* Enhanced version of editree.css with more styling options */
+
+.edi-tree {
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+
+.edi-tree ul {
+    margin-left: 1.2rem;
+    border-left: 2px solid #e0e0e0;
+    padding-left: 0.8rem;
+    margin-top: 0.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.edi-tree ul:hover {
+    border-left-color: #007bff;
+}
+
+.segment {
+    font-family: 'Courier New', monospace;
+    padding: 3px 6px;
+    margin: 1px 0;
+    border-radius: 3px;
+    transition: background-color 0.2s ease;
+    position: relative;
+}
+
+.segment:hover {
+    background-color: #f8f9fa;
+}
+
+/* Segment type styling using Bootstrap color variables */
+.edi-tree .segment.header {
+    color: var(--bs-primary) !important;
+    font-weight: 600;
+    cursor: pointer;
+    background-color: var(--bs-primary-bg-subtle) !important;
+    border-left: 4px solid var(--bs-primary-border-subtle) !important;
+    padding-left: 8px;
+}
+
+.edi-tree .segment.header:hover {
+    background-color: var(--bs-primary-bg-subtle) !important;
+    opacity: 0.8;
+}
+
+.edi-tree .segment.trailer {
+    color: var(--bs-secondary) !important;
+    font-style: italic;
+    background-color: var(--bs-secondary-bg-subtle) !important;
+    border-left: 4px solid var(--bs-secondary-border-subtle) !important;
+    padding-left: 8px;
+}
+
+.edi-tree .segment.content {
+    color: var(--bs-success) !important;
+    background-color: var(--bs-success-bg-subtle) !important;
+    border-left: 4px solid var(--bs-success-border-subtle) !important;
+    padding-left: 8px;
+}
+
+.edi-tree .segment.content:hover {
+    background-color: var(--bs-success-bg-subtle) !important;
+    opacity: 0.8;
+}
+
+/* Special styling for specific segment types */
+.edi-tree .segment.content[data-line-id] {
+    background-color: var(--bs-warning-bg-subtle) !important;
+    border-left-color: var(--bs-warning-border-subtle) !important;
+}
+
+.edi-tree .segment.content[data-line-id]:hover {
+    background-color: var(--bs-warning-bg-subtle) !important;
+    opacity: 0.8;
+}
+
+/* Bold segment tags - only in tree view */
+.edi-tree .segment-tag {
+    font-weight: bold;
+}
+
+/* Bootstrap collapse chevron styling */
+.edi-tree [data-bs-toggle="collapse"] .fa-chevron-down {
+    transition: transform 0.2s ease;
+}
+
+.edi-tree [data-bs-toggle="collapse"][aria-expanded="false"] .fa-chevron-down {
+    transform: rotate(-90deg);
+}
+
+/* Segment details (when enabled) */
+.segment-details {
+    margin-top: 0.25rem;
+    padding: 0.25rem;
+    background-color: #f1f3f4;
+    border-radius: 2px;
+    font-size: 0.8em;
+    color: #5f6368;
+    border-left: 2px solid #dadce0;
+}
+
+.segment-details small {
+    font-family: 'Courier New', monospace;
+}
+
+/* Loading and error states */
+.edi-loading {
+    text-align: center;
+    padding: 2rem;
+    color: #6c757d;
+}
+
+.edi-loading img {
+    margin-right: 0.5rem;
+}
+
+/* Line group styling */
+.edi-tree li > .segment.header + ul {
+    border-left-color: #17a2b8;
+}
+
+.edi-tree li > .segment.header:hover + ul {
+    border-left-color: #138496;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .edi-tree {
+        font-size: 0.8em;
+    }
+    
+    .edi-tree ul {
+        margin-left: 0.8rem;
+        padding-left: 0.5rem;
+    }
+    
+    .segment {
+        padding: 2px 4px;
+    }
+}
+
+/* Print styles */
+@media print {
+    .edi-tree {
+        font-size: 0.7em;
+    }
+    
+    .segment.header {
+        background-color: transparent !important;
+        border: 1px solid #000;
+    }
+    
+    .segment.content {
+        background-color: transparent !important;
+    }
+    
+    .chevron {
+        display: none;
+    }
+    
+    [data-toggle].collapsed + ul {
+        display: block !important;
+    }
+}
+
+/* Theme variants */
+.edi-tree.compact {
+    font-size: 0.8em;
+}
+
+.edi-tree.compact ul {
+    margin-left: 0.8rem;
+    padding-left: 0.4rem;
+}
+
+.edi-tree.compact .segment {
+    padding: 1px 4px;
+    margin: 0;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .edi-tree ul {
+        border-left-color: #444;
+    }
+    
+    .segment.header {
+        background-color: #1a2332;
+        color: #64b5f6;
+    }
+    
+    .segment.content {
+        background-color: #1a2f1a;
+        color: #81c784;
+    }
+    
+    .segment.trailer {
+        background-color: #2a2a2a;
+        color: #bbb;
+    }
+    
+    .segment-details {
+        background-color: #333;
+        color: #ccc;
+    }
+}
+
+/* Raw view styling */
+.edi-raw-view {
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    line-height: 1.4;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 1rem;
+    max-height: 60vh;
+    overflow-y: auto;
+    white-space: pre-wrap;
+}
+
+.edi-raw-view .segment-line {
+    margin: 2px 0;
+    padding: 1px 0;
+}
+
+.edi-raw-view .segment-line .segment-tag {
+    font-weight: bold;
+}
+
+/* Toolbar styling */
+.edi-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #dee2e6;
+    margin-bottom: 15px;
+}
+
+.edi-toolbar-left {
+    display: flex;
+    gap: 10px;
+}
+
+.edi-toolbar-right {
+    display: flex;
+    gap: 5px;
+}
+
+.edi-toolbar .btn {
+    border-radius: 4px;
+    font-size: 0.85em;
+    padding: 4px 8px;
+}
+
+.edi-toolbar .btn.active {
+    background-color: #007bff;
+    color: white;
+}
+
+/* View toggle styling */
+.edi-view-toggle .btn {
+    border-radius: 4px;
+    font-size: 0.85em;
+    padding: 4px 8px;
+}
+
+.edi-view-toggle .btn.active {
+    background-color: #007bff;
+    color: white;
+}
+
+/* Hidden state for switching views */
+.edi-tree.hidden {
+    display: none !important;
+}
+
+.edi-raw-view.hidden {
+    display: none !important;
+}
+
+/* Accessibility improvements */
+.segment.header[aria-expanded="true"] .chevron::after {
+    content: " (expanded)";
+    position: absolute;
+    left: -9999px;
+}
+
+.segment.header[aria-expanded="false"] .chevron::after {
+    content: " (collapsed)";
+    position: absolute;
+    left: -9999px;
+}
+
+/* Focus indicators */
+.segment.header:focus {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
+}
+
+/* Animation for smooth expand/collapse */
+.edi-tree ul {
+    transition: max-height 0.3s ease-in-out;
+    overflow: hidden;
+}
+
+[data-toggle].collapsed + ul {
+    max-height: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+/* Segment type indicators */
+.segment.content::before {
+    content: attr(data-line-id);
+    position: absolute;
+    right: 6px;
+    top: 3px;
+    font-size: 0.7em;
+    color: #999;
+    background-color: #fff;
+    padding: 1px 3px;
+    border-radius: 2px;
+    display: none;
+}
+
+.segment.content[data-line-id]:hover::before {
+    display: block;
+}

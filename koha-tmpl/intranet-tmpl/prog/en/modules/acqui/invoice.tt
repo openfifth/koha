@@ -559,7 +559,13 @@
     </div> <!-- /.modal-dialog -->
 </div> <!-- /#updateFund.modal -->
 
-[% INCLUDE 'modals/edifact-modal.inc' %]
+[%
+    INCLUDE 'modals/edifact-modal-enhanced.inc'
+    modal_id='EDI_modal'
+    modal_title='EDIFACT Message'
+    modal_size='xl'
+    show_actions=1
+%]
 
 <div style="display:none;">
     <select id="all_fund_dropdown">
@@ -581,7 +587,15 @@
     [% Asset.js("js/additional-fields-entry.js") | $raw %]
     [% INCLUDE 'calendar.inc' %]
     [% INCLUDE 'datatables.inc' %]
-    [% Asset.js("js/modals/edifact-modal.js") | $raw %]
+    [% Asset.css("css/edifact-display.css") | $raw %]
+    [% Asset.js("js/edifact-display.js") | $raw %]
+    <script>
+        EdifactDisplay.init({
+            modalId: "#EDI_modal",
+            expandByDefault: true,
+            showElementDetails: false,
+        });
+    </script>
     <script>
         function updateColumnsVisibility(visible) {
             if ( visible ) {
