@@ -297,7 +297,7 @@ sub process_invoice_service_charges {
                     # Adjust the orderline to avoid double-counting service charges
                     # Service charges are included in MOA+128/203 totals but we're extracting them separately
                     if ( $type eq 'charge' && $ordernumber ) {
-                        adjust_orderline_for_service_charge( $ordernumber, $amount, $verbose, $koha_invoice );
+                        adjust_orderline_for_service_charge( $ordernumber, $amount, $verbose, $koha_invoice, $line );
                     }
                 } else {
                     print "  Would create $type adjustment for invoice "
@@ -305,8 +305,9 @@ sub process_invoice_service_charges {
                         . ": $amount (Budget: $budget_id)\n";
                     if ( $type eq 'charge' ) {
                         my $ordernumber = $line->ordernumber();
-                        print "  Would reduce orderline $ordernumber by $amount to avoid double-counting\n"
-                            if $ordernumber;
+                        if ($ordernumber) {
+                            print "  Would adjust orderline $ordernumber to correct price based on EDI PRI data\n";
+                        }
                     }
                 }
 
@@ -450,7 +451,7 @@ sub map_vendor_to_budget_id {
 }
 
 sub adjust_orderline_for_service_charge {
-    my ( $ordernumber, $service_charge_amount, $verbose, $koha_invoice ) = @_;
+    my ( $ordernumber, $service_charge_amount, $verbose, $koha_invoice, $edi_line ) = @_;
 
     my $original_order = $schema->resultset('Aqorder')->find($ordernumber);
     return unless $original_order;
@@ -492,32 +493,51 @@ sub adjust_orderline_for_service_charge {
         print "  Using original order $ordernumber (no split occurred)\n";
     }
     
-    # Calculate the per-unit service charge reduction
-    # Service charges in MOA+8 are for the entire received quantity
-    my $quantity           = $order_to_adjust->quantityreceived || $order_to_adjust->quantity || 1;
-    my $per_unit_reduction = $service_charge_amount / $quantity;
+    # Use the same logic as _get_invoiced_price in Koha::EDI to get the base prices
+    # Get quantity for per-unit calculation
+    my $quantity = $order_to_adjust->quantityreceived || $order_to_adjust->quantity || 1;
+    
+    # Get MOA amounts from EDI data (these already include service charges)
+    my $line_total = $edi_line->amt_total();     # MOA+128 (total including allowances & tax)
+    my $excl_tax   = $edi_line->amt_lineitem();  # MOA+203 (item amount after allowances excluding tax)
+    
+    # If no tax some suppliers omit the total owed
+    if (!defined $line_total) {
+        my $tax_amount = $edi_line->amt_taxoncharge() || 0;
+        $line_total = $excl_tax + $tax_amount;
+    }
+    
+    # Convert to per-unit prices (invoices give amounts per orderline)
+    my ($base_unit_price_inc, $base_unit_price_exc);
+    if ($quantity != 1) {
+        $base_unit_price_inc = $line_total / $quantity;
+        $base_unit_price_exc = $excl_tax / $quantity;
+    } else {
+        $base_unit_price_inc = $line_total;
+        $base_unit_price_exc = $excl_tax;
+    }
+    
+    # Calculate per-unit service charge to subtract (to avoid double-counting)
+    my $per_unit_service_charge = $service_charge_amount / $quantity;
+    
+    # Subtract service charges from base prices since we're creating separate adjustments
+    my $final_unit_price_inc = $base_unit_price_inc - $per_unit_service_charge;
+    my $final_unit_price_exc = $base_unit_price_exc - $per_unit_service_charge;
 
-    # Reduce the order's unitprice_tax_included and unitprice_tax_excluded by the per-unit service charge amount
-    # to avoid double-counting since the service charge is already included in the MOA+128/203 totals
-    my $current_price_inc = $order_to_adjust->unitprice_tax_included || 0;
-    my $current_price_exc = $order_to_adjust->unitprice_tax_excluded || 0;
-
-    my $new_price_inc = $current_price_inc - $per_unit_reduction;
-    my $new_price_exc = $current_price_exc - $per_unit_reduction;
-
+    # Set the order to the correct price (base EDI price - service charges)
     $order_to_adjust->update(
         {
-            unitprice_tax_included => $new_price_inc,
-            unitprice_tax_excluded => $new_price_exc,
+            unitprice_tax_included => $final_unit_price_inc,
+            unitprice_tax_excluded => $final_unit_price_exc,
         }
     );
 
     my $order_type = ($actual_ordernumber != $ordernumber) ? "received order $actual_ordernumber (split from $ordernumber)" : "order $actual_ordernumber";
     print
-        "  Reduced $order_type unit price from $current_price_inc to $new_price_inc (qty: $quantity, total service charge: $service_charge_amount, per-unit: $per_unit_reduction)\n"
+        "  Set $order_type unit price to $final_unit_price_inc (EDI base: $base_unit_price_inc - service charge: $per_unit_service_charge)\n"
         if $verbose;
     $logger->info(
-        "Adjusted $order_type to remove service charge double-counting: total=$service_charge_amount, per-unit=$per_unit_reduction"
+        "Set $order_type price from EDI data minus service charges: base=$base_unit_price_inc, service_charge=$per_unit_service_charge, final=$final_unit_price_inc"
     );
 }
 
