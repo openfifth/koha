@@ -1,6 +1,5 @@
 <template>
-    <div v-if="!initialized">{{ $__("Loading") }}...</div>
-    <div v-else id="fund_transfer_add">
+    <div id="fund_transfer_add">
         <h2>{{ $__("Transfer between funds") }}</h2>
         <div>
             <form @submit="onSubmit($event)">
@@ -97,7 +96,7 @@
                     <button
                         class="btn btn-primary"
                         type="submit"
-                        :disabled="stopSubmit"
+                        :disabled="preventSubmit"
                     >
                         {{ $__("Submit") }}
                     </button>
@@ -117,23 +116,27 @@
 </template>
 
 <script>
-import { inject } from "vue";
+import { inject, ref } from "vue";
 import { APIClient } from "../../../fetch/api-client.js";
 import { setMessage, setWarning } from "../../../messages";
 import InfiniteScrollSelect from "../../InfiniteScrollSelect.vue";
+import { useRoute, useRouter } from "vue-router";
+import { $__ } from "@koha-vue/i18n";
 
 export default {
     setup() {
+        const route = useRoute();
+        const router = useRouter();
         const acquisitionsStore = inject("acquisitionsStore");
         const { isUserPermitted } = acquisitionsStore;
 
-        return {
-            isUserPermitted,
-        };
-    },
-    data() {
-        const { sub_fund_id, fund_id } = this.$route.query;
-        const fund_transfer = {
+        const subFunds = ref([]);
+        const noSubFunds = ref(true);
+        const preventSubmit = ref(false);
+        const selectedFund = ref(null);
+
+        const { sub_fund_id, fund_id } = route.query;
+        const fund_transfer = ref({
             fund_id_from: null,
             sub_fund_id_from: null,
             fund_id_to: null,
@@ -141,75 +144,69 @@ export default {
             reference: "",
             note: "",
             transfer_amount: null,
-        };
-        if (sub_fund_id) fund_transfer.sub_fund_id_from = parseInt(sub_fund_id);
+        });
+        if (sub_fund_id)
+            fund_transfer.value.sub_fund_id_from = parseInt(sub_fund_id);
         if (fund_id && !sub_fund_id)
-            fund_transfer.fund_id_from = parseInt(fund_id);
+            fund_transfer.value.fund_id_from = parseInt(fund_id);
 
-        return {
-            initialized: true,
-            fund_transfer,
-            subFunds: [],
-            noSubFunds: true,
-            stopSubmit: false,
-        };
-    },
-    methods: {
-        async getFund(fund_id) {
+        const getFund = fund_id => {
             const client = APIClient.acquisition;
-            await client.funds
-                .get(fund_id, { "x-koha-embed": "sub_funds" })
-                .then(
-                    fund => {
-                        this.selectedFund = fund;
-                        if (fund.sub_funds && fund.sub_funds.length > 0) {
-                            this.noSubFunds = false;
-                            this.subFunds = fund.sub_funds;
-                        }
-                    },
-                    error => {}
-                );
-        },
-        async handleSubFunds() {
-            this.stopSubmit = true;
-            await this.getFund(this.fund_transfer.fund_id_to);
-
-            if (
-                this.selectedFund.sub_funds &&
-                this.selectedFund.sub_funds.length > 0
-            ) {
-                this.noSubFunds = false;
-            }
-            this.stopSubmit = false;
-        },
-        onSubmit(e) {
+            client.funds.get(fund_id, { "x-koha-embed": "sub_funds" }).then(
+                fund => {
+                    selectedFund.value = fund;
+                    if (fund.sub_funds && fund.sub_funds.length > 0) {
+                        noSubFunds.value = false;
+                        subFunds.value = fund.sub_funds;
+                    }
+                },
+                error => {}
+            );
+        };
+        const handleSubFunds = () => {
+            preventSubmit.value = true;
+            getFund(fund_transfer.value.fund_id_to);
+            preventSubmit.value = false;
+        };
+        const onSubmit = e => {
             e.preventDefault();
 
-            if (!this.isUserPermitted("createFundAllocation")) {
+            if (!isUserPermitted("createFundAllocation")) {
                 setWarning(
-                    this.$__(
+                    $__(
                         "You do not have the required permissions to transfer between funds."
                     )
                 );
                 return;
             }
 
-            const fund_transfer = JSON.parse(
-                JSON.stringify(this.fund_transfer)
+            const fundTransfer = JSON.parse(
+                JSON.stringify(fund_transfer.value)
             );
 
             const acq_client = APIClient.acquisition;
-            acq_client.fundAllocations.transfer(fund_transfer).then(
+            acq_client.fundAllocations.transfer(fundTransfer).then(
                 success => {
-                    setMessage(this.$__("Funds successfully transferred"));
-                    this.$router.push({
+                    setMessage($__("Funds successfully transferred"));
+                    router.push({
                         name: "FundShow",
-                        params: { fund_id: this.$route.query.fund_id },
+                        params: { fund_id: route.query.fund_id },
                     });
                 },
                 error => {}
             );
-        },
+        };
+
+        return {
+            isUserPermitted,
+            subFunds,
+            noSubFunds,
+            preventSubmit,
+            selectedFund,
+            handleSubFunds,
+            onSubmit,
+            fund_transfer,
+        };
     },
     components: {
         InfiniteScrollSelect,
