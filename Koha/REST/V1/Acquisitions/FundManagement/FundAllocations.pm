@@ -272,7 +272,7 @@ sub transfer {
                         reference            => $body->{reference},
                         note                 => $note_from,
                         currency             => $fund_transferring_from->currency,
-                        owner                => $fund_transferring_from->owner,
+                        owner_id             => $fund_transferring_from->owner_id,
                         lib_group_visibility => $fund_transferring_from->lib_group_visibility,
                         is_transfer          => 1
                     }
@@ -287,7 +287,7 @@ sub transfer {
                         reference            => $body->{reference},
                         note                 => $note_to,
                         currency             => $fund_transferring_to->currency,
-                        owner                => $fund_transferring_to->owner,
+                        owner_id             => $fund_transferring_to->owner_id,
                         lib_group_visibility => $fund_transferring_to->lib_group_visibility,
                         is_transfer          => 1
                     }
