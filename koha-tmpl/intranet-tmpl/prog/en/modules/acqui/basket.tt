@@ -1073,7 +1073,13 @@
     </div> <!-- /.modal#dateEditor -->
 
 [% IF edifact_enabled && edifact_messages.size > 0 %]
-    [% INCLUDE 'modals/edifact-modal.inc' %]
+    [%
+        INCLUDE 'modals/edifact-modal-enhanced.inc'
+        modal_id='EDI_modal'
+        modal_title='EDIFACT Message'
+        modal_size='xl'
+        show_actions=1
+    %]
 [% END %]
 
 [% MACRO jsinclude BLOCK %]
@@ -1306,7 +1312,15 @@
     [% PROCESS patron_search_js columns => columns, actions => ["add"], preview_on_name_click => 1 %]
 
     [% IF edifact_enabled && edifact_messages.size > 0 %]
-        [% Asset.js("js/modals/edifact-modal.js") | $raw %]
+        [% Asset.css("css/edifact-display.css") | $raw %]
+        [% Asset.js("js/edifact-display.js") | $raw %]
+        <script>
+            EdifactDisplay.init({
+                modalId: "#EDI_modal",
+                expandByDefault: true,
+                showElementDetails: false,
+            });
+        </script>
     [% END %]
 [% END %]
 
