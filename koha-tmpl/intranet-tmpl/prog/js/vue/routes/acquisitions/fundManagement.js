@@ -2,20 +2,6 @@ import { markRaw } from "vue";
 
 import Homepage from "../../components/Acquisitions/FundManagement/Homepage.vue";
 import FundManagementHome from "../../components/Acquisitions/FundManagement/FundManagementHome.vue";
-import FiscalPeriodList from "../../components/Acquisitions/FundManagement/FiscalPeriodList.vue";
-import FiscalPeriodShow from "../../components/Acquisitions/FundManagement/FiscalPeriodShow.vue";
-import FiscalPeriodFormAdd from "../../components/Acquisitions/FundManagement/FiscalPeriodFormAdd.vue";
-import LedgerList from "../../components/Acquisitions/FundManagement/LedgerList.vue";
-import LedgerShow from "../../components/Acquisitions/FundManagement/LedgerShow.vue";
-import LedgerFormAdd from "../../components/Acquisitions/FundManagement/LedgerFormAdd.vue";
-import FundList from "../../components/Acquisitions/FundManagement/FundList.vue";
-import FundShow from "../../components/Acquisitions/FundManagement/FundShow.vue";
-import FundFormAdd from "../../components/Acquisitions/FundManagement/FundFormAdd.vue";
-import SubFundFormAdd from "../../components/Acquisitions/FundManagement/SubFundFormAdd.vue";
-import FundGroupList from "../../components/Acquisitions/FundManagement/FundGroupList.vue";
-import FundGroupShow from "../../components/Acquisitions/FundManagement/FundGroupShow.vue";
-import FundGroupFormAdd from "../../components/Acquisitions/FundManagement/FundGroupFormAdd.vue";
-import FundAllocationShow from "../../components/Acquisitions/FundManagement/FundAllocationShow.vue";
 import FundAllocationFormAdd from "../../components/Acquisitions/FundManagement/FundAllocationFormAdd.vue";
 import TransferFunds from "../../components/Acquisitions/FundManagement/TransferFunds.vue";
 
@@ -157,27 +143,20 @@ export const routes = [
                                 title: "Edit fund",
                                 permission: "editFund",
                             },
-                            {
-                                path: ":fund_id/allocation",
-                                component: markRaw(FundAllocationShow),
-                                name: "FundAllocationShow",
-                                title: "Show fund allocation",
-                                permission: "manageFundAllocations",
-                            },
-                            {
-                                path: ":fund_id/allocation/edit/:fund_allocation_id",
-                                component: markRaw(FundAllocationFormAdd),
-                                name: "FundAllocationFormAddEdit",
-                                title: "Edit fund allocation",
-                                permission: "editFundAllocation",
-                            },
-                            {
-                                path: ":fund_id/:sub_fund_id?/allocate",
-                                component: markRaw(FundAllocationFormAdd),
-                                name: "FundAllocationFormAdd",
-                                title: "Allocate funds",
-                                permission: "createFundAllocation",
-                            },
+                            // {
+                            //     path: ":fund_id/allocation/edit/:fund_allocation_id",
+                            //     component: markRaw(FundAllocationFormAdd),
+                            //     name: "FundAllocationFormAddEdit",
+                            //     title: "Edit fund allocation",
+                            //     permission: "editFundAllocation",
+                            // },
+                            // {
+                            //     path: ":fund_id/:sub_fund_id?/allocate",
+                            //     component: markRaw(FundAllocationFormAdd),
+                            //     name: "FundAllocationFormAdd",
+                            //     title: "Allocate funds",
+                            //     permission: "createFundAllocation",
+                            // },
                             {
                                 path: "transfer",
                                 component: markRaw(TransferFunds),

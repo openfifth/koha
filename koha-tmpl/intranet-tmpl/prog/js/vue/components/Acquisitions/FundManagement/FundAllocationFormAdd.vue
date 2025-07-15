@@ -84,136 +84,133 @@
 </template>
 
 <script>
-import { inject } from "vue"
-import { APIClient } from "../../../fetch/api-client.js"
-import { setMessage, setWarning } from "../../../messages"
-import InfiniteScrollSelect from "../../InfiniteScrollSelect.vue"
+import { inject, onBeforeMount, ref } from "vue";
+import { APIClient } from "../../../fetch/api-client.js";
+import { setMessage, setWarning } from "../../../messages";
+import InfiniteScrollSelect from "../../InfiniteScrollSelect.vue";
+import { useRoute, useRouter } from "vue-router";
+import { $__ } from "@koha-vue/i18n";
 
 export default {
     setup() {
-        const acquisitionsStore = inject("acquisitionsStore")
-        const { isUserPermitted } = acquisitionsStore
+        const route = useRoute();
+        const router = useRouter();
+        const acquisitionsStore = inject("acquisitionsStore");
+        const { isUserPermitted } = acquisitionsStore;
+
+        const initialized = ref(false);
+        const fund_allocation = ref({
+            fund_id: null,
+            sub_fund_id: null,
+            fiscal_period_id: null,
+            ledger_id: null,
+            reference: "",
+            note: "",
+            currency: "",
+            allocation_amount: null,
+            lib_group_visibility: "",
+        });
+        const selectedFund = ref(null);
+        const isSubFund = ref(false);
+
+        const getFundAllocation = fund_allocation_id => {
+            const client = APIClient.acquisition;
+            client.fundAllocations.get(fund_allocation_id).then(result => {
+                fund_allocation.value = result;
+            });
+        };
+        const getFund = params => {
+            const { fund_id, sub_fund_id } = params;
+            const whichClient = sub_fund_id ? "subFunds" : "funds";
+            const whichParam = sub_fund_id ? "sub_fund_id" : "fund_id";
+            if (sub_fund_id) isSubFund.value = true;
+
+            const client = APIClient.acquisition;
+            client[whichClient].get(params[whichParam]).then(
+                result => {
+                    selectedFund.value = result;
+                    fund_allocation.value[whichParam] = result[whichParam];
+                    fund_allocation.value.ledger_id = result.ledger_id;
+                    fund_allocation.value.fiscal_period_id =
+                        result.fiscal_period_id;
+                    fund_allocation.value.currency = result.currency;
+                    fund_allocation.value.owner_id = result.owner_id;
+                    fund_allocation.value.lib_group_visibility =
+                        result.lib_group_visibility;
+                },
+                error => {}
+            );
+        };
+        const onSubmit = e => {
+            e.preventDefault();
+
+            if (!isUserPermitted("createFundAllocation")) {
+                setWarning(
+                    $__(
+                        "You do not have the required permissions to create fund allocations."
+                    )
+                );
+                return;
+            }
+
+            const fundAllocation = JSON.parse(
+                JSON.stringify(fund_allocation.value)
+            );
+            const fund_allocation_id = fundAllocation.fund_allocation_id;
+
+            delete fundAllocation.fund_allocation_id;
+
+            if (fund_allocation_id) {
+                const acq_client = APIClient.acquisition;
+                acq_client.fundAllocations
+                    .update(fundAllocation, fund_allocation_id)
+                    .then(
+                        success => {
+                            setMessage($__("Fund allocation updated"));
+                            router.push({
+                                name: "FundShow",
+                                params: { fund_id: selectedFund.value.fund_id },
+                            });
+                        },
+                        error => {}
+                    );
+            } else {
+                const acq_client = APIClient.acquisition;
+                acq_client.fundAllocations.create(fundAllocation).then(
+                    success => {
+                        setMessage($__("Fund allocation created"));
+                        router.push({
+                            name: "FundShow",
+                            params: { fund_id: selectedFund.value.fund_id },
+                        });
+                    },
+                    error => {}
+                );
+            }
+        };
+
+        onBeforeMount(() => {
+            const { params } = route;
+            getFund(params).then(() => {
+                if (params.fund_allocation_id) {
+                    getFundAllocation(params.fund_allocation_id);
+                }
+                initialized.value = true;
+            });
+        });
 
         return {
             isUserPermitted,
-        }
-    },
-    data() {
-        return {
-            initialized: false,
-            fund_allocation: {
-                fund_id: null,
-                sub_fund_id: null,
-                fiscal_period_id: null,
-                ledger_id: null,
-                reference: "",
-                note: "",
-                currency: "",
-                allocation_amount: null,
-                lib_group_visibility: "",
-            },
-            funds: [],
-            selectedFund: null,
-            isSubFund: false,
-        }
-    },
-    beforeRouteEnter(to, from, next) {
-        next(vm => {
-            vm.getDataRequiredForPageLoad(to)
-        })
-    },
-    methods: {
-        async getDataRequiredForPageLoad(route) {
-            const { params } = route
-            this.getFund(params).then(() => {
-                if (params.fund_allocation_id) {
-                    this.getFundAllocation(params.fund_allocation_id)
-                }
-                this.initialized = true
-            })
-        },
-        async getFundAllocation(fund_allocation_id) {
-            const client = APIClient.acquisition
-            await client.fundAllocations
-                .get(fund_allocation_id)
-                .then(fund_allocation => {
-                    this.fund_allocation = fund_allocation
-                })
-        },
-        async getFund(params) {
-            const { fund_id, sub_fund_id } = params
-            const whichClient = sub_fund_id ? "subFunds" : "funds"
-            const whichParam = sub_fund_id ? "sub_fund_id" : "fund_id"
-            if (sub_fund_id) this.isSubFund = true
-
-            const client = APIClient.acquisition
-            await client[whichClient].get(params[whichParam]).then(
-                result => {
-                    this.selectedFund = result
-                    this.fund_allocation[whichParam] = result[whichParam]
-                    this.fund_allocation.ledger_id = result.ledger_id
-                    this.fund_allocation.fiscal_period_id =
-                        result.fiscal_period_id
-                    this.fund_allocation.currency = result.currency
-                    this.fund_allocation.owner_id = result.owner_id
-                    this.fund_allocation.lib_group_visibility =
-                        result.lib_group_visibility
-                },
-                error => {}
-            )
-        },
-        onSubmit(e) {
-            e.preventDefault()
-
-            if (!this.isUserPermitted("createFundAllocation")) {
-                setWarning(
-                    this.$__(
-                        "You do not have the required permissions to create fund allocations."
-                    )
-                )
-                return
-            }
-
-            const fund_allocation = JSON.parse(
-                JSON.stringify(this.fund_allocation)
-            )
-            const fund_allocation_id = fund_allocation.fund_allocation_id
-
-            delete fund_allocation.fund_allocation_id
-
-            if (fund_allocation_id) {
-                const acq_client = APIClient.acquisition
-                acq_client.fundAllocations
-                    .update(fund_allocation, fund_allocation_id)
-                    .then(
-                        success => {
-                            setMessage(this.$__("Fund allocation updated"))
-                            this.$router.push({
-                                name: "FundShow",
-                                params: { fund_id: this.selectedFund.fund_id },
-                            })
-                        },
-                        error => {}
-                    )
-            } else {
-                const acq_client = APIClient.acquisition
-                acq_client.fundAllocations.create(fund_allocation).then(
-                    success => {
-                        setMessage(this.$__("Fund allocation created"))
-                        this.$router.push({
-                            name: "FundShow",
-                            params: { fund_id: this.selectedFund.fund_id },
-                        })
-                    },
-                    error => {}
-                )
-            }
-        },
+            fund_allocation,
+            selectedFund,
+            isSubFund,
+            onSubmit,
+        };
     },
     components: {
         InfiniteScrollSelect,
     },
-}
+};
 </script>
 
 <style scoped>

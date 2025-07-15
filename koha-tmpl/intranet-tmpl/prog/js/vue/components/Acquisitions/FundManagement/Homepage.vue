@@ -3,30 +3,32 @@
 </template>
 
 <script>
-import { inject } from "vue"
-import { storeToRefs } from "pinia"
-import { setWarning } from "../../../messages"
+import { inject, onBeforeMount } from "vue";
+import { storeToRefs } from "pinia";
+import { setWarning } from "../../../messages";
+import { $__ } from "@koha-vue/i18n";
 
 export default {
     setup() {
-        const acquisitionsStore = inject("acquisitionsStore")
-        const { navigationBlocked } = storeToRefs(acquisitionsStore)
+        const acquisitionsStore = inject("acquisitionsStore");
+        const { navigationBlocked } = storeToRefs(acquisitionsStore);
+
+        onBeforeMount(() => {
+            if (navigationBlocked.value) {
+                setWarning(
+                    $__(
+                        "You did not have the required permissions to access that page. Please contact your system administrator."
+                    )
+                );
+                navigationBlocked.value = false;
+            }
+        });
 
         return {
             navigationBlocked,
-        }
+        };
     },
-    beforeCreate() {
-        if (this.navigationBlocked) {
-            setWarning(
-                this.$__(
-                    "You did not have the required permissions to access that page. Please contact your system administrator."
-                )
-            )
-            this.navigationBlocked = false
-        }
-    },
-}
+};
 </script>
 
 <style></style>

@@ -123,7 +123,7 @@
                         label="code"
                         apiClient="acquisition"
                         :filters="filterLimitations"
-                        :disabled="filters.ledger_id"
+                        :disabled="filters.ledger_id > 0"
                     />
                 </div>
                 <div class="filter-grid-cell">
@@ -180,9 +180,10 @@ import Toolbar from "../../Toolbar.vue";
 import ToolbarLink from "../../ToolbarLink.vue";
 import KohaTable from "../../KohaTable.vue";
 import InfiniteScrollSelect from "../../InfiniteScrollSelect.vue";
-import { inject, ref } from "vue";
+import { computed, inject, onBeforeMount, ref, useTemplateRef } from "vue";
 import { storeToRefs } from "pinia";
 import { APIClient } from "../../../fetch/api-client.js";
+import { $__ } from "@koha-vue/i18n";
 
 export default {
     setup() {
@@ -190,90 +191,32 @@ export default {
         const { isUserPermitted } = acquisitionsStore;
         const { getOwners, authorisedValues } = storeToRefs(acquisitionsStore);
 
-        const ledgersTable = ref();
-        const fundsTable = ref();
+        const ledgersTable = useTemplateRef("ledgersTable");
+        const fundsTable = useTemplateRef("fundsTable");
 
-        return {
-            isUserPermitted,
-            ledgersTable,
-            fundsTable,
-            authorisedValues,
-            getOwners,
-        };
-    },
-    data() {
-        return {
-            tableOptionsLedgers: {
-                columns: this.getTableColumns("ledger"),
-                url: this.tableUrl("ledgers"),
-                options: {
-                    dom: '<"top pager"<"table_entries"ip>>tr<"bottom pager"ip>',
-                },
-                table_settings: null,
-                add_filters: true,
-            },
-            tableOptionsFunds: {
-                columns: this.getTableColumns("fund"),
-                url: this.tableUrl("funds"),
-                options: {
-                    dom: '<"top pager"<"table_entries"ip>>tr<"bottom pager"ip>',
-                },
-                table_settings: null,
-                add_filters: true,
-            },
-            filters: {
-                status: null,
-                fund_type: null,
-                fund_group: null,
-                owner_id: null,
-                fiscal_period_id: null,
-                ledger_id: null,
-            },
-            statusOptions: [
-                { description: this.$__("Active"), value: true },
-                { description: this.$__("Inactive"), value: false },
-            ],
-            fundGroups: [],
-            initialized: false,
-        };
-    },
-    computed: {
-        filterLimitations() {
-            const filterLimitations = {};
-            Object.keys(this.filters)
-                .filter(key => !["fund_type", "fund_group"].includes(key))
-                .forEach(key => {
-                    if (this.filters[key]) {
-                        filterLimitations[key] = this.filters[key];
-                    }
-                });
-            return filterLimitations;
-        },
-    },
-    beforeRouteEnter(to, from, next) {
-        next(vm => {
-            vm.getFundGroups();
+        const filters = ref({
+            status: null,
+            fund_type: null,
+            fund_group: null,
+            owner_id: null,
+            fiscal_period_id: null,
+            ledger_id: null,
         });
-    },
-    methods: {
-        async getFundGroups() {
-            const client = APIClient.acquisition;
-            await client.fundGroups.getAll().then(
-                fundGroups => {
-                    this.fundGroups = fundGroups;
-                    this.initialized = true;
-                },
-                error => {}
-            );
-        },
-        tableUrl(type, query) {
+        const statusOptions = ref([
+            { description: $__("Active"), value: true },
+            { description: $__("Inactive"), value: false },
+        ]);
+        const fundGroups = ref([]);
+        const initialized = ref(false);
+
+        const tableUrl = (type, query) => {
             let url = `/api/v1/acquisitions/${type}`;
             if (query) {
                 url = url + "?q=" + JSON.stringify(query);
             }
             return url;
-        },
-        getTableColumns: function (dataType) {
+        };
+        const getTableColumns = dataType => {
             return [
                 {
                     title: __("Name"),
@@ -298,32 +241,91 @@ export default {
                     orderable: true,
                 },
             ];
-        },
-        filterTables() {
-            const filters = JSON.parse(JSON.stringify(this.filters));
-            Object.keys(filters).forEach(key => {
-                if (filters[key] === null) {
-                    delete filters[key];
+        };
+        const filterTables = () => {
+            const tableFilters = JSON.parse(JSON.stringify(filters.value));
+            Object.keys(tableFilters).forEach(key => {
+                if (tableFilters[key] === null) {
+                    delete tableFilters[key];
                 }
             });
-            this.$refs.fundsTable.redraw(this.tableUrl("funds", filters));
-            if (filters.hasOwnProperty("fund_type")) {
-                delete filters.fund_type;
+            fundsTable.value.redraw(tableUrl("funds", tableFilters));
+            if (tableFilters.hasOwnProperty("fund_type")) {
+                delete tableFilters.fund_type;
             }
-            if (filters.hasOwnProperty("fund_group")) {
-                delete filters.fund_group;
+            if (tableFilters.hasOwnProperty("fund_group")) {
+                delete tableFilters.fund_group;
             }
-            this.$refs.ledgersTable.redraw(this.tableUrl("ledgers", filters));
-        },
-        clearFilters() {
-            this.filters = {
+            ledgersTable.value.redraw(tableUrl("ledgers", tableFilters));
+        };
+        const clearFilters = () => {
+            filters.value = {
                 status: null,
                 fund_type: null,
                 owner_id: null,
                 fiscal_period_id: null,
                 ledger_id: null,
             };
-        },
+        };
+
+        const tableOptionsLedgers = ref({
+            columns: getTableColumns("ledger"),
+            url: tableUrl("ledgers"),
+            options: {
+                dom: '<"top pager"<"table_entries"ip>>tr<"bottom pager"ip>',
+            },
+            table_settings: null,
+            add_filters: true,
+        });
+        const tableOptionsFunds = ref({
+            columns: getTableColumns("fund"),
+            url: tableUrl("funds"),
+            options: {
+                dom: '<"top pager"<"table_entries"ip>>tr<"bottom pager"ip>',
+            },
+            table_settings: null,
+            add_filters: true,
+        });
+
+        const filterLimitations = computed(() => {
+            const filterLimitations = {};
+            Object.keys(filters.value)
+                .filter(key => !["fund_type", "fund_group"].includes(key))
+                .forEach(key => {
+                    if (filters.value[key]) {
+                        filterLimitations[key] = filters.value[key];
+                    }
+                });
+            return filterLimitations;
+        });
+
+        onBeforeMount(() => {
+            const client = APIClient.acquisition;
+            client.fundGroups.getAll().then(
+                result => {
+                    fundGroups.value = result;
+                    initialized.value = true;
+                },
+                error => {}
+            );
+        });
+
+        return {
+            isUserPermitted,
+            ledgersTable,
+            fundsTable,
+            authorisedValues,
+            getOwners,
+            tableOptionsLedgers,
+            tableOptionsFunds,
+            filters,
+            statusOptions,
+            fundGroups,
+            initialized,
+            filterLimitations,
+            filterTables,
+            clearFilters,
+        };
     },
     components: {
         Toolbar,
