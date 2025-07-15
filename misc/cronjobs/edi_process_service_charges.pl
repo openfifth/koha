@@ -150,12 +150,15 @@ sub process_invoice_service_charges {
 
     foreach my $msg ( @{$messages} ) {
 
-        # Find the Koha invoice for this message (all lines belong to the same invoice)
-        my $koha_invoice = find_koha_invoice_for_message($invoice_message);
+        # Find the Koha invoice for this specific message within the transmission
+        # Each message has its own BGM segment with invoice number
+        my $koha_invoice = find_koha_invoice_for_message($invoice_message, $msg);
         if ( !$koha_invoice ) {
-            print "  WARNING: Could not find Koha invoice for message " . $invoice_message->id . "\n";
+            print "  WARNING: Could not find Koha invoice for message within transmission " . $invoice_message->id . "\n";
             next;
         }
+        
+        print "  Processing message for invoice " . $koha_invoice->invoiceid . " (" . $koha_invoice->invoicenumber . ")\n" if $verbose;
 
         # First, handle message-level allowances and charges
         my $message_alcs = get_message_allowances_charges($msg);
@@ -358,12 +361,23 @@ sub get_message_allowances_charges {
 }
 
 sub find_koha_invoice_for_message {
-    my ($invoice_message) = @_;
+    my ($invoice_message, $msg) = @_;
 
-    # Find invoice by message_id in aqinvoices table
-    # One EDI message creates one Koha invoice, so all lines belong to the same invoice
+    # Extract the BGM invoice number from this specific message using the existing method
+    my $bgm_invoice_number = $msg->docmsg_number();
+    if (!$bgm_invoice_number) {
+        return;
+    }
+
+    # Find the Koha invoice by matching the BGM invoice number
+    # Multiple invoices can have the same message_id (one transmission, multiple messages)
     my $schema = Koha::Database->new()->schema();
-    return $schema->resultset('Aqinvoice')->search( { message_id => $invoice_message->id } )->first;
+    return $schema->resultset('Aqinvoice')->search( 
+        { 
+            message_id => $invoice_message->id,
+            invoicenumber => $bgm_invoice_number
+        } 
+    )->first;
 }
 
 sub get_line_allowances_charges {
