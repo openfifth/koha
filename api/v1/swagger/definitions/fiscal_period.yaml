@@ -22,7 +22,9 @@ properties:
     format: date
     description: Start date for the fiscal period
   end_date:
-    type: string
+    type:
+      - string
+      - "null"
     format: date
     description: End date for the fiscal period
   spend_limit:
