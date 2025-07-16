@@ -176,7 +176,7 @@ export default {
                     type: "select",
                     requiredKey: "borrowernumber",
                     label: $__("Owner"),
-                    options: getOwners.value,
+                    options: getOwners,
                     required: true,
                     onSelected: filterGroupsBasedOnOwner,
                     showElement: {
@@ -192,7 +192,7 @@ export default {
                     selectLabel: "title",
                     type: "select",
                     label: $__("Visible to"),
-                    options: getVisibleGroups.value,
+                    options: getVisibleGroups,
                     required: true,
                     onSelected: filterOwnersBasedOnGroup,
                     hideIn: [
