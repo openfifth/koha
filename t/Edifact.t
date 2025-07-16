@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use FindBin qw( $Bin );
 
-use Test::More tests => 45;
+use Test::More tests => 67;
 use JSON qw( decode_json );
 use Koha::EDI;
 
