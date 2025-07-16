@@ -299,12 +299,168 @@
 
             // Handle biblio restore
             var currentBiblioId = null;
-            $('#biblio_table').on('click', '.restore-biblio', function() {
-                currentBiblioId = $(this).data('biblionumber');
-                $('#restore_biblio_modal').modal('show');
+            var deletedItemsTable = null;
+
+            $("#biblio_table").on("click", ".restore-biblio", function () {
+                currentBiblioId = $(this).data("biblionumber");
+
+                // Check if there are deleted items for this biblio
+                $.ajax({
+                    url: "/api/v1/deleted/items?biblionumber=" + currentBiblioId,
+                    method: "GET",
+                    headers: {
+                        Accept: "application/json;charset=UTF-8",
+                    },
+                    success: function (items) {
+                        if (items && items.length > 0) {
+                            // Show item selection modal
+                            showItemSelectionModal(items);
+                        } else {
+                            // No deleted items, proceed with normal restoration
+                            $("#restore_biblio_modal").modal("show");
+                        }
+                    },
+                    error: function (xhr) {
+                        console.error("Error checking for deleted items:", xhr);
+                        // On error, proceed with normal restoration
+                        $("#restore_biblio_modal").modal("show");
+                    },
+                });
             });
 
-            $('#restore_biblio_confirm').on('click', function() {
+            function showItemSelectionModal(items) {
+                // Initialize or clear the deleted items table
+                if (deletedItemsTable) {
+                    deletedItemsTable.destroy();
+                }
+
+                $("#deleted_items_table tbody").empty();
+
+                // Populate the table with deleted items
+                items.forEach(function (item) {
+                    var row = $("<tr>");
+                    row.append('<td><input type="checkbox" class="item-checkbox" value="' + item.itemnumber + '"></td>');
+                    row.append("<td>" + (item.barcode || "") + "</td>");
+                    row.append("<td>" + (item.itemcallnumber || "") + "</td>");
+                    row.append("<td>" + (item.location || item.permanent_location || "") + "</td>");
+                    row.append("<td>" + (item.itype || "") + "</td>");
+                    row.append("<td>" + (item.ccode || "") + "</td>");
+                    row.append("<td>" + (item.deleted_on ? new Date(item.deleted_on).toLocaleString() : "") + "</td>");
+                    $("#deleted_items_table tbody").append(row);
+                });
+
+                // Initialize DataTable
+                deletedItemsTable = $("#deleted_items_table").DataTable({
+                    paging: false,
+                    searching: true,
+                    info: false,
+                    order: [[6, "desc"]],
+                });
+
+                $("#select_items_modal").modal("show");
+            }
+
+            // Handle select all/none buttons
+            $("#select_all_items").on("click", function () {
+                $(".item-checkbox").prop("checked", true);
+                $("#check_all_items").prop("checked", true);
+            });
+
+            $("#select_none_items").on("click", function () {
+                $(".item-checkbox").prop("checked", false);
+                $("#check_all_items").prop("checked", false);
+            });
+
+            // Handle check all checkbox
+            $("#check_all_items").on("change", function () {
+                $(".item-checkbox").prop("checked", $(this).prop("checked"));
+            });
+
+            // Handle individual checkbox changes
+            $(document).on("change", ".item-checkbox", function () {
+                var allChecked = $(".item-checkbox").length === $(".item-checkbox:checked").length;
+                $("#check_all_items").prop("checked", allChecked);
+            });
+
+            // Handle restore biblio with selected items
+            $("#restore_biblio_with_items").on("click", function () {
+                var button = $(this);
+                var selectedItems = [];
+                $(".item-checkbox:checked").each(function () {
+                    selectedItems.push($(this).val());
+                });
+
+                button.prop("disabled", true);
+
+                // First restore the biblio
+                $.ajax({
+                    url: "/api/v1/restore_records/biblio/" + currentBiblioId,
+                    method: "POST",
+                    success: function (response) {
+                        if (response.success) {
+                            // Biblio restored successfully, now restore selected items
+                            if (selectedItems.length > 0) {
+                                restoreSelectedItems(selectedItems, button);
+                            } else {
+                                // No items selected, just reload and close
+                                $("#biblio_table").DataTable().ajax.reload();
+                                $("#item_table").DataTable().ajax.reload();
+                                $("#select_items_modal").modal("hide");
+                                button.prop("disabled", false);
+                            }
+                        } else {
+                            alert("Failed to restore bibliographic record: " + (response.error || "Unknown error"));
+                            button.prop("disabled", false);
+                        }
+                    },
+                    error: function (xhr) {
+                        var errorMsg = xhr.responseJSON?.error || "Unknown error";
+                        alert("Error restoring bibliographic record: " + errorMsg);
+                        button.prop("disabled", false);
+                    },
+                });
+            });
+
+            function restoreSelectedItems(itemIds, button) {
+                var restored = 0;
+                var errors = [];
+
+                // Restore each selected item
+                var restorePromises = itemIds.map(function (itemId) {
+                    return $.ajax({
+                        url: "/api/v1/restore_records/item/" + itemId,
+                        method: "POST",
+                    })
+                        .done(function (response) {
+                            if (response.success) {
+                                restored++;
+                            } else {
+                                errors.push("Item " + itemId + ": " + (response.error || "Unknown error"));
+                            }
+                        })
+                        .fail(function (xhr) {
+                            var errorMsg = xhr.responseJSON?.error || "Unknown error";
+                            errors.push("Item " + itemId + ": " + errorMsg);
+                        });
+                });
+
+                // Wait for all restorations to complete
+                $.when.apply($, restorePromises).always(function () {
+                    if (errors.length > 0) {
+                        alert("Some items could not be restored:\n" + errors.join("\n"));
+                    }
+
+                    // Reload tables and close modal
+                    $("#biblio_table").DataTable().ajax.reload();
+                    $("#item_table").DataTable().ajax.reload();
+                    $("#select_items_modal").modal("hide");
+                    button.prop("disabled", false);
+
+                    // Successfully restored items - no console logging needed
+                });
+            }
+
+            $("#restore_biblio_confirm").on("click", function () {
                 var button = $(this);
                 button.prop('disabled', true);
 
