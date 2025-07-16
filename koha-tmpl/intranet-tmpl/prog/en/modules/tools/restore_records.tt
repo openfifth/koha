@@ -125,6 +125,43 @@
             </div>
         </div>
     </div>
+
+    <!-- Select items to restore modal -->
+    <div id="select_items_modal" class="modal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title">Select items to restore</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>This bibliographic record has the following deleted items. Select which items you want to restore:</p>
+                    <div class="btn-group mb-3">
+                        <button type="button" class="btn btn-sm btn-default" id="select_all_items">Select all</button>
+                        <button type="button" class="btn btn-sm btn-default" id="select_none_items">Select none</button>
+                    </div>
+                    <table id="deleted_items_table" class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th><input type="checkbox" id="check_all_items" /></th>
+                                <th>Barcode</th>
+                                <th>Call number</th>
+                                <th>Location</th>
+                                <th>Item type</th>
+                                <th>Collection</th>
+                                <th>Deleted date</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="restore_biblio_with_items">Restore biblio and selected items</button>
+                </div>
+            </div>
+        </div>
+    </div>
 [% END %]
 
 [% MACRO jsinclude BLOCK %]
