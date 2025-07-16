@@ -270,11 +270,16 @@ sub process_invoice_service_charges {
                 if ( !$dry_run ) {
 
                     # Create the invoice adjustment with enhanced order linkage
-                    my $ordernumber = $line->ordernumber();
-                    my $note        = sprintf(
-                        'EDI %s: Order #%s | EDI Line: %s | Service: %s%s',
+                    # Find the actual received order (which may be split from the original)
+                    my $original_ordernumber = $line->ordernumber();
+                    my $received_order = find_received_order_for_invoice($original_ordernumber, $koha_invoice);
+                    my $actual_ordernumber = $received_order ? $received_order->ordernumber : undef;
+                    
+                    my $note = sprintf(
+                        'EDI %s: Order #%s%s | EDI Line: %s | Service: %s%s',
                         ucfirst($type),
-                        $ordernumber || 'Unknown',
+                        $actual_ordernumber || $original_ordernumber || 'Unknown',
+                        ($actual_ordernumber && $actual_ordernumber != $original_ordernumber) ? " (split from #$original_ordernumber)" : '',
                         $line->line_item_number,
                         $service_code,
                         $description ? " ($description)" : ''
@@ -296,17 +301,26 @@ sub process_invoice_service_charges {
 
                     # Adjust the orderline to avoid double-counting service charges
                     # Service charges are included in MOA+128/203 totals but we're extracting them separately
-                    if ( $type eq 'charge' && $ordernumber ) {
-                        adjust_orderline_for_service_charge( $ordernumber, $amount, $verbose, $koha_invoice, $line );
+                    if ( $type eq 'charge' && $received_order ) {
+                        adjust_orderline_for_service_charge( $received_order, $amount, $verbose, $original_ordernumber, $line );
                     }
                 } else {
+                    # For dry-run, also show the split order handling
+                    my $original_ordernumber = $line->ordernumber();
+                    my $received_order = find_received_order_for_invoice($original_ordernumber, $koha_invoice);
+                    my $actual_ordernumber = $received_order ? $received_order->ordernumber : undef;
+                    
+                    my $order_info = $actual_ordernumber || $original_ordernumber || 'Unknown';
+                    if ($actual_ordernumber && $actual_ordernumber != $original_ordernumber) {
+                        $order_info .= " (split from #$original_ordernumber)";
+                    }
+                    
                     print "  Would create $type adjustment for invoice "
                         . $koha_invoice->invoiceid
-                        . ": $amount (Budget: $budget_id)\n";
+                        . ": $amount (Budget: $budget_id) [Order: $order_info]\n";
                     if ( $type eq 'charge' ) {
-                        my $ordernumber = $line->ordernumber();
-                        if ($ordernumber) {
-                            print "  Would adjust orderline $ordernumber to correct price based on EDI PRI data\n";
+                        if ($received_order) {
+                            print "  Would adjust orderline $order_info to correct price based on EDI PRI data\n";
                         }
                     }
                 }
@@ -450,47 +464,50 @@ sub map_vendor_to_budget_id {
     return '';
 }
 
-sub adjust_orderline_for_service_charge {
-    my ( $ordernumber, $service_charge_amount, $verbose, $koha_invoice, $edi_line ) = @_;
-
-    my $original_order = $schema->resultset('Aqorder')->find($ordernumber);
+sub find_received_order_for_invoice {
+    my ($original_ordernumber, $koha_invoice) = @_;
+    
+    return unless $original_ordernumber && $koha_invoice;
+    
+    my $original_order = $schema->resultset('Aqorder')->find($original_ordernumber);
     return unless $original_order;
-
-    # Find the received/completed order that was created for this invoice
-    # When orders are split, we need to adjust the received order, not the original
     
-    # First get the parent_ordernumber from the original order to find all related orders
-    my $parent_ordernumber = $original_order->parent_ordernumber || $ordernumber;
+    # Find the parent_ordernumber from the original order to find all related orders
+    my $parent_ordernumber = $original_order->parent_ordernumber || $original_ordernumber;
     
-    my $order_to_adjust = $schema->resultset('Aqorder')->search({
+    my $received_order = $schema->resultset('Aqorder')->search({
         -and => [
             { invoiceid => $koha_invoice->invoiceid },
             { 
                 -or => [
                     # Either the original order if it was fully received
-                    { ordernumber => $ordernumber },
+                    { ordernumber => $original_ordernumber },
                     # Or find any split order from the same parent that was receipted on this invoice
                     { 
                         parent_ordernumber => $parent_ordernumber,
-                        ordernumber => { '!=' => $ordernumber },
+                        ordernumber => { '!=' => $original_ordernumber },
                         orderstatus => 'complete'
                     }
                 ]
             }
         ]
     })->first;
+    
+    return $received_order;
+}
 
-    unless ($order_to_adjust) {
-        print "  WARNING: Could not find received order for original order $ordernumber on invoice " . $koha_invoice->invoiceid . "\n" if $verbose;
-        return;
-    }
+sub adjust_orderline_for_service_charge {
+    my ( $order_to_adjust, $service_charge_amount, $verbose, $original_ordernumber, $edi_line ) = @_;
+
+    return unless $order_to_adjust;
 
     my $actual_ordernumber = $order_to_adjust->ordernumber;
     
-    if ($verbose && $actual_ordernumber != $ordernumber) {
-        print "  Found split order: EDI references $ordernumber, adjusting received order $actual_ordernumber (parent: $parent_ordernumber)\n";
+    if ($verbose && $actual_ordernumber != $original_ordernumber) {
+        my $parent_ordernumber = $order_to_adjust->parent_ordernumber || $original_ordernumber;
+        print "  Found split order: EDI references $original_ordernumber, adjusting received order $actual_ordernumber (parent: $parent_ordernumber)\n";
     } elsif ($verbose) {
-        print "  Using original order $ordernumber (no split occurred)\n";
+        print "  Using original order $original_ordernumber (no split occurred)\n";
     }
     
     # Use the same logic as _get_invoiced_price in Koha::EDI to get the base prices
@@ -532,7 +549,7 @@ sub adjust_orderline_for_service_charge {
         }
     );
 
-    my $order_type = ($actual_ordernumber != $ordernumber) ? "received order $actual_ordernumber (split from $ordernumber)" : "order $actual_ordernumber";
+    my $order_type = ($actual_ordernumber != $original_ordernumber) ? "received order $actual_ordernumber (split from $original_ordernumber)" : "order $actual_ordernumber";
     print
         "  Set $order_type unit price to $final_unit_price_inc (EDI base: $base_unit_price_inc - service charge: $per_unit_service_charge)\n"
         if $verbose;
