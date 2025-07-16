@@ -63,9 +63,9 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
                 }
             });
             if (branchcodes) {
-                return filteredUsers.filter(user =>
-                    branchcodes.includes(user.branchcode)
-                );
+                return filteredUsers.filter(user => {
+                    return branchcodes.includes(user.branchcode);
+                });
             } else {
                 return filteredUsers;
             }
@@ -115,12 +115,12 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
                 store.currentPermission
             );
             if (!e) {
-                store.visibleGroups = libGroups;
+                store.visibleGroups = this.filterLibGroupsByUsersBranchcode();
                 store.owners = permittedUsers;
                 data.lib_group_visibility = null;
             } else {
                 const { branchcode } = permittedUsers.find(
-                    user => user.borrowernumber === e.borrowernumber
+                    user => user.borrowernumber === e
                 );
                 store.visibleGroups = this.filterLibGroupsByUsersBranchcode(
                     branchcode,

@@ -104,7 +104,7 @@ const _matchSubGroups = (group, filteredGroups, branch, groupsToCheck) => {
         if (
             groupsToCheck &&
             groupsToCheck.length &&
-            groupsToCheck.includes(group.id)
+            groupsToCheck.map(grp => grp.id).includes(group.id)
         ) {
             filteredGroups[group.id] = group;
             matched = true;

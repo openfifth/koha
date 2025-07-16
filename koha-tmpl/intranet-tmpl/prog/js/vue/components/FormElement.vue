@@ -110,7 +110,7 @@
             :required="!resource[attr.name] && attr.required"
             :disabled="disabled"
             :multiple="attr.allowMultipleChoices"
-            @option:selected="
+            @update:modelValue="
                 attr.onSelected && attr.onSelected($event, resource)
             "
         >
@@ -264,7 +264,9 @@ export default {
         });
         const selectOptions = computed(() => {
             if (props.attr.options) {
-                return props.attr.options;
+                return Array.isArray(props.attr.options)
+                    ? props.attr.options
+                    : props.attr.options.value;
             }
             return props.options;
         });
