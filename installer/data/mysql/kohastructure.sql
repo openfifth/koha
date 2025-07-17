@@ -5070,8 +5070,9 @@ DROP TABLE IF EXISTS `hold_groups`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE hold_groups (
-    hold_group_id int unsigned NOT NULL AUTO_INCREMENT,
+    `hold_group_id` int unsigned NOT NULL AUTO_INCREMENT,
     `borrowernumber` int(11) DEFAULT NULL COMMENT 'foreign key, linking this to the borrowers table',
+    `visual_hold_group_id` int(11) DEFAULT NULL COMMENT 'visual ID for this hold group, in the context of the related patron',
     KEY `hold_groups_borrowernumber` (`borrowernumber`),
     CONSTRAINT `hold_groups_ibfk_1` FOREIGN KEY (`borrowernumber`) REFERENCES `borrowers` (`borrowernumber`) ON DELETE CASCADE,
     PRIMARY KEY (hold_group_id)
