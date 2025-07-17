@@ -16,6 +16,7 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
         permittedUsers: null,
         visibleGroups: null,
         owners: null,
+        libGroupFilter: "",
         navigationBlocked: false,
         currentPermission: null,
         moduleList: {
@@ -107,21 +108,11 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
         //     }
         // },
         filterGroupsBasedOnOwner(e, data) {
-            const libGroups = this.filterLibGroupsByUsersBranchcode(
-                null,
-                store.visibleGroups
-            );
-            const permittedUsers = this.filterUsersByPermissions(
-                store.currentPermission
-            );
             if (!e) {
                 store.visibleGroups = this.filterLibGroupsByUsersBranchcode();
-                store.owners = permittedUsers;
                 data.lib_group_visibility = null;
             } else {
-                const { branchcode } = permittedUsers.find(
-                    user => user.borrowernumber === e
-                );
+                const { library_id: branchcode } = e;
                 store.visibleGroups = this.filterLibGroupsByUsersBranchcode(
                     branchcode,
                     store.visibleGroups
@@ -133,24 +124,11 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
                 null,
                 store.visibleGroups
             );
-            const permittedUsers = this.filterUsersByPermissions(
-                store.currentPermission
-            );
             if (!e.length) {
                 store.visibleGroups = libGroups;
-                store.owners = permittedUsers;
                 data.owner_id = null;
-            } else {
-                const filteredGroups = libGroups.filter(group =>
-                    e.includes(group.id)
-                );
-                const branchcodes =
-                    this._findBranchCodesInGroup(filteredGroups);
-                store.owners = this.filterUsersByPermissions(
-                    store.currentPermission,
-                    branchcodes
-                );
             }
+            store.libGroupFilter = e;
         },
         setOwnersBasedOnPermission(permission) {
             if (store.permittedUsers) {
@@ -195,6 +173,9 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
         }),
         getOwners: computed(() => {
             return store.owners;
+        }),
+        getLibGroupFilter: computed(() => {
+            return store.libGroupFilter;
         }),
     };
 

@@ -338,6 +338,8 @@
                 let patron_search_url = '/api/v1/acquisitions/funds/users';
             [% CASE 'erm_users' %]
                 let patron_search_url = '/api/v1/erm/users';
+            [% CASE 'fund_management_users' %]
+                let patron_search_url = '/api/v1/acquisitions/fund_management/users';
             [% CASE %]
                 let patron_search_url = '/api/v1/patrons';
             [% END %]
@@ -911,6 +913,11 @@
                 }
                 patrons_table.data('loaded_from_state', false);
                 first_draw = 1; // Only redirect if we are coming from here
+                let additionalPatronFilters = $("#additional_patron_filters").data("additionalfilters")
+                if(additionalPatronFilters) {
+                    let url = patron_search_url + "?q=" + JSON.stringify(additionalPatronFilters)
+                    table_dt.ajax.url(url)
+                }
                 table_dt.draw();
                 return false;
             }

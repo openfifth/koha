@@ -18,12 +18,10 @@ package Koha::Acquisition::FundManagement::FundGroup;
 # along with Koha; if not, see <http://www.gnu.org/licenses>.
 
 use Modern::Perl;
-use base qw(Koha::Object Koha::Object::Limit::LibraryGroup);
+use base qw(Koha::Acquisition::FundManagement::BaseObject);
 
 use Mojo::JSON qw(decode_json);
 use JSON       qw ( encode_json );
-
-
 
 =head1 NAME
 
@@ -56,7 +54,6 @@ sub funds {
     my $fund_rs = $self->_result->funds;
     return Koha::Acquisition::FundManagement::Funds->_new_from_dbic($fund_rs);
 }
-
 
 =head3 _library_group_visibility_parameters
 

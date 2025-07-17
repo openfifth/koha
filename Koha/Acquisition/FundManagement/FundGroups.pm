@@ -18,7 +18,7 @@ package Koha::Acquisition::FundManagement::FundGroups;
 # along with Koha; if not, see <http://www.gnu.org/licenses>.
 
 use Modern::Perl;
-use base qw(Koha::Objects Koha::Objects::Limit::LibraryGroup);
+use base qw(Koha::Acquisition::FundManagement::BaseObjects);
 
 use Koha::Acquisition::FundManagement::FundGroup;
 

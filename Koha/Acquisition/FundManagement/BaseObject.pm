@@ -18,7 +18,7 @@ package Koha::Acquisition::FundManagement::BaseObject;
 # along with Koha; if not, see <http://www.gnu.org/licenses>.
 
 use Modern::Perl;
-use base qw(Koha::Object);
+use base qw(Koha::Object Koha::Object::Limit::LibraryGroup);
 
 use Scalar::Util qw( looks_like_number );
 

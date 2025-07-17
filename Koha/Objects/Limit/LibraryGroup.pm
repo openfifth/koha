@@ -53,7 +53,7 @@ Wrapper method for searching objects with library limits, respecting those limit
 sub define_library_group_limits {
     my ( $self, $params, $attributes ) = @_;
 
-    my $userenv = C4::Context->userenv();
+    my $userenv          = C4::Context->userenv();
     my $logged_in_branch = $userenv ? $userenv->{'branch'} : undef;
     return ( $params, $attributes ) unless $logged_in_branch;
 
@@ -105,6 +105,47 @@ sub define_library_group_limits {
     return ( $params, $attributes );
 }
 
+=head3 filter_by_library_group_based_on_branchcode
+
+=cut
+
+sub filter_by_library_group_based_on_branchcode {
+    my ( $self, $args ) = @_;
+
+    my @branchcodes      = ();
+    my @filtered_objects = ();
+
+    my $visibility =
+        ref( $args->{lib_group_visibility} ) eq 'ARRAY'
+        ? join( "|", @{ $args->{lib_group_visibility} } )
+        : $args->{lib_group_visibility};
+
+    my @ids = grep( /[0-9]/, split( /\|/, $visibility ) );
+
+    my @lib_groups = map { Koha::Library::Groups->find($_) } @ids;
+
+    foreach my $group (@lib_groups) {
+        _map_sub_groups( { group => $group, branchcodes => \@branchcodes } );
+    }
+
+    if ( scalar(@branchcodes) == 0 ) {
+        return $args->{objects};
+    }
+
+    my $match_field = $args->{match_field};
+    foreach my $object ( @{ $args->{objects} } ) {
+        if ( grep( $_ eq $object->{$match_field}, @branchcodes ) ) {
+            push( @filtered_objects, $object );
+        }
+    }
+
+    return \@filtered_objects;
+}
+
+=head2 Internal methods
+
+=cut
+
 =head3 _handle_parent_groups
 
 _handle_parent_groups(
@@ -139,6 +180,24 @@ sub _handle_parent_groups {
                 visibility_column => $visibility_column
             }
         );
+    }
+}
+
+=head3 _map_sub_groups
+
+=cut
+
+sub _map_sub_groups {
+    my ($args) = @_;
+
+    my @children = $args->{group}->children;
+    foreach my $child (@children) {
+        if ( $child->branchcode ) {
+            push( @{ $args->{branchcodes} }, $child->branchcode )
+                unless grep( $_ eq $child->branchcode, @{ $args->{branchcodes} } );
+        } else {
+            _map_sub_groups( { group => $child, branchcodes => $args->{branchcodes} } );
+        }
     }
 }
 

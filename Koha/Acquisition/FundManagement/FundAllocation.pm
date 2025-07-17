@@ -18,7 +18,7 @@ package Koha::Acquisition::FundManagement::FundAllocation;
 # along with Koha; if not, see <http://www.gnu.org/licenses>.
 
 use Modern::Perl;
-use base qw(Koha::Object::Limit::LibraryGroup Koha::Acquisition::FundManagement::BaseObject);
+use base qw(Koha::Acquisition::FundManagement::BaseObject);
 
 use Koha::Acquisition::FundManagement::Fund;
 use Koha::Acquisition::FundManagement::SubFunds;
@@ -116,14 +116,13 @@ sub will_allocation_breach_spend_limits {
     return 0;
 }
 
-
 =head3 _object_hierarchy
 
 =cut
 
 sub _object_hierarchy {
     return {
-        object   => 'fund_allocation',
+        object => 'fund_allocation',
     };
 }
 

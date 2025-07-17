@@ -102,7 +102,8 @@ export function useBaseElement(instancedElement) {
                 prop.type === "boolean" ||
                 prop.type === "object" ||
                 prop.type === "string" ||
-                prop.type === "date"
+                prop.type === "date" ||
+                prop.type === "function"
             ) {
                 acc[key] = prop.value;
                 if (prop.indexRequired && instancedElement.index > -1) {

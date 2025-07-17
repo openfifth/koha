@@ -1,7 +1,7 @@
 ---
 /acquisitions/fund_management/config:
   get:
-    x-mojo-to: Acquisitions::FundManagement::Config#config
+    x-mojo-to: Acquisitions::FundManagement::FundManagement#config
     operationId: getFundManagementConfig
     description: This resource returns a list of options needed for the fund management app
     summary: get the fund management config
