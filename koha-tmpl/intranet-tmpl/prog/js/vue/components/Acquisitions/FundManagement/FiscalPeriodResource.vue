@@ -23,12 +23,8 @@ export default {
         const patron_to_html = $patron_to_html;
 
         const acquisitionsStore = inject("acquisitionsStore");
-        const {
-            getVisibleGroups,
-            getOwners,
-            libraryGroups,
-            getLibGroupFilter,
-        } = storeToRefs(acquisitionsStore);
+        const { getVisibleGroups, libraryGroups, getLibGroupFilter } =
+            storeToRefs(acquisitionsStore);
 
         const {
             filterGroupsBasedOnOwner,
@@ -134,22 +130,6 @@ export default {
                     size: 6,
                     hideIn: ["List"],
                 },
-                // {
-                //     name: "owner_id",
-                //     selectLabel: "displayName",
-                //     type: "select",
-                //     requiredKey: "borrowernumber",
-                //     label: $__("Owner"),
-                //     options: getOwners,
-                //     required: true,
-                //     onSelected: filterGroupsBasedOnOwner,
-                //     showElement: {
-                //         name: "owner",
-                //         type: "select",
-                //         format: patron_to_html,
-                //     },
-                //     hideIn: ["List"],
-                // },
                 {
                     name: "owner_id",
                     type: "component",
@@ -184,6 +164,10 @@ export default {
                             type: "function",
                             value: filterGroupsBasedOnOwner,
                         },
+                        fieldName: {
+                            type: "string",
+                            value: "owner",
+                        },
                     },
                     showElement: {
                         type: "text",
@@ -196,7 +180,7 @@ export default {
                     requiredKey: "id",
                     selectLabel: "title",
                     type: "select",
-                    label: $__("Visible to:"),
+                    label: $__("Visible to"),
                     options: getVisibleGroups,
                     required: true,
                     onSelected: filterOwnersBasedOnGroup,
@@ -284,7 +268,7 @@ export default {
 
         const afterResourceFetch = (componentData, resource, caller) => {
             if (caller === "form") {
-                componentData.resource.lib_group_visibility =
+                componentData.resource.value.lib_group_visibility =
                     formatLibraryGroupIds(resource.lib_group_visibility);
             }
         };

@@ -57,7 +57,7 @@ app.component("v-select", vSelect);
 app.component("font-awesome-icon", FontAwesomeIcon);
 
 const { removeMessages, setWarning } = mainStore;
-const { setOwnersBasedOnPermission, isUserPermitted } = acquisitionsStore;
+const { isUserPermitted } = acquisitionsStore;
 router.beforeEach((to, from) => {
     if (to.matched.length === 0) {
         // The Apache redirect does not render breadcrumbs so we need to push to the correct route
@@ -68,7 +68,6 @@ router.beforeEach((to, from) => {
             acquisitionsStore.$patch({
                 currentPermission: endRoute.permission,
             });
-            setOwnersBasedOnPermission(endRoute.permission);
             const userPermitted = isUserPermitted(
                 endRoute.permission,
                 userflags

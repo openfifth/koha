@@ -35,9 +35,11 @@ const formatLibraryGroupIds = ids => {
         return [];
     }
     const groups = ids.includes("|") ? ids.split("|") : [ids];
-    const groupIds = groups.map(group => {
-        return parseInt(group);
-    });
+    const groupIds = groups
+        .map(group => {
+            return group;
+        })
+        .filter(id => id && id !== "|");
     return groupIds;
 };
 const setLibraryGroupsHandler = (groups, store) => {

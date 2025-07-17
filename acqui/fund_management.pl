@@ -42,6 +42,7 @@ my $patron    = Koha::Patrons->find( { borrowernumber => $borrowernumber } );
 my $userflags = haspermission( $patron->userid );
 
 my $acquisitions_library_groups = Koha::Library::Groups->search( { ft_acquisitions => 1 } );
+
 # my @user_library_groups;
 
 # # If no library groups are defined then we gather all branches into one "group"
@@ -66,37 +67,38 @@ my $acquisitions_library_groups = Koha::Library::Groups->search( { ft_acquisitio
 # }
 
 # Get currency data
-my $currencies = Koha::Acquisition::Currencies->search()->unblessed;
-    my $logged_in_branch = C4::Context::mybranch();
+my $currencies       = Koha::Acquisition::Currencies->search()->unblessed;
+my $logged_in_branch = C4::Context::mybranch();
 
-my @permitted_patrons;
-my @patrons_with_flags = Koha::Patrons->search( { flags => { '!=' => undef } } )->as_list;
+# my @permitted_patrons;
+# my @patrons_with_flags = Koha::Patrons->search( { flags => { '!=' => undef } } )->as_list;
 
-foreach my $patron (@patrons_with_flags) {
-    my $userflags = haspermission( $patron->userid );
-    if ( $userflags->{acquisition} || $userflags->{superlibrarian} ) {
-        my $p = $patron->unblessed;
-        $p->{permissions} = $userflags;
-        push( @permitted_patrons, $p );
-    }
-}
+# foreach my $patron (@patrons_with_flags) {
+#     my $userflags = haspermission( $patron->userid );
+#     if ( $userflags->{acquisition} || $userflags->{superlibrarian} ) {
+#         my $p = $patron->unblessed;
+#         $p->{permissions} = $userflags;
+#         push( @permitted_patrons, $p );
+#     }
+# }
 
-if ( scalar( @{ $acquisitions_library_groups->as_list } == 0 ) ) {
-    $template->param( permitted_patrons => \@permitted_patrons );
-} else {
-    my @user_branchcodes = _get_lib_group_branchcodes($logged_in_branch);
-    my @permitted_patrons_in_group;
-    foreach my $patron (@permitted_patrons) {
-        push( @permitted_patrons_in_group, $patron ) if grep( $patron->{branchcode} eq $_, @user_branchcodes );
-    }
-    $template->param( permitted_patrons => \@permitted_patrons_in_group );
-}
+# if ( scalar( @{ $acquisitions_library_groups->as_list } == 0 ) ) {
+#     $template->param( permitted_patrons => \@permitted_patrons );
+# } else {
+#     my @user_branchcodes = _get_lib_group_branchcodes($logged_in_branch);
+#     my @permitted_patrons_in_group;
+#     foreach my $patron (@permitted_patrons) {
+#         push( @permitted_patrons_in_group, $patron ) if grep( $patron->{branchcode} eq $_, @user_branchcodes );
+#     }
+#     $template->param( permitted_patrons => \@permitted_patrons_in_group );
+# }
 
 $template->param(
     userflags        => $userflags,
     logged_in_branch => { branchcode => C4::Context::mybranch },
+
     # library_groups   => \@user_library_groups,
-    currencies       => $currencies
+    currencies => $currencies
 );
 
 output_html_with_http_headers $query, $cookie, $template->output;

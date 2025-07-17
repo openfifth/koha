@@ -36,7 +36,7 @@
             const userflags = [% To.json(userflags) | $raw %];
             // const library_groups = [% To.json(library_groups) | $raw %];
             const currencyList = [% To.json(currencies) | $raw %];
-            const permitted_patrons = [% To.json(permitted_patrons) | $raw %];
+            // const permitted_patrons = [% To.json(permitted_patrons) | $raw %];
         </script>
         [% Asset.js("js/vue/dist/acquisitions/fundManagement.js") | $raw %]
         [% INCLUDE 'select2.inc' %]

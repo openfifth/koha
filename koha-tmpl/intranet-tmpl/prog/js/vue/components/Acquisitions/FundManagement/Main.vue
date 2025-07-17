@@ -51,7 +51,6 @@ export default {
 
         const acquisitionsStore = inject("acquisitionsStore");
         const {
-            filterUsersByPermissions,
             filterLibGroupsByUsersBranchcode,
             setLibraryGroups,
             loadAuthorisedValues,
@@ -60,10 +59,8 @@ export default {
             user,
             settings,
             libraryGroups,
-            permittedUsers,
             modulesEnabled,
             visibleGroups,
-            owners,
             currencies,
             authorisedValues,
             userPermissions,
@@ -87,7 +84,6 @@ export default {
                         const client = APIClient.acquisition;
                         client.config.get("fund_management").then(result => {
                             userPermissions.value = result.permissions;
-                            permittedUsers.value = permitted_patrons;
                             const { permission } = route.meta.self;
                             const permissionRequired = permission
                                 ? permission
@@ -107,8 +103,6 @@ export default {
                                     false
                                 );
                             }
-                            owners.value =
-                                filterUsersByPermissions(permissionRequired);
                             visibleGroups.value =
                                 filterLibGroupsByUsersBranchcode();
                             settings.value = {
@@ -133,11 +127,8 @@ export default {
             settings,
             user,
             libraryGroups,
-            permittedUsers,
             modulesEnabled,
             visibleGroups,
-            owners,
-            filterUsersByPermissions,
             filterLibGroupsByUsersBranchcode,
             currencies,
             setLibraryGroups,
