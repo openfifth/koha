@@ -420,26 +420,6 @@ __PACKAGE__->belongs_to(
   },
 );
 
-=head2 item_group
-
-Type: belongs_to
-
-Related object: L<Koha::Schema::Result::ItemGroup>
-
-=cut
-
-__PACKAGE__->belongs_to(
-  "item_group",
-  "Koha::Schema::Result::ItemGroup",
-  { item_group_id => "item_group_id" },
-  {
-    is_deferrable => 1,
-    join_type     => "LEFT",
-    on_delete     => "SET NULL",
-    on_update     => "CASCADE",
-  },
-);
-
 =head2 hold_group
 
 Type: belongs_to
@@ -452,6 +432,26 @@ __PACKAGE__->belongs_to(
   "hold_group",
   "Koha::Schema::Result::HoldGroup",
   { hold_group_id => "hold_group_id" },
+  {
+    is_deferrable => 1,
+    join_type     => "LEFT",
+    on_delete     => "SET NULL",
+    on_update     => "CASCADE",
+  },
+);
+
+=head2 item_group
+
+Type: belongs_to
+
+Related object: L<Koha::Schema::Result::ItemGroup>
+
+=cut
+
+__PACKAGE__->belongs_to(
+  "item_group",
+  "Koha::Schema::Result::ItemGroup",
+  { item_group_id => "item_group_id" },
   {
     is_deferrable => 1,
     join_type     => "LEFT",
@@ -501,8 +501,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2024-10-30 17:21:09
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:bmt1FkgXdJSOMQFdAHO3cQ
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-07-25 13:02:35
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:x5AS7F7aOMb9ihb8gaxZvQ
 
 __PACKAGE__->belongs_to(
   "item",
