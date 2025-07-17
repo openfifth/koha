@@ -23,8 +23,12 @@ export default {
         const patron_to_html = $patron_to_html;
 
         const acquisitionsStore = inject("acquisitionsStore");
-        const { getVisibleGroups, getOwners, libraryGroups } =
-            storeToRefs(acquisitionsStore);
+        const {
+            getVisibleGroups,
+            getOwners,
+            libraryGroups,
+            getLibGroupFilter,
+        } = storeToRefs(acquisitionsStore);
 
         const {
             filterGroupsBasedOnOwner,
@@ -130,18 +134,59 @@ export default {
                     size: 6,
                     hideIn: ["List"],
                 },
+                // {
+                //     name: "owner_id",
+                //     selectLabel: "displayName",
+                //     type: "select",
+                //     requiredKey: "borrowernumber",
+                //     label: $__("Owner"),
+                //     options: getOwners,
+                //     required: true,
+                //     onSelected: filterGroupsBasedOnOwner,
+                //     showElement: {
+                //         name: "owner",
+                //         type: "select",
+                //         format: patron_to_html,
+                //     },
+                //     hideIn: ["List"],
+                // },
                 {
                     name: "owner_id",
-                    selectLabel: "displayName",
-                    type: "select",
-                    requiredKey: "borrowernumber",
+                    type: "component",
                     label: $__("Owner"),
-                    options: getOwners,
+                    componentPath: "./PatronSearch.vue",
                     required: true,
-                    onSelected: filterGroupsBasedOnOwner,
+                    componentProps: {
+                        name: {
+                            type: "string",
+                            value: "owner_id",
+                        },
+                        required: {
+                            type: "boolean",
+                            value: true,
+                        },
+                        resource: {
+                            type: "resource",
+                            value: null,
+                        },
+                        label: {
+                            type: "string",
+                            value: $__("Owner"),
+                        },
+                        additionalFilters: {
+                            type: "object",
+                            value: {
+                                permission: "acquisition.period_manage",
+                                lib_group_visibility: getLibGroupFilter,
+                            },
+                        },
+                        selectCallback: {
+                            type: "function",
+                            value: filterGroupsBasedOnOwner,
+                        },
+                    },
                     showElement: {
-                        name: "owner",
-                        type: "select",
+                        type: "text",
                         format: patron_to_html,
                     },
                     hideIn: ["List"],
@@ -151,7 +196,7 @@ export default {
                     requiredKey: "id",
                     selectLabel: "title",
                     type: "select",
-                    label: $__("Visible to"),
+                    label: $__("Visible to:"),
                     options: getVisibleGroups,
                     required: true,
                     onSelected: filterOwnersBasedOnGroup,

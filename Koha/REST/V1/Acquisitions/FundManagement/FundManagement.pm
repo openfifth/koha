@@ -1,4 +1,4 @@
-package Koha::REST::V1::Acquisitions::FundManagement::Config;
+package Koha::REST::V1::Acquisitions::FundManagement::FundManagement;
 
 # Copyright 2025 Open Fifth
 
@@ -25,6 +25,8 @@ use Try::Tiny;
 
 use C4::Context;
 
+use Koha::Acquisition::FundManagement::BaseObjects;
+
 =head1 API
 
 =head2 Methods
@@ -46,6 +48,42 @@ sub config {
             permissions => $permissions,
         },
     );
+}
+
+=head3 list_users
+
+Return the list of possible fund management users
+
+=cut
+
+sub list_users {
+    my $c = shift->openapi->valid_input or return;
+
+    return try {
+        my $query = decode_json( $c->req->param('q') );
+        $c->req->params->remove('q');
+
+        my $patrons_rs = Koha::Patrons->search->filter_by_have_permission( $query->{permission} );
+        my $patrons    = $c->objects->search($patrons_rs);
+
+        my $lib_group_visibility = $query->{lib_group_visibility};
+        if ( defined $lib_group_visibility ) {
+            $patrons = Koha::Acquisition::FundManagement::BaseObjects->filter_by_library_group_based_on_branchcode(
+                {
+                    lib_group_visibility => $lib_group_visibility,
+                    objects              => $patrons,
+                    match_field          => 'library_id',
+                }
+            );
+        }
+
+        return $c->render(
+            status  => 200,
+            openapi => $patrons
+        );
+    } catch {
+        $c->unhandled_exception($_);
+    };
 }
 
 1;

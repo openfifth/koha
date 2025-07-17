@@ -251,6 +251,8 @@ paths:
     $ref: ./paths/fund_groups.yaml#/~1acquisitions~1fund_groups
   "/acquisitions/fund_groups/{fund_group_id}":
     $ref: ./paths/fund_groups.yaml#/~1acquisitions~1fund_groups~1{fund_group_id}
+  /acquisitions/fund_management/users:
+    $ref: ./paths/acquisitions_users.yaml#/~1acquisitions~1fund_management~1users
   /acquisitions/ledgers:
     $ref: ./paths/ledgers.yaml#/~1acquisitions~1ledgers
   "/acquisitions/ledgers/{ledger_id}":
