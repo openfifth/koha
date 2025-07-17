@@ -23,13 +23,8 @@ export default {
         const patron_to_html = $patron_to_html;
 
         const acquisitionsStore = inject("acquisitionsStore");
-        const {
-            getVisibleGroups,
-            getOwners,
-            libraryGroups,
-            visibleGroups,
-            currencies,
-        } = storeToRefs(acquisitionsStore);
+        const { getVisibleGroups, libraryGroups, visibleGroups, currencies } =
+            storeToRefs(acquisitionsStore);
 
         const {
             filterGroupsBasedOnOwner,
@@ -170,22 +165,6 @@ export default {
                         formatValueWithCurrency(value, resource.currency),
                     hideIn: ["List"],
                 },
-                // {
-                //     name: "owner_id",
-                //     selectLabel: "displayName",
-                //     type: "select",
-                //     requiredKey: "borrowernumber",
-                //     label: $__("Owner"),
-                //     options: getOwners,
-                //     required: true,
-                //     onSelected: filterGroupsBasedOnOwner,
-                //     showElement: {
-                //         name: "owner",
-                //         type: "select",
-                //         format: patron_to_html,
-                //     },
-                //     hideIn: ["List"],
-                // },
                 {
                     name: "owner_id",
                     type: "component",
@@ -219,6 +198,10 @@ export default {
                         selectCallback: {
                             type: "function",
                             value: filterGroupsBasedOnOwner,
+                        },
+                        fieldName: {
+                            type: "string",
+                            value: "owner",
                         },
                     },
                     showElement: {

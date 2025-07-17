@@ -91,26 +91,6 @@
                     </v-select>
                 </div>
                 <div class="filter-grid-cell">
-                    <label for="owner" class="filter-label"
-                        >{{ $__("Owner") }}:</label
-                    >
-                    <v-select
-                        id="owner"
-                        v-model="filters.owner_id"
-                        :reduce="av => av.borrowernumber"
-                        :options="getOwners"
-                        label="displayName"
-                    >
-                        <template #search="{ attributes, events }">
-                            <input
-                                class="vs__search"
-                                v-bind="attributes"
-                                v-on="events"
-                            />
-                        </template>
-                    </v-select>
-                </div>
-                <div class="filter-grid-cell">
                     <label for="fiscal_period" class="filter-label"
                         >{{ $__("Fiscal period") }}:</label
                     >
@@ -189,7 +169,7 @@ export default {
     setup() {
         const acquisitionsStore = inject("acquisitionsStore");
         const { isUserPermitted } = acquisitionsStore;
-        const { getOwners, authorisedValues } = storeToRefs(acquisitionsStore);
+        const { authorisedValues } = storeToRefs(acquisitionsStore);
 
         const ledgersTable = useTemplateRef("ledgersTable");
         const fundsTable = useTemplateRef("fundsTable");
@@ -315,7 +295,6 @@ export default {
             ledgersTable,
             fundsTable,
             authorisedValues,
-            getOwners,
             tableOptionsLedgers,
             tableOptionsFunds,
             filters,

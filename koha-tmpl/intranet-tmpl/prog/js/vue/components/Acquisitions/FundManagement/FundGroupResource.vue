@@ -162,7 +162,7 @@ export default {
 
         const afterResourceFetch = (componentData, resource, caller) => {
             if (caller === "form") {
-                componentData.resource.lib_group_visibility =
+                componentData.resource.value.lib_group_visibility =
                     formatLibraryGroupIds(resource.lib_group_visibility);
             }
         };

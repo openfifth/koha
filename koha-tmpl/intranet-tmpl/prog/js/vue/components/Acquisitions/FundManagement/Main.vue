@@ -63,7 +63,6 @@ export default {
             permittedUsers,
             modulesEnabled,
             visibleGroups,
-            owners,
             currencies,
             authorisedValues,
             userPermissions,
@@ -107,8 +106,6 @@ export default {
                                     false
                                 );
                             }
-                            owners.value =
-                                filterUsersByPermissions(permissionRequired);
                             visibleGroups.value =
                                 filterLibGroupsByUsersBranchcode();
                             settings.value = {
@@ -136,7 +133,6 @@ export default {
             permittedUsers,
             modulesEnabled,
             visibleGroups,
-            owners,
             filterUsersByPermissions,
             filterLibGroupsByUsersBranchcode,
             currencies,
