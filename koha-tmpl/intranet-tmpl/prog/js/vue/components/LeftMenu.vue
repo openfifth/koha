@@ -2,6 +2,7 @@
     <aside v-if="navigationTree !== 'none'">
         <VendorMenu v-if="navigationTree === 'VendorMenu'" />
         <AcqMenu v-else-if="navigationTree === 'AcqMenu'" />
+        <AcquisitionsMenu v-else-if="navigationTree === 'AcquisitionsMenu'" />
         <div v-else class="sidebar_menu">
             <h5>{{ $__(title) }}</h5>
             <ul>
@@ -21,6 +22,7 @@ import { computed, inject, onBeforeMount } from "vue";
 import NavigationItem from "./NavigationItem.vue";
 import VendorMenu from "./Islands/VendorMenu.vue";
 import AcqMenu from "./Islands/AcqMenu.vue";
+import AcquisitionsMenu from "./Islands/AcquisitionsMenu.vue";
 import { storeToRefs } from "pinia";
 
 export default {
@@ -47,6 +49,7 @@ export default {
         NavigationItem,
         VendorMenu,
         AcqMenu,
+        AcquisitionsMenu,
     },
 };
 </script>

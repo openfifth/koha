@@ -1,5 +1,21 @@
 <template>
-    <h1 id="acq2_homepage">{{ $__("Homepage") }}</h1>
+    <Toolbar>
+        <ToolbarButton
+            to="cgi-bin/koha/acquisition/vendors/add"
+            icon="plus"
+            :title="$__('New vendor')"
+            callback="redirect"
+        />
+        <ToolbarButton
+            to="cgi-bin/koha/acquisition/vendors/add"
+            icon="plus"
+            :title="$__('New order line')"
+            callback="redirect"
+        />
+    </Toolbar>
+    <h1>{{ $__("Homepage") }}</h1>
+    <h3>Vendor search here</h3>
+    <h3>Widget dashboard here</h3>
 </template>
 
 <script>
@@ -7,6 +23,8 @@ import { inject, onBeforeMount } from "vue";
 import { storeToRefs } from "pinia";
 import { setWarning } from "../../messages";
 import { $__ } from "@koha-vue/i18n";
+import Toolbar from "../Toolbar.vue";
+import ToolbarButton from "../ToolbarButton.vue";
 
 export default {
     setup() {
@@ -27,6 +45,10 @@ export default {
         return {
             navigationBlocked,
         };
+    },
+    components: {
+        Toolbar,
+        ToolbarButton,
     },
 };
 </script>
