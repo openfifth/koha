@@ -11,7 +11,7 @@ import { $__ } from "@koha-vue/i18n";
 
 export const routes = [
     {
-        path: "/cgi-bin/koha/acqui/acqui-home.pl",
+        path: "/cgi-bin/koha/acqui/acquisitions.pl",
         is_default: true,
         is_base: true,
         title: $__("Acquisitions"),
@@ -246,6 +246,13 @@ export const routes = [
                         ],
                     },
                 ],
+            },
+            {
+                path: "/cgi-bin/koha/order_management",
+                moduleName: "ordering",
+                title: $__("Order management"),
+                icon: "fa fa-cart-shopping",
+                children: [],
             },
         ],
     },
