@@ -5,7 +5,7 @@
 <script>
 import { inject, onBeforeMount } from "vue";
 import { storeToRefs } from "pinia";
-import { setWarning } from "../../../messages";
+import { setWarning } from "../../messages";
 import { $__ } from "@koha-vue/i18n";
 
 export default {

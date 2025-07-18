@@ -28,8 +28,8 @@ module.exports = [
                 "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/acquisitions/vendors.ts",
             islands: "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/islands.ts",
             sip2: "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/sip2.ts",
-            "acquisitions/fundManagement":
-                "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/acquisitions/fundManagement.ts",
+            "acquisitions/acquisitions":
+                "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/acquisitions/acquisitions.ts",
         },
         output: {
             filename: "[name].js",

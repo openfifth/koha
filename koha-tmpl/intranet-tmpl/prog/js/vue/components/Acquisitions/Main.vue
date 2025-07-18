@@ -25,14 +25,14 @@
 </template>
 
 <script>
-import LeftMenu from "../../LeftMenu.vue";
-import Breadcrumbs from "../../Breadcrumbs.vue";
-import Help from "../../Help.vue";
-import Dialog from "../../Dialog.vue";
+import LeftMenu from "../LeftMenu.vue";
+import Breadcrumbs from "../Breadcrumbs.vue";
+import Help from "../Help.vue";
+import Dialog from "../Dialog.vue";
 import "vue-select/dist/vue-select.css";
 import { inject, onBeforeMount, ref } from "vue";
 import { storeToRefs } from "pinia";
-import { APIClient } from "../../../fetch/api-client.js";
+import { APIClient } from "../../fetch/api-client.js";
 import { useRoute } from "vue-router";
 
 export default {

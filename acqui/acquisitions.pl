@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Copyright 2024 PTFS Europe Ltd
+# Copyright 2025 Open Fifth Ltd
 #
 # This file is not part of Koha.
 #
@@ -31,7 +31,7 @@ use Koha::Libraries;
 my $query = CGI->new;
 my ( $template, $borrowernumber, $cookie ) = get_template_and_user(
     {
-        template_name => 'acqui/fund-management.tt',
+        template_name => 'acqui/acquisitions.tt',
         query         => $query,
         type          => 'intranet',
         is_plugin     => 1,
@@ -42,8 +42,8 @@ my $patron    = Koha::Patrons->find( { borrowernumber => $borrowernumber } );
 my $userflags = haspermission( $patron->userid );
 
 # Get currency data
-my $currencies = Koha::Acquisition::Currencies->search()->unblessed;
-    my $logged_in_branch = C4::Context::mybranch();
+my $currencies       = Koha::Acquisition::Currencies->search()->unblessed;
+my $logged_in_branch = C4::Context::mybranch();
 
 my @permitted_patrons;
 my @patrons_with_flags = Koha::Patrons->search( { flags => { '!=' => undef } } )->as_list;

@@ -9,19 +9,19 @@
 [% INCLUDE 'doc-head-open.inc' %]
 <title
     >[% FILTER collapse %]
-        [% t("Fund management") | html %]
+        [% t("Acquisitions") | html %]
         &rsaquo; [% t("Koha") | html %]
     [% END %]</title
 >
 [% INCLUDE 'doc-head-close.inc' %]
 </head>
 
-<body id="acq_fund_management" class="acq">
+<body id="acq_acquisitions" class="acq">
 [% WRAPPER 'header.inc' %]
     [% INCLUDE 'acquisitions-search.inc' %]
 [% END %]
 
-<div id="__fundManagement">
+<div id="__acquisitions">
     <!-- this is closed in intranet-bottom.inc -->
 
     [% MACRO jsinclude BLOCK %]
@@ -38,7 +38,7 @@
             const currencyList = [% To.json(currencies) | $raw %];
             const permitted_patrons = [% To.json(permitted_patrons) | $raw %];
         </script>
-        [% Asset.js("js/vue/dist/acquisitions/fundManagement.js") | $raw %]
+        [% Asset.js("js/vue/dist/acquisitions/acquisitions.js") | $raw %]
         [% INCLUDE 'select2.inc' %]
         [% SET columns = ['cardnumber','name','category','branch','action'] %]
         [% SET filter = "fund_management_users" %]

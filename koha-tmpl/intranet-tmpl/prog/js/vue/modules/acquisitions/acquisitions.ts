@@ -27,8 +27,8 @@ library.add(
     faArrowRightArrowLeft
 );
 
-import App from "../../components/Acquisitions/FundManagement/Main.vue";
-import { routes as routesDef } from "../../routes/acquisitions/fundManagement.js";
+import App from "../../components/Acquisitions/Main.vue";
+import { routes as routesDef } from "../../routes/acquisitions/acquisitions.js";
 import { useMainStore } from "../../stores/main";
 import { useNavigationStore } from "../../stores/navigation";
 import { useAcquisitionsStore } from "../../stores/acquisitions";
@@ -99,7 +99,7 @@ router.beforeEach((to, from) => {
 const loadRouterAndMount = async () => {
     try {
         await router.isReady();
-        app.mount("#__fundManagement");
+        app.mount("#__acquisitions");
     } catch (err) {}
 };
 
