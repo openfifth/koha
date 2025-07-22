@@ -103,6 +103,7 @@ if ($dry_run) {
     print "Processing EDI service charges (DRY RUN - use --confirm to make actual changes)\n" if $verbose;
 } else {
     print "Processing EDI service charges (LIVE MODE - making database changes)\n" if $verbose;
+    $logger->info("EDI Service Charges");
 }
 
 # Find invoice messages that have been received but not yet processed for service charges
@@ -117,6 +118,8 @@ my @invoice_messages = $schema->resultset('EdifactMessage')->search(
     }
 )->all;
 
+$logger->info( "EDI Service Charges: Found " . scalar(@invoice_messages) . " invoice messages to process" );
+
 my $processed_count  = 0;
 my $adjustment_count = 0;
 
@@ -129,13 +132,17 @@ foreach my $invoice_message (@invoice_messages) {
         $processed_count++;
     };
     if ($@) {
-        $logger->error( "Error processing invoice message " . $invoice_message->id . ": $@" );
+        $logger->error( "EDI Service Charges:    Error processing invoice message " . $invoice_message->id . ": $@" );
         print "ERROR: Failed to process message " . $invoice_message->id . ": $@\n";
     }
 }
 
 print "Processed $processed_count invoice messages\n";
 print "Created $adjustment_count service charge adjustments\n";
+
+$logger->info(
+    "EDI Service Charges: Completed processing. Processed $processed_count messages, created $adjustment_count adjustments"
+);
 
 sub process_invoice_service_charges {
     my ( $invoice_message, $dry_run, $verbose ) = @_;
@@ -146,22 +153,31 @@ sub process_invoice_service_charges {
     my $edi      = Koha::Edifact->new( { transmission => $invoice_message->raw_msg } );
     my $messages = $edi->message_array();
 
-    return 0 unless @{$messages};
+    unless ( @{$messages} ) {
+        return 0;
+    }
 
     foreach my $msg ( @{$messages} ) {
 
         # Find the Koha invoice for this specific message within the transmission
         # Each message has its own BGM segment with invoice number
-        my $koha_invoice = find_koha_invoice_for_message($invoice_message, $msg);
+        my $koha_invoice = find_koha_invoice_for_message( $invoice_message, $msg );
         if ( !$koha_invoice ) {
-            print "  WARNING: Could not find Koha invoice for message within transmission " . $invoice_message->id . "\n";
+            print "  WARNING: Could not find Koha invoice for message within transmission "
+                . $invoice_message->id . "\n";
+            $logger->warn( "EDI Service Charges:    Could not find Koha invoice for message within transmission "
+                    . $invoice_message->id );
             next;
         }
-        
-        print "  Processing message for invoice " . $koha_invoice->invoiceid . " (" . $koha_invoice->invoicenumber . ")\n" if $verbose;
+
+        print "  Processing message for invoice "
+            . $koha_invoice->invoiceid . " ("
+            . $koha_invoice->invoicenumber . ")\n"
+            if $verbose;
 
         # First, handle message-level allowances and charges
         my $message_alcs = get_message_allowances_charges($msg);
+
         foreach my $alc_data (@$message_alcs) {
             my $type         = $alc_data->{type};
             my $amount       = $alc_data->{amount};
@@ -171,8 +187,11 @@ sub process_invoice_service_charges {
             print "  Found invoice-level $type: $amount ($service_code)\n" if $verbose;
 
             # Skip allowances - only process charges
-            if ($type eq 'allowance') {
+            if ( $type eq 'allowance' ) {
                 print "  Skipping allowance - not creating adjustment\n" if $verbose;
+                $logger->info( "EDI Service Charges: Skipped invoice-level allowance for invoice "
+                        . $koha_invoice->invoicenumber
+                        . ": amount=$amount, service_code=$service_code" );
                 next;
             }
 
@@ -182,7 +201,7 @@ sub process_invoice_service_charges {
 
             print "  Vendor: $vendor_name -> Budget: $budget_id\n" if $verbose && $vendor_name;
 
-            my $reason = 'EDI_CHARGE';  # Only processing charges now
+            my $reason   = 'EDI_CHARGE';                                        # Only processing charges now
             my $existing = $schema->resultset('AqinvoiceAdjustment')->search(
                 {
                     invoiceid  => $koha_invoice->invoiceid,
@@ -248,17 +267,27 @@ sub process_invoice_service_charges {
                         . ": adjustment=$adjustment_amount (charge=$amount, tax=" . $alc_data->{tax_amount}
                         . "), budget_id=$budget_id, service_code=$service_code" );
                 $adjustments_created++;
+            } else {
+                $logger->info( "EDI Service Charges: Skipped duplicate invoice-level adjustment for invoice "
+                        . $koha_invoice->invoicenumber
+                        . ": amount=$amount, service_code=$service_code (existing ID "
+                        . $existing->adjustment_id
+                        . ")" );
             }
         }
 
         # Then handle line-level allowances and charges
         my $lines = $msg->lineitems();
+        my $orders_processed = {};
+
         foreach my $line ( @{$lines} ) {
 
             # Get all allowances and charges for this line
             my $allowances_charges = get_line_allowances_charges($line);
 
-            next unless @$allowances_charges;
+            unless (@$allowances_charges) {
+                next;
+            }
 
             foreach my $alc_data (@$allowances_charges) {
                 my $type         = $alc_data->{type};     # 'charge' or 'allowance'
@@ -269,13 +298,18 @@ sub process_invoice_service_charges {
                 print "  Found $type: $amount ($service_code) for line " . $line->line_item_number . "\n" if $verbose;
 
                 # Skip allowances - only process charges
-                if ($type eq 'allowance') {
+                if ( $type eq 'allowance' ) {
                     print "  Skipping line-level allowance - not creating adjustment\n" if $verbose;
+                    $logger->info( "EDI Service Charges: Skipped line-level allowance for line "
+                            . $line->line_item_number
+                            . " in invoice "
+                            . $koha_invoice->invoicenumber
+                            . ": amount=$amount, service_code=$service_code" );
                     next;
                 }
 
                 # Check if we already have this adjustment
-                my $reason = 'EDI_CHARGE';  # Only processing charges now
+                my $reason              = 'EDI_CHARGE';    # Only processing charges now
                 my $existing_adjustment = $schema->resultset('AqinvoiceAdjustment')->search(
                     {
                         invoiceid  => $koha_invoice->invoiceid,
@@ -288,6 +322,13 @@ sub process_invoice_service_charges {
                 if ($existing_adjustment) {
                     print "  $type adjustment already exists for invoice " . $koha_invoice->invoiceid . "\n"
                         if $verbose;
+                    $logger->info( "EDI Service Charges: Skipped duplicate line-level adjustment for line "
+                            . $line->line_item_number
+                            . " in invoice "
+                            . $koha_invoice->invoicenumber
+                            . ": amount=$amount, service_code=$service_code (existing ID "
+                            . $existing_adjustment->adjustment_id
+                            . ")" );
                     next;
                 }
 
@@ -315,8 +356,9 @@ sub process_invoice_service_charges {
 
                     # Create the invoice adjustment with enhanced order linkage
                     # Find the actual received order (which may be split from the original)
-                    my $original_ordernumber = $line->ordernumber();
-                    my $received_order = find_received_order_for_invoice($original_ordernumber, $koha_invoice);
+                    my $edi_ordernumber = $line->ordernumber();
+                    my $received_order =
+                        find_received_order_for_invoice( $edi_ordernumber, $koha_invoice, $orders_processed );
                     my $actual_ordernumber = $received_order ? $received_order->ordernumber : undef;
 
                     # Use tax rate from EDI TAX segment
@@ -325,8 +367,10 @@ sub process_invoice_service_charges {
                     my $note = sprintf(
                         'EDI %s: Order #%s%s | EDI Line: %s | Service: %s%s | Tax Rate: %s%% | EDI_EXCL: %s | EDI_TAX: %s',
                         ucfirst($type),
-                        $actual_ordernumber || $original_ordernumber || 'Unknown',
-                        ($actual_ordernumber && $actual_ordernumber != $original_ordernumber) ? " (split from #$original_ordernumber)" : '',
+                        $actual_ordernumber || $edi_ordernumber || 'Unknown',
+                        ( $actual_ordernumber && $actual_ordernumber != $edi_ordernumber )
+                        ? " (split from #$edi_ordernumber)"
+                        : '',
                         $line->line_item_number,
                         $service_code,
                         $description ? " ($description)" : '',
@@ -372,14 +416,16 @@ sub process_invoice_service_charges {
                                 . " (original order $edi_ordernumber)" );
                     }
                 } else {
+
                     # For dry-run, also show the split order handling
-                    my $original_ordernumber = $line->ordernumber();
-                    my $received_order = find_received_order_for_invoice($original_ordernumber, $koha_invoice);
+                    my $edi_ordernumber = $line->ordernumber();
+                    my $received_order =
+                        find_received_order_for_invoice( $edi_ordernumber, $koha_invoice, $orders_processed );
                     my $actual_ordernumber = $received_order ? $received_order->ordernumber : undef;
-                    
-                    my $order_info = $actual_ordernumber || $original_ordernumber || 'Unknown';
-                    if ($actual_ordernumber && $actual_ordernumber != $original_ordernumber) {
-                        $order_info .= " (split from #$original_ordernumber)";
+
+                    my $order_info = $actual_ordernumber || $edi_ordernumber || 'Unknown';
+                    if ( $actual_ordernumber && $actual_ordernumber != $edi_ordernumber ) {
+                        $order_info .= " (split from #$edi_ordernumber)";
                     }
 
                     print "  Would create $type adjustment for invoice "
@@ -472,23 +518,30 @@ sub get_message_allowances_charges {
 }
 
 sub find_koha_invoice_for_message {
-    my ($invoice_message, $msg) = @_;
+    my ( $invoice_message, $msg ) = @_;
 
     # Extract the BGM invoice number from this specific message using the existing method
     my $bgm_invoice_number = $msg->docmsg_number();
-    if (!$bgm_invoice_number) {
+    if ( !$bgm_invoice_number ) {
         return;
     }
 
     # Find the Koha invoice by matching the BGM invoice number
     # Multiple invoices can have the same message_id (one transmission, multiple messages)
-    my $schema = Koha::Database->new()->schema();
-    return $schema->resultset('Aqinvoice')->search( 
-        { 
-            message_id => $invoice_message->id,
+    my $schema       = Koha::Database->new()->schema();
+    my $koha_invoice = $schema->resultset('Aqinvoice')->search(
+        {
+            message_id    => $invoice_message->id,
             invoicenumber => $bgm_invoice_number
-        } 
+        }
     )->first;
+
+    unless ($koha_invoice) {
+        $logger->warn( "EDI Service Charges: No Koha invoice found for BGM '$bgm_invoice_number' and message "
+                . $invoice_message->id );
+    }
+
+    return $koha_invoice;
 }
 
 sub get_line_allowances_charges {
@@ -640,41 +693,44 @@ sub find_received_order_for_invoice {
 sub adjust_orderline_for_service_charge {
     my ( $order_to_adjust, $service_charge_amount, $service_charge_tax, $verbose, $original_ordernumber, $edi_line ) = @_;
 
-    return unless $order_to_adjust;
+    unless ($order_to_adjust) {
+        return;
+    }
 
     my $actual_ordernumber = $order_to_adjust->ordernumber;
-    
-    if ($verbose && $actual_ordernumber != $original_ordernumber) {
+
+    if ( $verbose && $actual_ordernumber != $original_ordernumber ) {
         my $parent_ordernumber = $order_to_adjust->parent_ordernumber || $original_ordernumber;
-        print "  Found split order: EDI references $original_ordernumber, adjusting received order $actual_ordernumber (parent: $parent_ordernumber)\n";
+        print
+            "  Found split order: EDI references $original_ordernumber, adjusting received order $actual_ordernumber (parent: $parent_ordernumber)\n";
     } elsif ($verbose) {
         print "  Using original order $original_ordernumber (no split occurred)\n";
     }
-    
+
     # Use the same logic as _get_invoiced_price in Koha::EDI to get the base prices
     # Get quantity for per-unit calculation
     my $quantity = $order_to_adjust->quantityreceived || $order_to_adjust->quantity || 1;
-    
+
     # Get MOA amounts from EDI data (these already include service charges)
-    my $line_total = $edi_line->amt_total();     # MOA+128 (total including allowances & tax)
-    my $excl_tax   = $edi_line->amt_lineitem();  # MOA+203 (item amount after allowances excluding tax)
-    
+    my $line_total = $edi_line->amt_total();       # MOA+128 (total including allowances & tax)
+    my $excl_tax   = $edi_line->amt_lineitem();    # MOA+203 (item amount after allowances excluding tax)
+
     # If no tax some suppliers omit the total owed
-    if (!defined $line_total) {
+    if ( !defined $line_total ) {
         my $tax_amount = $edi_line->amt_taxoncharge() || 0;
         $line_total = $excl_tax + $tax_amount;
     }
-    
+
     # Convert to per-unit prices (invoices give amounts per orderline)
-    my ($base_unit_price_inc, $base_unit_price_exc);
-    if ($quantity != 1) {
+    my ( $base_unit_price_inc, $base_unit_price_exc );
+    if ( $quantity != 1 ) {
         $base_unit_price_inc = $line_total / $quantity;
         $base_unit_price_exc = $excl_tax / $quantity;
     } else {
         $base_unit_price_inc = $line_total;
         $base_unit_price_exc = $excl_tax;
     }
-    
+
     # Calculate per-unit service charge to subtract (to avoid double-counting)
     # MOA+8 is tax-exclusive, MOA+124 is the tax on the charge
     my $per_unit_service_charge_excl = $service_charge_amount / $quantity;
@@ -701,7 +757,10 @@ sub adjust_orderline_for_service_charge {
         }
     );
 
-    my $order_type = ($actual_ordernumber != $original_ordernumber) ? "received order $actual_ordernumber (split from $original_ordernumber)" : "order $actual_ordernumber";
+    my $order_type =
+        ( $actual_ordernumber != $original_ordernumber )
+        ? "received order $actual_ordernumber (split from $original_ordernumber)"
+        : "order $actual_ordernumber";
     print
         "  Set $order_type unit price_inc to $final_unit_price_inc (EDI base: $base_unit_price_inc - service charge incl tax: $per_unit_service_charge_incl)\n"
         if $verbose;
