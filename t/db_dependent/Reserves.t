@@ -1279,6 +1279,7 @@ subtest 'CheckReserves additional tests' => sub {
                 suspend_until    => undef,
                 suspend          => 0,
                 itemtype         => undef,
+                hold_group_id    => undef,
             }
         }
     );
@@ -1299,6 +1300,7 @@ subtest 'CheckReserves additional tests' => sub {
                 suspend_until    => undef,
                 suspend          => 0,
                 itemtype         => undef,
+                hold_group_id    => undef,
             }
         }
     );
