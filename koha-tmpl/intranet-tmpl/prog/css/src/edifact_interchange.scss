@@ -1,0 +1,635 @@
+/* EDIFACT Interchange Display Styles */
+
+// Variables
+$monospace-font: 'Courier New', monospace;
+$base-font-size: 0.9em;
+$line-height: 1.4;
+$border-radius: 3px;
+$border-radius-small: 2px;
+$border-radius-large: 4px;
+$transition-duration: 0.2s;
+$transition-easing: ease;
+
+// Mixins
+@mixin segment-styling($color-var, $bg-color-var, $border-color-var) {
+  color: var(#{$color-var}) !important;
+  background-color: var(#{$bg-color-var}) !important;
+  border-left: 4px solid var(#{$border-color-var}) !important;
+  padding-left: 8px;
+
+  &:hover {
+    background-color: var(#{$bg-color-var}) !important;
+    opacity: 0.8;
+  }
+}
+
+// Enhanced mixin for better contrast using proper Bootstrap color combinations
+@mixin header-styling($theme-color) {
+  @if $theme-color == 'info' {
+    color: var(--bs-info-text-emphasis) !important;
+    background-color: var(--bs-info-bg-subtle) !important;
+    border-left: 4px solid var(--bs-info) !important;
+    border-top: 1px solid var(--bs-info) !important;
+    border-right: 1px solid var(--bs-info) !important;
+    border-bottom: 1px solid var(--bs-info) !important;
+  } @else if $theme-color == 'danger' {
+    color: var(--bs-danger-text-emphasis) !important;
+    background-color: var(--bs-danger-bg-subtle) !important;
+    border-left: 4px solid var(--bs-danger) !important;
+    border-top: 1px solid var(--bs-danger) !important;
+    border-right: 1px solid var(--bs-danger) !important;
+    border-bottom: 1px solid var(--bs-danger) !important;
+  } @else if $theme-color == 'success' {
+    color: var(--bs-success-text-emphasis) !important;
+    background-color: var(--bs-success-bg-subtle) !important;
+    border-left: 4px solid var(--bs-success) !important;
+    border-top: 1px solid var(--bs-success) !important;
+    border-right: 1px solid var(--bs-success) !important;
+    border-bottom: 1px solid var(--bs-success) !important;
+  } @else if $theme-color == 'warning' {
+    color: var(--bs-warning-text-emphasis) !important;
+    background-color: var(--bs-warning-bg-subtle) !important;
+    border-left: 4px solid var(--bs-warning) !important;
+    border-top: 1px solid var(--bs-warning) !important;
+    border-right: 1px solid var(--bs-warning) !important;
+    border-bottom: 1px solid var(--bs-warning) !important;
+  }
+
+  padding-left: 8px;
+
+  &:hover {
+    opacity: 0.8;
+  }
+}
+
+@mixin responsive-size($font-size, $margin-left, $padding-left, $segment-padding) {
+  .edi-tree {
+    font-size: $font-size;
+
+    ul {
+      margin-left: $margin-left;
+      padding-left: $padding-left;
+    }
+  }
+
+  .segment {
+    padding: $segment-padding;
+  }
+}
+
+// Main styles
+.edi-tree {
+  font-family: $monospace-font;
+  font-size: $base-font-size;
+  line-height: $line-height;
+
+  &.hidden {
+    display: none !important;
+  }
+
+  ul {
+    margin-left: 1.2rem;
+    border-left: 2px solid #e0e0e0;
+    padding-left: 0.8rem;
+    margin-top: 0.25rem;
+    margin-bottom: 0.25rem;
+    transition: max-height 0.3s ease-in-out;
+    overflow: hidden;
+
+    &:hover {
+      border-left-color: #007bff;
+    }
+  }
+
+  // Segment base styles
+  .segment {
+    font-family: $monospace-font;
+    padding: 3px 6px;
+    margin: 1px 0;
+    border-radius: $border-radius;
+    transition: background-color $transition-duration $transition-easing;
+    position: relative;
+
+    &:hover {
+      background-color: #f8f9fa;
+    }
+
+    // Segment type variations
+    &.header {
+      @include header-styling('primary');
+      cursor: pointer;
+
+      // Bootstrap collapse integration
+      &[data-bs-toggle="collapse"] {
+        .fa-chevron-down {
+          transition: transform $transition-duration $transition-easing;
+        }
+
+        &[aria-expanded="false"] .fa-chevron-down {
+          transform: rotate(-90deg);
+        }
+      }
+
+      // Accessibility
+      &[aria-expanded="true"] .chevron::after {
+        content: " (expanded)";
+        position: absolute;
+        left: -9999px;
+      }
+
+      &[aria-expanded="false"] .chevron::after {
+        content: " (collapsed)";
+        position: absolute;
+        left: -9999px;
+      }
+
+      &:focus {
+        outline: 2px solid #007bff;
+        outline-offset: 2px;
+      }
+    }
+
+  }
+
+  // Hierarchical color scheme for different nesting levels
+  // Level 1: UNB (Interchange) - Blue
+  > li > .segment {
+      &.header {
+        @include header-styling('info');
+      }
+
+      &.content {
+        @include segment-styling(--bs-info-text-emphasis, --bs-info-bg-subtle, --bs-info-border-subtle);
+      }
+  }
+
+  > li .segment-group.related-segments .segment.content {
+    @include segment-styling(--bs-info-text-emphasis, --bs-info-bg-subtle, --bs-info-border-subtle);
+  }
+
+  // Level 2: UNH (Message) - Red
+  > li > ul > li > .segment {
+      &.header {
+        @include header-styling('danger');
+      }
+      &.content {
+        @include segment-styling(--bs-danger-text-emphasis, --bs-danger-bg-subtle, --bs-danger-border-subtle);
+      }
+  }
+
+  > li > ul > li .segment-group.related-segments .segment.content {
+    @include segment-styling(--bs-danger-text-emphasis, --bs-danger-bg-subtle, --bs-danger-border-subtle);
+  }
+
+  // Level 3: LIN (Line groups) - Green
+  > li > ul > li > ul > li > .segment {
+      &.header {
+        @include header-styling('success');
+      }
+
+      &.content {
+        @include segment-styling(--bs-success-text-emphasis, --bs-success-bg-subtle, --bs-success-border-subtle);
+      }
+  }
+
+  > li > ul > li > ul > li .segment-group.related-segments .segment.content {
+    @include segment-styling(--bs-success-text-emphasis, --bs-success-bg-subtle, --bs-success-border-subtle);
+  }
+
+  // Level 4: Individual segments - Yellow
+  > li > ul > li > ul > li > ul > li > .segment {
+      &.header {
+        @include header-styling('warning');
+      }
+
+      &.content {
+        @include segment-styling(--bs-warning-text-emphasis, --bs-warning-bg-subtle, --bs-warning-border-subtle);
+      }
+  }
+
+  > li > ul > li > ul > li > ul > li .segment-group.related-segments .segment.content {
+    @include segment-styling(--bs-warning-text-emphasis, --bs-warning-bg-subtle, --bs-warning-border-subtle);
+  }
+
+  // Global trailer styling (for all levels)
+  .segment.trailer {
+    @include segment-styling(--bs-secondary-text-emphasis, --bs-secondary-bg-subtle, --bs-secondary-border-subtle);
+    font-style: italic;
+  }
+
+  // Bold segment tags
+  .segment-tag {
+    font-weight: bold;
+  }
+
+  // Related segment grouping
+  .segment-group {
+    position: relative;
+    margin: 2px 0;
+
+    &.related-segments {
+      background-color: rgba(13, 110, 253, 0.04); // Very subtle blue tint
+      border-radius: $border-radius-small;
+      padding: 2px 0;
+      margin: 3px 0;
+
+      // Connecting line for related segments
+      &::before {
+        content: "";
+        position: absolute;
+        left: -8px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background-color: rgba(13, 110, 253, 0.15);
+        border-radius: 1px;
+      }
+
+      .segment {
+        margin: 1px 0;
+
+        &:first-child {
+          margin-top: 2px;
+        }
+
+        &:last-child {
+          margin-bottom: 2px;
+        }
+      }
+    }
+  }
+
+  // Line group styling
+  li > .segment.header {
+    + ul {
+      border-left-color: #17a2b8;
+    }
+
+    &:hover + ul {
+      border-left-color: #138496;
+    }
+  }
+
+  // Collapsed state
+  [data-toggle].collapsed + ul {
+    max-height: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+
+  // Theme variants
+  &.compact {
+    font-size: 0.8em;
+
+    ul {
+      margin-left: 0.8rem;
+      padding-left: 0.4rem;
+    }
+
+    .segment {
+      padding: 1px 4px;
+      margin: 0;
+    }
+  }
+}
+
+// Segment details
+.segment-details {
+  margin-top: 0.25rem;
+  padding: 0.25rem;
+  background-color: #f1f3f4;
+  border-radius: $border-radius-small;
+  font-size: 0.8em;
+  color: #5f6368;
+  border-left: 2px solid #dadce0;
+
+  small {
+    font-family: $monospace-font;
+  }
+}
+
+// Loading states
+.edi-loading {
+  text-align: center;
+  padding: 2rem;
+  color: #6c757d;
+
+  img {
+    margin-right: 0.5rem;
+  }
+}
+
+// Raw view styling
+.edi-raw-view {
+  font-family: $monospace-font;
+  font-size: $base-font-size;
+  line-height: $line-height;
+  white-space: pre-wrap;
+
+  &.hidden {
+    display: none !important;
+  }
+
+  .segment-line {
+    margin: 2px 0;
+    padding: 1px 0;
+
+    .segment-tag {
+      font-weight: bold;
+    }
+  }
+
+  // Raw view focus highlighting for focused message segments
+  .edi-focused-segment-line {
+    background-color: rgba(13, 110, 253, 0.08);
+    border-left: 3px solid rgba(13, 110, 253, 0.6);
+    padding-left: 8px;
+    border-radius: $border-radius-small;
+    margin: 1px 0;
+    transition: background-color 0.3s ease;
+
+    &:hover {
+      background-color: rgba(13, 110, 253, 0.12);
+    }
+  }
+}
+
+// Modal body scrolling for EDIFACT content
+.modal-body.edi-content {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+// Main navbar styling (between modal-header and modal-body)
+.edi-main-navbar {
+  border-radius: 0;
+  margin-bottom: 0;
+  border-left: 0;
+  border-right: 0;
+  border-top: 0;
+
+  // Prevent form submission on enter
+  form {
+    button[type="submit"] {
+      display: none;
+    }
+  }
+
+  // View toggle buttons
+  .btn-group .btn {
+    &.active {
+      background-color: var(--bs-primary);
+      border-color: var(--bs-primary);
+      color: white;
+    }
+  }
+}
+
+// Tree toolbar styling (now inside modal-body)
+.edi-tree-toolbar {
+  // Hide by default (raw view)
+  &.d-none {
+    display: none !important;
+  }
+}
+
+// Legacy toolbar styling (for backward compatibility)
+.edi-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #dee2e6;
+  margin-bottom: 15px;
+
+  &-left {
+    display: flex;
+    gap: 10px;
+  }
+
+  &-center {
+    flex: 1;
+    max-width: 400px;
+    margin: 0 20px;
+  }
+
+  &-right {
+    display: flex;
+    gap: 5px;
+  }
+
+  .btn {
+    border-radius: $border-radius-large;
+    font-size: 0.85em;
+    padding: 4px 8px;
+
+    &.active {
+      background-color: #007bff;
+      color: white;
+    }
+  }
+}
+
+// Search functionality styling
+.edi-search-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .input-group {
+    flex: 1;
+    min-width: 200px;
+    margin-bottom: 0;
+  }
+
+  .edi-search-input {
+    border-radius: $border-radius-small;
+    font-size: 0.85em;
+
+    &:focus {
+      border-color: #007bff;
+      box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+  }
+}
+
+.edi-search-results {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+
+  .edi-search-count {
+    font-size: 0.8em;
+    color: #6c757d;
+    min-width: 70px;
+    text-align: right;
+  }
+
+  .btn-group {
+    .btn {
+      padding: 3px 6px;
+      font-size: 0.75em;
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+  }
+}
+
+// Search highlighting styles
+.edi-search-highlight {
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: $border-radius-small;
+  padding: 1px 2px;
+  font-weight: bold;
+}
+
+.edi-search-current {
+  position: relative;
+  background-color: rgba(255, 193, 7, 0.2) !important;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
+    background-color: rgba(255, 193, 7, 0.1);
+    border: 3px solid #ffc107;
+    border-radius: $border-radius;
+    z-index: -1;
+    animation: pulse-search 2s ease-in-out infinite;
+  }
+
+  // Make the search highlights within the current result more prominent
+  .edi-search-highlight {
+    background-color: #ffc107 !important;
+    border-color: #ff9800 !important;
+    color: #000 !important;
+    font-weight: bold !important;
+    box-shadow: 0 0 4px rgba(255, 193, 7, 0.5);
+  }
+}
+
+@keyframes pulse-search {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(255, 193, 7, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 193, 7, 0);
+  }
+}
+
+// Focus message highlighting
+.edi-focused-message {
+  position: relative;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: -6px;
+    left: -6px;
+    right: -6px;
+    bottom: -6px;
+    background-color: rgba(13, 110, 253, 0.15);
+    border: 3px solid #0d6efd;
+    border-radius: $border-radius;
+    z-index: 1;
+    // Initial animation for first 6 seconds, then static highlight
+    animation: pulse-focus 2s ease-in-out 3;
+  }
+
+  // Ensure the message content is above the highlight
+  > * {
+    position: relative;
+    z-index: 2;
+  }
+
+  // After animation, maintain a subtle but persistent highlight
+  &::after {
+    content: "";
+    position: absolute;
+    top: -6px;
+    left: -6px;
+    right: -6px;
+    bottom: -6px;
+    background-color: rgba(13, 110, 253, 0.08);
+    border: 2px solid rgba(13, 110, 253, 0.6);
+    border-radius: $border-radius;
+    z-index: 1;
+    // This will be visible after the animation completes
+    animation: fade-in-persistent 6s ease-in-out forwards;
+  }
+}
+
+@keyframes pulse-focus {
+  0% {
+    box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(13, 110, 253, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(13, 110, 253, 0);
+  }
+}
+
+@keyframes fade-in-persistent {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+// View toggle styling
+.edi-view-toggle .btn {
+  border-radius: $border-radius-large;
+  font-size: 0.85em;
+  padding: 4px 8px;
+
+  &.active {
+    background-color: #007bff;
+    color: white;
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  @include responsive-size(0.8em, 0.8rem, 0.5rem, 2px 4px);
+}
+
+// Print styles
+@media print {
+  .edi-tree {
+    font-size: 0.7em;
+
+    .segment {
+      &.header {
+        background-color: transparent !important;
+        border: 1px solid #000;
+      }
+
+      &.content {
+        background-color: transparent !important;
+      }
+    }
+  }
+
+  .chevron {
+    display: none;
+  }
+
+  [data-toggle].collapsed + ul {
+    display: block !important;
+  }
+}
