@@ -31,8 +31,8 @@
         [% INCLUDE 'js-date-format.inc' %]
         <script>
             const letters = [% To.json(letters) | $raw %];
-            const default_view = "[%- IF Koha.Preference('DefaultToLoggedInLibraryOverdueTriggers') -%][% Branches.GetLoggedInBranchcode %][%- ELSE -%]*[%- END -%]";
-            const from_branch = "[% Koha.Preference('OverdueNoticeFrom') %]";
+            const default_view = "[%- IF Koha.Preference('DefaultToLoggedInLibraryOverdueTriggers') -%][% Branches.GetLoggedInBranchcode | html %][%- ELSE -%]*[%- END -%]";
+            const from_branch = "[% Koha.Preference('OverdueNoticeFrom') | $raw %]";
         </script>
         [% Asset.js("js/vue/dist/admin/circulation_triggers.js") | $raw %]
     [% END %]
