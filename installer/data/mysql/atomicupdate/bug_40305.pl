@@ -1,7 +1,7 @@
 use Modern::Perl;
 
 return {
-    bug_number  => "36846",
+    bug_number  => "40305",
     description => "Fix 'collected' vs 'tendered' variables in notice templates",
     up          => sub {
         my ($args) = @_;
