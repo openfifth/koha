@@ -20,6 +20,8 @@ const {
     insertSamplePatron,
     insertObject,
     deleteSampleObjects,
+    insertSampleEdifactMessages,
+    deleteSampleEdifactMessages,
 } = require("./insertData.js");
 
 const { getBasicAuthHeader } = require("./auth.js");
@@ -103,6 +105,8 @@ module.exports = (on, config) => {
             return insertObject({ ...args, baseUrl, authHeader });
         },
         deleteSampleObjects,
+        insertSampleEdifactMessages,
+        deleteSampleEdifactMessages,
         query,
 
         apiGet(args) {
