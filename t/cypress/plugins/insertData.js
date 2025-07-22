@@ -926,6 +926,124 @@ const insertObject = async ({ type, object, baseUrl, authHeader }) => {
     return true;
 };
 
+const insertSampleEdifactMessages = async () => {
+    // First, create a test vendor
+    const vendorResult = await query({
+        sql: `INSERT INTO aqbooksellers (name, address1, address2, address3, phone, fax, url, active, listprice, invoiceprice, gstreg, listincgst, invoiceincgst, tax_rate, discount, notes)
+              VALUES ('Test EDI Vendor', '123 Test Street', 'Test City', 'Test Country', '555-1234', '555-5678', 'http://testvendor.com', 1, 'USD', 'USD', 0, 1, 1, 0.10, 0.05, 'Test vendor for EDIFACT testing')`,
+        values: [],
+    });
+    const vendor_id = vendorResult.insertId;
+
+    // Create a test EDI account for the vendor
+    const ediAccountResult = await query({
+        sql: `INSERT INTO vendor_edi_accounts (description, host, username, password, vendor_id, san, standard, quotes_enabled, invoices_enabled, orders_enabled, responses_enabled, auto_orders, plugin)
+              VALUES ('Test EDI Account', 'test.edi.host', 'testuser', 'testpass', ?, 'TEST123', 'EUR', 1, 1, 1, 1, 0, '')`,
+        values: [vendor_id],
+    });
+    const edi_acct = ediAccountResult.insertId;
+
+    // Insert sample EDIFACT messages for testing
+    const messages = [
+        {
+            message_type: "ORDERS",
+            transfer_date: "2025-01-20",
+            vendor_id: vendor_id,
+            edi_acct: edi_acct,
+            status: "new",
+            basketno: null,
+            filename: "test_order_001.edi",
+            raw_msg: `UNA:+.? 'UNB+UNOC:3+TEST_SUPPLIER:14+TEST_LIBRARY:14+20250121:1234+1++1++1'UNH+1+ORDERS:D:96A:UN:EAN008'BGM+220+BASKET001+9'DTM+137:20250721:102'RFF+ON:LibraryBasket001'NAD+BY+1234567890123::91++Test Library System+123 Library Street+Booktown+12345+US'LIN+1++9781234567890:IB'PIA+5+BOOK001:SA'IMD+L+009+:::Test Author'IMD+L+050+:::Introduction to Library Science'QTY+21:3'PRI+AAE:29.95:CA'RFF+LI:ORDER001'UNT+12+1'UNZ+1+1'`,
+        },
+        {
+            message_type: "INVOIC",
+            transfer_date: "2025-01-19",
+            vendor_id: vendor_id,
+            edi_acct: edi_acct,
+            status: "new",
+            basketno: null,
+            filename: "test_invoice_001.edi",
+            raw_msg: `UNA:+.? 'UNB+UNOC:3+FOCUS_SUPPLIER:14+FOCUS_LIBRARY:14+20250721:1600+3++1++1'UNH+2+INVOIC:D:96A:UN:EAN008'BGM+380+67890+9'DTM+137:20250720:102'RFF+IV:TEST_INVOICE_001'RFF+ON:FocusBasket002'NAD+SU+9876543210987::91++Test Book Supplier+456 Publisher Ave+Bookville+54321+US'LIN+1++9789876543210:IB'IMD+L+009+:::Sample Author'IMD+L+050+:::Advanced Library Management'QTY+47:2'PRI+AAA:45.00:CA'MOA+203:90.00:USD'UNT+13+2'UNZ+1+3'`,
+        },
+        {
+            message_type: "ORDERS",
+            transfer_date: "2025-01-18",
+            vendor_id: vendor_id,
+            edi_acct: edi_acct,
+            status: "new",
+            basketno: null,
+            filename: "test_search_content.edi",
+            raw_msg: `UNA:+.? 'UNB+UNOC:3+SEARCH_SUPPLIER:14+SEARCH_LIBRARY:14+20250721:1500+2++1++1'UNH+1+ORDERS:D:96A:UN:EAN008'BGM+220+SEARCH_BASKET+9'IMD+L+009+:::JavaScript Programming Guide'IMD+L+050+:::Learn modern JavaScript programming techniques'PIA+5+JS001:SA+9781234567890:IB'FTX+LIN+++Essential reading for web developers learning JavaScript'UNT+6+1'UNZ+1+2'`,
+        },
+    ];
+
+    const inserted_ids = [];
+    for (const message of messages) {
+        const result = await query({
+            sql: `INSERT INTO edifact_messages (message_type, transfer_date, vendor_id, edi_acct, status, basketno, filename, raw_msg) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            values: [
+                message.message_type,
+                message.transfer_date,
+                message.vendor_id,
+                message.edi_acct,
+                message.status,
+                message.basketno,
+                message.filename,
+                message.raw_msg,
+            ],
+        });
+        inserted_ids.push(result.insertId);
+    }
+
+    return {
+        message_ids: inserted_ids,
+        vendor_id: vendor_id,
+        edi_acct: edi_acct,
+    };
+};
+
+const deleteSampleEdifactMessages = async test_data => {
+    if (!test_data) {
+        // Clean up all test messages and related data
+        await query({
+            sql: "DELETE FROM edifact_messages WHERE filename LIKE 'test_%'",
+        });
+        await query({
+            sql: "DELETE FROM vendor_edi_accounts WHERE description = 'Test EDI Account'",
+        });
+        await query({
+            sql: "DELETE FROM aqbooksellers WHERE name = 'Test EDI Vendor'",
+        });
+        return { success: true };
+    }
+
+    if (test_data.message_ids) {
+        // Delete specific messages
+        await query({
+            sql: `DELETE FROM edifact_messages WHERE id IN (${test_data.message_ids.map(() => "?").join(",")})`,
+            values: test_data.message_ids,
+        });
+    }
+
+    if (test_data.edi_acct) {
+        // Delete the test EDI account
+        await query({
+            sql: "DELETE FROM vendor_edi_accounts WHERE id = ?",
+            values: [test_data.edi_acct],
+        });
+    }
+
+    if (test_data.vendor_id) {
+        // Delete the test vendor
+        await query({
+            sql: "DELETE FROM aqbooksellers WHERE id = ?",
+            values: [test_data.vendor_id],
+        });
+    }
+
+    return { success: true };
+};
+
 module.exports = {
     insertSampleBiblio,
     insertSampleHold,
@@ -933,4 +1051,6 @@ module.exports = {
     insertSamplePatron,
     insertObject,
     deleteSampleObjects,
+    insertSampleEdifactMessages,
+    deleteSampleEdifactMessages,
 };
