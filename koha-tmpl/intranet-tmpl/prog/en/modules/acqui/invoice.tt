@@ -67,7 +67,7 @@
                 [% END %]
             </p>
             <p>
-                <a href="#" class="btn btn-default btn-sm view_edifact_message" data-message-id="[% edifact_message.id | html %]"> <i class="fa fa-search"></i> View interchange</a>
+                <a href="#" class="btn btn-default btn-sm view_edifact_message" data-message-id="[% edifact_message.id | html %]" data-invoicenumber="[% invoicenumber | html %]"> <i class="fa fa-search"></i> View interchange</a>
             </p>
 
             [% IF edifact_errors.size > 0 %]
@@ -552,7 +552,7 @@
 </div>
 <!-- /#updateFund.modal -->
 
-[% INCLUDE 'modals/edifact-modal.inc' %]
+[% INCLUDE 'modals/edifact_interchange.inc' modal_id='EDI_modal' modal_title='EDIFACT Message' modal_size='xl' show_actions=1 %]
 
 <div style="display:none;">
     <select id="all_fund_dropdown">
@@ -575,8 +575,14 @@
     [% Asset.js("js/additional-fields-entry.js") | $raw %]
     [% INCLUDE 'calendar.inc' %]
     [% INCLUDE 'datatables.inc' %]
-    [% Asset.js("js/modals/edifact-modal.js") | $raw %]
+    [% Asset.css("css/edifact_interchange.css") | $raw %]
+    [% Asset.js("js/modals/edifact_interchange.js") | $raw %]
     <script nonce="[% Koha.CSPNonce | $raw %]">
+        EdifactDisplay.init({
+            modalId: "#EDI_modal",
+            expandByDefault: true,
+            showElementDetails: false,
+        });
         addPrefs({
             AcqEnableFiles: [% Koha.Preference('AcqEnableFiles') ? 1 : 0 | html %],
         });

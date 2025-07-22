@@ -141,14 +141,14 @@
                                         <ul class="dropdown-menu">
                                             [% FOR message IN quote_messages %]
                                                 <li>
-                                                    <a class="dropdown-item view_edifact_message" href="#" data-message-id="[% message.id | html %]">
+                                                    <a class="dropdown-item view_edifact_message" href="#" data-message-id="[% message.id | html %]" data-basketno="[% basketno | html %]" data-basketname="[% basketname | html %]">
                                                         <i class="fa fa-quote-left"></i> View quote ([% message.transfer_date | $KohaDates %])
                                                     </a>
                                                 </li>
                                             [% END %]
                                             [% FOR message IN order_messages %]
                                                 <li>
-                                                    <a class="dropdown-item view_edifact_message" href="#" data-message-id="[% message.id | html %]">
+                                                    <a class="dropdown-item view_edifact_message" href="#" data-message-id="[% message.id | html %]" data-basketno="[% basketno | html %]" data-basketname="[% basketname | html %]">
                                                         <i class="fa fa-shopping-cart"></i> View order ([% message.transfer_date | $KohaDates %])
                                                     </a>
                                                 </li>
@@ -158,12 +158,16 @@
                                 [% ELSIF quote_messages.size > 0 %]
                                     <!-- Only quote messages exist -->
                                     <div class="btn-group">
-                                        <button type="button" class="btn btn-default view_edifact_message" data-message-id="[% quote_messages.0.id | html %]"> <i class="fa fa-quote-left"></i> View EDIFACT quote </button>
+                                        <button type="button" class="btn btn-default view_edifact_message" data-message-id="[% quote_messages.0.id | html %]" data-basketno="[% basketno | html %]" data-basketname="[% basketname | html %]">
+                                            <i class="fa fa-quote-left"></i> View EDIFACT quote
+                                        </button>
                                     </div>
                                 [% ELSIF order_messages.size > 0 %]
                                     <!-- Only order messages exist -->
                                     <div class="btn-group">
-                                        <button type="button" class="btn btn-default view_edifact_message" data-message-id="[% order_messages.0.id | html %]"> <i class="fa fa-shopping-cart"></i> View EDIFACT order </button>
+                                        <button type="button" class="btn btn-default view_edifact_message" data-message-id="[% order_messages.0.id | html %]" data-basketno="[% basketno | html %]" data-basketname="[% basketname | html %]">
+                                            <i class="fa fa-shopping-cart"></i> View EDIFACT order
+                                        </button>
                                     </div>
                                 [% END %]
                             [% END %]
@@ -349,14 +353,14 @@
                                         <ul class="dropdown-menu">
                                             [% FOR message IN quote_messages %]
                                                 <li>
-                                                    <a class="dropdown-item view_edifact_message" href="#" data-message-id="[% message.id | html %]">
+                                                    <a class="dropdown-item view_edifact_message" href="#" data-message-id="[% message.id | html %]" data-basketno="[% basketno | html %]" data-basketname="[% basketname | html %]">
                                                         <i class="fa fa-quote-left"></i> View quote ([% message.transfer_date | $KohaDates %])
                                                     </a>
                                                 </li>
                                             [% END %]
                                             [% FOR message IN order_messages %]
                                                 <li>
-                                                    <a class="dropdown-item view_edifact_message" href="#" data-message-id="[% message.id | html %]">
+                                                    <a class="dropdown-item view_edifact_message" href="#" data-message-id="[% message.id | html %]" data-basketno="[% basketno | html %]" data-basketname="[% basketname | html %]">
                                                         <i class="fa fa-shopping-cart"></i> View order ([% message.transfer_date | $KohaDates %])
                                                     </a>
                                                 </li>
@@ -366,12 +370,16 @@
                                 [% ELSIF quote_messages.size > 0 %]
                                     <!-- Only quote interchanges exist -->
                                     <div class="btn-group">
-                                        <button type="button" class="btn btn-default view_edifact_message" data-message-id="[% quote_messages.0.id | html %]"> <i class="fa fa-quote-left"></i> View EDIFACT quote </button>
+                                        <button type="button" class="btn btn-default view_edifact_message" data-message-id="[% quote_messages.0.id | html %]" data-basketno="[% basketno | html %]" data-basketname="[% basketname | html %]">
+                                            <i class="fa fa-quote-left"></i> View EDIFACT quote
+                                        </button>
                                     </div>
                                 [% ELSIF order_messages.size > 0 %]
                                     <!-- Only order messages exist -->
                                     <div class="btn-group">
-                                        <button type="button" class="btn btn-default view_edifact_message" data-message-id="[% order_messages.0.id | html %]"> <i class="fa fa-shopping-cart"></i> View EDIFACT order </button>
+                                        <button type="button" class="btn btn-default view_edifact_message" data-message-id="[% order_messages.0.id | html %]" data-basketno="[% basketno | html %]" data-basketname="[% basketname | html %]">
+                                            <i class="fa fa-shopping-cart"></i> View EDIFACT order
+                                        </button>
                                     </div>
                                 [% END %]
                             [% END %]
@@ -1266,7 +1274,7 @@
 <!-- /.modal#dateEditor -->
 
 [% IF edifact_enabled && edifact_messages.size > 0 %]
-    [% INCLUDE 'modals/edifact-modal.inc' %]
+    [% INCLUDE 'modals/edifact_interchange.inc' modal_id='EDI_modal' modal_title='EDIFACT Message' modal_size='xl' show_actions=1 %]
 [% END %]
 
 [% MACRO jsinclude BLOCK %]
@@ -1524,7 +1532,15 @@
     [% PROCESS patron_search_js columns => columns, actions => ["add"], preview_on_name_click => 1 %]
 
     [% IF edifact_enabled && edifact_messages.size > 0 %]
-        [% Asset.js("js/modals/edifact-modal.js") | $raw %]
+        [% Asset.css("css/edifact_interchange.css") | $raw %]
+        [% Asset.js("js/modals/edifact_interchange.js") | $raw %]
+        <script>
+            EdifactDisplay.init({
+                modalId: "#EDI_modal",
+                expandByDefault: true,
+                showElementDetails: false,
+            });
+        </script>
     [% END %]
 [% END %]
 
