@@ -21,6 +21,7 @@ use strict;
 use warnings;
 use File::Slurp qw( read_file );
 use Carp        qw( carp croak );
+use JSON        qw( encode_json );
 use Koha::Edifact::Segment;
 use Koha::Edifact::Message;
 
@@ -172,6 +173,113 @@ sub message_array {
     return $msg_arr;
 }
 
+sub to_json {
+    my $self = shift;
+
+    # Find interchange header (UNB)
+    my $header_seg;
+    my $trailer_seg;
+    my @all_segments = @{ $self->{transmission} };
+
+    # Get header and trailer
+    for my $i ( 0 .. $#all_segments ) {
+        if ( $all_segments[$i]->tag eq 'UNB' ) {
+            $header_seg = $all_segments[$i];
+        } elsif ( $all_segments[$i]->tag eq 'UNZ' ) {
+            $trailer_seg = $all_segments[$i];
+        }
+    }
+
+    # Build messages array
+    my @json_messages;
+    my $current_message;
+    my @current_segments;
+    my $current_line_id;
+
+    for my $segment (@all_segments) {
+        my $tag = $segment->tag;
+
+        if ( $tag eq 'UNH' ) {
+
+            # Start new message
+            if ($current_message) {
+                $current_message->{segments} = [@current_segments];
+                push @json_messages, $current_message;
+            }
+            $current_message = {
+                header   => $segment->as_string,
+                segments => [],
+            };
+            @current_segments = ();
+            $current_line_id  = undef;
+        } elsif ( $tag eq 'UNT' ) {
+
+            # End current message
+            if ($current_message) {
+                $current_message->{trailer}  = $segment->as_string;
+                $current_message->{segments} = [@current_segments];
+                push @json_messages, $current_message;
+            }
+            $current_message  = undef;
+            @current_segments = ();
+            $current_line_id  = undef;
+        } elsif ( $tag eq 'UNB' || $tag eq 'UNZ' ) {
+
+            # Skip - these are handled separately
+            next;
+        } elsif ($current_message) {
+
+            # Process segment within message
+            my $segment_data = {
+                tag      => $tag,
+                raw      => $segment->as_string,
+                elements => [],
+            };
+
+            # Extract elements
+            my $elem_count = 0;
+            while ( defined( my $elem = $segment->elem($elem_count) ) ) {
+                push @{ $segment_data->{elements} }, $elem;
+                $elem_count++;
+            }
+
+            # Handle line_id assignment
+            if ( $tag eq 'LIN' ) {
+                $current_line_id = $segment->elem(0);
+                $segment_data->{line_id} = $current_line_id if defined $current_line_id;
+            } elsif ( $tag eq 'UNS' ) {
+
+                # UNS (Section Control) marks transition to message summary
+                # Reset line_id so subsequent segments are treated as message-level
+                $current_line_id = undef;
+            } elsif ( defined $current_line_id && $tag !~ /^(UNH|UNT|UNS|CNT)$/ ) {
+
+                # Assign line_id to segments that belong to current line item
+                # Exclude message control segments (UNH, UNT, UNS, CNT)
+                # After UNS, current_line_id is undefined, so segments are message-level
+                $segment_data->{line_id} = $current_line_id;
+            }
+
+            push @current_segments, $segment_data;
+        }
+    }
+
+    # Handle any remaining message
+    if ($current_message) {
+        $current_message->{segments} = [@current_segments];
+        push @json_messages, $current_message;
+    }
+
+    # Build final structure
+    my $json_structure = {
+        header   => $header_seg ? $header_seg->as_string : undef,
+        messages => \@json_messages,
+        trailer  => $trailer_seg ? $trailer_seg->as_string : undef,
+    };
+
+    return encode_json($json_structure);
+}
+
 #
 # internal parsing routines used in _init
 #
@@ -290,6 +398,13 @@ Edifact - Edifact message handler
 =head2 message_array
 
      return an array of Message objects contained in the Edifact transmission
+
+=head2 to_json
+
+     returns a JSON representation of the complete edifact interchange.
+     The JSON structure includes the interchange header, all messages with their
+     segments (both raw and parsed), and the interchange trailer.
+     Line items are grouped using line_id extracted from LIN segments.
 
 =head1 Internal Methods
 
