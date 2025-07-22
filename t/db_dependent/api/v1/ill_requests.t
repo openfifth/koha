@@ -264,7 +264,7 @@ subtest 'list() tests' => sub {
 
 subtest 'add() tests' => sub {
 
-    plan tests => 2;
+    plan tests => 3;
 
     $schema->storage->txn_begin;
 
@@ -371,6 +371,10 @@ subtest 'add() tests' => sub {
     ## Authorized user test
     $t->post_ok( "//$userid:$password@/api/v1/ill/requests" => json => $body)
       ->status_is(201);
+
+    # Confirm there is a notesopac value
+    my $req = Koha::ILL::Requests->search()->next;
+    ok( $req->notesopac, "notesopac value exists" ) if $req;
 
     $schema->storage->txn_rollback;
 };
