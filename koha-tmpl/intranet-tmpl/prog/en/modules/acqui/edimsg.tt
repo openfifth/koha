@@ -32,6 +32,13 @@
         [% IF no_message %]
             <div class="alert alert-info">The requested message cannot be displayed</div>
         [% ELSE %]
+            <div class="row">
+                <div class="col-sm-2">
+                    <div id="toolbar" class="btn-toolbar">
+                        <a class="btn btn-default btn-sm" href="[% "/cgi-bin/koha/acqui/edimsg.pl?id=" _ id _ "&format=json" %]" target="_blank"> <i class="fa fa-download"></i> JSON </a>
+                    </div>
+                </div>
+            </div>
             <ul>
                 [% FOREACH seg IN segments %]
                     <li>[% seg | html %]</li>
