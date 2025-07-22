@@ -20,11 +20,18 @@ use Modern::Perl;
 
 use CGI;
 use Koha::Database;
+use Koha::Edifact;
 use C4::Koha;
 use C4::Auth   qw( get_template_and_user );
-use C4::Output qw( output_html_with_http_headers );
+use C4::Output qw( output_html_with_http_headers output_with_http_headers );
 
 my $q = CGI->new;
+
+# Check if JSON output is requested
+my $format        = $q->param('format')   || '';
+my $accept_header = $ENV{HTTP_ACCEPT}     || '';
+my $wants_json    = ( $format eq 'json' ) || ( $accept_header =~ m|application/json| );
+
 my ( $template, $loggedinuser, $cookie, $userflags ) = get_template_and_user(
     {
         template_name => 'acqui/edimsg.tt',
@@ -33,17 +40,39 @@ my ( $template, $loggedinuser, $cookie, $userflags ) = get_template_and_user(
         flagsrequired => { acquisition => 'edi_manage' },
     }
 );
+
 my $msg_id = $q->param('id');
 my $schema = Koha::Database->new()->schema();
 
 my $msg = $schema->resultset('EdifactMessage')->find($msg_id);
+
 if ($msg) {
     my $transmission = $msg->raw_msg;
 
-    my @segments = segmentize($transmission);
-    $template->param( segments => \@segments );
+    if ($wants_json) {
+
+        # Return JSON representation using Koha::Edifact
+        my $edifact     = Koha::Edifact->new( { transmission => $transmission } );
+        my $json_output = $edifact->to_json();
+
+        output_with_http_headers( $q, $cookie, $json_output, 'json', '200 OK' );
+        exit;
+    } else {
+
+        # Return HTML representation (existing behavior)
+        my @segments = segmentize($transmission);
+        $template->param(
+            segments => \@segments,
+            id       => $msg_id
+        );
+    }
 } else {
-    $template->param( no_message => 1 );
+    if ($wants_json) {
+        output_with_http_headers( $q, $cookie, '{"error":"Message not found"}', 'json', '404 Not Found' );
+        exit;
+    } else {
+        $template->param( no_message => 1 );
+    }
 }
 
 output_html_with_http_headers( $q, $cookie, $template->output );
