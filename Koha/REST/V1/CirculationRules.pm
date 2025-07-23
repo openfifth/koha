@@ -115,7 +115,7 @@ sub list_rules {
             $kinds = [ split /\s*,\s*/, $c->param('rules') ];
             my $valid_kinds = Koha::CirculationRules->rule_kinds;
             for my $rule ( @{$kinds} ) {
-                ( my $rule_key = $rule ) =~ s/_\d_/_X_/;
+                ( my $rule_key = $rule ) =~ s/_\d+_/_X_/;
                 return $c->render_invalid_parameter_value(
                     {
                         path   => '/query/rules',
@@ -299,7 +299,7 @@ sub _all_kinds {
     my %seen;
     my $valid_kinds = Koha::CirculationRules->rule_kinds;
     for my $kind (@distinct_kinds) {
-        ( my $kind_key = $kind ) =~ s/_\d_/_X_/;
+        ( my $kind_key = $kind ) =~ s/_\d+_/_X_/;
         if ( exists $valid_kinds->{$kind_key} && !$seen{$kind} ) {
             push @all_valid_kinds, $kind;
             $seen{$kind} = 1;

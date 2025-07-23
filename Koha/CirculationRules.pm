@@ -390,7 +390,7 @@ sub set_rule {
             unless exists $params->{$mandatory_parameter};
     }
 
-    ( my $rule_key = $params->{rule_name} ) =~ s/_\d_/_X_/;
+    ( my $rule_key = $params->{rule_name} ) =~ s/_\d+_/_X_/;
     my $kind_info = $RULE_KINDS->{$rule_key};
     Koha::Exceptions::MissingParameter->throw("set_rule given unknown rule '$params->{rule_name}'!")
         unless defined $kind_info;
