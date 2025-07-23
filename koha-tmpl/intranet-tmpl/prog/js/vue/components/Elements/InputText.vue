@@ -5,6 +5,7 @@
         v-model="model"
         :placeholder="placeholder"
         :required="required"
+        :class="classNames"
     />
 </template>
 
@@ -16,6 +17,7 @@ export default {
         modelValue: Number | String,
         placeholder: String,
         required: Boolean,
+        classNames: String,
     },
     emits: ["update:modelValue"],
     setup(props, { emit }) {

@@ -11,6 +11,7 @@ import RecordSourcesAPIClient from "@fetch/record-sources-api-client";
 import SysprefAPIClient from "@fetch/system-preferences-api-client";
 import SIP2APIClient from "@fetch/sip2-api-client";
 import PreservationAPIClient from "@fetch/preservation-api-client";
+import MarcFrameworkAPIClient from "@fetch/marc-framework-api-client";
 import LibraryAPIClient from "@fetch/library-api-client";
 
 export const APIClient = {
@@ -21,6 +22,7 @@ export const APIClient = {
     authorised_values: new AVAPIClient(HttpClient),
     cash: new CashAPIClient(HttpClient),
     item: new ItemAPIClient(HttpClient),
+    marc_framework: new MarcFrameworkAPIClient(HttpClient),
     sysprefs: new SysprefAPIClient(HttpClient),
     sip2: new SIP2APIClient(HttpClient),
     preservation: new PreservationAPIClient(HttpClient),

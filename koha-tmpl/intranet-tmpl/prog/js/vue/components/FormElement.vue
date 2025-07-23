@@ -10,7 +10,7 @@
         <InputNumber
             :id="getElementId"
             v-model="resource[attr.name]"
-            :placeholder="attr.placeholder || attr.label"
+            :placeholder="getPlaceholder"
             :required="attr.required ? true : false"
             :size="attr.size"
             :maxlength="attr.maxlength"
@@ -22,10 +22,11 @@
         <InputText
             :id="getElementId"
             v-model="resource[attr.name]"
-            :placeholder="attr.placeholder || attr.label"
+            :placeholder="getPlaceholder"
             :required="attr.required ? true : false"
             :disabled="disabled"
             @update:modelValue="checkForInputError()"
+            :classNames="attr.class"
         />
     </template>
     <template v-else-if="attr.type == 'textarea'">
@@ -34,7 +35,7 @@
             v-model="resource[attr.name]"
             :rows="attr.textAreaRows"
             :cols="attr.textAreaCols"
-            :placeholder="attr.placeholder || attr.label"
+            :placeholder="getPlaceholder"
             :required="attr.required ? true : false"
             :disabled="disabled"
             @update:modelValue="checkForInputError()"
@@ -270,6 +271,12 @@ export default {
             }
             return props.options;
         });
+        const getPlaceholder = computed(() => {
+            if (props.attr.hasOwnProperty("placeholder")) {
+                return props.attr.placeholder;
+            }
+            return props.attr.placeholder || props.attr.label;
+        });
         const disabled = computed(() => {
             const disabledAttr = props.disabled || props.attr.disabled;
             if (typeof disabledAttr === "function") {
@@ -299,6 +306,7 @@ export default {
             disabled,
             fieldInputError,
             checkForInputError,
+            getPlaceholder,
         };
     },
     name: "FormElement",
