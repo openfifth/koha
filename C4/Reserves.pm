@@ -399,7 +399,7 @@ sub CanBookBeReserved {
                 ]
             },
             { join => ['item'] }
-        )->count;
+        );
 
         return { status => '' }
             if defined $reservesallowed and $reservesallowed < $count + 1;
