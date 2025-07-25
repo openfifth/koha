@@ -999,6 +999,7 @@ subtest 'pickup_locations() tests' => sub {
 
 subtest 'request_transfer' => sub {
     plan tests => 16;
+
     $schema->storage->txn_begin;
 
     my $library1 = $builder->build_object( { class => 'Koha::Libraries' } );
