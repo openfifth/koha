@@ -95,6 +95,21 @@ __PACKAGE__->belongs_to(
   },
 );
 
+=head2 hold_group_target_hold
+
+Type: might_have
+
+Related object: L<Koha::Schema::Result::HoldGroupTargetHold>
+
+=cut
+
+__PACKAGE__->might_have(
+  "hold_group_target_hold",
+  "Koha::Schema::Result::HoldGroupTargetHold",
+  { "foreign.hold_group_id" => "self.hold_group_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 old_reserves
 
 Type: has_many
