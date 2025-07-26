@@ -1690,6 +1690,9 @@ modules:
             -
               columnname: update
             -
+              columnname: library_limits
+              is_hidden: 1
+            -
               columnname: actions
               cannot_be_toggled: 1
               cannot_be_modified: 1
