@@ -32,6 +32,7 @@ export default {
         letters.unshift({
             name: "No letter",
             code: "",
+            branchcode: "",
         });
         circRulesStore.letters = letters;
 
