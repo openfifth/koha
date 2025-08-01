@@ -237,6 +237,7 @@ INSERT INTO systempreferences ( `variable`, `value`, `options`, `explanation`, `
 ('EasyAnalyticalRecords','0',NULL,'If on, display in the catalogue screens tools to easily setup analytical record relationships','YesNo'),
 ('EDIFACT','0',NULL,'Enables EDIFACT acquisitions functions','YesNo'),
 ('EdifactInvoiceImport', 'automatic', 'automatic|manual', 'If on, don\'t auto-import EDI invoices, just keep them in the database with the status \'new\'', 'Choice'),
+('EdifactLSL', 'ccode', 'location|ccode|', 'Map EDI sub-location code (GIR+LSL) to Koha Item field, empty to ignore', 'Choice'),
 ('EdifactLSQ', 'location', 'location|ccode|', 'Map EDI sequence code (GIR+LSQ) to Koha Item field, empty to ignore', 'Choice'),
 ('ElasticsearchBoostFieldMatch', '0', NULL, 'Add a "match" query to es when searching, will follow indexes chosen in advanced search, or use title-cover for generic keyword or title index search', 'YesNo'),
 ('ElasticsearchCrossFields', '1', NULL, 'Enable "cross_fields" option for searches using Elastic search.', 'YesNo'),
