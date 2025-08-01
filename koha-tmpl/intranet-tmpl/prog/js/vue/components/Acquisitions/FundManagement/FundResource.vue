@@ -240,6 +240,16 @@ export default {
                               relationshipRequiredKey: "fiscal_period_id",
                               onSelected: filterLedgersBySelectedFiscalPeriod,
                               query: { "ledgers.ledger_id": { "!=": null } },
+                              showElement: {
+                                  type: "text",
+                                  value: "fiscal_period.code",
+                                  link: {
+                                      name: "FiscalPeriodShow",
+                                      params: {
+                                          fiscal_period_id: "fiscal_period_id",
+                                      },
+                                  },
+                              },
                               hideIn: ["List"],
                           },
                       ]
@@ -259,6 +269,16 @@ export default {
                                   filterLibGroupsAndFundGroupsBySelectedLedger,
                               query: getLedgersQuery,
                               disabled: resource => !resource.fiscal_period_id,
+                              showElement: {
+                                  type: "text",
+                                  value: "ledger.name",
+                                  link: {
+                                      name: "LedgerShow",
+                                      params: {
+                                          ledger_id: "ledger_id",
+                                      },
+                                  },
+                              },
                               hideIn: ["List"],
                           },
                       ]
@@ -277,6 +297,16 @@ export default {
                                   filterLibGroupsAndFundGroupsBySelectedLedger,
                               query: getFundGroupsQuery,
                               disabled: resource => !resource.ledger_id,
+                              showElement: {
+                                  type: "text",
+                                  value: "fund_group.name",
+                                  link: {
+                                      name: "FundGroupShow",
+                                      params: {
+                                          fund_group_id: "fund_group_id",
+                                      },
+                                  },
+                              },
                               hideIn: ["List"],
                           },
                       ]

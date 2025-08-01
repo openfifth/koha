@@ -23,8 +23,13 @@ export default {
         const patron_to_html = $patron_to_html;
 
         const acquisitionsStore = inject("acquisitionsStore");
-        const { getVisibleGroups, libraryGroups, visibleGroups, currencies } =
-            storeToRefs(acquisitionsStore);
+        const {
+            getVisibleGroups,
+            libraryGroups,
+            visibleGroups,
+            currencies,
+            getLibGroupFilter,
+        } = storeToRefs(acquisitionsStore);
 
         const {
             filterGroupsBasedOnOwner,
@@ -130,6 +135,16 @@ export default {
                     relationshipOptionLabelAttr: "code",
                     relationshipRequiredKey: "fiscal_period_id",
                     onSelected: filterGroupsBySelectedFiscalPeriod,
+                    showElement: {
+                        type: "text",
+                        value: "fiscal_period.code",
+                        link: {
+                            name: "FiscalPeriodShow",
+                            params: {
+                                fiscal_period_id: "fiscal_period_id",
+                            },
+                        },
+                    },
                     hideIn: ["List"],
                 },
                 {
@@ -206,6 +221,7 @@ export default {
                     },
                     showElement: {
                         type: "text",
+                        value: "owner",
                         format: patron_to_html,
                     },
                     hideIn: ["List"],
@@ -345,6 +361,8 @@ export default {
 
             delete ledger.ledger_id;
             delete ledger.last_updated;
+            delete ledger.patron;
+            delete ledger.patron_str;
 
             if (ledger_id) {
                 const acq_client = APIClient.acquisition;
