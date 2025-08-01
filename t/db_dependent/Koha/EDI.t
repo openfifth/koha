@@ -21,7 +21,8 @@ use Modern::Perl;
 use FindBin qw( $Bin );
 
 use Test::NoWarnings;
-use Test::More tests => 6;
+use Test::More tests => 7;
+use Test::Warn;
 use Test::MockModule;
 
 use t::lib::Mocks;
@@ -1573,6 +1574,36 @@ subtest 'create_edi_order_logging' => sub {
                 description => 'test ean',
                 branchcode  => undef,
                 ean         => '1234567890'
+
+subtest 'LSL and LSQ validation functions' => sub {
+    plan tests => 16;
+
+    $schema->storage->txn_begin;
+
+    # Mock quote message object for testing
+    {
+
+        package MockQuoteMessage;
+
+        sub new {
+            my $class = shift;
+            return bless { errors => [] }, $class;
+        }
+
+        sub add_to_edifact_errors {
+            my ( $self, $error ) = @_;
+            push @{ $self->{errors} }, $error;
+        }
+    }
+
+    # Create test authorised values
+    my $loc_av = $builder->build(
+        {
+            source => 'AuthorisedValue',
+            value  => {
+                category         => 'LOC',
+                authorised_value => 'FICTION',
+                lib              => 'Fiction Section'
             }
         }
     );
@@ -1598,6 +1629,13 @@ subtest 'create_edi_order_logging' => sub {
             value => {
                 basketno    => $basket_with_orders->basketno,
                 orderstatus => 'new'
+    my $ccode_av = $builder->build(
+        {
+            source => 'AuthorisedValue',
+            value  => {
+                category         => 'CCODE',
+                authorised_value => 'ADULT',
+                lib              => 'Adult Collection'
             }
         }
     );
@@ -1613,6 +1651,72 @@ subtest 'create_edi_order_logging' => sub {
         'No matching EAN found for nonexistent_ean',
         'Warning logged when no matching EAN found'
     );
+    my $quote_message = MockQuoteMessage->new();
+
+    # Test valid location code validation
+    ok(
+        Koha::EDI::_validate_location_code( 'FICTION', $quote_message ),
+        'Valid location code passes validation'
+    );
+    is( scalar @{ $quote_message->{errors} }, 0, 'No errors for valid location code' );
+
+    # Test invalid location code validation
+    ok(
+        !Koha::EDI::_validate_location_code( 'INVALID_LOC', $quote_message ),
+        'Invalid location code fails validation'
+    );
+    is( scalar @{ $quote_message->{errors} }, 1, 'One error logged for invalid location code' );
+    like(
+        $quote_message->{errors}->[0]->{details}, qr/Invalid location code 'INVALID_LOC'/,
+        'Error details contain correct location code'
+    );
+
+    # Reset errors for collection code tests
+    $quote_message = MockQuoteMessage->new();
+
+    # Test valid collection code validation
+    ok(
+        Koha::EDI::_validate_collection_code( 'ADULT', $quote_message ),
+        'Valid collection code passes validation'
+    );
+    is( scalar @{ $quote_message->{errors} }, 0, 'No errors for valid collection code' );
+
+    # Test invalid collection code validation
+    ok(
+        !Koha::EDI::_validate_collection_code( 'INVALID_CCODE', $quote_message ),
+        'Invalid collection code fails validation'
+    );
+    is( scalar @{ $quote_message->{errors} }, 1, 'One error logged for invalid collection code' );
+    like(
+        $quote_message->{errors}->[0]->{details}, qr/Invalid collection code 'INVALID_CCODE'/,
+        'Error details contain correct collection code'
+    );
+
+    # Test empty/null handling
+    $quote_message = MockQuoteMessage->new();
+    ok(
+        Koha::EDI::_validate_location_code( '', $quote_message ),
+        'Empty location code passes validation'
+    );
+    ok(
+        Koha::EDI::_validate_location_code( undef, $quote_message ),
+        'Undefined location code passes validation'
+    );
+    ok(
+        Koha::EDI::_validate_collection_code( '', $quote_message ),
+        'Empty collection code passes validation'
+    );
+    ok(
+        Koha::EDI::_validate_collection_code( undef, $quote_message ),
+        'Undefined collection code passes validation'
+    );
+    is( scalar @{ $quote_message->{errors} }, 0, 'No errors for empty/undefined values' );
+
+    # Test error message format
+    $quote_message = MockQuoteMessage->new();
+    Koha::EDI::_validate_location_code( 'TEST_ERROR', $quote_message );
+    my $error = $quote_message->{errors}->[0];
+    is( $error->{section}, 'GIR+LSQ/LSL validation', 'Error has correct section identifier' );
 
     $schema->storage->txn_rollback;
 };
