@@ -114,6 +114,13 @@ properties:
     description: Ledger
     items:
       $ref: "ledger.yaml"
+  fund_group:
+    type:
+      - object
+      - "null"
+    description: Fund group
+    items:
+      $ref: "fund_group.yaml"
   sub_funds:
     type: array
     description: List of sub_funds

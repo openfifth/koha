@@ -88,11 +88,12 @@ sub add {
                     my $ledger = Koha::Acquisition::FundManagement::Ledgers->find( $body->{ledger_id} );
                     my $result = $ledger->check_spend_limits( { new_allocation => $body->{spend_limit} } );
                     return $c->render(
-                        status => 400,
-                        error  => "Ledger spend limit breached, please reduce spend limit by "
-                            . $result->{breach_amount}
-                            . " or increase the spend limit for this ledger"
-
+                        status  => 400,
+                        openapi => {
+                                  error => "Ledger spend limit breached, please reduce spend limit by "
+                                . $result->{breach_amount}
+                                . " or increase the spend limit for this ledger"
+                        }
                     ) unless $result->{within_limit};
                 }
 

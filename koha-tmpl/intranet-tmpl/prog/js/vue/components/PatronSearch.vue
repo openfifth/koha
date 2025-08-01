@@ -99,7 +99,7 @@ export default {
                 patron = p;
                 props.resource.patron = patron;
                 props.resource.patron_str = $patron_to_html(patron);
-                props.resource.user_id = patron.patron_id;
+                props.resource[props.name] = patron.patron_id;
                 if (props.selectCallback) {
                     props.selectCallback(patron);
                 }

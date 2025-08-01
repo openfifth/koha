@@ -1,6 +1,6 @@
 <template>
     <router-link
-        v-if="linkData && linkData.name"
+        v-if="linkData && linkData.name && paramsFound"
         :to="{
             name: linkData.name,
             params: formattedParams,
@@ -27,11 +27,13 @@ export default {
     },
     setup(props) {
         const formattedParams = ref({});
+        const paramsFound = ref(true);
 
         if (props.linkData && props.linkData.params) {
             Object.keys(props.linkData.params).forEach(key => {
                 formattedParams.value[key] =
                     props.resource[props.linkData.params[key]];
+                if (!formattedParams.value[key]) paramsFound.value = false;
             });
         }
 
@@ -47,6 +49,7 @@ export default {
         }
         return {
             formattedParams,
+            paramsFound,
         };
     },
 };

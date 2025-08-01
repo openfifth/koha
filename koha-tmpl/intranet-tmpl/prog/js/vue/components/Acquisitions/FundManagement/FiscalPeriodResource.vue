@@ -171,6 +171,7 @@ export default {
                     },
                     showElement: {
                         type: "text",
+                        value: "owner",
                         format: patron_to_html,
                     },
                     hideIn: ["List"],
@@ -238,6 +239,8 @@ export default {
 
             delete fiscal_period.fiscal_period_id;
             delete fiscal_period.last_updated;
+            delete fiscal_period.patron;
+            delete fiscal_period.patron_str;
 
             if (fiscal_period_id) {
                 const acq_client = APIClient.acquisition;
