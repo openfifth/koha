@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use FindBin qw( $Bin );
 
-use Test::More tests => 67;
+use Test::More tests => 74;
 use JSON qw( decode_json );
 use Koha::EDI;
 
@@ -265,3 +265,48 @@ ok( $lin_related_segment, 'Found line-related segment with line_id' );
 if ($lin_related_segment && $lin_segment) {
     is( $lin_related_segment->{line_id}, $lin_segment->{line_id}, 'Line-related segment has matching line_id' );
 }
+
+# Test LSL (Library Sub-Location) field extraction from GIR segments
+my $mock_line_data = {
+    GIR => [
+        {
+            copy              => '001',
+            sub_location_code => 'FICTION',    # LSL field
+            sequence_code     => 'ADULT',      # LSQ field
+            branch            => 'MAIN'
+        },
+        {
+            copy              => '002',
+            sub_location_code => 'REFERENCE',    # LSL field
+            branch            => 'BRANCH2'
+
+                # sequence_code missing for this item
+        }
+    ]
+};
+
+my $mock_line = bless $mock_line_data, 'Koha::Edifact::Line';
+
+# Test LSL field access via girfield method
+$y = $mock_line->girfield('sub_location_code');
+is( $y, 'FICTION', 'LSL field (sub_location_code) returned for first occurrence' );
+
+$y = $mock_line->girfield( 'sub_location_code', 0 );
+is( $y, 'FICTION', 'LSL field returned for explicit occurrence 0' );
+
+$y = $mock_line->girfield( 'sub_location_code', 1 );
+is( $y, 'REFERENCE', 'LSL field returned for occurrence 1' );
+
+$y = $mock_line->girfield( 'sub_location_code', 2 );
+is( $y, undef, 'LSL field returns undef for non-existent occurrence' );
+
+# Test that both LSL and LSQ can coexist
+$y = $mock_line->girfield( 'sequence_code', 0 );
+is( $y, 'ADULT', 'LSQ field still works when LSL is present' );
+
+$y = $mock_line->girfield( 'sequence_code', 1 );
+is( $y, undef, 'LSQ field correctly returns undef when not present for occurrence' );
+
+# Test LSL field when LSQ is missing
+$y = $mock_line->girfield( 'sub_location_code', 1 );
+is( $y, 'REFERENCE', 'LSL field works correctly when LSQ is missing for that occurrence' );
