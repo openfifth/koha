@@ -725,6 +725,163 @@ sub _core_status_graph {
             ui_method_icon => 'fa-download',
         }
     };
+
+    # Lending Status Graph
+    sub _core_lending_status_graph {
+
+        # Supplying agency has recieved a request/more information from a retry
+        RequestReceived => {
+            prev_actions   => ['RetryPossible'],
+            id             => 'RequestReceived',
+            name           => __('Lending request recieved'),
+            ui_method_name => 0,
+            method         => 'create_lending',
+            next_actions => [ 'ExpectToSupply', 'WillSupply', 'Loaned', 'RetryPossible', 'Unfilled', 'CopyCompleted' ],
+            ui_method_icon => 'fa-plus',
+            },
+
+            # Suppling library expects to fill the request. Can include ExpectedDeliveryDate
+            ExpectToSupply => {
+            prev_actions   => ['RequestReceived'],
+            id             => 'ExpectToSupply',
+            name           => __('Expect to supply'),
+            ui_method_name => __('Expect to supply'),
+            method         => 'expect_to_supply',
+            next_actions   => [ 'WillSupply', 'Loaned', 'RetryPossible', 'Unfilled' ],
+            },
+
+            # Supplying library has located the item but has not sent it
+            WillSupply => {
+            prev_actions   => [ 'RequestReceived', 'ExpectToSupply' ],
+            id             => 'WillSupply',
+            name           => __('Will supply'),
+            ui_method_name => __('Will supply'),
+            method         => 'will_supply',
+            next_actions   => [ 'Loaned', 'RetryPossible', 'CopyCompleted', 'Unfilled' ],
+            },
+
+            # The item is currently on loan to the partner library for the request
+            Loaned => {
+            prev_actions   => [ 'RequestReceived', 'ExpectToSupply', 'WillSupply' ],
+            id             => 'Loaned',
+            name           => __('Loaned to partner library'),
+            ui_method_name => __('Loan to partner library'),
+            needs_prefs    => ['CirculateILL'],
+            needs_perms    => ['user_circulate_circulate_remaining_permissions'],
+            next_actions   => [ 'Recalled', 'HoldReturn', 'LoanCompleted', 'CompletedWithoutReturn' ],
+
+            # An array of functions that all must return true
+            needs_all      => [ sub { my $r = shift; return $r->biblio; } ],
+            method         => 'lend',
+            next_actions   => [],
+            ui_method_icon => 'fa-upload',
+            },
+
+            # The item is on loan to the partner library and is overdue
+            Overdue => {
+            prev_actions   => ['Loaned'],
+            id             => 'Overdue',
+            name           => __('Loaned item is overdue'),
+            ui_method_name => 0,
+            method         => 0,
+            next_actions   => [ 'Recalled', 'HoldReturn', 'LoanCompleted', 'CompletedWithoutReturn' ],
+            },
+
+            # The item has been recalled to the supplying library
+            Recalled => {
+            prev_actions   => [ 'Loaned', 'Overdue' ],
+            id             => 'Recalled',
+            name           => __('Recall requested to partner library'),
+            ui_method_name => __('Request recall to partner library'),
+            method         => 'recall',
+            next_actions   => [ 'LoanCompleted', 'CompletedWithoutReturn' ],
+            },
+
+            # The supplying library cannot fill currently and needs more information. Send a reason with RetryInfo section
+            RetryPossible => {
+            prev_actions   => [ 'WillSupply', 'RequestReceived', 'ExpectToSupply' ],
+            id             => 'RetryPossible',
+            name           => __('Retry possible'),
+            ui_method_name => __('Not currently available'),
+            method         => 'retry_possible',
+            next_actions   => [''],
+            },
+
+            # The request will not be filled. A reason can be supplied with the ReasonUnfilled data element
+            Unfilled => {
+            prev_actions   => [ 'WillSupply', 'RequestReceived', 'ExpectToSupply' ],
+            id             => 'Unfilled',
+            name           => __('Request unfilled'),
+            ui_method_name => __('Will not fill'),
+            method         => 'unfilled',
+            next_actions   => [''],
+            },
+
+            # The item is currently on loan to the partner library and cannot yet be returned
+            HoldReturn => {
+            prev_actions   => [ 'Loaned', 'Overdue' ],
+            id             => 'HoldReturn',
+            name           => __('Return hold'),
+            ui_method_name => __('Request partner not return'),
+            method         => 'hold_return',
+            next_actions   => ['ReleaseHoldReturn'],
+            },
+
+            # An item that did have a return hold can now be returned by the partner library
+            ReleaseHoldReturn => {
+            prev_actions   => ['HoldReturn'],
+            id             => 'ReleaseHoldReturn',
+            name           => __('Return hold released'),
+            ui_method_name => __('Release return hold'),
+            method         => 'release_hold_return',
+            next_actions   => [ 'LoanCompleted', 'CompletedWithoutReturn' ],
+            },
+
+            # The supplying library has sent the requested item and there is no need to return it
+            CopyCompleted => {
+            prev_actions   => [ 'WillSupply', 'RequestReceived', 'ExpectToSupply' ],
+            id             => 'CopyCompleted',
+            name           => __('Copy sent'),
+            ui_method_name => __('Send copy'),
+            method         => 'send_copy',
+            next_actions   => [''],
+            ui_method_icon => 'fa-envelope-open-text',
+            },
+
+            # The loan has been returned from the partner library and checked in
+            LoanCompleted => {
+            prev_actions   => [ 'Loaned', 'Overdue', 'Recalled', 'ReleaseHoldReturn' ],
+            id             => 'LoanCompleted',
+            name           => __('Completed'),
+            ui_method_name => __('Complete request'),
+            method         => 'loan_complete',
+            next_actions   => [''],
+            ui_method_icon => 'fa-download',
+            },
+
+            # The loan has been marked as completed without reciving the item back due to loss or damage
+            CompletedWithoutReturn => {
+            prev_actions   => [ 'Loaned', 'Overdue', 'Recalled', 'ReleaseHoldReturn' ],
+            id             => 'CompletedWithoutReturn',
+            name           => __('Request completed without return'),
+            ui_method_name => __('Complete without return'),
+            method         => 'loan_complete_no_return',
+            next_actions   => [''],
+            ui_method_icon => 'fa-download',
+            },
+
+            # The supplying library has cancelled the request - Reported by partner library
+            Cancelled => {
+            prev_actions   => [ 'WillSupply', 'RequestReceived', 'ExpectToSupply' ],
+            id             => 'Cancelled',
+            name           => __('Request cancelled (borrowing)'),
+            ui_method_name => 0,
+            method         => 'cancelled_borrowing',
+            next_actions   => [''],
+            ui_method_icon => 'fa-trash',
+            },
+            ;
+    }
 }
 
 =head3 _status_graph_union
@@ -797,6 +954,76 @@ sub _status_graph_union {
     return $status_graph;
 }
 
+=head3 _lending_status_graph_union
+
+    my $lending_status_graph = $illrequest->_status_graph_union($origin, $new_graph);
+
+Return a new status_graph, the result of merging $origin & new_graph.  This is
+operation is a union over the sets defied by the two graphs.
+
+Each entry in $new_graph is added to $origin.  We do not provide a syntax for
+'subtraction' of entries from $origin.
+
+Whilst it is not intended that this works, you can override entries in $origin
+with entries with the same key in $new_graph.  This can lead to problematic
+behaviour when $new_graph adds an entry, which modifies a dependent entry in
+$origin, only for the entry in $origin to be replaced later with a new entry
+from $new_graph.
+
+NOTE: this procedure does not "re-link" entries in $origin or $new_graph,
+i.e. each of the graphs need to be correct at the outset of the operation.
+
+=cut
+
+sub _lending_status_graph_union {
+    my ( $self, $core_lending_status_graph, $backend_lending_status_graph ) = @_;
+
+    # Create new status graph with:
+    # - all core_lending_status_graph
+    # - for-each each backend_lending_status_graph
+    #   + add to new status graph
+    #   + for each core prev_action:
+    #     * locate core_status
+    #     * update next_actions with additional next action.
+    #   + for each core next_action:
+    #     * locate core_status
+    #     * update prev_actions with additional prev action
+
+    my @core_lending_status_ids = keys %{$core_lending_status_graph};
+    my $lending_status_graph    = clone($core_lending_status_graph);
+
+    foreach my $backend_lending_status_key ( keys %{$backend_lending_status_graph} ) {
+        my $backend_lending_status = $backend_lending_status_graph->{$backend_lending_status_key};
+
+        # Add to new status graph
+        $lending_status_graph->{$backend_lending_status_key} = $backend_lending_status;
+
+        # Update all core methods' next_actions.
+        foreach my $prev_action ( @{ $backend_lending_status->{prev_actions} } ) {
+            if ( grep { $prev_action eq $_ } @core_lending_status_ids ) {
+                my @next_actions =
+                    @{ $lending_status_graph->{$prev_action}->{next_actions} };
+                push @next_actions, $backend_lending_status_key
+                    if ( !grep( /^$backend_lending_status_key$/, @next_actions ) );
+                $lending_status_graph->{$prev_action}->{next_actions} = \@next_actions;
+            }
+        }
+
+        # Update all core methods' prev_actions
+        foreach my $next_action ( @{ $backend_lending_status->{next_actions} } ) {
+            if ( grep { $next_action eq $_ } @core_lending_status_ids ) {
+                my @prev_actions =
+                    @{ $lending_status_graph->{$next_action}->{prev_actions} };
+                push @prev_actions, $backend_lending_status_key
+                    if ( !grep( /^$backend_lending_status_key$/, @prev_actions ) );
+                $lending_status_graph->{$next_action}->{prev_actions} = \@prev_actions;
+            }
+        }
+    }
+
+    return $lending_status_graph;
+}
+
 ### Core API methods
 
 =head3 capabilities
@@ -829,12 +1056,14 @@ sub capabilities {
     # Generate up to date status_graph
     my $status_graph = $self->_status_graph_union(
         $self->_core_status_graph,
+        $self->_core_lending_status_graph,
         $self->_backend->status_graph(
             {
                 request => $self,
                 other   => {}
             }
-        )
+        ),
+        $self->_backend->lending_status_graph( { request => $self . other => {} } )
     );
 
     # Extract available actions from graph.
