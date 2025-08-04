@@ -174,10 +174,6 @@ if ( $op eq 'list' ) {
                 request     => $request
             );
             if ($backend_result->{stage} eq 'commit') {
-                # After creation actions
-                if ( $params->{type_disclaimer_submitted} ) {
-                    $type_disclaimer->after_request_created( $params, $request );
-                }
                 $request->extended_attributes(
                     [
                         {
@@ -186,6 +182,12 @@ if ( $op eq 'list' ) {
                         }
                     ]
                 ) if $params->{copyrightclearance_confirmed};
+
+                # After creation actions
+                if ( $params->{type_disclaimer_submitted} ) {
+                    $type_disclaimer->after_request_created( $params, $request );
+                }
+
                 print $query->redirect('/cgi-bin/koha/opac-illrequests.pl?message=2');
                 exit;
             }
