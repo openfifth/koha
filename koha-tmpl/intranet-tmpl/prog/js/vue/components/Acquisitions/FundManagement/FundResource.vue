@@ -291,7 +291,7 @@ export default {
                               label: $__("Fund group"),
                               relationshipAPIClient:
                                   APIClient.acquisition.fundGroups,
-                              relationshipOptionLabelAttr: "title",
+                              relationshipOptionLabelAttr: "name",
                               relationshipRequiredKey: "fund_group_id",
                               onSelected:
                                   filterLibGroupsAndFundGroupsBySelectedLedger,
