@@ -476,11 +476,13 @@ sub to_api {
     my $response = $self->SUPER::to_api($params);
     $response = $self->add_accounting_values( { data => $response } ) if $needs_values;
 
-    my $object_name = $self->_object_hierarchy()->{object};
-    my $value_field = $object_name . "_value";
+    if ( $self->can("_object_hierarchy") ) {
+        my $object_name = $self->_object_hierarchy()->{object};
+        my $value_field = $object_name . "_value";
 
-    $response->{$value_field} = $self->spend_limit + $self->total_allocations
-        if $object_name ne 'fund_allocation' && $object_name ne 'fiscal_period';
+        $response->{$value_field} = $self->spend_limit + $self->total_allocations
+            if $object_name ne 'fund_allocation' && $object_name ne 'fiscal_period';
+    }
 
     my $overrides = {};
 
