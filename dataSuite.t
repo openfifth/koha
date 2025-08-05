@@ -470,7 +470,6 @@ sub create_fund_allocations {
     my $allocation1 = Koha::Acquisition::FundManagement::FundAllocation->new(
         {
             fund_id              => 1,
-            sub_fund_id          => undef,
             ledger_id            => 3,
             fiscal_period_id     => 1,
             allocation_amount    => 1000,
@@ -485,7 +484,6 @@ sub create_fund_allocations {
     my $allocation2 = Koha::Acquisition::FundManagement::FundAllocation->new(
         {
             fund_id              => 1,
-            sub_fund_id          => undef,
             ledger_id            => 3,
             fiscal_period_id     => 1,
             allocation_amount    => 200,
@@ -500,7 +498,6 @@ sub create_fund_allocations {
     my $allocation3 = Koha::Acquisition::FundManagement::FundAllocation->new(
         {
             fund_id              => 2,
-            sub_fund_id          => undef,
             ledger_id            => 1,
             fiscal_period_id     => 1,
             allocation_amount    => 2500,
@@ -515,7 +512,6 @@ sub create_fund_allocations {
     my $allocation4 = Koha::Acquisition::FundManagement::FundAllocation->new(
         {
             fund_id              => 2,
-            sub_fund_id          => undef,
             ledger_id            => 1,
             fiscal_period_id     => 1,
             allocation_amount    => 200,
@@ -530,7 +526,6 @@ sub create_fund_allocations {
     my $allocation5 = Koha::Acquisition::FundManagement::FundAllocation->new(
         {
             fund_id              => 2,
-            sub_fund_id          => undef,
             ledger_id            => 1,
             fiscal_period_id     => 1,
             allocation_amount    => -200,
@@ -545,7 +540,6 @@ sub create_fund_allocations {
     my $allocation6 = Koha::Acquisition::FundManagement::FundAllocation->new(
         {
             fund_id              => 3,
-            sub_fund_id          => undef,
             ledger_id            => 4,
             fiscal_period_id     => 3,
             allocation_amount    => 1200,
@@ -560,7 +554,6 @@ sub create_fund_allocations {
     my $allocation7 = Koha::Acquisition::FundManagement::FundAllocation->new(
         {
             fund_id              => 3,
-            sub_fund_id          => undef,
             ledger_id            => 4,
             fiscal_period_id     => 3,
             allocation_amount    => 50,
@@ -575,7 +568,6 @@ sub create_fund_allocations {
     my $allocation8 = Koha::Acquisition::FundManagement::FundAllocation->new(
         {
             fund_id              => 4,
-            sub_fund_id          => undef,
             ledger_id            => 2,
             fiscal_period_id     => 1,
             allocation_amount    => 500,
@@ -590,7 +582,6 @@ sub create_fund_allocations {
     my $allocation9 = Koha::Acquisition::FundManagement::FundAllocation->new(
         {
             fund_id              => 5,
-            sub_fund_id          => undef,
             ledger_id            => 5,
             fiscal_period_id     => 2,
             allocation_amount    => 5000,
@@ -605,7 +596,6 @@ sub create_fund_allocations {
     my $allocation10 = Koha::Acquisition::FundManagement::FundAllocation->new(
         {
             fund_id              => 5,
-            sub_fund_id          => undef,
             ledger_id            => 5,
             fiscal_period_id     => 2,
             allocation_amount    => 1000,
@@ -620,7 +610,6 @@ sub create_fund_allocations {
     my $allocation11 = Koha::Acquisition::FundManagement::FundAllocation->new(
         {
             fund_id              => 6,
-            sub_fund_id          => undef,
             ledger_id            => 1,
             fiscal_period_id     => 1,
             allocation_amount    => 1000,
@@ -635,7 +624,6 @@ sub create_fund_allocations {
     my $allocation12 = Koha::Acquisition::FundManagement::FundAllocation->new(
         {
             fund_id              => 6,
-            sub_fund_id          => undef,
             ledger_id            => 1,
             fiscal_period_id     => 1,
             allocation_amount    => 250,
@@ -650,7 +638,6 @@ sub create_fund_allocations {
     my $allocation13 = Koha::Acquisition::FundManagement::FundAllocation->new(
         {
             fund_id              => 7,
-            sub_fund_id          => undef,
             ledger_id            => 3,
             fiscal_period_id     => 1,
             allocation_amount    => 250,
@@ -665,7 +652,6 @@ sub create_fund_allocations {
     my $allocation14 = Koha::Acquisition::FundManagement::FundAllocation->new(
         {
             fund_id              => 7,
-            sub_fund_id          => undef,
             ledger_id            => 3,
             fiscal_period_id     => 1,
             allocation_amount    => 25,

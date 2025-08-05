@@ -12,11 +12,6 @@ properties:
       - integer
       - "null"
     description: Internal fund identifier
-  sub_fund_id:
-    type:
-      - integer
-      - "null"
-    description: Internal sub fund identifier
   ledger_id:
     type:
       - integer

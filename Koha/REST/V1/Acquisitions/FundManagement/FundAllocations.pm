@@ -245,18 +245,10 @@ sub transfer {
                     Koha::Acquisition::FundManagement::Funds->find( { fund_id => $body->{fund_id_from} } );
                 my $fund_transferring_to =
                     Koha::Acquisition::FundManagement::Funds->find( { fund_id => $body->{fund_id_to} } );
-                my $sub_fund_transferring_from =
-                    Koha::Acquisition::FundManagement::SubFunds->find( { sub_fund_id => $body->{sub_fund_id_from} } );
-                my $sub_fund_transferring_to =
-                    Koha::Acquisition::FundManagement::SubFunds->find( { sub_fund_id => $body->{sub_fund_id_to} } );
 
-                my $note_from = "Transfer to "
-                    . ( $sub_fund_transferring_to ? $sub_fund_transferring_to->name : $fund_transferring_to->name );
+                my $note_from = "Transfer to " . $fund_transferring_to->name;
                 $note_from = $note_from . ": " . $body->{note} if $body->{note};
-                my $note_to =
-                    "Transfer from "
-                    . (
-                    $sub_fund_transferring_from ? $sub_fund_transferring_from->name : $fund_transferring_from->name );
+                my $note_to = "Transfer from " . $fund_transferring_from->name;
                 $note_to = $note_to . ": " . $body->{note} if $body->{note};
 
                 my $fund_id_from = $body->{sub_fund_id_from} ? undef : $body->{fund_id_from};

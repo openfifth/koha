@@ -121,11 +121,6 @@ properties:
     description: Fund group
     items:
       $ref: "fund_group.yaml"
-  sub_funds:
-    type: array
-    description: List of sub_funds
-    items:
-      $ref: "sub_fund.yaml"
   fund_allocations:
     type: array
     description: List of fund_allocations

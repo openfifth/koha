@@ -162,19 +162,6 @@ sub fund {
     return Koha::Acquisition::FundManagement::Fund->_new_from_dbic($fund_rs);
 }
 
-=head3 sub_fund
-
-Method to embed the sub_fund to a given fund allocation
-
-=cut
-
-sub sub_fund {
-    my ($self) = @_;
-    my $sub_fund_rs = $self->_result->sub_fund;
-    return unless $sub_fund_rs;
-    return Koha::Acquisition::FundManagement::SubFund->_new_from_dbic($sub_fund_rs);
-}
-
 =head3 fund_group
 
 Method to embed the fund group to a given fund
@@ -210,18 +197,6 @@ sub funds {
     my ($self) = @_;
     my $fund_rs = $self->_result->funds;
     return Koha::Acquisition::FundManagement::Funds->_new_from_dbic($fund_rs);
-}
-
-=head3 sub_funds
-
-Method to embed sub funds to the fund
-
-=cut
-
-sub sub_funds {
-    my ($self) = @_;
-    my $sub_fund_rs = $self->_result->sub_funds;
-    return Koha::Acquisition::FundManagement::SubFunds->_new_from_dbic($sub_fund_rs);
 }
 
 =head3 fund_allocations
