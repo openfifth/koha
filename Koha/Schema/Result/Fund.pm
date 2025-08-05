@@ -29,6 +29,13 @@ __PACKAGE__->table("funds");
   is_auto_increment: 1
   is_nullable: 0
 
+=head2 fund_parent_id
+
+  data_type: 'integer'
+  is_nullable: 1
+
+if this fund is a child of another the parent fund id will be stored here
+
 =head2 ledger_id
 
   data_type: 'integer'
@@ -192,6 +199,8 @@ library groups the fund is visible to
 __PACKAGE__->add_columns(
   "fund_id",
   { data_type => "integer", is_auto_increment => 1, is_nullable => 0 },
+  "fund_parent_id",
+  { data_type => "integer", is_nullable => 1 },
   "ledger_id",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
   "fiscal_period_id",
@@ -372,8 +381,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-08-05 10:10:56
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:UYXelxPShycTwhD5x8rkKw
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-08-05 12:15:32
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:dArdCf+NzwH49PgPPzN1Og
 
 __PACKAGE__->add_columns(
     '+status' => { is_boolean => 1 },

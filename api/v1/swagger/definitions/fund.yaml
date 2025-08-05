@@ -7,6 +7,12 @@ properties:
       - "null"
     readOnly: true
     description: Internal fund identifier
+  fund_parent_id:
+    type:
+      - integer
+      - "null"
+    readOnly: true
+    description: Identifier for the parent fund (if applicable)
   ledger_id:
     type:
       - integer

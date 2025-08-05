@@ -89,6 +89,7 @@ return {
                 q{
                 CREATE TABLE `funds` (
                 `fund_id` INT(11) NOT NULL AUTO_INCREMENT,
+                `fund_parent_id` INT(11) DEFAULT NULL COMMENT 'if this fund is a child of another the parent fund id will be stored here',
                 `ledger_id` INT(11) DEFAULT NULL COMMENT 'ledger the fund applies to',
                 `fiscal_period_id` INT(11) DEFAULT NULL COMMENT 'fiscal period the fund applies to',
                 `name` VARCHAR(255) DEFAULT NULL COMMENT 'name for the fund',
