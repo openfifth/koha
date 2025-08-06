@@ -20,6 +20,7 @@
           - ledger
           - fund_allocations
           - owner
+          - sub_funds
         collectionFormat: csv
       - $ref: "../swagger.yaml#/parameters/match"
       - $ref: "../swagger.yaml#/parameters/order_by"
@@ -141,6 +142,7 @@
           - owner
           - lib_group_limits
           - fund_group
+          - sub_funds
         collectionFormat: csv
     produces:
       - application/json
