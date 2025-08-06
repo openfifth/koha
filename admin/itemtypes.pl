@@ -80,7 +80,6 @@ if ( $op eq 'add_form' ) {
     my $rentalcharge_daily  = $input->param('rentalcharge_daily');
     my $rentalcharge_hourly = $input->param('rentalcharge_hourly');
     my $defaultreplacecost  = $input->param('defaultreplacecost');
-    my $processfee          = $input->param('processfee');
     my $image               = $input->param('image') || q||;
     my @branches            = grep { $_ ne q{} } $input->multi_param('branches');
 
@@ -109,7 +108,6 @@ if ( $op eq 'add_form' ) {
         $itemtype->rentalcharge_daily($rentalcharge_daily);
         $itemtype->rentalcharge_hourly($rentalcharge_hourly);
         $itemtype->defaultreplacecost($defaultreplacecost);
-        $itemtype->processfee($processfee);
         $itemtype->notforloan($notforloan);
         $itemtype->imageurl($imageurl);
         $itemtype->summary($summary);
@@ -145,7 +143,6 @@ if ( $op eq 'add_form' ) {
                 rentalcharge_daily           => $rentalcharge_daily,
                 rentalcharge_hourly          => $rentalcharge_hourly,
                 defaultreplacecost           => $defaultreplacecost,
-                processfee                   => $processfee,
                 notforloan                   => $notforloan,
                 imageurl                     => $imageurl,
                 summary                      => $summary,
