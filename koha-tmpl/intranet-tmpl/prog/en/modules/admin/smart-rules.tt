@@ -1109,182 +1109,240 @@
         </div>
     [% END %]
 
-    <div id="refund-lost-item-fee-on-return" class="page-section">
-        [% IF current_branch == '*' %]
-            <h2>Default lost item fee refund on return policy</h2>
-        [% ELSE %]
-            <h2>Lost item fee refund on return policy for [% Branches.GetName(current_branch) | html %]</h2>
-        [% END %]
-        <p>Specify the default policy for lost item fees on return.</p>
-        <form method="post" action="/cgi-bin/koha/admin/smart-rules.pl">
-            [% INCLUDE 'csrf-token.inc' %]
-            <input type="hidden" name="op" value="cud-mod-refund-lost-item-fee-rule" />
-            <input type="hidden" name="branch" value="[% current_branch | html %]" />
-            <table>
-                <tr>
-                    <th>Refund lost item replacement fee</th>
-                    <th>Refund lost item processing fee</th>
-                    <th>&nbsp;</th>
-                </tr>
-                <tr>
-                    <td>
-                        <select name="lostreturn">
-                            [%# Default branch %]
-                            [% IF ( current_branch == '*' ) %]
-                                [% IF ( defaultRefundRule == 'refund' ) %]
-                                    <option value="refund" selected="selected">Refund lost item charge</option>
-                                    <option value="refund_unpaid">Refund lost item charge (only if unpaid)</option>
-                                    <option value="charge">Refund lost item charge and charge new overdue fine</option>
-                                    <option value="restore">Refund lost item charge and restore overdue fine</option>
-                                    <option value="0">Leave lost item charge</option>
-                                [% ELSIF ( defaultRefundRule == 'refund_unpaid' ) %]
-                                    <option value="refund">Refund lost item charge</option>
-                                    <option value="refund_unpaid" selected="selected">Refund lost item charge (only if unpaid)</option>
-                                    <option value="charge">Refund lost item charge and charge new overdue fine</option>
-                                    <option value="restore">Refund lost item charge and restore overdue fine</option>
-                                    <option value="0">Leave lost item charge</option>
-                                [% ELSIF ( defaultRefundRule == 'charge' ) %]
-                                    <option value="refund">Refund lost item charge</option>
-                                    <option value="refund_unpaid">Refund lost item charge (only if unpaid)</option>
-                                    <option value="charge" selected="selected">Refund lost item charge and charge new overdue fine</option>
-                                    <option value="restore">Refund lost item charge and restore overdue fine</option>
-                                    <option value="0">Leave lost item charge</option>
-                                [% ELSIF ( defaultRefundRule == 'restore' ) %]
-                                    <option value="refund">Refund lost item charge</option>
-                                    <option value="refund_unpaid">Refund lost item charge (only if unpaid)</option>
-                                    <option value="charge">Refund lost item charge and charge new overdue fine</option>
-                                    <option value="restore" selected="selected">Refund lost item charge and restore overdue fine</option>
-                                    <option value="0">Leave lost item charge</option>
-                                [% ELSIF ( defaultRefundRule == 0 ) %]
-                                    <option value="refund">Refund lost item charge</option>
-                                    <option value="refund_unpaid">Refund lost item charge (only if unpaid)</option>
-                                    <option value="charge">Refund lost item charge and charge new overdue fine</option>
-                                    <option value="restore">Refund lost item charge and restore overdue fine</option>
-                                    <option value="0" selected="selected">Leave lost item charge</option>
-                                [% ELSE %]
-                                    <option value="refund">Refund lost item charge</option>
-                                    <option value="refund_unpaid">Refund lost item charge (only if unpaid)</option>
-                                    <option value="charge">Refund lost item charge and charge new overdue fine</option>
-                                    <option value="restore">Refund lost item charge and restore overdue fine</option>
-                                    <option value="0">Leave lost item charge</option>
-                                [% END %]
-                            [% ELSE %]
-                                [%# Branch-specific %]
-                                <option value="*" [% IF ( not refundLostItemFeeRule ) %]selected="selected"[% END %]>
-                                    [% IF defaultRefundRule == 'refund' %]
-                                        <span>Use default (Refund lost item charge)</span>
-                                    [% ELSIF defaultRefundRule == 'refund_unpaid' %]
-                                        Use default (Refund lost item charge (only if unpaid))
-                                    [% ELSIF defaultRefundRule == 'charge' %]
-                                        <span>Use default (Refund lost item charge and charge new overdue fine)</span>
-                                    [% ELSIF defaultRefundRule == 'restore' %]
-                                        <span>Use default (Refund lost item charge and restore overdue fine)</span>
-                                    [% ELSE %]
-                                        <span>Use default (Leave lost item charge)</span>
-                                    [% END %]
-                                </option>
-                                [% IF ( not refundLostItemFeeRule ) %]
-                                    <option value="refund">Refund lost item charge</option>
-                                    <option value="refund_unpaid">Refund lost item charge (only if unpaid)</option>
-                                    <option value="charge">Refund lost item charge and charge new overdue fine</option>
-                                    <option value="restore">Refund lost item charge and restore overdue fine</option>
-                                    <option value="0">Leave lost item charge</option>
-                                [% ELSE %]
-                                    [% IF ( refundLostItemFeeRule.rule_value == 'refund' ) %]
+    <div id="lost-item-rules" class="page-section">
+        <div id="refund-lost-item-fee-on-return" class="page-section">
+            [% IF current_branch == '*' %]
+                <h2>Default lost item fee refund on return policy</h2>
+            [% ELSE %]
+                <h2>Lost item fee refund on return policy for [% Branches.GetName(current_branch) | html %]</h2>
+            [% END %]
+            <p>Specify the default policy for lost item fees on return.</p>
+            <form method="post" action="/cgi-bin/koha/admin/smart-rules.pl">
+                [% INCLUDE 'csrf-token.inc' %]
+                <input type="hidden" name="op" value="cud-mod-refund-lost-item-fee-rule" />
+                <input type="hidden" name="branch" value="[% current_branch | html %]" />
+                <table>
+                    <tr>
+                        <th>Refund lost item replacement fee</th>
+                        <th>Refund lost item processing fee</th>
+                        <th>&nbsp;</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            <select name="lostreturn">
+                                [%# Default branch %]
+                                [% IF ( current_branch == '*' ) %]
+                                    [% IF ( defaultRefundRule == 'refund' ) %]
                                         <option value="refund" selected="selected">Refund lost item charge</option>
                                         <option value="refund_unpaid">Refund lost item charge (only if unpaid)</option>
                                         <option value="charge">Refund lost item charge and charge new overdue fine</option>
                                         <option value="restore">Refund lost item charge and restore overdue fine</option>
                                         <option value="0">Leave lost item charge</option>
-                                    [% ELSIF ( refundLostItemFeeRule.rule_value == 'refund_unpaid' ) %]
+                                    [% ELSIF ( defaultRefundRule == 'refund_unpaid' ) %]
                                         <option value="refund">Refund lost item charge</option>
                                         <option value="refund_unpaid" selected="selected">Refund lost item charge (only if unpaid)</option>
                                         <option value="charge">Refund lost item charge and charge new overdue fine</option>
                                         <option value="restore">Refund lost item charge and restore overdue fine</option>
                                         <option value="0">Leave lost item charge</option>
-                                    [% ELSIF ( refundLostItemFeeRule.rule_value == 'charge' ) %]
+                                    [% ELSIF ( defaultRefundRule == 'charge' ) %]
                                         <option value="refund">Refund lost item charge</option>
                                         <option value="refund_unpaid">Refund lost item charge (only if unpaid)</option>
                                         <option value="charge" selected="selected">Refund lost item charge and charge new overdue fine</option>
                                         <option value="restore">Refund lost item charge and restore overdue fine</option>
                                         <option value="0">Leave lost item charge</option>
-                                    [% ELSIF ( refundLostItemFeeRule.rule_value == 'restore' ) %]
+                                    [% ELSIF ( defaultRefundRule == 'restore' ) %]
                                         <option value="refund">Refund lost item charge</option>
                                         <option value="refund_unpaid">Refund lost item charge (only if unpaid)</option>
                                         <option value="charge">Refund lost item charge and charge new overdue fine</option>
                                         <option value="restore" selected="selected">Refund lost item charge and restore overdue fine</option>
                                         <option value="0">Leave lost item charge</option>
-                                    [% ELSIF ( refundLostItemFeeRule.rule_value == 0 ) %]
+                                    [% ELSIF ( defaultRefundRule == 0 ) %]
                                         <option value="refund">Refund lost item charge</option>
                                         <option value="refund_unpaid">Refund lost item charge (only if unpaid)</option>
                                         <option value="charge">Refund lost item charge and charge new overdue fine</option>
                                         <option value="restore">Refund lost item charge and restore overdue fine</option>
                                         <option value="0" selected="selected">Leave lost item charge</option>
-                                    [% END %]
-                                [% END %]
-                            [% END %]
-                        </select>
-                    </td>
-                    <td>
-                        <select name="processingreturn">
-                            [%# Default branch %]
-                            [% IF ( current_branch == '*' ) %]
-                                [% IF ( defaultProcessingRefundRule == 'refund' ) %]
-                                    <option value="refund" selected="selected">Refund lost item processing charge</option>
-                                    <option value="refund_unpaid">Refund lost item processing charge (only if unpaid)</option>
-                                    <option value="0">Leave lost item processing charge</option>
-                                [% ELSIF ( defaultProcessingRefundRule == 'refund_unpaid' ) %]
-                                    <option value="refund">Refund lost item charge</option>
-                                    <option value="refund_unpaid" selected="selected">Refund lost item processing charge (only if unpaid)</option>
-                                    <option value="0">Leave lost item processing charge</option>
-                                [% ELSIF ( defaultProcessingRefundRule == 0 ) %]
-                                    <option value="refund">Refund lost item processing charge</option>
-                                    <option value="refund_unpaid">Refund lost item processing charge (only if unpaid)</option>
-                                    <option value="0" selected="selected">Leave lost item processing charge</option>
-                                [% ELSE %]
-                                    <option value="refund">Refund lost item processing charge</option>
-                                    <option value="refund_unpaid">Refund lost item processing charge (only if unpaid)</option>
-                                    <option value="0">Leave lost item processing charge</option>
-                                [% END %]
-                            [% ELSE %]
-                                [%# Branch-specific %]
-                                <option value="*" [% IF ( not refundProcessingFeeRule ) %]selected="selected"[% END %]>
-                                    [% IF defaultProcessingRefundRule == 'refund' %]
-                                        <span>Use default (Refund lost item processing charge)</span>
-                                    [% ELSIF defaultProcessingRefundRule == 'refund_unpaid' %]
-                                        Use default (Refund lost item processing charge (only if unpaid))
                                     [% ELSE %]
-                                        <span>Use default (Leave lost item processing charge)</span>
+                                        <option value="refund">Refund lost item charge</option>
+                                        <option value="refund_unpaid">Refund lost item charge (only if unpaid)</option>
+                                        <option value="charge">Refund lost item charge and charge new overdue fine</option>
+                                        <option value="restore">Refund lost item charge and restore overdue fine</option>
+                                        <option value="0">Leave lost item charge</option>
                                     [% END %]
-                                </option>
-                                [% IF ( not refundProcessingFeeRule ) %]
-                                    <option value="refund">Refund lost item processing charge</option>
-                                    <option value="refund_unpaid">Refund lost item processing charge (only if unpaid)</option>
-                                    <option value="0">Leave lost item processing charge</option>
                                 [% ELSE %]
-                                    [% IF ( refundProcessingFeeRule.rule_value == 'refund' ) %]
+                                    [%# Branch-specific %]
+                                    <option value="*" [% IF ( not refundLostItemFeeRule ) %]selected="selected"[% END %]>
+                                        [% IF defaultRefundRule == 'refund' %]
+                                            <span>Use default (Refund lost item charge)</span>
+                                        [% ELSIF defaultRefundRule == 'refund_unpaid' %]
+                                            Use default (Refund lost item charge (only if unpaid))
+                                        [% ELSIF defaultRefundRule == 'charge' %]
+                                            <span>Use default (Refund lost item charge and charge new overdue fine)</span>
+                                        [% ELSIF defaultRefundRule == 'restore' %]
+                                            <span>Use default (Refund lost item charge and restore overdue fine)</span>
+                                        [% ELSE %]
+                                            <span>Use default (Leave lost item charge)</span>
+                                        [% END %]
+                                    </option>
+                                    [% IF ( not refundLostItemFeeRule ) %]
+                                        <option value="refund">Refund lost item charge</option>
+                                        <option value="refund_unpaid">Refund lost item charge (only if unpaid)</option>
+                                        <option value="charge">Refund lost item charge and charge new overdue fine</option>
+                                        <option value="restore">Refund lost item charge and restore overdue fine</option>
+                                        <option value="0">Leave lost item charge</option>
+                                    [% ELSE %]
+                                        [% IF ( refundLostItemFeeRule.rule_value == 'refund' ) %]
+                                            <option value="refund" selected="selected">Refund lost item charge</option>
+                                            <option value="refund_unpaid">Refund lost item charge (only if unpaid)</option>
+                                            <option value="charge">Refund lost item charge and charge new overdue fine</option>
+                                            <option value="restore">Refund lost item charge and restore overdue fine</option>
+                                            <option value="0">Leave lost item charge</option>
+                                        [% ELSIF ( refundLostItemFeeRule.rule_value == 'refund_unpaid' ) %]
+                                            <option value="refund">Refund lost item charge</option>
+                                            <option value="refund_unpaid" selected="selected">Refund lost item charge (only if unpaid)</option>
+                                            <option value="charge">Refund lost item charge and charge new overdue fine</option>
+                                            <option value="restore">Refund lost item charge and restore overdue fine</option>
+                                            <option value="0">Leave lost item charge</option>
+                                        [% ELSIF ( refundLostItemFeeRule.rule_value == 'charge' ) %]
+                                            <option value="refund">Refund lost item charge</option>
+                                            <option value="refund_unpaid">Refund lost item charge (only if unpaid)</option>
+                                            <option value="charge" selected="selected">Refund lost item charge and charge new overdue fine</option>
+                                            <option value="restore">Refund lost item charge and restore overdue fine</option>
+                                            <option value="0">Leave lost item charge</option>
+                                        [% ELSIF ( refundLostItemFeeRule.rule_value == 'restore' ) %]
+                                            <option value="refund">Refund lost item charge</option>
+                                            <option value="refund_unpaid">Refund lost item charge (only if unpaid)</option>
+                                            <option value="charge">Refund lost item charge and charge new overdue fine</option>
+                                            <option value="restore" selected="selected">Refund lost item charge and restore overdue fine</option>
+                                            <option value="0">Leave lost item charge</option>
+                                        [% ELSIF ( refundLostItemFeeRule.rule_value == 0 ) %]
+                                            <option value="refund">Refund lost item charge</option>
+                                            <option value="refund_unpaid">Refund lost item charge (only if unpaid)</option>
+                                            <option value="charge">Refund lost item charge and charge new overdue fine</option>
+                                            <option value="restore">Refund lost item charge and restore overdue fine</option>
+                                            <option value="0" selected="selected">Leave lost item charge</option>
+                                        [% END %]
+                                    [% END %]
+                                [% END %]
+                            </select>
+                        </td>
+                        <td>
+                            <select name="processingreturn">
+                                [%# Default branch %]
+                                [% IF ( current_branch == '*' ) %]
+                                    [% IF ( defaultProcessingRefundRule == 'refund' ) %]
                                         <option value="refund" selected="selected">Refund lost item processing charge</option>
                                         <option value="refund_unpaid">Refund lost item processing charge (only if unpaid)</option>
                                         <option value="0">Leave lost item processing charge</option>
-                                    [% ELSIF ( refundProcessingFeeRule.rule_value == 'refund_unpaid' ) %]
-                                        <option value="refund">Refund lost item processing charge</option>
+                                    [% ELSIF ( defaultProcessingRefundRule == 'refund_unpaid' ) %]
+                                        <option value="refund">Refund lost item charge</option>
                                         <option value="refund_unpaid" selected="selected">Refund lost item processing charge (only if unpaid)</option>
                                         <option value="0">Leave lost item processing charge</option>
-                                    [% ELSIF ( refundProcessingFeeRule.rule_value == 0 ) %]
+                                    [% ELSIF ( defaultProcessingRefundRule == 0 ) %]
                                         <option value="refund">Refund lost item processing charge</option>
                                         <option value="refund_unpaid">Refund lost item processing charge (only if unpaid)</option>
                                         <option value="0" selected="selected">Leave lost item processing charge</option>
+                                    [% ELSE %]
+                                        <option value="refund">Refund lost item processing charge</option>
+                                        <option value="refund_unpaid">Refund lost item processing charge (only if unpaid)</option>
+                                        <option value="0">Leave lost item processing charge</option>
+                                    [% END %]
+                                [% ELSE %]
+                                    [%# Branch-specific %]
+                                    <option value="*" [% IF ( not refundProcessingFeeRule ) %]selected="selected"[% END %]>
+                                        [% IF defaultProcessingRefundRule == 'refund' %]
+                                            <span>Use default (Refund lost item processing charge)</span>
+                                        [% ELSIF defaultProcessingRefundRule == 'refund_unpaid' %]
+                                            Use default (Refund lost item processing charge (only if unpaid))
+                                        [% ELSE %]
+                                            <span>Use default (Leave lost item processing charge)</span>
+                                        [% END %]
+                                    </option>
+                                    [% IF ( not refundProcessingFeeRule ) %]
+                                        <option value="refund">Refund lost item processing charge</option>
+                                        <option value="refund_unpaid">Refund lost item processing charge (only if unpaid)</option>
+                                        <option value="0">Leave lost item processing charge</option>
+                                    [% ELSE %]
+                                        [% IF ( refundProcessingFeeRule.rule_value == 'refund' ) %]
+                                            <option value="refund" selected="selected">Refund lost item processing charge</option>
+                                            <option value="refund_unpaid">Refund lost item processing charge (only if unpaid)</option>
+                                            <option value="0">Leave lost item processing charge</option>
+                                        [% ELSIF ( refundProcessingFeeRule.rule_value == 'refund_unpaid' ) %]
+                                            <option value="refund">Refund lost item processing charge</option>
+                                            <option value="refund_unpaid" selected="selected">Refund lost item processing charge (only if unpaid)</option>
+                                            <option value="0">Leave lost item processing charge</option>
+                                        [% ELSIF ( refundProcessingFeeRule.rule_value == 0 ) %]
+                                            <option value="refund">Refund lost item processing charge</option>
+                                            <option value="refund_unpaid">Refund lost item processing charge (only if unpaid)</option>
+                                            <option value="0" selected="selected">Leave lost item processing charge</option>
+                                        [% END %]
                                     [% END %]
                                 [% END %]
-                            [% END %]
-                        </select>
-                    </td>
-                    <td class="actions">
-                        <button type="submit" class="btn btn-default btn-xs"><i class="fa fa-save"></i> Save</button>
-                    </td>
-                </tr>
-            </table>
-        </form>
+                            </select>
+                        </td>
+                        <td class="actions">
+                            <button type="submit" class="btn btn-default btn-xs"><i class="fa fa-save"></i> Save</button>
+                        </td>
+                    </tr>
+                </table>
+            </form>
+        </div>
+        <div id="lost-item-fee-rules" class="page-section">
+            [% IF current_branch == '*' %]
+                <h2>Default lost item fee policy</h2>
+            [% ELSE %]
+                <h2>Lost item fee policy for [% Branches.GetName(current_branch) | html %]</h2>
+            [% END %]
+            <p>Specify the default policy for lost item fees.</p>
+            <form id="lost_item_processing_fee_form" method="post" action="/cgi-bin/koha/admin/smart-rules.pl">
+                [% INCLUDE 'csrf-token.inc' %]
+                <input type="hidden" name="op" value="cud-mod-lost-item-fee-rule" />
+                <input type="hidden" name="branch" value="[% current_branch | html %]" />
+                <table>
+                    <tr>
+                        <th>Item type</th>
+                        <th>Lost item processing fee</th>
+                        <th>&nbsp;</th>
+                    </tr>
+                    [% SET c = undef %]
+                    [% FOREACH i IN itemtypes %]
+                        [% SET lost_item_processing_fee = all_rules.$c.$i.lost_item_processing_fee %]
+
+                        [% IF ( lost_item_processing_fee.defined && lost_item_processing_fee != '' ) %]
+                            <tr>
+                                <td>
+                                    [% IF i == undef %]
+                                        <em>All</em>
+                                    [% ELSE %]
+                                        [% ItemTypes.GetDescription(i,1) | html %]
+                                    [% END %]
+                                </td>
+                                <td> [% lost_item_processing_fee | $Price %] </td>
+                                <td class="actions">
+                                    <a href="#" class="delete-lost-item-processing-fee btn btn-default btn-xs" data-categorycode="[% '*' | html %]" data-itemtype="[% i || '*' | html %]" data-branch="[% current_branch | html %]"
+                                        ><i class="fa fa-trash-can"></i> Delete</a
+                                    >
+                                </td>
+                            </tr>
+                        [% END %]
+                    [% END %]
+                    <tr>
+                        <td>
+                            <select name="lost_item_processing_fee_itemtype" id="lost_item_processing_fee_itemtype">
+                                <option value="*">All</option>
+                                [% FOREACH i IN itemtypeloop %]
+                                    <option value="[% i.itemtype | html %]">[% ItemTypes.GetDescription(i.itemtype) | html %]</option>
+                                [% END %]
+                            </select>
+                        </td>
+                        <td><input name="lost_item_processing_fee" size="5" type="text" inputmode="decimal" pattern="^\d+(\.\d{2})?$" /></td>
+                        <td class="actions"
+                            ><button type="submit" class="btn btn-default btn-xs"><i class="fa fa-plus"></i> Add</button></td
+                        >
+                    </tr>
+                </table>
+            </form>
+        </div>
     </div>
 
     <div id="holds-policy-by-item-type" class="page-section">
@@ -1486,6 +1544,11 @@
                 paging: false,
                 autoWidth: false,
             });
+        });
+        $("#lost_item_processing_fee_form").validate({
+            rules: {
+                lost_item_processing_fee: { required: true, number: true },
+            },
         });
 
         function clear_edit() {
@@ -1701,6 +1764,18 @@
                 let f = $("#delete_form");
                 f.find("[name='op']").val("cud-delete-branch-cat");
                 f.find("[name='categorycode']").val($(this).data("categorycode"));
+                f.find("[name='branch']").val($(this).data("branch"));
+                return f.submit();
+            });
+
+            $(".delete-lost-item-processing-fee").on("click", function (e) {
+                e.preventDefault();
+                if (!confirmDelete(MSG_CONFIRM_DELETE)) {
+                    return false;
+                }
+                let f = $("#delete_form");
+                f.find("[name='op']").val("cud-delete-lost-item-processing-fee");
+                f.find("[name='itemtype']").val($(this).data("itemtype"));
                 f.find("[name='branch']").val($(this).data("branch"));
                 return f.submit();
             });
