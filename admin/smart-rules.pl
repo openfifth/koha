@@ -223,6 +223,17 @@ if ( $op eq 'cud-delete' ) {
             }
         }
     );
+} elsif ( $op eq 'cud-delete-lost-item-processing-fee' ) {
+    my $itemtype = $input->param('itemtype');
+    Koha::CirculationRules->set_rules(
+        {
+            branchcode => $branch eq '*' ? undef : $branch,
+            itemtype   => $itemtype,
+            rules      => {
+                lost_item_processing_fee => undef,
+            }
+        }
+    );
 }
 
 # save the values entered
@@ -530,6 +541,19 @@ elsif ( $op eq 'cud-add' ) {
             }
         );
     }
+} elsif ( $op eq 'cud-mod-lost-item-fee-rule' ) {
+
+    my $lost_item_processing_fee_itemtype = $input->param('lost_item_processing_fee_itemtype');
+    my $lost_item_processing_fee          = $input->param('lost_item_processing_fee');
+
+    Koha::CirculationRules->set_rules(
+        {
+            branchcode => $branch,
+            itemtype   => $lost_item_processing_fee_itemtype,
+            rules      => { lost_item_processing_fee => $lost_item_processing_fee }
+        }
+    ) unless $lost_item_processing_fee eq '';
+
 } elsif ( $op eq "cud-set-waiting-hold-cancellation" ) {
 
     my $category = $input->param('waiting_hold_cancellation_category');
