@@ -56,6 +56,10 @@ our $RULE_KINDS = {
     processingreturn => {
         scope => ['branchcode'],
     },
+    lost_item_processing_fee => {
+        scope        => [ 'branchcode', 'itemtype' ],
+        can_be_blank => 0,
+    },
     patron_maxissueqty => {
         scope => [ 'branchcode', 'categorycode' ],
     },
