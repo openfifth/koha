@@ -1,6 +1,7 @@
 import HttpClient from "./http-client";
 
 import ERMAPIClient from "@fetch/erm-api-client";
+import ILLAPIClient from "@fetch/ill-api-client";
 import PatronAPIClient from "@fetch/patron-api-client";
 import AcquisitionAPIClient from "@fetch/acquisition-api-client";
 import AdditionalFieldsAPIClient from "@fetch/additional-fields-api-client";
@@ -14,6 +15,7 @@ import PreservationAPIClient from "@fetch/preservation-api-client";
 
 export const APIClient = {
     erm: new ERMAPIClient(HttpClient),
+    ill: new ILLAPIClient(HttpClient),
     patron: new PatronAPIClient(HttpClient),
     acquisition: new AcquisitionAPIClient(HttpClient),
     additional_fields: new AdditionalFieldsAPIClient(HttpClient),
