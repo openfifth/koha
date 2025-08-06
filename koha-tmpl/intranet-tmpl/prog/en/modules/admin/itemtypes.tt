@@ -307,10 +307,6 @@
                         <input type="text" id="defaultreplacecost" name="defaultreplacecost" size="10" value="[% itemtype.defaultreplacecost | $Price on_editing => 1 %]" min="0" />
                     </li>
                     <li>
-                        <label for="processfee">Processing fee (when lost): </label>
-                        <input type="text" id="processfee" name="processfee" size="10" value="[% itemtype.processfee | $Price on_editing => 1 %]" min="0" />
-                    </li>
-                    <li>
                         <label for="checkinmsg">Checkin message: </label>
                         <textarea id="checkinmsg" name="checkinmsg" cols="55" rows="5">[% itemtype.checkinmsg | html %]</textarea>
                     </li>
@@ -439,7 +435,6 @@
                         <th>Daily rental charge</th>
                         <th>Hourly rental charge</th>
                         <th>Default replacement cost</th>
-                        <th>Processing fee (when lost)</th>
                         <th>Checkin message</th>
                         <th>Library limitations</th>
                         <th>Automatic check-in</th>
@@ -516,7 +511,6 @@
                             </td>
 
                             <td>[% itemtype.defaultreplacecost | $Price %]</td>
-                            <td>[% itemtype.processfee | $Price %]</td>
                             <td>[% itemtype.checkinmsg | html_line_break | $raw %]</td>
                             <td>
                                 [% SET library_limits = itemtype.library_limits %]
@@ -582,8 +576,7 @@
                    description: { required: true },
                    rentalcharge: { number: true },
                    rentalcharge_hourly: { number: true },
-                   defaultreplacecost: { number: true },
-                   processfee: { number: true }
+                   defaultreplacecost: { number: true }
                }
            });
            $("#itemtype").on("blur",function(){
