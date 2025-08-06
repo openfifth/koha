@@ -133,6 +133,10 @@ module.exports = [
                 "./koha-tmpl/intranet-tmpl/prog/js/vue/csp-nonce.js",
                 "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/sip2.ts",
             ],
+            ill: [
+                "./koha-tmpl/intranet-tmpl/prog/js/vue/csp-nonce.js",
+                "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/ill.ts",
+            ],
         },
         output: {
             filename: "[name].js",
