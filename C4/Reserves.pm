@@ -2204,6 +2204,8 @@ sub RevertWaitingStatus {
 
     _FixPriority( { biblionumber => $hold->biblionumber } );
 
+    $hold->remove_as_hold_group_target();
+
     Koha::BackgroundJob::BatchUpdateBiblioHoldsQueue->new->enqueue( { biblio_ids => [ $hold->biblionumber ] } )
         if C4::Context->preference('RealTimeHoldsQueue');
 
