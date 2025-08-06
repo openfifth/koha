@@ -139,6 +139,11 @@ properties:
       - object
       - "null"
     description: Pickup library
+  hold_group_id:
+    type:
+      - integer
+      - "null"
+    description: Hold group identifier
   _strings:
     type:
       - object
