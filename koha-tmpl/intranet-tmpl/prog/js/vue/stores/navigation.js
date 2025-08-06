@@ -190,7 +190,12 @@ export const useNavigationStore = defineStore("navigation", () => {
             }
         }),
         leftNavigation: computed(() => {
-            const currentRoute = store.current[store.current.length - 1];
+            const currentRoute =
+                // FIXME: This validation shouldn't be needed (?) i.e. store.current should always have something ? But it doesnt for /cgi-bin/koha/ill/ill.pl
+                store.current && store.current.length > 0
+                    ? store.current[store.current.length - 1]
+                    : undefined;
+
             if (currentRoute) {
                 const alternateMenuRequired =
                     currentRoute.meta.self.alternateLeftMenu;
