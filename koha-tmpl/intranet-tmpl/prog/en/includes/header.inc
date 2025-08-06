@@ -56,7 +56,7 @@
                         [% END %]
                         <li><a class="dropdown-item" href="/cgi-bin/koha/authorities/authorities-home.pl">Authorities</a></li>
                         [% IF Koha.Preference('ILLModule') && CAN_user_ill %]
-                            <li><a class="dropdown-item" href="/cgi-bin/koha/ill/ill-requests.pl">ILL requests</a></li>
+                            <li><a class="dropdown-item" href="/cgi-bin/koha/ill/ill.pl">Interlibrary loans</a></li>
                         [% END %]
                         [% IF ( CAN_user_serials ) %]
                             <li><a class="dropdown-item" href="/cgi-bin/koha/serials/serials-home.pl">Serials</a></li>

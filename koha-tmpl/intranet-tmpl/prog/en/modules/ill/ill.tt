@@ -1,0 +1,35 @@
+[% USE raw %]
+[% USE To %]
+[% USE Asset %]
+[% USE KohaDates %]
+[% USE TablesSettings %]
+[% PROCESS 'i18n.inc' %]
+[% SET footerjs = 1 %]
+[% PROCESS 'patron-search.inc' %]
+[% INCLUDE 'doc-head-open.inc' %]
+<title
+    >[% FILTER collapse %]
+        [% t("Interlibrary loans") | html %]
+        &rsaquo; [% t("Koha") | html %]
+    [% END %]</title
+>
+[% INCLUDE 'doc-head-close.inc' %]
+</head>
+
+<body id="ill_module" class="ill">
+[% WRAPPER 'header.inc' %]
+    [% INCLUDE 'cat-search.inc' %]
+[% END %]
+
+<div id="ill"></div>
+
+[% MACRO jsinclude BLOCK %]
+    [% INCLUDE 'calendar.inc' %]
+    [% INCLUDE 'datatables.inc' %]
+    [% INCLUDE 'js-date-format.inc' %]
+    <script nonce="[% Koha.CSPNonce | $raw %]">
+        const supplying_ill_table_settings = [% TablesSettings.GetTableSettings( 'illrequests', 'ill-requests', 'ill-requests', 'json' ) | $raw %];
+    </script>
+    [% Asset.js("js/vue/dist/ill.js") | $raw %]
+[% END %]
+[% INCLUDE 'intranet-bottom.inc' %]

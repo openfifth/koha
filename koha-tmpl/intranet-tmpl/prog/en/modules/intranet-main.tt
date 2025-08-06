@@ -115,7 +115,7 @@
                         </li>
                         [% IF Koha.Preference('ILLModule') && CAN_user_ill %]
                             <li>
-                                <a class="icon_general icon_ill" href="/cgi-bin/koha/ill/ill-requests.pl"><i class="fa fa-fw fa-retweet"></i>ILL requests</a>
+                                <a class="icon_general icon_ill" href="/cgi-bin/koha/ill/ill.pl"><i class="fa fa-fw fa-retweet"></i>Interlibrary loans</a>
                             </li>
                         [% END %]
 
