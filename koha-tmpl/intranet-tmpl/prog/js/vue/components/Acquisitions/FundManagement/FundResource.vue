@@ -21,9 +21,7 @@ export default {
         route: Object,
     },
     setup(props) {
-        const isSubFund = ref(
-            props.route.path.includes("sub_fund") ? true : false
-        );
+        const isSubFund = ref(props.route.query.fund_id ? true : false);
 
         const patron_to_html = $patron_to_html;
 
@@ -38,8 +36,10 @@ export default {
         } = acquisitionsStore;
 
         const ledgersQuery = ref({});
+        const fundsQuery = ref({});
         const fundGroupsQuery = ref({});
         const getLedgersQuery = computed(() => ledgersQuery.value);
+        const getFundsQuery = computed(() => fundsQuery.value);
         const getFundGroupsQuery = computed(() => fundGroupsQuery.value);
 
         const filterLibGroupsAndFundGroupsBySelectedLedger = (
@@ -47,11 +47,13 @@ export default {
             options,
             resource
         ) => {
-            if (isSubFund.value) return;
             if (!e && resource.ledger_id) {
                 fundGroupsQuery.value = {
                     currency: resource.currency,
                     lib_group_visibility: resource.lib_group_visibility,
+                };
+                fundsQuery.value = {
+                    ledger_id: resource.ledger_id,
                 };
                 const applicableGroups = formatLibraryGroupIds(
                     resource.ledger.lib_group_visibility
@@ -73,6 +75,9 @@ export default {
                 fundGroupsQuery.value = {
                     currency: selectedLedger.currency,
                     lib_group_visibility: applicableGroups,
+                };
+                fundsQuery.value = {
+                    ledger_id: e,
                 };
             }
         };
@@ -101,37 +106,24 @@ export default {
         const defaultToolbarButtons = (defaultButtons, resource, router) => {
             return {
                 list: defaultButtons.list,
-                show: defaultButtons.show.map(button => {
-                    if (!isSubFund.value) return button;
-                    if (button.action === "edit") {
-                        return {
-                            action: "edit",
-                            onClick: () => {
-                                router.push({
-                                    name: "SubFundFormAddEdit",
-                                    params: {
-                                        fund_id: resource.fund_id,
-                                        sub_fund_id: resource.sub_fund_id,
-                                    },
-                                });
-                            },
-                            title: $__("Edit"),
-                            index: 0,
-                        };
-                    }
-                    return button;
-                }),
+                show: !resource.sub_funds?.length
+                    ? defaultButtons.show
+                    : defaultButtons.show.filter(
+                          button => button.action !== "delete"
+                      ),
             };
         };
 
         const additionalToolbarButtons = resource => {
             return {
                 show: [
-                    ...(!isSubFund.value &&
-                    resource?.fund_allocations?.length === 0
+                    ...(!isSubFund.value
                         ? [
                               {
-                                  to: { name: "SubFundFormAdd" },
+                                  to: {
+                                      name: "FundFormAdd",
+                                      query: { fund_id: resource.fund_id },
+                                  },
                                   icon: "plus",
                                   title: $__("Add sub fund"),
                               },
@@ -155,33 +147,22 @@ export default {
         };
 
         const baseResource = useBaseResource({
-            resourceName: isSubFund.value ? "sub_fund" : "fund",
+            resourceName: "fund",
             nameAttr: "name",
-            idAttr: isSubFund.value ? "sub_fund_id" : "fund_id",
-            showComponent: isSubFund.value ? "SubFundShow" : "FundShow",
+            idAttr: "fund_id",
+            showComponent: "FundShow",
             listComponent: "FundList",
-            addComponent: isSubFund.value ? "SubFundFormAdd" : "FundFormAdd",
-            editComponent: isSubFund.value
-                ? "SubFundFormAddEdit"
-                : "FundFormAddEdit",
-            apiClient: isSubFund.value
-                ? APIClient.acquisition.subFunds
-                : APIClient.acquisition.funds,
-            resourceTableUrl:
-                APIClient.acquisition._baseURL + isSubFund.value
-                    ? "sub_funds"
-                    : "funds",
+            addComponent: "FundFormAdd",
+            editComponent: "FundFormAddEdit",
+            apiClient: APIClient.acquisition.funds,
+            resourceTableUrl: APIClient.acquisition._baseURL + "funds",
             i18n: {
-                deleteConfirmationMessage: isSubFund.value
-                    ? $__("Are you sure you want to remove this sub fund?")
-                    : $__("Are you sure you want to remove this fund?"),
-                deleteSuccessMessage: isSubFund.value
-                    ? $__("Sub fund %s deleted")
-                    : $__("Fund %s deleted"),
-                displayName: isSubFund.value ? $__("Sub fund") : $__("Fund"),
-                editLabel: isSubFund.value
-                    ? $__("Edit sub fund #%s")
-                    : $__("Edit fund #%s"),
+                deleteConfirmationMessage: $__(
+                    "Are you sure you want to remove this fund?"
+                ),
+                deleteSuccessMessage: $__("Fund %s deleted"),
+                displayName: $__("Fund"),
+                editLabel: $__("Edit fund #%s"),
                 emptyListMessage: $__("There are no funds defined"),
                 newLabel: isSubFund.value
                     ? $__("New sub fund")
@@ -192,23 +173,12 @@ export default {
             defaultToolbarButtons,
             additionalToolbarButtons,
             resourceAttrs: [
-                ...(isSubFund.value
-                    ? [
-                          {
-                              name: "sub_fund_id",
-                              label: $__("ID"),
-                              type: "text",
-                              hideIn: ["Form", "Show"],
-                          },
-                      ]
-                    : [
-                          {
-                              name: "fund_id",
-                              label: $__("ID"),
-                              type: "text",
-                              hideIn: ["Form", "Show"],
-                          },
-                      ]),
+                {
+                    name: "fund_id",
+                    label: $__("ID"),
+                    type: "text",
+                    hideIn: ["Form", "Show"],
+                },
                 {
                     name: "name",
                     required: true,
@@ -276,6 +246,32 @@ export default {
                                       name: "LedgerShow",
                                       params: {
                                           ledger_id: "ledger_id",
+                                      },
+                                  },
+                              },
+                              hideIn: ["List"],
+                          },
+                      ]
+                    : []),
+                ...(!isSubFund.value
+                    ? [
+                          {
+                              name: "fund_parent_id",
+                              type: "relationshipSelect",
+                              label: $__("Parent fund"),
+                              relationshipAPIClient:
+                                  APIClient.acquisition.funds,
+                              relationshipOptionLabelAttr: "name",
+                              relationshipRequiredKey: "fund_id",
+                              query: getFundsQuery,
+                              disabled: resource => !resource.fiscal_period_id,
+                              showElement: {
+                                  type: "text",
+                                  value: "parent_fund.name",
+                                  link: {
+                                      name: "FundShow",
+                                      params: {
+                                          fund_id: "parent_fund_id",
                                       },
                                   },
                               },
@@ -443,23 +439,22 @@ export default {
         const tableURL = () => {
             if (props.embedded) {
                 const id = isSubFund.value
-                    ? baseResource.route.params.fund_id
+                    ? baseResource.route.params.fund_parent_id
                     : baseResource.route.params.ledger_id;
                 const query = {};
-                query["me." + (isSubFund.value ? "fund_id" : "ledger_id")] = id;
-                return (
-                    `/api/v1/acquisitions/${isSubFund.value ? "sub_funds" : "funds"}?q=` +
-                    JSON.stringify(query)
-                );
+                query[
+                    "me." + (isSubFund.value ? "fund_parent_id" : "ledger_id")
+                ] = id;
+                return `/api/v1/acquisitions/funds?q=` + JSON.stringify(query);
             }
-            return `/api/v1/acquisitions/${isSubFund.value ? "sub_funds" : "funds"}`;
+            return `/api/v1/acquisitions/funds`;
         };
 
         const tableOptions = {
             url: tableURL(),
             table_settings: null,
             add_filters: true,
-            options: { embed: "fund_allocations" },
+            options: { embed: "sub_funds,fund_allocations" },
             add_filters: true,
             ...(!props.embedded && {
                 actions: {
@@ -469,7 +464,16 @@ export default {
                             ? ["edit"]
                             : []),
                         ...(baseResource.isUserPermitted("deleteFund")
-                            ? ["delete"]
+                            ? [
+                                  {
+                                      delete: {
+                                          text: $__("Delete"),
+                                          icon: "fa fa-trash",
+                                          should_display: row =>
+                                              row.sub_funds.length == 0,
+                                      },
+                                  },
+                              ]
                             : []),
                     ],
                 },
@@ -489,7 +493,7 @@ export default {
             }
 
             const fund = JSON.parse(JSON.stringify(fundToSave));
-            const fund_id = isSubFund.value ? fund.sub_fund_id : fund.fund_id;
+            const fund_id = fund.fund_id;
 
             const oe_warning_percent = fund.oe_warning_percent;
             fund.oe_warning_percent = oe_warning_percent / 100;
@@ -497,33 +501,37 @@ export default {
             if (!isSubFund.value) {
                 delete fund.fund_id;
             } else {
-                delete fund.sub_fund_id;
-                fund.fund_id = baseResource.route.params.fund_id;
+                delete fund.fund_id;
+                fund.fund_parent_id =
+                    baseResource.route.query.fund_id || fund.fund_id;
             }
             delete fund.last_updated;
+            delete fund.owner;
+            delete fund.lib_group_limits;
+            delete fund.fund_allocations;
+            delete fund.ledger;
+            delete fund.fund_group;
+            delete fund.fiscal_period;
+            delete fund.sub_funds;
 
             if (fund_id) {
                 const acq_client = APIClient.acquisition;
-                acq_client[isSubFund.value ? "subFunds" : "funds"]
-                    .update(fund, fund_id)
-                    .then(
-                        success => {
-                            baseResource.setMessage($__("Fund updated"));
-                            baseResource.router.push({ name: "FundList" });
-                        },
-                        error => {}
-                    );
+                acq_client.funds.update(fund, fund_id).then(
+                    success => {
+                        baseResource.setMessage($__("Fund updated"));
+                        baseResource.router.push({ name: "FundList" });
+                    },
+                    error => {}
+                );
             } else {
                 const acq_client = APIClient.acquisition;
-                acq_client[isSubFund.value ? "subFunds" : "funds"]
-                    .create(fund)
-                    .then(
-                        success => {
-                            baseResource.setMessage($__("Fund created"));
-                            baseResource.router.push({ name: "FundList" });
-                        },
-                        error => {}
-                    );
+                acq_client.funds.create(fund).then(
+                    success => {
+                        baseResource.setMessage($__("Fund created"));
+                        baseResource.router.push({ name: "FundList" });
+                    },
+                    error => {}
+                );
             }
         };
 
@@ -659,30 +667,22 @@ export default {
                                   filters: {
                                       type: "filter",
                                       keys: {
-                                          ...(isSubFund.value
-                                              ? {
-                                                    sub_fund_id: {
-                                                        property: "sub_fund_id",
-                                                    },
-                                                }
-                                              : {
-                                                    fund_id: {
-                                                        property: "fund_id",
-                                                    },
-                                                }),
+                                          fund_id: {
+                                              property: "fund_id",
+                                          },
                                       },
                                   },
-                                  resource: {
-                                      type: "resource",
-                                  },
-                                  resourceName: {
-                                      type: "string",
-                                      value: "allocation",
-                                  },
-                                  resourceNamePlural: {
-                                      type: "string",
-                                      value: "allocations",
-                                  },
+                              },
+                              resource: {
+                                  type: "resource",
+                              },
+                              resourceName: {
+                                  type: "string",
+                                  value: "allocation",
+                              },
+                              resourceNamePlural: {
+                                  type: "string",
+                                  value: "allocations",
                               },
                           },
                       ]
@@ -701,7 +701,7 @@ export default {
                                           columns: [
                                               {
                                                   title: __("Name"),
-                                                  data: "name:sub_fund_id",
+                                                  data: "name:fund_id",
                                                   searchable: true,
                                                   orderable: true,
                                                   render: function (
@@ -711,8 +711,8 @@ export default {
                                                       meta
                                                   ) {
                                                       return (
-                                                          '<a href="/cgi-bin/koha/fund_management/fund/sub_fund/' +
-                                                          row.sub_fund_id +
+                                                          '<a href="/cgi-bin/koha/fund_management/fund/' +
+                                                          row.fund_id +
                                                           '" class="show">' +
                                                           escape_str(
                                                               `${row.name}`
@@ -745,7 +745,7 @@ export default {
                                               },
                                               {
                                                   title: __("Fund value"),
-                                                  data: "sub_fund_value",
+                                                  data: "fund_value",
                                                   searchable: true,
                                                   orderable: true,
                                                   render: function (
@@ -755,7 +755,7 @@ export default {
                                                       meta
                                                   ) {
                                                       return formatValueWithCurrency(
-                                                          row.sub_fund_value,
+                                                          row.fund_value,
                                                           row.currency
                                                       );
                                                   },
@@ -763,7 +763,7 @@ export default {
                                           ],
                                           url:
                                               APIClient.acquisition.httpClient
-                                                  ._baseURL + "sub_funds",
+                                                  ._baseURL + "funds",
                                           table_settings: null,
                                           add_filters: true,
                                           actions: {
@@ -773,7 +773,7 @@ export default {
                                   },
                                   apiClient: {
                                       type: "object",
-                                      value: APIClient.acquisition.subFunds,
+                                      value: APIClient.acquisition.funds,
                                   },
                                   filters: {
                                       type: "filter",
@@ -800,6 +800,11 @@ export default {
         };
 
         const afterNewResourceCreate = (resource, componentData) => {
+            if (componentData.route.query.fund_id) {
+                resource.fund_parent_id = parseInt(
+                    componentData.route.query.fund_id
+                );
+            }
             if (componentData.route.query.ledger_id) {
                 resource.ledger_id = parseInt(
                     componentData.route.query.ledger_id

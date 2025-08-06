@@ -193,6 +193,13 @@ sub delete {
     return $c->render_resource_not_found("Fund")
         unless $fund;
 
+    if ( $fund->has_sub_funds ) {
+        return $c->render(
+            status  => 400,
+            openapi => { error => "Fund has sub funds" }
+        );
+    }
+
     return try {
         $fund->delete;
         return $c->render_resource_deleted;
@@ -204,6 +211,14 @@ sub delete {
 sub _inherit_currency_and_owner {
     my ($fund) = @_;
 
+    if ( $fund->{fund_parent_id} ) {
+        my $parent = Koha::Acquisition::FundManagement::Funds->find( $fund->{fund_parent_id} );
+        $fund->{currency}         = $parent->currency;
+        $fund->{owner_id}         = $parent->owner_id;
+        $fund->{ledger_id}        = $parent->ledger_id;
+        $fund->{fiscal_period_id} = $parent->fiscal_period_id;
+        return $fund;
+    }
     my $ledger = Koha::Acquisition::FundManagement::Ledgers->find( { ledger_id => $fund->{ledger_id} } );
 
     $fund->{currency} = $ledger->currency;

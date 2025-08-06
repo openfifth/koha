@@ -61,9 +61,27 @@ sub delete {
 
     my $deleted = $self->_result()->delete;
 
-    my $ledger = $self->ledger;
-
     return $self;
+}
+
+=head3 sub_funds
+
+Returns any sub funds with any further nested funds embedded
+
+=cut
+
+sub sub_funds {
+    my ( $self, $args ) = @_;
+
+    my $embed_children = $args->{embed_children} || 1;
+
+    my $sub_funds = Koha::Acquisition::FundManagement::Funds->search( { fund_parent_id => $self->fund_id } );
+
+    if ($embed_children) {
+        $sub_funds = _embed_child_funds( { sub_funds => $sub_funds } );
+    }
+
+    return $sub_funds;
 }
 
 =head3 has_sub_funds
@@ -75,9 +93,9 @@ Checks if a fund has sub funds
 sub has_sub_funds {
     my ( $self, $args ) = @_;
 
-    my $sub_fund_count = $self->sub_funds->count;
+    my $sub_funds = $self->sub_funds( { embed_children => 0 } );
 
-    return 1 if scalar( $sub_fund_count > 0 );
+    return 1 if scalar( @{$sub_funds} ) > 0;
     return 0;
 }
 
@@ -121,11 +139,11 @@ This method cascades changes to the values of the "lib_group_visibility" and "st
 sub cascade_to_sub_funds {
     my ( $self, $args ) = @_;
 
-    my @sub_funds            = $self->sub_funds->as_list;
+    my $sub_funds            = $self->sub_funds;
     my $lib_group_visibility = $self->lib_group_visibility;
     my $status               = $self->status;
 
-    foreach my $sub_fund (@sub_funds) {
+    foreach my $sub_fund (@$sub_funds) {
         my $visibility_updated = $self->cascade_lib_group_visibility(
             {
                 parent_visibility => $lib_group_visibility,
@@ -184,6 +202,27 @@ sub _library_group_visibility_parameters {
 
 sub _type {
     return 'Fund';
+}
+
+=head3 _embed_child_funds
+
+Recursively finds child funds and adds them to an array for embedding
+
+=cut
+
+sub _embed_child_funds {
+    my ($args) = @_;
+
+    my $sub_funds     = $args->{sub_funds};
+    my $sub_fund_list = $args->{sub_fund_list} || [];
+
+    foreach my $sub_fund ( $sub_funds->as_list ) {
+        my $child_funds = Koha::Acquisition::FundManagement::Funds->search( { fund_parent_id => $sub_fund->fund_id } );
+        push( @$sub_fund_list, $sub_fund );
+        _embed_child_funds( { sub_funds => $child_funds, sub_fund_list => $sub_fund_list } );
+    }
+
+    return $sub_fund_list;
 }
 
 1;
