@@ -36,7 +36,7 @@ foreign key, linking this to the hold_groups table
 
   data_type: 'integer'
   is_foreign_key: 1
-  is_nullable: 1
+  is_nullable: 0
 
 foreign key, linking this to the reserves table
 
@@ -51,8 +51,22 @@ __PACKAGE__->add_columns(
     is_nullable => 0,
   },
   "reserve_id",
-  { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
+  { data_type => "integer", is_foreign_key => 1, is_nullable => 0 },
 );
+
+=head1 PRIMARY KEY
+
+=over 4
+
+=item * L</hold_group_id>
+
+=item * L</reserve_id>
+
+=back
+
+=cut
+
+__PACKAGE__->set_primary_key("hold_group_id", "reserve_id");
 
 =head1 UNIQUE CONSTRAINTS
 
@@ -109,17 +123,12 @@ __PACKAGE__->belongs_to(
   "reserve",
   "Koha::Schema::Result::Reserve",
   { reserve_id => "reserve_id" },
-  {
-    is_deferrable => 1,
-    join_type     => "LEFT",
-    on_delete     => "CASCADE",
-    on_update     => "RESTRICT",
-  },
+  { is_deferrable => 1, on_delete => "CASCADE", on_update => "RESTRICT" },
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-07-25 13:10:48
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:xgRnzTXH+Q+YxYLKQeGe+g
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-08-06 15:04:39
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:UD9tr/ceHggVl1rRrimtVg
 
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration
