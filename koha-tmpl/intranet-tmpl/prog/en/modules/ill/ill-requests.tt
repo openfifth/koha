@@ -31,6 +31,9 @@
 
 [% WRAPPER 'sub-header.inc' %]
     [% WRAPPER breadcrumbs %]
+        [% WRAPPER breadcrumb_item %]
+            <a href="/cgi-bin/koha/ill/ill.pl">ILL module</a>
+        [% END %]
         [% WRAPPER breadcrumb_item bc_active = (op == 'illlist' || op == 'batch_list' ? 1 : 0) %]
             [% IF op == 'batch_list' %]
                 <a href="/cgi-bin/koha/ill/ill-requests.pl">ILL batch requests</a>
