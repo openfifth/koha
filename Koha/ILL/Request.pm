@@ -1056,14 +1056,16 @@ sub capabilities {
     # Generate up to date status_graph
     my $status_graph = $self->_status_graph_union(
         $self->_core_status_graph,
-        $self->_core_lending_status_graph,
+
+        # $self->_core_lending_status_graph,
         $self->_backend->status_graph(
             {
                 request => $self,
                 other   => {}
             }
         ),
-        $self->_backend->lending_status_graph( { request => $self . other => {} } )
+
+        # $self->_backend->lending_status_graph( { request => $self . other => {} } )
     );
 
     # Extract available actions from graph.
