@@ -68,6 +68,7 @@ sub create_edi_order {
     my $ean        = $parameters->{ean};
     my $branchcode = $parameters->{branchcode};
     my $noingest   = $parameters->{noingest};
+    my $logger = Koha::Logger->get( { interface => 'edi' } );
     if ( !$basketno || !$ean ) {
         carp 'create_edi_order called with no basketno or ean';
         return;
@@ -92,6 +93,32 @@ sub create_edi_order {
             vendor_id => $orderlines[0]->basketno->booksellerid->id,
         }
     )->single;
+
+    # Check for duplicate PO numbers when po_is_basketname is enabled
+    if ( $vendor && $vendor->po_is_basketname ) {
+        my $basket = $orderlines[0]->basketno;
+        if ( $basket->basketname ) {
+            my $existing_basket = $schema->resultset('Aqbasket')->search(
+                {
+                    basketname   => $basket->basketname,
+                    booksellerid => $basket->booksellerid,
+                    basketno     => { '!=' => $basketno },    # Exclude current basket
+                }
+            )->first;
+
+            if ($existing_basket) {
+                $logger->error( "EDI order blocked for basket $basketno due to duplicate PO number '"
+                        . $basket->basketname
+                        . "' (existing basket: "
+                        . $existing_basket->basketno
+                        . ")" );
+                return {
+                    error     => "duplicate_po_number", existing_basket => $existing_basket->basketno,
+                    po_number => $basket->basketname
+                };
+            }
+        }
+    }
 
     my $ean_search_keys = { ean => $ean, };
     if ($branchcode) {
@@ -648,7 +675,8 @@ sub process_quote {
     my $schema         = Koha::Database->new()->schema();
     my $message_count  = 0;
     my $split_message;
-    my @added_baskets;    # if auto & multiple baskets need to order all
+    my @added_baskets;                # if auto & multiple baskets need to order all
+    my %baskets_with_po_conflicts;    # track baskets that have PO number conflicts
 
     # Get vendor EDI account configuration
     my $v = $schema->resultset('VendorEdiAccount')->search(
@@ -664,13 +692,16 @@ sub process_quote {
 
             # Determine basket name based on vendor configuration
             my $basket_name = $quote_message->filename;
+            my $purchase_order_number;
+            my $existing_basket;
+
             if ( $v && $v->po_is_basketname ) {
-                my $purchase_order_number = $msg->purchase_order_number;
+                $purchase_order_number = $msg->purchase_order_number;
                 if ($purchase_order_number) {
                     $basket_name = $purchase_order_number;
 
                     # Check for duplicate purchase order numbers for this vendor (including closed baskets)
-                    my $existing_basket = $schema->resultset('Aqbasket')->search(
+                    $existing_basket = $schema->resultset('Aqbasket')->search(
                         {
                             basketname   => $basket_name,
                             booksellerid => $quote_message->vendor_id,
@@ -702,6 +733,14 @@ sub process_quote {
                 q{} . q{}
             );
             push @added_baskets, $basketno;
+
+            # Record if this basket has a PO conflict (for auto_orders blocking)
+            if ($existing_basket) {
+                $baskets_with_po_conflicts{$basketno} = {
+                    po_number       => $purchase_order_number,
+                    existing_basket => $existing_basket->basketno
+                };
+            }
             if ( $message_count > 1 ) {
                 my $m_filename = $quote_message->filename;
                 $m_filename .= "_$message_count";
@@ -742,6 +781,19 @@ sub process_quote {
                                # Do we automatically generate orders for this vendor
     if ( $v && $v->auto_orders ) {
         for my $b (@added_baskets) {
+
+            # Check if this basket has a PO number conflict
+            if ( exists $baskets_with_po_conflicts{$b} ) {
+                my $conflict_info = $baskets_with_po_conflicts{$b};
+                $logger->warn( "Auto-order blocked for basket $b due to duplicate PO number '"
+                        . $conflict_info->{po_number}
+                        . "' (existing basket: "
+                        . $conflict_info->{existing_basket}
+                        . ")" );
+                $logger->info("Basket $b remains open due to PO number conflict");
+                next;
+            }
+
             create_edi_order(
                 {
                     ean      => $messages->[0]->buyer_ean,
