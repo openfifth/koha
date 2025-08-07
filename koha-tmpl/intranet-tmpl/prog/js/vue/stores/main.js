@@ -14,6 +14,7 @@ export const useMainStore = defineStore("main", () => {
         displayed_already: false,
         is_submitting: false,
         is_loading: false,
+        customModal: null,
     });
 
     const actions = {
@@ -79,6 +80,7 @@ export const useMainStore = defineStore("main", () => {
                 this.message = null;
                 this.confirmation = null;
                 this.accept_callback = null;
+                this.customModal = null;
             }
             this.displayed_already = true;
         },
@@ -97,6 +99,9 @@ export const useMainStore = defineStore("main", () => {
         },
         loaded() {
             this.is_loading = false;
+        },
+        setCustomModal(customModal) {
+            this.customModal = customModal;
         },
     };
 

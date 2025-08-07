@@ -95,6 +95,7 @@
             </div>
         </div>
     </div>
+    <AddOrderLineModal v-if="customModal == 'addorderline'" />
     <div
         class="component modal"
         role="dialog"
@@ -154,6 +155,7 @@ import {
 import { storeToRefs } from "pinia";
 import FormElement from "./FormElement.vue";
 import { loadComponent } from "@koha-vue/loaders/componentResolver";
+import AddOrderLineModal from "./Islands/AddOrderLineModal.vue";
 
 export default {
     setup() {
@@ -167,6 +169,7 @@ export default {
             accept_callback,
             is_submitting,
             is_loading,
+            customModal,
         } = storeToRefs(mainStore);
         const { removeMessages, removeConfirmationMessages } = mainStore;
 
@@ -245,6 +248,15 @@ export default {
                 loadComponent(componentDialog.value.componentPath)
             );
         });
+        watch(customModal, newCustomModal => {
+            if (!newCustomModal) {
+                $("#addToBasket.modal").modal("hide");
+                return;
+            }
+            nextTick(() => {
+                $("#addToBasket.modal").modal("show");
+            });
+        });
 
         return {
             message,
@@ -261,10 +273,12 @@ export default {
             submit,
             inputFields,
             requiredComponent,
+            customModal,
         };
     },
     components: {
         FormElement,
+        AddOrderLineModal,
     },
 };
 </script>

@@ -7,10 +7,9 @@
             callback="redirect"
         />
         <ToolbarButton
-            to="cgi-bin/koha/acquisition/vendors/add"
             icon="plus"
             :title="$__('New order line')"
-            callback="redirect"
+            :onClick="() => setCustomModal('addorderline')"
         />
     </Toolbar>
     <h1>{{ $__("Homepage") }}</h1>
@@ -31,6 +30,9 @@ export default {
         const acquisitionsStore = inject("acquisitionsStore");
         const { navigationBlocked } = storeToRefs(acquisitionsStore);
 
+        const mainStore = inject("mainStore");
+        const { setCustomModal } = mainStore;
+
         onBeforeMount(() => {
             if (navigationBlocked.value) {
                 setWarning(
@@ -44,6 +46,7 @@ export default {
 
         return {
             navigationBlocked,
+            setCustomModal,
         };
     },
     components: {

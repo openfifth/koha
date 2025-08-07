@@ -1,12 +1,11 @@
 <template>
     <div
-        :id="'addtoBasket'"
+        :id="'addToBasket'"
         class="modal add_to_basket"
         tabindex="-1"
         role="dialog"
-        :aria-labelledby="'addtoBasketLabel' + basketno"
-        aria-hidden="true"
         :data-basketno="basketname"
+        aria-hidden="true"
     >
         <div class="modal-dialog">
             <div class="modal-content">
@@ -126,6 +125,7 @@
                         class="btn btn-default"
                         type="button"
                         data-bs-dismiss="modal"
+                        @click="() => setCustomModal(null)"
                     >
                         {{ $__("Cancel") }}
                     </button>
@@ -136,6 +136,7 @@
 </template>
 
 <script>
+import { inject } from "vue";
 export default {
     props: {
         basketname: String,
@@ -147,12 +148,16 @@ export default {
         ermmodule: String,
     },
     setup(props) {
+        const mainStore = inject("mainStore");
+        const { setCustomModal } = mainStore;
+
         const ermEnabled = props.erm === "1" && props.ermmodule !== "0";
         return {
             ermEnabled,
+            setCustomModal,
         };
     },
 };
 </script>
 
-<style></style>
+<style scoped></style>
