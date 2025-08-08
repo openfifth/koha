@@ -151,33 +151,34 @@
         </div>
         <!-- /.row -->
 
-<!-- Confirm cashup modal -->
-<div class="modal" id="confirmCashupModal" tabindex="-1" role="dialog" aria-labelledby="confirmCashupLabel">
-    <form id="cashup_individual_form" method="post" enctype="multipart/form-data">
-        [% INCLUDE 'csrf-token.inc' %]
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h1 class="modal-title" id="confirmCashupLabel">Confirm cashup of <em><span id="registerc"></span></em></h1>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <!-- Confirm cashup modal -->
+        <div class="modal" id="confirmCashupModal" tabindex="-1" role="dialog" aria-labelledby="confirmCashupLabel">
+            <form id="cashup_individual_form" method="post" enctype="multipart/form-data">
+                [% INCLUDE 'csrf-token.inc' %]
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h1 class="modal-title" id="confirmCashupLabel">Confirm cashup of <em><span id="registerc"></span></em></h1>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            Please confirm that you have removed <span id="cashc"></span> from the cash register and left a float of <span id="floatc"></span>.
+                        </div>
+                        <!-- /.modal-body -->
+                        <div class="modal-footer">
+                            <input type="hidden" name="registerid" id="cashup_registerid" value="" />
+                            <input type="hidden" name="op" value="cud-cashup" />
+                            <button type="submit" class="btn btn-primary" id="cashup_confirm">Confirm</button>
+                            <button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancel</button>
+                        </div>
+                        <!-- /.modal-footer -->
+                    </div>
+                    <!-- /.modal-content -->
                 </div>
-                <div class="modal-body">
-                    Please confirm that you have removed <span id="cashc"></span> from the cash register and left a float of <span id="floatc"></span>.
-                </div> <!-- /.modal-body -->
-                <div class="modal-footer">
-                    <input type="hidden" name="registerid" id="cashup_registerid" value="" />
-                    <input type="hidden" name="op" value="cud-cashup" />
-                    <button type="submit" class="btn btn-primary" id="cashup_confirm">Confirm</button>
-                    <button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancel</button>
-                </div>
-                <!-- /.modal-footer -->
-            </div>
-        <!-- /.modal-content -->
+                <!-- /.modal-dialog -->
+            </form>
         </div>
-        <!-- /.modal-dialog -->
-    </form>
-</div>
-<!-- /#confirmCashupModal -->
+        <!-- /#confirmCashupModal -->
 
 <!-- Confirm cashupall modal -->
 <div class="modal" id="confirmCashupAllModal" tabindex="-1" role="dialog" aria-labelledby="confirmCashupAllLabel">
@@ -209,6 +210,7 @@
     </form>
 </div>
 <!-- /#confirmCashupAllModal -->
+
 
         [% INCLUDE 'modals/cashup_summary.inc' %]
 
@@ -243,6 +245,19 @@
                    $('#cashup_registerid').val(rid);
                 });
             });
-        </script>
-        [% END %]
+
+            $("#confirmCashupModal").on("shown.bs.modal", function(e){
+               var button = $(e.relatedTarget);
+               var register = button.data('register');
+               $("#registerc").text(register);
+               var bankable = button.data('bankable');
+               $("#cashc").text(bankable);
+               var rfloat = button.data('float');
+               $('#floatc').text(rfloat);
+               var rid = button.data('registerid');
+               $('#cashup_registerid').val(rid);
+            });
+        });
+    </script>
+[% END %]
 [% INCLUDE 'intranet-bottom.inc' %]
