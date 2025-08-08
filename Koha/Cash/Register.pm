@@ -126,6 +126,22 @@ sub outstanding_accountlines {
         $since->count
         ? { 'date' => { '>' => $since->get_column('timestamp')->as_query } }
         : {};
+
+    # Exclude reconciliation accountlines from outstanding accountlines
+    $local_conditions->{'-and'} = [
+        {
+            '-or' => [
+                { 'credit_type_code' => { '!=' => 'CASHUP_SURPLUS' } },
+                { 'credit_type_code' => undef }
+            ]
+        },
+        {
+            '-or' => [
+                { 'debit_type_code' => { '!=' => 'CASHUP_DEFICIT' } },
+                { 'debit_type_code' => undef }
+            ]
+        }
+    ];
     my $merged_conditions =
         $conditions
         ? { %{$conditions}, %{$local_conditions} }
