@@ -11,7 +11,11 @@
 
 [% BLOCK koha_news_block %]
     [% IF ( news.content && news.content.count > 0 ) %]
-        <div id="[% news.location | html %]">
+        [% IF (news.location == "OpacMainUserBlock") %]
+            <div id="[% news.location | html %]" tabindex="0">
+        [% ELSE %]
+            <div id="[% news.location | html %]">
+        [% END %]
             [% FOREACH n IN news.content %]
                 <div class="[% n.lang | html %]_item">
                     [% IF ( n.title && news.blocktitle ) %]
