@@ -31,7 +31,7 @@
                 <a href="https://images-na.ssl-images-amazon.com/images/P/[% SEARCH_RESULT.normalized_isbn | uri %].01.LZZZZZZZ.jpg">
                     <img
                         src="https://images-na.ssl-images-amazon.com/images/P/[% SEARCH_RESULT.normalized_isbn | uri %].01.MZZZZZZZ.jpg"
-                        alt="Amazon cover image"
+                        alt=""
                         id="amazon-thumbnail-[% SEARCH_RESULT.biblionumber | html %]"
                         data-link="http://www.amazon[% AmazonTld | uri %]/gp/reader/[% SEARCH_RESULT.normalized_isbn | html %][% AmazonAssocTag | html %]#reader-link"
                     />

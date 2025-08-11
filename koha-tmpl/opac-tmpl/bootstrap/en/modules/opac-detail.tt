@@ -76,10 +76,10 @@
 
                             [% IF ( OPACAmazonCoverImages && normalized_isbn) %]
                                 <div class="cover-image" id="amazon-bookcoverimg">
-                                    <a href="https://images-na.ssl-images-amazon.com/images/P/[% normalized_isbn | uri %].01.LZZZZZZZ.jpg" title="Amazon cover image">
+                                    <a href="https://images-na.ssl-images-amazon.com/images/P/[% normalized_isbn | uri %].01.LZZZZZZZ.jpg">
                                         <img
                                             src="https://images-na.ssl-images-amazon.com/images/P/[% normalized_isbn | uri %].01.MZZZZZZZ.jpg"
-                                            alt="Amazon cover image"
+                                            alt=""
                                             data-link="http://www.amazon[% AmazonTld | uri %]/gp/reader/[% normalized_isbn | uri %][% AmazonAssocTag | uri %]#reader-link"
                                         />
                                     </a>
