@@ -17,7 +17,9 @@
             <label for="borrower_streetnumber" class="[% required.streetnumber | html %]">Street number:</label>
 
             <input type="text" id="borrower_streetnumber" name="borrower_streetnumber" value="[% borrower.streetnumber | html %]" class="[% required.streetnumber | html %]" size="5" maxlength="10" />
-            <div class="required_label [% required.streetnumber | html %]">Required</div>
+            [% IF required.defined('streetnumber') %]
+                <div class="required_label required">Required</div>
+            [% END %]
         </li>
     [% END %]
 [% END %]
@@ -27,7 +29,9 @@
             <label for="borrower_B_streetnumber" class="[% required.B_streetnumber | html %]">Street number:</label>
 
             <input type="text" id="borrower_B_streetnumber" name="borrower_B_streetnumber" value="[% borrower.B_streetnumber | html %]" class="[% required.B_streetnumber | html %]" size="5" maxlength="10" />
-            <div class="required_label [% required.B_streetnumber | html %]">Required</div>
+            [% IF required.defined('B_streetnumber') %]
+                <div class="required_label required">Required</div>
+            [% END %]
         </li>
     [% END %]
 [% END %]
@@ -224,7 +228,7 @@
 
                         [% FOREACH field = ['streetnumber' 'streettype'  'cardnumber' 'branchcode' 'categorycode' 'title' 'surname' 'firstname' 'preferred_name' 'middle_name' 'dateofbirth' 'initials' 'pronouns' 'othernames' 'address' 'address2' 'city' 'state' 'zipcode' 'country' 'phone' 'phonepro' 'mobile' 'email' 'emailpro' 'fax' 'B_streettype' 'B_streetnumber' 'B_address' 'B_address2' 'B_city' 'B_state' 'B_zipcode' 'B_country' 'B_phone' 'B_email' 'contactnote' 'altcontactsurname' 'altcontactfirstname' 'altcontactaddress1' 'altcontactaddress2' 'altcontactaddress3' 'altcontactstate' 'altcontactzipcode' 'altcontactcountry' 'altcontactphone' 'password' 'lang' ] %]
                             [% IF mandatory.defined( field ) %]
-                                [% SET required.$field = 'required' %]
+                                [% SET required.$field = mandatory.$field %]
                             [% END %]
                         [% END %]
 
@@ -254,7 +258,9 @@
                                                                 maxlength="[% maxlength_cardnumber | html %]"
                                                                 class="[% required.cardnumber | html %]"
                                                             />
-                                                            <div class="required_label [% required.cardnumber | html %]">Required</div>
+                                                            [% IF required.defined('cardnumber') %]
+                                                                <div class="required_label required">Required</div>
+                                                            [% END %]
                                                             <div class="hint">Card number must be exactly [% minlength_cardnumber | html %] characters.</div>
                                                         [% ELSIF minlength_cardnumber && maxlength_cardnumber %]
                                                             <input
@@ -267,7 +273,9 @@
                                                                 maxlength="[% maxlength_cardnumber | html %]"
                                                                 class="[% required.cardnumber | html %]"
                                                             />
-                                                            <div class="required_label [% required.cardnumber | html %]">Required</div>
+                                                            [% IF required.defined('cardnumber') %]
+                                                                <div class="required_label required">Required</div>
+                                                            [% END %]
                                                             <div class="hint">Card number must be between [% minlength_cardnumber | html %] and [% maxlength_cardnumber | html %] characters.</div>
                                                         [% ELSIF maxlength_cardnumber %]
                                                             <input
@@ -279,11 +287,15 @@
                                                                 maxlength="[% maxlength_cardnumber | html %]"
                                                                 class="[% required.cardnumber | html %]"
                                                             />
-                                                            <div class="required_label [% required.cardnumber | html %]">Required</div>
+                                                            [% IF required.defined('cardnumber') %]
+                                                                <div class="required_label required">Required</div>
+                                                            [% END %]
                                                             <div class="hint">Card number can be up to [% maxlength_cardnumber | html %] characters.</div>
                                                         [% ELSE %]
                                                             <input type="text" id="borrower_cardnumber" name="borrower_cardnumber" size="20" value="[% borrower.cardnumber | html %]" class="[% required.cardnumber | html %]" />
-                                                            <div class="required_label [% required.cardnumber | html %]">Required</div>
+                                                            [% IF required.defined('cardnumber') %]
+                                                                <div class="required_label required">Required</div>
+                                                            [% END %]
                                                             <div class="hint">There is no minimum or maximum character length.</div>
                                                         [% END %]
                                                     [% END %]
@@ -323,7 +335,9 @@
                                                                 [% END %]
                                                             [% END %]
                                                         </select>
-                                                        <div class="required_label [% required.branchcode | html %]">Required</div>
+                                                        [% IF required.defined('branchcode') %]
+                                                            <div class="required_label required">Required</div>
+                                                        [% END %]
                                                     [% ELSE %]
                                                         <span class="label">Home library:</span>
                                                         [% FOREACH l IN libraries %]
@@ -362,7 +376,9 @@
                                                                 [% END %]
                                                             [% END %]
                                                         </select>
-                                                        <div class="required_label [% required.categorycode | html %]">Required</div>
+                                                        [% IF required.defined('categorycode') %]
+                                                            <div class="required_label required">Required</div>
+                                                        [% END %]
                                                     [% END %]
                                                 </li>
                                             [% END %]
@@ -397,7 +413,9 @@
                                                             [% END %]
                                                         [% END %]
                                                     </select>
-                                                    <div class="required_label [% required.title | html %]">Required</div>
+                                                    [% IF required.defined('title') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -406,7 +424,9 @@
                                                     <label for="borrower_surname" class="[% required.surname | html %]">Surname:</label>
 
                                                     <input type="text" id="borrower_surname" name="borrower_surname" value="[% borrower.surname | html %]" class="[% required.surname | html %]" [% IF required.surname %]required[% END %] />
-                                                    <div class="required_label [% required.surname | html %]">Required</div>
+                                                    [% IF required.defined('surname') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -422,7 +442,9 @@
                                                         class="[% required.firstname | html %]"
                                                         [% IF required.firstname %]required[% END %]
                                                     />
-                                                    <div class="required_label [% required.firstname | html %]">Required</div>
+                                                    [% IF required.defined('firstname') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -438,7 +460,9 @@
                                                         class="[% required.middle_name | html %]"
                                                         [% IF required.middle_name %]required[% END %]
                                                     />
-                                                    <div class="required_label [% required.middle_name | html %]">Required</div>
+                                                    [% IF required.defined('middle_name') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -454,7 +478,9 @@
                                                         class="[% required.preferred_name | html %]"
                                                         [% IF required.preferred_name %]required[% END %]
                                                     />
-                                                    <div class="required_label [% required.preferred_name | html %]">Required</div>
+                                                    [% IF required.defined('preferred_name') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -471,8 +497,9 @@
                                                         class="[% required.dateofbirth | html %] flatpickr pastdate"
                                                         [% IF required.dateofbirth %]required[% END %]
                                                     />
-
-                                                    <div class="required_label [% required.dateofbirth | html %]">Required</div>
+                                                    [% IF required.defined('dateofbirth') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -488,7 +515,9 @@
                                                         class="[% required.initials | html %]"
                                                         [% IF required.initials %]required[% END %]
                                                     />
-                                                    <div class="required_label [% required.initials | html %]">Required</div>
+                                                    [% IF required.defined('initials') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -504,7 +533,9 @@
                                                         class="[% required.pronouns | html %]"
                                                         [% IF required.pronouns %]required[% END %]
                                                     />
-                                                    <div class="required_label [% required.pronouns | html %]">Required</div>
+                                                    [% IF required.defined('pronouns') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -520,7 +551,9 @@
                                                         class="[% required.othernames | html %]"
                                                         [% IF required.othernames %]required[% END %]
                                                     />
-                                                    <div class="required_label [% required.othernames | html %]">Required</div>
+                                                    [% IF required.defined('othernames') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -598,7 +631,9 @@
                                                                 [% END %]
                                                             [% END %]
                                                         </select>
-                                                        <div class="required_label [% required.streettype | html %]">Required</div>
+                                                        [% IF required.defined('streettype') %]
+                                                            <div class="required_label required">Required</div>
+                                                        [% END %]
                                                     </li>
                                                 [% END %]
                                             [% END %]
@@ -608,7 +643,9 @@
                                                     <label for="borrower_address" class="[% required.address | html %]">Address:</label>
 
                                                     <input type="text" id="borrower_address" name="borrower_address" value="[% borrower.address | html %]" class="[% required.address | html %]" [% IF required.address %]required[% END %] />
-                                                    <div class="required_label [% required.address | html %]">Required</div>
+                                                    [% IF required.defined('address') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -626,7 +663,9 @@
                                                         class="[% required.address2 | html %]"
                                                         [% IF required.address2 %]required[% END %]
                                                     />
-                                                    <div class="required_label [% required.address2 | html %]">Required</div>
+                                                    [% IF required.defined('address2') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -635,7 +674,9 @@
                                                     <label for="borrower_city" class="[% required.city | html %]">City:</label>
 
                                                     <input type="text" id="borrower_city" name="borrower_city" value="[% borrower.city | html %]" class="[% required.city | html %]" [% IF required.city %]required[% END %] />
-                                                    <div class="required_label [% required.city | html %]">Required</div>
+                                                    [% IF required.defined('city') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -644,7 +685,9 @@
                                                     <label for="borrower_state" class="[% required.state | html %]">State:</label>
 
                                                     <input type="text" id="borrower_state" name="borrower_state" value="[% borrower.state | html %]" class="[% required.state | html %]" [% IF required.state %]required[% END %] />
-                                                    <div class="required_label [% required.state | html %]">Required</div>
+                                                    [% IF required.defined('state') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -653,7 +696,9 @@
                                                     <label for="borrower_zipcode" class="[% required.zipcode | html %]">ZIP/Postal code:</label>
 
                                                     <input type="text" id="borrower_zipcode" name="borrower_zipcode" value="[% borrower.zipcode | html %]" class="[% required.zipcode | html %]" [% IF required.zipcode %]required[% END %] />
-                                                    <div class="required_label [% required.zipcode | html %]">Required</div>
+                                                    [% IF required.defined('zipcode') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -662,7 +707,9 @@
                                                     <label for="borrower_country" class="[% required.country | html %]">Country:</label>
 
                                                     <input type="text" id="borrower_country" name="borrower_country" value="[% borrower.country | html %]" class="[% required.country | html %]" [% IF required.country %]required[% END %] />
-                                                    <div class="required_label [% required.country | html %]">Required</div>
+                                                    [% IF required.defined('country') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
                                         </ol>
@@ -687,7 +734,9 @@
                                                     <label for="borrower_phone" class="[% required.phone | html %]">Primary phone:</label>
 
                                                     <input type="text" id="borrower_phone" name="borrower_phone" value="[% borrower.phone | html %]" class="[% required.phone | html %]" [% IF required.phone %]required[% END %] />
-                                                    <div class="required_label [% required.phone | html %]">Required</div>
+                                                    [% IF required.defined('phone') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -703,7 +752,9 @@
                                                         class="[% required.phonepro | html %]"
                                                         [% IF required.phonepro %]required[% END %]
                                                     />
-                                                    <div class="required_label [% required.phonepro | html %]">Required</div>
+                                                    [% IF required.defined('phonepro') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -712,7 +763,9 @@
                                                     <label for="borrower_mobile" class="[% required.mobile | html %]">Other phone:</label>
 
                                                     <input type="text" id="borrower_mobile" name="borrower_mobile" value="[% borrower.mobile | html %]" class="[% required.mobile | html %]" [% IF required.mobile %]required[% END %] />
-                                                    <div class="required_label [% required.mobile | html %]">Required</div>
+                                                    [% IF required.defined('mobile') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -721,7 +774,9 @@
                                                     <label for="borrower_email" class="[% required.email | html %]">Primary email:</label>
 
                                                     <input type="text" id="borrower_email" name="borrower_email" value="[% borrower.email | html %]" class="[% required.email | html %]" [% IF required.email %]required[% END %] />
-                                                    <div class="required_label [% required.email | html %]">Required</div>
+                                                    [% IF required.defined('email') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
 
                                                 [% IF op != 'edit' and Koha.Preference('PatronSelfRegistrationConfirmEmail') %]
@@ -729,7 +784,9 @@
                                                         <label for="borrower_repeat_email" class="[% required.email | html %]">Confirm primary email:</label>
 
                                                         <input type="text" id="borrower_repeat_email" name="borrower_repeat_email" autocomplete="off" class="[% required.email | html %]" [% IF required.email %]required[% END %] />
-                                                        <div class="required_label [% required.email | html %]">Required</div>
+                                                        [% IF required.defined('email') %]
+                                                            <div class="required_label required">Required</div>
+                                                        [% END %]
                                                     </li>
                                                 [% END %]
                                             [% END %]
@@ -746,7 +803,9 @@
                                                         class="[% required.emailpro | html %]"
                                                         [% IF required.emailpro %]required[% END %]
                                                     />
-                                                    <div class="required_label [% required.emailpro | html %]">Required</div>
+                                                    [% IF required.defined('emailpro') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -755,7 +814,9 @@
                                                     <label for="borrower_fax" class="[% required.fax | html %]">Fax:</label>
 
                                                     <input type="text" id="borrower_fax" name="borrower_fax" value="[% borrower.fax | html %]" class="[% required.fax | html %]" [% IF required.fax %]required[% END %] />
-                                                    <div class="required_label [% required.fax | html %]">Required</div>
+                                                    [% IF required.defined('fax') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -812,7 +873,9 @@
                                                             [% END %]
                                                         [% END %]
                                                     </select>
-                                                    [% IF ( mandatory.defined('primary_contact_method') ) %]<span class="required">Required</span>[% END %]
+                                                    [% IF ( mandatory.defined('primary_contact_method') ) %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                                 [% UNLESS hidden.defined('lang') %]
                                                     <li>
@@ -848,7 +911,9 @@
                                                             [% END #/FOR language %]
                                                         </select>
                                                         <!-- /#lang -->
-                                                        [% IF ( mandatory.defined('lang') ) %]<div class="required_label required">Required</div>[% END %]
+                                                        [% IF ( mandatory.defined('lang') ) %]
+                                                            <div class="required_label required">Required</div>
+                                                        [% END %]
                                                     </li>
                                                 [% END %]
                                             [% END %]
@@ -887,7 +952,9 @@
                                                                 [% END %]
                                                             [% END %]
                                                         </select>
-                                                        <div class="required_label [% required.B_streettype | html %]">Required</div>
+                                                        [% IF mandatory.defined('B_streettype') %]
+                                                            <div class="required_label required">Required</div>
+                                                        [% END %]
                                                     </li>
                                                 [% END %]
                                             [% END %]
@@ -903,7 +970,9 @@
                                                         class="[% required.B_address | html %]"
                                                         [% IF required.B_address %]required[% END %]
                                                     />
-                                                    <div class="required_label [% required.B_address | html %]">Required</div>
+                                                    [% IF mandatory.defined('B_address') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -921,7 +990,9 @@
                                                         class="[% required.B_address2 | html %]"
                                                         [% IF required.B_address2 %]required[% END %]
                                                     />
-                                                    <div class="required_label [% required.B_address2 | html %]">Required</div>
+                                                    [% IF mandatory.defined('B_address2') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -930,7 +1001,9 @@
                                                     <label for="borrower_B_city" class="[% required.B_city | html %]">City:</label>
 
                                                     <input type="text" id="borrower_B_city" name="borrower_B_city" value="[% borrower.B_city | html %]" class="[% required.B_city | html %]" [% IF required.B_city %]required[% END %] />
-                                                    <div class="required_label [% required.B_city | html %]">Required</div>
+                                                    [% IF mandatory.defined('B_city') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -939,7 +1012,9 @@
                                                     <label for="borrower_B_state" class="[% required.B_state | html %]">State:</label>
 
                                                     <input type="text" id="borrower_B_state" name="borrower_B_state" value="[% borrower.B_state | html %]" class="[% required.B_state | html %]" [% IF required.B_state %]required[% END %] />
-                                                    <div class="required_label [% required.B_state | html %]">Required</div>
+                                                    [% IF mandatory.defined('B_state') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -955,7 +1030,9 @@
                                                         class="[% required.B_zipcode | html %]"
                                                         [% IF required.B_zipcode %]required[% END %]
                                                     />
-                                                    <div class="required_label [% required.B_zipcode | html %]">Required</div>
+                                                    [% IF mandatory.defined('B_zipcode') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -971,7 +1048,9 @@
                                                         class="[% required.B_country | html %]"
                                                         [% IF required.B_country %]required[% END %]
                                                     />
-                                                    <div class="required_label [% required.B_country | html %]">Required</div>
+                                                    [% IF mandatory.defined('B_country') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -980,7 +1059,9 @@
                                                     <label for="borrower_B_phone" class="[% required.B_phone | html %]">Phone:</label>
 
                                                     <input type="text" id="borrower_B_phone" name="borrower_B_phone" value="[% borrower.B_phone | html %]" class="[% required.B_phone | html %]" [% IF required.B_phone %]required[% END %] />
-                                                    <div class="required_label [% required.B_phone | html %]">Required</div>
+                                                    [% IF mandatory.defined('B_phone') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -989,7 +1070,9 @@
                                                     <label for="borrower_B_email" class="[% required.B_email | html %]">Email:</label>
 
                                                     <input type="text" id="borrower_B_email" name="borrower_B_email" value="[% borrower.B_email | html %]" class="[% required.B_email | html %]" [% IF required.B_email %]required[% END %] />
-                                                    <div class="required_label [% required.B_email | html %]">Required</div>
+                                                    [% IF mandatory.defined('B_email') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -998,7 +1081,9 @@
                                                     <label for="borrower_contactnote" class="[% required.contactnote | html %]" [% IF required.contactnote %]required[% END %]>Contact note:</label>
 
                                                     <textarea id="borrower_contactnote" name="borrower_contactnote" cols="30" rows="2" class="[% required.contactnote | html %]">[% borrower.contactnote | html %]</textarea>
-                                                    <div class="required_label [% required.contactnote | html %]">Required</div>
+                                                    [% IF mandatory.defined('contactnote') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
                                         </ol>
@@ -1030,7 +1115,9 @@
                                                         class="[% required.altcontactsurname | html %]"
                                                         [% IF required.altcontactsurname %]required[% END %]
                                                     />
-                                                    <div class="required_label [% required.altcontactsurname | html %]">Required</div>
+                                                    [% IF mandatory.defined('altcontactsurname') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -1046,7 +1133,9 @@
                                                         class="[% required.altcontactfirstname | html %]"
                                                         [% IF required.altcontactfirstname %]required[% END %]
                                                     />
-                                                    <div class="required_label [% required.altcontactfirstname | html %]">Required</div>
+                                                    [% IF mandatory.defined('altcontactfirstname') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -1062,7 +1151,9 @@
                                                         class="[% required.altcontactaddress1 | html %]"
                                                         [% IF required.altcontactaddress1 %]required[% END %]
                                                     />
-                                                    <div class="required_label [% required.altcontactaddress1 | html %]">Required</div>
+                                                    [% IF mandatory.defined('altcontactaddress1') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -1078,7 +1169,9 @@
                                                         class="[% required.altcontactaddress2 | html %]"
                                                         [% IF required.altcontactaddress2 %]required[% END %]
                                                     />
-                                                    <div class="required_label [% required.altcontactaddress2 | html %]">Required</div>
+                                                    [% IF mandatory.defined('altcontactaddress2') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -1094,7 +1187,9 @@
                                                         class="[% required.altcontactaddress3 | html %]"
                                                         [% IF required.altcontactaddress3 %]required[% END %]
                                                     />
-                                                    <div class="required_label [% required.altcontactaddress3 | html %]">Required</div>
+                                                    [% IF mandatory.defined('altcontactaddress3') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -1110,7 +1205,9 @@
                                                         class="[% required.altcontactstate | html %]"
                                                         [% IF required.altcontactstate %]required[% END %]
                                                     />
-                                                    <div class="required_label [% required.altcontactstate | html %]">Required</div>
+                                                    [% IF mandatory.defined('altcontactstate') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -1126,7 +1223,9 @@
                                                         class="[% required.altcontactzipcode | html %]"
                                                         [% IF required.altcontactzipcode %]required[% END %]
                                                     />
-                                                    <div class="required_label [% required.altcontactzipcode | html %]">Required</div>
+                                                    [% IF mandatory.defined('altcontactzipcode') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -1142,7 +1241,9 @@
                                                         class="[% required.altcontactcountry | html %]"
                                                         [% IF required.altcontactcountry %]required[% END %]
                                                     />
-                                                    <div class="required_label [% required.altcontactcountry | html %]">Required</div>
+                                                    [% IF mandatory.defined('altcontactcountry') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
 
@@ -1158,7 +1259,9 @@
                                                         class="[% required.altcontactphone | html %]"
                                                         [% IF required.altcontactphone %]required[% END %]
                                                     />
-                                                    <div class="required_label [% required.altcontactphone | html %]">Required</div>
+                                                    [% IF mandatory.defined('altcontactphone') %]
+                                                        <div class="required_label required">Required</div>
+                                                    [% END %]
                                                 </li>
                                             [% END %]
                                         </ol>
@@ -1194,12 +1297,16 @@
                                             <li
                                                 ><label for="password" class="[% required.password | html %]">Password:</label>
                                                 <input type="password" name="borrower_password" id="password" class="[% required.password | html %]" autocomplete="new-password" />
-                                                <div class="required_label [% required.password | html %]">Required</div>
+                                                [% IF mandatory.defined('password') %]
+                                                    <div class="required_label required">Required</div>
+                                                [% END %]
                                             </li>
                                             <li
                                                 ><label for="password2" class="[% required.password | html %]">Confirm password:</label>
                                                 <input type="password" name="borrower_password2" id="password2" autocomplete="new-password" />
-                                                <div class="required_label [% required.password | html %]">Required</div>
+                                                [% IF mandatory.defined('password') %]
+                                                    <div class="required_label required">Required</div>
+                                                [% END %]
                                             </li>
                                         </ol>
                                     </fieldset>
