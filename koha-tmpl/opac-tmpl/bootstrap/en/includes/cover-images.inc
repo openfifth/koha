@@ -13,7 +13,12 @@
         [% IF ( OPACAmazonCoverImages && SEARCH_RESULT.normalized_isbn) %]
             <div class="cover-image amazon-coverimg">
                 <a href="https://images-na.ssl-images-amazon.com/images/P/[% SEARCH_RESULT.normalized_isbn | uri %].01.LZZZZZZZ.jpg">
-                    <img src="https://images-na.ssl-images-amazon.com/images/P/[% SEARCH_RESULT.normalized_isbn | uri %].01.MZZZZZZZ.jpg" alt="Amazon cover image" id="amazon-thumbnail-[% SEARCH_RESULT.biblionumber | html %]" data-link="http://www.amazon[% AmazonTld | uri %]/gp/reader/[% SEARCH_RESULT.normalized_isbn | html %][% AmazonAssocTag | html %]#reader-link"/>
+                    <img
+                        src="https://images-na.ssl-images-amazon.com/images/P/[% SEARCH_RESULT.normalized_isbn | uri %].01.MZZZZZZZ.jpg"
+                        alt=""
+                        id="amazon-thumbnail-[% SEARCH_RESULT.biblionumber | html %]"
+                        data-link="http://www.amazon[% AmazonTld | uri %]/gp/reader/[% SEARCH_RESULT.normalized_isbn | html %][% AmazonAssocTag | html %]#reader-link"
+                    />
                 </a>
                 <div class="hint">Image from Amazon.com</div>
             </div>
