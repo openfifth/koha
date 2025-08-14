@@ -310,6 +310,11 @@
                     <input id="min_password_length" type="text" inputmode="numeric" name="min_password_length" value="[% category.min_password_length | html %]"/>
                     <div class="hint">Leave blank to use system default ([% Koha.Preference('minPasswordLength') | html %])</div>
                 </li>
+                <li>
+                    <label for="password_history_count">Password history count:</label>
+                    <input id="password_history_count" type="text" inputmode="numeric" name="password_history_count" value="[% category.password_history_count | html %]" />
+                    <div class="hint">Leave blank to use system default ([% Koha.Preference('PasswordHistoryCount') | html %])</div>
+                </li>
                 <li class="pwd_setting_wrapper">
                     <label for="require_strong_password">Require strong password:</label>
                     <select id="require_strong_password" name="require_strong_password">

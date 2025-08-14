@@ -79,6 +79,7 @@ elsif ( $op eq 'cud-add_validate' ) {
     my $require_strong_password                = $input->param('require_strong_password');
     my $noissuescharge                         = $input->param('noissuescharge') || undef;
     my $noissueschargeguarantees               = $input->param('noissueschargeguarantees') || undef;
+    my $password_history_count                 = $input->param('password_history_count');
     my $noissueschargeguarantorswithguarantees = $input->param('noissueschargeguarantorswithguarantees') || undef;
 
     my @branches = grep { $_ ne q{} } $input->multi_param('branches');
@@ -88,6 +89,7 @@ elsif ( $op eq 'cud-add_validate' ) {
     $reset_password                         = undef if $reset_password eq -1;
     $change_password                        = undef if $change_password eq -1;
     $min_password_length                    = undef unless length($min_password_length);
+    $password_history_count                 = $password_history_count ? int($password_history_count) : undef;
     $require_strong_password                = undef if $require_strong_password eq -1;
     $force_password_reset_when_set_by_staff = undef if $force_password_reset_when_set_by_staff eq -1;
 
@@ -117,6 +119,7 @@ elsif ( $op eq 'cud-add_validate' ) {
         $category->exclude_from_local_holds_priority($exclude_from_local_holds_priority);
         $category->min_password_length($min_password_length);
         $category->require_strong_password($require_strong_password);
+        $category->password_history_count($password_history_count);
         $category->noissuescharge($noissuescharge);
         $category->noissueschargeguarantees($noissueschargeguarantees);
         $category->noissueschargeguarantorswithguarantees($noissueschargeguarantorswithguarantees);
@@ -155,6 +158,7 @@ elsif ( $op eq 'cud-add_validate' ) {
                 exclude_from_local_holds_priority      => $exclude_from_local_holds_priority,
                 min_password_length                    => $min_password_length,
                 require_strong_password                => $require_strong_password,
+                password_history_count                 => $password_history_count,
                 noissuescharge                         => $noissuescharge,
                 noissueschargeguarantees               => $noissueschargeguarantees,
                 noissueschargeguarantorswithguarantees => $noissueschargeguarantorswithguarantees,
