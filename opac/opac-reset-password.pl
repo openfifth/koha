@@ -79,7 +79,8 @@ if ( $op eq 'cud-update' ) {
                             'Koha::Exceptions::Password::WhitespaceCharacters');
                         if ($_->isa('Koha::Exceptions::Password::UsedBefore')) {
                             $template->param( password_used_before => 1 );
-                            $template->param( password_history_count => C4::Context->preference('PasswordHistoryCount') );
+                            $template->param(
+                                password_history_count => $patron->category->effective_password_history_count );
                         }
                         $template->param( 'error' => $error );
                     };

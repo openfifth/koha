@@ -385,19 +385,20 @@ if ($op eq 'cud-save' || $op eq 'cud-insert'){
             push @errors, 'ERROR_password_too_weak'        if $error eq 'too_weak';
             push @errors, 'ERROR_password_has_whitespaces' if $error eq 'has_whitespaces';
         }
-        
+
         # Check password history
-        if ($patron && $is_valid) {  # Only check if other validations passed and we have a patron
-            my $is_used = Koha::PatronPasswordHistories->has_used_password({
-                borrowernumber => $patron->borrowernumber,
-                password => $password,
-                current_password => $patron->password
-            });
-            
+        if ( $patron && $is_valid ) {    # Only check if other validations passed and we have a patron
+            my $is_used = Koha::PatronPasswordHistories->has_used_password(
+                {
+                    borrowernumber   => $patron->borrowernumber,
+                    password         => $password,
+                    current_password => $patron->password
+                }
+            );
+
             if ($is_used) {
                 push @errors, 'ERROR_password_used_before';
-                my $count = C4::Context->preference('PasswordHistoryCount') || 0;
-                $template->param( password_history_count => $count );
+                $template->param( password_history_count => $patron->category->effective_password_history_count );
             }
         }
     }
@@ -604,7 +605,7 @@ if ((!$nok) and $nodouble and ($op eq 'cud-insert' or $op eq 'cud-save')){
                 }
             }
 
-            # password validity has been checked above 
+            # password validity has been checked above
             my $password = $newdata{password};
             if ( $password and $password ne '****' and $success ) {
                 $patron->set_password( { password => $password } );
