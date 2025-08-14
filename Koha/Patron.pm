@@ -1116,7 +1116,7 @@ sub set_password {
     if ($self->password && $self->in_storage) {
         # Get the old password before it's replaced
         my $old_password = $self->get_from_storage->password;
-        my $history_count = C4::Context->preference('PasswordHistoryCount') || 0;
+        my $history_count = $self->category->effective_password_history_count || 0;
         
         # Always store the old password, regardless of current preference
         # This ensures we maintain history if the preference is increased later
