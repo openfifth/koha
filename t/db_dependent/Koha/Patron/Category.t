@@ -19,7 +19,8 @@
 
 use Modern::Perl;
 
-use Test::More tests => 9;
+use Test::NoWarnings;
+use Test::More tests => 11;
 
 use t::lib::TestBuilder;
 use t::lib::Mocks;
@@ -300,6 +301,56 @@ subtest 'get_password_expiry_date() tests' => sub {
         'DateTime object passed as a parameter should not be modified when ->get_password_expiry_date is called'
     );
 
+};
+
+subtest 'effective_password_history_count' => sub {
+    plan tests => 5;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'PasswordHistoryCount', 3 );
+
+    my $category =
+        $builder->build_object( { class => 'Koha::Patron::Categories', value => { password_history_count => undef } } );
+
+    is(
+        $category->effective_password_history_count, 3,
+        'Category should use password history count from system preference'
+    );
+
+    $category->password_history_count(5)->store;
+
+    is(
+        $category->effective_password_history_count, 5,
+        'Category should use password history count from category setting'
+    );
+
+    # Test explicit 0 in category (should not fall back to system preference)
+    $category->password_history_count(0)->store;
+
+    is(
+        $category->effective_password_history_count, 0,
+        'Category setting of 0 should return 0, not fall back to system preference'
+    );
+
+    # Test system preference = 0, category = undef (should return 0)
+    t::lib::Mocks::mock_preference( 'PasswordHistoryCount', 0 );
+    $category->password_history_count(undef)->store;
+
+    is(
+        $category->effective_password_history_count, 0,
+        'Should return 0 when system preference is 0 and category is undef'
+    );
+
+    # Test both are 0
+    $category->password_history_count(0)->store;
+
+    is(
+        $category->effective_password_history_count, 0,
+        'Should return 0 when both category and system preference are 0'
+    );
+
+    $schema->storage->txn_rollback;
 };
 
 subtest 'can_make_suggestions' => sub {

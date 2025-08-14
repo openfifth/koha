@@ -19,7 +19,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 38;
+use Test::More tests => 40;
 use Test::Exception;
 use Test::Warn;
 use Time::Fake;
@@ -1789,6 +1789,201 @@ subtest 'force_password_reset_when_set_by_staff tests' => sub {
         $patron->password_expired, 0,
         "Patron forced into changing password but patron is self registered, password not expired."
     );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'password history integration tests' => sub {
+    plan tests => 7;
+
+    $schema->storage->txn_begin;
+
+    my $category = $builder->build_object(
+        {
+            class => 'Koha::Patron::Categories',
+            value => {
+                password_history_count  => 3,
+                require_strong_password => 0,
+            }
+        }
+    );
+
+    my $patron = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => {
+                categorycode => $category->categorycode,
+                password     => Koha::AuthUtils::hash_password('initial_password')
+            }
+        }
+    );
+
+    # Test that password history is created when changing password
+    my $initial_history_count =
+        Koha::PatronPasswordHistories->search( { borrowernumber => $patron->borrowernumber } )->count;
+
+    $patron->set_password( { password => 'new_password_1', skip_validation => 1 } );
+
+    my $new_history_count =
+        Koha::PatronPasswordHistories->search( { borrowernumber => $patron->borrowernumber } )->count;
+
+    is( $new_history_count, $initial_history_count + 1, 'Password history entry created when password changed' );
+
+    # Test that UsedBefore exception is thrown for reused password
+    throws_ok {
+        $patron->set_password( { password => 'initial_password' } );
+    }
+    'Koha::Exceptions::Password::UsedBefore', 'UsedBefore exception thrown for reused password';
+
+    # Test that category-specific history count is respected
+    $patron->set_password( { password => 'new_password_2', skip_validation => 1 } );
+    $patron->set_password( { password => 'new_password_3', skip_validation => 1 } );
+    $patron->set_password( { password => 'new_password_4', skip_validation => 1 } );
+
+    my $final_history_count =
+        Koha::PatronPasswordHistories->search( { borrowernumber => $patron->borrowernumber } )->count;
+
+    # With password_history_count=3, we should have 2 history entries (3-1 for current)
+    is( $final_history_count, 2, 'Password history cleanup respects category setting' );
+
+    # Test that changing category password_history_count affects validation
+    $category->password_history_count(1)->store;
+
+    lives_ok {
+        $patron->set_password( { password => 'initial_password', skip_validation => 1 } );
+    }
+    'With history_count=1, old passwords from history are not checked';
+
+    throws_ok {
+        $patron->set_password( { password => 'initial_password' } );
+    }
+    'Koha::Exceptions::Password::UsedBefore', 'Current password still checked with history_count=1';
+
+    # Test with history_count=0 (no checking)
+    $category->password_history_count(0)->store;
+
+    lives_ok {
+        $patron->set_password( { password => 'initial_password', skip_validation => 1 } );
+    }
+    'With history_count=0, no password history checking performed';
+
+    # Test fallback to system preference
+    $category->password_history_count(undef)->store;
+    t::lib::Mocks::mock_preference( 'PasswordHistoryCount', 2 );
+
+    throws_ok {
+        $patron->set_password( { password => 'initial_password' } );
+    }
+    'Koha::Exceptions::Password::UsedBefore', 'Falls back to system preference when category setting is null';
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'password history edge cases and overrides' => sub {
+    plan tests => 4;
+
+    $schema->storage->txn_begin;
+
+    # Test both category and system preference = 0 (should allow password reuse)
+    t::lib::Mocks::mock_preference( 'PasswordHistoryCount', 0 );
+
+    my $category_zero = $builder->build_object(
+        {
+            class => 'Koha::Patron::Categories',
+            value => {
+                password_history_count  => 0,
+                require_strong_password => 0,
+            }
+        }
+    );
+
+    my $patron_zero = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => {
+                categorycode => $category_zero->categorycode,
+                password     => Koha::AuthUtils::hash_password('reusable_password')
+            }
+        }
+    );
+
+    # Should allow password reuse when both are 0
+    lives_ok {
+        $patron_zero->set_password( { password => 'reusable_password' } );
+    }
+    'Password reuse allowed when both category and system preference are 0';
+
+    # Test category overrides system preference (category higher than system)
+    t::lib::Mocks::mock_preference( 'PasswordHistoryCount', 1 );
+
+    my $category_high = $builder->build_object(
+        {
+            class => 'Koha::Patron::Categories',
+            value => {
+                password_history_count  => 3,
+                require_strong_password => 0,
+            }
+        }
+    );
+
+    my $patron_high = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => {
+                categorycode => $category_high->categorycode,
+                password     => Koha::AuthUtils::hash_password('test_password')
+            }
+        }
+    );
+
+    # Add some password history
+    $patron_high->set_password( { password => 'password1', skip_validation => 1 } );
+    $patron_high->set_password( { password => 'password2', skip_validation => 1 } );
+
+    # Should prevent reuse of old password because category=3 overrides system=1
+    throws_ok {
+        $patron_high->set_password( { password => 'test_password' } );
+    }
+    'Koha::Exceptions::Password::UsedBefore', 'Category setting (3) overrides lower system setting (1)';
+
+    # Test category overrides system preference (category lower than system)
+    t::lib::Mocks::mock_preference( 'PasswordHistoryCount', 5 );
+
+    my $category_low = $builder->build_object(
+        {
+            class => 'Koha::Patron::Categories',
+            value => {
+                password_history_count  => 1,
+                require_strong_password => 0,
+            }
+        }
+    );
+
+    my $patron_low = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => {
+                categorycode => $category_low->categorycode,
+                password     => Koha::AuthUtils::hash_password('another_password')
+            }
+        }
+    );
+
+    # Add password history that would be caught by system=5 but not category=1
+    $patron_low->set_password( { password => 'old_password1', skip_validation => 1 } );
+    $patron_low->set_password( { password => 'old_password2', skip_validation => 1 } );
+
+    # Should allow reuse of original password because category=1 overrides system=5
+    lives_ok {
+        $patron_low->set_password( { password => 'another_password', skip_validation => 1 } );
+    }
+    'Category setting (1) overrides higher system setting (5) - old password allowed';
+
+    # But current password should still be blocked
+    throws_ok {
+        $patron_low->set_password( { password => 'another_password' } );
+    }
+    'Koha::Exceptions::Password::UsedBefore', 'Current password still blocked with category=1';
 
     $schema->storage->txn_rollback;
 };
