@@ -244,6 +244,20 @@ sub effective_force_password_reset_when_set_by_staff {
     return $self->force_password_reset_when_set_by_staff // C4::Context->preference('ForcePasswordResetWhenSetByStaff');
 }
 
+=head3 effective_password_history_count
+
+    $category->effective_password_history_count()
+
+Returns the number of previous passwords to check against when changing password.
+If set in $self->password_history_count or, if undef, falls back to the PasswordHistoryCount
+system preference.
+
+=cut
+
+sub effective_password_history_count {
+    my ($self) = @_;
+    return $self->password_history_count // C4::Context->preference('PasswordHistoryCount');
+}
 
 =head3 override_hidden_items
 
