@@ -7,7 +7,7 @@ export const useCircRulesStore = defineStore("circRules", {
     actions: {
         splitCircRulesByTriggerNumber(rules) {
             const ruleSuffixes = ["delay", "notice", "mtt", "restrict"];
-            let numberOfTabs = 1;
+            let numberOfTabs = [1];
             const rulesPerTrigger = rules.reduce((acc, rule) => {
                 const regex = /overdue_(\d+)_delay/g;
                 const numberOfTriggers = Object.keys(rule).filter(key =>
