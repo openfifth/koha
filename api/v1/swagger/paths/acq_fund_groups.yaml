@@ -31,7 +31,7 @@
         description: Fund group data
         schema:
           items:
-            $ref: "../swagger.yaml#/definitions/fund_group"
+            $ref: "../swagger.yaml#/definitions/acq_fund_group"
           type: array
       "400":
         description: |
@@ -74,12 +74,12 @@
         name: body
         required: true
         schema:
-            $ref: "../swagger.yaml#/definitions/fund_group"
+            $ref: "../swagger.yaml#/definitions/acq_fund_group"
     responses:
       '201':
         description: FundGroup
         schema:
-          $ref: "../swagger.yaml#/definitions/fund_group"
+          $ref: "../swagger.yaml#/definitions/acq_fund_group"
       400:
         description: Bad request
         schema:
@@ -145,7 +145,7 @@
       '200':
         description: Fund group
         schema:
-          $ref: "../swagger.yaml#/definitions/fund_group"
+          $ref: "../swagger.yaml#/definitions/acq_fund_group"
       '400':
         description: Bad request
         schema:
@@ -212,14 +212,14 @@
         description: Fund group object that needs to be added
         required: true
         schema:
-          $ref: "../swagger.yaml#/definitions/fund_group"
+          $ref: "../swagger.yaml#/definitions/acq_fund_group"
     produces:
       - application/json
     responses:
       '200':
         description: Fund group
         schema:
-          $ref: "../swagger.yaml#/definitions/fund_group"
+          $ref: "../swagger.yaml#/definitions/acq_fund_group"
       '400':
         description: Bad request
         schema:

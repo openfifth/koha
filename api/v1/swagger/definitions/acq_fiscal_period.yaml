@@ -54,12 +54,12 @@ properties:
     type: array
     description: List of ledgers
     items:
-      $ref: "ledger.yaml"
+      $ref: "acq_ledger.yaml"
   funds:
     type: array
     description: List of funds
     items:
-      $ref: "fund.yaml"
+      $ref: "acq_fund.yaml"
   owner:
     type: object
     description: Owner of the ledger

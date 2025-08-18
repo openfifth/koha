@@ -1,10 +1,11 @@
-/acquisitions/ledgers:
+---
+/acquisitions/fund_allocations:
   get:
-    x-mojo-to: Acquisitions::FundManagement::Ledgers#list
-    operationId: GetLedgers
-    description: Retrieves the ledgers for the acquisitions module
+    x-mojo-to: Acquisitions::FundManagement::FundAllocations#list
+    operationId: GetFundAllocation
+    description: Retrieves the fund allocations for the acquisitions module
     tags:
-      - GetLedgers
+      - GetFundAllocation
     produces:
       - application/json
     parameters:
@@ -17,8 +18,8 @@
           type: string
           enum:
           - fiscal_period
-          - funds
-          - funds.fund_allocations
+          - ledger
+          - fund
           - owner
         collectionFormat: csv
       - $ref: "../swagger.yaml#/parameters/match"
@@ -29,10 +30,10 @@
       - $ref: "../swagger.yaml#/parameters/q_body"
     responses:
       '200':
-        description: Ledger data
+        description: Fund allocation data
         schema:
           items:
-            $ref: "../swagger.yaml#/definitions/ledger"
+            $ref: "../swagger.yaml#/definitions/acq_fund_allocation"
           type: array
       "400":
         description: |
@@ -60,27 +61,28 @@
       permissions:
         acquisition: budget_manage_all
   post:
-    x-mojo-to: Acquisitions::FundManagement::Ledgers#add
-    operationId: StoreLedger
+    x-mojo-to: Acquisitions::FundManagement::FundAllocations#add
+    operationId: StoreFundAllocation
     tags:
-      - StoreLedger
-    summary: Add ledger
+      - StoreFundAllocation
+    summary: Add fund allocation
     consumes:
       - application/json
     produces:
       - application/json
     parameters:
-      - description: A JSON object containing information about the new ledger
+      - description: A JSON object containing information about the new fund allocation
         in: body
         name: body
         required: true
         schema:
-            $ref: "../swagger.yaml#/definitions/ledger"
+            $ref: "../swagger.yaml#/definitions/acq_fund_allocation"
     responses:
       '201':
-        description: Ledger
+        description: Fund allocation
         schema:
-          $ref: "../swagger.yaml#/definitions/ledger"
+          items:
+            $ref: "../swagger.yaml#/definitions/acq_fund_allocation"
       400:
         description: Bad request
         schema:
@@ -118,15 +120,47 @@
     x-koha-authorization:
       permissions:
         acquisition: budget_manage_all
-/acquisitions/ledgers/{ledger_id}:
+/acquisitions/fund_allocations/transfer:
+  post:
+    x-mojo-to: Acquisitions::FundManagement::FundAllocations#transfer
+    operationId: AcquireTransferFunds
+    tags:
+      - Acquire
+    produces:
+      - application/json
+    responses:
+      '201':
+        description: Transfer confirmation
+        schema:
+          type: object
+      '404':
+        description: An error occured
+        schema:
+          type: object
+          properties:
+            error:
+              description: An explanation for the error
+              type: string
+      '500':
+        description: An error occured
+        schema:
+          type: object
+          properties:
+            error:
+              description: An explanation for the error
+              type: string
+    x-koha-authorization:
+      permissions:
+        acquisition: budget_manage_all
+/acquisitions/fund_allocations/{fund_allocation_id}:
   get:
-    x-mojo-to: Acquisitions::FundManagement::Ledgers#get
-    operationId: getLedger
+    x-mojo-to: Acquisitions::FundManagement::FundAllocations#get
+    operationId: getFundAllocation
     tags:
       - acquire
-    description: Get a single ledger
+    description: Get a single fund allocation
     parameters:
-      - $ref: "../swagger.yaml#/parameters/ledger_id_pp"
+      - $ref: "../swagger.yaml#/parameters/fund_allocation_id_pp"
       - name: x-koha-embed
         in: header
         description: Embed
@@ -136,18 +170,17 @@
           type: string
           enum:
           - fiscal_period
-          - funds
-          - funds.fund_allocations
+          - ledger
+          - fund
           - owner
-          - managing_library
         collectionFormat: csv
     produces:
       - application/json
     responses:
       '200':
-        description: Ledger
+        description: Fund allocation
         schema:
-          $ref: "../swagger.yaml#/definitions/ledger"
+          $ref: "../swagger.yaml#/definitions/acq_fund_allocation"
       '400':
         description: Bad request
         schema:
@@ -202,26 +235,26 @@
       permissions:
         acquisition: budget_manage_all
   put:
-    x-mojo-to: Acquisitions::FundManagement::Ledgers#update
-    operationId: updateLedger
+    x-mojo-to: Acquisitions::FundManagement::FundAllocations#update
+    operationId: updateFundAllocation
     tags:
       - acquire
-    description: Update a ledger
+    description: Update a fund allocation
     parameters:
-      - $ref: "../swagger.yaml#/parameters/ledger_id_pp"
+      - $ref: "../swagger.yaml#/parameters/fund_allocation_id_pp"
       - name: body
         in: body
-        description: Ledger object that needs to be added
+        description: Fund allocation object that needs to be added
         required: true
         schema:
-          $ref: "../swagger.yaml#/definitions/ledger"
+          $ref: "../swagger.yaml#/definitions/acq_fund_allocation"
     produces:
       - application/json
     responses:
       '200':
-        description: Ledger
+        description: Fund allocation
         schema:
-          $ref: "../swagger.yaml#/definitions/ledger"
+          $ref: "../swagger.yaml#/definitions/acq_fund_allocation"
       '400':
         description: Bad request
         schema:
@@ -276,18 +309,18 @@
       permissions:
         acquisition: budget_manage_all
   delete:
-    x-mojo-to: Acquisitions::FundManagement::Ledgers#delete
-    operationId: deleteLedger
+    x-mojo-to: Acquisitions::FundManagement::FundAllocations#delete
+    operationId: deleteFundAllocation
     tags:
       - acquire
-    description: Delete a ledger
+    description: Delete a fund allocation
     parameters:
-      - $ref: "../swagger.yaml#/parameters/ledger_id_pp"
+      - $ref: "../swagger.yaml#/parameters/fund_allocation_id_pp"
     produces:
       - application/json
     responses:
       '204':
-        description: Ledger deleted
+        description: Fund allocation deleted
         schema:
           type: string
       '400':

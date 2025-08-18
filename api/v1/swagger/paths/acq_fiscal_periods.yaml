@@ -32,7 +32,7 @@
         description: Fiscal period data
         schema:
           items:
-            $ref: "../swagger.yaml#/definitions/fiscal_period"
+            $ref: "../swagger.yaml#/definitions/acq_fiscal_period"
           type: array
       "400":
         description: |
@@ -75,12 +75,12 @@
         name: body
         required: true
         schema:
-            $ref: "../swagger.yaml#/definitions/fiscal_period"
+            $ref: "../swagger.yaml#/definitions/acq_fiscal_period"
     responses:
       '201':
         description: FiscalPeriod
         schema:
-          $ref: "../swagger.yaml#/definitions/fiscal_period"
+          $ref: "../swagger.yaml#/definitions/acq_fiscal_period"
       "400":
         description: Bad request
         schema:
@@ -135,7 +135,7 @@
       "200":
         description: A fiscal period
         schema:
-          $ref: "../swagger.yaml#/definitions/fiscal_period"
+          $ref: "../swagger.yaml#/definitions/acq_fiscal_period"
       "400":
         description: Bad request
         schema:
@@ -171,14 +171,14 @@
         description: Fiscal period object that needs to be added
         required: true
         schema:
-          $ref: "../swagger.yaml#/definitions/fiscal_period"
+          $ref: "../swagger.yaml#/definitions/acq_fiscal_period"
     produces:
       - application/json
     responses:
       '200':
         description: Fiscal period
         schema:
-          $ref: "../swagger.yaml#/definitions/fiscal_period"
+          $ref: "../swagger.yaml#/definitions/acq_fiscal_period"
       "400":
         description: Bad request
         schema:

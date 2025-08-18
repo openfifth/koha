@@ -13,7 +13,7 @@
       200:
         description: The fund management config
         schema:
-          $ref: "../swagger.yaml#/definitions/fund_management_config"
+          $ref: "../swagger.yaml#/definitions/acq_fund_management_config"
       400:
         description: Bad request
         schema:

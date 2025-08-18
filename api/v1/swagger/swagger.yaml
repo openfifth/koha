@@ -6,6 +6,18 @@ definitions:
     $ref: ./definitions/account_line.yaml
   additional_content:
     $ref: ./definitions/additional_content.yaml
+  acq_fund_management_config:
+    $ref: ./definitions/acq_fund_management_config.yaml
+  acq_fiscal_period:
+    $ref: ./definitions/acq_fiscal_period.yaml
+  acq_fund:
+    $ref: ./definitions/acq_fund.yaml
+  acq_fund_group:
+    $ref: ./definitions/acq_fund_group.yaml
+  acq_fund_allocation:
+    $ref: ./definitions/acq_fund_allocation.yaml
+  acq_ledger:
+    $ref: ./definitions/acq_ledger.yaml
   advancededitormacro:
     $ref: ./definitions/advancededitormacro.yaml
   allows_renewal:
@@ -94,16 +106,6 @@ definitions:
     $ref: ./definitions/extended_attribute_type.yaml
   extended_attribute_value:
     $ref: ./definitions/extended_attribute_value.yaml
-  fund_management_config:
-    $ref: ./definitions/fund_management_config.yaml
-  fiscal_period:
-    $ref: ./definitions/fiscal_period.yaml
-  fund:
-    $ref: ./definitions/fund.yaml
-  fund_group:
-    $ref: ./definitions/fund_group.yaml
-  fund_allocation:
-    $ref: ./definitions/fund_allocation.yaml
   hold:
     $ref: ./definitions/hold.yaml
   holds:
@@ -144,8 +146,6 @@ definitions:
     $ref: ./definitions/item_type.yaml
   job:
     $ref: ./definitions/job.yaml
-  ledger:
-    $ref: ./definitions/ledger.yaml
   library:
     $ref: ./definitions/library.yaml
   list:
@@ -226,35 +226,35 @@ paths:
   /acquisitions/edifiles:
     $ref: ./paths/acquisitions_edifiles.yaml#/~1acquisitions~1edifiles
   /acquisitions/fiscal_periods:
-    $ref: ./paths/fiscal_periods.yaml#/~1acquisitions~1fiscal_periods
+    $ref: ./paths/acq_fiscal_periods.yaml#/~1acquisitions~1fiscal_periods
   "/acquisitions/fiscal_periods/{fiscal_period_id}":
-    $ref: ./paths/fiscal_periods.yaml#/~1acquisitions~1fiscal_periods~1{fiscal_period_id}
+    $ref: ./paths/acq_fiscal_periods.yaml#/~1acquisitions~1fiscal_periods~1{fiscal_period_id}
   /acquisitions/fund_management/config:
-    $ref: ./paths/acquisitions_fund_management_config.yaml#/~1acquisitions~1fund_management~1config
+    $ref: ./paths/acq_fund_management_config.yaml#/~1acquisitions~1fund_management~1config
   /acquisitions/funds:
-    $ref: ./paths/funds.yaml#/~1acquisitions~1funds
+    $ref: ./paths/acq_funds.yaml#/~1acquisitions~1funds
   "/acquisitions/funds/{fund_id}":
-    $ref: ./paths/funds.yaml#/~1acquisitions~1funds~1{fund_id}
+    $ref: ./paths/acq_funds.yaml#/~1acquisitions~1funds~1{fund_id}
   /acquisitions/funds/owners:
     $ref: ./paths/acquisitions_funds.yaml#/~1acquisitions~1funds~1owners
   /acquisitions/funds/users:
     $ref: ./paths/acquisitions_funds.yaml#/~1acquisitions~1funds~1users
   /acquisitions/fund_allocations:
-    $ref: ./paths/fund_allocations.yaml#/~1acquisitions~1fund_allocations
+    $ref: ./paths/acq_fund_allocations.yaml#/~1acquisitions~1fund_allocations
   /acquisitions/fund_allocations/transfer:
-    $ref: ./paths/fund_allocations.yaml#/~1acquisitions~1fund_allocations~1transfer
+    $ref: ./paths/acq_fund_allocations.yaml#/~1acquisitions~1fund_allocations~1transfer
   "/acquisitions/fund_allocations/{fund_allocation_id}":
-    $ref: ./paths/fund_allocations.yaml#/~1acquisitions~1fund_allocations~1{fund_allocation_id}
+    $ref: ./paths/acq_fund_allocations.yaml#/~1acquisitions~1fund_allocations~1{fund_allocation_id}
   /acquisitions/fund_groups:
-    $ref: ./paths/fund_groups.yaml#/~1acquisitions~1fund_groups
+    $ref: ./paths/acq_fund_groups.yaml#/~1acquisitions~1fund_groups
   "/acquisitions/fund_groups/{fund_group_id}":
-    $ref: ./paths/fund_groups.yaml#/~1acquisitions~1fund_groups~1{fund_group_id}
+    $ref: ./paths/acq_fund_groups.yaml#/~1acquisitions~1fund_groups~1{fund_group_id}
   /acquisitions/fund_management/users:
-    $ref: ./paths/acquisitions_users.yaml#/~1acquisitions~1fund_management~1users
+    $ref: ./paths/acq_users.yaml#/~1acquisitions~1fund_management~1users
   /acquisitions/ledgers:
-    $ref: ./paths/ledgers.yaml#/~1acquisitions~1ledgers
+    $ref: ./paths/acq_ledgers.yaml#/~1acquisitions~1ledgers
   "/acquisitions/ledgers/{ledger_id}":
-    $ref: ./paths/ledgers.yaml#/~1acquisitions~1ledgers~1{ledger_id}
+    $ref: ./paths/acq_ledgers.yaml#/~1acquisitions~1ledgers~1{ledger_id}
   /acquisitions/orders:
     $ref: ./paths/acquisitions_orders.yaml#/~1acquisitions~1orders
   "/acquisitions/orders/{order_id}":

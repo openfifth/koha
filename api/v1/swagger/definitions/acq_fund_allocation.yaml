@@ -79,17 +79,17 @@ properties:
     type: object
     description: Fiscal_period
     items:
-      $ref: "fiscal_period.yaml"
+      $ref: "acq_fiscal_period.yaml"
   ledger:
     type: object
     description: Ledger
     items:
-      $ref: "ledger.yaml"
+      $ref: "acq_ledger.yaml"
   fund:
     type: object
     description: Fund
     items:
-      $ref: "fund.yaml"
+      $ref: "acq_fund.yaml"
   owner:
     type: object
     description: Owner of the ledger
