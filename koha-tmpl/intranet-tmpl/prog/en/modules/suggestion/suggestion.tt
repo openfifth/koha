@@ -1332,7 +1332,7 @@
                                     },
                                     {
                                         data: "suggester.category.name",
-                                        searchable: false,
+                                        searchable: true,
                                         orderable: true,
                                         render: function (data, type, row, meta) {
                                             return escape_str(row.suggester ? row.suggester.category.name : '');
@@ -1348,7 +1348,7 @@
                                     },
                                     {
                                         data: "patron_reason",
-                                        searchable: false,
+                                        searchable: true,
                                         orderable: true,
                                         render: function (data, type, row, meta) {
                                             return escape_str(row._strings.patron_reason.str ? row._strings.patron_reason.str : '');
@@ -1408,7 +1408,7 @@
                                     },
                                     {
                                         data: "library.name",
-                                        searchable: false,
+                                        searchable: true,
                                         orderable: true,
                                         render: function (data, type, row, meta) {
                                             return escape_str(row.library?.name ? row.library.name : '');
@@ -1416,7 +1416,7 @@
                                     },
                                     {
                                         data: "fund.name",
-                                        searchable: false,
+                                        searchable: true,
                                         orderable: true,
                                         render: function (data, type, row, meta) {
                                             return escape_str(row.fund?.name ? row.fund.name : '');
@@ -1432,7 +1432,7 @@
                                     },
                                     {
                                         data: "status",
-                                        searchable: false,
+                                        searchable: true,
                                         orderable: true,
                                         render: function (data, type, row, meta) {
                                             if(row.status === 'ASKED') return '<span>%s</span>'.format(_("Pending"));
