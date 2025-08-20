@@ -231,7 +231,6 @@ INSERT INTO systempreferences ( `variable`, `value`, `options`, `explanation`, `
 ('EdifactInvoiceImport', 'automatic', 'automatic|manual', "If on, don't auto-import EDI invoices, just keep them in the database with the status 'new'", 'Choice'),
 ('EdifactLSL', 'ccode', 'location|ccode|', 'Map EDI sub-location code (GIR+LSL) to Koha Item field, empty to ignore', 'Choice'),
 ('EdifactLSQ', 'location', 'location|ccode|', 'Map EDI sequence code (GIR+LSQ) to Koha Item field, empty to ignore', 'Choice'),
-('ElasticsearchBoostFieldMatch', '0', NULL, 'Add a "match" query to es when searching, will follow indexes chosen in advanced search, or use title-cover for generic keyword or title index search', 'YesNo'),
 ('ElasticsearchCrossFields', '1', '', 'Enable "cross_fields" option for searches using Elastic search.', 'YesNo'),
 ('ElasticsearchIndexStatus_authorities', '0', 'Authorities index status', NULL, NULL),
 ('ElasticsearchIndexStatus_biblios', '0', 'Biblios index status', NULL, NULL),
