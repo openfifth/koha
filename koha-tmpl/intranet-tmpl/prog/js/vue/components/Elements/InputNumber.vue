@@ -7,6 +7,7 @@
         :required="required"
         :size="size"
         :maxlength="maxlength"
+        :disabled="disabled"
     />
 </template>
 
@@ -20,6 +21,7 @@ export default {
         required: Boolean,
         size: Number | null,
         maxlength: Number | null,
+        disabled: Boolean,
     },
     emits: ["update:modelValue"],
     setup(props, { emit }) {

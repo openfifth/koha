@@ -6,6 +6,7 @@
         :cols="cols"
         :placeholder="placeholder"
         :required="required"
+        :disabled="disabled"
     />
 </template>
 
@@ -25,6 +26,7 @@ export default {
             type: Number,
             default: 50,
         },
+        disabled: Boolean,
     },
     emits: ["update:modelValue"],
     setup(props, { emit }) {

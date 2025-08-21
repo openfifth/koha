@@ -16,6 +16,7 @@
             :maxlength="attr.maxlength"
             :disabled="disabled"
             @update:modelValue="checkForInputError()"
+            :disabled="disabled"
         />
     </template>
     <template v-else-if="attr.type == 'text'">
@@ -27,6 +28,7 @@
             :disabled="disabled"
             @update:modelValue="checkForInputError()"
             :classNames="attr.class"
+            :disabled="disabled"
         />
     </template>
     <template v-else-if="attr.type == 'textarea'">
@@ -39,6 +41,7 @@
             :required="attr.required ? true : false"
             :disabled="disabled"
             @update:modelValue="checkForInputError()"
+            :disabled="disabled"
         />
     </template>
     <template v-else-if="attr.type == 'checkbox'">
@@ -197,6 +200,9 @@
     <span style="margin-left: 5px" class="error" v-if="fieldInputError">
         {{ attr.formErrorMessage }}
     </span>
+    <span v-if="attr.hint" class="hint" style="margin-left: 5px">{{
+        attr.hint
+    }}</span>
 </template>
 
 <script>

@@ -6,6 +6,7 @@
         :placeholder="placeholder"
         :required="required"
         :class="classNames"
+        :disabled="disabled"
     />
 </template>
 
@@ -18,6 +19,7 @@ export default {
         placeholder: String,
         required: Boolean,
         classNames: String,
+        disabled: Boolean,
     },
     emits: ["update:modelValue"],
     setup(props, { emit }) {

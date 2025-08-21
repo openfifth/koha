@@ -6,6 +6,7 @@
         :placeholder="placeholder"
         :required="required"
         @change="changeMethod()"
+        :disabled="disabled"
     />
 </template>
 
@@ -21,6 +22,7 @@ export default {
             type: Function,
             default: () => {},
         },
+        disabled: Boolean,
     },
     setup(props, { emit }) {
         const model = computed({
