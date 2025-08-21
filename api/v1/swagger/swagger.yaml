@@ -18,6 +18,8 @@ definitions:
     $ref: ./definitions/acq_fund_allocation.yaml
   acq_ledger:
     $ref: ./definitions/acq_ledger.yaml
+  acq_orderline:
+    $ref: ./definitions/acq_orderline.yaml
   advancededitormacro:
     $ref: ./definitions/advancededitormacro.yaml
   allows_renewal:
@@ -255,6 +257,10 @@ paths:
     $ref: ./paths/acq_ledgers.yaml#/~1acquisitions~1ledgers
   "/acquisitions/ledgers/{ledger_id}":
     $ref: ./paths/acq_ledgers.yaml#/~1acquisitions~1ledgers~1{ledger_id}
+  /acquisitions/orderlines:
+    $ref: ./paths/acq_orderlines.yaml#/~1acquisitions~1orderlines
+  "/acquisitions/orderlines/{orderline_id}":
+    $ref: "./paths/acq_orderlines.yaml#/~1acquisitions~1orderlines~1{orderline_id}"
   /acquisitions/orders:
     $ref: ./paths/acquisitions_orders.yaml#/~1acquisitions~1orders
   "/acquisitions/orders/{order_id}":
@@ -966,6 +972,12 @@ parameters:
     description: Internal order identifier
     in: path
     name: order_id
+    required: true
+    type: integer
+  orderline_id_pp:
+    description: Internal orderline identifier
+    in: path
+    name: orderline_id
     required: true
     type: integer
   page:

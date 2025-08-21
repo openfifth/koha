@@ -1,0 +1,133 @@
+---
+type: object
+properties:
+  orderline_id:
+    type: integer
+    description: Unique identifier for the orderline
+  biblionumber:
+    type: integer
+    description: Foreign key referencing the biblio table
+  deleted_biblionumber:
+    type: integer
+    description: Foreign key referencing the deletedbiblio table
+  subscriptionid:
+    type: integer
+    description: Foreign key referencing the subscription table
+  purchase_order_id:
+    type: integer
+    description: Foreign key referencing the acq_purchase_orders table
+  created_by:
+    type: integer
+    description: Foreign key referencing the borrowers table
+  created_date:
+    type: string
+    format: date-time
+    description: Date the orderline was created
+  modified_date:
+    type: string
+    format: date-time
+    description: Date the orderline was last updated
+  ordered_date:
+    type: string
+    format: date-time
+    description: Date the orderline was ordered
+  status:
+    type: string
+    enum:
+      - draft
+      - new
+      - ordered
+      - continuing
+      - complete
+      - partial
+      - unsubscribed
+      - cancelled
+    description: Status of the orderline
+  payment_status:
+    type: string
+    enum:
+      - pending
+      - partial
+      - paid
+      - unpaid
+      - cancelled
+    description: Payment status of the orderline
+  is_continuous:
+    type: boolean
+    description: Whether the orderline is continuous
+  renewal_required:
+    type: boolean
+    description: Whether the orderline requires renewal
+  review_interval:
+    type: integer
+    description: Interval for reviewing the orderline
+  last_review_date:
+    type: string
+    format: date
+    description: Date the orderline was last reviewed
+  planned_cancellation_date:
+    type: string
+    format: date
+    description: Date the subscription is planned to be cancelled
+  acquisition_method:
+    type: string
+    description: Method of acquisition for the orderline
+  create_items:
+    type: string
+    enum:
+      - ordering
+      - receiving
+      - cataloging
+    description: Point at which items are created for the orderline
+  managing_branch:
+    type: string
+    description: Branch responsible for managing the orderline
+  vendor_id:
+    type: integer
+    description: Foreign key referencing the vendors table
+  quantity_ordered:
+    type: integer
+    description: Quantity ordered for the orderline
+  uncertain_price:
+    type: boolean
+    description: Whether the price is uncertain
+  vendor_price_currency:
+    type: string
+    description: Currency used for the vendor price
+  vendor_price:
+    type: number
+    description: Price charged by the vendor
+  discount_percentage:
+    type: number
+    description: Discount percentage applied to the orderline
+  discount_amount_oc:
+    type: number
+    description: Discount amount in the original currency
+  replacement_price:
+    type: number
+    description: Replacement cost for the orderline
+  calculated_amount_oc:
+    type: number
+    description: Calculated amount in the original currency
+  internal_note:
+    type: string
+    description: Internal note for the orderline
+  receiving_note:
+    type: string
+    description: Receiving note for the orderline
+  vendor_note:
+    type: string
+    description: Vendor note for the orderline
+  urgent_order:
+    type: boolean
+    description: Whether the orderline is urgent
+  statistic1:
+    type: string
+    description: First statistical field for the orderline
+  statistic2:
+    type: string
+    description: Second statistical field for the orderline
+required:
+  - orderline_id
+  - status
+  - payment_status

@@ -315,20 +315,65 @@ export class AcquisitionAPIClient {
                 this.httpClient.delete({
                     endpoint: "fund_groups/" + id,
                 }),
-            create: fund_allocation =>
+            create: fund_group =>
                 this.httpClient.post({
                     endpoint: "fund_groups",
-                    body: fund_allocation,
+                    body: fund_group,
                 }),
-            update: (fund_allocation, id) =>
+            update: (fund_group, id) =>
                 this.httpClient.put({
                     endpoint: "fund_groups/" + id,
-                    body: fund_allocation,
+                    body: fund_group,
                 }),
             count: (query = {}) =>
                 this.httpClient.count({
                     endpoint:
                         "fund_groups?" +
+                        new URLSearchParams({
+                            _page: 1,
+                            _per_page: 1,
+                            ...(query && { q: JSON.stringify(query) }),
+                        }),
+                }),
+        };
+    }
+
+    get orderlines() {
+        return {
+            get: (id, headers) =>
+                this.httpClient.get({
+                    endpoint: "orderlines/" + id,
+                    ...(headers && {
+                        headers,
+                    }),
+                }),
+            getAll: (query, params, headers) =>
+                this.httpClient.getAll({
+                    endpoint: "orderlines",
+                    query,
+                    params,
+                    ...(headers && {
+                        headers,
+                    }),
+                }),
+            delete: id =>
+                this.httpClient.delete({
+                    endpoint: "orderlines/" + id,
+                }),
+            create: orderline =>
+                this.httpClient.post({
+                    endpoint: "orderlines",
+                    body: orderline,
+                }),
+            update: (orderline, id) =>
+                this.httpClient.put({
+                    endpoint: "orderlines/" + id,
+                    body: orderline,
+                }),
+            count: (query = {}) =>
+                this.httpClient.count({
+                    endpoint:
+                        "orderlines?" +
                         new URLSearchParams({
                             _page: 1,
                             _per_page: 1,
