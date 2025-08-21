@@ -2,6 +2,7 @@ import { markRaw } from "vue";
 
 import Homepage from "../../components/Acquisitions/Homepage.vue";
 import FundManagementHome from "../../components/Acquisitions/FundManagement/FundManagementHome.vue";
+import OrderManagementHome from "../../components/Acquisitions/OrderManagement/OrderManagementHome.vue";
 import FundAllocationFormAdd from "../../components/Acquisitions/FundManagement/FundAllocationFormAdd.vue";
 import TransferFunds from "../../components/Acquisitions/FundManagement/TransferFunds.vue";
 
@@ -23,7 +24,7 @@ export const routes = [
                 is_navigation_item: false,
             },
             {
-                path: "/cgi-bin/koha/fund_management",
+                path: "/cgi-bin/koha/acquisitions/fund_management",
                 moduleName: "funds",
                 title: $__("Fund management"),
                 icon: "fa fa-money-check-dollar",
@@ -248,11 +249,60 @@ export const routes = [
                 ],
             },
             {
-                path: "/cgi-bin/koha/order_management",
+                path: "/cgi-bin/koha/acquisitions/order_management",
                 moduleName: "ordering",
                 title: $__("Order management"),
                 icon: "fa fa-cart-shopping",
-                children: [],
+                children: [
+                    {
+                        path: "",
+                        component: markRaw(OrderManagementHome),
+                        name: "OrderManagementHome",
+                        is_navigation_item: false,
+                        alternateLeftMenu: "AcqMenu",
+                    },
+                    {
+                        path: "orderlines",
+                        title: "Orderlines",
+                        is_navigation_item: false,
+                        resource:
+                            "Acquisitions/OrderManagement/OrderlineResource.vue",
+                        children: [
+                            {
+                                path: "",
+                                component: markRaw(ResourceWrapper),
+                                name: "OrderlineList",
+                                title: "List orderlines",
+                                permission: "manageOrderlines",
+                                alternateLeftMenu: "AcqMenu",
+                            },
+                            {
+                                path: ":fiscal_period_id",
+                                component: markRaw(ResourceWrapper),
+                                name: "OrderlineShow",
+                                title: "Show orderline",
+                                permission: "manageOrderlines",
+                                alternateLeftMenu: "AcqMenu",
+                            },
+                            {
+                                path: "add",
+                                component: markRaw(ResourceWrapper),
+                                name: "OrderlineFormAdd",
+                                title: "Add orderline",
+                                permission: "createOrderlines",
+                                alternateLeftMenu: "AcqMenu",
+                            },
+                            {
+                                path: "edit/:fiscal_period_id",
+                                component: markRaw(ResourceWrapper),
+                                name: "OrderlineFormAddEdit",
+                                title: "Edit orderline",
+                                permission: "editOrderline",
+                                alternateLeftMenu: "AcqMenu",
+                            },
+                        ],
+                    },
+                ],
             },
         ],
     },

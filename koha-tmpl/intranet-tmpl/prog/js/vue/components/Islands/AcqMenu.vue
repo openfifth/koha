@@ -14,9 +14,16 @@ been migrated
             </li>
             <li>
                 <a
-                    href="/cgi-bin/koha/fund_management"
+                    href="/cgi-bin/koha/acquisitions/fund_management"
                     :ref="el => templateRefs.push(el)"
                     >{{ $__("Fund management") }}</a
+                >
+            </li>
+            <li>
+                <a
+                    href="/cgi-bin/koha/acquisitions/order_management"
+                    :ref="el => templateRefs.push(el)"
+                    >{{ $__("Order management") }}</a
                 >
             </li>
         </ul>
