@@ -287,17 +287,6 @@
             [% IF ( extended_attribute_types ) %][% extended_attribute_types = [ extended_attribute_types ]  %][% END %]
             var extended_attribute_types = [% To.json(extended_attribute_types || []) | $raw %];
         [% END %]
-
-        $(document).on("shown.bs.modal", function(){
-            $('select[name="sort1_filter"]').select2({allowClear:true,dropdownParent:$('#patron_search_modal')});
-            $('select[name="sort2_filter"]').select2({allowClear:true,dropdownParent:$('#patron_search_modal')});
-        }).on("hidden.bs.modal", function(){
-            ["sort1_filter", "sort2_filter"].forEach(function(item){
-                if( $('select[name=' +  item + ']').data("select2") ){
-                    $('select[name=' +  item + ']').select2("destroy");
-                }
-            });
-        });
     </script>
     [% INCLUDE 'datatables.inc' %]
     [% INCLUDE 'js-patron-get-age.inc' %]
@@ -339,6 +328,22 @@
             [% CASE %]
                 let patron_search_url = '/api/v1/patrons';
             [% END %]
+
+            $(document).on("shown.bs.modal", function(){
+                const vueFilteredEndpoint = $("#vuePatronSearchFilter").data("patron_search_filter")
+                if(vueFilteredEndpoint) {
+                    patrons_table.DataTable().ajax.url(vueFilteredEndpoint)
+                    patron_search_url = vueFilteredEndpoint
+                }
+                $('select[name="sort1_filter"]').select2({allowClear:true, dropdownParent: $('#patron_search_modal') });
+                $('select[name="sort2_filter"]').select2({allowClear:true, dropdownParent: $('#patron_search_modal') });
+            }).on("hidden.bs.modal", function(){
+                ["sort1_filter", "sort2_filter"].forEach(function(item){
+                    if( $('select[name=' +  item + ']').data("select2") ){
+                        $('select[name=' +  item + ']').select2("destroy");
+                    }
+                });
+            });
 
             $(document).ready(function(){
 

@@ -25,10 +25,15 @@
         name="selected_patron_id"
         id="selected_patron_id"
     />
+    <span
+        id="vuePatronSearchFilter"
+        style="display: none"
+        aria-hidden="true"
+    ></span>
 </template>
 
 <script>
-import { computed, onBeforeMount, ref } from "vue";
+import { computed, onBeforeMount, onMounted, ref } from "vue";
 import { APIClient } from "../fetch/api-client.js";
 
 export default {
@@ -44,6 +49,7 @@ export default {
             type: String,
             default: "patron",
         },
+        filteredUrl: String,
     },
     setup(props) {
         const loading = ref(false);
@@ -52,6 +58,14 @@ export default {
             props.resource.patron_str = $patron_to_html(
                 props.resource[props.fieldName]
             );
+        });
+        onMounted(() => {
+            if (props.filteredUrl) {
+                $("#vuePatronSearchFilter").data(
+                    "patron_search_filter",
+                    props.filteredUrl
+                );
+            }
         });
 
         const filters = computed(() => {
