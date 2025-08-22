@@ -181,6 +181,10 @@ export default {
                             type: "string",
                             value: "owner",
                         },
+                        filteredUrl: {
+                            type: "string",
+                            value: "/api/v1/acquisitions/fund_management/users",
+                        },
                     },
                     showElement: {
                         type: "text",

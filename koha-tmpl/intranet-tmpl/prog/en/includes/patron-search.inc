@@ -323,8 +323,6 @@
                 let patron_search_url = '/api/v1/acquisitions/funds/users';
             [% CASE 'erm_users' %]
                 let patron_search_url = '/api/v1/erm/users';
-            [% CASE 'fund_management_users' %]
-                let patron_search_url = '/api/v1/acquisitions/fund_management/users';
             [% CASE %]
                 let patron_search_url = '/api/v1/patrons';
             [% END %]
