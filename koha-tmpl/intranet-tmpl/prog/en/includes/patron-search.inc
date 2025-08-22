@@ -327,8 +327,18 @@
                 let patron_search_url = '/api/v1/patrons';
             [% END %]
 
+            let actionButtons;
+            [% IF actions %]
+                actionButtons = [% To.json(actions) | $raw %]
+            [% ELSE %]
+                actionButtons = []
+            [% END %]
+
             $(document).on("shown.bs.modal", function(){
-                const vueFilteredEndpoint = $("#vuePatronSearchFilter").data("patron_search_filter")
+                const vueData = $("#vuePatronSearchData")
+                const actionType = vueData.data("action_type")
+                if(!actionButtons.includes(actionType) ) actionButtons.push(actionType)
+                const vueFilteredEndpoint = vueData.data("patron_search_filter")
                 if(vueFilteredEndpoint) {
                     patrons_table.DataTable().ajax.url(vueFilteredEndpoint)
                     patron_search_url = vueFilteredEndpoint
@@ -752,22 +762,26 @@
 
                                         let patron_id = encodeURIComponent(row.patron_id);
                                         let action_node = "";
-                                        [% FOR action IN actions %]
-                                        [% SWITCH action %]
-                                        [% CASE 'select' %]
-                                            action_node += '<a href="#" class="btn btn-default btn-xs select_user" data-borrowernumber="' + patron_id + '">' + _("Select") + '</a>';
-                                        [% CASE 'add' %]
-                                            action_node += '<a href="#" class="btn btn-default btn-xs add_user" data-borrowernumber="' + patron_id + '">' + _("Add") + '</a>';
-                                        [% CASE 'edit' %]
-                                            [% IF CAN_user_borrowers_edit_borrowers %]
-                                                action_node += '<a href="/cgi-bin/koha/members/memberentry.pl?op=edit_form&amp;destination=circ&amp;borrowernumber=' + patron_id + '" class="btn btn-default btn-xs"><i class="fa-solid fa-pencil" aria-hidden="true"></i> ' + _("Edit") + '</a>';
-                                            [% END %]
-                                        [% CASE 'checkout' %]
-                                            [% IF CAN_user_circulate_circulate_remaining_permissions %]
-                                                action_node += '<a class="btn btn-default btn-xs" href="/cgi-bin/koha/circ/circulation.pl?borrowernumber=' + patron_id + '"><i class="fa fa-barcode"></i> ' + _("Check out") + '</a>';
-                                            [% END %]
-                                        [% END %]
-                                        [% END %]
+                                        actionButtons.forEach(action => {
+                                            switch (action) {
+                                                case 'select':
+                                                    action_node += '<a href="#" class="btn btn-default btn-xs select_user" data-borrowernumber="' + patron_id + '">' + _("Select") + '</a>';
+                                                    break;
+                                                case 'add':
+                                                    action_node += '<a href="#" class="btn btn-default btn-xs add_user" data-borrowernumber="' + patron_id + '">' + _("Add") + '</a>';
+                                                    break;
+                                                case 'edit':
+                                                    [% IF CAN_user_borrowers_edit_borrowers %]
+                                                        action_node += '<a href="/cgi-bin/koha/members/memberentry.pl?op=edit_form&amp;destination=circ&amp;borrowernumber=' + patron_id + '" class="btn btn-default btn-xs"><i class="fa-solid fa-pencil" aria-hidden="true"></i> ' + _("Edit") + '</a>';
+                                                    [% END %]
+                                                    break;
+                                                case 'checkout':
+                                                    [% IF CAN_user_circulate_circulate_remaining_permissions %]
+                                                        action_node += '<a class="btn btn-default btn-xs" href="/cgi-bin/koha/circ/circulation.pl?borrowernumber=' + patron_id + '"><i class="fa fa-barcode"></i> ' + _("Check out") + '</a>';
+                                                    [% END %]
+                                                    break;
+                                            }
+                                        })
 
                                         let patron_str = JSON.stringify(row);
                                         let input_node = $('<input type="hidden" name="borrower_data'+ patron_id + '"/>');
