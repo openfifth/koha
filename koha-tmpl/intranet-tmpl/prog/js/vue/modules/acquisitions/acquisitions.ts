@@ -101,7 +101,7 @@ router.beforeEach((to, from) => {
 const loadRouterAndMount = async () => {
     try {
         await router.isReady();
-        app.mount("#__acquisitions");
+        app.mount("#acquisitions");
     } catch (err) {}
 };
 

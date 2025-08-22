@@ -85,6 +85,46 @@ export default {
                     },
                     value: "",
                 },
+                //TODO: Catalog details
+                {
+                    name: "patrons_to_notify",
+                    group: $__("Patrons to notify"),
+                    type: "component",
+                    label: $__("Notify on receiving"),
+                    componentPath: "./PatronSearch.vue",
+                    componentProps: {
+                        name: {
+                            type: "string",
+                            value: "patrons_to_notify",
+                        },
+                        required: {
+                            type: "boolean",
+                            value: false,
+                        },
+                        resource: {
+                            type: "resource",
+                            value: null,
+                        },
+                        label: {
+                            type: "string",
+                            value: $__("Notify on receiving"),
+                        },
+                        fieldName: {
+                            type: "string",
+                            value: "patrons_to_notify",
+                        },
+                        modalType: {
+                            type: "string",
+                            value: "add",
+                        },
+                    },
+                    // showElement: {
+                    //     type: "text",
+                    //     value: "owner",
+                    //     format: patron_to_html,
+                    // },
+                    hideIn: ["List"],
+                },
             ],
         });
 

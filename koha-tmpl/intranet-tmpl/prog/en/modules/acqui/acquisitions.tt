@@ -21,7 +21,7 @@
     [% INCLUDE 'acquisitions-search.inc' %]
 [% END %]
 
-<div id="__acquisitions"></div>
+<div id="acquisitions"></div>
 
 [% MACRO jsinclude BLOCK %]
     [% Asset.js("js/cataloging.js") | $raw %]
@@ -32,17 +32,40 @@
     [% INCLUDE 'format_price.inc' %]
     <script>
         const logged_in_user = [% To.json(logged_in_user.unblessed) | $raw %];
-        const logged_in_branch = [% To.json(logged_in_branch) | $raw %];
-        const userflags = [% To.json(userflags) | $raw %];
-        // const library_groups = [% To.json(library_groups) | $raw %];
-        const currencyList = [% To.json(currencies) | $raw %];
-        const permitted_patrons = [% To.json(permitted_patrons) | $raw %];
+            const logged_in_branch = [% To.json(logged_in_branch) | $raw %];
+            const userflags = [% To.json(userflags) | $raw %];
+            // const library_groups = [% To.json(library_groups) | $raw %];
+            const currencyList = [% To.json(currencies) | $raw %];
+            const permitted_patrons = [% To.json(permitted_patrons) | $raw %];
+
+        function add_user(borrowernumber, borrowername) {
+            var ids = $("#users_ids").val();
+            if(ids.length > 0) {
+                ids = ids.split(':');
+            } else {
+                ids = new Array;
+            }
+            if (ids.indexOf(borrowernumber.toString()) < 0) {
+                ids.push(borrowernumber);
+                $("#users_ids").val(ids.join(':'));
+                var li = '<li id="user_'+borrowernumber+'">'+borrowername
+                    + ' <i class="fa fa-trash" style="cursor:pointer;" onclick="del_user('+borrowernumber+');"></i></li>';
+                $("#users_names").append(li);
+                return 0;
+            }
+            return -1;
+        }
+        function del_user(borrowernumber) {
+            $("#user_"+borrowernumber).remove();
+            var ids = $("#users_ids").val().split(':');
+            ids.splice(ids.indexOf(borrowernumber.toString()), 1);
+            $("#users_ids").val(ids.join(':'));
+        }
     </script>
     [% Asset.js("js/vue/dist/acquisitions/acquisitions.js") | $raw %]
     [% INCLUDE 'select2.inc' %]
     [% SET columns = ['cardnumber','name','category','branch','action'] %]
-    [% SET filter = "fund_management_users" %]
     [% PROCESS patron_search_modal columns => columns, modal_title => t("Select user") %]
-    [% PROCESS patron_search_js columns => columns, actions => ["select"], preview_on_name_click => 1 %]
+    [% PROCESS patron_search_js columns => columns, preview_on_name_click => 1 %]
 [% END %]
 [% INCLUDE 'intranet-bottom.inc' %]
