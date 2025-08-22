@@ -82,8 +82,11 @@ sub call {
                 $request_method, $uri, $referer;
 
         } elsif ( !$csrf_token ) {
-            $error = sprintf "Programming error - No CSRF token passed for %s %s (referer: %s)", $request_method,
-                $uri, $referer;
+            my $u0 = URI->new($uri);
+            unless ( $u0->path =~ m|/intranet/plugins/run.pl$| && $req->param('method') eq 'vendor_order_receive' ) {
+                $error = sprintf "Programming error - No CSRF token passed for %s %s (referer: %s)", $request_method,
+                    $uri, $referer;
+            }
         } else {
             unless (
                 Koha::Token->new->check_csrf(
