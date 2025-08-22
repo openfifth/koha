@@ -1,0 +1,20 @@
+---
+type: object
+properties:
+  name:
+    description: the field name
+    type: string
+  attrname:
+    description: optional name of patron attribute
+    type:
+      - "string"
+      - "null"
+  value:
+    description: the completed field value
+    type:
+      - "string"
+      - "null"
+additionalProperties: false
+required:
+  - name
+  - value
