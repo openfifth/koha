@@ -55,6 +55,9 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
             const modulesEnabled = store.settings.modulesEnabled;
             return modulesEnabled.value ? modulesEnabled.value : "";
         }),
+        getActiveCurrency: computed(() => {
+            return store.currencies.find(curr => curr.active);
+        }),
     };
 
     return {
