@@ -21,7 +21,7 @@ export default {
     },
     setup(props) {
         const acquisitionsStore = inject("acquisitionsStore");
-        const { currencies } = storeToRefs(acquisitionsStore);
+        const { currencies, gstValues } = storeToRefs(acquisitionsStore);
 
         const baseResource = useBaseResource({
             resourceName: "orderline",
@@ -178,10 +178,14 @@ export default {
                     label: $__("Vendor"),
                     relationshipAPIClient: APIClient.acquisition.vendors,
                     relationshipOptionLabelAttr: "name",
-                    relationshipRequiredKey: "vendor_id",
+                    relationshipRequiredKey: "id",
                     hint: $__(
                         "If you leave the vendor empty the orderline can only be saved as a draft"
                     ),
+                    onSelected: (e, options, resource) => {
+                        const vendor = options.find(option => option.id === e);
+                        resource.tax_rate = vendor.tax_rate;
+                    },
                     hideIn: ["List"],
                 },
                 {
@@ -197,6 +201,7 @@ export default {
                     name: "vendor_price",
                     group: $__("Accounting details"),
                     type: "number",
+                    required: true,
                     label: $__("Price"),
                     defaultValue: null,
                     size: 6,
@@ -233,6 +238,26 @@ export default {
                             value: null,
                         },
                     },
+                    hideIn: ["List"],
+                },
+                {
+                    name: "replacement_price",
+                    group: $__("Accounting details"),
+                    type: "number",
+                    label: $__("Replacement cost"),
+                    defaultValue: null,
+                    size: 6,
+                    hideIn: ["List"],
+                },
+                {
+                    name: "tax_rate",
+                    group: $__("Accounting details"),
+                    type: "select",
+                    label: $__("Tax rate"),
+                    options: gstValues.value,
+                    defaultValue: null,
+                    selectLabel: "label",
+                    requiredKey: "value",
                     hideIn: ["List"],
                 },
                 {

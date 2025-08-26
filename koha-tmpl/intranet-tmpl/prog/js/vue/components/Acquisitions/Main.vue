@@ -54,6 +54,7 @@ export default {
             permittedUsers,
             modulesEnabled,
             currencies,
+            gstValues,
             authorisedValues,
             userPermissions,
         } = storeToRefs(acquisitionsStore);

@@ -4,4 +4,7 @@ properties:
   permissions:
     type: object
     description: List of permissions for the user
+  gst_values:
+    type: array
+    description: List of GST values
 additionalProperties: false

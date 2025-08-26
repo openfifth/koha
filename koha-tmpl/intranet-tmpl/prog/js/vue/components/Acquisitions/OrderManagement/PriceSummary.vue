@@ -1,7 +1,7 @@
 <template>
     <br />
     <div style="display: flex; align-items: center">
-        <h4>{{ $__("Total prices (for all items) in original currency") }}</h4>
+        <h4>{{ $__("Total prices (for all items) in fund currency") }}</h4>
         <ToolTip
             :toolTip="
                 $__(
@@ -10,8 +10,50 @@
             "
         />
     </div>
-    <h5>{{ $__("Price") }}: {{ totalPrice }}</h5>
-    <h5>{{ $__("Discounted price") }}: {{ totalDiscountedPrice }}</h5>
+    <h5>
+        {{ $__("Price") }}:
+        {{
+            totalPrice
+                ? formatValueWithCurrency(
+                      totalPrice,
+                      resource.vendor_price_currency
+                  )
+                : formatValueWithCurrency(0, resource.vendor_price_currency)
+        }}
+    </h5>
+    <h5>
+        {{ $__("Discounted price") }}:
+        {{
+            totalDiscountedPrice
+                ? formatValueWithCurrency(
+                      totalDiscountedPrice,
+                      resource.vendor_price_currency
+                  )
+                : formatValueWithCurrency(0, resource.vendor_price_currency)
+        }}
+    </h5>
+    <h5>
+        {{ $__("Total cost (tax included)") }}:
+        {{
+            totalCostTaxIncluded
+                ? formatValueWithCurrency(
+                      totalCostTaxIncluded,
+                      resource.vendor_price_currency
+                  )
+                : formatValueWithCurrency(0, resource.vendor_price_currency)
+        }}
+    </h5>
+    <h5>
+        {{ $__("Total cost (tax excluded)") }}:
+        {{
+            totalCostTaxExcluded
+                ? formatValueWithCurrency(
+                      totalCostTaxExcluded,
+                      resource.vendor_price_currency
+                  )
+                : formatValueWithCurrency(0, resource.vendor_price_currency)
+        }}
+    </h5>
 </template>
 
 <script>
@@ -29,33 +71,42 @@ export default {
 
         const { resource } = props;
         const totalPrice = computed(() => {
-            return formatValueWithCurrency(
-                resource.vendor_price * resource.quantity_ordered,
-                resource.vendor_price_currency
-            );
+            return resource.vendor_price * resource.quantity_ordered;
         });
         const totalDiscountedPrice = computed(() => {
             if (resource.discount_percentage) {
-                return formatValueWithCurrency(
+                return (
                     resource.vendor_price *
-                        ((100 - resource.discount_percentage) / 100) *
-                        resource.quantity_ordered,
-                    resource.vendor_price_currency
+                    ((100 - resource.discount_percentage) / 100) *
+                    resource.quantity_ordered
                 );
             }
             if (resource.discount_amount_oc) {
-                return formatValueWithCurrency(
+                return (
                     (resource.vendor_price - resource.discount_amount_oc) *
-                        resource.quantity_ordered,
-                    resource.vendor_price_currency
+                    resource.quantity_ordered
                 );
             }
-            return totalPrice;
+            return totalPrice.value;
+        });
+        const totalCostTaxIncluded = computed(() => {
+            const priceToTax = totalDiscountedPrice.value
+                ? totalDiscountedPrice.value
+                : totalPrice.value;
+            return priceToTax * (1 + resource.tax_rate);
+        });
+        const totalCostTaxExcluded = computed(() => {
+            const totalCost = totalDiscountedPrice.value
+                ? totalDiscountedPrice.value
+                : totalPrice.value;
+            return totalCost;
         });
         return {
             totalPrice,
             totalDiscountedPrice,
             formatValueWithCurrency,
+            totalCostTaxIncluded,
+            totalCostTaxExcluded,
         };
     },
 };

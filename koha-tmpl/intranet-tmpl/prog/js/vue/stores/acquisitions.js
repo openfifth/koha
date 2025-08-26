@@ -21,6 +21,7 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
         },
         permissionsMatrix: permissionsMatrix,
         currencies: [],
+        gstValues: [],
         authorisedValues: {
             av_fund_type: "FUND_TYPE",
         },
@@ -39,7 +40,7 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
             if (!value) {
                 return `${symbol}0`;
             }
-            const formattedPrice = value.format_price();
+            const formattedPrice = Number(value).format_price();
             if (!formattedPrice) {
                 return `${symbol}0`;
             }

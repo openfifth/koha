@@ -42,10 +42,13 @@ sub config {
     my $userflags   = C4::Auth::getuserflags( $patron->flags, $patron->id );
     my $permissions = Koha::Auth::Permissions->get_authz_from_flags( { flags => $userflags } );
 
+    my @gst_values = map { option => $_ + 0.0 }, split( '\|', C4::Context->preference("TaxRates") );
+
     return $c->render(
         status  => 200,
         openapi => {
             permissions => $permissions,
+            gst_values  => \@gst_values,
         },
     );
 }
