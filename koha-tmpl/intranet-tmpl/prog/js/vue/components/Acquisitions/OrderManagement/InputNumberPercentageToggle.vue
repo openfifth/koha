@@ -1,27 +1,27 @@
 <template>
     <div style="display: flex; min-width: 30%">
         <InputNumberElement
-            id="discountField"
-            v-model="resource[`discount_${toggleValue}`]"
+            id="percentageToggleField"
+            v-model="resource[toggleValue]"
             :size="6"
-            @update:modelValue="verifyDiscountValue()"
+            @update:modelValue="verifyFieldValue()"
         />
         <button
             type="button"
             @click="setToPercentage"
-            :style="`background-color: ${toggleValue === 'percentage' ? '#e2ee79' : '#fff'}`"
+            :style="`background-color: ${toggleValue === percentageField ? '#e2ee79' : '#fff'}`"
         >
             {{ $__("%") }}
         </button>
         <button
             type="button"
             @click="setToAmount"
-            :style="`background-color: ${toggleValue === 'amount_oc' ? '#e2ee79' : '#fff'}`"
+            :style="`background-color: ${toggleValue === amountField ? '#e2ee79' : '#fff'}`"
         >
             {{ $__("Amount") }}
         </button>
-        <span style="margin-left: 5px" class="error" v-if="discountError">
-            {{ discountError }}
+        <span style="margin-left: 5px" class="error" v-if="fieldError">
+            {{ fieldError }}
         </span>
     </div>
 </template>
@@ -34,29 +34,31 @@ import { $__ } from "@koha-vue/i18n";
 export default {
     props: {
         resource: Object,
+        percentageField: String,
+        amountField: String,
     },
     inheritAttrs: false,
     setup(props) {
-        const toggleValue = ref("percentage");
-        const discountError = ref("");
+        const toggleValue = ref(props.percentageField);
+        const fieldError = ref("");
 
         const setToPercentage = () => {
-            toggleValue.value = "percentage";
-            props.resource.discount_amount_oc = undefined;
+            toggleValue.value = percentageField;
+            props.resource[props.amountField] = undefined;
         };
 
         const setToAmount = () => {
-            toggleValue.value = "amount_oc";
-            props.resource.discount_percentage = undefined;
+            toggleValue.value = props.amountField;
+            props.resource[props.percentageField] = undefined;
         };
 
-        const verifyDiscountValue = () => {
-            if (toggleValue.value === "percentage") {
+        const verifyFieldValue = () => {
+            if (toggleValue.value === props.percentageField) {
                 const result = /^[\-]?\d{0,2}(\.\d{0,3})*$/.test(
-                    props.resource[`discount_${toggleValue.value}`]
+                    props.resource[props.percentageField]
                 );
                 if (!result) {
-                    discountError.value = $__(
+                    fieldError.value = $__(
                         "Please enter a decimal number in the format: 0.0"
                     );
                 }
@@ -67,8 +69,8 @@ export default {
             toggleValue,
             setToAmount,
             setToPercentage,
-            verifyDiscountValue,
-            discountError,
+            verifyFieldValue,
+            fieldError,
         };
     },
     components: {
