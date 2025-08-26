@@ -30,6 +30,9 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
         ...withAuthorisedValueActions(store),
         ...permissionsActions(store),
         formatValueWithCurrency(value, currency) {
+            if (!currency) {
+                return "";
+            }
             const { symbol } = store.currencies.find(
                 curr => curr.currency === currency
             );

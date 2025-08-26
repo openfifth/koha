@@ -10,6 +10,8 @@ import BaseResource from "../../BaseResource.vue";
 import { APIClient } from "../../../fetch/api-client.js";
 import { useBaseResource } from "../../../composables/base-resource";
 import { $__ } from "@koha-vue/i18n";
+import { inject } from "vue";
+import { storeToRefs } from "pinia";
 
 export default {
     props: {
@@ -18,6 +20,9 @@ export default {
         embedEvent: Function,
     },
     setup(props) {
+        const acquisitionsStore = inject("acquisitionsStore");
+        const { currencies } = storeToRefs(acquisitionsStore);
+
         const baseResource = useBaseResource({
             resourceName: "orderline",
             nameAttr: "orderline_id",
@@ -105,10 +110,6 @@ export default {
                             type: "resource",
                             value: null,
                         },
-                        label: {
-                            type: "string",
-                            value: $__("Notify on receiving"),
-                        },
                         fieldName: {
                             type: "string",
                             value: "patrons_to_notify",
@@ -123,6 +124,129 @@ export default {
                     //     value: "owner",
                     //     format: patron_to_html,
                     // },
+                    hideIn: ["List"],
+                },
+                {
+                    name: "managing_branch",
+                    group: $__("Library management"),
+                    type: "relationshipSelect",
+                    label: $__("Managing library"),
+                    relationshipAPIClient: APIClient.libraries.libraries,
+                    relationshipOptionLabelAttr: "name",
+                    relationshipRequiredKey: "library_id",
+                    hideIn: ["List"],
+                },
+                {
+                    name: "managed_by",
+                    group: $__("Library management"),
+                    type: "component",
+                    label: $__("Managed by"),
+                    componentPath: "./PatronSearch.vue",
+                    componentProps: {
+                        name: {
+                            type: "string",
+                            value: "managed_by",
+                        },
+                        required: {
+                            type: "boolean",
+                            value: false,
+                        },
+                        resource: {
+                            type: "resource",
+                            value: null,
+                        },
+                        fieldName: {
+                            type: "string",
+                            value: "managed_by",
+                        },
+                        modalType: {
+                            type: "string",
+                            value: "add",
+                        },
+                    },
+                    // showElement: {
+                    //     type: "text",
+                    //     value: "owner",
+                    //     format: patron_to_html,
+                    // },
+                    hideIn: ["List"],
+                },
+                {
+                    name: "vendor_id",
+                    group: $__("Vendor selection"),
+                    type: "relationshipSelect",
+                    label: $__("Vendor"),
+                    relationshipAPIClient: APIClient.acquisition.vendors,
+                    relationshipOptionLabelAttr: "name",
+                    relationshipRequiredKey: "vendor_id",
+                    hint: $__(
+                        "If you leave the vendor empty the orderline can only be saved as a draft"
+                    ),
+                    hideIn: ["List"],
+                },
+                {
+                    name: "quantity_ordered",
+                    group: $__("Accounting details"),
+                    type: "number",
+                    label: $__("Quantity"),
+                    defaultValue: null,
+                    size: 6,
+                    hideIn: ["List"],
+                },
+                {
+                    name: "vendor_price",
+                    group: $__("Accounting details"),
+                    type: "number",
+                    label: $__("Price"),
+                    defaultValue: null,
+                    size: 6,
+                    hideIn: ["List"],
+                },
+                {
+                    name: "vendor_price_currency",
+                    group: $__("Accounting details"),
+                    type: "select",
+                    selectLabel: "currency",
+                    requiredKey: "currency",
+                    label: $__("Currency"),
+                    options: currencies.value,
+                    defaultValue: null,
+                },
+                {
+                    name: "uncertain_price",
+                    group: $__("Accounting details"),
+                    type: "checkbox",
+                    label: $__("Uncertain price"),
+                    value: false,
+                    hideIn: ["List"],
+                },
+                {
+                    name: "discount",
+                    group: $__("Accounting details"),
+                    type: "component",
+                    label: $__("Discount"),
+                    componentPath:
+                        "./Acquisitions/OrderManagement/DiscountField.vue",
+                    componentProps: {
+                        resource: {
+                            type: "resource",
+                            value: null,
+                        },
+                    },
+                    hideIn: ["List"],
+                },
+                {
+                    name: "price_summary",
+                    group: $__("Accounting details"),
+                    type: "component",
+                    componentPath:
+                        "./Acquisitions/OrderManagement/PriceSummary.vue",
+                    componentProps: {
+                        resource: {
+                            type: "resource",
+                            value: null,
+                        },
+                    },
                     hideIn: ["List"],
                 },
             ],
