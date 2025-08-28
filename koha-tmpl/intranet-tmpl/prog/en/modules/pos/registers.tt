@@ -180,36 +180,37 @@
         </div>
         <!-- /#confirmCashupModal -->
 
-<!-- Confirm cashupall modal -->
-<div class="modal" id="confirmCashupAllModal" tabindex="-1" role="dialog" aria-labelledby="confirmCashupAllLabel">
-    <form id="cashup_all_form" method="post" enctype="multipart/form-data">
-        [% INCLUDE 'csrf-token.inc' %]
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h1 class="modal-title" id="confirmCashupAllLabel">Confirm cashup of <em>all</em> cash registers</h1>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <!-- Confirm cashupall modal -->
+        <div class="modal" id="confirmCashupAllModal" tabindex="-1" role="dialog" aria-labelledby="confirmCashupAllLabel">
+            <form id="cashup_all_form" method="post" enctype="multipart/form-data">
+                [% INCLUDE 'csrf-token.inc' %]
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h1 class="modal-title" id="confirmCashupAllLabel">Confirm cashup of <em>all</em> cash registers</h1>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>Please confirm that you have received [% bankable | $Price %] to cashup.</p>
+                            <ul>
+                                <li>Total income (cash): [% ctotal | $Price %] ([% cctotal | $Price %])</li>
+                                <li>Total outgoing (cash): [% dtotal | $Price %] ([% cdtotal | $Price %])</li>
+                            </ul>
+                        </div>
+                        <!-- /.modal-body -->
+                        <div class="modal-footer">
+                            <input type="hidden" name="op" value="cud-cashup" />
+                            <button type="submit" class="btn btn-primary" id="cashup_all_confirm">Confirm</button>
+                            <button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancel</button>
+                        </div>
+                        <!-- /.modal-footer -->
+                    </div>
+                    <!-- /.modal-content -->
                 </div>
-                <div class="modal-body">
-                    <p>Please confirm that you have received [% bankable | $Price %] to cashup.</p>
-                    <ul>
-                        <li>Total income (cash): [% ctotal | $Price %] ([% cctotal | $Price %])</li>
-                        <li>Total outgoing (cash): [% dtotal | $Price %] ([% cdtotal | $Price %])</li>
-                    </ul>
-                </div> <!-- /.modal-body -->
-                <div class="modal-footer">
-                    <input type="hidden" name="op" value="cud-cashup" />
-                    <button type="submit" class="btn btn-primary" id="cashup_all_confirm">Confirm</button>
-                    <button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancel</button>
-                </div>
-                <!-- /.modal-footer -->
-            </div>
-            <!-- /.modal-content -->
+                <!-- /.modal-dialog -->
+            </form>
         </div>
-        <!-- /.modal-dialog -->
-    </form>
-</div>
-<!-- /#confirmCashupAllModal -->
+        <!-- /#confirmCashupAllModal -->
 
 
         [% INCLUDE 'modals/cashup_summary.inc' %]
@@ -245,19 +246,6 @@
                    $('#cashup_registerid').val(rid);
                 });
             });
-
-            $("#confirmCashupModal").on("shown.bs.modal", function(e){
-               var button = $(e.relatedTarget);
-               var register = button.data('register');
-               $("#registerc").text(register);
-               var bankable = button.data('bankable');
-               $("#cashc").text(bankable);
-               var rfloat = button.data('float');
-               $('#floatc').text(rfloat);
-               var rid = button.data('registerid');
-               $('#cashup_registerid').val(rid);
-            });
-        });
     </script>
 [% END %]
 [% INCLUDE 'intranet-bottom.inc' %]
