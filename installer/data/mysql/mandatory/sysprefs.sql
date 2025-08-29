@@ -151,6 +151,7 @@ INSERT INTO systempreferences ( `variable`, `value`, `options`, `explanation`, `
 ('CatalogModuleRelink','0',NULL,'If OFF the linker will never replace the authids that are set in the cataloging module.','YesNo'),
 ('CataloguingLog','1',NULL,'If ON, log edit/create/delete actions on bibliographic data. WARNING: this feature is very resource consuming.','YesNo'),
 ('ChargeFinesOnClosedDays','0',NULL,'Charge fines on days the library is closed.','YesNo'),
+('CircControlCheckoutLimitScope', 'all', 'all|item|checkout', 'Determines how checkout limits are calculated. "all" counts all patron checkouts across all libraries. "item" counts only checkouts of items from the same library as the item being checked out (uses HomeOrHoldingBranch preference). "checkout" counts only checkouts made at the same library as the current checkout.', 'Choice'),
 ('CheckPrevCheckout','hardno','hardyes|softyes|softno|hardno','By default, for every item checked out, should we warn if the patron has borrowed that item in the past?','Choice'),
 ('CheckPrevCheckoutDelay','0', NULL,'Maximum number of days that will trigger a warning if the patron has borrowed that item in the past when CheckPrevCheckout is enabled.','free'),
 ('ChildNeedsGuarantor', 0, 'If ON, a child patron must have a guarantor when adding the patron.', '', 'YesNo'),
