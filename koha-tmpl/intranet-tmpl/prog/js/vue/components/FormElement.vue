@@ -200,8 +200,8 @@
     <span style="margin-left: 5px" class="error" v-if="fieldInputError">
         {{ attr.formErrorMessage }}
     </span>
-    <span v-if="attr.hint" class="hint" style="margin-left: 5px">{{
-        attr.hint
+    <span v-if="getHint" class="hint" style="margin-left: 5px">{{
+        getHint
     }}</span>
 </template>
 
@@ -301,6 +301,14 @@ export default {
             }
         };
 
+        const getHint = computed(() => {
+            if (props.attr.hint && typeof props.attr.hint === "function") {
+                return props.attr.hint(props.resource);
+            } else {
+                return props.attr.hint || '';
+            }
+        })
+
         return {
             ...baseElement,
             selectRequiredKey,
@@ -313,6 +321,7 @@ export default {
             fieldInputError,
             checkForInputError,
             getPlaceholder,
+            getHint
         };
     },
     name: "FormElement",
