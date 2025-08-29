@@ -15,7 +15,7 @@
             :size="attr.size"
             :maxlength="attr.maxlength"
             :disabled="disabled"
-            @update:modelValue="checkForInputError()"
+            @update:modelValue="checkForInputErrorAndRunOnChangeHandler()"
             :disabled="disabled"
         />
     </template>
@@ -26,7 +26,7 @@
             :placeholder="getPlaceholder"
             :required="attr.required ? true : false"
             :disabled="disabled"
-            @update:modelValue="checkForInputError()"
+            @update:modelValue="checkForInputErrorAndRunOnChangeHandler()"
             :classNames="attr.class"
             :disabled="disabled"
         />
@@ -40,7 +40,7 @@
             :placeholder="getPlaceholder"
             :required="attr.required ? true : false"
             :disabled="disabled"
-            @update:modelValue="checkForInputError()"
+            @update:modelValue="checkForInputErrorAndRunOnChangeHandler()"
             :disabled="disabled"
         />
     </template>
@@ -115,7 +115,7 @@
             :disabled="disabled"
             :multiple="attr.allowMultipleChoices"
             @update:modelValue="
-                attr.onSelected && attr.onSelected($event, resource)
+                attr.onSelected && attr.onSelected($event, options, resource)
             "
         >
             <template v-if="attr.required" #search="{ attributes, events }">
@@ -293,11 +293,14 @@ export default {
         });
 
         const fieldInputError = ref(false);
-        const checkForInputError = () => {
+        const checkForInputErrorAndRunOnChangeHandler = () => {
             if (props.attr.formErrorHandler) {
                 fieldInputError.value = !props.attr.formErrorHandler(
                     props.resource[props.attr.name]
                 );
+            }
+            if (!fieldInputError.value && props.attr.onChange) {
+                props.attr.onChange(props.resource);
             }
         };
 
@@ -305,9 +308,9 @@ export default {
             if (props.attr.hint && typeof props.attr.hint === "function") {
                 return props.attr.hint(props.resource);
             } else {
-                return props.attr.hint || '';
+                return props.attr.hint || "";
             }
-        })
+        });
 
         return {
             ...baseElement,
@@ -319,9 +322,9 @@ export default {
             selectOptions,
             disabled,
             fieldInputError,
-            checkForInputError,
+            checkForInputErrorAndRunOnChangeHandler,
             getPlaceholder,
-            getHint
+            getHint,
         };
     },
     name: "FormElement",
