@@ -310,6 +310,14 @@ Circulation:
                   homebranch: the item's home library (homebranch).
                   holdingbranch: the item's holding library (holdingbranch).
         -
+            - Calculate total issues for maxIssue limits using
+            - pref: CircControlCheckoutLimitScope
+              type: choice
+              choices:
+                  all: all patron checkouts across all libraries.
+                  item: only checkouts of items from the same library as the item being checked out (follows HomeOrHoldingBranch preference).
+                  checkout: only checkouts made at the same library as the current checkout.
+        -
             - Allow items to be checked in
             - pref: AllowReturnToBranch
               type: choice
