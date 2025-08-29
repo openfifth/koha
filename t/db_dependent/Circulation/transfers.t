@@ -59,6 +59,7 @@ $dbh->do(q|DELETE FROM branchtransfers|);
 my $branchcode_1 = $builder->build( { source => 'Branch', } )->{branchcode};
 my $branchcode_2 = $builder->build( { source => 'Branch', } )->{branchcode};
 my $branchcode_3 = $builder->build( { source => 'Branch', } )->{branchcode};
+
 # Add itemtype
 my $itemtype = $builder->build( { source => 'Itemtype' } )->{itemtype};
 
