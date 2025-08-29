@@ -467,19 +467,23 @@ sub TooMany {
     if (defined($maxissueqty_rule) and $maxissueqty_rule->rule_value ne "") {
 
         my $checkouts;
-        if ( $maxissueqty_rule->branchcode ) {
-            if ( C4::Context->preference('CircControl') eq 'PickupLibrary' ) {
-                $checkouts = $patron->checkouts->search(
-                    { 'me.branchcode' => $maxissueqty_rule->branchcode } );
-            } elsif (C4::Context->preference('CircControl') eq 'PatronLibrary') {
-                $checkouts = $patron->checkouts; # if branch is the patron's home branch, then count all loans by patron
-            } else {
-                my $branch_type = C4::Context->preference('HomeOrHoldingBranch') || 'homebranch';
-                $checkouts = $patron->checkouts->search(
-                    { "item.$branch_type" => $maxissueqty_rule->branchcode } );
-            }
+        my $checkout_limit_scope = C4::Context->preference('CircControlCheckoutLimitScope') || 'all';
+        if ( $checkout_limit_scope eq 'checkout'
+            and ( C4::Context->userenv and C4::Context->userenv->{'branch'} ) )
+        {
+
+            # Count only checkouts made at this pickup library
+            my $pickup_branch = C4::Context->userenv->{'branch'};
+            $checkouts = $patron->checkouts->search( { 'me.branchcode' => $pickup_branch } );
+        } elsif ( $checkout_limit_scope eq 'item' ) {
+
+            # Count only checkouts of items from this items library (follows HomeOrHoldingBranch)
+            my $branch_type = C4::Context->preference('HomeOrHoldingBranch') || 'homebranch';
+            $checkouts = $patron->checkouts->search( { "item.$branch_type" => $item->$branch_type } );
         } else {
-            $checkouts = $patron->checkouts; # if rule is not branch specific then count all loans by patron
+
+            # Default 'all': count all patron checkouts across all libraries
+            $checkouts = $patron->checkouts;    # if rule is not branch specific then count all loans by patron
         }
         $checkouts = $checkouts->search(undef, { prefetch => 'item' });
 
@@ -567,17 +571,24 @@ sub TooMany {
     my $branch_borrower_circ_rule = GetBranchBorrowerCircRule($branch, $cat_borrower);
     if (defined($branch_borrower_circ_rule->{patron_maxissueqty}) and $branch_borrower_circ_rule->{patron_maxissueqty} ne '') {
         my $checkouts;
-        if ( C4::Context->preference('CircControl') eq 'PickupLibrary' ) {
-            $checkouts = $patron->checkouts->search(
-                { 'me.branchcode' => $branch} );
-        } elsif (C4::Context->preference('CircControl') eq 'PatronLibrary') {
-            $checkouts = $patron->checkouts; # if branch is the patron's home branch, then count all loans by patron
-        } else {
+        my $checkout_limit_scope = C4::Context->preference('CircControlCheckoutLimitScope') || 'all';
+        if ( $checkout_limit_scope eq 'checkout'
+            and ( C4::Context->userenv and C4::Context->userenv->{'branch'} ) )
+        {
+            # Count only checkouts made at this pickup library
+            my $pickup_branch = C4::Context->userenv->{'branch'};
+            $checkouts = $patron->checkouts->search( { 'me.branchcode' => $pickup_branch } );
+        } elsif ( $checkout_limit_scope eq 'item' ) {
+
+            # Count only checkouts of items from this library (follows HomeOrHoldingBranch)
             my $branch_type = C4::Context->preference('HomeOrHoldingBranch') || 'homebranch';
-            $checkouts = $patron->checkouts->search(
-                { "item.$branch_type" => $branch},
-                { prefetch            => 'item' } );
+            $checkouts = $patron->checkouts->search( { "item.$branch_type" => $item->$branch_type } );
+        } else {
+
+            # Default 'all': count all patron checkouts across all libraries
+            $checkouts = $patron->checkouts;
         }
+        $checkouts = $checkouts->search( undef, { prefetch => 'item' } );
 
         my $checkout_count = $checkouts->count;
         my $onsite_checkout_count = $checkouts->search({ onsite_checkout => 1 })->count;
