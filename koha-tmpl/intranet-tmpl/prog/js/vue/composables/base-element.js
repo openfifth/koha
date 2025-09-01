@@ -121,6 +121,8 @@ export function useBaseElement(instancedElement) {
                         currentValue = !currentValue;
                     }
                     acc[key] = !!currentValue;
+                } else if (prop.type === "function") {
+                    acc[key] = prop.value(instancedElement.resource);
                 } else {
                     const currentValue = acc[key];
                     acc[key] = !!currentValue;
@@ -150,6 +152,9 @@ export function useBaseElement(instancedElement) {
                         };
                     }
                 });
+            }
+            if (prop.type === "parentProp") {
+                acc[key] = instancedElement[key];
             }
             if (instancedElement.attr.indexRequired) {
                 acc.index = instancedElement.index;
@@ -181,11 +186,35 @@ export function useBaseElement(instancedElement) {
         resource.extended_attributes = additionalFieldValues;
     };
 
+    /**
+     * Returns the formatted value of the given attribute from the given
+     * resource. If the attribute has a value property, uses that as the
+     * key to access the resource. If the attribute has a format property,
+     * uses that function to format the value. If the formatted value is
+     * "Invalid Date", returns an empty string instead.
+     *
+     * @param {Object} attr - The attribute object
+     * @param {Object} resource - The resource object
+     * @returns {string} The formatted value of the attribute
+     */
+    const formatValue = (attr, resource) => {
+        const valueKey = attr.hasOwnProperty("value") ? attr.value : attr.name;
+        if (valueKey?.includes(".")) {
+            return accessNestedProperty(valueKey, resource);
+        }
+        const displayValue = attr.format(resource[valueKey], resource);
+        if (displayValue == "Invalid Date") {
+            return "";
+        }
+        return displayValue || "";
+    };
+
     return {
         ...instancedElement,
         identifyAndImportComponent,
         getComponentProps,
         accessNestedProperty,
         additionalFieldsChanged,
+        formatValue,
     };
 }

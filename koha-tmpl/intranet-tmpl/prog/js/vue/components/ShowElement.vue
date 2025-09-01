@@ -175,19 +175,6 @@ export default {
             }
             return props.attr;
         });
-        const formatValue = (attr, resource) => {
-            const valueKey = attr.hasOwnProperty("value")
-                ? attr.value
-                : attr.name;
-            if (valueKey?.includes(".")) {
-                return baseElement.accessNestedProperty(valueKey, resource);
-            }
-            const displayValue = attr.format(resource[valueKey], resource);
-            if (displayValue == "Invalid Date") {
-                return "";
-            }
-            return displayValue || "";
-        };
         const radioOptionText = computed(() => {
             if (!attribute.value.value || !attribute.value.options.length)
                 return "";

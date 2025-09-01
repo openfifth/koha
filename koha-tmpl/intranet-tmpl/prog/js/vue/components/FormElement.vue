@@ -190,6 +190,11 @@
             @additional-fields-changed="additionalFieldsChanged"
         ></AdditionalFieldsEntry>
     </template>
+    <template v-else-if="attr.type == 'display'">
+        <span>{{
+            attr?.format ? formatValue(attr, resource) : resource[attr.name]
+        }}</span>
+    </template>
     <template v-else>
         <span>{{
             $__("Programming error: unknown type %s").format(attr.type)
