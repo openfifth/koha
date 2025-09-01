@@ -314,6 +314,10 @@ export default {
                             type: "resource",
                             value: null,
                         },
+                        currency: {
+                            type: "string",
+                            value: "original",
+                        },
                     },
                     hideIn: ["List", "Show"],
                 },
@@ -336,7 +340,7 @@ export default {
                             value: {
                                 orderline_id: null,
                                 fund_id: null,
-                                percentage: 100,
+                                percentage: null,
                                 distributed_amount_oc: null,
                                 exchange_rate: null,
                                 distributed_amount: null,
@@ -360,7 +364,9 @@ export default {
                                 // if(!resource.fund_distributions?.length) return false
                                 if (
                                     resource.fund_distributions?.length &&
-                                    !resource.fund_distributions[0].fund_id
+                                    (!resource.fund_distributions[0].fund_id ||
+                                        resource.totalDistributedAmount ===
+                                            resource.calculated_amount_oc)
                                 )
                                     return true;
                                 return false;

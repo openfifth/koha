@@ -26,7 +26,7 @@ export default {
     },
     setup(props) {
         const acquisitionsStore = inject("acquisitionsStore");
-        const { gstValues, sysprefs } = storeToRefs(acquisitionsStore);
+        const { gstValues } = storeToRefs(acquisitionsStore);
         const { getCurrencyConversionRate, formatValueWithCurrency } =
             acquisitionsStore;
 
@@ -84,7 +84,18 @@ export default {
         props.resource.calculateDistributedAmount =
             calculateDistributedAmount.bind(null, props.resource, orderline);
         // Calculate the initial distributed amount based on a default of 100% being allocated to the first fund selected
-        if (props.index === 0) calculateDistributedAmount(props.resource);
+        if (props.index === 0) {
+            props.resource.percentage = 100;
+            calculateDistributedAmount(props.resource);
+        } else {
+            const remainderToDistribute =
+                orderline.calculated_amount_oc -
+                orderline.totalDistributedAmount;
+            const remainderPercentage =
+                (remainderToDistribute / orderline.calculated_amount_oc) * 100;
+            props.resource.percentage = remainderPercentage;
+        }
+
         watch(
             () => orderline.calculated_amount_oc,
             () => {
