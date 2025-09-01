@@ -146,7 +146,7 @@ export default {
                               '">' +
                               $patron_to_html(patron) +
                               "</a>"
-                            : this.$__("Cronjob")
+                            : __("Cronjob")
                         return importer
                     },
                     searchable: true,
