@@ -1,19 +1,43 @@
 <template>
-    <h3>
+    <h3 v-if="currency === 'original'">
         {{ $__("Remaining amount in original currency to be distributed") }}:
         {{ remainingAmount }}
     </h3>
+    <template v-if="currency !== 'original'">
+        <h5>
+            {{ $__("Calculated item amount in %s (tax incl./excl.)").format(calculatedItemAmounts.currency) }}:
+            {{ calculatedItemAmounts.itemPrice }}
+        </h5>
+        <h5>
+            {{ $__("Total cost (tax included)") }}:
+            {{ calculatedItemAmounts.totalTaxIncluded }}
+        </h5>
+        <h5>
+            {{ $__("Total cost (tax excluded)") }}:
+            {{ calculatedItemAmounts.totalTaxExcluded }}
+        </h5>
+        <h5>
+            {{ $__("Calculated total amount") }}:
+            {{ calculatedItemAmounts.totalAmount }}
+        </h5>
+    </template>
 </template>
 
 <script>
-import { computed, inject, ref, watch } from "vue";
+import { computed, inject } from "vue";
+
 export default {
+    inheritAttrs: false,
     props: {
         resource: Object,
+        currency: {
+            type: String,
+            default: "",
+        }
     },
     setup(props) {
         const acquisitionsStore = inject("acquisitionsStore");
-        const { formatValueWithCurrency } = acquisitionsStore;
+        const { formatValueWithCurrency, getActiveCurrency } = acquisitionsStore;
 
         const remainingAmount = computed(() => {
             const calculatedAmount = props.resource.calculated_amount_oc
@@ -28,8 +52,31 @@ export default {
             );
         });
 
+        const calculatedItemAmounts = computed(() => {
+            const orderline = props.resource
+            const itemPrice = (orderline.calculated_amount_oc * orderline.distribution_exchange_rate) / orderline.quantity_ordered;
+            const selectedCurrency = orderline.fund_distributions[0]?.currency || getActiveCurrency.currency;
+            const isTaxIncluded = orderline.vendor?.list_includes_gst;
+            const taxRate = orderline.vendor?.tax_rate || 0;
+            const taxIncludedPrice = isTaxIncluded ? itemPrice : itemPrice * (1 + taxRate);
+            const taxExcludedPrice = isTaxIncluded ? itemPrice - itemPrice * taxRate : itemPrice;
+            const totalTaxIncluded = taxIncludedPrice * orderline.quantity_ordered;
+            const totalTaxExcluded = taxExcludedPrice * orderline.quantity_ordered;
+            const totalAmount = isTaxIncluded ? totalTaxIncluded : totalTaxExcluded
+
+            const itemPricePoints = {
+                totalTaxIncluded: formatValueWithCurrency(totalTaxIncluded, selectedCurrency), 
+                totalTaxExcluded: formatValueWithCurrency(totalTaxExcluded, selectedCurrency),
+                totalAmount: formatValueWithCurrency(totalAmount, selectedCurrency),
+                itemPrice: formatValueWithCurrency(itemPrice, selectedCurrency),
+                currency: selectedCurrency
+            }
+            props.resource.replacement_price = itemPrice;
+            return itemPricePoints;
+        })
         return {
             remainingAmount,
+            calculatedItemAmounts
         };
     },
 };

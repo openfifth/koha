@@ -407,6 +407,29 @@ export default {
                     },
                     hideIn: ["List"],
                 },
+                {
+                    name: "replacement_price",
+                    group: $__("Fund / fund distributions"),
+                    label: $__("Item replacement cost"),
+                    type: "number",
+                    defaultValue: 1.0,
+                    size: 6,
+                    hideIn: ["List"],
+                },
+                {
+                    name: "calculated_item_costs",
+                    type: "component",
+                    group: $__("Fund / fund distributions"),
+                    componentPath:
+                        "./Acquisitions/OrderManagement/CalculatedAmount.vue",
+                    componentProps: {
+                        resource: {
+                            type: "resource",
+                            value: null,
+                        },
+                    },
+                    hideIn: ["List", "Show"],
+                },
             ],
         });
 
