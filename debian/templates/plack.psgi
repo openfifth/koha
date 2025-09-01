@@ -25,6 +25,10 @@ use Plack::Request;
 
 use Mojo::Server::PSGI;
 
+use KohaServices::RedirectBibitem;
+use KohaServices::RedirectReserve;
+use KohaServices::LoanStatus;
+
 # Pre-load libraries
 use C4::Koha;
 use C4::Languages;
@@ -63,6 +67,19 @@ my $intranet_svc = Plack::App::CGIBin->new(
 my $opac = Plack::App::CGIBin->new(
     root => $ENV{GIT_INSTALL}? "$home/opac": "$home/opac/cgi-bin/opac"
 )->to_app;
+
+my $loan_status = new KohaServices::LoanStatus({
+            record_matcher => 'KohaServices::RecordMatcher::KBiblioId',
+            output_format => 'KohaServices::OutputFormat::LibrisXml'
+    });
+
+my $redirect_bibitem = new KohaServices::RedirectBibitem({
+            record_matcher => 'KohaServices::RecordMatcher::KBiblioId'
+    });
+
+my $redirect_reserve = new KohaServices::RedirectReserve({
+            record_matcher => 'KohaServices::RecordMatcher::KBiblioId'
+    });
 
 my $apiv1  = builder {
     my $server = Mojo::Server::PSGI->new;
@@ -135,5 +152,26 @@ builder {
             enable 'LogWarn';
         }
         $apiv1;
+    };
+    mount '/redirect-bibitem' => builder {
+        if ( Log::Log4perl->get_logger('libris-services')->has_appenders ){
+            enable 'Log4perl', category => 'plack-api';
+            enable 'LogWarn';
+        }
+        $redirect_bibitem->app;
+    };
+    mount '/loan-status'      => builder {
+        if ( Log::Log4perl->get_logger('libris-services')->has_appenders ){
+            enable 'Log4perl', category => 'plack-api';
+            enable 'LogWarn';
+        }
+        $loan_status->app;
+    };
+    mount '/redirect-reserve' => builder {
+        if ( Log::Log4perl->get_logger('libris-services')->has_appenders ){
+            enable 'Log4perl', category => 'plack-api';
+            enable 'LogWarn';
+        }
+        $redirect_reserve->app;
     };
 };
