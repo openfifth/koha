@@ -7,4 +7,7 @@ properties:
   gst_values:
     type: array
     description: List of GST values
+  sysprefs:
+    type: object
+    description: List of GST values
 additionalProperties: false
