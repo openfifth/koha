@@ -160,6 +160,14 @@ export default {
             fundList.value = filterFundsBasedOnPreviousSelections();
             orderline.totalDistributedAmount =
                 calculatedTotalDistributedAmount(fundDistributions);
+            if (
+                fundDistributions[props.index]?.fund_id !==
+                props.resource.fund_id
+            ) {
+                Object.keys(fundDistributions[props.index]).forEach(key => {
+                    props.resource[key] = fundDistributions[props.index][key];
+                });
+            }
         });
 
         const distributionFields = ref([
