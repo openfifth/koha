@@ -148,7 +148,7 @@ export default {
         const distributedAmount = ref(0);
         const calculatedTotalDistributedAmount = fundDistributions => {
             return fundDistributions.reduce((acc, fd) => {
-                return acc + fd.distributed_amount_oc;
+                return acc + parseFloat(fd.distributed_amount_oc || 0);
             }, 0);
         };
 

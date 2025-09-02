@@ -1,11 +1,15 @@
 <template>
     <h3 v-if="currency === 'original'">
         {{ $__("Remaining amount in original currency to be distributed") }}:
-        {{ remainingAmount }}
+        {{ remainingAmount.amount }} ({{ remainingAmount.percentage }}%)
     </h3>
     <template v-if="currency !== 'original'">
         <h5>
-            {{ $__("Calculated item amount in %s (tax incl./excl.)").format(calculatedItemAmounts.currency) }}:
+            {{
+                $__("Calculated item amount in %s (tax incl./excl.)").format(
+                    calculatedItemAmounts.currency
+                )
+            }}:
             {{ calculatedItemAmounts.itemPrice }}
         </h5>
         <h5>
@@ -33,11 +37,12 @@ export default {
         currency: {
             type: String,
             default: "",
-        }
+        },
     },
     setup(props) {
         const acquisitionsStore = inject("acquisitionsStore");
-        const { formatValueWithCurrency, getActiveCurrency } = acquisitionsStore;
+        const { formatValueWithCurrency, getActiveCurrency } =
+            acquisitionsStore;
 
         const remainingAmount = computed(() => {
             const calculatedAmount = props.resource.calculated_amount_oc
@@ -46,37 +51,65 @@ export default {
             const remainderToDistribute =
                 calculatedAmount - props.resource.totalDistributedAmount;
             props.resource.remainderToDistribute = remainderToDistribute;
-            return formatValueWithCurrency(
-                remainderToDistribute || 0,
-                props.resource.vendor_price_currency
-            );
+            const result = {
+                amount: formatValueWithCurrency(
+                    remainderToDistribute || 0,
+                    props.resource.vendor_price_currency
+                ),
+                percentage: remainderToDistribute
+                    ? (remainderToDistribute / calculatedAmount) * 100
+                    : 0,
+            };
+            return result;
         });
 
         const calculatedItemAmounts = computed(() => {
-            const orderline = props.resource
-            const itemPrice = (orderline.calculated_amount_oc * orderline.distribution_exchange_rate) / orderline.quantity_ordered;
-            const selectedCurrency = orderline.fund_distributions[0]?.currency || getActiveCurrency.currency;
+            const orderline = props.resource;
+            const itemPrice =
+                (orderline.calculated_amount_oc *
+                    orderline.distribution_exchange_rate) /
+                orderline.quantity_ordered;
+            const selectedCurrency =
+                orderline.fund_distributions[0]?.currency ||
+                getActiveCurrency.currency;
             const isTaxIncluded = orderline.vendor?.list_includes_gst;
             const taxRate = orderline.vendor?.tax_rate || 0;
-            const taxIncludedPrice = isTaxIncluded ? itemPrice : itemPrice * (1 + taxRate);
-            const taxExcludedPrice = isTaxIncluded ? itemPrice - itemPrice * taxRate : itemPrice;
-            const totalTaxIncluded = taxIncludedPrice * orderline.quantity_ordered;
-            const totalTaxExcluded = taxExcludedPrice * orderline.quantity_ordered;
-            const totalAmount = isTaxIncluded ? totalTaxIncluded : totalTaxExcluded
+            const taxIncludedPrice = isTaxIncluded
+                ? itemPrice
+                : itemPrice * (1 + taxRate);
+            const taxExcludedPrice = isTaxIncluded
+                ? itemPrice - itemPrice * taxRate
+                : itemPrice;
+            const totalTaxIncluded =
+                taxIncludedPrice * orderline.quantity_ordered;
+            const totalTaxExcluded =
+                taxExcludedPrice * orderline.quantity_ordered;
+            const totalAmount = isTaxIncluded
+                ? totalTaxIncluded
+                : totalTaxExcluded;
 
             const itemPricePoints = {
-                totalTaxIncluded: formatValueWithCurrency(totalTaxIncluded, selectedCurrency), 
-                totalTaxExcluded: formatValueWithCurrency(totalTaxExcluded, selectedCurrency),
-                totalAmount: formatValueWithCurrency(totalAmount, selectedCurrency),
+                totalTaxIncluded: formatValueWithCurrency(
+                    totalTaxIncluded,
+                    selectedCurrency
+                ),
+                totalTaxExcluded: formatValueWithCurrency(
+                    totalTaxExcluded,
+                    selectedCurrency
+                ),
+                totalAmount: formatValueWithCurrency(
+                    totalAmount,
+                    selectedCurrency
+                ),
                 itemPrice: formatValueWithCurrency(itemPrice, selectedCurrency),
-                currency: selectedCurrency
-            }
+                currency: selectedCurrency,
+            };
             props.resource.replacement_price = itemPrice;
             return itemPricePoints;
-        })
+        });
         return {
             remainingAmount,
-            calculatedItemAmounts
+            calculatedItemAmounts,
         };
     },
 };
