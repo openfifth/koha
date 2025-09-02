@@ -636,5 +636,21 @@ __PACKAGE__->belongs_to(
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:y/FAK75NVbVD4wITu3HDVg
 
 
+=head2 koha_object_class
+
+=cut
+
+sub koha_object_class {
+    'Koha::Acquisition::OrderManagement::Orderline';
+}
+
+=head2 koha_objects_class
+
+=cut
+
+sub koha_objects_class {
+    'Koha::Acquisition::OrderManagement::Orderlines';
+}
+
 # You can replace this text with custom code or comments, and it will be preserved on regeneration
 1;
