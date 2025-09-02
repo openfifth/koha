@@ -445,6 +445,62 @@ export default {
                     },
                     hideIn: ["List", "Show"],
                 },
+                {
+                    name: "statistic1",
+                    group: $__("Reporting information"),
+                    type: "text",
+                    label: $__("Statistic 1"),
+                    hideIn: ["List"],
+                },
+                {
+                    name: "statistic2",
+                    group: $__("Reporting information"),
+                    type: "text",
+                    label: $__("Statistic 2"),
+                    hideIn: ["List"],
+                },
+                {
+                    name: "urgent_order",
+                    group: $__("Notes"),
+                    type: "checkbox",
+                    label: $__("Rush / urgent order"),
+                    value: false,
+                    hideIn: ["List"],
+                },
+                {
+                    name: "internal_note",
+                    group: $__("Notes"),
+                    type: "textarea",
+                    textAreaRows: 5,
+                    label: $__("Internal note"),
+                    hideIn: ["List"],
+                },
+                {
+                    name: "receiving note",
+                    group: $__("Notes"),
+                    type: "textarea",
+                    textAreaRows: 5,
+                    label: $__("Receiving note"),
+                    hint: $__(
+                        "The receiving note will be displayed when you receive the order line"
+                    ),
+                    hideIn: ["List"],
+                },
+                {
+                    name: "vendor note",
+                    group: $__("Notes"),
+                    type: "textarea",
+                    textAreaRows: 5,
+                    label: $__("Vendor note"),
+                    hideIn: ["List"],
+                },
+                {
+                    name: "estimated_delivery_date",
+                    type: "date",
+                    group: $__("Notes"),
+                    label: $__("Estimated delivery date"),
+                    value: "",
+                },
             ],
         });
 
