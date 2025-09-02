@@ -27,8 +27,12 @@ export default {
     setup(props) {
         const acquisitionsStore = inject("acquisitionsStore");
         const { gstValues } = storeToRefs(acquisitionsStore);
-        const { getCurrencyConversionRate, formatValueWithCurrency } =
-            acquisitionsStore;
+        const {
+            getCurrencyConversionRate,
+            formatValueWithCurrency,
+            getActiveCurrency,
+            formatFloatingPoint,
+        } = acquisitionsStore;
 
         const fundDistributions = inject("resourceRelationships");
         const orderline = inject("resource");
@@ -213,6 +217,18 @@ export default {
                                 resource.distributed_amount_oc = 0;
                             }
                             calculateDistributedAmount(resource);
+                        },
+                    },
+                    formatInputValue: {
+                        type: "function",
+                        value: (value, resource) => {
+                            const isPercentage = resource.percentage;
+                            if (isPercentage) {
+                                return `${formatFloatingPoint(value)}%`;
+                            }
+                            const currency =
+                                resource.currency || getActiveCurrency.currency;
+                            return formatValueWithCurrency(value, currency);
                         },
                     },
                 },

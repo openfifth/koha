@@ -5,9 +5,11 @@
             v-model="resource[toggleValue]"
             :size="6"
             @update:modelValue="verifyFieldValue()"
+            :formatInputValue="formatInputValue"
             :max="toggleValue == percentageField ? 100 : null"
             :min="toggleValue == percentageField ? 0 : null"
             :step="0.01"
+            :resource="resource"
         />
         <button
             type="button"
@@ -40,6 +42,7 @@ export default {
         percentageField: String,
         amountField: String,
         onChange: Function,
+        formatInputValue: Function,
     },
     inheritAttrs: false,
     setup(props, { emit }) {

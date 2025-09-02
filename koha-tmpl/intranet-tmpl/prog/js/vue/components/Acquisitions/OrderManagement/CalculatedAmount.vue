@@ -1,7 +1,9 @@
 <template>
     <h3 v-if="currency === 'original'">
         {{ $__("Remaining amount in original currency to be distributed") }}:
-        {{ remainingAmount.amount }} ({{ remainingAmount.percentage }}%)
+        {{ remainingAmount.amount }} ({{
+            !remainingAmount ? 0 : remainingAmount.percentage
+        }}%)
     </h3>
     <template v-if="currency !== 'original'">
         <h5>
