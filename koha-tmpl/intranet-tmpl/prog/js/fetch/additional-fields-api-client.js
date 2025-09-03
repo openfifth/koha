@@ -14,6 +14,9 @@ export class AdditionalFieldsAPIClient {
                 this.httpClient.getAll({
                     endpoint: "",
                     params: { resource_type },
+                    headers: {
+                        "x-koha-embed": "effective_authorised_value_category",
+                    },
                 }),
         };
     }

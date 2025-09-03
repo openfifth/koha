@@ -31,6 +31,11 @@ properties:
   repeatable:
     description: is the extended attribute type repetable
     type: boolean
+  effective_authorised_value_category:
+    description: the category for the authorised value associated to the extended attribute
+    type:
+      - string
+      - "null"
 
 additionalProperties: false
 required:
