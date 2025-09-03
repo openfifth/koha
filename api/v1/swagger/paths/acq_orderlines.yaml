@@ -15,6 +15,17 @@
       - $ref: "../swagger.yaml#/parameters/per_page"
       - $ref: "../swagger.yaml#/parameters/q_param"
       - $ref: "../swagger.yaml#/parameters/q_body"
+      - name: x-koha-embed
+        in: header
+        required: false
+        description: Embed list sent as a request header
+        type: array
+        items:
+          type: string
+          enum:
+            - extended_attributes
+            - +strings
+        collectionFormat: csv
     responses:
       '200':
         description: Orderline data
@@ -104,6 +115,17 @@
     description: Get a single orderline
     parameters:
       - $ref: "../swagger.yaml#/parameters/orderline_id_pp"
+      - name: x-koha-embed
+        in: header
+        required: false
+        description: Embed list sent as a request header
+        type: array
+        items:
+          type: string
+          enum:
+            - extended_attributes
+            - +strings
+        collectionFormat: csv
     produces:
       - application/json
     responses:

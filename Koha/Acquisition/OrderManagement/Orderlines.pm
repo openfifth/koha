@@ -18,7 +18,7 @@ package Koha::Acquisition::OrderManagement::Orderlines;
 # along with Koha; if not, see <http://www.gnu.org/licenses>.
 
 use Modern::Perl;
-use base qw(Koha::Objects);
+use base qw(Koha::Object::Mixin::AdditionalFields Koha::Objects);
 
 use Koha::Acquisition::OrderManagement::Orderline;
 

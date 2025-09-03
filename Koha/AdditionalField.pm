@@ -65,7 +65,8 @@ sub to_api {
         'aqorders'              => 'order',
         'aqbooksellers:vendor'  => 'vendor',
         'erm_titles'            => 'title',
-        'erm_agreement_periods' => 'agreement_period'
+        'erm_agreement_periods' => 'agreement_period',
+        'acq_orderlines'       => 'orderline'
     };
 
     my $json = $self->SUPER::to_api($params);

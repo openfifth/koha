@@ -55,6 +55,7 @@ sub _list {
         vendor           => 'aqbooksellers:vendor',
         title            => 'erm_titles',
         agreement_period => 'erm_agreement_periods'
+        orderline => 'acq_orderlines'
     };
 
     my @tables;

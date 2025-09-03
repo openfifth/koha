@@ -48,6 +48,7 @@ export default {
                 emptyListMessage: $__("There are no orderlines defined"),
                 newLabel: $__("New orderline"),
             },
+            extendedAttributesResourceType: "orderline",
             props,
             moduleStore: "acquisitionsStore",
             resourceAttrs: [

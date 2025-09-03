@@ -18,7 +18,7 @@ package Koha::Acquisition::OrderManagement::Orderline;
 # along with Koha; if not, see <http://www.gnu.org/licenses>.
 
 use Modern::Perl;
-use base qw(Koha::Object);
+use base qw(Koha::Object::Mixin::AdditionalFields Koha::Object);
 
 use Mojo::JSON qw(decode_json);
 use JSON       qw ( encode_json );

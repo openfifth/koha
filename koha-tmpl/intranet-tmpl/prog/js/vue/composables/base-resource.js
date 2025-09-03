@@ -476,6 +476,14 @@ export function useBaseResource(resourceConfig) {
                 hasDataToDisplay: false,
             };
             if (
+                group === "noGroupFound" &&
+                groupFields.length === 1 &&
+                groupFields[0].type === "additional_fields"
+            ) {
+                acc[acc.length - 1].fields.push(...groupFields);
+                return [...acc];
+            }
+            if (
                 component === "Show" &&
                 resourceConfig.showGroupsDisplayMode === "splitScreen" &&
                 resourceConfig.splitScreenGroupings.length > 0

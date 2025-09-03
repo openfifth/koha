@@ -26,6 +26,7 @@
           - vendor
           - title
           - agreement_period
+          - orderline
       - $ref: "../swagger.yaml#/parameters/match"
       - $ref: "../swagger.yaml#/parameters/order_by"
       - $ref: "../swagger.yaml#/parameters/page"
