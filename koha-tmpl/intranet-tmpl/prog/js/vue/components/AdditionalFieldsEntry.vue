@@ -12,7 +12,7 @@
             >
                 <template
                     v-if="
-                        available_field.authorised_value_category_name &&
+                        available_field.effective_authorised_value_category &&
                         !available_field.repeatable
                     "
                 >
@@ -41,12 +41,42 @@
                                         .authorised_value_category_name
                                 ]
                             "
+                            :disabled="
+                                fieldIsAGetTypeMarcField(available_field)
+                            "
                         />
+                        <template v-if="!searchForm">
+                            <span class="marcFieldHint">{{
+                                $__("(Authorised values for %s).").format(
+                                    available_field.effective_authorised_value_category
+                                )
+                            }}</span>
+                            <span
+                                class="marcFieldHint"
+                                v-if="fieldIsAGetTypeMarcField(available_field)"
+                            >
+                                {{
+                                    $__(
+                                        "This value will be filled with the %s subfield of the selected bibliographic record."
+                                    ).format(available_field.marc_field)
+                                }}</span
+                            >
+                            <span
+                                class="marcFieldHint"
+                                v-if="fieldIsASetTypeMarcField(available_field)"
+                            >
+                                {{
+                                    $__(
+                                        "This value will be saved to the %s subfield of the selected bibliographic record."
+                                    ).format(available_field.marc_field)
+                                }}</span
+                            >
+                        </template>
                     </li>
                 </template>
                 <template
                     v-if="
-                        available_field.authorised_value_category_name &&
+                        available_field.effective_authorised_value_category &&
                         available_field.repeatable
                     "
                 >
@@ -79,9 +109,45 @@
                         />
                     </li>
                 </template>
-
                 <template
-                    v-if="!available_field.authorised_value_category_name"
+                    v-if="
+                        fieldIsAGetTypeMarcField(available_field) &&
+                        !available_field.effective_authorised_value_category
+                    "
+                >
+                    <li>
+                        <label
+                            :for="
+                                `additional_field_` +
+                                available_field.extended_attribute_type_id
+                            "
+                        >
+                            {{ available_field.name }}:</label
+                        >
+                        <input
+                            type="text"
+                            :id="
+                                `additional_field_` +
+                                available_field.extended_attribute_type_id
+                            "
+                            v-model="
+                                current_additional_fields_values[
+                                    available_field.extended_attribute_type_id
+                                ]
+                            "
+                            readonly="readonly"
+                        />
+                        <template v-if="!searchForm">
+                            <span class="marcFieldHint">{{
+                                $__(
+                                    "This value will be filled with the %s subfield of the selected bibliographic record."
+                                ).format(available_field.marc_field)
+                            }}</span>
+                        </template>
+                    </li>
+                </template>
+                <template
+                    v-if="!available_field.effective_authorised_value_category"
                 >
                     <li
                         v-for="current in current_additional_fields_values[
@@ -293,6 +359,13 @@ export default {
             }
         });
 
+        const fieldIsAGetTypeMarcField = field => {
+            return field.marc_field && field.marc_field_mode === "get";
+        };
+        const fieldIsASetTypeMarcField = field => {
+            return field.marc_field && field.marc_field_mode === "set";
+        };
+
         return {
             available_fields,
             av_options,
@@ -300,6 +373,8 @@ export default {
             clearField,
             cloneField,
             initialized,
+            fieldIsAGetTypeMarcField,
+            fieldIsASetTypeMarcField,
         };
     },
     name: "AdditionalFieldsEntry",
@@ -307,7 +382,17 @@ export default {
         extended_attributes_resource_type: String,
         additional_field_values: Array,
         resource: Object,
+        searchForm: {
+            type: Boolean,
+            default: false,
+        },
     },
     emits: ["additional-fields-changed"],
 };
 </script>
+
+<style scoped>
+.marcFieldHint {
+    margin-left: 5px;
+}
+</style>
