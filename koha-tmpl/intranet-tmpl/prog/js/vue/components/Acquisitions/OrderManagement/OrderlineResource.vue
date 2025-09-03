@@ -532,6 +532,44 @@ export default {
             // TODOs:
             // Need to check all costs distributed (resource.remainderToDistribute)
             // Various new prperties added to support reactivity through different components, delete here to avoid API spec conflict
+
+            if (!baseResource.isUserPermitted("createOrderline")) {
+                setWarning(
+                    $__(
+                        "You do not have the required permissions to create orderlines."
+                    )
+                );
+                return;
+            }
+
+            const orderline = JSON.parse(JSON.stringify(orderlineToSave));
+            const orderline_id = orderline.orderline_id;
+
+            delete orderline.orderline_id;
+            delete orderline.distribution_exchange_rate;
+            delete orderline.price_summary;
+            delete orderline.remainderToDistribute;
+            delete orderline.vendor;
+
+            if (orderline_id) {
+                const acq_client = APIClient.acquisition;
+                acq_client.orderlines.update(orderline, orderline_id).then(
+                    success => {
+                        baseResource.setMessage($__("Orderline updated"));
+                        baseResource.router.push({ name: "OrderlineList" });
+                    },
+                    error => {}
+                );
+            } else {
+                const acq_client = APIClient.acquisition;
+                acq_client.orderlines.create(orderline).then(
+                    success => {
+                        baseResource.setMessage($__("Orderline created"));
+                        baseResource.router.push({ name: "OrderlineList" });
+                    },
+                    error => {}
+                );
+            }
         };
 
         return {

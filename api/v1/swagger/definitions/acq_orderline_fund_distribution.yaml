@@ -1,0 +1,25 @@
+---
+type: object
+properties:
+  orderline_fund_distribution_id:
+    type: number
+  orderline_id:
+    type: number
+  fund_id:
+    type: number
+  percentage:
+    type: number
+  distributed_amount_oc:
+    type: number
+  exchange_rate:
+    type: number
+  distributed_amount:
+    type: number
+  tax_rate:
+    type: number
+  tax_value:
+    type: number
+  distibuted_amount_tax_excluded:
+    type: number
+  distibuted_amount_tax_included:
+    type: number
