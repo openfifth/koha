@@ -128,5 +128,25 @@ return {
             say_info( $out, "Table 'acq_orderline_fund_distribution' already exists" );
         }
 
+        $dbh->do(
+            q{
+                INSERT IGNORE INTO authorised_value_categories(  category_name, is_system  ) VALUES
+                ('ACQUISITION_METHOD', 1);
+                }
+        );
+        say_success( $out, "Added new category 'ACQUISITION_METHOD'" );
+
+        $dbh->do(
+            q{
+                INSERT IGNORE INTO authorised_values(  category, authorised_value, lib  ) VALUES
+                ('ACQUISITION_METHOD', "PURCHASE", "Purchase"),
+                ('ACQUISITION_METHOD', "GIFT", "Gift"),
+                ('ACQUISITION_METHOD', "LEGAL_DEPOSIT", "Legal deposit"),
+                ('ACQUISITION_METHOD', "EXCHANGE", "Exchange"),
+                ('ACQUISITION_METHOD', "APPROVAL_PLAN", "Approval plan");
+                }
+        );
+        say_success( $out, "Added new authorised values to those categories" );
+
     },
 };

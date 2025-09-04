@@ -24,6 +24,7 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
         gstValues: [],
         authorisedValues: {
             av_fund_type: "FUND_TYPE",
+            av_acquisition_method: "ACQUISITION_METHOD",
         },
         userPermissions: null,
     });
