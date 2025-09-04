@@ -11,9 +11,8 @@ package Koha::REST::V1::BorrowerCompletion;
 # WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
 # A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along
-# with Koha; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+# You should have received a copy of the GNU General Public License
+# along with Koha; if not, see <http://www.gnu.org/licenses>.
 
 use Modern::Perl;
 
@@ -41,11 +40,17 @@ sub fetch {
 
     $logger->warn('fetch');
 
-    eval "use $backend; \$bcservice = new $backend;";
+    ( my $file = $backend ) =~ s{::}{/}g;
+    $file .= '.pm';
 
-    $logger->warn( 'eval result: ' . $@ );
-
+    eval {
+        require $file;
+        $backend->can('new') or die "Class $backend has no constructor";
+        $bcservice = $backend->new;
+    };
     if ($@) {
+        $logger->warn( 'eval result: ' . $@ );
+
         return $c->render(
             status  => 500,
             openapi => { error => $@ }
