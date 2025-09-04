@@ -21,7 +21,7 @@ export default {
     },
     setup(props) {
         const acquisitionsStore = inject("acquisitionsStore");
-        const { currencies } = storeToRefs(acquisitionsStore);
+        const { currencies, sysprefs } = storeToRefs(acquisitionsStore);
         const {
             getCurrencyConversionRate,
             getActiveCurrency,
@@ -97,13 +97,25 @@ export default {
                     },
                     value: "",
                 },
-                //TODO: Catalog details
                 {
                     name: "acquisition_method",
                     type: "select",
                     group: $__("Acquisition method"),
                     label: $__("Acquisition method"),
                     avCat: "av_acquisition_method",
+                },
+                {
+                    name: "create_items",
+                    group: $__("Catalog details"),
+                    label: $__("Create items when"),
+                    type: "radio",
+                    options: [
+                        { description: $__("Ordering"), value: "ordering" },
+                        { description: $__("Receiving"), value: "receiving" },
+                        { description: $__("Cataloging"), value: "cataloging" },
+                    ],
+                    defaultValue: sysprefs.value.acq_create_items,
+                    hideIn: ["List"],
                 },
                 {
                     name: "patrons_to_notify",
@@ -213,6 +225,9 @@ export default {
                     label: $__("Quantity"),
                     defaultValue: null,
                     size: 6,
+                    disabled: () => {
+                        return sysprefs.value.acq_create_items === "ordering";
+                    },
                     hideIn: ["List"],
                 },
                 {

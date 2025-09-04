@@ -35,9 +35,9 @@
 
 <script>
 import { onBeforeMount, ref } from "vue";
-import { APIClient } from "../fetch/api-client.js";
-import FormElement from "./FormElement.vue";
-import ButtonSubmit from "./ButtonSubmit.vue";
+import { APIClient } from "../../../fetch/api-client.js";
+import FormElement from "../../FormElement.vue";
+import ButtonSubmit from "../../ButtonSubmit.vue";
 export default {
     props: {
         orderNumber: String,
