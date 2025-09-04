@@ -38,8 +38,8 @@
             const currencyList = [% To.json(currencies) | $raw %];
             const permitted_patrons = [% To.json(permitted_patrons) | $raw %];
 
-        function add_user(borrowernumber, borrowername) {
-            var ids = $("#users_ids").val();
+        function add_user(borrowernumber, borrowername, fieldName) {
+            var ids = $(`#${fieldName}_users_ids`).val();
             if(ids.length > 0) {
                 ids = ids.split(':');
             } else {
@@ -47,19 +47,19 @@
             }
             if (ids.indexOf(borrowernumber.toString()) < 0) {
                 ids.push(borrowernumber);
-                $("#users_ids").val(ids.join(':'));
-                var li = '<li id="user_'+borrowernumber+'">'+borrowername
-                    + ' <i class="fa fa-trash" style="cursor:pointer;" onclick="del_user('+borrowernumber+');"></i></li>';
-                $("#users_names").append(li);
+                $(`#${fieldName}_users_ids`).val(ids.join(':'));
+                var li = '<li id="'+fieldName+'_user_'+borrowernumber+'">'+borrowername
+                    + ' <i class="fa fa-trash" style="cursor:pointer;" onclick="del_user('+borrowernumber+', '+'\''+fieldName+'\''+');"></i></li>';
+                $(`#${fieldName}_users_names`).append(li);
                 return 0;
             }
             return -1;
         }
-        function del_user(borrowernumber) {
-            $("#user_"+borrowernumber).remove();
-            var ids = $("#users_ids").val().split(':');
+        function del_user(borrowernumber, fieldName) {
+            $("#"+fieldName+"_user_"+borrowernumber).remove();
+            var ids = $(`#${fieldName}_users_ids`).val().split(':');
             ids.splice(ids.indexOf(borrowernumber.toString()), 1);
-            $("#users_ids").val(ids.join(':'));
+            $(`#${fieldName}_users_ids`).val(ids.join(':'));
         }
     </script>
     [% Asset.js("js/vue/dist/acquisitions/acquisitions.js") | $raw %]

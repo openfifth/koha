@@ -334,9 +334,11 @@
                 actionButtons = []
             [% END %]
 
+            let resultsFieldName
             $(document).on("shown.bs.modal", function(){
                 const vueData = $("#vuePatronSearchData")
                 const actionType = vueData.data("action_type")
+                resultsFieldName = vueData.data("field_name")
                 if(!actionButtons.includes(actionType) ) actionButtons.push(actionType)
                 const vueFilteredEndpoint = vueData.data("patron_search_filter")
                 if(vueFilteredEndpoint) {
@@ -354,7 +356,6 @@
             });
 
             $(document).ready(function(){
-
                 let parent_block = $("#[% search_results_block_id | html %]");
                 let patron_search_form = get_patron_search_form();
 
@@ -828,7 +829,7 @@
                     e.preventDefault();
                     var borrowernumber = $(this).data("borrowernumber");
                     var borrower_data = JSON.parse(patrons_table.find("input[name='borrower_data"+borrowernumber+"']").val());
-                    modal_add_user( borrowernumber, $patron_to_html( borrower_data, { display_cardnumber: false, url: false } ) );
+                    modal_add_user( borrowernumber, $patron_to_html( borrower_data, { display_cardnumber: false, url: false } ), resultsFieldName );
                 });
                 patrons_table.on("click",".select_user",function(e){
                     e.preventDefault();
@@ -992,12 +993,12 @@
             }
 
             // modify parent window owner element
-            function modal_add_user(borrowernumber, borrowername) {
+            function modal_add_user(borrowernumber, borrowername, resultsFieldName) {
                 [%# Note that add_user could sent data instead of borrowername too %]
                 let parent_block = $("#[% search_results_block_id | html %]");
                 parent_block.find(".info").hide();
                 parent_block.find(".error").hide();
-                if ( add_user(borrowernumber, borrowername) < 0 ) {
+                if ( add_user(borrowernumber, borrowername, resultsFieldName) < 0 ) {
                     parent_block.find(".error").html(_("Patron '%s' is already in the list.").format(borrowername)).show();
                 } else {
                     parent_block.find(".info").html(_("Patron '%s' added.").format(borrowername)).show();
@@ -1037,6 +1038,7 @@
                 </div>
                 <div class="modal-body">
                     [% PROCESS patron_search_filters filters => ['branch','category','sort1','sort2'] %]
+                    <input id="vuePatronSearchData" type="hidden" />
 
                     <div id="[% search_results_block_id | html %]" class="search_results_block">
                         <!-- FIXME removed style from #searchresults, is that bad? -->

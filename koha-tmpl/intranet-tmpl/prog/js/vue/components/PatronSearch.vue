@@ -12,11 +12,11 @@
             @click="selectUser()"
             class="btn btn-default"
             data-bs-toggle="modal"
+            data-bs-target="#patron_search_modal"
             ><i class="fa fa-plus"></i> {{ $__("Select user") }}</a
         >
         <input
             type="hidden"
-            name="selected_patron_id"
             id="additional_patron_filters"
             :data-additionalfilters="filters"
         />
@@ -28,21 +28,20 @@
         />
     </template>
     <template v-if="modalType === 'add'">
-        <a
-            href="#patron_search_modal"
-            @click="addUser()"
-            class="btn btn-default"
-            data-bs-toggle="modal"
+        <a @click="addUser()" class="btn btn-default"
             ><i class="fa fa-plus"></i> {{ $__("Add user") }}</a
         >
-        <input type="hidden" name="users_ids" id="users_ids" />
-        <ol id="users_names"></ol>
+        <input
+            type="hidden"
+            :name="`${name}_users_ids`"
+            :id="`${name}_users_ids`"
+        />
+        <ol :id="`${name}_users_names`"></ol>
     </template>
-    <input id="vuePatronSearchData" type="hidden" />
 </template>
 
 <script>
-import { computed, onBeforeMount, onMounted, ref } from "vue";
+import { computed, onBeforeMount, onMounted, ref, watch } from "vue";
 import { APIClient } from "../fetch/api-client.js";
 
 export default {
@@ -74,15 +73,6 @@ export default {
                 );
             }
         });
-        onMounted(() => {
-            if (props.filteredUrl) {
-                $("#vuePatronSearchData").data(
-                    "patron_search_filter",
-                    props.filteredUrl
-                );
-            }
-            $("#vuePatronSearchData").data("action_type", props.modalType);
-        });
 
         const filters = computed(() => {
             if (!props.additionalFilters) return "";
@@ -104,7 +94,23 @@ export default {
             return !document.getElementById("selected_patron_id");
         });
 
+        const addPatronData = () => {
+            if (props.filteredUrl) {
+                $("#vuePatronSearchData").data(
+                    "patron_search_filter",
+                    props.filteredUrl
+                );
+            }
+            $("#vuePatronSearchData").data("action_type", props.modalType);
+            $("#vuePatronSearchData").data("field_name", props.name);
+        };
+        onMounted(() => {
+            addPatronData();
+        });
+
         const addUser = () => {
+            addPatronData();
+            $("#patron_search_modal").modal("show");
             const modalEventListener = () => {
                 newUserAdded();
                 $(document).off(
@@ -121,9 +127,12 @@ export default {
         };
 
         const newUserAdded = () => {
-            const userIds = document.getElementById("users_ids").value;
+            const userIds = document.getElementById(
+                `${props.name}_users_ids`
+            ).value;
             props.resource[props.name] = userIds.split(":");
         };
+
         const selectUser = () => {
             const modalEventListener = () => {
                 newUserSelected();
