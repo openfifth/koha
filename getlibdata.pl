@@ -53,7 +53,7 @@ my $branch = $query->param('branch');
 #my $ill_id = $query->param('ill_id');
 my $libsigel = $query->param('sigel');
 
-my $ua = new LWP::UserAgent;
+my $ua = LWP::UserAgent->new;
 $ua->agent("Koha ILL");
 
 # Setup variables

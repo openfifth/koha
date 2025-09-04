@@ -55,7 +55,7 @@ my $start  = $query->param('start');
 my $end    = $query->param('end');
 my $ill_id = $query->param('ill_id');
 
-my $ua = new LWP::UserAgent;
+my $ua = LWP::UserAgent->new;
 $ua->agent("Koha ILL");
 
 # Setup variables

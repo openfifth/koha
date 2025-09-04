@@ -18,7 +18,7 @@ my @dirs = (
     'authorities',       'basket',
     'catalogue',         'cataloguing',
     'changelanguage.pl', 'circ',
-    'debian',            'docs',
+    'docs',
     'errors',            'fix-perl-path.PL', 'help.pl',
     'installer',         'kohaversion.pl',   'labels',
     'mainpage.pl',       'Makefile.PL',

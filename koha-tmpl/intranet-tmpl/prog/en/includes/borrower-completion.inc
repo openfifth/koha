@@ -2,8 +2,8 @@
 [% USE Asset %]
 [% Asset.css("css/humanmsg.css") | $raw %]
 [% Asset.js("lib/jquery/plugins/humanmsg.js") | $raw %]
-[% Asset.js("js/ajax.js") %]
-[% Asset.js("js/form-completer.js") %]
+[% Asset.js("js/ajax.js") | $raw %]
+[% Asset.js("js/form-completer.js") | $raw %]
 <script type="text/javascript">
     //<![CDATA[
         var MSG_FETCHING_BORROWER_DATA = _("Fetching borrower data ...");
