@@ -48,6 +48,7 @@ export default {
                 emptyListMessage: $__("There are no orderlines defined"),
                 newLabel: $__("New orderline"),
             },
+            formGroupsDisplayMode: "accordion",
             extendedAttributesResourceType: "orderline",
             props,
             moduleStore: "acquisitionsStore",
@@ -97,6 +98,13 @@ export default {
                     value: "",
                 },
                 //TODO: Catalog details
+                {
+                    name: "acquisition_method",
+                    type: "select",
+                    group: $__("Acquisition method"),
+                    label: $__("Acquisition method"),
+                    avCat: "av_acquisition_method",
+                },
                 {
                     name: "patrons_to_notify",
                     group: $__("Patrons to notify"),
