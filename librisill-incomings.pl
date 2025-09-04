@@ -44,7 +44,7 @@ use JSON;
 
 use utf8;
 
-my $query = new CGI;
+my $query = CGI->new;
 
 my $debug = 1;
 

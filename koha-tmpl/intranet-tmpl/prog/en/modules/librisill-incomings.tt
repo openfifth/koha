@@ -46,14 +46,14 @@
               <tbody>
                 [% FOREACH ill_request IN decoded.ill_requests.reverse %]            
                 <tr>
-                  <td class="lf_number"><a href="https://iller.libris.kb.se/librisfjarrlan/lf.php?action=search&search_string=[% ill_request.lf_number %]" target="_blank">[% ill_request.lf_number %]</a></td>
-                  <td class="bib_id"><a href="https://libris.kb.se/bib/[% ill_request.bib_id %]" target="_blank">[% ill_request.bib_id %]</a></td>
-                  <td class="ill_title"><a href="/cgi-bin/koha/catalogue/search.pl?q=[% ill_request.bib_id %]" target="_blank">[% ill_request.title %]</a></td>
-                  <td class="req_library"><a href="/cgi-bin/koha/circ/circulation.pl?findborrower=[% ill_request.requesting_library %]">[% ill_request.requesting_library %]</a></td>
-                  <td class="ill_status">[% ill_request.status %]</td>
-                  <td style="white-space:nowrap;"><a href="https://iller.libris.kb.se/librisfjarrlan/api/illrequests/[% decoded.library_code %]/[% ill_request.lf_number %]?format=pdf" target="_blank">Öppna PDF</a></td>
-                  <td><a href="" target="blank" class="adresslapplink" data="[% ill_request.requesting_library %]">Skriv ut</a></td>
-                  [% IF NOT archive %] <td><button class="behandla btn btn-xs btn-primary" data-bs-toggle="modal" data-bs-target="#behandlaModal" data="[% ill_request.request_id	%]" timestamp="[% ill_request.last_modified %]">Behandla</a></td> [% END %]
+                  <td class="lf_number"><a href="https://iller.libris.kb.se/librisfjarrlan/lf.php?action=search&search_string=[% ill_request.lf_number | url %]" target="_blank">[% ill_request.lf_number | html %]</a></td>
+                  <td class="bib_id"><a href="https://libris.kb.se/bib/[% ill_request.bib_id | url %]" target="_blank">[% ill_request.bib_id | html %]</a></td>
+                  <td class="ill_title"><a href="/cgi-bin/koha/catalogue/search.pl?q=[% ill_request.bib_id | url %]" target="_blank">[% ill_request.title | html %]</a></td>
+                  <td class="req_library"><a href="/cgi-bin/koha/circ/circulation.pl?findborrower=[% ill_request.requesting_library | url %]">[% ill_request.requesting_library | html %]</a></td>
+                  <td class="ill_status">[% ill_request.status | html %]</td>
+                  <td style="white-space:nowrap;"><a href="https://iller.libris.kb.se/librisfjarrlan/api/illrequests/[% decoded.library_code | url %]/[% ill_request.lf_number | url %]?format=pdf" target="_blank">Öppna PDF</a></td>
+                  <td><a href="" target="blank" class="adresslapplink" data="[% ill_request.requesting_library | html %]">Skriv ut</a></td>
+                  [% IF NOT archive %] <td><button class="behandla btn btn-xs btn-primary" data-bs-toggle="modal" data-bs-target="#behandlaModal" data="[% ill_request.request_id	| html %]" timestamp="[% ill_request.last_modified | html %]">Behandla</a></td> [% END %]
                 </tr>
                 [% END %]
               </tbody>
@@ -150,7 +150,7 @@
             var selected = $('#response_id :selected').val();
             var responsetext = $('#response_text').val();
             
-            var url = `/cgi-bin/koha/librisill-incomings.pl?order_id=${order_id}&branch=[% decoded.library_code %]&action=response&timestamp=${timestamp}&response_id=${selected}&added_response=${responsetext}`;
+            var url = `/cgi-bin/koha/librisill-incomings.pl?order_id=${order_id}&branch=[% decoded.library_code | uri %]&action=response&timestamp=${timestamp}&response_id=${selected}&added_response=${responsetext}`;
     
             if (may_reserve) {
                 url += `&may_reserve=${may_reserve}`;

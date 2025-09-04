@@ -46,7 +46,7 @@ use JSON;
 
 use CGI::Carp qw(fatalsToBrowser);
 
-my $query = new CGI;
+my $query = CGI->new;
 
 my ( $template, $loggedinuser, $cookie, $flags ) = get_template_and_user(
     {
@@ -74,7 +74,7 @@ my $libris_keys = $json->decode($json_keys);
 my $branch2  = $query->param('branch');
 my $lfnumber = $query->param('lfnumber');
 
-my $ua = new LWP::UserAgent;
+my $ua = LWP::UserAgent->new;
 $ua->agent("Perl API Client/1.0");
 
 # Setup variables
