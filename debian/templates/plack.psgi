@@ -68,16 +68,16 @@ my $opac = Plack::App::CGIBin->new(
     root => $ENV{GIT_INSTALL}? "$home/opac": "$home/opac/cgi-bin/opac"
 )->to_app;
 
-my $loan_status = new KohaServices::LoanStatus({
+my $loan_status = KohaServices::LoanStatus->new({
             record_matcher => 'KohaServices::RecordMatcher::KBiblioId',
             output_format => 'KohaServices::OutputFormat::LibrisXml'
     });
 
-my $redirect_bibitem = new KohaServices::RedirectBibitem({
+my $redirect_bibitem = KohaServices::RedirectBibitem->new({
             record_matcher => 'KohaServices::RecordMatcher::KBiblioId'
     });
 
-my $redirect_reserve = new KohaServices::RedirectReserve({
+my $redirect_reserve = KohaServices::RedirectReserve->new({
             record_matcher => 'KohaServices::RecordMatcher::KBiblioId'
     });
 
