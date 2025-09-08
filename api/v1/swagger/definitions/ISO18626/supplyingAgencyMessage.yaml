@@ -1,0 +1,27 @@
+---
+type: object
+properties:
+  supplyingAgencyMessage:
+    type: object
+    properties:
+      header:
+        $ref: './types/supplyingAgencyMessageHeader.yaml'
+      messageInfo:
+        $ref: './supplyingAgencyMessage/messageInfo.yaml'
+      statusInfo:
+        $ref: './supplyingAgencyMessage/statusInfo.yaml'
+      retryInfo:
+        $ref: './supplyingAgencyMessage/retryInfo.yaml'
+      deliveryInfo:
+        $ref: './supplyingAgencyMessage/deliveryInfo.yaml'
+      shippingInfo:
+        $ref: './supplyingAgencyMessage/shippingInfo.yaml'
+      returnInfo:
+        $ref: './supplyingAgencyMessage/returnInfo.yaml'
+    required:
+    - header
+    - messageInfo
+    - statusInfo
+required:
+  - supplyingAgencyMessage
+additionalProperties: false

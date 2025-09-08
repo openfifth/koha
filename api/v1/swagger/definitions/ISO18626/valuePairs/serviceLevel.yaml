@@ -1,0 +1,10 @@
+---
+type: string
+enum:
+  - Express
+  - Normal
+  - Rush
+  - SecondaryMail
+  - Standard
+  - Urgent
+description: If the requesting library is willing and is able to accept any service level, then the requesting library shall not include this element in the message
