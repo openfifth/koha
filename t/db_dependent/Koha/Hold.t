@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 21;
+use Test::More tests => 22;
 
 use Test::Exception;
 use Test::MockModule;
@@ -32,6 +32,7 @@ use t::lib::Dates;
 use C4::Reserves qw(AddReserve);
 
 use Koha::ActionLogs;
+use Koha::CirculationRules;
 use Koha::DateUtils qw(dt_from_string);
 use Koha::Holds;
 use Koha::Libraries;
@@ -139,19 +140,27 @@ subtest 'fill() tests' => sub {
 
     my $fee = 15;
 
-    my $category = $builder->build_object(
-        {
-            class => 'Koha::Patron::Categories',
-            value => { reservefee => $fee }
-        }
-    );
-    my $patron = $builder->build_object(
+    my $category = $builder->build_object( { class => 'Koha::Patron::Categories' } );
+    my $patron   = $builder->build_object(
         {
             class => 'Koha::Patrons',
             value => { categorycode => $category->id }
         }
     );
     my $manager = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+
+    # Set up circulation rules for hold fees
+    Koha::CirculationRules->set_rules(
+        {
+            branchcode   => undef,
+            categorycode => $category->id,
+            itemtype     => undef,
+            rules        => {
+                hold_fee => $fee,
+            }
+        }
+    );
 
     my $title  = 'Do what you want';
     my $biblio = $builder->build_sample_biblio( { title => $title } );
@@ -163,6 +172,7 @@ subtest 'fill() tests' => sub {
                 biblionumber   => $biblio->id,
                 borrowernumber => $patron->id,
                 itemnumber     => $item->id,
+                branchcode     => $library->branchcode,
                 timestamp      => dt_from_string('2021-06-25 14:05:35'),
                 priority       => 10,
             }
@@ -191,12 +201,25 @@ subtest 'fill() tests' => sub {
 
     subtest 'item_id parameter' => sub {
         plan tests => 1;
-        $category->reservefee(0)->store;    # do not disturb later accounts
+
+        # Clear hold fee rule to not disturb later accounts
+        Koha::CirculationRules->set_rules(
+            {
+                branchcode   => undef,
+                categorycode => $category->id,
+                itemtype     => undef,
+                rules        => {
+                    hold_fee => 0,
+                }
+            }
+        );
         $hold = $builder->build_object(
             {
                 class => 'Koha::Holds',
-                value =>
-                    { biblionumber => $biblio->id, borrowernumber => $patron->id, itemnumber => undef, priority => 1 }
+                value => {
+                    biblionumber => $biblio->id, borrowernumber => $patron->id, itemnumber => undef, priority => 1,
+                    branchcode   => $library->branchcode
+                }
             }
         );
 
@@ -205,7 +228,18 @@ subtest 'fill() tests' => sub {
         $old_hold = Koha::Old::Holds->find( $hold->id );
         is( $old_hold->itemnumber, $item->itemnumber, 'The itemnumber has been saved in old_reserves by fill' );
         $old_hold->delete;
-        $category->reservefee($fee)->store;    # restore
+
+        # Restore hold fee rule
+        Koha::CirculationRules->set_rules(
+            {
+                branchcode   => undef,
+                categorycode => $category->id,
+                itemtype     => undef,
+                rules        => {
+                    hold_fee => $fee,
+                }
+            }
+        );
     };
 
     subtest 'fee applied tests' => sub {
@@ -1934,6 +1968,7 @@ subtest 'move_hold() tests' => sub {
 
     $schema->storage->txn_rollback;
 };
+
 subtest 'is_hold_group_target, cleanup_hold_group and set_as_hold_group_target tests' => sub {
 
     plan tests => 16;
@@ -2236,6 +2271,327 @@ subtest '_Findgroupreserve in the context of hold groups' => sub {
         $new_reserves[0]->{reserve_id}, $reserve_3_id,
         "reserve_3_id should not be here."
     );
+};
+
+subtest 'calculate_hold_fee() tests' => sub {
+    plan tests => 12;
+
+    $schema->storage->txn_begin;
+
+    # Create patron category and patron
+    my $cat     = $builder->build( { source => 'Category', value => { categorycode => 'XYZ1' } } );
+    my $patron1 = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { categorycode => 'XYZ1' }
+        }
+    );
+    my $patron2 = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { categorycode => 'XYZ1' }
+        }
+    );
+
+    # Create itemtypes with different fees
+    my $itemtype1 = $builder->build( { source => 'Itemtype' } );
+    my $itemtype2 = $builder->build( { source => 'Itemtype' } );
+    my $itemtype3 = $builder->build( { source => 'Itemtype' } );
+
+    # Set up circulation rules with different hold fees for different itemtypes
+    Koha::CirculationRules->set_rules(
+        {
+            branchcode   => undef,
+            categorycode => 'XYZ1',
+            itemtype     => $itemtype1->{itemtype},
+            rules        => { hold_fee => 1.00, reservesallowed => 10 }
+        }
+    );
+    Koha::CirculationRules->set_rules(
+        {
+            branchcode   => undef,
+            categorycode => 'XYZ1',
+            itemtype     => $itemtype2->{itemtype},
+            rules        => { hold_fee => 3.00, reservesallowed => 10 }
+        }
+    );
+    Koha::CirculationRules->set_rules(
+        {
+            branchcode   => undef,
+            categorycode => 'XYZ1',
+            itemtype     => $itemtype3->{itemtype},
+            rules        => { hold_fee => 2.00, reservesallowed => 10 }
+        }
+    );
+
+    # Set generic rules for permission checking
+    Koha::CirculationRules->set_rules(
+        {
+            branchcode   => undef,
+            categorycode => undef,
+            itemtype     => undef,
+            rules        => { reservesallowed => 10, holds_per_record => 10, holds_per_day => 10 }
+        }
+    );
+
+    my $biblio = $builder->build_sample_biblio();
+
+    # Create multiple items with different itemtypes and fees
+    my $item1 = $builder->build_sample_item(
+        {
+            biblionumber => $biblio->biblionumber,
+            itype        => $itemtype1->{itemtype},
+            notforloan   => 0,
+        }
+    );
+    my $item2 = $builder->build_sample_item(
+        {
+            biblionumber => $biblio->biblionumber,
+            itype        => $itemtype2->{itemtype},
+            notforloan   => 0,
+        }
+    );
+    my $item3 = $builder->build_sample_item(
+        {
+            biblionumber => $biblio->biblionumber,
+            itype        => $itemtype3->{itemtype},
+            notforloan   => 0,
+        }
+    );
+
+    # Test 1: Item-level hold calculates fee correctly
+    my $item_hold = $builder->build_object(
+        {
+            class => 'Koha::Holds',
+            value => {
+                borrowernumber => $patron1->borrowernumber,
+                biblionumber   => $biblio->biblionumber,
+                itemnumber     => $item2->itemnumber,         # Use item2 with 3.00 fee
+            }
+        }
+    );
+
+    my $fee = $item_hold->calculate_hold_fee();
+    is( $fee, 3.00, 'Item-level hold calculates fee correctly' );
+
+    # Create title-level hold for comprehensive testing
+    my $title_hold = $builder->build_object(
+        {
+            class => 'Koha::Holds',
+            value => {
+                borrowernumber => $patron2->borrowernumber,
+                biblionumber   => $biblio->biblionumber,
+                itemnumber     => undef,
+            }
+        }
+    );
+
+    # Test 2: Default 'highest' strategy should return 3.00 (highest fee)
+    t::lib::Mocks::mock_preference( 'TitleHoldFeeStrategy', 'highest' );
+    $fee = $title_hold->calculate_hold_fee();
+    is( $fee, 3.00, 'Title-level hold: highest strategy returns highest fee (3.00)' );
+
+    # Test 3: 'lowest' strategy should return 1.00 (lowest fee)
+    t::lib::Mocks::mock_preference( 'TitleHoldFeeStrategy', 'lowest' );
+    $fee = $title_hold->calculate_hold_fee();
+    is( $fee, 1.00, 'Title-level hold: lowest strategy returns lowest fee (1.00)' );
+
+    # Test 4: 'most_common' strategy with unique fees should return highest
+    t::lib::Mocks::mock_preference( 'TitleHoldFeeStrategy', 'most_common' );
+    $fee = $title_hold->calculate_hold_fee();
+    is( $fee, 3.00, 'Title-level hold: most_common strategy with unique fees returns highest fee (3.00)' );
+
+    # Test 5: Add another item with same fee to test most_common properly
+    my $item4 = $builder->build_sample_item(
+        {
+            biblionumber => $biblio->biblionumber,
+            itype        => $itemtype1->{itemtype},
+            notforloan   => 0,
+        }
+    );
+    $fee = $title_hold->calculate_hold_fee();
+    is( $fee, 1.00, 'Title-level hold: most_common strategy returns most common fee (1.00 - 2 items)' );
+
+    # Test 6: Unknown/invalid strategy defaults to 'highest'
+    t::lib::Mocks::mock_preference( 'TitleHoldFeeStrategy', 'invalid_strategy' );
+    $fee = $title_hold->calculate_hold_fee();
+    is( $fee, 3.00, 'Title-level hold: invalid strategy defaults to highest fee (3.00)' );
+
+    # Test 7: Empty preference defaults to 'highest'
+    t::lib::Mocks::mock_preference( 'TitleHoldFeeStrategy', '' );
+    $fee = $title_hold->calculate_hold_fee();
+    is( $fee, 3.00, 'Title-level hold: empty strategy preference defaults to highest fee (3.00)' );
+
+    # Test 8: No holdable items returns 0
+    # Make all items not holdable
+    $item1->notforloan(1)->store;
+    $item2->notforloan(1)->store;
+    $item3->notforloan(1)->store;
+    $item4->notforloan(1)->store;
+
+    $fee = $title_hold->calculate_hold_fee();
+    is( $fee, 0, 'Title-level hold: no holdable items returns 0 fee' );
+
+    # Test 9: Mix of holdable and non-holdable items (highest)
+    # Make some items holdable again
+    $item2->notforloan(0)->store;    # Fee: 3.00
+    $item3->notforloan(0)->store;    # Fee: 2.00
+
+    t::lib::Mocks::mock_preference( 'TitleHoldFeeStrategy', 'highest' );
+    $fee = $title_hold->calculate_hold_fee();
+    is( $fee, 3.00, 'Title-level hold: highest strategy with mixed holdable items returns 3.00' );
+
+    # Test 10: Mix of holdable and non-holdable items (lowest)
+    t::lib::Mocks::mock_preference( 'TitleHoldFeeStrategy', 'lowest' );
+    $fee = $title_hold->calculate_hold_fee();
+    is( $fee, 2.00, 'Title-level hold: lowest strategy with mixed holdable items returns 2.00' );
+
+    # Test 11: Items with 0 fee
+    my $itemtype_free = $builder->build( { source => 'Itemtype' } );
+    Koha::CirculationRules->set_rules(
+        {
+            branchcode   => undef,
+            categorycode => 'XYZ1',
+            itemtype     => $itemtype_free->{itemtype},
+            rules        => { hold_fee => 0, reservesallowed => 10 }
+        }
+    );
+
+    my $item_free = $builder->build_sample_item(
+        {
+            biblionumber => $biblio->biblionumber,
+            itype        => $itemtype_free->{itemtype},
+            notforloan   => 0,
+        }
+    );
+
+    t::lib::Mocks::mock_preference( 'TitleHoldFeeStrategy', 'lowest' );
+    $fee = $title_hold->calculate_hold_fee();
+    is( $fee, 0, 'Title-level hold: lowest strategy with free item returns 0' );
+
+    # Test 12: All items have same fee
+    # Set all holdable items to same fee
+    Koha::CirculationRules->set_rules(
+        {
+            branchcode   => undef,
+            categorycode => 'XYZ1',
+            itemtype     => $itemtype2->{itemtype},
+            rules        => { hold_fee => 2.50, reservesallowed => 10 }
+        }
+    );
+    Koha::CirculationRules->set_rules(
+        {
+            branchcode   => undef,
+            categorycode => 'XYZ1',
+            itemtype     => $itemtype3->{itemtype},
+            rules        => { hold_fee => 2.50, reservesallowed => 10 }
+        }
+    );
+    Koha::CirculationRules->set_rules(
+        {
+            branchcode   => undef,
+            categorycode => 'XYZ1',
+            itemtype     => $itemtype_free->{itemtype},
+            rules        => { hold_fee => 2.50, reservesallowed => 10 }
+        }
+    );
+
+    $fee = $title_hold->calculate_hold_fee();
+    is( $fee, 2.50, 'Title-level hold: all items with same fee returns that fee regardless of strategy' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'should_charge() tests' => sub {
+    plan tests => 6;
+
+    $schema->storage->txn_begin;
+
+    my $patron = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $biblio = $builder->build_sample_biblio();
+    my $item   = $builder->build_sample_item( { biblionumber => $biblio->biblionumber } );
+
+    my $hold = $builder->build_object(
+        {
+            class => 'Koha::Holds',
+            value => {
+                borrowernumber => $patron->borrowernumber,
+                biblionumber   => $biblio->biblionumber,
+                itemnumber     => $item->itemnumber,
+            }
+        }
+    );
+
+    # Test any_time_is_placed mode
+    t::lib::Mocks::mock_preference( 'HoldFeeMode', 'any_time_is_placed' );
+    ok( $hold->should_charge('placement'),   'any_time_is_placed charges at placement' );
+    ok( !$hold->should_charge('collection'), 'any_time_is_placed does not charge at collection' );
+
+    # Test any_time_is_collected mode
+    t::lib::Mocks::mock_preference( 'HoldFeeMode', 'any_time_is_collected' );
+    ok( !$hold->should_charge('placement'), 'any_time_is_collected does not charge at placement' );
+    ok( $hold->should_charge('collection'), 'any_time_is_collected charges at collection' );
+
+    # Test not_always mode (basic case - items available)
+    t::lib::Mocks::mock_preference( 'HoldFeeMode', 'not_always' );
+    ok( !$hold->should_charge('placement'),  'not_always does not charge at placement when items available' );
+    ok( !$hold->should_charge('collection'), 'not_always does not charge at collection' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'charge_hold_fee() tests' => sub {
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    my $cat = $builder->build( { source => 'Category', value => { categorycode => 'XYZ1' } } );
+
+    # Set up circulation rules for hold fees
+    Koha::CirculationRules->set_rules(
+        {
+            branchcode   => undef,
+            categorycode => 'XYZ1',
+            itemtype     => undef,
+            rules        => {
+                hold_fee => 2.00,
+            }
+        }
+    );
+
+    my $patron = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { categorycode => 'XYZ1' }
+        }
+    );
+    t::lib::Mocks::mock_userenv( { patron => $patron, branchcode => $patron->branchcode } );
+
+    my $biblio = $builder->build_sample_biblio();
+    my $item   = $builder->build_sample_item( { biblionumber => $biblio->biblionumber } );
+
+    my $hold = $builder->build_object(
+        {
+            class => 'Koha::Holds',
+            value => {
+                borrowernumber => $patron->borrowernumber,
+                biblionumber   => $biblio->biblionumber,
+                itemnumber     => $item->itemnumber,
+            }
+        }
+    );
+
+    my $account        = $patron->account;
+    my $balance_before = $account->balance;
+
+    # Charge fee
+    my $account_line = $hold->charge_hold_fee();
+    is( $account_line->amount, 2.00, 'charge_hold_fee returns account line with correct amount' );
+
+    my $balance_after = $account->balance;
+    is( $balance_after, $balance_before + 2.00, 'Patron account charged correctly' );
+
+    $schema->storage->txn_rollback;
 };
 
 sub set_userenv {

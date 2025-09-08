@@ -29,9 +29,6 @@ BEGIN {
 
         GetReserveStatus
 
-        ChargeReserveFee
-        GetReserveFee
-
         ModReserveAffect
         ModReserve
         ModReserveStatus
@@ -297,9 +294,8 @@ sub AddReserve {
     my $reserve_id = $hold->id();
 
     # add a reserve fee if needed
-    if ( C4::Context->preference('HoldFeeMode') ne 'any_time_is_collected' ) {
-        my $reserve_fee = GetReserveFee( $borrowernumber, $biblionumber );
-        ChargeReserveFee( $borrowernumber, $reserve_fee, $title );
+    if ( $hold->should_charge('placement') ) {
+        $hold->charge_hold_fee();
     }
 
     FixPriority( { biblionumber => $biblionumber } );
@@ -743,84 +739,6 @@ sub CanItemBeReserved {
     }
 
     return _cache { status => 'OK' };
-}
-
-=head2 ChargeReserveFee
-
-    $fee = ChargeReserveFee( $borrowernumber, $fee, $title );
-
-    Charge the fee for a reserve (if $fee > 0)
-
-=cut
-
-sub ChargeReserveFee {
-    my ( $borrowernumber, $fee, $title ) = @_;
-    return if !$fee || $fee == 0;    # the last test is needed to include 0.00
-    Koha::Account->new( { patron_id => $borrowernumber } )->add_debit(
-        {
-            amount       => $fee,
-            description  => $title,
-            note         => undef,
-            user_id      => C4::Context->userenv ? C4::Context->userenv->{'number'} : undef,
-            library_id   => C4::Context->userenv ? C4::Context->userenv->{'branch'} : undef,
-            interface    => C4::Context->interface,
-            invoice_type => undef,
-            type         => 'RESERVE',
-            item_id      => undef
-        }
-    );
-}
-
-=head2 GetReserveFee
-
-    $fee = GetReserveFee( $borrowernumber, $biblionumber );
-
-    Calculate the fee for a reserve (if applicable).
-
-=cut
-
-sub GetReserveFee {
-    my ( $borrowernumber, $biblionumber ) = @_;
-    my $borquery = qq{
-SELECT reservefee FROM borrowers LEFT JOIN categories ON borrowers.categorycode = categories.categorycode WHERE borrowernumber = ?
-    };
-    my $issue_qry = qq{
-SELECT COUNT(*) FROM items
-LEFT JOIN issues USING (itemnumber)
-WHERE items.biblionumber=? AND issues.issue_id IS NULL
-    };
-    my $holds_qry = qq{
-SELECT COUNT(*) FROM reserves WHERE biblionumber=? AND borrowernumber<>?
-    };
-
-    my $dbh = C4::Context->dbh;
-    my ($fee) = $dbh->selectrow_array( $borquery, undef, ($borrowernumber) );
-    $fee += 0;
-    my $hold_fee_mode = C4::Context->preference('HoldFeeMode') || 'not_always';
-    if ( $fee and $fee > 0 and $hold_fee_mode eq 'not_always' ) {
-
-        # This is a reconstruction of the old code:
-        # Compare number of items with items issued, and optionally check holds
-        # If not all items are issued and there are no holds: charge no fee
-        # NOTE: Lost, damaged, not-for-loan, etc. are just ignored here
-        my ( $notissued, $reserved );
-        ($notissued) = $dbh->selectrow_array(
-            $issue_qry, undef,
-            ($biblionumber)
-        );
-        if ( $notissued == 0 ) {
-
-            # all items are issued
-            ($reserved) = $dbh->selectrow_array(
-                $holds_qry, undef,
-                ( $biblionumber, $borrowernumber )
-            );
-            $fee = 0 if $reserved == 0;
-        } else {
-            $fee = 0;
-        }
-    }
-    return $fee;
 }
 
 =head2 GetReserveStatus

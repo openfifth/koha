@@ -1230,6 +1230,13 @@ Circulation:
                   not_always: "only if all items are checked out and the record has at least one hold already."
                   any_time_is_collected: "any time a hold is collected."
         -
+            - "When a title-level hold is placed and different items could result in different hold fees, choose the fee level to apply as"
+            - pref: TitleHoldFeeStrategy
+              choices:
+                  highest: "the highest applicable fee among the items."
+                  lowest: "the lowest applicable fee among the items."
+                  most_common: "the most common fee among the items."
+        -
             - pref: useDefaultReplacementCost
               choices:
                   1: Use
