@@ -1,0 +1,48 @@
+---
+type: object
+properties:
+  publisher:
+    type:
+      - string
+      - "null"
+    description: Name of the publisher
+  publisherId:
+    type:
+      - string
+      - "null"
+    description: ISNI name identifier of the publisher. See ISO 27729
+  publicationType:
+    type: string
+    enum:
+      - ArchiveMaterial
+      - Article
+      - AudioBook
+      - Book
+      - Chapter
+      - ConferenceProc
+      - Game
+      - GovernmentPubl
+      - Image
+      - Journal
+      - Manuscript
+      - Map
+      - Movie
+      - MusicRecording
+      - MusicScore
+      - Newspaper
+      - Patent
+      - Report
+      - SoundRecording
+      - Thesis
+    description: Type of publication
+  publicationDate:
+    type:
+      - string
+      - "null"
+    description: Date of publication. For serials and serial articles, this should be the publication date of the component part such as issue, not the date when the serial was first issued
+  placeOfPublication:
+    type:
+      - string
+      - "null"
+    description: Place of publication, e.g. a city
+additionalProperties: false

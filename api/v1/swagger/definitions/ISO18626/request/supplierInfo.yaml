@@ -1,0 +1,35 @@
+---
+type: object
+properties:
+  sortOrder:
+    type:
+      - integer
+      - "null"
+    description: Value from 1 to 99 defining the order of preference of use
+  supplierCode:
+    $ref: '../types/agencyId.yaml'
+    description: Code defining a potential supplier
+  supplierDescription:
+    type:
+      - string
+      - "null"
+    description: Textual information about supplier
+  bibliographicRecordId:
+    $ref: './bibliographicInfo/bibliographicRecordId.yaml'
+    description: Identification of a bibliographic record used
+  callNumber:
+    type:
+      - string
+      - "null"
+    description: Indication of the shelf position of the resource
+  summaryHoldings:
+    type:
+      - string
+      - "null"
+    description: Textual description of summary level holdings
+  availabilityNote:
+    type:
+      - string
+      - "null"
+    description: Information about availability
+additionalProperties: false

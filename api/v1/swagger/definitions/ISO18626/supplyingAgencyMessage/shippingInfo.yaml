@@ -1,0 +1,25 @@
+---
+type: object
+properties:
+  courierName:
+    $ref: '../valuePairs/courierName.yaml'
+  trackingId:
+    type: array
+    items:
+      type:
+        - string
+        - "null"
+    description: The tracking number(s) assigned by the courier to the package(s) containing the item(s) to be shipped
+  insurance:
+    $ref: '../types/yesNo.yaml'
+  insuranceThirdParty:
+    $ref: '../types/yesNo.yaml'
+  thirdPartyName:
+    type:
+      - string
+      - "null"
+  insuranceCosts:
+    type: array
+    items:
+      $ref: '../types/costs.yaml'
+additionalProperties: false

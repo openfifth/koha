@@ -1,0 +1,40 @@
+---
+type: object
+properties:
+  reasonForMessage:
+    $ref: '../types/reasonForMessage.yaml'
+  answerYesNo:
+    $ref: '../types/yesNo.yaml'
+  note:
+    type:
+      - string
+      - "null"
+  reasonUnfilled:
+    type: string
+    enum:
+      - NonCirculating
+      - NotAvailableForILL
+      - NotHeld
+      - NotOnShelf
+      - PolicyProblem
+      - PoorCondition
+  reasonRetry:
+    type: string
+    enum:
+      - AtBindery
+      - CostExceedsMaxCost
+      - CourierNotSupp
+      - MultiVolAvail
+      - MustMeetLoanCondition
+      - NotCurrentAvailableForILL
+      - NotFoundAsCited
+      - OnLoan
+      - OnOrder
+      - ReqDelDateNotPossible
+      - ReqDelMethodNotSupp
+      - ReqEditionNotPossible
+      - ReqFormatNotPossible
+      - ReqPayMethodNotSupported
+      - ReqServLevelNotSupp
+      - ReqServTypeNotPossible
+additionalProperties: false

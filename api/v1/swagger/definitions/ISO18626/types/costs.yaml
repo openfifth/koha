@@ -1,0 +1,13 @@
+---
+type: object
+properties:
+  currencyCode:
+    type: string
+    description: Currency symbol as specified in ISO 4217 e.g. 'USD', 'EUR', 'GBP', 'AUD'
+  monetaryValue:
+    type: number
+    format: float
+required:
+  - currencyCode
+  - monetaryValue
+additionalProperties: false

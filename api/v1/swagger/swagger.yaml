@@ -120,6 +120,18 @@ definitions:
     $ref: ./definitions/ill_batchstatus.yaml
   ill_batchstatuses:
     $ref: ./definitions/ill_batchstatuses.yaml
+  ISO18626request:
+    $ref: ./definitions/ISO18626/request.yaml
+  ISO18626requestingAgencyMessage:
+    $ref: ./definitions/ISO18626/requestingAgencyMessage.yaml
+  ISO18626supplyingAgencyMessage:
+    $ref: ./definitions/ISO18626/supplyingAgencyMessage.yaml
+  ISO18626requestConfirmation:
+    $ref: ./definitions/ISO18626/requestConfirmation.yaml
+  ISO18626requestingAgencyMessageConfirmation:
+    $ref: ./definitions/ISO18626/requestingAgencyMessageConfirmation.yaml
+  ISO18626supplyingAgencyMessageConfirmation:
+    $ref: ./definitions/ISO18626/supplyingAgencyMessageConfirmation.yaml
   import_batch_profile:
     $ref: ./definitions/import_batch_profile.yaml
   import_batch_profiles:
@@ -575,6 +587,8 @@ paths:
     $ref: "./paths/biblios.yaml#/~1public~1biblios~1{biblio_id}"
   "/public/checkouts/availability":
     $ref: ./paths/checkouts.yaml#/~1public~1checkouts~1availability
+  "/public/ill/iso18626":
+    $ref: ./paths/ill_iso18626.yaml#/~1public~1ill~1iso18626
   "/public/items":
     $ref: "./paths/items.yaml#/~1public~1items"
   "/public/biblios/{biblio_id}/items":
@@ -867,6 +881,12 @@ parameters:
     name: ill_batchstatus_code
     required: true
     type: string
+  iso18626_request_id_pp:
+    description: ISO18626 ILL request internal identifier
+    in: path
+    name: iso18626_request_id
+    required: true
+    type: integer
   import_batch_profile_id_pp:
     description: Internal profile identifier
     in: path

@@ -1,0 +1,61 @@
+---
+type: object
+properties:
+  loanCondition:
+    type: array
+    items:
+      $ref: '../valuePairs/loanCondition.yaml'
+    description: Applied when ReasonRetry, MustMeetLoanCondition is used because the supplying library requires that conditions of use be met once the requested item is delivered
+  edition:
+    type: array
+    items:
+      type:
+        - string
+        - "null"
+  itemFormat:
+    type: array
+    items:
+      $ref: '../valuePairs/itemFormat.yaml'
+  volume:
+    type: array
+    items:
+      type:
+        - string
+        - "null"
+  serviceType:
+    $ref: '../types/serviceType.yaml'
+    description: If Copy is requested, then the requesting library is interested only in a copy. If Loan is requested, then the requesting library is interested only in a loan. If CopyOrLoan is requested, then the requesting library is willing to accept either a copy or a loan
+  serviceLevel:
+    type: array
+    items:
+      $ref: '../valuePairs/serviceLevel.yaml'
+  deliveryMethod:
+    type: array
+    items:
+      $ref: '../valuePairs/deliveryMethod.yaml'
+    description: Applied when ReasonRetry, ReqDelMethodNotSupp is used, because the requested delivery method(s) are not supported. The supplying library indicates which delivery methods are supported
+  courierName:
+    type: array
+    items:
+      $ref: '../valuePairs/courierName.yaml'
+  offeredCosts:
+    type: array
+    items:
+      $ref: '../types/costs.yaml'
+    description: Applied when ReasonRetry, MaximumCosts, is used because actual costs exceed those specified by the requesting library. The supplying library indicates what the actual cost shall be (consists of Complex Type Costs)
+  paymentMethod:
+    type: array
+    items:
+      $ref: '../valuePairs/paymentMethod.yaml'
+    description: Applied when ReasonRetry, ReqPayMethodNotSupp is used, because the requested payment method is not supported. The supplying library indicates which payment method(s) are supported
+  retryBefore:
+    type:
+      - string
+      - "null"
+    format: date-time
+  retryAfter:
+    type:
+      - string
+      - "null"
+    format: date-time
+additionalProperties: false

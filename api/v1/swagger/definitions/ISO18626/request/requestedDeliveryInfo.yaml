@@ -1,0 +1,16 @@
+---
+type: object
+properties:
+  sortOrder:
+    type:
+      - integer
+      - "null"
+    description: Value from 1 to 99 according to the order
+  address:
+    $ref: '../types/address.yaml'
+    description: Description of the delivery address
+  deliveryMethod:
+    $ref: '../valuePairs/deliveryMethod.yaml'
+  courierName:
+    $ref: '../valuePairs/courierName.yaml'
+additionalProperties: false

@@ -1,0 +1,19 @@
+---
+type: object
+properties:
+  supplyingAgencyMessageConfirmation:
+    type: object
+    properties:
+      confirmationHeader:
+        $ref: './confirmation/confirmationHeader.yaml'
+      reasonForMessage:
+        $ref: './types/reasonForMessage.yaml'
+      errorData:
+        type: array
+        items:
+          $ref: './confirmation/errorData.yaml'
+    required:
+      - confirmationHeader
+required:
+  - supplyingAgencyMessageConfirmation
+additionalProperties: false

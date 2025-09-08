@@ -1,0 +1,12 @@
+---
+type: object
+properties:
+  errorType:
+    $ref: '../types/errorType.yaml'
+  errorValue:
+    type:
+      - string
+      - "null"
+required:
+  - errorType
+additionalProperties: false

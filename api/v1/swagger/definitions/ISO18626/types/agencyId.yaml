@@ -1,0 +1,15 @@
+---
+type: object
+properties:
+  agencyIdType:
+    type: string
+    enum:
+      - DNUCNI # Danish National Union Catalogue Non-ISIL Identifier
+      - ICOLC  # https://icolc.net/consortia
+      - ISIL   # ISO 15511
+  agencyIdValue:
+    type: string
+required:
+  - agencyIdType
+  - agencyIdValue
+additionalProperties: false

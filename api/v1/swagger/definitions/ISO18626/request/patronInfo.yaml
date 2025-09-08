@@ -1,0 +1,42 @@
+---
+type: object
+properties:
+  patronId:
+    type:
+      - string
+      - "null"
+    description: Details of the patron for whom the request is being made
+  surname:
+    type:
+      - string
+      - "null"
+    description: Details of the patron for whom the request is being made
+  givenName:
+    type:
+      - string
+      - "null"
+    description: First name of the patron
+  patronType:
+    type: string
+    enum:
+      - Adult
+      - Child
+      - DoctoralStudent
+      - Faculty
+      - GraduateStudent
+      - PostdoctoralResearcher
+      - PostgraduateStudent
+      - Researcher
+      - Staff
+      - Student
+      - UnderGraduateStudent
+    description: Type of patron
+  sendToPatron:
+    $ref: '../types/yesNo.yaml'
+    description: Only used with value “Y” if requesting library asks the supplying library to send the requested resource directly to the patron
+  address:
+    type: array
+    items:
+      $ref: '../types/address.yaml'
+    description: Description of how to contact the patron.
+additionalProperties: false

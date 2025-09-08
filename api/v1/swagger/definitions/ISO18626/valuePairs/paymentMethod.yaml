@@ -1,0 +1,14 @@
+---
+type: string
+enum:
+  - BankTransfer
+  - CreditCard
+  - DebitCard
+  - EFTS
+  - IBS
+  - IIBS
+  - IFLAVoucher
+  - IFM
+  - LAPS
+  - Paypal
+description: If the requesting library is willing and is able to accept any format, then the requesting library shall not include this element in the message

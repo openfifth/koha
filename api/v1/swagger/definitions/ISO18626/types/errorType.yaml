@@ -1,0 +1,22 @@
+---
+type: object
+properties:
+  errorType:
+    type: string
+    enum:
+      - UnsupportedActionType
+      - UnsupportedReasonForMessageType
+      - UnrecognisedDataElement
+      - UnrecognisedDataValue
+      - BadlyFormedMessage
+    description: |
+      The type of error that occurred.
+
+      * `UnsupportedActionType`: The supplying library cannot handle the received message because the Action in Requesting Agency Message is not supported Value: Action type which is not supported by the application
+      * `UnsupportedReasonForMessageType`: The requesting library cannot handle the received message because the ReasonforMessage in the Supplying Agency Message is not supported Value: ReasonforMessage type which is not supported by the application
+      * `UnrecognisedDataElement`: The supplying library or requesting library has received a data element it does not recognize Values: data element which is not recognized by the application
+      * `UnrecognisedDataValue`: The receiving system may respond with an error message if the content of a data element is not understandable or if the code or combination of codes is not recognized Value: The combination of the name of the data element and the element values or combination of elements values which is not recognized by the application
+      * `BadlyFormedMessage`: The structure of the incoming message did not conform to the protocol schema definition and could not be interpreted by the receiving system No value
+required:
+  - errorType
+additionalProperties: false

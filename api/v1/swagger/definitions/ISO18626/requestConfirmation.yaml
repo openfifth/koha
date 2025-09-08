@@ -1,0 +1,19 @@
+
+---
+type: object
+properties:
+  requestConfirmation:
+    type: object
+    properties:
+      confirmationHeader:
+        $ref: './confirmation/confirmationHeader.yaml'
+      errorData:
+        type: array
+        items:
+          $ref: './confirmation/errorData.yaml'
+    required:
+      - confirmationHeader
+    additionalProperties: false
+required:
+  - requestConfirmation
+additionalProperties: false
