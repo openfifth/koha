@@ -1,0 +1,24 @@
+---
+type: object
+properties:
+  bibliographicRecordIdentifier:
+    type: string
+  bibliographicRecordIdentifierCode:
+    type: string
+    enum:
+      - AMICUS  # Canadian National Catalogue code
+      - BL      # British Library
+      - FAUST   # FAUST number (Denmark)
+      - JNB     # Japanese National Bibliography
+      - LA      # Libraries Australia
+      - LCCN    # Library of Congress. Cataloging Number (US)
+      - Medline # Medline
+      - NCID    # NACSIS-CAT bibliographic record identifier (Japan)
+      - OCLC    # OCLC
+      - PID     # Danish National Union Catalogue Record Identifier
+      - PMID    # PubMed Id
+      - TP      # Te Puna (New Zealand)
+required:
+  - bibliographicRecordIdentifier
+  - bibliographicRecordIdentifierCode
+additionalProperties: false

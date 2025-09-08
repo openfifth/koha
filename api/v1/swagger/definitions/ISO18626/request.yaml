@@ -1,0 +1,35 @@
+---
+type: object
+properties:
+  request:
+    type: object
+    properties:
+      header:
+        $ref: './types/requestHeader.yaml'
+      bibliographicInfo:
+        $ref: './request/bibliographicInfo.yaml'
+      publicationInfo:
+        $ref: './request/publicationInfo.yaml'
+      serviceInfo:
+        $ref: './request/serviceInfo.yaml'
+      supplierInfo:
+        type: array
+        items:
+          $ref: './request/supplierInfo.yaml'
+      requestedDeliveryInfo:
+        type: array
+        items:
+          $ref: './request/requestedDeliveryInfo.yaml'
+      requestingAgencyInfo:
+        $ref: './request/requestingAgencyInfo.yaml'
+      patronInfo:
+        $ref: './request/patronInfo.yaml'
+      billingInfo:
+        $ref: './request/billingInfo.yaml'
+    required:
+    - header
+    - bibliographicInfo
+    - serviceInfo
+required:
+  - request
+additionalProperties: false

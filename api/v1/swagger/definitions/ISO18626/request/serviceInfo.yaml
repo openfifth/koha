@@ -1,0 +1,63 @@
+---
+type: object
+properties:
+  requestType:
+    $ref: '../types/requestType.yaml'
+    description: If no request type is specified, the default is “New”
+  requestSubType:
+    type: array
+    items:
+      $ref: '../types/requestSubType.yaml'
+    description: Sub type to qualify the request
+  requestingAgencyPreviousRequestId:
+    type:
+      - string
+      - "null"
+    description: Requesting agencys previous request number when a retry is sent. The Retry request may include updated data based on ReasonRetry
+  serviceType:
+    $ref: '../types/serviceType.yaml'
+    description: If Copy is requested, then the requesting library is interested only in a copy. If Loan is requested, then the requesting library is interested only in a loan. If CopyOrLoan is requested, then the requesting library is willing to accept either a copy or a loan
+  serviceLevel:
+    type: array
+    items:
+      $ref: '../valuePairs/serviceLevel.yaml'
+  itemFormat:
+    type: array
+    items:
+      $ref: '../valuePairs/itemFormat.yaml'
+  needBeforeDate:
+    type:
+      - string
+      - "null"
+    format: date-time
+    description: The request is not relevant after the stated date/time Ref. ISO 8601-1  YYYY-MM-DDThh:mm:ssZ. If the requesting library is willing and is able to accept the requested item at any time, then the requesting library shall not include this element in the message
+  copyrightCompliance:
+    $ref: '../types/schemeValuePair.yaml'
+    description: The requesting librarys copyright compliance
+  anyEdition:
+    $ref: '../types/yesNo.yaml'
+    description: Yes for yes to any edition. No if only the specified edition is acceptable
+  loanCondition:
+    type: array
+    items:
+      $ref: '../valuePairs/loanCondition.yaml'
+  startDate:
+    type:
+      - string
+      - "null"
+    format: date-time
+    description: Start date for a Booking (RequestSubType) See ISO 8601-1 YYYY-MM-DDThh:mm:ssZ
+  endDate:
+    type:
+      - string
+      - "null"
+    format: date-time
+    description: End date for a Booking (RequestSubType) See ISO 8601-1 YYYY-MM-DDThh:mm:ssZ
+  note:
+    type:
+      - string
+      - "null"
+    description: Human readable note
+required:
+  - serviceType
+additionalProperties: false

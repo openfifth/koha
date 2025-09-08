@@ -1,0 +1,47 @@
+---
+type: object
+properties:
+  dateSent:
+    type: string
+    format: date-time
+    description: Start date for a Booking (RequestSubType) See ISO 8601-1 YYYY-MM-DDThh:mm:ssZ
+  itemId:
+    type:
+      - string
+      - "null"
+    description: Value of Barcode(s) or RFID-tag Id of the item(s) being delivered
+  URL:
+    type:
+      - string
+      - "null"
+    description: URL from which to download or access the requested item
+  deliveryMethod:
+    $ref: '../valuePairs/deliveryMethod.yaml'
+    description: The service via which the requested item was sent
+  address:
+    $ref: '../types/address.yaml'
+  sentToPatron:
+    type:
+      - boolean
+      - "null"
+  loanCondition:
+    type: array
+    items:
+      $ref: '../valuePairs/loanCondition.yaml'
+  itemFormat:
+    type: array
+    items:
+      $ref: '../valuePairs/itemFormat.yaml'
+  serviceType:
+    $ref: '../types/serviceType.yaml'
+    description: If Copy is requested, then the requesting library is interested only in a copy. If Loan is requested, then the requesting library is interested only in a loan. If CopyOrLoan is requested, then the requesting library is willing to accept either a copy or a loan
+  deliveryCosts:
+    type: array
+    items:
+      $ref: '../types/costs.yaml'
+  paymentMethod:
+    $ref: '../valuePairs/paymentMethod.yaml'
+    description: The payment method preferred by the supplying library
+required:
+  - dateSent
+additionalProperties: false

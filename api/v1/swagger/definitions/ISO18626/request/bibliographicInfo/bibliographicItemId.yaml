@@ -1,0 +1,20 @@
+---
+type: object
+properties:
+  bibliographicItemIdentifier:
+    type: string
+  bibliographicItemIdentifierCode:
+    type: string
+    enum:
+      - DOI    # ISO 26324
+      - Handle # RFC 3650
+      - ISBN   # ISO 2108
+      - ILII   # ISO 20247
+      - ISSN   # ISO 3297
+      - ISMN   # ISO 10957
+      - NBN    # RFC 8458
+      - URN    # RFC 8141
+required:
+  - bibliographicItemIdentifier
+  - bibliographicItemIdentifierCode
+additionalProperties: false

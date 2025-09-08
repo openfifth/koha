@@ -1,0 +1,10 @@
+---
+type: string
+enum:
+  - RequestResponse
+  - StatusRequestResponse
+  - RenewResponse
+  - CancelResponse
+  - StatusChange
+  - Notification
+additionalProperties: false

@@ -1,0 +1,19 @@
+---
+type: object
+properties:
+  status:
+    $ref: '../types/status.yaml'
+  expectedDeliveryDate:
+    type:
+      - string
+      - "null"
+    format: date-time
+  dueDate:
+    type:
+      - string
+      - "null"
+    format: date-time
+  lastChange:
+    type: string
+    format: date-time
+additionalProperties: false
