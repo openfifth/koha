@@ -1,0 +1,12 @@
+---
+type: object
+properties:
+  accountId:
+    type:
+      - string
+      - "null"
+  securityCode:
+    type:
+      - string
+      - "null"
+additionalProperties: false

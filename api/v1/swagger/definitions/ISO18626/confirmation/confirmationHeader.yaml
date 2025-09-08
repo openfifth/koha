@@ -1,0 +1,28 @@
+---
+type: object
+properties:
+  supplyingAgencyId:
+    $ref: '../types/agencyId.yaml'
+    description: Identification of the supplying library
+  requestingAgencyId:
+    $ref: '../types/agencyId.yaml'
+    description: Identification of the requesting library
+  timestamp:
+    type: string
+    format: date-time
+    description: Date and time of the confirmation transaction See ISO 8601-1 YYYY-MM-DDThh:mm:ssZ
+  requestingAgencyRequestId:
+    type: string
+    description: Requesting library’s request identification
+  timestampReceived:
+    type: string
+    format: date-time
+    description: Date and time of the confirmed request transaction See ISO 8601-1 YYYY-MM-DDThh:mm:ssZ
+  messageStatus:
+    $ref: '../types/messageStatus.yaml'
+    description: Value “OK” or “ERROR”
+required:
+  - timestamp
+  - timestampReceived
+  - messageStatus
+additionalProperties: false

@@ -1,0 +1,25 @@
+---
+type: string
+enum:
+  - CassetteTape
+  - CD
+  - CD-ROM
+  - Daisy-ROM
+  - DVD
+  - EPUB
+  - EPUB2
+  - EPUB3
+  - JPEG
+  - LargePrint
+  - LP
+  - Microform
+  - MP3
+  - Multimedia
+  - PaperCopy
+  - PDF
+  - Printed
+  - Tape
+  - TIFF
+  - UltraHD
+  - VHS
+description: If the requesting library is willing and is able to accept any format, then the requesting library shall not include this element in the message

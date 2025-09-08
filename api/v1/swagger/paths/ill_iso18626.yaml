@@ -1,0 +1,53 @@
+---
+/public/ill/iso18626:
+  post:
+    x-mojo-to: ILL::ISO18626#message
+    operationId: ISO18626message
+    tags:
+      - iso18626
+    summary: ISO18626 message
+    parameters:
+      - name: message
+        in: body
+        description: The XML object containing information about the new request
+        required: true
+        schema:
+          type: object
+          # $ref: "../swagger.yaml#/definitions/ISO18626request"
+          # $ref: "../swagger.yaml#/definitions/ISO18626requestingAgencyMessage"
+    produces:
+      - application/xml
+    consumes:
+      - application/xml
+    responses:
+      "201":
+        description: An ISO18626 confirmation message
+        # schema:
+        #   $ref: "../swagger.yaml#/definitions/ISO18626requestConfirmation"
+        #   $ref: "../swagger.yaml#/definitions/ISO18626requestingAgencyMessageConfirmation"
+      "400":
+        description: |
+          Bad request. Possible `error_code` attribute values:
+
+            * `invalid_query`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Patron not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"

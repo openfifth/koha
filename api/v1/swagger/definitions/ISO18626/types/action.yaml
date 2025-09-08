@@ -1,0 +1,13 @@
+---
+type: string
+enum:
+  - StatusRequest  # The requesting library asks the supplying library to provide the current status for the request
+  - Received       # The requesting library notifies the supplying library the requested item has been received
+  - Cancel         # The requesting library asks the supplying library if the request may be cancelled. The supplying library returns a SupplyingAgencyMessage with ReasonForMessage = CancelResponse Yes or No.
+  - Renew          # The requesting library asks the supplying library if the item currently on loan may be renewed. The supplying library returns a SupplyingAgencyMessage with ReasonForMessage = RenewResponse Yes or No (and DueDate if applicable)
+  - HoldReturn     # The requesting library notifies the supplying library that an item currently on loan cannot be returned for the time being (due to temporary issues that prevent processing of returns at the requesting library)
+  - ShippedReturn  # The requesting library notifies the supplying library that the borrowed item has been sent back
+  - ShippedForward # The requesting library notifies the supplying library that the borrowed item has been returned and sent to the library specified in ReturnInfo
+  - Notification   # The requesting library sends a message to the supplying library
+  - Lost           # The requesting library notifies the supplying library the item has been lost
+description: Action in confirmed Receiving Agency Message

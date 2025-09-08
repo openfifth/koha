@@ -1,0 +1,18 @@
+---
+type: string
+enum:
+  - RequestReceived
+  - ExpectToSupply
+  - WillSupply
+  - Loaned
+  - Overdue
+  - Recalled
+  - RetryPossible
+  - Unfilled
+  - HoldReturn
+  - ReleaseHoldReturn
+  - CopyCompleted
+  - LoanCompleted
+  - CompletedWithoutReturn
+  - Cancelled
+additionalProperties: false

@@ -1,0 +1,19 @@
+---
+type: object
+properties:
+  name:
+    type:
+      - string
+      - "null"
+    description: Name of the requesting agency
+  contactName:
+    type:
+      - string
+      - "null"
+    description: Name of the requesting agency
+  address:
+    type: array
+    items:
+      $ref: '../types/address.yaml'
+    description: Description of how to contact the requesting agency
+additionalProperties: false

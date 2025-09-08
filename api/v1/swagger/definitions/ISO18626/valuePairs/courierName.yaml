@@ -1,0 +1,9 @@
+---
+type: string
+enum:
+  - DB Schenker
+  - DHL
+  - Fedex
+  - PostNord AB
+  - UPS
+description: An identified courier to be used if DeliveryMethod value = “Courier”. If the requesting library is willing and is able to accept any courier, then the requesting library shall not include this element in the message
