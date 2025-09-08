@@ -1,0 +1,21 @@
+---
+type: object
+properties:
+  requestingAgencyMessage:
+    type: object
+    properties:
+      header:
+        $ref: './types/requestingAgencyMessageHeader.yaml'
+      action:
+        $ref: './types/action.yaml'
+      note:
+        type:
+          - string
+          - "null"
+    required:
+      - header
+      - action
+    additionalProperties: false
+required:
+  - requestingAgencyMessage
+additionalProperties: false

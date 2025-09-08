@@ -1,0 +1,87 @@
+---
+type: object
+properties:
+  supplierUniqueRecordId:
+    type:
+      - string
+      - "null"
+    description: SupplierUniqueRecordId should be used for the supplying librarys internal unique identifier for the requested item, acquired from a preceding automatic holdings request. If this identifier is used, there should be no other identifiers in BibliographicInfo
+  title:
+    type:
+      - string
+      - "null"
+    description: Title of the requested item
+  author:
+    type:
+      - string
+      - "null"
+    description: Author of the requested item
+  authorId:
+    type:
+      - string
+      - "null"
+    description: ISNI name identifier of the author. See ISO 27729
+  subtitle:
+    type:
+      - string
+      - "null"
+    description: Subtitle of the requested item
+  seriesTitle:
+    type:
+      - string
+      - "null"
+    description: Title of the series
+  edition:
+    type:
+      - string
+      - "null"
+    description: Number or name of the edition
+  titleOfComponent:
+    type:
+      - string
+      - "null"
+    description: Title of the component part (e.g. article)
+  authorOfComponent:
+    type:
+      - string
+      - "null"
+    description: Author of the component part
+  volume:
+    type: array
+    description: Volume number
+  issue:
+    type:
+      - string
+      - "null"
+    description: Issue number
+  pagesRequested:
+    type:
+      - string
+      - "null"
+    description: Page from and page to
+  estimatedNoPages:
+    type:
+      - string
+      - "null"
+    description: Expected number of pages
+  bibliographicItemId:
+    type: array
+    items:
+      $ref: './bibliographicInfo/bibliographicItemId.yaml'
+    description: Identification of a physical or electronic object
+  sponsor:
+    type:
+      - string
+      - "null"
+    description: Person or organization sponsoring the publication
+  informationSource:
+    type:
+      - string
+      - "null"
+    description: Description of where bibliographic information was found
+  bibliographicRecordId:
+    type: array
+    items:
+      $ref: './bibliographicInfo/bibliographicRecordId.yaml'
+    description: Identification of a bibliographic record
+additionalProperties: false

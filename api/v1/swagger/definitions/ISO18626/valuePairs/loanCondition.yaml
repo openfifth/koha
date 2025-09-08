@@ -1,0 +1,9 @@
+---
+type: string
+enum:
+  - LibraryUseOnly # Use in library only
+  - WatchLibraryUseOnly # Supervised use in library only
+  - NoReproduction # No reproduction
+  - SignatureRequired # Signature required
+  - SpecCollSupervReq # Special collections supervision required
+description: Conditions for use of the item. Used when submitting a Request Retry, after the supplying library indicates there is a loan condition that shall be met

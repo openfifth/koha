@@ -1,0 +1,11 @@
+---
+type: string
+enum:
+  - ArticleExchange
+  - Courier
+  - Email
+  - FTP
+  - Mail
+  - Odyssey
+  - URL
+description: The service via which the requested item should be sent. If the requesting library is willing and is able to accept any delivery method, then the requesting library shall not include this element in the message

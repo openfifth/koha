@@ -1,0 +1,8 @@
+---
+type: string
+enum:
+  - BookingRequest
+  - MultipleItemRequest
+  - PatronRequest
+  - TransferRequest
+  - SupplyingLibrarysChoice

@@ -1,0 +1,32 @@
+---
+type: object
+properties:
+  supplyingAgencyId:
+    $ref: '../types/agencyId.yaml'
+    description: Identification of supplying library. Shall be provided except for RequestSub-Type = PatronRequest and TransferRequest
+  requestingAgencyId:
+    $ref: '../types/agencyId.yaml'
+  consortialId:
+    $ref: '../types/agencyId.yaml'
+    description: Identification of the consortium with which the request is associated
+  timestamp:
+    type: string
+    format: date-time
+    description: Date and time of the transaction
+  requestingAgencyRequestId:
+    type: string
+    description: Requesting librarys request identification or number
+  supplyingAgencyRequestId:
+    type:
+      - string
+      - "null"
+    description: Supplying librarys request identification or number
+  requestingAgencyAuthentication:
+    $ref: '../requestHeader/requestingAgencyAuthentication.yaml'
+    description: Authentication in supplying library system of the requesting library
+required:
+- supplyingAgencyId
+- requestingAgencyId
+- timestamp
+- requestingAgencyRequestId
+additionalProperties: false

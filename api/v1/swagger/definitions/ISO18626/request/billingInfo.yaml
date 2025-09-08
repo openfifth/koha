@@ -1,0 +1,21 @@
+---
+type: object
+properties:
+  paymentMethod:
+    $ref: '../valuePairs/paymentMethod.yaml'
+    description: The preferred payment method If the requesting library is willing and is able to accept any payment method, then the requesting library shall not include this element in the message
+  maximumCosts:
+    $ref: '../types/costs.yaml'
+    description: The highest amount the requesting agency is prepared to pay for the service. If the requesting library has no maximum costs, then the requesting library shall not include this element in the message.
+  billingMethod:
+    $ref: '../types/schemeValuePair.yaml'
+    description: Preferred billing method
+  billingName:
+    type:
+      - string
+      - "null"
+    description: Name of the contact person in finance department, etc.
+  address:
+    $ref: '../types/address.yaml'
+    description: Name of the contact person in finance department, etc.
+additionalProperties: false

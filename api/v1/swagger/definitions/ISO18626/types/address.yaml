@@ -1,0 +1,11 @@
+---
+type: object
+properties:
+  address:
+    $ref: './address/physicalAddress.yaml'
+    # FIXME: Allow both, but oneOf and anyOf are swagger v3 only
+    # anyOf:
+      # - $ref: 'definitions/ISO18626/request/address/electronicAddress.yaml'
+      # - $ref: 'definitions/ISO18626/request/address/physicalAddress.yaml'
+    
+additionalProperties: false

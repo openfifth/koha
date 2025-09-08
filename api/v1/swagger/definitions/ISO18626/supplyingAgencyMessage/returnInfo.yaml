@@ -1,0 +1,12 @@
+---
+type: object
+properties:
+  returnAgencyId:
+    $ref: '../types/agencyId.yaml'
+  name:
+    type:
+    - string
+    - "null"
+  physicalAddress:
+    $ref: '../types/address/physicalAddress.yaml'
+additionalProperties: false
