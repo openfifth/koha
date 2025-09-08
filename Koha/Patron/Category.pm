@@ -311,7 +311,6 @@ sub to_api_mapping {
         dateofbirthrequired                    => 'lower_age_limit',
         enrolmentfee                           => 'enrolment_fee',
         overduenoticerequired                  => 'overdue_notice_required',
-        reservefee                             => 'reserve_fee',
         hidelostitems                          => 'hide_lost_items',
         category_type                          => 'category_type',
         BlockExpiredPatronOpacActions          => 'block_expired_patron_opac_actions',

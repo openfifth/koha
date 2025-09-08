@@ -90,6 +90,10 @@ our $RULE_KINDS = {
         scope       => [ 'branchcode', 'categorycode' ],
         is_monetary => 1,
     },
+    hold_fee => {
+        scope       => [ 'branchcode', 'categorycode', 'itemtype' ],
+        is_monetary => 1,
+    },
     open_article_requests_limit => {
         scope => [ 'branchcode', 'categorycode' ],
     },

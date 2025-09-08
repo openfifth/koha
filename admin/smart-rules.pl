@@ -121,6 +121,7 @@ if ( $op eq 'cud-delete' ) {
                 recall_shelf_time                => undef,
                 decreaseloanholds                => undef,
                 holds_pickup_period              => undef,
+                hold_fee                         => undef,
             }
         }
     );
@@ -276,6 +277,7 @@ elsif ( $op eq 'cud-add' ) {
     my $recall_overdue_fine           = $input->param('recall_overdue_fine');
     my $recall_shelf_time             = $input->param('recall_shelf_time');
     my $holds_pickup_period           = strip_non_numeric( scalar $input->param('holds_pickup_period') );
+    my $hold_fee                      = $input->param('hold_fee') || q{};
 
     my $rules = {
         maxissueqty                      => $maxissueqty,
@@ -319,6 +321,7 @@ elsif ( $op eq 'cud-add' ) {
         recall_overdue_fine              => $recall_overdue_fine,
         recall_shelf_time                => $recall_shelf_time,
         holds_pickup_period              => $holds_pickup_period,
+        hold_fee                         => $hold_fee,
     };
 
     Koha::CirculationRules->set_rules(
