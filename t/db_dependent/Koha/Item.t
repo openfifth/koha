@@ -21,7 +21,7 @@ use Modern::Perl;
 use utf8;
 
 use Test::NoWarnings;
-use Test::More tests => 41;
+use Test::More tests => 42;
 use Test::Exception;
 use Test::MockModule;
 use Test::Warn;
@@ -3936,6 +3936,66 @@ subtest 'effective_bookable() tests' => sub {
     }
     qr/item-level_itypes set but no itemtype set for item/,
         'Warning raised for missing itemtype when item-level_itypes is set';
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'holds_fee() tests' => sub {
+    plan tests => 3;
+
+    $schema->storage->txn_begin;
+
+    my $cat1 = $builder->build( { source => 'Category', value => { categorycode => 'XYZ1' } } );
+    my $cat2 = $builder->build( { source => 'Category', value => { categorycode => 'XYZ2' } } );
+
+    # Set up circulation rules for hold fees
+    Koha::CirculationRules->set_rules(
+        {
+            branchcode   => undef,
+            categorycode => 'XYZ1',
+            itemtype     => undef,
+            rules        => {
+                hold_fee => 2.00,
+            }
+        }
+    );
+    Koha::CirculationRules->set_rules(
+        {
+            branchcode   => undef,
+            categorycode => 'XYZ2',
+            itemtype     => undef,
+            rules        => {
+                hold_fee => 0,
+            }
+        }
+    );
+
+    my $patron1 = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { categorycode => 'XYZ1' }
+        }
+    );
+    my $patron2 = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { categorycode => 'XYZ2' }
+        }
+    );
+
+    my $item = $builder->build_sample_item();
+
+    # Test with fee rule
+    my $fee = $item->holds_fee($patron1);
+    is( $fee, 2.00, 'Item holds_fee returns correct fee from circulation rule' );
+
+    # Test with no fee rule
+    $fee = $item->holds_fee($patron2);
+    is( $fee, 0, 'Item holds_fee returns 0 when no fee configured' );
+
+    # Test without patron
+    $fee = $item->holds_fee(undef);
+    is( $fee, 0, 'Item holds_fee returns 0 when no patron provided' );
 
     $schema->storage->txn_rollback;
 };
