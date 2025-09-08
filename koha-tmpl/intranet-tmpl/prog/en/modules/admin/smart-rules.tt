@@ -156,6 +156,7 @@
                         <th>On shelf holds allowed</th>
                         <th>OPAC item level holds</th>
                         <th>Holds pickup period (day)</th>
+                        <th>Hold fee</th>
                         [% IF Koha.Preference('ArticleRequests') %]
                             <th>Article requests</th>
                         [% END %]
@@ -218,8 +219,9 @@
                             [% SET recall_overdue_fine = all_rules.$c.$i.recall_overdue_fine %]
                             [% SET recall_shelf_time = all_rules.$c.$i.recall_shelf_time %]
                             [% SET holds_pickup_period = all_rules.$c.$i.holds_pickup_period %]
+                            [% SET hold_fee = all_rules.$c.$i.hold_fee %]
 
-                            [% SET show_rule = note || maxissueqty || maxonsiteissueqty || issuelength || daysmode || lengthunit || hardduedate || hardduedatecompare || fine || chargeperiod || chargeperiod_charge_at || firstremind || overduefinescap || cap_fine_to_replacement_price || expire_reserves_charge || finedays || maxsuspensiondays || suspension_chargeperiod || renewalsallowed || unseenrenewalsallowed || renewalperiod || norenewalbefore || noautorenewalbefore || auto_renew || no_auto_renewal_after || no_auto_renewal_after_hard_limit || reservesallowed || holds_per_day || holds_per_record || onshelfholds || opacitemholds || article_requests || rentaldiscount || decreaseloanholds || recalls_allowed || recalls_per_record || on_shelf_recalls || recall_due_date_interval || recall_overdue_fine || recall_shelf_time || holds_pickup_period %]
+                            [% SET show_rule = note || maxissueqty || maxonsiteissueqty || issuelength || daysmode || lengthunit || hardduedate || hardduedatecompare || fine || chargeperiod || chargeperiod_charge_at || firstremind || overduefinescap || cap_fine_to_replacement_price || expire_reserves_charge || finedays || maxsuspensiondays || suspension_chargeperiod || renewalsallowed || unseenrenewalsallowed || renewalperiod || norenewalbefore || noautorenewalbefore || auto_renew || no_auto_renewal_after || no_auto_renewal_after_hard_limit || reservesallowed || holds_per_day || holds_per_record || onshelfholds || opacitemholds || article_requests || rentaldiscount || decreaseloanholds || recalls_allowed || recalls_per_record || on_shelf_recalls || recall_due_date_interval || recall_overdue_fine || recall_shelf_time || holds_pickup_period || hold_fee %]
                             [% IF show_rule %]
                                 [% SET row_count = row_count + 1 %]
                                 <tr row_countd="row_[% row_count | html %]">
@@ -412,6 +414,13 @@
                                             [% holds_pickup_period | html %]
                                         [% END %]
                                     </td>
+                                    <td>
+                                        [% IF hold_fee.defined && hold_fee != '' %]
+                                            [% hold_fee | $Price %]
+                                        [% ELSE %]
+                                            <span>0.00</span>
+                                        [% END %]
+                                    </td>
                                     [% IF Koha.Preference('ArticleRequests') %]
                                         <td data-code="[% article_requests | html %]">
                                             [% IF article_requests == 'no' %]
@@ -565,6 +574,7 @@
                             </select>
                         </td>
                         <td><input type="text" name="holds_pickup_period" id="holds_pickup_period" size="2" /></td>
+                        <td><input type="text" name="hold_fee" id="hold_fee" size="5" inputmode="decimal" pattern="^\d+(\.\d{2})?$" /></td>
                         [% IF Koha.Preference('ArticleRequests') %]
                             <td>
                                 <select id="article_requests" name="article_requests">
@@ -637,6 +647,7 @@
                         <th>On shelf holds allowed</th>
                         <th>OPAC item level holds</th>
                         <th>Holds pickup period (day)</th>
+                        <th>Hold fee</th>
                         [% IF Koha.Preference('ArticleRequests') %]
                             <th>Article requests</th>
                         [% END %]
