@@ -1804,7 +1804,6 @@ CREATE TABLE `categories` (
   `dateofbirthrequired` tinyint(1) DEFAULT NULL COMMENT 'the minimum age required for the patron category',
   `enrolmentfee` decimal(28,6) DEFAULT NULL COMMENT 'enrollment fee for the patron',
   `overduenoticerequired` tinyint(1) DEFAULT NULL COMMENT 'are overdue notices sent to this patron category (1 for yes, 0 for no)',
-  `reservefee` decimal(28,6) DEFAULT NULL COMMENT 'cost to place holds',
   `print_notice_charge` decimal(28,6) DEFAULT 0.00 COMMENT 'charge for print notices (0.00 = disabled)',
   `hidelostitems` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'are lost items shown to this category (1 for yes, 0 for no)',
   `category_type` varchar(1) NOT NULL DEFAULT 'A' COMMENT 'type of Koha patron (Adult, Child, Professional, Organizational, Statistical, Staff)',
