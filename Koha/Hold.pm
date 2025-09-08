@@ -1070,21 +1070,8 @@ sub fill {
             # now fix the priority on the others....
             C4::Reserves::FixPriority( { biblionumber => $self->biblionumber } );
 
-            if ( C4::Context->preference('HoldFeeMode') eq 'any_time_is_collected' ) {
-                my $fee = $patron->category->reservefee // 0;
-                if ( $fee > 0 ) {
-                    $patron->account->add_debit(
-                        {
-                            amount      => $fee,
-                            description => $self->biblio->title,
-                            user_id     => C4::Context->userenv ? C4::Context->userenv->{'number'} : undef,
-                            library_id  => C4::Context->userenv ? C4::Context->userenv->{'branch'} : undef,
-                            interface   => C4::Context->interface,
-                            type        => 'RESERVE',
-                            item_id     => $self->itemnumber
-                        }
-                    );
-                }
+            if ( $self->should_charge('collection') ) {
+                $self->charge_hold_fee();
             }
 
             C4::Log::logaction( 'HOLDS', 'FILL', $self->id, $self, undef, $original )
@@ -1289,6 +1276,214 @@ sub hold_group {
     }
 
     return;
+}
+
+=head3 calculate_hold_fee
+
+    my $fee = $hold->calculate_hold_fee();
+
+Calculate the hold fee for this hold using circulation rules.
+Returns the fee amount as a decimal.
+
+=cut
+
+sub calculate_hold_fee {
+    my ($self) = @_;
+
+    my $item = $self->item;
+
+    if ($item) {
+
+        # Item-level hold - straightforward fee calculation
+        return $item->holds_fee( $self->patron );
+    } else {
+
+        # Title-level hold - use strategy to determine fee
+        return $self->_calculate_title_hold_fee();
+    }
+}
+
+=head3 should_charge
+
+    my $should_charge = $hold->should_charge($stage);
+
+Returns true if the hold fee should be charged at the given stage
+based on HoldFeeMode preference and current hold state.
+
+Stage can be:
+- 'placement': When the hold is first placed
+- 'collection': When the hold is filled/collected
+
+=cut
+
+sub should_charge {
+    my ( $self, $stage ) = @_;
+
+    return 0 unless $stage;
+    return 0 unless $stage =~ /^(placement|collection)$/;
+
+    my $mode = C4::Context->preference('HoldFeeMode') || 'not_always';
+
+    if ( $stage eq 'placement' ) {
+        return 0 if $mode eq 'any_time_is_collected';    # Don't charge at placement
+        return 1 if $mode eq 'any_time_is_placed';       # Always charge at placement
+
+        # 'not_always' mode - check conditions at placement time
+        return $self->_should_charge_not_always_mode();
+    } elsif ( $stage eq 'collection' ) {
+        return 1 if $mode eq 'any_time_is_collected';    # Charge at collection
+        return 0 if $mode eq 'any_time_is_placed';       # Already charged at placement
+
+        # 'not_always' mode - no additional fee at collection
+        return 0;
+    }
+
+    return 0;
+}
+
+=head3 charge_hold_fee
+
+    $hold->charge_hold_fee({ amount => $fee });
+
+Charge the patron for the hold fee.
+
+=cut
+
+sub charge_hold_fee {
+    my ( $self, $params ) = @_;
+
+    my $amount = $params->{amount} // $self->calculate_hold_fee();
+    return unless $amount && $amount > 0;
+
+    my $line = $self->patron->account->add_debit(
+        {
+            amount      => $amount,
+            description => $self->biblio->title,
+            type        => 'RESERVE',
+            item_id     => $self->itemnumber,
+            user_id     => C4::Context->userenv ? C4::Context->userenv->{number} : undef,
+            library_id  => C4::Context->userenv ? C4::Context->userenv->{branch} : undef,
+            interface   => C4::Context->interface,
+        }
+    );
+
+    return $line;
+}
+
+=head3 _calculate_title_hold_fee
+
+    my $fee = $hold->_calculate_title_hold_fee();
+
+Calculate the hold fee for a title-level hold using the TitleHoldFeeStrategy
+system preference to determine which fee to charge when items have different fees.
+
+=cut
+
+sub _calculate_title_hold_fee {
+    my ($self) = @_;
+
+    # Get all holdable items for this biblio and calculate their fees
+    my $biblio         = $self->biblio;
+    my @holdable_items = $biblio->items->search(
+        {
+            -or => [
+                { 'me.notforloan' => 0 },
+                { 'me.notforloan' => undef }
+            ]
+        }
+    )->as_list;
+
+    my @fees;
+    foreach my $item (@holdable_items) {
+
+        # Check if item is holdable for this patron
+        next unless C4::Reserves::CanItemBeReserved( $self->patron, $item )->{status} eq 'OK';
+
+        my $fee = $item->holds_fee( $self->patron );
+        push @fees, $fee;
+    }
+
+    return 0 unless @fees;
+
+    # Apply the strategy from system preference
+    my $strategy = C4::Context->preference('TitleHoldFeeStrategy') || 'highest';
+
+    if ( $strategy eq 'highest' ) {
+        return ( sort { $b <=> $a } @fees )[0];    # Maximum fee
+    } elsif ( $strategy eq 'lowest' ) {
+        return ( sort { $a <=> $b } @fees )[0];    # Minimum fee
+    } elsif ( $strategy eq 'most_common' ) {
+        return $self->_get_most_common_fee(@fees);
+    } else {
+
+        # Default to highest if unknown strategy
+        return ( sort { $b <=> $a } @fees )[0];
+    }
+}
+
+=head3 _get_most_common_fee
+
+Helper method to find the most frequently occurring fee in a list.
+
+=cut
+
+sub _get_most_common_fee {
+    my ( $self, @fees ) = @_;
+
+    return 0 unless @fees;
+
+    # Count frequency of each fee
+    my %fee_count;
+    for my $fee (@fees) {
+        $fee_count{$fee}++;
+    }
+
+    # Sort by frequency (desc), then by value (desc) as tie breaker
+    my $most_common_fee =
+        ( sort { $fee_count{$b} <=> $fee_count{$a} || $b <=> $a } keys %fee_count )[0];
+
+    return $most_common_fee;
+}
+
+=head3 _should_charge_not_always_mode
+
+Helper method to implement the 'not_always' HoldFeeMode logic.
+Returns true if a fee should be charged in not_always mode.
+
+=cut
+
+sub _should_charge_not_always_mode {
+    my ($self) = @_;
+
+    # First check if we have a calculated fee > 0
+    my $potential_fee = $self->calculate_hold_fee();
+    return 0 unless $potential_fee > 0;
+
+    # Apply not_always logic:
+    # - If items are available (not issued) → No fee
+    # - If all items issued AND no other holds → No fee
+    # - If all items issued AND other holds exist → Charge fee
+
+    # Count items that are not on loan (available)
+    my $biblio          = $self->biblio;
+    my $available_items = $biblio->items->search( { onloan => undef } )->count;
+
+    if ( $available_items > 0 ) {
+
+        # Items are available, no fee needed
+        return 0;
+    }
+
+    # All items are issued, check for other holds
+    my $other_holds = Koha::Holds->search(
+        {
+            biblionumber   => $self->biblionumber,
+            borrowernumber => { '!=' => $self->borrowernumber }
+        }
+    )->count;
+
+    # Charge fee only if there are other holds (patron joins a queue)
+    return $other_holds > 0 ? 1 : 0;
 }
 
 =head3 _move_to_old

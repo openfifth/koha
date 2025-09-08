@@ -1266,6 +1266,39 @@ sub has_pending_hold {
     return $self->_result->tmp_holdsqueue ? 1 : 0;
 }
 
+=head3 holds_fee
+
+    my $fee = $item->holds_fee($patron);
+
+Calculate the hold fee for placing a hold on this specific item
+for the given patron. Uses ReservesControlBranch preference to determine
+which library's rules apply. Returns the fee amount as a decimal.
+
+=cut
+
+sub holds_fee {
+    my ( $self, $patron, $params ) = @_;
+
+    return 0 unless $patron;
+
+    # Use ReservesControlBranch policy to determine fee calculation branch
+    my $control_branch = $patron->branchcode;    # Default to patron's home library
+    if ( C4::Context->preference('ReservesControlBranch') eq 'ItemHomeLibrary' ) {
+        $control_branch = $self->homebranch;
+    }
+
+    my $rule = Koha::CirculationRules->get_effective_rule(
+        {
+            branchcode   => $control_branch,
+            categorycode => $patron->categorycode,
+            itemtype     => $self->effective_itemtype,
+            rule_name    => 'hold_fee',
+        }
+    );
+
+    return $rule ? $rule->rule_value : 0;
+}
+
 =head3 has_pending_recall {
 
   my $has_pending_recall

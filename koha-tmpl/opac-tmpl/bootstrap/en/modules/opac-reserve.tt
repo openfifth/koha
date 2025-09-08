@@ -145,12 +145,51 @@
                                     </div>
                                 [% END %]
 
-                                [% IF ( bibitemloo.reserve_charge ) %]
+                                [% IF ( bibitemloo.reserve_charge || bibitemloo.item_hold_fees.size ) %]
                                     <div class="alert" id="reserve_fee">
-                                        [% IF Koha.Preference('HoldFeeMode') == 'any_time_is_collected' %]
-                                            <span>You will be charged a hold fee of [% bibitemloo.reserve_charge | $Price %] when you collect this item</span>
-                                        [% ELSE %]
-                                            <span>You will be charged a hold fee of [% bibitemloo.reserve_charge | $Price %] for placing this hold</span>
+                                        [% IF bibitemloo.item_hold_fees.size %]
+                                            [% SET fee_message_time = Koha.Preference('HoldFeeMode') == 'any_time_is_collected' ? 'when you collect' : 'for placing this hold' %]
+                                            [% SET unique_fees = {} %]
+                                            [% SET max_fee = 0 %]
+                                            [% FOREACH fee IN bibitemloo.item_hold_fees %]
+                                                [% SET unique_fees.${fee.fee} = fee.fee %]
+                                                [% IF fee.fee > max_fee %][% SET max_fee = fee.fee %][% END %]
+                                            [% END %]
+                                            [% SET fee_list = unique_fees.keys.sort('cmp_numeric') %]
+
+                                            [% IF fee_list.size == 1 && fee_list.0 > 0 %]
+                                                <span>You will be charged a hold fee of [% fee_list.0 | $Price %] [% fee_message_time | html %]</span>
+                                            [% ELSIF fee_list.size > 1 %]
+                                                [% SET strategy = Koha.Preference('TitleHoldFeeStrategy') || 'highest' %]
+                                                [% IF strategy == 'highest' %]
+                                                    <span>You will be charged a hold fee of [% max_fee | $Price %] [% fee_message_time | html %].</span>
+                                                [% ELSIF strategy == 'lowest' %]
+                                                    [% SET min_fee = fee_list.sort('cmp_numeric').0 %]
+                                                    <span>You will be charged a hold fee of [% min_fee | $Price %] [% fee_message_time | html %].</span>
+                                                [% ELSIF strategy == 'most_common' %]
+                                                    [% SET fee_counts = {} %]
+                                                    [% FOREACH fee IN fee_list %]
+                                                        [% SET fee_counts.$fee = fee_counts.$fee + 1 || 1 %]
+                                                    [% END %]
+                                                    [% SET most_common_fee = fee_list.0 %]
+                                                    [% SET max_count = 0 %]
+                                                    [% FOREACH fee IN fee_counts.keys %]
+                                                        [% IF fee_counts.$fee > max_count %]
+                                                            [% SET max_count = fee_counts.$fee %]
+                                                            [% SET most_common_fee = fee %]
+                                                        [% END %]
+                                                    [% END %]
+                                                    <span>You will be charged a hold fee of [% most_common_fee | $Price %] [% fee_message_time | html %].</span>
+                                                [% ELSE %]
+                                                    <span>You will be charged a hold fee of [% max_fee | $Price %] [% fee_message_time | html %].</span>
+                                                [% END %]
+                                            [% END %]
+                                        [% ELSIF bibitemloo.reserve_charge %]
+                                            [% IF Koha.Preference('HoldFeeMode') == 'any_time_is_collected' %]
+                                                <span>You will be charged a hold fee of [% bibitemloo.reserve_charge | $Price %] when you collect this item</span>
+                                            [% ELSE %]
+                                                <span>You will be charged a hold fee of [% bibitemloo.reserve_charge | $Price %] for placing this hold</span>
+                                            [% END %]
                                         [% END %]
                                     </div>
                                 [% END %]
@@ -378,6 +417,9 @@
                                                                 [% END %]
                                                                 <th>Notes</th>
                                                                 <th>Information</th>
+                                                                [% IF bibitemloo.item_hold_fees.size > 1 %]
+                                                                    <th>Hold fee</th>
+                                                                [% END %]
                                                             </tr>
                                                         </thead>
                                                         <tbody>
@@ -494,6 +536,22 @@
                                                                             <span class="notonhold">Not on hold</span>
                                                                         [% END # / IF ( itemLoo.first_hold ) %]
                                                                     </td>
+                                                                    [% IF bibitemloo.item_hold_fees.size > 1 %]
+                                                                        <td class="hold_fee">
+                                                                            [% SET item_fee = 0 %]
+                                                                            [% FOREACH fee IN bibitemloo.item_hold_fees %]
+                                                                                [% IF fee.itemnumber == itemLoo.itemnumber %]
+                                                                                    [% SET item_fee = fee.fee %]
+                                                                                    [% LAST %]
+                                                                                [% END %]
+                                                                            [% END %]
+                                                                            [% IF item_fee > 0 %]
+                                                                                [% item_fee | $Price %]
+                                                                            [% ELSE %]
+                                                                                <span>No fee</span>
+                                                                            [% END %]
+                                                                        </td>
+                                                                    [% END %]
                                                                 </tr>
                                                             [% END # / FOREACH itemLoo IN bibitemloo.itemLoop %]
                                                         </tbody>

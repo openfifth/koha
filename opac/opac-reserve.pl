@@ -24,7 +24,7 @@ use CGI             qw ( -utf8 );
 use C4::Auth        qw( get_template_and_user );
 use C4::Koha        qw( getitemtypeimagelocation getitemtypeimagesrc );
 use C4::Circulation qw( GetBranchItemRule );
-use C4::Reserves    qw( CanItemBeReserved CanBookBeReserved AddReserve IsAvailableForItemLevelRequest GetReserveFee );
+use C4::Reserves    qw( CanItemBeReserved CanBookBeReserved AddReserve IsAvailableForItemLevelRequest );
 use C4::Biblio      qw( GetBiblioData GetFrameworkCode );
 use C4::Output      qw( output_html_with_http_headers );
 use C4::Context;
@@ -579,8 +579,45 @@ foreach my $biblioNum (@biblionumbers) {
         $biblioLoopIter{forced_hold_level} = $forced_hold_level;
     }
 
-    # Pass through any reserve charge
-    $biblioLoopIter{reserve_charge} = GetReserveFee( $patron->id, $biblioNum );
+    # Pass through any reserve charge - get fees per item for better display
+    my $biblio_obj = Koha::Biblios->find($biblioNum);
+    my @item_fees;
+
+    if ($biblio_obj) {
+
+        # Get holdable items and calculate fees using object methods
+        my @holdable_items = $biblio_obj->items->search(
+            {
+                -or => [
+                    { 'me.notforloan' => 0 },
+                    { 'me.notforloan' => undef }
+                ]
+            }
+        )->as_list;
+
+        foreach my $item (@holdable_items) {
+
+            # Check if item is holdable for this patron
+            next unless C4::Reserves::CanItemBeReserved( $patron, $item )->{status} eq 'OK';
+
+            my $fee = $item->holds_fee($patron);
+
+            push @item_fees, {
+                itemnumber => $item->id,
+                fee        => $fee,
+                barcode    => $item->barcode,
+                callnumber => $item->itemcallnumber,
+                location   => $item->location,
+            };
+        }
+    }
+
+    if (@item_fees) {
+        $biblioLoopIter{reserve_charge} = $item_fees[0]->{fee};    # Legacy compatibility
+        $biblioLoopIter{item_hold_fees} = \@item_fees;             # New array for templates
+    } else {
+        $biblioLoopIter{reserve_charge} = 0;
+    }
 
     push @$biblioLoop, \%biblioLoopIter;
 
