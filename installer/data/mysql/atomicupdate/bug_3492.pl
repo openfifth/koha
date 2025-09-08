@@ -3,7 +3,7 @@ use Koha::Installer::Output qw(say_warning say_failure say_success say_info);
 
 return {
     bug_number  => "3492",
-    description => "Migrate reservefee from categories to circulation rules and remove deprecated column",
+    description => "Migrate reservefee from categories to circulation rules",
     up          => sub {
         my ($args) = @_;
         my ( $dbh, $out ) = @$args{qw(dbh out)};
@@ -73,6 +73,14 @@ return {
             say_info( $out, "The reservefee column has already been removed from the categories table." );
         }
 
+        # Add the new system preference
+        $dbh->do(
+            q{
+            INSERT IGNORE INTO systempreferences (variable, value, options, explanation, type) VALUES
+            ('TitleHoldFeeStrategy', 'highest', 'highest|lowest|most_common', 'Strategy for calculating fees on title-level holds when items have different fees: highest = charge maximum fee, lowest = charge minimum fee, most_common = charge most frequently occurring fee', 'Choice')
+        }
+        );
+        say_success( $out, "Added TitleHoldFeeStrategy system preference" );
         say_info( $out, "Hold fees can now be configured in Administration > Circulation and fine rules." );
         say_success( $out, "Migration complete: Hold fees are now fully managed through circulation rules." );
     },

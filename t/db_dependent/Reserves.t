@@ -33,7 +33,7 @@ use C4::Items;
 use C4::Biblio qw( GetMarcFromKohaField ModBiblio );
 use C4::HoldsQueue;
 use C4::Members;
-use C4::Reserves qw( AddReserve AlterPriority CheckReserves ModReserve ModReserveAffect ReserveSlip CalculatePriority CanBookBeReserved IsAvailableForItemLevelRequest MoveReserve ChargeReserveFee RevertWaitingStatus CanItemBeReserved MergeHolds );
+use C4::Reserves qw( AddReserve AlterPriority CheckReserves ModReserve ModReserveAffect ReserveSlip CalculatePriority CanBookBeReserved IsAvailableForItemLevelRequest MoveReserve RevertWaitingStatus CanItemBeReserved MergeHolds );
 use Koha::ActionLogs;
 use Koha::Biblios;
 use Koha::Caches;
@@ -907,20 +907,31 @@ subtest 'ReservesNeedReturns' => sub {
     t::lib::Mocks::mock_preference('ReservesNeedReturns', 1); # Don't affect other tests
 };
 
-subtest 'ChargeReserveFee tests' => sub {
+subtest 'Hold fee charging tests' => sub {
 
     plan tests => 8;
 
-    my $library = $builder->build_object({ class => 'Koha::Libraries' });
-    my $patron  = $builder->build_object({ class => 'Koha::Patrons' });
-
-    my $fee   = 20;
-    my $title = 'A title';
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron  = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $biblio  = $builder->build_sample_biblio();
+    my $item    = $builder->build_sample_item( { biblionumber => $biblio->biblionumber } );
 
     my $context = Test::MockModule->new('C4::Context');
     $context->mock( userenv => { branch => $library->id } );
 
-    my $line = C4::Reserves::ChargeReserveFee( $patron->id, $fee, $title );
+    my $hold = $builder->build_object(
+        {
+            class => 'Koha::Holds',
+            value => {
+                borrowernumber => $patron->id,
+                biblionumber   => $biblio->biblionumber,
+                itemnumber     => $item->itemnumber,
+            }
+        }
+    );
+
+    my $fee  = 20;
+    my $line = $hold->charge_hold_fee( { amount => $fee } );
 
     is( ref($line), 'Koha::Account::Line' , 'Returns a Koha::Account::Line object');
     ok( $line->is_debit, 'Generates a debit line' );
@@ -928,7 +939,7 @@ subtest 'ChargeReserveFee tests' => sub {
     is( $line->borrowernumber, $patron->id , 'generated line belongs to the passed patron');
     is( $line->amount, $fee , 'amount set correctly');
     is( $line->amountoutstanding, $fee , 'amountoutstanding set correctly');
-    is( $line->description, "$title" , 'description is title of reserved item');
+    is( $line->description, $biblio->title , 'description is title of reserved item');
     is( $line->branchcode, $library->id , "Library id is picked from userenv and stored correctly" );
 };
 
