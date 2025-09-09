@@ -120,6 +120,10 @@ definitions:
     $ref: ./definitions/ill_batchstatus.yaml
   ill_batchstatuses:
     $ref: ./definitions/ill_batchstatuses.yaml
+  iso18626_request:
+    $ref: ./definitions/iso18626_request.yaml
+  iso18626_requesting_agency:
+    $ref: ./definitions/iso18626_requesting_agency.yaml
   ISO18626request:
     $ref: ./definitions/ISO18626/request.yaml
   ISO18626requestingAgencyMessage:
@@ -471,6 +475,14 @@ paths:
     $ref: ./paths/ill_backends.yaml#/~1ill~1backends
   "/ill/backends/{ill_backend_id}":
     $ref: "./paths/ill_backends.yaml#/~1ill~1backends~1{ill_backend_id}"
+  /ill/iso18626_requests:
+    $ref: ./paths/ill_iso18626_requests.yaml#/~1ill~1iso18626_requests
+  "/ill/iso18626_requests/{iso18626_request_id}":
+    $ref: ./paths/ill_iso18626_requests.yaml#/~1ill~1iso18626_requests~1{iso18626_request_id}
+  /ill/iso18626_requesting_agencies:
+    $ref: ./paths/ill_iso18626_requesting_agencies.yaml#/~1ill~1iso18626_requesting_agencies
+  "/ill/iso18626_requesting_agencies/{iso18626_requesting_agency_id}":
+    $ref: ./paths/ill_iso18626_requesting_agencies.yaml#/~1ill~1iso18626_requesting_agencies~1{iso18626_requesting_agency_id}
   /ill/requests:
     $ref: ./paths/ill_requests.yaml#/~1ill~1requests
   /ill/batches:
@@ -885,6 +897,12 @@ parameters:
     description: ISO18626 ILL request internal identifier
     in: path
     name: iso18626_request_id
+    required: true
+    type: integer
+  iso18626_requesting_agency_id_pp:
+    description: ISO18626 ILL requesting agency internal identifier
+    in: path
+    name: iso18626_requesting_agency_id
     required: true
     type: integer
   import_batch_profile_id_pp:
