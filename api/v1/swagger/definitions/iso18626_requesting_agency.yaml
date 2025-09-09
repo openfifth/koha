@@ -1,0 +1,44 @@
+---
+type: object
+properties:
+  iso18626_requesting_agency_id:
+    type: integer
+    description: Internal requesting agency number
+    readOnly: true
+  name:
+    type: string
+    description: Requesting agency name
+  patron_id:
+    type:
+      - integer
+      - "null"
+    description: Internal patron id
+  type:
+    type: string
+    enum:
+      - DNUCNI # Danish National Union Catalogue Non-ISIL Identifier
+      - ICOLC  # https://icolc.net/consortia
+      - ISIL   # ISO 15511
+    description: ISO18626 requesting agency type
+  account_id:
+    type: string
+    description: 'Authentication: Requesting agency account ID'
+  securityCode:
+    type: string
+    description: 'Authentication: Requesting agency security code'
+  callback_endpoint:
+    type: string
+    description: Callback endpoint to send messages back to
+  ill_partner:
+    description: ILL partner patron object
+    type:
+    - object
+    - "null"
+required:
+  - iso18626_requesting_agency_id
+  - name
+  - type
+  - account_id
+  - securityCode
+  - callback_endpoint
+additionalProperties: false
