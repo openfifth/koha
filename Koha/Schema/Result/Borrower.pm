@@ -1511,6 +1511,21 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 iso18626_requesting_agencies
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::Iso18626RequestingAgency>
+
+=cut
+
+__PACKAGE__->has_many(
+  "iso18626_requesting_agencies",
+  "Koha::Schema::Result::Iso18626RequestingAgency",
+  { "foreign.borrowernumber" => "self.borrowernumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 issues
 
 Type: has_many
@@ -2212,8 +2227,8 @@ Composing rels: L</user_permissions> -> permission
 __PACKAGE__->many_to_many("permissions", "user_permissions", "permission");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-10-29 16:44:27
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:SSJcjPvlr82qecmbk1Q8iA
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-01-12 15:10:21
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:O33gqo5Fb1rE0VqLr7qxCw
 
 __PACKAGE__->belongs_to(
   "library",

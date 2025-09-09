@@ -1,0 +1,48 @@
+---
+type: object
+properties:
+  iso18626_request_id:
+    type: integer
+    description: Internal ILL request identifier
+  supplyingAgencyId:
+    type:
+      - string
+      - "null"
+    description: Internal supplying agency identifier
+  requestingAgencyId:
+    type: string
+    description: Internal bibliographic record identifier
+  status:
+    type: string
+    description: ISO18626 request status
+  service_type:
+    description: ISO18626 request service type
+    $ref: "../definitions/ISO18626/types/serviceType.yaml"
+  pending_requesting_agency_action:
+    type:
+      - string
+      - "null"
+    enum:
+      - Cancel
+      - Renew
+      - null
+    description: Requesting Agency action that requires an action from the supplying agency
+  timestamp:
+    type:
+      - string
+      - "null"
+    format: date-time
+    description: Date and time the request item should be due when checked out
+  requestingAgencyRequestId:
+    type: string
+    description: Requesting agency request ID or number
+  messages:
+    type:
+      - array
+      - "null"
+    description: The linked messages (x-koha-embed)
+required:
+  - requestingAgencyId
+  - service_type
+  - status
+additionalProperties: false
