@@ -1,0 +1,185 @@
+---
+/ill/iso18626_requests:
+  get:
+    x-mojo-to: ILL::ISO18626::Requests#list
+    operationId: listIso18626Illrequests
+    tags:
+      - iso18626_requests
+    summary: List ISO18626 ILL requests
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/page"
+      - $ref: "../swagger.yaml#/parameters/per_page"
+      - $ref: "../swagger.yaml#/parameters/match"
+      - $ref: "../swagger.yaml#/parameters/order_by"
+      - $ref: "../swagger.yaml#/parameters/q_param"
+      - $ref: "../swagger.yaml#/parameters/q_body"
+      - $ref: "../swagger.yaml#/parameters/request_id_header"
+      - name: x-koha-embed
+        in: header
+        required: false
+        description: Embed list sent as a request header
+        type: array
+        items:
+          type: string
+          enum:
+            - messages
+            - requesting_agency
+        collectionFormat: csv
+    produces:
+      - application/json
+    responses:
+      "200":
+        description: A list of ISO18626 ILL requests
+        schema:
+          type: array
+          items:
+            $ref: "../swagger.yaml#/definitions/iso18626_request"
+      "400":
+        description: |
+          Bad request. Possible `error_code` attribute values:
+
+            * `invalid_query`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Patron not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        ill: "1"
+
+/ill/iso18626_requests/{iso18626_request_id}:
+  get:
+    x-mojo-to: ILL::ISO18626::Requests#get
+    operationId: getIso18626Illrequest
+    tags:
+      - iso18626_requests
+    summary: Retrieve a single ISO18626 ILL request
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/iso18626_request_id_pp"
+      - name: x-koha-embed
+        in: header
+        required: false
+        description: Embed list sent as a request header
+        type: array
+        items:
+          type: string
+          enum:
+            - messages
+            - requesting_agency
+        collectionFormat: csv
+    produces:
+      - application/json
+    responses:
+      "200":
+        description: A single ISO18626 ILL request
+        schema:
+          $ref: "../swagger.yaml#/definitions/iso18626_request"
+      "400":
+        description: |
+          Bad request. Possible `error_code` attribute values:
+
+            * `invalid_query`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Patron not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        ill: "1"
+  patch:
+    x-mojo-to: ILL::ISO18626::Requests#edit
+    operationId: editIso18626Illrequest
+    tags:
+      - iso18626_requests
+    summary: Edit a single ISO18626 ILL request
+    produces:
+      - application/json
+    parameters:
+      - description: A JSON object containing the new status
+        in: body
+        name: status
+        required: true
+        schema:
+          type: object
+          properties:
+            status:
+              description: The status of the ISO18626 request
+              $ref: "../definitions/ISO18626/types/status.yaml"
+            answerYesNo:
+              description: The answerYesNo of the ISO18626 request
+              $ref: "../definitions/ISO18626/types/yesNo.yaml"
+            messageInfoNote:
+              description: The messageInfo note of the ISO18626 request
+              type:
+                - string
+                - "null"
+          additionalProperties: false
+      - $ref: "../swagger.yaml#/parameters/iso18626_request_id_pp"
+    responses:
+      200:
+        description: The ISO18626 ILL request that was updated
+        schema:
+          $ref: "../swagger.yaml#/definitions/iso18626_request"
+      400:
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      401:
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      403:
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      404:
+        description: Package not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      500:
+        description: |-
+          Internal server error. Possible `error_code` attribute values:
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      503:
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        ill: 1
