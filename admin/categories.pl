@@ -64,7 +64,6 @@ elsif ( $op eq 'cud-add_validate' ) {
     my $upperagelimit                          = $input->param('upperagelimit');
     my $dateofbirthrequired                    = $input->param('dateofbirthrequired');
     my $enrolmentfee                           = $input->param('enrolmentfee');
-    my $reservefee                             = $input->param('reservefee');
     my $print_notice_charge                    = $input->param('print_notice_charge');
     my $hidelostitems                          = $input->param('hidelostitems');
     my $overduenoticerequired                  = $input->param('overduenoticerequired');
@@ -104,7 +103,6 @@ elsif ( $op eq 'cud-add_validate' ) {
         $category->upperagelimit($upperagelimit);
         $category->dateofbirthrequired($dateofbirthrequired);
         $category->enrolmentfee($enrolmentfee);
-        $category->reservefee($reservefee);
         $category->print_notice_charge($print_notice_charge);
         $category->hidelostitems($hidelostitems);
         $category->overduenoticerequired($overduenoticerequired);
@@ -143,7 +141,6 @@ elsif ( $op eq 'cud-add_validate' ) {
                 upperagelimit                          => $upperagelimit,
                 dateofbirthrequired                    => $dateofbirthrequired,
                 enrolmentfee                           => $enrolmentfee,
-                reservefee                             => $reservefee,
                 print_notice_charge                    => $print_notice_charge,
                 hidelostitems                          => $hidelostitems,
                 overduenoticerequired                  => $overduenoticerequired,
