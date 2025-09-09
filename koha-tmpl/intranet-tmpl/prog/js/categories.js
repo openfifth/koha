@@ -94,9 +94,6 @@ $(document).ready(function () {
             enrolmentfee: {
                 number: true,
             },
-            reservefee: {
-                number: true,
-            },
             category_type: {
                 required: true,
             },
