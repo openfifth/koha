@@ -63,7 +63,6 @@ if ( $op eq 'add_form' ) {
     my $upperagelimit                          = $input->param('upperagelimit');
     my $dateofbirthrequired                    = $input->param('dateofbirthrequired');
     my $enrolmentfee                           = $input->param('enrolmentfee');
-    my $reservefee                             = $input->param('reservefee');
     my $hidelostitems                          = $input->param('hidelostitems');
     my $overduenoticerequired                  = $input->param('overduenoticerequired');
     my $category_type                          = $input->param('category_type');
@@ -103,7 +102,6 @@ if ( $op eq 'add_form' ) {
         $category->upperagelimit($upperagelimit);
         $category->dateofbirthrequired($dateofbirthrequired);
         $category->enrolmentfee($enrolmentfee);
-        $category->reservefee($reservefee);
         $category->hidelostitems($hidelostitems);
         $category->overduenoticerequired($overduenoticerequired);
         $category->category_type($category_type);
@@ -142,7 +140,6 @@ if ( $op eq 'add_form' ) {
                 upperagelimit                          => $upperagelimit,
                 dateofbirthrequired                    => $dateofbirthrequired,
                 enrolmentfee                           => $enrolmentfee,
-                reservefee                             => $reservefee,
                 hidelostitems                          => $hidelostitems,
                 overduenoticerequired                  => $overduenoticerequired,
                 category_type                          => $category_type,

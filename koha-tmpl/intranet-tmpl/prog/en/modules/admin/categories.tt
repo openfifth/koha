@@ -205,10 +205,6 @@
                         </select>
                     </li>
                     <li>
-                        <label for="reservefee">Hold fee: </label>
-                        <input type="text" name="reservefee" id="reservefee" size="6" value="[% category.reservefee | $Price on_editing => 1 %]" />
-                    </li>
-                    <li>
                         <label for="category_type" class="required">Category type: </label>
                         <select name="category_type" id="category_type">
                             [% UNLESS category %]<option value="" selected="selected">Select a category type</option>[% ELSE %]<option value="">Select a category type</option>[% END %]
@@ -571,7 +567,6 @@
                 <tr><th scope="row">Enrollment fee: </th><td>[% category.enrolmentfee | $Price %]</td></tr>
                 <tr><th scope="row">Receives overdue notices: </th><td>[% IF category. overduenoticerequired %]Yes[% ELSE %]No[% END %]</td></tr>
                 <tr><th scope="row">Lost items in staff interface:</th><td>[% IF category.hidelostitems %]Hidden by default[% ELSE %]Shown[% END %]</td></tr>
-                <tr><th scope="row">Hold fee: </th><td>[% category.reservefee | $Price %]</td></tr>
 
                 [% IF ( Koha.Preference('CheckPrevCheckout') == 'softyes' || Koha.Preference('CheckPrevCheckout') == 'softno' ) %]
                     <tr>
@@ -652,7 +647,6 @@
                             <th scope="col" data-colname="enrollment_fee">Enrollment fee</th>
                             <th scope="col" data-colname="overdue">Overdue</th>
                             <th scope="col" data-colname="lost_items">Lost items</th>
-                            <th scope="col" data-colname="hold_fee">Hold fee</th>
                             [% IF ( EnhancedMessagingPreferences ) %]
                                 <th scope="col" data-colname="messaging">Messaging</th>
                             [% END %]
@@ -726,11 +720,6 @@
                                 [% END %]
                                 <td>[% IF ( category.overduenoticerequired ) %]Yes[% ELSE %]No[% END %]</td>
                                 <td>[% IF ( category.hidelostitems ) %]Hidden[% ELSE %]Shown[% END %]</td>
-                                [% IF (category.reservefee > 0) %]
-                                    <td>[% category.reservefee | $Price %]</td>
-                                [% ELSE %]
-                                    <td>-</td>
-                                [% END %]
                                 [% IF Koha.Preference('EnhancedMessagingPreferences') %]
                                     <td style="white-space: nowrap; font-size:80%;">
                                         [% SET default_messaging = category.default_messaging %]
