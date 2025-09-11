@@ -82,19 +82,18 @@ my $samplecat = {
     dateofbirthrequired   => undef,
     enrolmentfee          => undef,
     overduenoticerequired => undef,
-    reservefee            => undef,
     hidelostitems         => 0,
     category_type         => 'A',
 };
 my $query =
-    "INSERT INTO categories (categorycode,description,enrolmentperiod,enrolmentperioddate,dateofbirthrequired,enrolmentfee,overduenoticerequired ,reservefee ,hidelostitems ,category_type) VALUES( ?,?,?,?,?,?,?,?,?,?)";
+    "INSERT INTO categories (categorycode,description,enrolmentperiod,enrolmentperioddate,dateofbirthrequired,enrolmentfee,overduenoticerequired,hidelostitems,category_type) VALUES(?,?,?,?,?,?,?,?,?)";
 $dbh->do(
     $query, {},
     $samplecat->{categorycode},          $samplecat->{description},
     $samplecat->{enrolmentperiod},       $samplecat->{enrolmentperioddate},
     $samplecat->{dateofbirthrequired},   $samplecat->{enrolmentfee},
-    $samplecat->{overduenoticerequired}, $samplecat->{reservefee},
-    $samplecat->{hidelostitems},         $samplecat->{category_type}
+    $samplecat->{overduenoticerequired}, $samplecat->{hidelostitems},
+    $samplecat->{category_type}
 );
 
 my $builder         = t::lib::TestBuilder->new;

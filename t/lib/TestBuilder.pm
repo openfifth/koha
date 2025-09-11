@@ -655,7 +655,6 @@ sub _gen_default_values {
         },
         Category => {
             enrolmentfee => 0,
-            reservefee   => 0,
 
             # Not X, used for statistics
             category_type                 => sub { return [qw( A C S I P )]->[ int( rand(5) ) ] },
