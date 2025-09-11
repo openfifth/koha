@@ -217,7 +217,6 @@ subtest 'cancel' => sub {
         my $patron_category = $builder->build_object(
             {
                 class => 'Koha::Patron::Categories',
-                value => { reservefee => 0 }
             }
         );
         my $patron = $builder->build_object(
