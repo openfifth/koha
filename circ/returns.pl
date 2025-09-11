@@ -185,7 +185,16 @@ my $borrower;
 my $returned = 0;
 my $messages;
 my $issue;
-my $barcode    = $query->param('barcode');
+my $barcode_input  = $query->param('barcode');
+my $batch_barcodes = $query->param('batch_barcodes');
+
+# Check if barcode input contains multiple lines (batch mode)
+my $is_batch_mode = $barcode_input && $barcode_input =~ /\n/;
+if ($is_batch_mode) {
+    $batch_barcodes = $barcode_input;
+    $barcode_input  = undef;            # Clear single barcode when in batch mode
+}
+my $barcode    = $barcode_input;
 my $exemptfine = $query->param('exemptfine');
 if ( $exemptfine
     && !C4::Auth::haspermission( C4::Context->userenv->{'id'}, { 'updatecharges' => 'writeoff' } ) )
@@ -273,6 +282,96 @@ if ( $transit && $op eq 'cud-transfer' ) {
 
 # actually return book and prepare item table.....
 my $returnbranch;
+
+# Handle batch returns
+my @batch_results;
+if ( $batch_barcodes && $op eq 'cud-checkin' ) {
+    my @barcodes = split /\s*\n\s*/, $batch_barcodes;
+    @barcodes = grep { $_ && $_ !~ /^\s*$/ } @barcodes;    # Remove empty lines
+
+    foreach my $batch_barcode (@barcodes) {
+        $batch_barcode = barcodedecode($batch_barcode) if $batch_barcode;
+        next unless $batch_barcode;
+
+        my $batch_item   = Koha::Items->find( { barcode => $batch_barcode } );
+        my %batch_result = (
+            barcode  => $batch_barcode,
+            success  => 0,
+            messages => {},
+            borrower => undef,
+            item     => $batch_item
+        );
+
+        if ($batch_item) {
+            my $batch_itemnumber = $batch_item->itemnumber;
+
+            # Check if we should display a checkin message
+            my $itemtype = Koha::ItemTypes->find( $batch_item->effective_itemtype );
+            if ( $itemtype && $itemtype->checkinmsg ) {
+                $batch_result{checkinmsg}     = $itemtype->checkinmsg;
+                $batch_result{checkinmsgtype} = $itemtype->checkinmsgtype;
+            }
+
+            # Process the return date
+            my $return_date = $dropboxmode ? $dropboxdate : dt_from_string($return_date_override);
+
+            # Check for multi-part confirmation requirement
+            my $needs_confirm =
+                   C4::Context->preference("CircConfirmItemParts")
+                && $batch_item->materials
+                && !$query->param('multiple_confirm');
+
+            # Check for bundle confirmation requirement
+            my $bundle_confirm = $batch_item->is_bundle
+                && !$query->param('confirm_items_bundle_return');
+
+            # Process waiting holds cancellation requests
+            if ($batch_item) {
+                my $waiting_holds_to_be_cancelled = $batch_item->holds->waiting->filter_by_has_cancellation_requests;
+                while ( my $hold = $waiting_holds_to_be_cancelled->next ) {
+                    $hold->cancel;
+                }
+            }
+
+            # Do the actual return unless confirmation needed
+            unless ( $needs_confirm || $bundle_confirm ) {
+                my ( $batch_returned, $batch_messages, $batch_issue, $batch_borrower ) =
+                    AddReturn( $batch_barcode, $userenv_branch, $exemptfine, $return_date );
+
+                $batch_result{success}  = $batch_returned;
+                $batch_result{messages} = $batch_messages;
+                $batch_result{issue}    = $batch_issue;
+                $batch_result{borrower} = $batch_borrower;
+
+                if ($batch_returned) {
+                    unshift @checkins, {
+                        barcode        => $batch_barcode,
+                        duedate        => $batch_issue ? $batch_issue->date_due       : undef,
+                        borrowernumber => $batch_issue ? $batch_issue->borrowernumber : undef,
+                        not_returned   => 0,
+                    };
+                } elsif ( C4::Context->preference('ShowAllCheckins') && !$batch_messages->{'BadBarcode'} ) {
+                    unshift @checkins, {
+                        barcode        => $batch_barcode,
+                        duedate        => $batch_issue ? $batch_issue->date_due       : undef,
+                        borrowernumber => $batch_issue ? $batch_issue->borrowernumber : undef,
+                        not_returned   => 1,
+                    };
+                }
+            } else {
+                $batch_result{needs_confirm}  = $needs_confirm;
+                $batch_result{bundle_confirm} = $bundle_confirm;
+            }
+        } else {
+            $batch_result{messages}{'BadBarcode'} = $batch_barcode;
+        }
+
+        push @batch_results, \%batch_result;
+    }
+
+    $template->param( batch_results => \@batch_results );
+}
+
 if ( $barcode && ( $op eq 'cud-checkin' || $op eq 'cud-affect_reserve' ) ) {
     $barcode = barcodedecode($barcode) if $barcode;
     my $item = Koha::Items->find( { barcode => $barcode } );

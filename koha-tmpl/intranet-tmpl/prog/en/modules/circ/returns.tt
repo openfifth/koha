@@ -1203,9 +1203,16 @@
                 <div class="col-sm-6">
                     <div class="form-control-group">
                         [% IF ( exemptfine || dropboxmode ) %]
-                            <input name="barcode" id="barcode" size="14" placeholder="Enter item barcode" class="barcode focus input-warning" type="text" />
+                            <textarea
+                                name="barcode"
+                                id="barcode"
+                                placeholder="Enter item barcode"
+                                class="barcode focus input-warning"
+                                rows="1"
+                                style="width: 240px; height: 2.2em; resize: none; overflow: hidden; white-space: nowrap;"
+                            ></textarea>
                         [% ELSE %]
-                            <input name="barcode" id="barcode" size="14" placeholder="Enter item barcode" class="barcode focus" type="text" />
+                            <textarea name="barcode" id="barcode" placeholder="Enter item barcode" class="barcode focus" rows="1" style="width: 240px; height: 2.2em; resize: none; overflow: hidden; white-space: nowrap;"></textarea>
                         [% END %]
                         <input type="hidden" name="op" value="cud-checkin" />
 
@@ -1293,6 +1300,11 @@
                     <label for="dropboxcheck">Book drop mode</label>
                 </div>
 
+                <div id="batch-mode-setting" class="circ-setting">
+                    <input type="checkbox" id="batch-mode-toggle" name="batch_mode" value="batch_mode" />
+                    <label for="batch-mode-toggle">Enable batch mode for multiple returns</label>
+                </div>
+
                 [% IF Koha.Preference('ExpireReservesMaxPickUpDelayCharge') %]
                     <div class="forgive-manual-hold-fees circ-setting">
                         [% IF ( forgivemanualholdsexpire ) %]
@@ -1310,6 +1322,73 @@
         <!-- /#circ_returns_checkin -->
     </form>
     <!-- /#checkin-form -->
+
+    [% IF ( batch_results.size ) %]
+        <div class="page-section">
+            <h2>Batch return results</h2>
+            <table id="batch-results-table" class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Barcode</th>
+                        <th>Status</th>
+                        <th>Title</th>
+                        <th>Patron</th>
+                        <th>Messages</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    [% FOREACH result IN batch_results %]
+                        <tr class="[% IF result.success %]success[% ELSE %]danger[% END %]">
+                            <td>[% result.barcode | html %]</td>
+                            <td>
+                                [% IF result.success %]
+                                    <span class="label label-success">Returned</span>
+                                [% ELSIF result.needs_confirm %]
+                                    <span class="label label-warning">Needs confirmation</span>
+                                [% ELSIF result.bundle_confirm %]
+                                    <span class="label label-warning">Bundle confirmation required</span>
+                                [% ELSIF result.messages.BadBarcode %]
+                                    <span class="label label-danger">Invalid barcode</span>
+                                [% ELSE %]
+                                    <span class="label label-danger">Failed</span>
+                                [% END %]
+                            </td>
+                            <td>
+                                [% IF result.item %]
+                                    <a href="/cgi-bin/koha/catalogue/detail.pl?biblionumber=[% result.item.biblio.biblionumber | uri %]"> [% result.item.biblio.title | html %] </a>
+                                [% END %]
+                            </td>
+                            <td>
+                                [% IF result.borrower %]
+                                    <a href="/cgi-bin/koha/members/moremember.pl?borrowernumber=[% result.borrower.borrowernumber | uri %]"> [% result.borrower.firstname | html %] [% result.borrower.surname | html %] </a>
+                                [% END %]
+                            </td>
+                            <td>
+                                [% IF result.checkinmsg %]
+                                    <div class="alert alert-[% result.checkinmsgtype || 'info' %]">[% result.checkinmsg | html %]</div>
+                                [% END %]
+                                [% FOREACH code IN result.messages.keys %]
+                                    [% IF code == 'WasTransfered' %]
+                                        <div class="alert alert-info">Item transferred to [% result.messages.TransferTo %]</div>
+                                    [% ELSIF code == 'NeedsTransfer' %]
+                                        <div class="alert alert-warning">Item needs transfer</div>
+                                    [% ELSIF code == 'NotIssued' %]
+                                        <div class="alert alert-warning">Item was not checked out</div>
+                                    [% ELSIF code == 'WasLost' %]
+                                        <div class="alert alert-info">Item was lost, now found</div>
+                                    [% ELSIF code == 'withdrawn' %]
+                                        <div class="alert alert-warning">Item is withdrawn</div>
+                                    [% ELSIF code == 'Debarred' %]
+                                        <div class="alert alert-danger">Patron is restricted</div>
+                                    [% END %]
+                                [% END %]
+                            </td>
+                        </tr>
+                    [% END %]
+                </tbody>
+            </table>
+        </div>
+    [% END %]
 
     [% IF ( checkins.size ) %]
         <div class="page-section">
@@ -1797,6 +1876,84 @@
                     [1, "asc"],
                     [0, "asc"],
                 ],
+            });
+
+            // Debounce variables for RFID batch input
+            let debounceTimer;
+            let isReceivingRFIDInput = false;
+
+            // Batch mode toggle functionality
+            $("#batch-mode-toggle").on("change", function () {
+                const $barcodeTextarea = $("#barcode");
+
+                if ($(this).is(":checked")) {
+                    // Switch to multi-line batch mode
+                    $barcodeTextarea
+                        .attr({
+                            placeholder: "Enter barcodes, one per line",
+                            rows: 8,
+                        })
+                        .css({
+                            height: "auto",
+                            overflow: "auto",
+                            "white-space": "pre-wrap",
+                            resize: "vertical",
+                        });
+                } else {
+                    // Switch back to single-line mode
+                    $barcodeTextarea
+                        .attr({
+                            placeholder: "Enter item barcode",
+                            rows: 1,
+                        })
+                        .css({
+                            height: "2.2em",
+                            overflow: "hidden",
+                            "white-space": "nowrap",
+                            resize: "none",
+                        });
+                }
+                $barcodeTextarea.focus();
+            });
+
+            // Handle RFID input with debouncing
+            $("#barcode").on("input paste", function (e) {
+                const currentValue = $(this).val();
+
+                // Clear any existing timer
+                clearTimeout(debounceTimer);
+
+                // Check if this looks like RFID batch input (contains newlines)
+                if (currentValue.includes("\n")) {
+                    isReceivingRFIDInput = true;
+
+                    // Auto-enable batch mode if not already enabled
+                    if (!$("#batch-mode-toggle").is(":checked")) {
+                        $("#batch-mode-toggle").prop("checked", true).trigger("change");
+                    }
+
+                    // Set a debounce timer to submit after RFID scanning finishes
+                    debounceTimer = setTimeout(function () {
+                        isReceivingRFIDInput = false;
+                        $("#checkin-form").submit();
+                    }, 500); // 500ms delay after last input
+                }
+            });
+
+            // Prevent immediate form submission on Enter if receiving RFID input
+            $("#barcode").on("keydown", function (e) {
+                if (e.which === 13 && isReceivingRFIDInput) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+
+            // Prevent form submission during RFID input
+            $("#checkin-form").on("submit", function (e) {
+                if (isReceivingRFIDInput) {
+                    e.preventDefault();
+                    return false;
+                }
             });
 
             if (!Koha.prefs.TransfersBlockCirc && Koha.prefs.AutomaticConfirmTransfer) {
