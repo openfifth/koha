@@ -110,7 +110,10 @@ sub do_checkin {
       AddReturn( $barcode, $branch, undef, $return_date )
       unless $human_required || $checkin_blocked_by_holds;
 
-    if ( $checked_in_ok ) {
+    # TransferArrived is informational and should not trigger alerts
+    delete $messages->{TransferArrived};
+
+    if ($checked_in_ok) {
         delete $messages->{ItemLocationUpdated};
         delete $messages->{NotIssued};
         delete $messages->{LocalUse};
