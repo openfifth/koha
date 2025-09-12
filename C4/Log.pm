@@ -155,6 +155,8 @@ sub logaction {
     $diff //= encode_json( diff( $original, $updated, noU => 1 ) )
         if $original && ref $updated eq 'HASH';
 
+    $infos = encode_json($infos) if ( ref $infos eq 'HASH' );
+
     Koha::ActionLog->new(
         {
             timestamp => \'NOW()',

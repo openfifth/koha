@@ -10,6 +10,7 @@ use CGI        qw ( -utf8 );
 use C4::Output qw( output_and_exit_if_error output_and_exit output_html_with_http_headers );
 use C4::Auth   qw( get_template_and_user get_all_subpermissions get_user_subpermissions );
 use C4::Context;
+use C4::Log qw( logaction );
 
 use Koha::Patron::Categories;
 use Koha::Patrons;
@@ -69,16 +70,19 @@ if ( $op eq 'cud-newflags' ) {
 
     # construct flags
     my $module_flags = 0;
-    my $sth          = $dbh->prepare("SELECT bit,flag FROM userflags ORDER BY bit");
+    my $sth          = $dbh->prepare("SELECT bit,flag,flagdesc FROM userflags ORDER BY bit");
     $sth->execute();
-    while ( my ( $bit, $flag ) = $sth->fetchrow_array ) {
+    my %userflags;
+    while ( my ( $bit, $flag, $flagdesc ) = $sth->fetchrow_array ) {
         if ( exists $all_module_perms{$flag} ) {
             $module_flags += 2**$bit;
         }
+        $userflags{$bit} = [ $flag, $flagdesc ];
     }
 
     $sth = $dbh->prepare("UPDATE borrowers SET flags=? WHERE borrowernumber=?");
-    my $old_flags = $patron->flags // 0;
+    my $old_flags          = $patron->flags // 0;
+    my %permissions_before = get_permissions( \%userflags, $old_flags );
     if ( ( $old_flags == 1 || $module_flags == 1 )
         && $old_flags != $module_flags )
     {
@@ -105,6 +109,8 @@ if ( $op eq 'cud-newflags' ) {
         }
     }
 
+    my %permissions_after = get_permissions( \%userflags, $module_flags );
+    logaction( 'MEMBERS', 'MODIFY', $member, \%permissions_after, undef, \%permissions_before );
     print $input->redirect("/cgi-bin/koha/members/moremember.pl?borrowernumber=$member");
 } else {
 
@@ -199,4 +205,37 @@ if ( $op eq 'cud-newflags' ) {
 
     output_html_with_http_headers $input, $cookie, $template->output;
 
+}
+
+sub get_permissions {
+    my ( $userflags, $old_flags ) = @_;
+
+    my %active_flag = decode_flags( $userflags, $old_flags );
+    my $user_perms  = get_user_subpermissions( $bor->{'userid'} );
+    my %permissions;
+    my $dbh = C4::Context->dbh();
+    my $sth = $dbh->prepare("SELECT code, description FROM permissions");
+    $sth->execute();
+
+    while ( my ( $code, $desc ) = $sth->fetchrow_array ) {
+        $permissions{$code} = $desc;
+    }
+    for my $module ( keys %$user_perms ) {
+        for my $code ( keys %{ $user_perms->{$module} } ) {
+            $active_flag{$code} = $permissions{$code};
+        }
+    }
+    return %active_flag;
+}
+
+sub decode_flags {
+    my ( $userflags, $flags ) = @_;
+    my %active_flags;
+    foreach my $bit ( keys %$userflags ) {
+        if ( $flags & ( 2**$bit ) ) {
+            my ( $flag, $desc ) = @{ $userflags->{$bit} };
+            $active_flags{$flag} = $desc;
+        }
+    }
+    return %active_flags;
 }
