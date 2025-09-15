@@ -51,6 +51,11 @@ properties:
       - number
       - "null"
     description: Cost to place holds
+  print_notice_charge:
+    type:
+      - number
+      - "null"
+    description: Charge for print notices to recover postage and processing costs (0.00 = disabled)
   hide_lost_items:
     type: boolean
     description: Are lost items shown to this category (1 for yes, 0 for no)
