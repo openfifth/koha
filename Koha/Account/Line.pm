@@ -104,6 +104,29 @@ sub checkout {
     return $result;
 }
 
+=head3 hold
+
+    my $hold = $account_line->hold;
+
+Get the hold associated with this account line (if any)
+
+=cut
+
+sub hold {
+    my ($self) = @_;
+
+    my $result;
+    if ( $self->reserve_id ) {
+        my $hold_rs = $self->_result->reserve;
+        $result = Koha::Hold->_new_from_dbic($hold_rs) if $hold_rs;
+    } elsif ( $self->old_reserve_id ) {
+        my $old_hold_rs = $self->_result->old_reserve;
+        $result = Koha::Old::Hold->_new_from_dbic($old_hold_rs) if $old_hold_rs;
+    }
+
+    return $result;
+}
+
 =head3 library
 
 Returns a Koha::Library object representing where the accountline was recorded
