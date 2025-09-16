@@ -154,6 +154,13 @@ properties:
       - object
       - "null"
     description: Patron for hold
+  debits:
+    type:
+      - array
+      - "null"
+    description: Debits (charges) linked to this hold (x-koha-embed)
+    items:
+      $ref: "./debit.yaml"
   _strings:
     type:
       - object
