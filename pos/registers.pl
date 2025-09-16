@@ -15,11 +15,11 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with Koha; if not, see <http://www.gnu.org/licenses>.
+# along with Koha; if not, see <https://www.gnu.org/licenses>.
 
 use Modern::Perl;
 use CGI;
-use C4::Auth qw( get_template_and_user );
+use C4::Auth   qw( get_template_and_user );
 use C4::Output qw( output_html_with_http_headers );
 use C4::Context;
 
@@ -49,38 +49,159 @@ my $registers = Koha::Cash::Registers->search(
 
 if ( !$registers->count ) {
     $template->param( error_registers => 1 );
-}
-else {
+} else {
     $template->param( registers => $registers );
 }
 
+# Handle success/error messages from redirects
+my $cashup_start_success    = $input->param('cashup_start_success');
+my $cashup_start_errors     = $input->param('cashup_start_errors');
+my $cashup_complete_success = $input->param('cashup_complete_success');
+my $cashup_complete_errors  = $input->param('cashup_complete_errors');
+
+if ($cashup_start_success) {
+    $template->param( cashup_start_success => $cashup_start_success );
+}
+if ($cashup_start_errors) {
+    $template->param( cashup_start_errors => $cashup_start_errors );
+}
+if ($cashup_complete_success) {
+    $template->param( cashup_complete_success => $cashup_complete_success );
+}
+if ($cashup_complete_errors) {
+    $template->param( cashup_complete_errors => $cashup_complete_errors );
+}
+
 my $op = $input->param('op') // '';
-if ( $op eq 'cud-cashup' ) {
+if ( $op eq 'cud-cashup_start' ) {
     if ( $logged_in_user->has_permission( { cash_management => 'cashup' } ) ) {
-        my $registerid = $input->param('registerid');
-        if ($registerid) {
-            my $register = Koha::Cash::Registers->find( { id => $registerid } );
-            $register->add_cashup(
-                {
-                    manager_id => $logged_in_user->id,
-                    amount     => $register->outstanding_accountlines->total
-                }
-            );
-        }
-        else {
-            for my $register ( $registers->as_list ) {
-                $register->add_cashup(
+        my $registerid_param = $input->param('registerid');
+        my @register_ids     = split( ',', $registerid_param );
+        my @errors           = ();
+        my $success_count    = 0;
+
+        foreach my $register_id (@register_ids) {
+            $register_id =~ s/^\s+|\s+$//g;    # Trim whitespace
+            next unless $register_id;
+
+            my $register = Koha::Cash::Registers->find( { id => $register_id } );
+            next unless $register;
+
+            eval {
+                $register->start_cashup(
                     {
                         manager_id => $logged_in_user->id,
-                        amount     => $register->outstanding_accountlines->total
                     }
                 );
+                $success_count++;
+            };
+            if ($@) {
+                if ( $@->isa('Koha::Exceptions::Object::DuplicateID') ) {
+                    push @errors, "Register " . $register->name . ": Cashup already in progress";
+                } else {
+                    push @errors, "Register " . $register->name . ": Failed to start cashup";
+                }
             }
         }
 
-        # Redirect to prevent duplicate submissions (POST/REDIRECT/GET pattern)
-        print $input->redirect("/cgi-bin/koha/pos/registers.pl");
-        exit;
+        if ( @errors && $success_count == 0 ) {
+
+            # All failed - stay on page to show errors
+            $template->param(
+                error_cashup_start => 1,
+                cashup_errors      => \@errors
+            );
+        } else {
+
+            # Some or all succeeded - redirect with coded parameters
+            my $redirect_url = "/cgi-bin/koha/pos/registers.pl";
+            my @params;
+
+            if ( $success_count > 0 ) {
+                push @params, "cashup_start_success=" . $success_count;
+            }
+            if (@errors) {
+                push @params, "cashup_start_errors=" . scalar(@errors);
+            }
+
+            if (@params) {
+                $redirect_url .= "?" . join( "&", @params );
+            }
+
+            print $input->redirect($redirect_url);
+            exit;
+        }
+    } else {
+        $template->param( error_cashup_permission => 1 );
+    }
+} elsif ( $op eq 'cud-cashup' ) {
+    if ( $logged_in_user->has_permission( { cash_management => 'cashup' } ) ) {
+        my $registerid_param = $input->param('registerid');
+        my @register_ids     = split( ',', $registerid_param );
+        my @errors           = ();
+        my $success_count    = 0;
+
+        foreach my $register_id (@register_ids) {
+            $register_id =~ s/^\s+|\s+$//g;    # Trim whitespace
+            next unless $register_id;
+
+            my $register = Koha::Cash::Registers->find( { id => $register_id } );
+            next unless $register;
+
+            eval {
+                # Quick cashup: calculate expected amount from outstanding accountlines
+                my $expected_amount =
+                    $register->outstanding_accountlines->total( { payment_type => [ 'CASH', 'SIP00' ] } ) * -1;
+
+                # Quick cashup assumes actual amount equals expected (no reconciliation needed)
+                $register->add_cashup(
+                    {
+                        manager_id => $logged_in_user->id,
+                        amount     => $expected_amount,
+
+                        # No reconciliation_note = quick cashup assumes correct amounts
+                    }
+                );
+                $success_count++;
+            };
+            if ($@) {
+                if ( $@->isa('Koha::Exceptions::Object::BadValue') ) {
+                    push @errors, "Register " . $register->name . ": No cashup session to complete";
+                } elsif ( $@->isa('Koha::Exceptions::Object::DuplicateID') ) {
+                    push @errors, "Register " . $register->name . ": Cashup already completed";
+                } else {
+                    push @errors, "Register " . $register->name . ": Failed to complete cashup";
+                }
+            }
+        }
+
+        if ( @errors && $success_count == 0 ) {
+
+            # All failed - stay on page to show errors
+            $template->param(
+                error_cashup_complete => 1,
+                cashup_errors         => \@errors
+            );
+        } else {
+
+            # Some or all succeeded - redirect with coded parameters
+            my $redirect_url = "/cgi-bin/koha/pos/registers.pl";
+            my @params;
+
+            if ( $success_count > 0 ) {
+                push @params, "cashup_complete_success=" . $success_count;
+            }
+            if (@errors) {
+                push @params, "cashup_complete_errors=" . scalar(@errors);
+            }
+
+            if (@params) {
+                $redirect_url .= "?" . join( "&", @params );
+            }
+
+            print $input->redirect($redirect_url);
+            exit;
+        }
     } else {
         $template->param( error_cashup_permission => 1 );
     }

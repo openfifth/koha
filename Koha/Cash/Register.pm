@@ -16,6 +16,8 @@ package Koha::Cash::Register;
 # along with Koha; if not, see <https://www.gnu.org/licenses>.
 
 use Modern::Perl;
+use DateTime;
+use Scalar::Util qw( looks_like_number );
 
 use Koha::Account;
 use Koha::Account::Lines;
@@ -23,6 +25,7 @@ use Koha::Account::Offsets;
 use Koha::Cash::Register::Actions;
 use Koha::Cash::Register::Cashups;
 use Koha::Database;
+use Koha::DateUtils qw( dt_from_string );
 
 use base qw(Koha::Object);
 
@@ -113,35 +116,14 @@ Return a set of accountlines linked to this cash register since the last cashup 
 sub outstanding_accountlines {
     my ( $self, $conditions, $attrs ) = @_;
 
-    my $since = $self->_result->search_related(
-        'cash_register_actions',
-        { 'code' => 'CASHUP' },
-        {
-            order_by => { '-desc' => [ 'timestamp', 'id' ] },
-            rows     => 1
-        }
-    );
+    # Find the start timestamp for the current "open" session
+    my $start_timestamp = $self->_get_session_start_timestamp;
 
     my $local_conditions =
-        $since->count
-        ? { 'date' => { '>' => $since->get_column('timestamp')->as_query } }
+        $start_timestamp
+        ? { 'date' => { '>' => $start_timestamp } }
         : {};
 
-    # Exclude reconciliation accountlines from outstanding accountlines
-    $local_conditions->{'-and'} = [
-        {
-            '-or' => [
-                { 'credit_type_code' => { '!=' => 'CASHUP_SURPLUS' } },
-                { 'credit_type_code' => undef }
-            ]
-        },
-        {
-            '-or' => [
-                { 'debit_type_code' => { '!=' => 'CASHUP_DEFICIT' } },
-                { 'debit_type_code' => undef }
-            ]
-        }
-    ];
     my $merged_conditions =
         $conditions
         ? { %{$conditions}, %{$local_conditions} }
@@ -153,6 +135,40 @@ sub outstanding_accountlines {
     );
 
     return Koha::Account::Lines->_new_from_dbic($rs);
+}
+
+=head3 cashup_in_progress
+
+Check if there is currently a cashup in progress (CASHUP_START without corresponding CASHUP).
+Returns the CASHUP_START action if in progress, undef otherwise.
+
+=cut
+
+sub cashup_in_progress {
+    my ($self) = @_;
+
+    my $last_start = $self->_result->search_related(
+        'cash_register_actions',
+        { 'code'   => 'CASHUP_START' },
+        { order_by => { '-desc' => [ 'timestamp', 'id' ] }, rows => 1 }
+    )->single;
+
+    return unless $last_start;
+
+    my $last_completion = $self->cashups(
+        {},
+        { order_by => { '-desc' => [ 'timestamp', 'id' ] }, rows => 1 }
+    )->single;
+
+    # If we have a start but no completion, or the start is more recent than completion
+    if ( !$last_completion
+        || DateTime->compare( dt_from_string( $last_start->timestamp ), dt_from_string( $last_completion->timestamp ) )
+        > 0 )
+    {
+        return Koha::Cash::Register::Action->_new_from_dbic($last_start);
+    }
+
+    return;
 }
 
 =head3 store
@@ -221,6 +237,72 @@ sub drop_default {
     return $self;
 }
 
+=head3 start_cashup
+
+    my $cashup_start = $cash_register->start_cashup(
+        {
+            manager_id => $logged_in_user->id,
+        }
+    );
+
+Start a new cashup period. This marks the beginning of the cash counting process
+and creates a snapshot point for calculating outstanding amounts. Returns the
+CASHUP_START action.
+
+=cut
+
+sub start_cashup {
+    my ( $self, $params ) = @_;
+
+    # check for mandatory params
+    my @mandatory = ('manager_id');
+    for my $param (@mandatory) {
+        unless ( defined( $params->{$param} ) ) {
+            Koha::Exceptions::MissingParameter->throw( error => "The $param parameter is mandatory" );
+        }
+    }
+    my $manager_id = $params->{manager_id};
+
+    # Check if there's already a cashup in progress
+    my $last_cashup_start_rs = $self->_result->search_related(
+        'cash_register_actions',
+        { 'code'   => 'CASHUP_START' },
+        { order_by => { '-desc' => [ 'timestamp', 'id' ] }, rows => 1 }
+    )->single;
+
+    my $last_cashup_completed = $self->cashups(
+        {},
+        { order_by => { '-desc' => [ 'timestamp', 'id' ] }, rows => 1 }
+    )->single;
+
+    # If we have a CASHUP_START that's more recent than the last CASHUP, there's already an active cashup
+    if (
+        $last_cashup_start_rs
+        && (
+            !$last_cashup_completed || DateTime->compare(
+                dt_from_string( $last_cashup_start_rs->timestamp ),
+                dt_from_string( $last_cashup_completed->timestamp )
+            ) > 0
+        )
+        )
+    {
+        Koha::Exceptions::Object::DuplicateID->throw( error => "A cashup is already in progress for this register" );
+    }
+
+    my $expected_amount = abs( $self->outstanding_accountlines->total( { payment_type => [ 'CASH', 'SIP00' ] } ) );
+
+    # Create the CASHUP_START action
+    my $rs = $self->_result->add_to_cash_register_actions(
+        {
+            code       => 'CASHUP_START',
+            manager_id => $manager_id,
+            amount     => $expected_amount
+        }
+    )->discard_changes;
+
+    return Koha::Cash::Register::Cashup->_new_from_dbic($rs);
+}
+
 =head3 add_cashup
 
     my $cashup = $cash_register->add_cashup(
@@ -231,33 +313,73 @@ sub drop_default {
         }
     );
 
-Add a new cashup action to the till, returns the added action.
-If amount differs from expected amount, creates surplus/deficit accountlines.
+Complete a cashup period started with start_cashup(). This performs the actual
+reconciliation against the amount counted and creates surplus/deficit accountlines
+if needed. Returns the completed CASHUP action.
 
 =cut
 
 sub add_cashup {
     my ( $self, $params ) = @_;
 
-    my $manager_id          = $params->{manager_id};
-    my $amount              = $params->{amount};
-    my $reconciliation_note = $params->{reconciliation_note};
+    # check for mandatory params
+    my @mandatory = ( 'manager_id', 'amount' );
+    for my $param (@mandatory) {
+        unless ( defined( $params->{$param} ) ) {
+            Koha::Exceptions::MissingParameter->throw( error => "The $param parameter is mandatory" );
+        }
+    }
+    my $manager_id = $params->{manager_id};
+
+    # Validate amount should always be a positive value
+    my $amount = $params->{amount};
+    unless ( looks_like_number($amount) && $amount > 0 ) {
+        Koha::Exceptions::Account::AmountNotPositive->throw( error => 'Cashup amount passed is not positive number' );
+    }
 
     # Sanitize reconciliation note - treat empty/whitespace-only as undef
+    my $reconciliation_note = $params->{reconciliation_note};
     if ( defined $reconciliation_note ) {
         $reconciliation_note = substr( $reconciliation_note, 0, 1000 );    # Limit length
         $reconciliation_note =~ s/^\s+|\s+$//g;                            # Trim whitespace
         $reconciliation_note = undef if $reconciliation_note eq '';        # Empty after trim = undef
     }
 
-    # Calculate expected amount from outstanding accountlines
-    my $expected_amount = $self->outstanding_accountlines->total;
+    # Find the most recent CASHUP_START to determine if we're in two-phase mode
+    my $cashup_start;
+    my $cashup_start_rs = $self->_result->search_related(
+        'cash_register_actions',
+        { 'code'   => 'CASHUP_START' },
+        { order_by => { '-desc' => [ 'timestamp', 'id' ] }, rows => 1 }
+    )->single;
 
-    # For backward compatibility, if no actual amount is specified, use expected amount
-    $amount //= abs($expected_amount);
+    if ($cashup_start_rs) {
+
+        # Two-phase mode: Check if this CASHUP_START has already been completed
+        my $existing_completion = $self->_result->search_related(
+            'cash_register_actions',
+            {
+                'code'      => 'CASHUP',
+                'timestamp' => { '>' => $cashup_start_rs->timestamp }
+            },
+            { rows => 1 }
+        )->single;
+
+        if ( !$existing_completion ) {
+            $cashup_start = Koha::Cash::Register::Cashup->_new_from_dbic($cashup_start_rs);
+        }
+
+    }
+
+    # Calculate expected amount from session accountlines
+    my $expected_amount = (
+          $cashup_start
+        ? $cashup_start->accountlines->total( { payment_type => [ 'CASH', 'SIP00' ] } )
+        : $self->outstanding_accountlines->total( { payment_type => [ 'CASH', 'SIP00' ] } )
+    ) * -1;
 
     # Calculate difference (actual - expected)
-    my $difference = $amount - abs($expected_amount);
+    my $difference = $amount - $expected_amount;
 
     # Use database transaction to ensure consistency
     my $schema = $self->_result->result_source->schema;
@@ -279,14 +401,27 @@ sub add_cashup {
             # Create reconciliation accountline if there's a difference
             if ( $difference != 0 ) {
 
+                # Determine reconciliation date based on mode
+                my $reconciliation_date;
+                if ($cashup_start) {
+
+                    # Two-phase mode: Backdate reconciliation lines to just before the CASHUP_START timestamp
+                    # This ensures they belong to the previous session, not the current one
+                    my $timestamp_str = "DATE_SUB('" . $cashup_start->timestamp . "', INTERVAL 1 SECOND)";
+                    $reconciliation_date = \$timestamp_str;
+                } else {
+
+                    # Legacy mode: Use the original backdating approach
+                    $reconciliation_date = \'DATE_SUB(NOW(), INTERVAL 1 SECOND)';
+                }
+
                 if ( $difference > 0 ) {
 
                     # Surplus: more cash found than expected (credits are negative amounts)
                     my $surplus = Koha::Account::Line->new(
                         {
-                            date             => \'DATE_SUB(NOW(), INTERVAL 1 SECOND)',
-                            amount           => -abs($difference),                             # Credits are negative
-                            description      => 'Cash register surplus found during cashup',
+                            date             => $reconciliation_date,
+                            amount           => -abs($difference),      # Credits are negative
                             credit_type_code => 'CASHUP_SURPLUS',
                             manager_id       => $manager_id,
                             interface        => 'intranet',
@@ -309,9 +444,8 @@ sub add_cashup {
                     # Deficit: less cash found than expected
                     my $deficit = Koha::Account::Line->new(
                         {
-                            date            => \'DATE_SUB(NOW(), INTERVAL 1 SECOND)',
+                            date            => $reconciliation_date,
                             amount          => abs($difference),
-                            description     => 'Cash register deficit found during cashup',
                             debit_type_code => 'CASHUP_DEFICIT',
                             manager_id      => $manager_id,
                             interface       => 'intranet',
@@ -333,6 +467,94 @@ sub add_cashup {
     );
 
     return $cashup;
+}
+
+=head3 _get_session_start_timestamp
+
+Internal method to determine the start timestamp for the current "open" session.
+This handles the following cashup scenarios:
+
+=over 4
+
+=item 1. No cashups ever → undef (returns all accountlines)
+
+=item 2. Quick cashup completed → Uses CASHUP timestamp
+
+=item 3. Two-phase started → Uses CASHUP_START timestamp
+
+=item 4. Two-phase completed → Uses the CASHUP_START timestamp that led to the last CASHUP
+
+=item 5. Mixed workflows → Correctly distinguishes between quick and two-phase cashups
+
+=back
+
+=cut
+
+sub _get_session_start_timestamp {
+    my ($self) = @_;
+
+    # Check if there's a cashup in progress (CASHUP_START without corresponding CASHUP)
+    my $cashup_in_progress = $self->cashup_in_progress;
+
+    if ($cashup_in_progress) {
+
+        # Scenario 3: Two-phase cashup started - return accountlines since CASHUP_START
+        return $cashup_in_progress->timestamp;
+    }
+
+    # No cashup in progress - find the most recent cashup completion
+    my $last_cashup = $self->cashups(
+        {},
+        {
+            order_by => { '-desc' => [ 'timestamp', 'id' ] },
+            rows     => 1
+        }
+    )->single;
+
+    if ( !$last_cashup ) {
+
+        # Scenario 1: No cashups have ever taken place - return all accountlines
+        return;
+    }
+
+    # Find if this CASHUP was part of a two-phase workflow
+    my $corresponding_start = $self->_result->search_related(
+        'cash_register_actions',
+        {
+            'code'      => 'CASHUP_START',
+            'timestamp' => { '<' => $last_cashup->timestamp }
+        },
+        {
+            order_by => { '-desc' => [ 'timestamp', 'id' ] },
+            rows     => 1
+        }
+    )->single;
+
+    if ($corresponding_start) {
+
+        # Check if this CASHUP_START was completed by this CASHUP
+        # (no other CASHUP between them)
+        my $intervening_cashup = $self->_result->search_related(
+            'cash_register_actions',
+            {
+                'code'      => 'CASHUP',
+                'timestamp' => {
+                    '>' => $corresponding_start->timestamp,
+                    '<' => $last_cashup->timestamp
+                }
+            },
+            { rows => 1 }
+        )->single;
+
+        if ( !$intervening_cashup ) {
+
+            # Scenario 4: Two-phase cashup completed - return accountlines since the CASHUP_START
+            return $corresponding_start->timestamp;
+        }
+    }
+
+    # Scenarios 2 & 5: Quick cashup (or orphaned CASHUP) - return accountlines since CASHUP
+    return $last_cashup->timestamp;
 }
 
 =head3 to_api_mapping

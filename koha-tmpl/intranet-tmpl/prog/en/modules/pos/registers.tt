@@ -6,246 +6,635 @@
 [% PROCESS 'i18n.inc' %]
 [% SET footerjs = 1 %]
 [% INCLUDE 'doc-head-open.inc' %]
-<title>[% FILTER collapse %]
-    [% tx("Cash summary for {library}", { library = library.branchname }) | html %] &rsaquo;
-    [% t("Koha") | html %]
-[% END %]</title>
+<title
+    >[% FILTER collapse %]
+        [% tx("Cash summary for {library}", { library = library.branchname }) | html %]
+        &rsaquo; [% t("Koha") | html %]
+    [% END %]</title
+>
 [% INCLUDE 'doc-head-close.inc' %]
 </head>
 
 <body id="cashup" class="pos">
-    [% WRAPPER 'header.inc' %]
+[% WRAPPER 'header.inc' %]
     [% INCLUDE 'circ-search.inc' %]
 [% END %]
 
-    [% WRAPPER 'sub-header.inc' %]
-        [% WRAPPER breadcrumbs %]
-            [% WRAPPER breadcrumb_item bc_active= 1 %]
-                <span>Cash summary for [% library.branchname | html %]</span>
+[% WRAPPER 'sub-header.inc' %]
+    [% WRAPPER breadcrumbs %]
+        [% WRAPPER breadcrumb_item bc_active= 1 %]
+            <span>Cash summary for [% library.branchname | html %]</span>
+        [% END %]
+    [% END #/ WRAPPER breadcrumbs %]
+[% END #/ WRAPPER sub-header.inc %]
+
+[% WRAPPER 'main-container.inc' aside='pos-menu' %]
+    [% IF ( error_registers ) %]
+        <div id="error_message" class="alert alert-info">
+            <p> You must have at least one cash register associated with the library before you can record payments. </p>
+            [% IF ( CAN_user_parameters_manage_cash_registers ) %]
+                <form action="/cgi-bin/koha/admin/cash_registers.pl" method="get">
+                    <input type="hidden" name="op" value="add_form" />
+                    <button class="new" type="submit"><i class="fa fa-plus"></i> Create a new cash register</button>
+                </form>
             [% END %]
-        [% END #/ WRAPPER breadcrumbs %]
-    [% END #/ WRAPPER sub-header.inc %]
+        </div>
+    [% ELSE %]
 
-    <div class="main container-fluid">
-        <div class="row">
-            <div class="col-md-10 order-md-2 order-sm-1">
-                <main>
-                    [% INCLUDE 'messages.inc' %]
-                    [% IF ( error_registers ) %]
-                        <div id="error_message" class="alert alert-info">
-                            <p>
-                                You must have at least one cash register associated with the library before you can record payments.
-                            </p>
-                            [% IF ( CAN_user_parameters_manage_cash_registers ) %]
-                                <form action="/cgi-bin/koha/admin/cash_registers.pl" method="get">
-                                    <input type="hidden" name="op" value="add_form" />
-                                    <button class="new" type="submit"><i class="fa fa-plus"></i> Create a new cash register</button>
-                                </form>
-                            [% END %]
-                        </div>
+        [% IF ( error_cashup_permission ) %]
+            <div id="error_message" class="alert alert-warning"> You do not have permission to perform cashup actions. </div>
+        [% END %]
+
+        [% IF ( error_cashup_start && cashup_errors ) %]
+            <div class="alert alert-warning">
+                <strong>Some registers failed to start cashup:</strong>
+                <ul>
+                    [% FOREACH error IN cashup_errors %]
+                        <li>[% error | html %]</li>
+                    [% END %]
+                </ul>
+            </div>
+        [% END %]
+
+        [% IF ( error_cashup_complete && cashup_errors ) %]
+            <div class="alert alert-warning">
+                <strong>Some registers failed to complete cashup:</strong>
+                <ul>
+                    [% FOREACH error IN cashup_errors %]
+                        <li>[% error | html %]</li>
+                    [% END %]
+                </ul>
+            </div>
+        [% END %]
+
+        [% IF ( cashup_start_success ) %]
+            <div class="alert alert-success">
+                <i class="fa fa-check"></i>
+                [% IF cashup_start_success == 1 %]
+                    Successfully started cashup for 1 register.
+                [% ELSE %]
+                    Successfully started cashup for [% cashup_start_success | html %] registers.
+                [% END %]
+                [% IF ( cashup_start_errors ) %]
+                    [% IF cashup_start_errors == 1 %]
+                        However, 1 register had errors.
                     [% ELSE %]
-
-                    [% IF ( error_cashup_permission ) %]
-                    <div id="error_message" class="alert alert-warning">
-                        You do not have permission to perform cashup actions.
-                    </div>
+                        However, [% cashup_start_errors | html %] registers had errors.
                     [% END %]
+                [% END %]
+            </div>
+        [% END %]
 
-                    [% IF CAN_user_cash_management_cashup %]
-                    <div id="toolbar" class="btn-toolbar">
-                        <button type="button" class="cashup_all btn btn-default" data-bs-toggle="modal" data-bs-target="#confirmCashupAllModal"><i class="fa-solid fa-money-bill-1"></i> Cashup all</button>
-                    </div>
+        [% IF ( cashup_complete_success ) %]
+            <div class="alert alert-success">
+                <i class="fa fa-check"></i>
+                [% IF cashup_complete_success == 1 %]
+                    Successfully completed cashup for 1 register.
+                [% ELSE %]
+                    Successfully completed cashup for [% cashup_complete_success | html %] registers.
+                [% END %]
+                [% IF ( cashup_complete_errors ) %]
+                    [% IF cashup_complete_errors == 1 %]
+                        However, 1 register had errors.
+                    [% ELSE %]
+                        However, [% cashup_complete_errors | html %] registers had errors.
                     [% END %]
+                [% END %]
+            </div>
+        [% END %]
 
-                    <h1>Cash summary for [% library.branchname | html %]</h1>
+        [% IF ( cashup_start_errors && !cashup_start_success ) %]
+            <div class="alert alert-warning">
+                <i class="fa fa-exclamation-triangle"></i>
+                [% IF cashup_start_errors == 1 %]
+                    Failed to start cashup for 1 register.
+                [% ELSE %]
+                    Failed to start cashup for [% cashup_start_errors | html %] registers.
+                [% END %]
+            </div>
+        [% END %]
 
-                    <h2>Summary</h2>
+        [% IF ( cashup_complete_errors && !cashup_complete_success ) %]
+            <div class="alert alert-warning">
+                <i class="fa fa-exclamation-triangle"></i>
+                [% IF cashup_complete_errors == 1 %]
+                    Failed to complete cashup for 1 register.
+                [% ELSE %]
+                    Failed to complete cashup for [% cashup_complete_errors | html %] registers.
+                [% END %]
+            </div>
+        [% END %]
+
+        <h1>Cash summary for [% library.branchname | html %]</h1>
+
+        <h2>Summary</h2>
+        <ul>
+            <li>Total income (cash): <span id="income"></span></li>
+            <li>Total outgoing (cash): <span id="outgoing"></span></li>
+            <li>Total bankable: <span id="bankable"></span></li>
+        </ul>
+
+        <div class="page-section">
+            <table id="registers" class="table_registers">
+                <thead>
+                    <tr>
+                        [% IF CAN_user_cash_management_cashup %]
+                            <th class="no-export"><input type="checkbox" id="select_all_registers" title="Select all available registers" /></th>
+                        [% END %]
+                        <th>Register name</th>
+                        <th>Register description</th>
+                        <th>Last cashup</th>
+                        <th>Float</th>
+                        <th>Bankable</th>
+                        <th>Income (cash)</th>
+                        <th>Outgoing (cash)</th>
+                        [% IF CAN_user_cash_management_cashup %]
+                            <th class="no-export">Actions</th>
+                        [% END %]
+                    </tr>
+                </thead>
+                <tbody>
+                    [% SET bankable = 0, ctotal = 0, dtotal = 0, cctotal = 0, cdtotal = 0 %]
+                    [% FOREACH register IN registers %]
+                        <tr>
+                            [% IF CAN_user_cash_management_cashup %]
+                                <td>
+                                    [% IF register.cashup_in_progress %]
+                                        <input type="checkbox" class="register_checkbox" value="[% register.id | html %]" disabled title="Cashup in progress" />
+                                    [% ELSE %]
+                                        <input type="checkbox" class="register_checkbox" value="[% register.id | html %]" />
+                                    [% END %]
+                                </td>
+                            [% END %]
+                            <td><a href="/cgi-bin/koha/pos/register.pl?registerid=[% register.id | uri %]">[% register.name | html %]</a></td>
+                            <td>[% register.description | html %]</td>
+                            <td>
+                                [%- IF register.last_cashup -%]
+                                    [% register.last_cashup.timestamp | $KohaDates with_hours => 1 %]
+                                    (<a data-bs-toggle="modal" data-cashup="[% register.last_cashup.id | html %]" data-register="[% register.description | html %]" href="#cashupSummaryModal" class="button">Summary</a>)
+                                [%- ELSE -%]
+                                    No last cashup
+                                [%- END -%]
+                            </td>
+                            <td>[% register.starting_float | $Price %]</td>
+                            <td>
+                                [% SET rbankable = ( register.outstanding_accountlines.total( payment_type => [ 'CASH', 'SIP00' ]) * -1 ) %]
+                                [% SET bankable = bankable + rbankable %]
+                                [% rbankable | $Price %]
+                            </td>
+                            <td>
+                                [% SET rctotal = ( register.outstanding_accountlines.credits_total * -1 ) %]
+                                [% SET rcctotal = ( register.outstanding_accountlines.credits_total( payment_type => [ 'CASH', 'SIP00' ]) * -1 ) %]
+                                [% rctotal | $Price %]
+                                ([% rcctotal | $Price %]) [% SET ctotal = ctotal + rctotal %]
+                                [% SET cctotal = cctotal + rcctotal %]
+                            </td>
+                            <td>
+                                [% SET rdtotal = ( register.outstanding_accountlines.debits_total * -1 ) %]
+                                [% SET rcdtotal = ( register.outstanding_accountlines.debits_total( payment_type => [ 'CASH', 'SIP00' ]) * -1 ) %]
+                                [% rdtotal | $Price %]
+                                ([% rcdtotal | $Price %]) [% SET dtotal = dtotal + rdtotal %]
+                                [% SET cdtotal = cdtotal + rcdtotal %]
+                            </td>
+                            [% IF CAN_user_cash_management_cashup %]
+                                <td>
+                                    [% IF register.cashup_in_progress %]
+                                        <button
+                                            type="button"
+                                            class="btn btn-xs btn-primary pos_complete_cashup"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#confirmCashupModal"
+                                            data-register="[% register.description | html %]"
+                                            data-bankable="[% rbankable | $Price %]"
+                                            data-float="[% register.starting_float | $Price %]"
+                                            data-registerid="[% register.id | html %]"
+                                            ><i class="fa-solid fa-check"></i> Complete cashup</button
+                                        >
+                                    [% ELSE %]
+                                        <button
+                                            type="button"
+                                            class="cashup_individual btn btn-xs btn-default"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#triggerCashupModalRegister"
+                                            data-register="[% register.description | html %]"
+                                            data-bankable="[% rbankable | $Price %]"
+                                            data-float="[% register.starting_float | $Price %]"
+                                            data-registerid="[% register.id | html %]"
+                                            ><i class="fa-solid fa-money-bill-1"></i> Record cashup</button
+                                        >
+                                    [% END %]
+                                </td>
+                            [% END %]
+                        </tr>
+                    [% END %]
+                </tbody>
+                <tfoot>
+                    <tr>
+                        [% IF CAN_user_cash_management_cashup %]
+                            <td colspan="5" align="right">Totals:</td>
+                        [% ELSE %]
+                            <td colspan="4" align="right">Totals:</td>
+                        [% END %]
+                        <td>[% bankable | $Price %]</td>
+                        <td>[% ctotal | $Price %] ([% cctotal | $Price %])</td>
+                        <td>[% dtotal | $Price %] ([% cdtotal | $Price %])</td>
+                        [% IF CAN_user_cash_management_cashup %]
+                            <td>
+                                <button type="button" id="cashup_selected_btn" class="btn btn-xs btn-default" data-bs-toggle="modal" data-bs-target="#confirmCashupSelectedModal" disabled
+                                    ><i class="fa-solid fa-money-bill-1"></i> Cashup selected</button
+                                >
+                            </td>
+                        [% END %]
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <!-- /.page-section -->
+    [% END %]
+[% END %]
+
+<!-- Trigger cashup modal for individual registers -->
+<div class="modal" id="triggerCashupModalRegister" tabindex="-1" role="dialog" aria-labelledby="triggerCashupLabelRegister">
+    <form method="post" class="validated">
+        [% INCLUDE 'csrf-token.inc' %]
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title" id="triggerCashupLabelRegister">
+                        Cashup for <em><span id="register_desc"></span></em>
+                    </h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p><strong>Choose how to proceed with the cashup:</strong></p>
+                    <p><strong>Start cashup</strong></p>
                     <ul>
-                        <li>Total income (cash): <span id="income"></span></li>
-                        <li>Total outgoing (cash): <span id="outgoing"></span></li>
-                        <li>Total bankable: <span id="bankable"></span></li>
+                        <li>Remove cash from the register for counting</li>
+                        <li>The register can continue operating during counting</li>
+                        <li>Complete the cashup once counted</li>
                     </ul>
-
-                    <div class="page-section">
-                        <table id="registers" class="table_registers">
-                            <thead>
-                                <tr>
-                                    <th>Register name</th>
-                                    <th>Register description</th>
-                                    <th>Last cashup</th>
-                                    <th>Float</th>
-                                    <th>Bankable</th>
-                                    <th>Income (cash)</th>
-                                    <th>Outgoing (cash)</th>
-                                    [% IF CAN_user_cash_management_cashup %]
-                                        <th class="noExport">Actions</th>
-                                    [% END %]
-                                </tr>
-                            </thead>
-                            <tbody>
-                                [% SET bankable = 0, ctotal = 0, dtotal = 0, cctotal = 0, cdtotal = 0 %]
-                                [% FOREACH register IN registers %]
-                                <tr>
-                                    <td><a href="/cgi-bin/koha/pos/register.pl?registerid=[% register.id | uri %]">[% register.name | html %]</a></td>
-                                    <td>[% register.description | html %]</td>
-                                    <td>
-                                        [%- IF register.last_cashup -%]
-                                        [% register.last_cashup.timestamp | $KohaDates with_hours => 1 %] (<a data-bs-toggle="modal" data-cashup="[% register.last_cashup.id | html %]" data-register="[% register.description | html %]" href="#cashupSummaryModal" class="button">Summary</a>)
-                                        [%- ELSE -%]
-                                        No last cashup
-                                        [%- END -%]
-                                    </td>
-                                    <td>[% register.starting_float | $Price %]</td>
-                                    <td>
-                                        [% SET rbankable = ( register.outstanding_accountlines.total( payment_type => [ 'CASH', 'SIP00' ]) * -1 ) %]
-                                        [% SET bankable = bankable + rbankable %]
-                                        [% rbankable | $Price %]
-                                    </td>
-                                    <td>
-                                        [% SET rctotal = ( register.outstanding_accountlines.credits_total * -1 ) %]
-                                        [% SET rcctotal = ( register.outstanding_accountlines.credits_total( payment_type => [ 'CASH', 'SIP00' ]) * -1 ) %]
-                                        [% rctotal | $Price %] ([% rcctotal | $Price %])
-                                        [% SET ctotal = ctotal + rctotal %]
-                                        [% SET cctotal = cctotal + rcctotal %]
-                                    </td>
-                                    <td>
-                                        [% SET rdtotal = ( register.outstanding_accountlines.debits_total * -1 ) %]
-                                        [% SET rcdtotal = ( register.outstanding_accountlines.debits_total( payment_type => [ 'CASH', 'SIP00' ]) * -1 ) %]
-                                        [% rdtotal | $Price %] ([% rcdtotal | $Price %])
-                                        [% SET dtotal = dtotal + rdtotal %]
-                                        [% SET cdtotal = cdtotal + rcdtotal %]
-                                    </td>
-                                    [% IF CAN_user_cash_management_cashup %]
-                                    <td>
-                                        <button type="button" class="cashup_individual btn btn-xs btn-default" data-bs-toggle="modal" data-bs-target="#confirmCashupModal" data-register="[% register.description | html %]" data-bankable="[% rbankable | $Price %]" data-float="[% register.starting_float | $Price %]" data-registerid="[% register.id | html %]"><i class="fa-solid fa-money-bill-1"></i> Record cashup</button>
-                                    </td>
-                                    [% END %]
-                                </tr>
-                                [% END %]
-                            </tbody>
-                            <tfoot>
-                                <tr>
-                                    <td colspan="4" align="right">Totals:</td>
-                                    <td>[% bankable | $Price %]</td>
-                                    <td>[% ctotal | $Price %] ([% cctotal | $Price %])</td>
-                                    <td>[% dtotal | $Price %] ([% cdtotal | $Price %])</td>
-                                    [% IF CAN_user_cash_management_cashup %]
-                                    <td>
-                                        <button type="button" class="cashup_all btn btn-xs btn-default" data-bs-toggle="modal" data-bs-target="#confirmCashupAllModal"><i class="fa-solid fa-money-bill-1"></i> Cashup all</button>
-                                    </td>
-                                    [% END %]
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div> <!-- /.page-section -->
-                    [% END %]
-                </main>
-            </div>
-
-            <div class="col-md-2 order-sm-2 order-md-1">
-                <aside>
-                    [% INCLUDE 'pos-menu.inc' %]
-                </aside>
-            </div>
-
-        </div>
-        <!-- /.row -->
-
-        <!-- Confirm cashup modal -->
-        <div class="modal" id="confirmCashupModal" tabindex="-1" role="dialog" aria-labelledby="confirmCashupLabel">
-            <form id="cashup_individual_form" method="post" enctype="multipart/form-data">
-                [% INCLUDE 'csrf-token.inc' %]
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h1 class="modal-title" id="confirmCashupLabel">Confirm cashup of <em><span id="registerc"></span></em></h1>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            Please confirm that you have removed <span id="cashc"></span> from the cash register and left a float of <span id="floatc"></span>.
-                        </div>
-                        <!-- /.modal-body -->
-                        <div class="modal-footer">
-                            <input type="hidden" name="registerid" id="cashup_registerid" value="" />
-                            <input type="hidden" name="op" value="cud-cashup" />
-                            <button type="submit" class="btn btn-primary" id="cashup_confirm">Confirm</button>
-                            <button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancel</button>
-                        </div>
-                        <!-- /.modal-footer -->
-                    </div>
-                    <!-- /.modal-content -->
+                    <p><strong>Quick cashup</strong></p>
+                    <ul>
+                        <li>Confirm you have removed <span id="expected_amount_display"></span> cash from the register to bank immediately</li>
+                    </ul>
+                    <p
+                        >Remember to leave the float amount of <strong><span id="float_amount_display"></span></strong> in the register.</p
+                    >
                 </div>
-                <!-- /.modal-dialog -->
-            </form>
-        </div>
-        <!-- /#confirmCashupModal -->
-
-        <!-- Confirm cashupall modal -->
-        <div class="modal" id="confirmCashupAllModal" tabindex="-1" role="dialog" aria-labelledby="confirmCashupAllLabel">
-            <form id="cashup_all_form" method="post" enctype="multipart/form-data">
-                [% INCLUDE 'csrf-token.inc' %]
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h1 class="modal-title" id="confirmCashupAllLabel">Confirm cashup of <em>all</em> cash registers</h1>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <p>Please confirm that you have received [% bankable | $Price %] to cashup.</p>
-                            <ul>
-                                <li>Total income (cash): [% ctotal | $Price %] ([% cctotal | $Price %])</li>
-                                <li>Total outgoing (cash): [% dtotal | $Price %] ([% cdtotal | $Price %])</li>
-                            </ul>
-                        </div>
-                        <!-- /.modal-body -->
-                        <div class="modal-footer">
-                            <input type="hidden" name="op" value="cud-cashup" />
-                            <button type="submit" class="btn btn-primary" id="cashup_all_confirm">Confirm</button>
-                            <button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancel</button>
-                        </div>
-                        <!-- /.modal-footer -->
-                    </div>
-                    <!-- /.modal-content -->
+                <div class="modal-footer">
+                    <input type="hidden" name="registerid" id="register_id_field" value="" />
+                    <input type="hidden" name="op" value="cud-cashup_start" />
+                    <input type="hidden" name="amount" value="" />
+                    <button type="submit" class="btn btn-primary">Start cashup</button>
+                    <button type="button" class="btn btn-success" id="quick_cashup_btn">Quick cashup</button>
+                    <button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancel</button>
                 </div>
-                <!-- /.modal-dialog -->
-            </form>
+            </div>
         </div>
-        <!-- /#confirmCashupAllModal -->
+    </form>
+</div>
+<!-- /#triggerCashupModalRegister -->
 
+<!-- Confirm cashup selected modal -->
+<div class="modal" id="confirmCashupSelectedModal" tabindex="-1" role="dialog" aria-labelledby="confirmCashupSelectedLabel">
+    <form method="post" class="validated">
+        [% INCLUDE 'csrf-token.inc' %]
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title" id="confirmCashupSelectedLabel">Cashup selected registers</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p
+                        ><strong>Choose how to proceed with the cashup for <span id="selected_count">0</span> selected register(s):</strong></p
+                    >
 
-        [% INCLUDE 'modals/cashup_summary.inc' %]
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title"><i class="fa-solid fa-play"></i> Start cashup for selected</h5>
+                                    <p class="card-text">Begin two-phase cashup for all selected registers. Cash can be removed for counting while registers continue operating.</p>
+                                    <ul class="small">
+                                        <li>Remove cash from each register for counting</li>
+                                        <li>Registers continue operating during counting</li>
+                                        <li>Complete each register individually later</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title"><i class="fa-solid fa-lightning"></i> Quick cashup for selected</h5>
+                                    <p class="card-text">Complete cashup immediately for all selected registers using expected amounts (no reconciliation needed).</p>
+                                    <ul class="small">
+                                        <li>Uses expected amounts for each register</li>
+                                        <li>No individual reconciliation</li>
+                                        <li>Completes all selected registers immediately</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-        [% MACRO jsinclude BLOCK %]
-        [% INCLUDE 'datatables.inc' %]
-        [% INCLUDE 'format_price.inc' %]
-        [% INCLUDE 'js-date-format.inc' %]
-        [% Asset.js("js/cashup_modal.js") | $raw %]
-        [% Asset.js("js/modal_printer.js") | $raw %]
-        <script>
-            $(document).ready(function () {
+                    <div class="mt-3">
+                        <h6>Selected registers:</h6>
+                        <ul id="selected_registers_list"></ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <input type="hidden" name="registerid" id="selected_registers_field" value="" />
+                    <input type="hidden" name="op" id="selected_operation" value="" />
+                    <button type="button" class="btn btn-primary" id="start_selected_btn">Start cashup for selected</button>
+                    <button type="button" class="btn btn-success" id="quick_selected_btn">Quick cashup for selected</button>
+                    <button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+<!-- /#confirmCashupSelectedModal -->
 
-                [%# js used here as we don't have access to these template variables where we need them #%]
-                $("#bankable").text('[% bankable | $Price %]');
-                $("#income").text('[% ctotal | $Price %] ([% cctotal | $Price %])');
-                $("#outgoing").text('[% dtotal | $Price %] ([% cdtotal | $Price %])');
+<!-- Confirm cashup modal -->
+<div class="modal" id="confirmCashupModal" tabindex="-1" role="dialog" aria-labelledby="confirmCashupLabel">
+    <form id="cashup_individual_form" method="post" enctype="multipart/form-data" class="validated">
+        [% INCLUDE 'csrf-token.inc' %]
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title" id="confirmCashupLabel">
+                        Confirm cashup of <em><span id="registerc"></span></em>
+                    </h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <fieldset class="rows">
+                        <ol>
+                            <li>
+                                <span class="label"> Expected cashup amount: </span>
+                                <span id="cashc" class="expected-amount"></span>
+                            </li>
+                            <li>
+                                <label class="required" for="amount"> Actual cashup amount counted: </label>
+                                <input type="text" inputmode="decimal" pattern="^\d+(\.\d{2})?$" id="amount" name="amount" required="required" />
+                                <span class="required">Required</span>
+                            </li>
+                            <li id="reconciliation_display" style="display: none;">
+                                <span class="label">Reconciliation:</span>
+                                <span id="reconciliation_text"></span>
+                            </li>
+                            <li id="reconciliation_note_field" style="display: none;">
+                                <label for="reconciliation_note">Note (optional):</label>
+                                <textarea id="reconciliation_note" name="reconciliation_note" rows="3" cols="40" maxlength="1000" placeholder="Enter a note explaining the surplus or deficit..."></textarea>
+                                <div class="hint">Maximum 1000 characters</div>
+                            </li>
+                        </ol>
+                    </fieldset>
+                </div>
+                <!-- /.modal-body -->
+                <div class="modal-footer">
+                    <input type="hidden" name="registerid" id="cashup_registerid" value="" />
+                    <input type="hidden" name="op" value="cud-cashup" />
+                    <button type="submit" class="btn btn-primary" id="cashup_confirm"> Complete cashup</button>
+                    <button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancel</button>
+                </div>
+                <!-- /.modal-footer -->
+            </div>
+            <!-- /.modal-content -->
+        </div>
+        <!-- /.modal-dialog -->
+    </form>
+</div>
+<!-- /#confirmCashupModal -->
 
-                var registers_table = $("#registers").dataTable($.extend(true, {}, dataTablesDefaults, {
-                    "searching": false,
-                    "paginationType": "full"
-                }));
+<!-- Confirm cashupall modal -->
+<div class="modal" id="confirmCashupAllModal" tabindex="-1" role="dialog" aria-labelledby="confirmCashupAllLabel">
+    <form id="cashup_all_form" method="post" enctype="multipart/form-data">
+        [% INCLUDE 'csrf-token.inc' %]
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title" id="confirmCashupAllLabel">Confirm cashup of <em>all</em> cash registers</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Please confirm that you have received [% bankable | $Price %] to cashup.</p>
+                    <ul>
+                        <li>Total income (cash): [% ctotal | $Price %] ([% cctotal | $Price %])</li>
+                        <li>Total outgoing (cash): [% dtotal | $Price %] ([% cdtotal | $Price %])</li>
+                    </ul>
+                </div>
+                <!-- /.modal-body -->
+                <div class="modal-footer">
+                    <input type="hidden" name="op" value="cud-cashup" />
+                    <button type="submit" class="btn btn-primary" id="cashup_all_confirm">Confirm</button>
+                    <button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancel</button>
+                </div>
+                <!-- /.modal-footer -->
+            </div>
+            <!-- /.modal-content -->
+        </div>
+        <!-- /.modal-dialog -->
+    </form>
+</div>
+<!-- /#confirmCashupAllModal -->
 
-                $("#confirmCashupModal").on("shown.bs.modal", function(e){
-                   var button = $(e.relatedTarget);
-                   var register = button.data('register');
-                   $("#registerc").text(register);
-                   var bankable = button.data('bankable');
-                   $("#cashc").text(bankable);
-                   var rfloat = button.data('float');
-                   $('#floatc').text(rfloat);
-                   var rid = button.data('registerid');
-                   $('#cashup_registerid').val(rid);
-                });
+[% INCLUDE 'modals/cashup_summary.inc' %]
+
+[% MACRO jsinclude BLOCK %]
+    [% INCLUDE 'datatables.inc' %]
+    [% INCLUDE 'format_price.inc' %]
+    [% INCLUDE 'js-date-format.inc' %]
+    [% Asset.js("js/cashup_modal.js") | $raw %]
+    [% Asset.js("js/modal_printer.js") | $raw %]
+    <script>
+        $(document).ready(function () {
+
+            [%# js used here as we don't have access to these template variables where we need them #%]
+            $("#bankable").text('[% bankable | $Price %]');
+            $("#income").text('[% ctotal | $Price %] ([% cctotal | $Price %])');
+            $("#outgoing").text('[% dtotal | $Price %] ([% cdtotal | $Price %])');
+
+            var registers_table = $("#registers").kohaTable({
+                columnDefs: [{ targets: [ -1, 0 ], orderable: false }],
+                searching: false,
+                paginationType: "full",
             });
+
+            // Real-time reconciliation calculation for cashup modal
+            $("#amount").on("input", function() {
+                var actualAmount = parseFloat($(this).val()) || 0;
+                var expectedText = $("#expected_amount").text().replace(/[£$,]/g, '');
+                var expectedAmount = parseFloat(expectedText) || 0;
+                var difference = actualAmount - expectedAmount;
+
+                if ($(this).val() && !isNaN(actualAmount)) {
+                    var reconciliationText = "";
+                    var reconciliationClass = "";
+                    var hasDiscrepancy = false;
+
+                    if (difference > 0) {
+                        reconciliationText = "Surplus: " + difference.format_price();
+                        reconciliationClass = "success";
+                        hasDiscrepancy = true;
+                    } else if (difference < 0) {
+                        reconciliationText = "Deficit: " + Math.abs(difference).format_price();
+                        reconciliationClass = "warning";
+                        hasDiscrepancy = true;
+                    } else {
+                        reconciliationText = "Balanced - no surplus or deficit";
+                        reconciliationClass = "success";
+                        hasDiscrepancy = false;
+                    }
+
+                    $("#reconciliation_text").text(reconciliationText)
+                        .removeClass("success warning")
+                        .addClass(reconciliationClass);
+                    $("#reconciliation_display").show();
+
+                    // Show/hide note field based on whether there's a discrepancy
+                    if (hasDiscrepancy) {
+                        $("#reconciliation_note_field").show();
+                    } else {
+                        $("#reconciliation_note_field").hide();
+                        $("#reconciliation_note").val(''); // Clear note when balanced
+                    }
+                } else {
+                    $("#reconciliation_display").hide();
+                    $("#reconciliation_note_field").hide();
+                }
+            });
+
+            // Reset modal when opened
+            $("#confirmCashupModal").on("shown.bs.modal", function(e){
+               var button = $(e.relatedTarget);
+               var register = button.data('register');
+               $("#registerc").text(register);
+               var bankable = button.data('bankable');
+               $("#cashc").text(bankable);
+               var rfloat = button.data('float');
+               $('#floatc').text(rfloat);
+               var rid = button.data('registerid');
+               $('#cashup_registerid').val(rid);
+               $("#amount").val('').focus();
+               $("#reconciliation_display").hide();
+               $("#reconciliation_note_field").hide();
+               $("#reconciliation_note").val('');
+            });
+
+            // Handle the new trigger cashup modal for individual registers
+            $("#triggerCashupModalRegister").on("shown.bs.modal", function(e){
+               var button = $(e.relatedTarget);
+               var register = button.data('register');
+               $("#register_desc").text(register);
+               var bankable = button.data('bankable');
+               $("#expected_amount_display").text(bankable);
+               var rfloat = button.data('float');
+               $('#float_amount_display').text(rfloat);
+               var rid = button.data('registerid');
+               $('#register_id_field').val(rid);
+
+               // Store bankable amount for quick cashup
+               $('#triggerCashupModalRegister').data('bankable-amount', bankable.replace(/[^0-9.-]/g, ''));
+            });
+
+            // Handle Quick cashup button click
+            $("#quick_cashup_btn").on("click", function(e){
+               e.preventDefault();
+               var form = $(this).closest('form');
+               var bankableAmount = $('#triggerCashupModalRegister').data('bankable-amount');
+
+               // Change operation to cud-cashup (quick cashup)
+               form.find('input[name="op"]').val('cud-cashup');
+
+               // Set the amount to the expected bankable amount
+               form.find('input[name="amount"]').val(bankableAmount);
+
+               // Submit the form
+               form.submit();
+            });
+
+            // Select all registers functionality
+            $("#select_all_registers").on("change", function() {
+                var isChecked = $(this).is(":checked");
+                $(".register_checkbox:not(:disabled)").prop("checked", isChecked);
+                updateCashupSelectedButton();
+            });
+
+            // Individual checkbox change handler
+            $(".register_checkbox").on("change", function() {
+                updateCashupSelectedButton();
+
+                // Update select all checkbox state
+                var totalCheckboxes = $(".register_checkbox:not(:disabled)").length;
+                var checkedCheckboxes = $(".register_checkbox:not(:disabled):checked").length;
+
+                if (checkedCheckboxes === 0) {
+                    $("#select_all_registers").prop("indeterminate", false).prop("checked", false);
+                } else if (checkedCheckboxes === totalCheckboxes) {
+                    $("#select_all_registers").prop("indeterminate", false).prop("checked", true);
+                } else {
+                    $("#select_all_registers").prop("indeterminate", true);
+                }
+            });
+
+            // Update cashup selected button state
+            function updateCashupSelectedButton() {
+                var selectedCount = $(".register_checkbox:checked").length;
+                var button = $("#cashup_selected_btn");
+
+                if (selectedCount > 0) {
+                    button.prop("disabled", false).removeClass("btn-default").addClass("btn-primary");
+                } else {
+                    button.prop("disabled", true).removeClass("btn-primary").addClass("btn-default");
+                }
+            }
+
+            // Handle cashup selected modal
+            $("#confirmCashupSelectedModal").on("shown.bs.modal", function(e) {
+                var selectedCheckboxes = $(".register_checkbox:checked");
+                var selectedCount = selectedCheckboxes.length;
+                var selectedIds = [];
+                var selectedNames = [];
+
+                selectedCheckboxes.each(function() {
+                    var registerRow = $(this).closest("tr");
+                    var registerId = $(this).val();
+                    var registerName = registerRow.find("td:nth-child(2) a").text(); // Second column (after checkbox)
+
+                    selectedIds.push(registerId);
+                    selectedNames.push(registerName);
+                });
+
+                $("#selected_count").text(selectedCount);
+                $("#selected_registers_field").val(selectedIds.join(","));
+
+                // Populate register list
+                var listHtml = "";
+                selectedNames.forEach(function(name) {
+                    listHtml += "<li>" + name + "</li>";
+                });
+                $("#selected_registers_list").html(listHtml);
+            });
+
+            // Handle start cashup for selected
+            $("#start_selected_btn").on("click", function(e) {
+                e.preventDefault();
+                var form = $(this).closest("form");
+                form.find("#selected_operation").val("cud-cashup_start");
+                form.submit();
+            });
+
+            // Handle quick cashup for selected
+            $("#quick_selected_btn").on("click", function(e) {
+                e.preventDefault();
+                var form = $(this).closest("form");
+                form.find("#selected_operation").val("cud-cashup");
+                form.submit();
+            });
+        });
     </script>
 [% END %]
 [% INCLUDE 'intranet-bottom.inc' %]

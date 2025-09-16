@@ -13,10 +13,9 @@ package Koha::Cash::Register::Cashup;
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with Koha; if not, see <http://www.gnu.org/licenses>.
+# along with Koha; if not, see <https://www.gnu.org/licenses>.
 
 use Modern::Perl;
-
 
 use Koha::Database;
 
@@ -45,7 +44,7 @@ sub search {
 
     unless ( exists $attr->{order_by} ) {
         $attr->{order_by} =
-          [ { '-asc' => 'register_id' }, { '-desc' => 'timestamp' } ];
+            [ { '-asc' => 'register_id' }, { '-desc' => 'timestamp' } ];
     }
 
     return $self->SUPER::search( $where, $attr );
@@ -62,28 +61,29 @@ Return a hashref containing a summary of transactions that make up this cashup.
 sub summary {
     my ($self) = @_;
     my $summary;
-    my $prior_cashup = Koha::Cash::Register::Cashups->search(
-        {
-            'timestamp' => { '<' => $self->timestamp },
-            register_id => $self->register_id
-        },
-        {
-            order_by => { '-desc' => [ 'timestamp', 'id' ] },
-            rows     => 1
-        }
-    );
 
-    my $previous = $prior_cashup->single;
+    # Get the session boundaries for this cashup
+    my ( $session_start, $session_end ) = $self->_get_session_boundaries;
 
-    my $conditions =
-      $previous
-      ? {
-        'date' => {
-            '-between' =>
-              [ $previous->_result->get_column('timestamp'), $self->timestamp ]
-        }
-      }
-      : { 'date' => { '<' => $self->timestamp } };
+    my $conditions;
+    if ( $session_start && $session_end ) {
+
+        # Complete session: between start and end (exclusive)
+        $conditions = {
+            'date' => {
+                '>' => $session_start,
+                '<' => $session_end
+            }
+        };
+    } elsif ($session_end) {
+
+        # Session from beginning to end
+        $conditions = { 'date' => { '<' => $session_end } };
+    } else {
+
+        # Shouldn't happen for a completed cashup, but fallback
+        $conditions = { 'date' => { '<' => $self->timestamp } };
+    }
 
     my $payout_transactions = $self->register->accountlines->search(
         {
@@ -102,16 +102,12 @@ sub summary {
 
     my $income_summary = Koha::Account::Offsets->search(
         {
-            'me.credit_id' => {
-                '-in' => $income_transactions->_resultset->get_column(
-                    'accountlines_id')->as_query
-            },
-            'me.debit_id' => { '!=' => undef }
+            'me.credit_id' => { '-in' => $income_transactions->_resultset->get_column('accountlines_id')->as_query },
+            'me.debit_id'  => { '!='  => undef }
         },
         {
-            join => { 'debit' => 'debit_type_code' },
-            group_by =>
-              [ 'debit.debit_type_code', 'debit_type_code.description' ],
+            join     => { 'debit' => 'debit_type_code' },
+            group_by => [ 'debit.debit_type_code', 'debit_type_code.description' ],
             'select' => [
                 { sum => 'me.amount' }, 'debit.debit_type_code',
                 'debit_type_code.description'
@@ -123,24 +119,16 @@ sub summary {
 
     my $payout_summary = Koha::Account::Offsets->search(
         {
-            'me.debit_id' => {
-                '-in' => $payout_transactions->_resultset->get_column(
-                    'accountlines_id')->as_query
-            },
-            'me.credit_id'                     => { '!=' => undef },
-            'account_offsets_credits.debit_id' => {
-                '-not_in' => $payout_transactions->_resultset->get_column(
-                    'accountlines_id')->as_query
-            }
+            'me.debit_id'  => { '-in' => $payout_transactions->_resultset->get_column('accountlines_id')->as_query },
+            'me.credit_id' => { '!='  => undef },
+            'account_offsets_credits.debit_id' =>
+                { '-not_in' => $payout_transactions->_resultset->get_column('accountlines_id')->as_query }
         },
         {
             join => {
                 'credit' => [
                     'credit_type_code',
-                    {
-                        'account_offsets_credits' =>
-                          { 'debit' => 'debit_type_code' }
-                    }
+                    { 'account_offsets_credits' => { 'debit' => 'debit_type_code' } }
                 ]
             },
             group_by => [
@@ -148,7 +136,7 @@ sub summary {
                 'debit.debit_type_code',   'debit_type_code.description'
             ],
             'select' => [
-                { sum => 'me.amount' }, 'credit.credit_type_code',
+                { sum => 'me.amount' },         'credit.credit_type_code',
                 'credit_type_code.description', 'debit.debit_type_code',
                 'debit_type_code.description'
             ],
@@ -157,10 +145,7 @@ sub summary {
                 'credit_description', 'debit_type_code',
                 'debit_description'
             ],
-            order_by => {
-                '-asc' =>
-                  [ 'credit_type_code.description', 'debit_type_code.description' ]
-            },
+            order_by => { '-asc' => [ 'credit_type_code.description', 'debit_type_code.description' ] },
         }
     );
 
@@ -168,19 +153,17 @@ sub summary {
         {
             total           => $_->get_column('total') * -1,
             debit_type_code => $_->get_column('debit_type_code'),
-            debit_type => { description => $_->get_column('debit_description') }
+            debit_type      => { description => $_->get_column('debit_description') }
         }
     } $income_summary->as_list;
     my @payout = map {
         {
             total            => $_->get_column('total') * -1,
             credit_type_code => $_->get_column('credit_type_code'),
-            credit_type =>
-              { description => $_->get_column('credit_description') },
-            related_debit => {
+            credit_type      => { description => $_->get_column('credit_description') },
+            related_debit    => {
                 debit_type_code => $_->get_column('debit_type_code'),
-                debit_type =>
-                  { description => $_->get_column('debit_description') }
+                debit_type      => { description => $_->get_column('debit_description') }
             }
         }
     } $payout_summary->as_list;
@@ -190,9 +173,7 @@ sub summary {
     my $total        = ( $income_total + $payout_total );
 
     my $payment_types = Koha::AuthorisedValues->search(
-        {
-            category => 'PAYMENT_TYPE'
-        },
+        { category => 'PAYMENT_TYPE' },
         {
             order_by => ['lib'],
         }
@@ -202,7 +183,7 @@ sub summary {
     for my $type ( $payment_types->as_list ) {
         my $typed_income = $income_transactions->total( { payment_type => $type->authorised_value } );
         my $typed_payout = $payout_transactions->total( { payment_type => $type->authorised_value } );
-        my $typed_total = ( $typed_income + $typed_payout );
+        my $typed_total  = ( $typed_income + $typed_payout );
         push @total_grouped, { payment_type => $type->lib, total => $typed_total };
     }
 
@@ -223,8 +204,8 @@ sub summary {
     my $deficit_note = $deficit_record ? $deficit_record->note : undef;
 
     $summary = {
-        from_date      => $previous ? $previous->timestamp : undef,
-        to_date        => $self->timestamp,
+        from_date      => $session_start,
+        to_date        => $session_end,
         income_grouped => \@income,
         income_total   => abs($income_total),
         payout_grouped => \@payout,
@@ -242,9 +223,113 @@ sub summary {
     return $summary;
 }
 
+=head3 accountlines
+
+Fetch the accountlines associated with this cashup
+
+=cut
+
+sub accountlines {
+    my ($self) = @_;
+
+    # Get the session boundaries for this cashup
+    my ( $session_start, $session_end ) = $self->_get_session_boundaries;
+
+    my $conditions;
+    if ( $session_start && $session_end ) {
+
+        # Complete session: between start and end (exclusive)
+        $conditions = {
+            'date' => {
+                '>' => $session_start,
+                '<' => $session_end
+            }
+        };
+    } elsif ($session_end) {
+
+        # Session from beginning to end
+        $conditions = { 'date' => { '<' => $session_end } };
+    } else {
+
+        # Shouldn't happen for a completed cashup, but fallback
+        $conditions = { 'date' => { '<' => $self->timestamp } };
+    }
+
+    return $self->register->accountlines->search($conditions);
+}
+
+=head3 _get_session_boundaries
+
+Internal method to determine the session boundaries for this cashup.
+Returns ($session_start, $session_end) timestamps.
+
+=cut
+
+sub _get_session_boundaries {
+    my ($self) = @_;
+
+    my $session_end = $self->_get_session_end;
+
+    # Find the previous CASHUP
+    my $session_start;
+    my $previous_cashup = $self->register->cashups(
+        { 'timestamp' => { '<' => $session_end } },
+        {
+            order_by => { '-desc' => [ 'timestamp', 'id' ] },
+            rows     => 1
+        }
+    )->single;
+
+    $session_start = $previous_cashup ? $previous_cashup->_get_session_end : undef;
+
+    return ( $session_start, $session_end );
+}
+
+sub _get_session_end {
+    my ($self) = @_;
+
+    my $session_end = $self->timestamp;
+
+    # Find if this CASHUP was part of a two-phase workflow
+    my $nearest_start = $self->register->_result->search_related(
+        'cash_register_actions',
+        {
+            'code'      => 'CASHUP_START',
+            'timestamp' => { '<' => $session_end }
+        },
+        {
+            order_by => { '-desc' => [ 'timestamp', 'id' ] },
+            rows     => 1
+        }
+    )->single;
+
+    if ($nearest_start) {
+
+        # Check if this CASHUP_START was completed by this CASHUP
+        # (no other CASHUP between them)
+        my $intervening_cashup = $self->register->cashups(
+            {
+                'timestamp' => {
+                    '>' => $nearest_start->timestamp,
+                    '<' => $session_end
+                }
+            },
+            { rows => 1 }
+        )->single;
+
+        if ( !$intervening_cashup ) {
+
+            # Two-phase workflow: session runs to CASHUP_START
+            $session_end = $nearest_start->timestamp;
+        }
+    }
+
+    return $session_end;
+}
+
 =head3 to_api_mapping
 
-This method returns the mapping for representing a Koha::Cash::Regiser::Cashup object
+This method returns the mapping for representing a Koha::Cash::Register::Cashup object
 on the API.
 
 =cut
