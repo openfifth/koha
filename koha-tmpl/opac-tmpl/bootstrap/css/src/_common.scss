@@ -872,16 +872,6 @@ table {
         thead {
             tr {
                 th {
-                    &.dt-orderable-asc span.dt-column-order,
-                    &.dt-orderable-desc span.dt-column-order,
-                    &.dt-ordering-asc span.dt-column-order,
-                    &.dt-ordering-desc span.dt-column-order {
-                        bottom: 0;
-                        position: absolute;
-                        right: 10px;
-                        top: 40%;
-                        width: 7px;
-                    }
 
                     &.dt-orderable-asc span.dt-column-order::before,
                     &.dt-ordering-asc span.dt-column-order::before,
