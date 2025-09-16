@@ -49,6 +49,8 @@ sub to_api_mapping {
         branchcode        => 'library_id',
         issue_id          => 'checkout_id',
         old_issue_id      => 'old_checkout_id',
+        reserve_id        => 'hold_id',
+        old_reserve_id    => 'old_hold_id',
         itemnumber        => 'item_id',
         manager_id        => 'user_id',
         note              => 'internal_note',

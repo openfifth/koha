@@ -110,6 +110,7 @@
             - patron
             - item_group
             - item_level_holds_count
+            - debits
         collectionFormat: csv
     produces:
       - application/json
@@ -232,6 +233,16 @@
             - expired
             - hold_limit
             - restricted
+        collectionFormat: csv
+      - name: x-koha-embed
+        in: header
+        required: false
+        description: Embed list sent as a request header
+        type: array
+        items:
+          type: string
+          enum:
+            - debits
         collectionFormat: csv
     consumes:
       - application/json
