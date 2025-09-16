@@ -90,6 +90,17 @@ enrollment fee for the patron
 
 are overdue notices sent to this patron category (1 for yes, 0 for no)
 
+
+
+=head2 print_notice_charge
+
+  data_type: 'decimal'
+  default_value: 0.000000
+  is_nullable: 1
+  size: [28,6]
+
+charge for print notices (0.00 = disabled)
+
 =head2 hidelostitems
 
   data_type: 'tinyint'
@@ -243,6 +254,13 @@ __PACKAGE__->add_columns(
   { data_type => "decimal", is_nullable => 1, size => [28, 6] },
   "overduenoticerequired",
   { data_type => "tinyint", is_nullable => 1 },
+  "print_notice_charge",
+  {
+    data_type => "decimal",
+    default_value => "0.000000",
+    is_nullable => 1,
+    size => [28, 6],
+  },
   "hidelostitems",
   { data_type => "tinyint", default_value => 0, is_nullable => 0 },
   "category_type",
