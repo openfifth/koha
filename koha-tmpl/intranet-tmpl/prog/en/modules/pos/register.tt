@@ -52,13 +52,44 @@
             <div id="error_message" class="alert alert-warning"> Invalid amount entered for cashup. Please enter a valid monetary amount. </div>
         [% END %]
 
+        [% IF ( error_cashup_in_progress ) %]
+            <div id="error_message" class="alert alert-warning"> A cashup is already in progress for this register. </div>
+        [% END %]
+
+        [% IF ( error_no_cashup_start ) %]
+            <div id="error_message" class="alert alert-warning"> No cashup session has been started. Please start a cashup before attempting to complete it. </div>
+        [% END %]
+
+        [% IF ( error_cashup_already_completed ) %]
+            <div id="error_message" class="alert alert-warning"> This cashup session has already been completed. </div>
+        [% END %]
+
+        [% IF ( error_cashup_start ) %]
+            <div id="error_message" class="alert alert-warning"> Failed to start cashup. Please try again. </div>
+        [% END %]
+
+        [% IF ( error_cashup_complete ) %]
+            <div id="error_message" class="alert alert-warning"> Failed to complete cashup. Please try again. </div>
+        [% END %]
+
         [% IF ( error_refund_permission ) %]
             <div id="error_message" class="alert alert-warning"> You do not have permission to perform refund actions. </div>
         [% END %]
 
+        [% IF cashup_in_progress %]
+            <div class="alert alert-warning">
+                <i class="fa-solid fa-info-circle"></i>
+                Cashup in progress - started [% cashup_in_progress.timestamp | $KohaDates with_hours => 1 %]. You can continue to make transactions while counting cash.
+            </div>
+        [% END %]
+
         [% IF ( CAN_user_cash_management_cashup ) %]
             <div id="toolbar" class="btn-toolbar">
-                <button id="pos_cashup" type="button" class="btn btn-default" data-bs-toggle="modal" data-bs-target="#confirmCashupModal"><i class="fa-solid fa-money-bill-1"></i> Record cashup</button>
+                [% IF cashup_in_progress %]
+                    <button id="pos_complete_cashup" type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#confirmCashupModal"> <i class="fa-solid fa-check"></i> Complete cashup </button>
+                [% ELSE %]
+                    <button type="button" class="btn btn-default" data-bs-toggle="modal" data-bs-target="#triggerCashupModal"> <i class="fa fa-money-bill-alt"></i> Record cashup </button>
+                [% END %]
             </div>
         [% END %]
 
@@ -375,22 +406,36 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h1 class="modal-title" id="confirmCashupLabel">Confirm cashup of <em>[% register.description | html %]</em></h1>
+                    <h1 class="modal-title" id="confirmCashupLabel">
+                        [% IF cashup_in_progress %]
+                            Complete cashup of <em>[% register.description | html %]</em>
+                        [% ELSE %]
+                            Confirm cashup of <em>[% register.description | html %]</em>
+                        [% END %]
+                    </h1>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <fieldset class="rows">
                         <ol>
                             <li>
-                                <span class="label">Expected amount to remove:</span>
-                                <span id="expected_amount" class="expected-amount">[% accountlines.total( payment_type => [ 'CASH', 'SIP00' ]) * -1 | $Price %]</span>
+                                <span class="label">
+                                    [% IF cashup_in_progress %]
+                                        Expected cashup amount:
+                                    [% ELSE %]
+                                        Expected amount to remove:
+                                    [% END %]
+                                </span>
+                                <span id="expected_amount" class="expected-amount">[% cashup_in_progress.amount | $Price %]</span>
                             </li>
                             <li>
-                                <span class="label">Float to remain:</span>
-                                <span>[% register.starting_float | $Price %]</span>
-                            </li>
-                            <li>
-                                <label class="required" for="amount">Actual amount removed from register:</label>
+                                <label class="required" for="amount">
+                                    [% IF cashup_in_progress %]
+                                        Actual cashup amount counted:
+                                    [% ELSE %]
+                                        Actual amount removed from register:
+                                    [% END %]
+                                </label>
                                 <input type="text" inputmode="decimal" pattern="^\d+(\.\d{2})?$" id="amount" name="amount" required="required" />
                                 <span class="required">Required</span>
                             </li>
@@ -410,7 +455,7 @@
                 <div class="modal-footer">
                     <input type="hidden" name="registerid" value="[% register.id | html %]" />
                     <input type="hidden" name="op" value="cud-cashup" />
-                    <button type="submit" class="btn btn-primary" id="pos_cashup_confirm">Confirm cashup</button>
+                    <button type="submit" class="btn btn-primary" id="pos_cashup_confirm"> [% IF cashup_in_progress %]Complete cashup[% ELSE %]Confirm cashup[% END %] </button>
                     <button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancel</button>
                 </div>
                 <!-- /.modal-footer -->
@@ -464,6 +509,46 @@
     <!-- /#refund_form -->
 </div>
 <!-- /#issueRefundModal -->
+
+<!-- Trigger cashup modal -->
+<div class="modal" id="triggerCashupModal" tabindex="-1" role="dialog" aria-labelledby="triggerCashupLabel">
+    <form method="post" class="validated">
+        [% INCLUDE 'csrf-token.inc' %]
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title" id="triggerCashupLabel"> Cashup for <em>[% register.description | html %]</em> </h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p><strong>Choose how to proceed with the cashup:</strong></p>
+                    <p><strong>Start cashup</strong></p>
+                    <ul>
+                        <li>Remove cash from the register for counting</li>
+                        <li>The register can continue operating during counting</li>
+                        <li>Complete the cashup once counted</li>
+                    </ul>
+                    <p><strong>Quick cashup</strong></p>
+                    <ul>
+                        <li>Confirm you have removed [% accountlines.total( payment_type => [ 'CASH', 'SIP00' ]) * -1 | $Price %] cash from the register to bank immediately</li>
+                    </ul>
+                    <p>Remember to leave the float amount of <strong>[% register.starting_float | $Price %]</strong> in the register.</p>
+                </div>
+                <div class="modal-footer">
+                    <input type="hidden" name="registerid" value="[% register.id | html %]" />
+                    <input type="hidden" name="op" value="cud-cashup_start" />
+                    <input type="hidden" name="amount" value="" />
+                    <button type="submit" class="btn btn-primary">Start cashup</button>
+                    <button type="button" class="btn btn-success" onclick="this.form.op.value='cud-cashup'; this.form.amount.value='[% accountlines.total( payment_type => [ 'CASH', 'SIP00' ]) * -1 | html %]'; this.form.submit();"
+                        >Quick cashup</button
+                    >
+                    <button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+<!-- /#triggerCashupModal -->
 
 [% INCLUDE 'modals/cashup_summary.inc' %]
 

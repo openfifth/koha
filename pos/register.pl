@@ -63,11 +63,14 @@ if ( !$registers->count ) {
         registers  => $registers,
     );
 
-    my $cash_register = Koha::Cash::Registers->find( { id => $registerid } );
-    my $accountlines  = $cash_register->outstanding_accountlines();
+    my $cash_register      = Koha::Cash::Registers->find( { id => $registerid } );
+    my $accountlines       = $cash_register->outstanding_accountlines();
+    my $cashup_in_progress = $cash_register->cashup_in_progress();
+
     $template->param(
-        register     => $cash_register,
-        accountlines => $accountlines
+        register           => $cash_register,
+        accountlines       => $accountlines,
+        cashup_in_progress => $cashup_in_progress,
     );
 
     my $transactions_range_from = $input->param('trange_f');
@@ -102,7 +105,31 @@ if ( !$registers->count ) {
     $template->param( trange_t => $end, );
 
     my $op = $input->param('op') // '';
-    if ( $op eq 'cud-cashup' ) {
+    if ( $op eq 'cud-cashup_start' ) {
+        if ( $logged_in_user->has_permission( { cash_management => 'cashup' } ) ) {
+            eval {
+                $cash_register->start_cashup(
+                    {
+                        manager_id => $logged_in_user->id,
+                    }
+                );
+            };
+            if ($@) {
+                if ( $@->isa('Koha::Exceptions::Object::DuplicateID') ) {
+                    $template->param( error_cashup_in_progress => 1 );
+                } else {
+                    $template->param( error_cashup_start => 1 );
+                }
+            } else {
+
+                # Redirect to prevent duplicate submissions (POST/REDIRECT/GET pattern)
+                print $input->redirect( "/cgi-bin/koha/pos/register.pl?registerid=" . $registerid );
+                exit;
+            }
+        } else {
+            $template->param( error_cashup_permission => 1 );
+        }
+    } elsif ( $op eq 'cud-cashup' ) {
         if ( $logged_in_user->has_permission( { cash_management => 'cashup' } ) ) {
             my $amount              = $input->param('amount');
             my $reconciliation_note = $input->param('reconciliation_note');
@@ -116,17 +143,29 @@ if ( !$registers->count ) {
                     $reconciliation_note = undef if $reconciliation_note eq '';
                 }
 
-                $cash_register->add_cashup(
-                    {
-                        manager_id          => $logged_in_user->id,
-                        amount              => $amount,
-                        reconciliation_note => $reconciliation_note
+                eval {
+                    $cash_register->add_cashup(
+                        {
+                            manager_id          => $logged_in_user->id,
+                            amount              => $amount,
+                            reconciliation_note => $reconciliation_note
+                        }
+                    );
+                };
+                if ($@) {
+                    if ( $@->isa('Koha::Exceptions::Object::BadValue') ) {
+                        $template->param( error_no_cashup_start => 1 );
+                    } elsif ( $@->isa('Koha::Exceptions::Object::DuplicateID') ) {
+                        $template->param( error_cashup_already_completed => 1 );
+                    } else {
+                        $template->param( error_cashup_complete => 1 );
                     }
-                );
+                } else {
 
-                # Redirect to prevent duplicate submissions (POST/REDIRECT/GET pattern)
-                print $input->redirect( "/cgi-bin/koha/pos/register.pl?registerid=" . $registerid );
-                exit;
+                    # Redirect to prevent duplicate submissions (POST/REDIRECT/GET pattern)
+                    print $input->redirect( "/cgi-bin/koha/pos/register.pl?registerid=" . $registerid );
+                    exit;
+                }
 
             } else {
                 $template->param( error_cashup_amount => 1 );
