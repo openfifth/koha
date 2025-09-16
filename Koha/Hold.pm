@@ -981,7 +981,8 @@ sub cancel {
                         interface  => C4::Context->interface,
                         library_id => C4::Context->userenv ? C4::Context->userenv->{'branch'} : undef,
                         type       => 'RESERVE_EXPIRED',
-                        item_id    => $self->itemnumber
+                        item_id    => $self->itemnumber,
+                        hold_id    => $self->id,
                     }
                 ) if $charge && $charge > 0;
             }
@@ -1361,6 +1362,7 @@ sub charge_hold_fee {
             description => $self->biblio->title,
             type        => 'RESERVE',
             item_id     => $self->itemnumber,
+            hold_id     => $self->id,
             user_id     => C4::Context->userenv ? C4::Context->userenv->{number} : undef,
             library_id  => C4::Context->userenv ? C4::Context->userenv->{branch} : undef,
             interface   => C4::Context->interface,
@@ -1498,7 +1500,19 @@ sub _move_to_old {
     my ($self) = @_;
     my $hold_infos = $self->unblessed;
     require Koha::Old::Hold;
-    return Koha::Old::Hold->new($hold_infos)->store;
+
+    # Create the old hold record
+    my $old_hold = Koha::Old::Hold->new($hold_infos)->store;
+
+    # Update any linked accountlines to point to old_reserve_id instead of reserve_id
+    $self->_result->search_related('accountlines')->update(
+        {
+            old_reserve_id => $self->id,
+            reserve_id     => undef,
+        }
+    );
+
+    return $old_hold;
 }
 
 =head3 to_api_mapping
@@ -1592,6 +1606,29 @@ sub strings_map {
     }
 
     return $strings;
+}
+
+=head3 debits
+
+    my $debits = $hold->debits;
+
+Get all debit account lines (charges) associated with this hold
+
+=cut
+
+sub debits {
+    my ($self) = @_;
+
+    my $accountlines_rs = $self->_result->search_related(
+        'accountlines',
+        {
+            credit_type_code => undef,    # Only debits (no credits)
+        },
+        {
+            order_by => { -desc => 'timestamp' },
+        }
+    );
+    return Koha::Account::Debits->_new_from_dbic($accountlines_rs);
 }
 
 =head2 Internal methods
