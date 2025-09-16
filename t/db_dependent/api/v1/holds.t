@@ -17,7 +17,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 15;
+use Test::More tests => 17;
 use Test::NoWarnings;
 use Test::MockModule;
 use Test::Mojo;
@@ -38,6 +38,8 @@ use Koha::Biblios;
 use Koha::Biblioitems;
 use Koha::Items;
 use Koha::CirculationRules;
+use Koha::Patron::Debarments qw(AddDebarment);
+use Koha::Holds;
 
 my $schema  = Koha::Database->new->schema;
 my $builder = t::lib::TestBuilder->new();
@@ -1580,6 +1582,149 @@ subtest 'delete() tests' => sub {
         ->status_is( 202, 'Cancellation request accepted' );
 
     is( $hold->cancellation_requests->count, 1 );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'debits embedding tests' => sub {
+
+    plan tests => 8;
+
+    $schema->storage->txn_begin;
+
+    # Setup proper permissions and authentication
+    my $categorycode = $builder->build( { source => 'Category' } )->{categorycode};
+    my $branchcode   = $builder->build( { source => 'Branch' } )->{branchcode};
+    my $password     = 'thePassword123';
+
+    my $librarian = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => {
+                categorycode => $categorycode,
+                branchcode   => $branchcode,
+                flags        => 80,              # borrowers (16) + reserveforothers (64) = 80
+            }
+        }
+    );
+    $librarian->set_password( { password => $password, skip_validation => 1 } );
+    my $userid = $librarian->userid;
+
+    my $patron = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => {
+                categorycode => $categorycode,
+                branchcode   => $branchcode,
+            }
+        }
+    );
+    my $biblio = $builder->build_sample_biblio();
+
+    # Create a hold using the proper API method
+    my $reserve_id = C4::Reserves::AddReserve(
+        {
+            branchcode     => $branchcode,
+            borrowernumber => $patron->borrowernumber,
+            biblionumber   => $biblio->biblionumber,
+            priority       => 1,
+        }
+    );
+
+    my $hold = Koha::Holds->find($reserve_id);
+
+    # Create account lines and link them to the hold
+    my $fee1 = $patron->account->add_debit(
+        {
+            amount      => 2.50,
+            description => 'Hold placement fee',
+            type        => 'RESERVE',
+            interface   => 'intranet',
+            hold_id     => $hold->id
+        }
+    );
+
+    # Test without embedding - should not include debits
+    $t->get_ok( "//$userid:$password@/api/v1/holds?hold_id=" . $hold->id )->status_is(200)->json_has('/0/hold_id')
+        ->json_hasnt( '/0/debits', 'No debits without embedding' );
+
+    # Test with debits embedding - should include debits
+    $t->get_ok(
+        "//$userid:$password@/api/v1/holds?hold_id=" . $hold->id,
+        { 'x-koha-embed' => 'debits' }
+    )->status_is(200)->json_has( '/0/debits', 'debits present when embedded' )
+        ->json_is( '/0/debits/0/amount', 2.50, 'Account line amount correct' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'POST with debits embedding tests' => sub {
+
+    plan tests => 4;
+
+    $schema->storage->txn_begin;
+
+    # Setup proper permissions and authentication
+    my $categorycode = $builder->build( { source => 'Category' } )->{categorycode};
+    my $branchcode   = $builder->build( { source => 'Branch' } )->{branchcode};
+    my $password     = 'thePassword123';
+
+    my $librarian = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => {
+                categorycode => $categorycode,
+                branchcode   => $branchcode,
+                flags        => 80,              # borrowers (16) + reserveforothers (64) = 80
+            }
+        }
+    );
+    $librarian->set_password( { password => $password, skip_validation => 1 } );
+    my $userid = $librarian->userid;
+
+    my $patron = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => {
+                categorycode => $categorycode,
+                branchcode   => $branchcode,
+            }
+        }
+    );
+    my $biblio = $builder->build_sample_biblio();
+    my $item   = $builder->build_sample_item( { biblionumber => $biblio->biblionumber } );
+
+    # Set up system preference to charge fees for holds
+    t::lib::Mocks::mock_preference( 'HoldFeeMode', 'any_time_is_placed' );
+
+    # Create a circulation rule with hold fee
+    Koha::CirculationRules->set_rules(
+        {
+            categorycode => $patron->categorycode,
+            branchcode   => undef,
+            itemtype     => undef,
+            rules        => {
+                hold_fee => 2.50,
+            }
+        }
+    );
+
+    # Make sure pickup location checks doesn't get in the middle
+    my $mock_biblio = Test::MockModule->new('Koha::Biblio');
+    $mock_biblio->mock( 'pickup_locations', sub { return Koha::Libraries->search; } );
+    my $mock_item = Test::MockModule->new('Koha::Item');
+    $mock_item->mock( 'pickup_locations', sub { return Koha::Libraries->search } );
+
+    # Test POST with embedding (should include automatically charged debits in response)
+    $t->post_ok(
+        "//$userid:$password@/api/v1/holds" => { 'x-koha-embed' => 'debits' } => json => {
+            patron_id         => $patron->borrowernumber,
+            biblio_id         => $biblio->biblionumber,
+            item_id           => $item->itemnumber,
+            pickup_library_id => $branchcode,
+        }
+    )->status_is(201)->json_has( '/debits', 'debits embedded in POST response' )
+        ->json_is( '/debits/0/amount', 2.50, 'Hold fee automatically charged and embedded' );
 
     $schema->storage->txn_rollback;
 };
