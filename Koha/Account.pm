@@ -492,6 +492,7 @@ sub add_debit {
     my $transaction_type = $params->{transaction_type};
     my $item_id          = $params->{item_id};
     my $issue_id         = $params->{issue_id};
+    my $hold_id          = $params->{hold_id};
 
     my $old_issue_id;
     if ($issue_id) {
@@ -500,6 +501,16 @@ sub add_debit {
             my $old_issue = Koha::Old::Checkouts->find($issue_id);
             $issue_id     = undef;
             $old_issue_id = $old_issue->id;
+        }
+    }
+
+    my $old_hold_id;
+    if ($hold_id) {
+        my $hold = Koha::Holds->find($hold_id);
+        unless ($hold) {
+            my $old_hold = Koha::Old::Holds->find($hold_id);
+            $hold_id     = undef;
+            $old_hold_id = $old_hold->id;
         }
     }
 
@@ -531,6 +542,16 @@ sub add_debit {
                         (
                             $old_issue_id
                             ? ( old_issue_id => $old_issue_id )
+                            : ()
+                        ),
+                        (
+                            $hold_id
+                            ? ( reserve_id => $hold_id )
+                            : ()
+                        ),
+                        (
+                            $old_hold_id
+                            ? ( old_reserve_id => $old_hold_id )
                             : ()
                         ),
                         branchcode  => $library_id,
