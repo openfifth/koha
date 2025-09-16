@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 22;
+use Test::More tests => 25;
 
 use Test::Exception;
 use Test::MockModule;
@@ -2599,4 +2599,160 @@ sub set_userenv {
     my $staff = $builder->build_object( { class => "Koha::Patrons" } );
     t::lib::Mocks::mock_userenv( { patron => $staff, branchcode => $library->{branchcode} } );
 }
+
+subtest 'debits() tests' => sub {
+
+    plan tests => 5;
+
+    $schema->storage->txn_begin;
+
+    my $patron = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $biblio = $builder->build_sample_biblio;
+    my $item   = $builder->build_sample_item( { biblionumber => $biblio->biblionumber } );
+
+    # Create a hold
+    my $hold = $builder->build_object(
+        {
+            class => 'Koha::Holds',
+            value => {
+                borrowernumber => $patron->borrowernumber,
+                biblionumber   => $biblio->biblionumber,
+                itemnumber     => $item->itemnumber,
+                branchcode     => $patron->branchcode,
+            }
+        }
+    );
+
+    # Test 1: Hold with no debits returns empty collection
+    my $debits = $hold->debits;
+    isa_ok( $debits, 'Koha::Account::Debits', 'debits() returns a Koha::Account::Debits object' );
+    is( $debits->count, 0, 'debits() returns empty collection when no debits exist' );
+
+    # Test 2: Create some account lines (debits and credits) linked to the hold
+    my $account = $patron->account;
+
+    # Add a debit (hold fee)
+    my $debit1 = $account->add_debit(
+        {
+            amount      => 5.00,
+            description => 'Hold fee',
+            type        => 'RESERVE',
+            user_id     => 1,
+            library_id  => $patron->branchcode,
+            interface   => 'intranet',
+            hold_id     => $hold->id,
+        }
+    );
+
+    # Add another debit (expiration fee)
+    my $debit2 = $account->add_debit(
+        {
+            amount      => 2.00,
+            description => 'Hold expiration fee',
+            type        => 'RESERVE_EXPIRED',
+            user_id     => 1,
+            library_id  => $patron->branchcode,
+            interface   => 'intranet',
+            hold_id     => $hold->id,
+        }
+    );
+
+    # Add a credit (should not appear in debits)
+    my $credit = $account->add_credit(
+        {
+            amount      => 3.00,
+            description => 'Credit for hold',
+            type        => 'CREDIT',
+            user_id     => 1,
+            library_id  => $patron->branchcode,
+            interface   => 'intranet',
+        }
+    );
+
+    # Link credit to hold manually since add_credit doesn't have hold_id parameter
+    $credit->reserve_id( $hold->id )->store;
+
+    # Test 3: Hold debits returns only debit lines, ordered by timestamp descending
+    $debits = $hold->debits;
+    is( $debits->count, 2, 'debits() returns correct count of debit lines only' );
+
+    my @debit_amounts = sort { $b <=> $a } map { $_->amount + 0 } $debits->as_list;
+    is_deeply( \@debit_amounts, [ 5.0, 2.0 ], 'debits() returns correct amounts in descending order' );
+
+    # Test 4: Verify both debit types are present
+    my @debit_types = sort map { $_->debit_type_code } $debits->as_list;
+    is_deeply( \@debit_types, [ 'RESERVE', 'RESERVE_EXPIRED' ], 'debits() returns both expected debit types' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest '_move_to_old() account migration tests' => sub {
+
+    plan tests => 6;
+
+    $schema->storage->txn_begin;
+
+    my $patron = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $biblio = $builder->build_sample_biblio;
+    my $item   = $builder->build_sample_item( { biblionumber => $biblio->biblionumber } );
+
+    # Create a hold
+    my $hold = $builder->build_object(
+        {
+            class => 'Koha::Holds',
+            value => {
+                borrowernumber => $patron->borrowernumber,
+                biblionumber   => $biblio->biblionumber,
+                itemnumber     => $item->itemnumber,
+                branchcode     => $patron->branchcode,
+            }
+        }
+    );
+
+    my $account = $patron->account;
+
+    # Create account lines linked to the hold
+    my $debit1 = $account->add_debit(
+        {
+            amount      => 5.00,
+            description => 'Hold fee',
+            type        => 'RESERVE',
+            user_id     => 1,
+            library_id  => $patron->branchcode,
+            interface   => 'intranet',
+            hold_id     => $hold->id,
+        }
+    );
+
+    my $debit2 = $account->add_debit(
+        {
+            amount      => 2.00,
+            description => 'Hold expiration fee',
+            type        => 'RESERVE_EXPIRED',
+            user_id     => 1,
+            library_id  => $patron->branchcode,
+            interface   => 'intranet',
+            hold_id     => $hold->id,
+        }
+    );
+
+    # Test initial state
+    is( $debit1->reserve_id,     $hold->id, 'Account line initially has reserve_id set' );
+    is( $debit1->old_reserve_id, undef,     'Account line initially has old_reserve_id unset' );
+    is( $debit2->reserve_id,     $hold->id, 'Second account line initially has reserve_id set' );
+
+    # Call _move_to_old
+    my $old_hold = $hold->_move_to_old;
+
+    # Verify account lines were updated
+    $debit1->discard_changes;
+    $debit2->discard_changes;
+
+    is( $debit1->reserve_id,     undef,     'Account line reserve_id cleared after _move_to_old' );
+    is( $debit1->old_reserve_id, $hold->id, 'Account line old_reserve_id set after _move_to_old' );
+    is( $debit2->old_reserve_id, $hold->id, 'Second account line old_reserve_id set after _move_to_old' );
+
+    $schema->storage->txn_rollback;
+};
+
 

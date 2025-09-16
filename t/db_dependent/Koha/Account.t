@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 16;
+use Test::More tests => 17;
 use Test::MockModule;
 use Test::Exception;
 use Test::Warn;
@@ -32,6 +32,8 @@ use Koha::Account::CreditTypes;
 use Koha::Account::Lines;
 use Koha::Account::Offsets;
 use Koha::DateUtils qw( dt_from_string );
+use Koha::Holds;
+use Koha::Old::Holds;
 
 use t::lib::Mocks;
 use t::lib::TestBuilder;
@@ -1546,6 +1548,110 @@ subtest 'Koha::Account::payin_amount() tests' => sub {
     is( $offset->debit_id,   $debit_5->id, "Offset added against debit_5" );
     is( $offset->type,       'APPLY',      "APPLY used for offset_type" );
     is( $offset->amount * 1, -2.50,        'Correct amount offset against debit_5' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'add_debit() with hold_id tests' => sub {
+
+    plan tests => 8;
+
+    $schema->storage->txn_begin;
+
+    my $patron = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $biblio = $builder->build_sample_biblio;
+    my $item   = $builder->build_sample_item( { biblionumber => $biblio->biblionumber } );
+
+    # Create a hold
+    my $hold = $builder->build_object(
+        {
+            class => 'Koha::Holds',
+            value => {
+                borrowernumber => $patron->borrowernumber,
+                biblionumber   => $biblio->biblionumber,
+                itemnumber     => $item->itemnumber,
+                branchcode     => $patron->branchcode,
+            }
+        }
+    );
+
+    # Create an old hold
+    my $old_hold = $builder->build_object(
+        {
+            class => 'Koha::Old::Holds',
+            value => {
+                borrowernumber => $patron->borrowernumber,
+                biblionumber   => $biblio->biblionumber,
+                itemnumber     => $item->itemnumber,
+                branchcode     => $patron->branchcode,
+            }
+        }
+    );
+
+    my $account = $patron->account;
+
+    # Test 1: add_debit with current hold_id sets reserve_id
+    my $debit1 = $account->add_debit(
+        {
+            amount      => 5.00,
+            description => 'Hold fee',
+            type        => 'RESERVE',
+            user_id     => 1,
+            library_id  => $patron->branchcode,
+            interface   => 'intranet',
+            hold_id     => $hold->id,
+        }
+    );
+
+    is( $debit1->reserve_id,     $hold->id, 'add_debit() sets reserve_id correctly for current hold' );
+    is( $debit1->old_reserve_id, undef,     'add_debit() leaves old_reserve_id undef for current hold' );
+
+    # Test 2: add_debit with old hold_id sets old_reserve_id
+    my $debit2 = $account->add_debit(
+        {
+            amount      => 3.00,
+            description => 'Old hold fee',
+            type        => 'RESERVE',
+            user_id     => 1,
+            library_id  => $patron->branchcode,
+            interface   => 'intranet',
+            hold_id     => $old_hold->id,
+        }
+    );
+
+    is( $debit2->reserve_id,     undef,         'add_debit() leaves reserve_id undef for old hold' );
+    is( $debit2->old_reserve_id, $old_hold->id, 'add_debit() sets old_reserve_id correctly for old hold' );
+
+    # Test 3: add_debit without hold_id leaves both fields undef
+    my $debit3 = $account->add_debit(
+        {
+            amount      => 2.00,
+            description => 'Regular fee',
+            type        => 'OVERDUE',
+            user_id     => 1,
+            library_id  => $patron->branchcode,
+            interface   => 'intranet',
+        }
+    );
+
+    is( $debit3->reserve_id,     undef, 'add_debit() without hold_id leaves reserve_id undef' );
+    is( $debit3->old_reserve_id, undef, 'add_debit() without hold_id leaves old_reserve_id undef' );
+
+    # Test 4: add_debit with non-existent hold_id handles gracefully
+    my $debit4 = $account->add_debit(
+        {
+            amount      => 1.50,
+            description => 'Fee for missing hold',
+            type        => 'RESERVE',
+            user_id     => 1,
+            library_id  => $patron->branchcode,
+            interface   => 'intranet',
+            hold_id     => 99999,                    # Non-existent hold ID
+        }
+    );
+
+    is( $debit4->reserve_id,     undef, 'add_debit() handles non-existent hold_id gracefully (reserve_id)' );
+    is( $debit4->old_reserve_id, undef, 'add_debit() handles non-existent hold_id gracefully (old_reserve_id)' );
 
     $schema->storage->txn_rollback;
 };
