@@ -34,6 +34,8 @@
             - deleted_biblio
             - item
             - pickup_library
+            - pickup_library.branchname
+            - debits
         collectionFormat: csv
     produces:
       - application/json

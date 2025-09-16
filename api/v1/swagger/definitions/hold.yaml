@@ -135,6 +135,13 @@ properties:
       - object
       - "null"
     description: Pickup library
+  debits:
+    type:
+      - array
+      - "null"
+    description: Debits (charges) linked to this hold (x-koha-embed)
+    items:
+      $ref: "./debit.yaml"
   _strings:
     type:
       - object
