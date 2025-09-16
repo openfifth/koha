@@ -2163,3 +2163,79 @@ subtest 'Bug 40866: API hold creation with override logs confirmations' => sub {
 
     $schema->storage->txn_rollback;
 };
+
+subtest 'debits embedding tests' => sub {
+
+    plan tests => 8;
+
+    $schema->storage->txn_begin;
+
+    # Setup proper permissions and authentication
+    my $categorycode = $builder->build( { source => 'Category' } )->{categorycode};
+    my $branchcode   = $builder->build( { source => 'Branch' } )->{branchcode};
+    my $password     = 'thePassword123';
+
+    my $librarian = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => {
+                categorycode => $categorycode,
+                branchcode   => $branchcode,
+                flags        => 80,              # borrowers (16) + reserveforothers (64) = 80
+            }
+        }
+    );
+    $librarian->set_password( { password => $password, skip_validation => 1 } );
+    my $userid = $librarian->userid;
+
+    my $patron = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => {
+                categorycode => $categorycode,
+                branchcode   => $branchcode,
+            }
+        }
+    );
+    my $biblio = $builder->build_sample_biblio();
+
+    # Create a hold using the proper API method
+    my $reserve_id = C4::Reserves::AddReserve(
+        {
+            branchcode     => $branchcode,
+            borrowernumber => $patron->borrowernumber,
+            biblionumber   => $biblio->biblionumber,
+            priority       => 1,
+        }
+    );
+
+    my $hold = Koha::Holds->find($reserve_id);
+
+    # Create account lines and link them to the hold
+    my $fee1 = $patron->account->add_debit(
+        {
+            amount      => 2.50,
+            description => 'Hold placement fee',
+            type        => 'RESERVE',
+            interface   => 'intranet',
+            hold_id     => $hold->id
+        }
+    );
+
+    # Test without embedding - should not include debits
+    $t->get_ok( "//$userid:$password@/api/v1/holds?hold_id=" . $hold->id )
+        ->status_is(200)
+        ->json_has('/0/hold_id')
+        ->json_hasnt( '/0/debits', 'No debits without embedding' );
+
+    # Test with debits embedding - should include debits
+    $t->get_ok(
+        "//$userid:$password@/api/v1/holds?hold_id=" . $hold->id,
+        { 'x-koha-embed' => 'debits' }
+        )
+        ->status_is(200)
+        ->json_has( '/0/debits', 'debits present when embedded' )
+        ->json_is( '/0/debits/0/amount', 2.50, 'Account line amount correct' );
+
+    $schema->storage->txn_rollback;
+};
