@@ -41,6 +41,18 @@ __PACKAGE__->table("accountlines");
   is_foreign_key: 1
   is_nullable: 1
 
+=head2 reserve_id
+
+  data_type: 'integer'
+  is_foreign_key: 1
+  is_nullable: 1
+
+=head2 old_reserve_id
+
+  data_type: 'integer'
+  is_foreign_key: 1
+  is_nullable: 1
+
 =head2 borrowernumber
 
   data_type: 'integer'
@@ -159,6 +171,10 @@ __PACKAGE__->add_columns(
   "issue_id",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
   "old_issue_id",
+  { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
+  "reserve_id",
+  { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
+  "old_reserve_id",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
   "borrowernumber",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
@@ -424,6 +440,26 @@ __PACKAGE__->belongs_to(
   },
 );
 
+=head2 old_reserve
+
+Type: belongs_to
+
+Related object: L<Koha::Schema::Result::OldReserve>
+
+=cut
+
+__PACKAGE__->belongs_to(
+  "old_reserve",
+  "Koha::Schema::Result::OldReserve",
+  { reserve_id => "old_reserve_id" },
+  {
+    is_deferrable => 1,
+    join_type     => "LEFT",
+    on_delete     => "SET NULL",
+    on_update     => "CASCADE",
+  },
+);
+
 =head2 register
 
 Type: belongs_to
@@ -444,9 +480,29 @@ __PACKAGE__->belongs_to(
   },
 );
 
+=head2 reserve
 
-# Created by DBIx::Class::Schema::Loader v0.07049 @ 2024-02-08 14:18:03
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:aVLdvK1lek01lZ0mbaCwZQ
+Type: belongs_to
+
+Related object: L<Koha::Schema::Result::Reserve>
+
+=cut
+
+__PACKAGE__->belongs_to(
+  "reserve",
+  "Koha::Schema::Result::Reserve",
+  { reserve_id => "reserve_id" },
+  {
+    is_deferrable => 1,
+    join_type     => "LEFT",
+    on_delete     => "SET NULL",
+    on_update     => "CASCADE",
+  },
+);
+
+
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-09-16 10:19:22
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:JGNBdISXLLAdEXI25nrzaQ
 
 =head2 patron
 
