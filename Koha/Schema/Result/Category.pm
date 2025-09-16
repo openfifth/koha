@@ -98,6 +98,15 @@ are overdue notices sent to this patron category (1 for yes, 0 for no)
 
 cost to place holds
 
+=head2 print_notice_charge
+
+  data_type: 'decimal'
+  default_value: 0.000000
+  is_nullable: 1
+  size: [28,6]
+
+charge for print notices (0.00 = disabled)
+
 =head2 hidelostitems
 
   data_type: 'tinyint'
@@ -253,6 +262,13 @@ __PACKAGE__->add_columns(
   { data_type => "tinyint", is_nullable => 1 },
   "reservefee",
   { data_type => "decimal", is_nullable => 1, size => [28, 6] },
+  "print_notice_charge",
+  {
+    data_type => "decimal",
+    default_value => "0.000000",
+    is_nullable => 1,
+    size => [28, 6],
+  },
   "hidelostitems",
   { data_type => "tinyint", default_value => 0, is_nullable => 0 },
   "category_type",
@@ -410,8 +426,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-07-10 07:11:31
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:ADt+iDjteg9Jb81L2FMIvg
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-09-16 15:18:44
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:uR+KIzEJDFp0EaTlpYrVng
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration
 
