@@ -332,6 +332,21 @@ __PACKAGE__->set_primary_key("reserve_id");
 
 =head1 RELATIONS
 
+=head2 accountlines
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::Accountline>
+
+=cut
+
+__PACKAGE__->has_many(
+  "accountlines",
+  "Koha::Schema::Result::Accountline",
+  { "foreign.old_reserve_id" => "self.reserve_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 biblionumber
 
 Type: belongs_to
@@ -473,8 +488,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-09-03 17:08:22
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:bo/exwlpahEVYtkWjusWLw
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-09-16 10:19:22
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:RLh8fPWOVtWzG3VGOXyz6Q
 
 __PACKAGE__->belongs_to(
   "item",
@@ -550,5 +565,12 @@ Missing POD for koha_objects_class.
 sub koha_objects_class {
     'Koha::Old::Holds';
 }
+
+__PACKAGE__->has_many(
+  "accountlines",
+  "Koha::Schema::Result::Accountline",
+  { "foreign.old_reserve_id" => "self.reserve_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
 
 1;

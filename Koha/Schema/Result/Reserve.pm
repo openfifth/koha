@@ -340,6 +340,21 @@ __PACKAGE__->set_primary_key("reserve_id");
 
 =head1 RELATIONS
 
+=head2 accountlines
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::Accountline>
+
+=cut
+
+__PACKAGE__->has_many(
+  "accountlines",
+  "Koha::Schema::Result::Accountline",
+  { "foreign.reserve_id" => "self.reserve_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 biblionumber
 
 Type: belongs_to
@@ -601,6 +616,13 @@ __PACKAGE__->belongs_to(
   "Koha::Schema::Result::Branch",
   { "foreign.branchcode" => "self.branchcode" },
   { is_deferrable => 1, on_delete => "CASCADE", on_update => "CASCADE" },
+);
+
+__PACKAGE__->has_many(
+  "accountlines",
+  "Koha::Schema::Result::Accountline",
+  { "foreign.reserve_id" => "self.reserve_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
 );
 
 1;
