@@ -121,6 +121,8 @@ CREATE TABLE `accountlines` (
   `accountlines_id` int(11) NOT NULL AUTO_INCREMENT,
   `issue_id` int(11) DEFAULT NULL,
   `old_issue_id` int(11) DEFAULT NULL,
+  `reserve_id` int(11) DEFAULT NULL,
+  `old_reserve_id` int(11) DEFAULT NULL,
   `borrowernumber` int(11) DEFAULT NULL,
   `itemnumber` int(11) DEFAULT NULL,
   `date` timestamp NULL DEFAULT NULL,
@@ -149,6 +151,8 @@ CREATE TABLE `accountlines` (
   KEY `accountlines_ibfk_registers` (`register_id`),
   KEY `accountlines_ibfk_old_issues` (`old_issue_id`),
   KEY `accountlines_ibfk_issues` (`issue_id`),
+  KEY `accountlines_ibfk_reserves` (`reserve_id`),
+  KEY `accountlines_ibfk_old_reserves` (`old_reserve_id`),
   CONSTRAINT `accountlines_ibfk_borrowers` FOREIGN KEY (`borrowernumber`) REFERENCES `borrowers` (`borrowernumber`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `accountlines_ibfk_borrowers_2` FOREIGN KEY (`manager_id`) REFERENCES `borrowers` (`borrowernumber`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `accountlines_ibfk_branches` FOREIGN KEY (`branchcode`) REFERENCES `branches` (`branchcode`) ON DELETE SET NULL ON UPDATE CASCADE,
@@ -157,7 +161,9 @@ CREATE TABLE `accountlines` (
   CONSTRAINT `accountlines_ibfk_issues` FOREIGN KEY (`issue_id`) REFERENCES `issues` (`issue_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `accountlines_ibfk_items` FOREIGN KEY (`itemnumber`) REFERENCES `items` (`itemnumber`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `accountlines_ibfk_old_issues` FOREIGN KEY (`old_issue_id`) REFERENCES `old_issues` (`issue_id`) ON DELETE SET NULL ON UPDATE CASCADE,
-  CONSTRAINT `accountlines_ibfk_registers` FOREIGN KEY (`register_id`) REFERENCES `cash_registers` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+  CONSTRAINT `accountlines_ibfk_registers` FOREIGN KEY (`register_id`) REFERENCES `cash_registers` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `accountlines_ibfk_reserves` FOREIGN KEY (`reserve_id`) REFERENCES `reserves` (`reserve_id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `accountlines_ibfk_old_reserves` FOREIGN KEY (`old_reserve_id`) REFERENCES `old_reserves` (`reserve_id`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
