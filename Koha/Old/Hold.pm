@@ -105,6 +105,30 @@ sub anonymize {
     return $self->update( { borrowernumber => $anonymous_id } );
 }
 
+=head3 debits
+
+    my $debits = $old_hold->debits;
+
+Get all debit account lines (charges) associated with this old hold
+
+=cut
+
+sub debits {
+    my ($self) = @_;
+
+    my $accountlines_rs = $self->_result->search_related(
+        'accountlines',
+        {
+            credit_type_code => undef,    # Only debits (no credits)
+        },
+        {
+            # Optimize with proper ordering and potential prefetching
+            order_by => { -desc => 'timestamp' },
+        }
+    );
+    return Koha::Account::Debits->_new_from_dbic($accountlines_rs);
+}
+
 =head2 Internal methods
 
 =head3 _type
