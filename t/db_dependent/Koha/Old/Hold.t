@@ -17,11 +17,12 @@
 
 use Modern::Perl;
 
-use Test::More tests => 4;
+use Test::More tests => 5;
 use Test::NoWarnings;
 use Test::Exception;
 
 use Koha::Database;
+use Koha::Account;
 
 use t::lib::Mocks;
 use t::lib::TestBuilder;
@@ -145,6 +146,92 @@ subtest 'item/pickup_library() tests' => sub {
 
     is( $old_hold->item,           undef, 'Item has been deleted, ->item should return undef' );
     is( $old_hold->pickup_library, undef, 'Library has been deleted, ->pickup_library should return undef' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'debits() tests' => sub {
+
+    plan tests => 5;
+
+    $schema->storage->txn_begin;
+
+    my $patron = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $biblio = $builder->build_sample_biblio;
+    my $item   = $builder->build_sample_item( { biblionumber => $biblio->biblionumber } );
+
+    # Create an old hold
+    my $old_hold = $builder->build_object(
+        {
+            class => 'Koha::Old::Holds',
+            value => {
+                borrowernumber => $patron->borrowernumber,
+                biblionumber   => $biblio->biblionumber,
+                itemnumber     => $item->itemnumber,
+                branchcode     => $patron->branchcode,
+            }
+        }
+    );
+
+    # Test 1: Old hold with no debits returns empty collection
+    my $debits = $old_hold->debits;
+    isa_ok( $debits, 'Koha::Account::Debits', 'debits() returns a Koha::Account::Debits object' );
+    is( $debits->count, 0, 'debits() returns empty collection when no debits exist' );
+
+    # Test 2: Create account lines (debits and credits) linked to the old hold
+    my $account = $patron->account;
+
+    # Add a debit linked to old hold
+    my $debit1 = $account->add_debit(
+        {
+            amount      => 3.50,
+            description => 'Old hold fee',
+            type        => 'RESERVE',
+            user_id     => 1,
+            library_id  => $patron->branchcode,
+            interface   => 'intranet',
+        }
+    );
+
+    # Manually set old_reserve_id since add_debit doesn't handle old holds directly
+    $debit1->old_reserve_id( $old_hold->reserve_id )->store;
+
+    # Add another debit
+    my $debit2 = $account->add_debit(
+        {
+            amount      => 1.50,
+            description => 'Old hold expiration fee',
+            type        => 'RESERVE_EXPIRED',
+            user_id     => 1,
+            library_id  => $patron->branchcode,
+            interface   => 'intranet',
+        }
+    );
+    $debit2->old_reserve_id( $old_hold->reserve_id )->store;
+
+    # Add a credit (should not appear in debits)
+    my $credit = $account->add_credit(
+        {
+            amount      => 2.00,
+            description => 'Credit for old hold',
+            type        => 'CREDIT',
+            user_id     => 1,
+            library_id  => $patron->branchcode,
+            interface   => 'intranet',
+        }
+    );
+    $credit->old_reserve_id( $old_hold->reserve_id )->store;
+
+    # Test 3: Old hold debits returns only debit lines, ordered by timestamp descending
+    $debits = $old_hold->debits;
+    is( $debits->count, 2, 'debits() returns correct count of debit lines only' );
+
+    my @debit_amounts = sort { $b <=> $a } map { $_->amount + 0 } $debits->as_list;
+    is_deeply( \@debit_amounts, [ 3.5, 1.5 ], 'debits() returns correct amounts in descending order' );
+
+    # Test 4: Verify both debit types are present
+    my @debit_types = sort map { $_->debit_type_code } $debits->as_list;
+    is_deeply( \@debit_types, [ 'RESERVE', 'RESERVE_EXPIRED' ], 'debits() returns both expected debit types' );
 
     $schema->storage->txn_rollback;
 };

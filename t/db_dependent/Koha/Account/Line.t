@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 17;
+use Test::More tests => 18;
 use Test::Exception;
 use Test::MockModule;
 
@@ -30,7 +30,9 @@ use C4::Circulation qw( AddRenewal CanBookBeRenewed LostItem AddIssue AddReturn 
 use Koha::Account;
 use Koha::Account::Lines;
 use Koha::Account::Offsets;
+use Koha::Holds;
 use Koha::Items;
+use Koha::Old::Holds;
 use Koha::DateUtils qw( dt_from_string );
 
 use t::lib::Mocks;
@@ -1572,6 +1574,101 @@ subtest "cancel() tests" => sub {
         $THE_offset->amount * 1,
         -10, 'Correct amount was applied against debit'
     );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'hold() tests' => sub {
+
+    plan tests => 7;
+
+    $schema->storage->txn_begin;
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron  = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $biblio  = $builder->build_sample_biblio;
+
+    # Create a hold
+    my $hold = $builder->build_object(
+        {
+            class => 'Koha::Holds',
+            value => {
+                borrowernumber => $patron->borrowernumber,
+                biblionumber   => $biblio->biblionumber,
+                branchcode     => $library->branchcode,
+            }
+        }
+    );
+
+    # Create an old hold
+    my $old_hold = $builder->build_object(
+        {
+            class => 'Koha::Old::Holds',
+            value => {
+                borrowernumber => $patron->borrowernumber,
+                biblionumber   => $biblio->biblionumber,
+                branchcode     => $library->branchcode,
+            }
+        }
+    );
+
+    # Test 1: Account line with reserve_id returns current hold
+    my $line_with_hold = Koha::Account::Line->new(
+        {
+            borrowernumber  => $patron->borrowernumber,
+            debit_type_code => "RESERVE",
+            status          => "UNRETURNED",
+            amount          => 5.00,
+            reserve_id      => $hold->reserve_id,
+            interface       => 'commandline',
+        }
+    )->store;
+
+    my $returned_hold = $line_with_hold->hold;
+    is( ref($returned_hold),        'Koha::Hold',      'hold() returns a Koha::Hold object when reserve_id is set' );
+    is( $returned_hold->reserve_id, $hold->reserve_id, 'hold() returns the correct hold' );
+
+    # Test 2: Account line with old_reserve_id returns old hold
+    my $line_with_old_hold = Koha::Account::Line->new(
+        {
+            borrowernumber  => $patron->borrowernumber,
+            debit_type_code => "RESERVE",
+            status          => "UNRETURNED",
+            amount          => 5.00,
+            old_reserve_id  => $old_hold->reserve_id,
+            interface       => 'commandline',
+        }
+    )->store;
+
+    my $returned_old_hold = $line_with_old_hold->hold;
+    is(
+        ref($returned_old_hold), 'Koha::Old::Hold',
+        'hold() returns a Koha::Old::Hold object when old_reserve_id is set'
+    );
+    is( $returned_old_hold->reserve_id, $old_hold->reserve_id, 'hold() returns the correct old hold' );
+
+    # Test 3: Account line with neither reserve_id nor old_reserve_id returns undef
+    my $line_without_hold = Koha::Account::Line->new(
+        {
+            borrowernumber  => $patron->borrowernumber,
+            debit_type_code => "OVERDUE",
+            status          => "RETURNED",
+            amount          => 3.00,
+            interface       => 'commandline',
+        }
+    )->store;
+
+    is( $line_without_hold->hold, undef, 'hold() returns undef when neither reserve_id nor old_reserve_id is set' );
+
+    # Test 4: Set reserve_id to NULL and verify it returns undef
+    $line_with_hold->reserve_id(undef)->store;
+
+    is( $line_with_hold->hold, undef, 'hold() returns undef when reserve_id is set to NULL' );
+
+    # Test 5: Set old_reserve_id to NULL and verify it returns undef
+    $line_with_old_hold->old_reserve_id(undef)->store;
+
+    is( $line_with_old_hold->hold, undef, 'hold() returns undef when old_reserve_id is set to NULL' );
 
     $schema->storage->txn_rollback;
 };

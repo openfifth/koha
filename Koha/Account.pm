@@ -509,8 +509,15 @@ sub add_debit {
         my $hold = Koha::Holds->find($hold_id);
         unless ($hold) {
             my $old_hold = Koha::Old::Holds->find($hold_id);
-            $hold_id     = undef;
-            $old_hold_id = $old_hold->id;
+            if ($old_hold) {
+                $hold_id     = undef;
+                $old_hold_id = $old_hold->id;
+            } else {
+
+                # Neither current nor old hold exists, keep hold_id as is for now
+                # The caller will need to handle this case
+                $hold_id = undef;
+            }
         }
     }
 
