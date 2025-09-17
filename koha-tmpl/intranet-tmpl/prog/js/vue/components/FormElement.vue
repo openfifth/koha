@@ -2,7 +2,7 @@
     <label
         v-if="attr.label"
         :for="getElementId"
-        :class="{ required: attr.required }"
+        :class="{ required: attr.required, 'd-none': attr.hide }"
         :style="{ ...attr.style }"
         >{{ attr.label }}:</label
     >
@@ -25,6 +25,7 @@
             :placeholder="attr.placeholder || attr.label"
             :required="attr.required ? true : false"
             :disabled="disabled"
+            :class="{ 'd-none': attr.hide }"
             @update:modelValue="checkForInputError()"
         />
     </template>
