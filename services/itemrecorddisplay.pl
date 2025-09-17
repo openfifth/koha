@@ -58,7 +58,7 @@ unless ($result) {
 $template->param(%$result);
 
 if ($return_json) {
-    output_with_http_headers $input, undef, to_json($result), 'json';
+    output_with_http_headers $input, undef, to_json( $result, { utf8 => 1 } ), 'json';
     exit 0;
 }
 
