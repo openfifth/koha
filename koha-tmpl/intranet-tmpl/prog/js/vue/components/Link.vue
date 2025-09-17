@@ -11,7 +11,7 @@
     <a
         v-else-if="action === undefined && onClick"
         @click="onClick"
-        class="btn btn-default"
+        :class="cssClass"
         ><font-awesome-icon v-if="icon" :icon="icon" /> {{ title }}</a
     >
     <a
