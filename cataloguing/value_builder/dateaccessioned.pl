@@ -40,7 +40,6 @@ my $builder = sub {
     my $res = <<END_OF_JS;
 <script>
 /* from: cataloguing/value_builder/dateaccessioned.pl */
-
 \$(document).ready(function(){
     \$("#$function_name").flatpickr({
         onReady: function(selectedDates, dateStr, instance) {
@@ -50,7 +49,7 @@ my $builder = sub {
                 overwriteMode: 'replace',
             });
 
-            new Maskito( instance.altInput || instance.input, options );
+            new Maskito( instance.altInput, options );
         },
         onOpen: function(selectedDates, dateStr, instance) {
             if (dateStr == '') {

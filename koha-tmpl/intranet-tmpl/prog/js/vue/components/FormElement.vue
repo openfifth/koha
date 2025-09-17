@@ -146,6 +146,7 @@
             v-bind="getComponentProps()"
             v-on="getEventHandlers()"
             v-model="resource[attr.name]"
+            :classNames="attr.class"
         ></component>
     </template>
     <template v-else-if="attr.type == 'component' && attr.componentPath">

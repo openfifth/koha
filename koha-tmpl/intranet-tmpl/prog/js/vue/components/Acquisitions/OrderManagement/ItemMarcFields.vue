@@ -68,6 +68,9 @@ export default {
                         : field.marc_value.includes("<script>")
                           ? "valueBuilder"
                           : "text";
+                const usesFlatpickr =
+                    typeof field.marc_value === "string" &&
+                    field.marc_value.includes("flatpickr");
                 const fieldDefinition = {
                     name: field.kohafield.split(".").pop(),
                     label: field.subfield + " - " + field.marc_lib,
@@ -81,14 +84,16 @@ export default {
                         requiredKey: "value",
                     }),
                     ...(type === "valueBuilder" && {
-                        type: "text",
+                        type: usesFlatpickr ? "date" : "text",
                         valueBuilder: true,
-                        dataPlugin: field.marc_value
-                            .split('data-plugin="')[1]
-                            .split('"')[0],
+                        dataPlugin: [
+                            field.marc_value
+                                .split('data-plugin="')[1]
+                                .split('"')[0],
+                        ],
                         class: "input_marceditor framework_plugin noEnterSubmit",
                     }),
-                    id: field.id,
+                    id: usesFlatpickr ? `flatpickr-${field.id}` : field.id,
                 };
                 if (type === "valueBuilder") {
                     const valueScript = field.marc_value
@@ -197,9 +202,9 @@ export default {
     width: 25%;
 }
 
-#itemfieldset .input_marceditor {
+/* #itemfieldset .input_marceditor {
     flex-basis: 50%;
-}
+} */
 
 #itemfieldset .input_marceditor.flatpickr-input {
     width: 50%;
