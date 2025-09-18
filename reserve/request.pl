@@ -33,7 +33,7 @@ use List::MoreUtils qw( uniq );
 use Date::Calc qw( Date_to_Days );
 use C4::Output qw( output_html_with_http_headers );
 use C4::Auth qw( get_template_and_user );
-use C4::Reserves qw( RevertWaitingStatus AlterPriority ToggleLowestPriority CanBookBeReserved GetMaxPatronHoldsForRecord CanItemBeReserved IsAvailableForItemLevelRequest GetReserveFee );
+use C4::Reserves qw( RevertWaitingStatus AlterPriority ToggleLowestPriority CanBookBeReserved GetMaxPatronHoldsForRecord CanItemBeReserved IsAvailableForItemLevelRequest );
 use C4::Items qw( get_hostitemnumbers_of );
 use C4::Koha qw( getitemtypeimagelocation );
 use C4::Serials qw( CountSubscriptionFromBiblionumber );
@@ -43,6 +43,7 @@ use C4::Search qw( enabled_staff_search_views );
 
 use Koha::Biblios;
 use Koha::Checkouts;
+use Koha::Hold;
 use Koha::Holds;
 use Koha::CirculationRules;
 use Koha::Items;
@@ -713,7 +714,12 @@ if (   ( $findborrower && $borrowernumber_hold || $findclub && $club_hold )
 
         # Pass through any reserve charge
         if ($patron) {
-            $biblioloopiter{reserve_charge} = GetReserveFee( $patron->borrowernumber, $biblionumber );
+            my $hold = Koha::Hold->new({
+                borrowernumber => $patron->borrowernumber,
+                biblionumber   => $biblionumber,
+                itemnumber     => undef,  # Title-level hold
+            });
+            $biblioloopiter{reserve_charge} = $hold->calculate_hold_fee();
         }
 
         if (@reserveloop) {
@@ -746,7 +752,13 @@ unless ($multi_hold) {
 
     # Pass through any reserve charge for single holds
     if ($borrowernumber_hold) {
-        $template->param( reserve_charge => GetReserveFee( $borrowernumber_hold, $biblionumbers[0] ) );
+        my $patron = Koha::Patrons->find($borrowernumber_hold);
+        my $hold = Koha::Hold->new({
+            borrowernumber => $patron->borrowernumber,
+            biblionumber   => $biblionumbers[0],
+            itemnumber     => undef,  # Title-level hold
+        });
+        $template->param( reserve_charge => $hold->calculate_hold_fee() );
     }
 }
 $template->param( biblionumbers => \@biblionumbers );
