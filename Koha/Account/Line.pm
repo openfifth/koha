@@ -988,6 +988,8 @@ sub to_api_mapping {
         manager_id        => 'user_id',
         note              => 'internal_note',
         register_id       => 'cash_register_id',
+        reserve_id        => 'hold_id',
+        old_reserve_id    => 'old_hold_id',
     };
 
 }

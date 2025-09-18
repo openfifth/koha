@@ -82,6 +82,16 @@ properties:
       - integer
       - "null"
     description: Internal patron identifier for the staff member that introduced the account line
+  hold_id:
+    type:
+      - integer
+      - "null"
+    description: Internal identifier for the hold the account line is related to
+  old_hold_id:
+    type:
+      - integer
+      - "null"
+    description: Internal identifier for the old hold the account line is related to
 required:
   - amount
 additionalProperties: false
