@@ -2096,7 +2096,9 @@ subtest '->set_password' => sub {
 
     $schema->storage->txn_begin;
 
-    my $patron = $builder->build_object( { class => 'Koha::Patrons', value => { login_attempts => 3 } } );
+    # Create a category with password history disabled for these tests
+    my $category = $builder->build_object( { class => 'Koha::Patron::Categories', value => { password_history_count => 0 } } );
+    my $patron = $builder->build_object( { class => 'Koha::Patrons', value => { login_attempts => 3, categorycode => $category->categorycode } } );
 
     # Disable logging password changes for these tests
     t::lib::Mocks::mock_preference( 'BorrowersLog', 0 );

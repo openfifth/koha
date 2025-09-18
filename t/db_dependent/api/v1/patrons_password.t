@@ -39,10 +39,13 @@ subtest 'set() (authorized user tests)' => sub {
 
     $schema->storage->txn_begin;
 
+    # Create categories with password history disabled for these tests
+    my $category = $builder->build_object( { class => 'Koha::Patron::Categories', value => { password_history_count => 0 } } );
+
     my $privileged_patron = $builder->build_object(
         {
             class => 'Koha::Patrons',
-            value => { flags => 1 }
+            value => { flags => 1, categorycode => $category->categorycode }
         }
     );
     my $password = 'thePassword123';
@@ -50,7 +53,7 @@ subtest 'set() (authorized user tests)' => sub {
         { password => $password, skip_validation => 1 } );
     my $userid = $privileged_patron->userid;
 
-    my $patron = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $patron = $builder->build_object( { class => 'Koha::Patrons', value => { categorycode => $category->categorycode } } );
 
     t::lib::Mocks::mock_preference( 'minPasswordLength',     3 );
     t::lib::Mocks::mock_preference( 'RequireStrongPassword', 0 );
@@ -124,7 +127,10 @@ subtest 'set_public() (unprivileged user tests)' => sub {
     my $category = $builder->build_object(
         {
             class => 'Koha::Patron::Categories',
-            value => { change_password => 0 } # disallow changing password for the patron category
+            value => {
+                change_password => 0, # disallow changing password for the patron category
+                password_history_count => 0 # disable password history for these tests
+            }
         }
     );
     my $patron = $builder->build_object(
@@ -137,7 +143,7 @@ subtest 'set_public() (unprivileged user tests)' => sub {
     my $password = 'thePassword123';
     $patron->set_password( { password => $password, skip_validation => 1 } );
     my $userid       = $patron->userid;
-    my $other_patron = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $other_patron = $builder->build_object( { class => 'Koha::Patrons', value => { categorycode => $category->categorycode } } );
 
     # Enable the public API
     t::lib::Mocks::mock_preference( 'RESTPublicAPI', 1 );
