@@ -316,6 +316,21 @@ __PACKAGE__->set_primary_key("reserve_id");
 
 =head1 RELATIONS
 
+=head2 accountlines
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::Accountline>
+
+=cut
+
+__PACKAGE__->has_many(
+  "accountlines",
+  "Koha::Schema::Result::Accountline",
+  { "foreign.old_reserve_id" => "self.reserve_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 biblionumber
 
 Type: belongs_to
@@ -437,8 +452,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2024-10-30 17:21:09
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:6huDoFe9Uil1WyJ7EOcQSw
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-09-18 16:35:16
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:p9Xzk3e7W8K9mOGtIxLvUw
 
 __PACKAGE__->belongs_to(
   "item",

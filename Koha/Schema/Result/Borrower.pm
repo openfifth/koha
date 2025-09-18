@@ -1151,6 +1151,21 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 borrower_password_histories
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::BorrowerPasswordHistory>
+
+=cut
+
+__PACKAGE__->has_many(
+  "borrower_password_histories",
+  "Koha::Schema::Result::BorrowerPasswordHistory",
+  { "foreign.borrowernumber" => "self.borrowernumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 borrower_relationships_guarantees
 
 Type: has_many
@@ -2197,8 +2212,8 @@ Composing rels: L</user_permissions> -> permission
 __PACKAGE__->many_to_many("permissions", "user_permissions", "permission");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2024-11-11 11:07:06
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:wJkyjCy8MXEe2ZZCxszAMQ
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-09-18 14:50:41
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:NvgiRcbM+TBcYxeKc7gXhQ
 
 __PACKAGE__->belongs_to(
   "library",
