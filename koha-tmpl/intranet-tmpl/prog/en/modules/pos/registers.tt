@@ -112,17 +112,31 @@
                             </td>
                             [% IF CAN_user_cash_management_cashup %]
                                 <td>
-                                    <button
-                                        type="button"
-                                        class="cashup_individual btn btn-xs btn-default"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#confirmCashupModal"
-                                        data-register="[% register.description | html %]"
-                                        data-bankable="[% rbankable | $Price %]"
-                                        data-float="[% register.starting_float | $Price %]"
-                                        data-registerid="[% register.id | html %]"
-                                        ><i class="fa-solid fa-money-bill-1"></i> Record cashup</button
-                                    >
+                                    [% IF register.cashup_in_progress %]
+                                        <button
+                                            type="button"
+                                            class="btn btn-xs btn-primary pos_complete_cashup"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#confirmCashupModal"
+                                            data-register="[% register.description | html %]"
+                                            data-bankable="[% rbankable | $Price %]"
+                                            data-float="[% register.starting_float | $Price %]"
+                                            data-registerid="[% register.id | html %]"
+                                            ><i class="fa-solid fa-check"></i> Complete cashup</button
+                                        >
+                                    [% ELSE %]
+                                        <button
+                                            type="button"
+                                            class="cashup_individual btn btn-xs btn-default"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#triggerCashupModalRegister"
+                                            data-register="[% register.description | html %]"
+                                            data-bankable="[% rbankable | $Price %]"
+                                            data-float="[% register.starting_float | $Price %]"
+                                            data-registerid="[% register.id | html %]"
+                                            ><i class="fa-solid fa-money-bill-1"></i> Record cashup</button
+                                        >
+                                    [% END %]
                                 </td>
                             [% END %]
                         </tr>
@@ -147,24 +161,89 @@
     [% END %]
 [% END %]
 
-<!-- Confirm cashup modal -->
-<div class="modal" id="confirmCashupModal" tabindex="-1" role="dialog" aria-labelledby="confirmCashupLabel">
-    <form id="cashup_individual_form" method="post" enctype="multipart/form-data">
+<!-- Trigger cashup modal for individual registers -->
+<div class="modal" id="triggerCashupModalRegister" tabindex="-1" role="dialog" aria-labelledby="triggerCashupLabelRegister">
+    <form method="post" class="validated">
         [% INCLUDE 'csrf-token.inc' %]
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h1 class="modal-title" id="confirmCashupLabel"
-                        >Confirm cashup of <em><span id="registerc"></span></em
-                    ></h1>
+                    <h1 class="modal-title" id="triggerCashupLabelRegister">
+                        Cashup for <em><span id="register_desc"></span></em>
+                    </h1>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body"> Please confirm that you have removed <span id="cashc"></span> from the cash register and left a float of <span id="floatc"></span>. </div>
+                <div class="modal-body">
+                    <p><strong>Choose how to proceed with the cashup:</strong></p>
+                    <p><strong>Start cashup</strong></p>
+                    <ul>
+                        <li>Remove cash from the register for counting</li>
+                        <li>The register can continue operating during counting</li>
+                        <li>Complete the cashup once counted</li>
+                    </ul>
+                    <p><strong>Quick cashup</strong></p>
+                    <ul>
+                        <li>Confirm you have removed <span id="expected_amount_display"></span> cash from the register to bank immediately</li>
+                    </ul>
+                    <p
+                        >Remember to leave the float amount of <strong><span id="float_amount_display"></span></strong> in the register.</p
+                    >
+                </div>
+                <div class="modal-footer">
+                    <input type="hidden" name="registerid" id="register_id_field" value="" />
+                    <input type="hidden" name="op" value="cud-cashup_start" />
+                    <input type="hidden" name="amount" value="" />
+                    <button type="submit" class="btn btn-primary">Start cashup</button>
+                    <button type="button" class="btn btn-success" id="quick_cashup_btn">Quick cashup</button>
+                    <button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+<!-- /#triggerCashupModalRegister -->
+
+<!-- Confirm cashup modal -->
+<div class="modal" id="confirmCashupModal" tabindex="-1" role="dialog" aria-labelledby="confirmCashupLabel">
+    <form id="cashup_individual_form" method="post" enctype="multipart/form-data" class="validated">
+        [% INCLUDE 'csrf-token.inc' %]
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title" id="confirmCashupLabel">
+                        Confirm cashup of <em><span id="registerc"></span></em>
+                    </h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <fieldset class="rows">
+                        <ol>
+                            <li>
+                                <span class="label"> Expected cashup amount: </span>
+                                <span id="cashc" class="expected-amount"></span>
+                            </li>
+                            <li>
+                                <label class="required" for="amount"> Actual cashup amount counted: </label>
+                                <input type="text" inputmode="decimal" pattern="^\d+(\.\d{2})?$" id="amount" name="amount" required="required" />
+                                <span class="required">Required</span>
+                            </li>
+                            <li id="reconciliation_display" style="display: none;">
+                                <span class="label">Reconciliation:</span>
+                                <span id="reconciliation_text"></span>
+                            </li>
+                            <li id="reconciliation_note_field" style="display: none;">
+                                <label for="reconciliation_note">Note (optional):</label>
+                                <textarea id="reconciliation_note" name="reconciliation_note" rows="3" cols="40" maxlength="1000" placeholder="Enter a note explaining the surplus or deficit..."></textarea>
+                                <div class="hint">Maximum 1000 characters</div>
+                            </li>
+                        </ol>
+                    </fieldset>
+                </div>
                 <!-- /.modal-body -->
                 <div class="modal-footer">
                     <input type="hidden" name="registerid" id="cashup_registerid" value="" />
                     <input type="hidden" name="op" value="cud-cashup" />
-                    <button type="submit" class="btn btn-primary" id="cashup_confirm">Confirm</button>
+                    <button type="submit" class="btn btn-primary" id="cashup_confirm"> Complete cashup</button>
                     <button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancel</button>
                 </div>
                 <!-- /.modal-footer -->
@@ -229,6 +308,51 @@
                 paginationType: "full",
             });
 
+            // Real-time reconciliation calculation for cashup modal
+            $("#amount").on("input", function() {
+                var actualAmount = parseFloat($(this).val()) || 0;
+                var expectedText = $("#expected_amount").text().replace(/[£$,]/g, '');
+                var expectedAmount = parseFloat(expectedText) || 0;
+                var difference = actualAmount - expectedAmount;
+
+                if ($(this).val() && !isNaN(actualAmount)) {
+                    var reconciliationText = "";
+                    var reconciliationClass = "";
+                    var hasDiscrepancy = false;
+
+                    if (difference > 0) {
+                        reconciliationText = "Surplus: " + difference.format_price();
+                        reconciliationClass = "success";
+                        hasDiscrepancy = true;
+                    } else if (difference < 0) {
+                        reconciliationText = "Deficit: " + Math.abs(difference).format_price();
+                        reconciliationClass = "warning";
+                        hasDiscrepancy = true;
+                    } else {
+                        reconciliationText = "Balanced - no surplus or deficit";
+                        reconciliationClass = "success";
+                        hasDiscrepancy = false;
+                    }
+
+                    $("#reconciliation_text").text(reconciliationText)
+                        .removeClass("success warning")
+                        .addClass(reconciliationClass);
+                    $("#reconciliation_display").show();
+
+                    // Show/hide note field based on whether there's a discrepancy
+                    if (hasDiscrepancy) {
+                        $("#reconciliation_note_field").show();
+                    } else {
+                        $("#reconciliation_note_field").hide();
+                        $("#reconciliation_note").val(''); // Clear note when balanced
+                    }
+                } else {
+                    $("#reconciliation_display").hide();
+                    $("#reconciliation_note_field").hide();
+                }
+            });
+
+            // Reset modal when opened
             $("#confirmCashupModal").on("shown.bs.modal", function(e){
                var button = $(e.relatedTarget);
                var register = button.data('register');
@@ -239,6 +363,42 @@
                $('#floatc').text(rfloat);
                var rid = button.data('registerid');
                $('#cashup_registerid').val(rid);
+               $("#amount").val('').focus();
+               $("#reconciliation_display").hide();
+               $("#reconciliation_note_field").hide();
+               $("#reconciliation_note").val('');
+            });
+
+            // Handle the new trigger cashup modal for individual registers
+            $("#triggerCashupModalRegister").on("shown.bs.modal", function(e){
+               var button = $(e.relatedTarget);
+               var register = button.data('register');
+               $("#register_desc").text(register);
+               var bankable = button.data('bankable');
+               $("#expected_amount_display").text(bankable);
+               var rfloat = button.data('float');
+               $('#float_amount_display').text(rfloat);
+               var rid = button.data('registerid');
+               $('#register_id_field').val(rid);
+
+               // Store bankable amount for quick cashup
+               $('#triggerCashupModalRegister').data('bankable-amount', bankable.replace(/[^0-9.-]/g, ''));
+            });
+
+            // Handle Quick cashup button click
+            $("#quick_cashup_btn").on("click", function(e){
+               e.preventDefault();
+               var form = $(this).closest('form');
+               var bankableAmount = $('#triggerCashupModalRegister').data('bankable-amount');
+
+               // Change operation to cud-cashup (quick cashup)
+               form.find('input[name="op"]').val('cud-cashup');
+
+               // Set the amount to the expected bankable amount
+               form.find('input[name="amount"]').val(bankableAmount);
+
+               // Submit the form
+               form.submit();
             });
         });
     </script>
