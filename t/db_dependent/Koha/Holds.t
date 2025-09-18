@@ -135,7 +135,7 @@ subtest 'cancel' => sub {
 
     subtest 'charge_cancel_fee parameter' => sub {
         plan tests => 4;
-        my $patron_category = $builder->build_object({ class => 'Koha::Patron::Categories', value => { reservefee => 0 } } );
+        my $patron_category = $builder->build_object({ class => 'Koha::Patron::Categories' } );
         my $patron = $builder->build_object({ class => 'Koha::Patrons', value => { categorycode => $patron_category->categorycode } });
         is( $patron->account->balance, 0, 'A new patron does not have any charges' );
 
