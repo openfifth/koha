@@ -810,6 +810,7 @@ INSERT INTO systempreferences ( `variable`, `value`, `options`, `explanation`, `
 ('TimeFormat','24hr','12hr|24hr','Defines the global time format for visual output.','Choice'),
 ('timeout','1d',NULL,'Inactivity timeout for cookies authentication','Free'),
 ('todaysIssuesDefaultSortOrder','desc','asc|desc','Specify the sort order of Todays Issues on the circulation page','Choice'),
+('TitleHoldFeeStrategy', 'highest', 'highest|lowest|most_common', 'Strategy for calculating fees on title-level holds when items have different fees: highest = charge maximum fee, lowest = charge minimum fee, most_common = charge most frequently occurring fee', 'Choice'),
 ('TraceCompleteSubfields','0','0','Force subject tracings to only match complete subfields.','YesNo'),
 ('TraceSubjectSubdivisions','0','1','Create searches on all subdivisions for subject tracings.','YesNo'),
 ('TrackClicks','0',NULL,'Track links clicked','Integer'),
