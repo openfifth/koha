@@ -166,7 +166,6 @@ if ( !$registers->count ) {
                     print $input->redirect( "/cgi-bin/koha/pos/register.pl?registerid=" . $registerid );
                     exit;
                 }
-
             } else {
                 $template->param( error_cashup_amount => 1 );
             }
