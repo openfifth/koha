@@ -173,54 +173,26 @@ sub store {
     try {
         return $self->_result()->update_or_insert() ? $self : undef;
     } catch {
+        # Use centralized exception translation
+        warn $_->{msg} if ref($_) eq 'DBIx::Class::Exception';
 
-        # Catch problems and raise relevant exceptions
-        if ( ref($_) eq 'DBIx::Class::Exception' ) {
-            warn $_->{msg};
-            if ( $_->{msg} =~ /Cannot add or update a child row: a foreign key constraint fails/ ) {
-
-                # FK constraints
-                # FIXME: MySQL error, if we support more DB engines we should implement this for each
-                if ( $_->{msg} =~ /FOREIGN KEY \(`(?<column>.*?)`\)/ ) {
-                    Koha::Exceptions::Object::FKConstraint->throw(
-                        error     => 'Broken FK constraint',
-                        broken_fk => $+{column}
-                    );
-                }
-            } elsif ( $_->{msg} =~ /Duplicate entry '(.*?)' for key '(?<key>.*?)'/ ) {
-                Koha::Exceptions::Object::DuplicateID->throw(
-                    error        => 'Duplicate ID',
-                    duplicate_id => $+{key}
-                );
-            } elsif ( $_->{msg} =~ /Incorrect (?<type>\w+) value: '(?<value>.*)' for column \W?(?<property>\S+)/ )
-            {    # The optional \W in the regex might be a quote or backtick
-                my $type     = $+{type};
-                my $value    = $+{value};
-                my $property = $+{property};
-                $property =~ s/['`]//g;
-                Koha::Exceptions::Object::BadValue->throw(
-                    type     => $type,
-                    value    => $value,
-                    property => $property =~ /(\w+\.\w+)$/
-                    ? $1
-                    : $property,    # results in table.column without quotes or backtics
-                );
-            } elsif ( $_->{msg} =~ /Data truncated for column \W?(?<property>\w+)/ )
-            {                       # The optional \W in the regex might be a quote or backtick
-                my $property = $+{property};
-                my $type     = $columns_info->{$property}->{data_type};
+        # For enum data truncation, we need to pass the object value which the utility can't access
+        if ( ref($_) eq 'DBIx::Class::Exception' && $_->{msg} =~ /Data truncated for column \W?(?<property>\w+)/ ) {
+            my $property = $+{property};
+            my $type     = $columns_info->{$property}->{data_type} // '';
+            if ( $type eq 'enum' ) {
                 Koha::Exceptions::Object::BadValue->throw(
                     type     => 'enum',
                     property => $property =~ /(\w+\.\w+)$/
                     ? $1
-                    : $property,    # results in table.column without quotes or backtics
+                    : $property,    # results in table.column without quotes or backticks
                     value => $self->$property,
-                ) if $type eq 'enum';
+                );
             }
         }
 
-        # Catch-all for foreign key breakages. It will help find other use cases
-        $_->rethrow();
+        # Delegate to centralized exception translation
+        $self->_result->result_source->schema->translate_exception($_, $columns_info);
     }
 }
 
