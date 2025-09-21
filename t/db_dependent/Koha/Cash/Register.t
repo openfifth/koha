@@ -1071,8 +1071,10 @@ subtest 'start_cashup_parameter_validation' => sub {
 
         my $register3 = $builder->build_object( { class => 'Koha::Cash::Registers' } );
 
-        eval { $register3->start_cashup( { manager_id => 99999999 } ); };
-        ok( $@, 'start_cashup fails with invalid manager_id' );
+        throws_ok {
+            $register3->start_cashup( { manager_id => 99999999 } );
+        }
+        'Koha::Exceptions::Object::FKConstraint', 'start_cashup throws FK constraint exception with invalid manager_id';
     };
 
     # Test 4: Duplicate start_cashup prevention
@@ -1377,9 +1379,10 @@ subtest 'add_cashup' => sub {
 
         my $register9 = $builder->build_object( { class => 'Koha::Cash::Registers' } );
 
-        eval { $register9->add_cashup( { manager_id => 99999999, amount => '10.00' } ); };
-        ok( $@, 'add_cashup fails with invalid manager_id' );
-        diag($@);
+        throws_ok {
+            $register9->add_cashup( { manager_id => 99999999, amount => '10.00' } );
+        }
+        'Koha::Exceptions::Object::FKConstraint', 'add_cashup throws FK constraint exception with invalid manager_id';
     };
 
     $schema->storage->txn_rollback;
