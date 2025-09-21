@@ -224,8 +224,12 @@
                                 <span>The new owner has no share for this list.</span>
                             [% CASE 'Koha::Exceptions::Virtualshelf::DuplicateObject' %]
                                 <span>An error occurred when creating the list. The name [% shelfname | html %] already exists.</span>
-                            [% CASE 'DBIx::Class::Exception' %]
-                                [% m.msg | html %]
+                            [% CASE 'Koha::Exceptions::Object::FKConstraint' %]
+                                <span>Database constraint error: [% m.msg | html %]</span>
+                            [% CASE 'Koha::Exceptions::Object::DuplicateID' %]
+                                <span>Duplicate entry error: [% m.msg | html %]</span>
+                            [% CASE 'Koha::Exceptions::Object::BadValue' %]
+                                <span>Invalid data error: [% m.msg | html %]</span>
                             [% CASE %]
                                 [% m.code | html %]
                                 [% m.msg | html %]
