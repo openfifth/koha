@@ -111,43 +111,46 @@ sub approve {
         };
     }
 
-    $self->_result->result_source->schema->txn_do(
+    my $schema = $self->_result->result_source->schema;
+    $schema->txn_do(
         sub {
             try {
-                $patron->store();
+                $schema->safe_do(
+                    sub {
+                        $patron->store();
 
-                # Deal with attributes
-                my @codes = uniq( map { $_->{code} } @{$extended_attributes} );
-                foreach my $code (@codes) {
-                    map { $_->delete } Koha::Patron::Attributes->search(
-                        {
-                            borrowernumber => $patron->borrowernumber,
-                            code           => $code
+                        # Deal with attributes
+                        my @codes = uniq( map { $_->{code} } @{$extended_attributes} );
+                        foreach my $code (@codes) {
+                            map { $_->delete } Koha::Patron::Attributes->search(
+                                {
+                                    borrowernumber => $patron->borrowernumber,
+                                    code           => $code
+                                }
+                            )->as_list;
                         }
-                    )->as_list;
-                }
-                foreach my $attr ( @{$extended_attributes} ) {
-                    $attr->{attribute} = exists $attr->{attribute} ? $attr->{attribute} : $attr->{value};
-                    Koha::Patron::Attribute->new(
-                        {
-                            borrowernumber => $patron->borrowernumber,
-                            code           => $attr->{code},
-                            attribute      => $attr->{attribute},
+                        foreach my $attr ( @{$extended_attributes} ) {
+                            $attr->{attribute} = exists $attr->{attribute} ? $attr->{attribute} : $attr->{value};
+                            Koha::Patron::Attribute->new(
+                                {
+                                    borrowernumber => $patron->borrowernumber,
+                                    code           => $attr->{code},
+                                    attribute      => $attr->{attribute},
+                                }
+                                )->store
+                                if $attr->{attribute}    # there's a value
+                                or (
+                                defined $attr->{attribute}     # there's a value that is 0, and not
+                                && $attr->{attribute} ne ""    # the empty string which means delete
+                                && $attr->{attribute} == 0
+                                );
                         }
-                        )->store
-                        if $attr->{attribute}    # there's a value
-                        or (
-                        defined $attr->{attribute}     # there's a value that is 0, and not
-                        && $attr->{attribute} ne ""    # the empty string which means delete
-                        && $attr->{attribute} == 0
-                        );
-                }
+                    }
+                );
             } catch {
-                if ( $_->isa('DBIx::Class::Exception') ) {
-                    Koha::Exceptions::Patron::Modification->throw( $_->{msg} );
-                } else {
-                    Koha::Exceptions::Patron::Modification->throw($_);
-                }
+
+                # Convert any exception to domain-specific exception
+                Koha::Exceptions::Patron::Modification->throw($_);
             };
         }
     );
