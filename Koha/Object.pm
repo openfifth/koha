@@ -174,26 +174,11 @@ sub store {
         return $self->_result()->update_or_insert() ? $self : undef;
     } catch {
 
-        # Use centralized exception translation
+        # Log DBIx::Class exceptions for debugging (expected by tests)
         warn $_->{msg} if ref($_) eq 'DBIx::Class::Exception';
 
-        # For enum data truncation, we need to pass the object value which the utility can't access
-        if ( ref($_) eq 'DBIx::Class::Exception' && $_->{msg} =~ /Data truncated for column \W?(?<property>\w+)/ ) {
-            my $property = $+{property};
-            my $type     = $columns_info->{$property}->{data_type} // '';
-            if ( $type eq 'enum' ) {
-                Koha::Exceptions::Object::BadValue->throw(
-                    type     => 'enum',
-                    property => $property =~ /(\w+\.\w+)$/
-                    ? $1
-                    : $property,    # results in table.column without quotes or backticks
-                    value => $self->$property,
-                );
-            }
-        }
-
-        # Delegate to centralized exception translation
-        $self->_result->result_source->schema->translate_exception( $_, $columns_info );
+        # Delegate to centralized exception translation with object context for enum handling
+        $self->_result->result_source->schema->translate_exception( $_, $columns_info, $self );
     }
 }
 

@@ -15,7 +15,7 @@ package Koha::Schema::Util::ExceptionTranslator;
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with Koha; if not, see <http://www.gnu.org/licenses>.
+# along with Koha; if not, see <https://www.gnu.org/licenses>.
 
 use Modern::Perl;
 
@@ -80,7 +80,7 @@ If the exception cannot be translated, it rethrows the original exception.
 =cut
 
 sub translate_exception {
-    my ( $class, $exception, $columns_info ) = @_;
+    my ( $class, $exception, $columns_info, $object ) = @_;
 
     # Only handle DBIx::Class exceptions
     return $exception->rethrow() unless ref($exception) eq 'DBIx::Class::Exception';
@@ -148,12 +148,19 @@ sub translate_exception {
         if ( $columns_info && $columns_info->{$property} ) {
             my $type = $columns_info->{$property}->{data_type};
             if ( $type && $type eq 'enum' ) {
+                my $value = 'Invalid enum value';    # Default value
+
+                # If we have an object, try to get the actual property value
+                if ( $object && $object->can($property) ) {
+                    eval { $value = $object->$property; };
+                }
+
                 Koha::Exceptions::Object::BadValue->throw(
                     type     => 'enum',
                     property => $property =~ /(\w+\.\w+)$/
                     ? $1
-                    : $property,                      # results in table.column without quotes or backticks
-                    value => 'Invalid enum value',    # We don't have access to the object here
+                    : $property,    # results in table.column without quotes or backticks
+                    value => $value,
                 );
             }
         }

@@ -19,7 +19,7 @@
 
 use Modern::Perl;
 use Test::NoWarnings;
-use Test::More tests => 8;
+use Test::More tests => 9;
 use Test::Exception;
 
 use Koha::Database;
@@ -140,6 +140,45 @@ subtest 'fk_constraint_deletion_translation' => sub {
         Koha::Schema::Util::ExceptionTranslator->translate_exception($exception);
     }
     'Koha::Exceptions::Object::FKConstraintDeletion', 'FK constraint deletion exception is properly translated';
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'enum_truncation_with_object_value' => sub {
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    # Create a mock object with a property accessor
+    my $mock_object = bless { test_enum => 'invalid_value' }, 'TestObject';
+
+    # Add the can method to simulate a real object
+    {
+        no strict 'refs';
+        *{"TestObject::can"} = sub {
+            my ( $self, $method ) = @_;
+            return $method eq 'test_enum' ? sub { return $self->{test_enum} } : undef;
+        };
+        *{"TestObject::test_enum"} = sub { return $_[0]->{test_enum} };
+    }
+
+    # Create a mock DBIx::Class::Exception for enum data truncation
+    my $exception = bless { msg => "Data truncated for column 'test_enum'" }, 'DBIx::Class::Exception';
+
+    # Mock column info with enum type
+    my $columns_info = { test_enum => { data_type => 'enum' } };
+
+    # Test with object - should include the actual value
+    throws_ok {
+        Koha::Schema::Util::ExceptionTranslator->translate_exception( $exception, $columns_info, $mock_object );
+    }
+    'Koha::Exceptions::Object::BadValue', 'Enum truncation with object throws BadValue exception';
+
+    # Test without object - should use default value
+    throws_ok {
+        Koha::Schema::Util::ExceptionTranslator->translate_exception( $exception, $columns_info );
+    }
+    'Koha::Exceptions::Object::BadValue', 'Enum truncation without object throws BadValue exception';
 
     $schema->storage->txn_rollback;
 };
