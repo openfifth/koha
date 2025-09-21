@@ -15,7 +15,7 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with Koha; if not, see <http://www.gnu.org/licenses>.
+# along with Koha; if not, see <https://www.gnu.org/licenses>.
 
 use Modern::Perl;
 use Test::NoWarnings;
@@ -149,18 +149,27 @@ subtest 'enum_truncation_with_object_value' => sub {
 
     $schema->storage->txn_begin;
 
-    # Create a mock object with a property accessor
-    my $mock_object = bless { test_enum => 'invalid_value' }, 'TestObject';
+    # Create a mock object class with proper methods
+    package TestObject {
 
-    # Add the can method to simulate a real object
-    {
-        no strict 'refs';
-        *{"TestObject::can"} = sub {
+        sub new {
+            my ( $class, %args ) = @_;
+            return bless \%args, $class;
+        }
+
+        sub can {
             my ( $self, $method ) = @_;
-            return $method eq 'test_enum' ? sub { return $self->{test_enum} } : undef;
-        };
-        *{"TestObject::test_enum"} = sub { return $_[0]->{test_enum} };
+            return $method eq 'test_enum' ? \&test_enum : undef;
+        }
+
+        sub test_enum {
+            my ($self) = @_;
+            return $self->{test_enum};
+        }
     }
+
+    # Create a mock object with a property accessor
+    my $mock_object = TestObject->new( test_enum => 'invalid_value' );
 
     # Create a mock DBIx::Class::Exception for enum data truncation
     my $exception = bless { msg => "Data truncated for column 'test_enum'" }, 'DBIx::Class::Exception';
