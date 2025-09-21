@@ -2374,43 +2374,8 @@ sub add_to_bundle {
         );
     } catch {
 
-        # FIXME: See if we can move the below copy/paste from Koha::Object::store into it's own class and catch at a lower level in the Schema instantiation, take inspiration from DBIx::Error
-        if ( ref($_) eq 'DBIx::Class::Exception' ) {
-            if ( $_->{msg} =~ /Cannot add or update a child row: a foreign key constraint fails/ ) {
-
-                # FK constraints
-                # FIXME: MySQL error, if we support more DB engines we should implement this for each
-                if ( $_->{msg} =~ /FOREIGN KEY \(`(?<column>.*?)`\)/ ) {
-                    Koha::Exceptions::Object::FKConstraint->throw(
-                        error     => 'Broken FK constraint',
-                        broken_fk => $+{column}
-                    );
-                }
-            } elsif ( $_->{msg} =~ /Duplicate entry '(.*?)' for key '(?<key>.*?)'/ ) {
-                Koha::Exceptions::Object::DuplicateID->throw(
-                    error        => 'Duplicate ID',
-                    duplicate_id => $+{key}
-                );
-            } elsif ( $_->{msg} =~ /Incorrect (?<type>\w+) value: '(?<value>.*)' for column \W?(?<property>\S+)/ )
-            {    # The optional \W in the regex might be a quote or backtick
-                my $type     = $+{type};
-                my $value    = $+{value};
-                my $property = $+{property};
-                $property =~ s/['`]//g;
-                Koha::Exceptions::Object::BadValue->throw(
-                    type     => $type,
-                    value    => $value,
-                    property => $property =~ /(\w+\.\w+)$/
-                    ? $1
-                    : $property,    # results in table.column without quotes or backtics
-                );
-            }
-
-            # Catch-all for foreign key breakages. It will help find other use cases
-            $_->rethrow();
-        } else {
-            $_->rethrow();
-        }
+        # Use centralized exception translation instead of duplicated code
+        $schema->translate_exception($_);
     };
 }
 
