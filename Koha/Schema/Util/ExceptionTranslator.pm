@@ -89,6 +89,7 @@ sub translate_exception {
 
     # Foreign key constraint failures
     if ( $msg =~ /Cannot add or update a child row: a foreign key constraint fails/ ) {
+
         # FIXME: MySQL error, if we support more DB engines we should implement this for each
         if ( $msg =~ /FOREIGN KEY \(`(?<column>.*?)`\)/ ) {
             Koha::Exceptions::Object::FKConstraint->throw(
@@ -97,6 +98,20 @@ sub translate_exception {
             );
         }
     }
+
+    # Foreign key constraint deletion failures (parent row deletion blocked)
+    elsif ( $msg =~
+        /Cannot delete or update a parent row\: a foreign key constraint fails \(\`(?<database>.*?)\`\.\`(?<table>.*?)\`, CONSTRAINT \`(?<constraint>.*?)\` FOREIGN KEY \(\`(?<fk>.*?)\`\) REFERENCES \`.*\` \(\`(?<column>.*?)\`\)/
+        )
+    {
+        Koha::Exceptions::Object::FKConstraintDeletion->throw(
+            column     => $+{column},
+            constraint => $+{constraint},
+            fk         => $+{fk},
+            table      => $+{table},
+        );
+    }
+
     # Duplicate key violations
     elsif ( $msg =~ /Duplicate entry '(.*?)' for key '(?<key>.*?)'/ ) {
         Koha::Exceptions::Object::DuplicateID->throw(
@@ -104,8 +119,10 @@ sub translate_exception {
             duplicate_id => $+{key}
         );
     }
+
     # Invalid data type values
     elsif ( $msg =~ /Incorrect (?<type>\w+) value: '(?<value>.*)' for column \W?(?<property>\S+)/ ) {
+
         # The optional \W in the regex might be a quote or backtick
         my $type     = $+{type};
         my $value    = $+{value};
@@ -116,12 +133,14 @@ sub translate_exception {
             type     => $type,
             value    => $value,
             property => $property =~ /(\w+\.\w+)$/
-                ? $1
-                : $property,    # results in table.column without quotes or backticks
+            ? $1
+            : $property,    # results in table.column without quotes or backticks
         );
     }
+
     # Data truncation for enum columns
     elsif ( $msg =~ /Data truncated for column \W?(?<property>\w+)/ ) {
+
         # The optional \W in the regex might be a quote or backtick
         my $property = $+{property};
 
@@ -132,9 +151,9 @@ sub translate_exception {
                 Koha::Exceptions::Object::BadValue->throw(
                     type     => 'enum',
                     property => $property =~ /(\w+\.\w+)$/
-                        ? $1
-                        : $property,    # results in table.column without quotes or backticks
-                    value => 'Invalid enum value',  # We don't have access to the object here
+                    ? $1
+                    : $property,                      # results in table.column without quotes or backticks
+                    value => 'Invalid enum value',    # We don't have access to the object here
                 );
             }
         }
