@@ -173,6 +173,7 @@ sub store {
     try {
         return $self->_result()->update_or_insert() ? $self : undef;
     } catch {
+
         # Use centralized exception translation
         warn $_->{msg} if ref($_) eq 'DBIx::Class::Exception';
 
@@ -192,7 +193,7 @@ sub store {
         }
 
         # Delegate to centralized exception translation
-        $self->_result->result_source->schema->translate_exception($_, $columns_info);
+        $self->_result->result_source->schema->translate_exception( $_, $columns_info );
     }
 }
 
@@ -238,20 +239,9 @@ sub delete {
     try {
         $deleted = $self->_result()->delete;
     } catch {
-        if ( ref($_) eq 'DBIx::Class::Exception' ) {
-            if ( $_->{msg} =~
-                /Cannot delete or update a parent row\: a foreign key constraint fails \(\`(?<database>.*?)\`\.\`(?<table>.*?)\`, CONSTRAINT \`(?<constraint>.*?)\` FOREIGN KEY \(\`(?<fk>.*?)\`\) REFERENCES \`.*\` \(\`(?<column>.*?)\`\)/
-                )
-            {
-                Koha::Exceptions::Object::FKConstraintDeletion->throw(
-                    column     => $+{column},
-                    constraint => $+{constraint},
-                    fk         => $+{fk},
-                    table      => $+{table},
-                );
-            }
-            $_->rethrow();
-        }
+
+        # Delegate to centralized exception translation
+        $self->_result->result_source->schema->translate_exception($_);
     };
 
     if ( ref $deleted ) {
