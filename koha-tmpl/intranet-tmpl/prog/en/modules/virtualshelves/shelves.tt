@@ -195,8 +195,12 @@
                 <span>An error occurred when creating this list. The name [% shelfname | html %] already exists.</span>
             [% CASE 'Koha::Exceptions::Virtualshelf::UseDbAdminAccount' %]
                 <span>List could not be created. (Do not use the database administrator account.)</span>
-            [% CASE 'DBIx::Class::Exception' %]
-                [% m.msg | html %]
+            [% CASE 'Koha::Exceptions::Object::FKConstraint' %]
+                <span>Database constraint error: [% m.msg | html %]</span>
+            [% CASE 'Koha::Exceptions::Object::DuplicateID' %]
+                <span>Duplicate entry error: [% m.msg | html %]</span>
+            [% CASE 'Koha::Exceptions::Object::BadValue' %]
+                <span>Invalid data error: [% m.msg | html %]</span>
             [% CASE %]
                 [% m.code | html %]
                 [% m.msg | html %]
