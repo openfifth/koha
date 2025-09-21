@@ -117,6 +117,8 @@ if ( !$registers->count ) {
             if ($@) {
                 if ( $@->isa('Koha::Exceptions::Object::DuplicateID') ) {
                     $template->param( error_cashup_in_progress => 1 );
+                } elsif ( $@->isa('Koha::Exceptions::Object::BadValue') ) {
+                    $template->param( error_cashup_no_transactions => 1 );
                 } else {
                     $template->param( error_cashup_start => 1 );
                 }
@@ -157,8 +159,14 @@ if ( !$registers->count ) {
                         $template->param( error_no_cashup_start => 1 );
                     } elsif ( $@->isa('Koha::Exceptions::Object::DuplicateID') ) {
                         $template->param( error_cashup_already_completed => 1 );
+                    } elsif ( $@->isa('Koha::Exceptions::MissingParameter') ) {
+                        $template->param( error_cashup_missing_param => 1, error_message => $@ );
+                    } elsif ( $@->isa('Koha::Exceptions::Account::AmountNotPositive') ) {
+                        $template->param( error_cashup_amount_invalid => 1 );
                     } else {
-                        $template->param( error_cashup_complete => 1 );
+
+                        # Log the actual exception for debugging
+                        $template->param( error_cashup_complete => 1, error_details => "$@" );
                     }
                 } else {
 

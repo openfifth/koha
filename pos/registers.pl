@@ -98,6 +98,8 @@ if ( $op eq 'cud-cashup_start' ) {
             if ($@) {
                 if ( $@->isa('Koha::Exceptions::Object::DuplicateID') ) {
                     push @errors, "Register " . $register->name . ": Cashup already in progress";
+                } elsif ( $@->isa('Koha::Exceptions::Object::BadValue') ) {
+                    push @errors, "Register " . $register->name . ": No cash transactions to cashup";
                 } else {
                     push @errors, "Register " . $register->name . ": Failed to start cashup";
                 }
