@@ -174,14 +174,9 @@ if ( $op eq 'list' ) {
                 request     => $request
             );
             if ($backend_result->{stage} eq 'commit') {
-                $request->extended_attributes(
-                    [
-                        {
-                            type  => 'copyrightclearance_confirmed',
-                            value => 1,
-                        }
-                    ]
-                ) if $params->{copyrightclearance_confirmed};
+
+                $request->set_copyright_clearance_confirmed(1)
+                    if $params->{copyrightclearance_confirmed};
 
                 # After creation actions
                 if ( $params->{type_disclaimer_submitted} ) {
