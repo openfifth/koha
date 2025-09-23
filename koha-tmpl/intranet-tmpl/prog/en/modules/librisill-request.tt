@@ -1,0 +1,107 @@
+<!-- version 1.0 (2025-06-25) -->
+
+[% USE raw %]
+[% USE Asset %]
+[% USE Koha %]
+[% USE Branches %]
+[% SET footerjs = 1 %]
+[% INCLUDE 'doc-head-open.inc' %]
+<title>Fjärrlånebäställningar</title>
+[% Asset.css("css/mainpage.css") | $raw %]
+[% INCLUDE 'doc-head-close.inc' %]
+</head>
+
+<body id="fjarrlan_request" class="intranet-main">
+[% INCLUDE 'header.inc' %]
+[% INCLUDE 'home-search.inc' %]
+
+<!--
+<nav id="breadcrumbs" aria-label="Breadcrumb" class="breadcrumb">
+    <ol>
+        <li>
+            <a href="#" aria-current="page">Home</a>
+        </li>
+    </ol>
+</nav>
+-->
+
+    <div class="container-fluid">
+      <div class="row">
+        <div class="col-md-6">
+	        <h3>Fjärrlånestatus för [% decoded.ill_requests.0.lf_number %]</h3>
+          <div class="page-section">
+            <table>
+              <tr>
+                <td>Beställningsnummer:</td>
+                <td><a href="http://iller.libris.kb.se/librisfjarrlan/lf.php?action=search&search_string=[% decoded.ill_requests.0.lf_number %]" target="_blank">[% decoded.ill_requests.0.lf_number %]</a></td>  
+              </tr>
+              <tr>
+                <td>Titel:</td>
+                <td>[% decoded.ill_requests.0.title %]</td>  
+              </tr>
+              <tr>
+                <td>Författare:</td>
+                <td>[% decoded.ill_requests.0.author %]</td>  
+              </tr>
+              <tr>
+                <td>Utgivning:</td>
+                <td>[% decoded.ill_requests.0.imprint %]</td>  
+              </tr>
+              <tr>
+                <td>ISBN/ISSN:</td>
+                <td>[% decoded.ill_requests.0.isbn_issn %]</td>  
+              </tr>
+              <tr>
+                <td>Libris-ID:</td>
+                <td>[% decoded.ill_requests.0.bib_id %]</td>  
+              </tr>
+              <tr>
+                <td>Aktivt bibliotek:</td>
+                <td>[% decoded.ill_requests.0.active_library %]</td>  
+              </tr>
+              <tr>
+                <td>Remisskedja:</td>
+                <!--<td>[% FOREACH library IN library_codes %]( [% library.library_code %] ) [% END %]</td>-->
+                <td>[% library_codes %]</td> 
+              </tr>
+              <tr>
+                <td>Låntagare:</td>
+                <td class="user">[% IF patron.surname.length > 0 %][% patron.surname %], [% patron.firstname %] [% ELSE %] (ej angivet) [% END %] [% IF patron.borrowernumber.length > 0 %]([% patron.borrowernumber %])[% ELSIF decoded.ill_requests.0.user_id > 0%]<i style="color:#d00">(Ej registrerad låntagare)</i> [% END %]</td>  
+              </tr>
+              <tr>
+                <td>Lånekortsnummer:</td>
+                <td class="user_id">[% decoded.ill_requests.0.user_id %]</td>  
+              </tr>
+            </table>
+          </div>
+          <p>
+            [% IF patron.borrowernumber.length > 0 %]<a class="btn btn-default" href="/cgi-bin/koha/circ/circulation.pl?findborrower=[% decoded.ill_requests.0.user_id %]" target="_blank">Visa låntagare</a>[% END %]
+            [% IF decoded.ill_requests.0.bib_id.length > 0%]<a title="[% decoded.ill_requests.0.bib_id %]" class="btn btn-default import" >Importera post</a>[% END %]
+          </p>
+        </div>
+      </div> <!-- /.row -->
+    </div> <!-- /.container-fluid -->	    
+
+<!-- the main div is closed in intranet-bottom.inc -->
+[% INCLUDE 'intranet-bottom.inc' %]
+
+<script>
+/*
+  function PopupZ3950(fw) {
+    var strQuery = GetZ3950Terms(fw);
+    if(strQuery){
+      window.open("/cgi-bin/koha/cataloguing/z3950_search.pl?biblionumber=0&stdid=[% decoded.ill_requests.0.bib_id %]&z3950_1=1&op=do_search&id=1","z3950search",'width=800,height=500,location=yes,toolbar=no,scrollbars=yes,resize=yes');
+    }
+  }
+
+  function GetZ3950Terms(fw){
+    var strQuery="&frameworkcode=" + fw;
+    return strQuery;
+  }
+*/
+
+  var illjson = [% ill_JSON %];
+  
+  localStorage.setItem('latest_ill', JSON.stringify(illjson));
+
+</script>
