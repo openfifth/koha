@@ -21,19 +21,19 @@
             <tbody>
                 <tr>
                     <td>
-                        {{ ruleInfo.issuelength }}
+                        {{ ruleSetInfo.issuelength }}
                     </td>
                     <td>
-                        {{ ruleInfo.lengthunit }}
+                        {{ ruleSetInfo.lengthunit }}
                     </td>
                     <td>
-                        {{ ruleInfo.decreaseloanholds }}
+                        {{ ruleSetInfo.decreaseloanholds }}
                     </td>
                     <td>
-                        {{ ruleInfo.fine }}
+                        {{ ruleSetInfo.fine }}
                     </td>
                     <td>
-                        {{ ruleInfo.chargeperiod }}
+                        {{ ruleSetInfo.chargeperiod }}
                     </td>
                 </tr>
             </tbody>
@@ -43,7 +43,7 @@
 
 <script>
 export default {
-    props: ["ruleInfo"],
+    props: ["ruleSetInfo"],
 };
 </script>
 

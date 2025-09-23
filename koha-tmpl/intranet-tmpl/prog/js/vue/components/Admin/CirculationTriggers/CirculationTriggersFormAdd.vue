@@ -1,720 +1,762 @@
 <template>
-    <div v-if="initialized" class="modal-content">
-        <form @submit="addCircRule($event)">
-            <div class="modal-header">
-                <h1 class="modal-title" v-if="!editMode">
-                    {{ $__("Circulation triggers") }}
-                </h1>
-                <h1 class="modal-title" v-else>
-                    {{ $__("Edit circulation trigger") }}
-                </h1>
-                <router-link
-                    class="btn-close"
-                    type="button"
-                    :to="{
-                        name: 'CirculationTriggersList',
-                    }"
-                ></router-link>
+    <form
+        class="modal-content"
+        id="circulation-trigger-form-add"
+        @submit="addCircRule($event)"
+    >
+        <div class="modal-header">
+            <h1 class="modal-title">
+                {{ $__("Circulation Trigger Configuration") }}
+            </h1>
+            <router-link
+                class="btn-close"
+                type="button"
+                :to="{
+                    name: 'CirculationTriggersList',
+                }"
+            ></router-link>
+        </div>
+        <div class="modal-body">
+            <div class="page-section bg-info" v-if="ruleSetInitialized">
+                <h2>{{ $__("Circulation context") }}</h2>
+                <TriggerContext :ruleSetInfo="ruleSetInfo" />
             </div>
-            <div class="modal-body">
-                <div class="page-section bg-info" v-if="circRules.length">
-                    <h2>{{ $__("Circulation context") }}</h2>
-                    <TriggerContext :ruleInfo="ruleInfo" />
-                </div>
-
-                <fieldset class="rows">
-                    <legend>{{ $__("Select trigger context") }}</legend>
-                    <ol>
-                        <li>
-                            <label for="library_id" class="required"
-                                >{{ $__("Library") }}:</label
-                            >
-                            <v-select
-                                id="library_id"
-                                v-model="newRule.library_id"
-                                label="name"
-                                :reduce="lib => lib.library_id"
-                                :options="libraries"
-                                @update:modelValue="handleContextChange($event)"
-                                :disabled="editMode ? true : false"
-                            >
-                                <template #search="{ attributes, events }">
-                                    <input
-                                        :required="!newRule.library_id"
-                                        class="vs__search"
-                                        v-bind="attributes"
-                                        v-on="events"
-                                    />
-                                </template>
-                            </v-select>
-                            <span class="required">{{ $__("Required") }}</span>
-                        </li>
-                        <li>
-                            <label for="patron_category_id" class="required"
-                                >{{ $__("Patron category") }}:</label
-                            >
-                            <v-select
-                                id="patron_category_id"
-                                v-model="newRule.patron_category_id"
-                                label="name"
-                                :reduce="cat => cat.patron_category_id"
-                                :options="categories"
-                                @update:modelValue="handleContextChange($event)"
-                                :disabled="editMode ? true : false"
-                            >
-                                <template #search="{ attributes, events }">
-                                    <input
-                                        :required="!newRule.patron_category_id"
-                                        class="vs__search"
-                                        v-bind="attributes"
-                                        v-on="events"
-                                    />
-                                </template>
-                            </v-select>
-                            <span class="required">{{ $__("Required") }}</span>
-                        </li>
-                        <li>
-                            <label for="item_type_id" class="required"
-                                >{{ $__("Item type") }}:</label
-                            >
-                            <v-select
-                                id="item_type_id"
-                                v-model="newRule.item_type_id"
-                                label="description"
-                                :reduce="type => type.item_type_id"
-                                :options="itemTypes"
-                                @update:modelValue="handleContextChange($event)"
-                                :disabled="editMode ? true : false"
-                            >
-                                <template #search="{ attributes, events }">
-                                    <input
-                                        :required="!newRule.item_type_id"
-                                        class="vs__search"
-                                        v-bind="attributes"
-                                        v-on="events"
-                                    />
-                                </template>
-                            </v-select>
-                            <span class="required">{{ $__("Required") }}</span>
-                        </li>
-                    </ol>
-
-                    <div
-                        class="page-section bg-warning-subtle"
-                        v-if="circRules.length"
+            <div v-else-if="editMode !== 'confirmContext'">
+                <p>{{ $__("Loading rule set information...") }}</p>
+            </div>
+            <fieldset class="rows" v-if="contextInitialized">
+                <legend>{{ $__("Confirm trigger context") }}</legend>
+                <ol>
+                    <li>
+                        <label for="library_id" class="required"
+                            >{{ $__("Library") }}:</label
+                        >
+                        <v-select
+                            id="library_id"
+                            v-model="context.library_id"
+                            label="name"
+                            :reduce="lib => lib.library_id"
+                            :options="libraries"
+                            :disabled="editMode !== 'confirmContext'"
+                        >
+                            <template #search="{ attributes, events }">
+                                <input
+                                    :required="!context.library_id"
+                                    class="vs__search"
+                                    v-bind="attributes"
+                                    v-on="events"
+                                />
+                            </template>
+                        </v-select>
+                        <span class="required">{{ $__("Required") }}</span>
+                    </li>
+                    <li>
+                        <label for="patron_category_id" class="required"
+                            >{{ $__("Patron category") }}:</label
+                        >
+                        <v-select
+                            id="patron_category_id"
+                            v-model="context.patron_category_id"
+                            label="name"
+                            :reduce="cat => cat.patron_category_id"
+                            :options="patronCategories"
+                            :disabled="editMode !== 'confirmContext'"
+                        >
+                            <template #search="{ attributes, events }">
+                                <input
+                                    :required="!context.patron_category_id"
+                                    class="vs__search"
+                                    v-bind="attributes"
+                                    v-on="events"
+                                />
+                            </template>
+                        </v-select>
+                        <span class="required">{{ $__("Required") }}</span>
+                    </li>
+                    <li>
+                        <label for="item_type_id" class="required"
+                            >{{ $__("Item type") }}:</label
+                        >
+                        <v-select
+                            id="item_type_id"
+                            v-model="context.item_type_id"
+                            label="description"
+                            :reduce="type => type.item_type_id"
+                            :options="itemTypes"
+                            :disabled="editMode !== 'confirmContext'"
+                        >
+                            <template #search="{ attributes, events }">
+                                <input
+                                    :required="!context.item_type_id"
+                                    class="vs__search"
+                                    v-bind="attributes"
+                                    v-on="events"
+                                />
+                            </template>
+                        </v-select>
+                        <span class="required">{{ $__("Required") }}</span>
+                    </li>
+                </ol>
+                <div v-if="editMode === 'confirmContext'">
+                    <router-link
+                        :to="{
+                            name: 'CirculationTriggersSelectOrAdd',
+                            query: context,
+                        }"
+                        class="btn btn-default btn-xs"
+                        ><i class="fa-solid fa-pencil"></i>
+                        {{ $__("Confirm context") }}</router-link
                     >
-                        <TriggersTable
-                            :circRules="circRules"
-                            :triggerNumber="newTriggerNumber - 1"
-                            :modal="true"
-                            :ruleBeingEdited="ruleBeingEdited"
-                            :triggerBeingEdited="triggerBeingEdited"
-                            :letters="filteredLetters"
-                        />
-                    </div>
-                </fieldset>
-
-                <fieldset class="rows" v-if="editMode">
-                    <legend v-if="ruleInfo.numberOfTriggers < newTriggerNumber">
-                        {{ $__("Add new trigger") }}
-                        {{ " " + newTriggerNumber }}
-                    </legend>
-                    <legend v-else>
-                        {{ $__("Edit trigger") }} {{ " " + newTriggerNumber }}
-                    </legend>
-                    <ol>
-                        <li>
-                            <label for="overdue_delay"
-                                >{{ $__("Delay") }}:
-                            </label>
-                            <div class="numeric-input-wrapper">
-                                <div class="input-with-clear">
-                                    <input
-                                        id="overdue_delay"
-                                        v-model="newRule.delay"
-                                        type="number"
-                                        :placeholder="fallbackRule.delay"
-                                        :min="minDelay"
-                                        :max="maxDelay"
-                                        class="numeric-input"
-                                    />
-                                    <button
-                                        v-if="
-                                            newRule.delay !== null &&
-                                            newRule.delay !== undefined
-                                        "
-                                        type="button"
-                                        class="clear-btn"
-                                        @click="newRule.delay = null"
+                </div>
+                <div
+                    class="page-section"
+                    v-if="ruleSetInitialized && editMode !== 'confirmContext'"
+                >
+                    <TriggersTable
+                        :triggerNumber="triggerNumber"
+                        :modal="true"
+                        :actions="true"
+                        :ruleSets="effectiveTriggerFilteredRuleSets"
+                        :ruleSetBeingEdited="currentRuleSet"
+                        :triggerBeingEdited="triggerBeingEdited"
+                    />
+                </div>
+            </fieldset>
+            <div v-else>
+                <p>{{ $__("Loading context...") }}</p>
+            </div>
+            <fieldset class="rows" v-if="alertMessage">
+                <div class="alert alert-info">{{ alertMessage }}</div>
+            </fieldset>
+            <fieldset
+                class="rows"
+                v-if="
+                    (ruleSetInitialized && editMode === 'edit') ||
+                    editMode === 'add'
+                "
+            >
+                <legend v-if="editMode === 'add'">
+                    {{ $__("Add new trigger") }}
+                    {{ " " + triggerNumber }}
+                </legend>
+                <legend v-else>
+                    {{ $__("Edit trigger") }} {{ " " + triggerNumber }}
+                </legend>
+                <div class="page-section bg-info">
+                    <p>
+                        {{
+                            $__(
+                                "NOTE: Delay for a given trigger can be pushed forward or backwards only within the bounds of what its two neighbouring triggers allows."
+                            )
+                        }}
+                    </p>
+                </div>
+                <ol>
+                    <li>
+                        <label for="overdue_delay">{{ $__("Delay") }}: </label>
+                        <div class="numeric-input-wrapper">
+                            <div class="input-with-clear">
+                                <input
+                                    @input="setAllowSubmission"
+                                    id="overdue_delay"
+                                    v-model="
+                                        ruleSetToSubmit[
+                                            `overdue_${triggerNumber}_delay`
+                                        ]
+                                    "
+                                    type="number"
+                                    :placeholder="
+                                        fallbackRuleSet?.[
+                                            `overdue_${triggerNumber}_delay`
+                                        ]
+                                    "
+                                    :min="minDelay"
+                                    :max="maxDelay"
+                                    class="numeric-input"
+                                />
+                                <button
+                                    v-if="
+                                        ruleSetToSubmit[
+                                            `overdue_${triggerNumber}_delay`
+                                        ] !== null &&
+                                        ruleSetToSubmit[
+                                            `overdue_${triggerNumber}_delay`
+                                        ] !== undefined
+                                    "
+                                    type="button"
+                                    class="clear-btn"
+                                    @click="handleSetDelayToNull"
+                                >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        width="10"
+                                        height="10"
                                     >
-                                        <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            width="10"
-                                            height="10"
-                                        >
-                                            <path
-                                                d="M6.895455 5l2.842897-2.842898c.348864-.348863.348864-.914488 0-1.263636L9.106534.261648c-.348864-.348864-.914489-.348864-1.263636 0L5 3.104545 2.157102.261648c-.348863-.348864-.914488-.348864-1.263636 0L.261648.893466c-.348864.348864-.348864.914489 0 1.263636L3.104545 5 .261648 7.842898c-.348864.348863-.348864.914488 0 1.263636l.631818.631818c.348864.348864.914773.348864 1.263636 0L5 6.895455l2.842898 2.842897c.348863.348864.914772.348864 1.263636 0l.631818-.631818c.348864-.348864.348864-.914489 0-1.263636L6.895455 5z"
-                                            ></path>
-                                        </svg>
+                                        <path
+                                            d="M6.895455 5l2.842897-2.842898c.348864-.348863.348864-.914488 0-1.263636L9.106534.261648c-.348864-.348864-.914489-.348864-1.263636 0L5 3.104545 2.157102.261648c-.348863-.348864-.914488-.348864-1.263636 0L.261648.893466c-.348864.348864-.348864.914489 0 1.263636L3.104545 5 .261648 7.842898c-.348864.348863-.348864.914488 0 1.263636l.631818.631818c.348864.348864.914773.348864 1.263636 0L5 6.895455l2.842898 2.842897c.348863.348864.914772.348864 1.263636 0l.631818-.631818c.348864-.348864.348864-.914489 0-1.263636L6.895455 5z"
+                                        ></path>
+                                    </svg>
+                                </button>
+                                <div class="chevron-buttons">
+                                    <button
+                                        type="button"
+                                        class="increment-btn"
+                                        @click="incrementDelay"
+                                    >
+                                        ▴
                                     </button>
-                                    <div class="chevron-buttons">
-                                        <button
-                                            type="button"
-                                            class="increment-btn"
-                                            @click="incrementDelay"
-                                        >
-                                            ▴
-                                        </button>
-                                        <button
-                                            type="button"
-                                            class="decrement-btn"
-                                            @click="decrementDelay"
-                                        >
-                                            ▾
-                                        </button>
-                                    </div>
+                                    <button
+                                        type="button"
+                                        class="decrement-btn"
+                                        @click="decrementDelay"
+                                    >
+                                        ▾
+                                    </button>
                                 </div>
                             </div>
-                        </li>
-                        <li>
-                            <label for="letter_code"
-                                >{{ $__("Letter") }}:</label
-                            >
-                            <v-select
-                                id="letter_code"
-                                v-model="newRule.notice"
-                                label="name"
-                                :reduce="type => type.code"
-                                :options="filteredLetters"
-                            >
-                                <template #search="{ attributes, events }">
-                                    <input
-                                        class="vs__search"
-                                        v-bind="attributes"
-                                        v-on="events"
-                                        :placeholder="
-                                            newRule.notice === null ||
-                                            newRule.notice === undefined
-                                                ? letters.find(
-                                                      letter =>
-                                                          letter.code ===
-                                                          fallbackRule.notice
-                                                  )?.name || fallbackRule.notice
-                                                : ''
-                                        "
-                                    />
-                                </template>
-                            </v-select>
-                        </li>
-                        <li
-                            v-if="
-                                newRule.notice !== '' ||
-                                ((newRule.notice === null ||
-                                    newRule.notice === undefined) &&
-                                    fallbackRule.notice !== '')
-                            "
+                        </div>
+                    </li>
+                    <li>
+                        <label for="restricts"
+                            >{{ $__("Restricts checkouts") }}:</label
                         >
-                            <label for="mtt"
-                                >{{ $__("Transport type(s)") }}:</label
+                        <div>
+                            <input
+                                @click="setAllowSubmission"
+                                type="radio"
+                                id="restricts-yes"
+                                v-model="
+                                    ruleSetToSubmit[
+                                        `overdue_${triggerNumber}_restrict`
+                                    ]
+                                "
+                                :value="1"
+                            />
+                            {{ $__("Yes") }}
+                            <input
+                                @click="setAllowSubmission"
+                                type="radio"
+                                id="restricts-no"
+                                v-model="
+                                    ruleSetToSubmit[
+                                        `overdue_${triggerNumber}_restrict`
+                                    ]
+                                "
+                                :value="0"
+                            />
+                            {{ $__("No") }}
+                            <input
+                                @click="setAllowSubmission"
+                                type="radio"
+                                id="restricts-fallback"
+                                v-model="
+                                    ruleSetToSubmit[
+                                        `overdue_${triggerNumber}_restrict`
+                                    ]
+                                "
+                                :value="null"
+                            />
+                            {{ $__("Fallback to default") }}
+                            <span
+                                v-if="
+                                    fallbackRuleSet?.[
+                                        `overdue_${triggerNumber}_restrict`
+                                    ] !== null
+                                "
                             >
-                            <v-select
-                                id="mtt"
-                                v-model="newRule.mtt"
-                                label="name"
-                                :reduce="type => type.code"
-                                :options="mtts"
-                                multiple
-                            >
-                                <template #search="{ attributes, events }">
-                                    <input
-                                        class="vs__search"
-                                        v-bind="attributes"
-                                        v-on="events"
-                                        :placeholder="
-                                            newRule.mtt === null ||
-                                            newRule.mtt === undefined ||
-                                            newRule.mtt.length === 0
-                                                ? fallbackRule.mtt
-                                                : ''
-                                        "
-                                    />
-                                </template>
-                            </v-select>
-                        </li>
-                        <li>
-                            <label for="restricts"
-                                >{{ $__("Restricts checkouts") }}:</label
-                            >
-                            <div>
-                                <input
-                                    type="radio"
-                                    id="restricts-yes"
-                                    v-model="newRule.restrict"
-                                    :value="1"
-                                />
-                                {{ $__("Yes") }}
-
-                                <input
-                                    type="radio"
-                                    id="restricts-no"
-                                    v-model="newRule.restrict"
-                                    :value="0"
-                                />
-                                {{ $__("No") }}
-
-                                <input
-                                    type="radio"
-                                    id="restricts-fallback"
-                                    v-model="newRule.restrict"
-                                    :value="null"
-                                />
-                                {{ $__("Fallback to default") }}
-                                <span v-if="fallbackRule.restricts !== null">
-                                    ({{
-                                        fallbackRule.restricts === 1
-                                            ? $__("Yes")
-                                            : $__("No")
-                                    }})
-                                </span>
-                            </div>
-                        </li>
-                    </ol>
-                </fieldset>
+                                ({{
+                                    fallbackRuleSet?.[
+                                        `overdue_${triggerNumber}_restrict`
+                                    ] === "1"
+                                        ? $__("Yes")
+                                        : $__("No")
+                                }})
+                            </span>
+                        </div>
+                    </li>
+                </ol>
+            </fieldset>
+            <div v-else-if="editMode === 'add' || editMode === 'edit'">
+                <p>{{ $__("Loading circulation rules...") }}</p>
             </div>
-            <div class="modal-footer">
-                <ButtonSubmit />
-                <router-link
-                    :to="{
-                        name: 'CirculationTriggersList',
-                    }"
-                    >{{ $__("Cancel") }}</router-link
-                >
+            <fieldset
+                class="rows"
+                v-if="
+                    (ruleSetInitialized && editMode === 'edit') ||
+                    editMode === 'add'
+                "
+            >
+                <legend v-if="ruleSetInfo.triggerCount < triggerNumber">
+                    {{ $__("Notice for trigger") }}
+                    {{ " " + triggerNumber }}
+                </legend>
+                <legend v-else>
+                    {{ $__("Edit notice for trigger") }}
+                    {{ " " + triggerNumber }}
+                </legend>
+                <ol>
+                    <li>
+                        <label for="letter_code">{{ $__("Letter") }}:</label>
+                        <v-select
+                            id="letter_code"
+                            v-model="
+                                ruleSetToSubmit[
+                                    `overdue_${triggerNumber}_notice`
+                                ]
+                            "
+                            label="name"
+                            :reduce="type => type.code"
+                            :options="filteredLetters"
+                            @update:modelValue="setAllowSubmission"
+                        >
+                            <template #search="{ attributes, events }">
+                                <input
+                                    class="vs__search"
+                                    v-bind="attributes"
+                                    v-on="events"
+                                    :placeholder="
+                                        ruleSetToSubmit[
+                                            `overdue_${triggerNumber}_notice`
+                                        ] === null ||
+                                        ruleSetToSubmit[
+                                            `overdue_${triggerNumber}_notice`
+                                        ] === undefined
+                                            ? letters.find(
+                                                  letter =>
+                                                      letter.code ===
+                                                      fallbackRuleSet?.[
+                                                          `overdue_${triggerNumber}_notice`
+                                                      ]
+                                              )?.name ||
+                                              fallbackRuleSet?.[
+                                                  `overdue_${triggerNumber}_notice`
+                                              ]
+                                            : ''
+                                    "
+                                />
+                            </template>
+                        </v-select>
+                    </li>
+                    <li
+                        v-if="
+                            ruleSetToSubmit[
+                                `overdue_${triggerNumber}_notice`
+                            ] !== '' ||
+                            ((ruleSetToSubmit[
+                                `overdue_${triggerNumber}_notice`
+                            ] === null ||
+                                ruleSetToSubmit[
+                                    `overdue_${triggerNumber}_notice`
+                                ] === undefined) &&
+                                fallbackRuleSet?.[
+                                    `overdue_${triggerNumber}_notice`
+                                ] !== '')
+                        "
+                    >
+                        <label for="mtt">{{ $__("Transport type(s)") }}:</label>
+                        <v-select
+                            id="mtt"
+                            v-model="
+                                ruleSetToSubmit[`overdue_${triggerNumber}_mtt`]
+                            "
+                            label="name"
+                            :reduce="type => type.code"
+                            :options="transportTypes"
+                            multiple
+                            :required="true"
+                            @update:modelValue="setAllowSubmission"
+                        >
+                            <template #search="{ attributes, events }">
+                                <input
+                                    class="vs__search"
+                                    v-bind="attributes"
+                                    v-on="events"
+                                    :placeholder="
+                                        ruleSetToSubmit[
+                                            `overdue_${triggerNumber}_mtt`
+                                        ] === null ||
+                                        ruleSetToSubmit[
+                                            `overdue_${triggerNumber}_mtt`
+                                        ] === undefined ||
+                                        ruleSetToSubmit[
+                                            `overdue_${triggerNumber}_mtt`
+                                        ].length === 0
+                                            ? fallbackRuleSet?.[
+                                                  `overdue_${triggerNumber}_mtt`
+                                              ]
+                                            : ''
+                                    "
+                                />
+                            </template>
+                        </v-select>
+                    </li>
+                </ol>
+            </fieldset>
+            <div v-else-if="editMode === 'add' || editMode === 'edit'">
+                <p>{{ $__("Loading circulation rules...") }}</p>
             </div>
-        </form>
-    </div>
-    <div v-else>
-        <p>{{ $__("Loading...") }}</p>
-    </div>
+        </div>
+        <div class="modal-footer">
+            <ButtonSubmit
+                v-if="editMode === 'edit' || editMode === 'add'"
+                :disabled="!allowSubmission"
+            />
+            <router-link
+                :to="{
+                    name: 'CirculationTriggersList',
+                }"
+                >{{ $__("Cancel") }}</router-link
+            >
+        </div>
+    </form>
 </template>
 
 <script>
-import { APIClient } from "../../../fetch/api-client.js";
 import TriggersTable from "./TriggersTable.vue";
 import { inject } from "vue";
 import { storeToRefs } from "pinia";
 import ButtonSubmit from "../../ButtonSubmit.vue";
 import TriggerContext from "./TriggerContext.vue";
+import { isEqual, cloneDeep } from "lodash";
 
 export default {
     setup() {
         const circRulesStore = inject("circRulesStore");
-        const { splitCircRulesByTriggerNumber } = circRulesStore;
-        const { letters } = storeToRefs(circRulesStore);
+        const {
+            updateTriggerCount,
+            findEffectiveRule,
+            getSelectedRuleSet,
+            setEffectiveTriggerFilteredRuleSet,
+            updateCircRuleSets,
+            hasConflict,
+        } = circRulesStore;
+        const {
+            letters,
+            libraries,
+            itemTypes,
+            transportTypes,
+            patronCategories,
+            triggerCounts,
+            storeInitialized,
+        } = storeToRefs(circRulesStore);
 
         return {
-            splitCircRulesByTriggerNumber,
             letters,
+            itemTypes,
+            libraries,
+            transportTypes,
+            triggerCounts,
+            patronCategories,
+            getSelectedRuleSet,
+            updateTriggerCount,
+            findEffectiveRule,
+            setEffectiveTriggerFilteredRuleSet,
+            updateCircRuleSets,
+            hasConflict,
+            storeInitialized,
         };
     },
     data() {
         return {
-            initialized: false,
-            libraries: null,
-            categories: null,
-            itemTypes: null,
-            circRules: [],
-            newRule: {
-                item_type_id: "*",
+            triggerNumber: 1,
+            context: {
                 library_id: "*",
-                patron_category_id: "*",
-                delay: null,
-                notice: null,
-                mtt: null,
-                restrict: null,
-            },
-            fallbackRule: {
                 item_type_id: "*",
-                library_id: "*",
                 patron_category_id: "*",
-                delay: null,
-                notice: null,
-                mtt: null,
-                restrict: null,
             },
-            newTriggerNumber: 1,
-            mtts: [
-                { code: "email", name: "Email" },
-                { code: "sms", name: "SMS" },
-                { code: "print", name: "Print" },
-            ],
-            ruleInfo: {
+            fallbackRuleSet: null,
+            ruleSetInfo: {
                 issuelength: null,
                 decreaseloanholds: null,
                 fine: null,
                 chargeperiod: null,
                 lengthunit: null,
-                numberOfTriggers: null,
+                triggerCount: null,
             },
             editMode: false,
-            ruleBeingEdited: null,
+            ruleSetToSubmit: null,
+            currentRuleSet: null,
             triggerBeingEdited: null,
             minDelay: 0,
             maxDelay: Infinity,
             filteredLetters: [],
+            alertMessage: null,
+            allowSubmission: false,
+            effectiveTriggerFilteredRuleSets: [],
+            contextInitialized: false,
+            ruleSetInitialized: false,
         };
     },
+    beforeMount() {
+        // handle hard refresh mid-stepper workflow by ensuring store is initialized
+        if (!this.storeInitialized) {
+            this.$watch("storeInitialized", newVal => {
+                if (newVal) {
+                    this.initializeComponent();
+                }
+            });
+            return;
+        }
+        this.initializeComponent();
+    },
     beforeRouteEnter(to, from, next) {
-        next(vm => {
-            vm.getLibraries().then(() =>
-                vm.getCategories().then(() =>
-                    vm.getItemTypes().then(() =>
-                        vm.getCircRules().then(() => {
-                            const { query } = to;
-                            vm.checkForExistingRules(query).then(
-                                () => (vm.initialized = true)
-                            );
-                        })
-                    )
-                )
-            );
-        });
+        if (!from.name) {
+            next();
+            return;
+        }
+        next(vm => vm.initializeComponent());
     },
     methods: {
+        initializeComponent() {
+            const { query } = this.$route;
+            this.setEditMode();
+            this.setContext(query);
+            this.contextInitialized = true;
+            this.setTriggerNumber(query.triggerNumber, this.context.library_id);
+            if (
+                ["selectOrAdd", "add", "edit"].some(str =>
+                    this.$route.fullPath.includes(str)
+                )
+            ) {
+                this.setRuleSets();
+            }
+        },
         async addCircRule(e) {
             e.preventDefault();
 
-            const context = {
-                library_id: this.newRule.library_id || "*",
-                item_type_id: this.newRule.item_type_id || "*",
-                patron_category_id: this.newRule.patron_category_id || "*",
+            const ruleSetToSubmit = {
+                context: this.context,
             };
 
-            const circRule = {
-                context,
-            };
-            circRule[`overdue_${this.newTriggerNumber}_delay`] =
-                this.newRule.delay;
-            circRule[`overdue_${this.newTriggerNumber}_notice`] =
-                this.newRule.notice;
-            circRule[`overdue_${this.newTriggerNumber}_restrict`] =
-                this.newRule.restrict;
-            circRule[`overdue_${this.newTriggerNumber}_mtt`] =
-                this.newRule.mtt && this.newRule.mtt.length
-                    ? this.newRule.mtt.join(",")
-                    : null;
-
-            const client = APIClient.circRule;
-            await client.circRules.update(circRule).then(
-                () => {
-                    this.$router
-                        .push({
-                            name: "CirculationTriggersList",
-                            query: { trigger: this.newTriggerNumber },
-                        })
-                        .then(() => this.$router.go(0));
-                },
-                error => {}
-            );
-        },
-        async getLibraries() {
-            const client = APIClient.library;
-            await client.libraries.getAll().then(
-                libraries => {
-                    libraries.unshift({
-                        library_id: "*",
-                        name: this.$__("Default rule for all libraries"),
-                    });
-                    this.libraries = libraries;
-                },
-                error => {}
-            );
-        },
-        async getCategories() {
-            const client = APIClient.patron;
-            await client.patronCategories.getAll().then(
-                categories => {
-                    categories.unshift({
-                        patron_category_id: "*",
-                        name: this.$__("Default rule for all categories"),
-                    });
-                    this.categories = categories;
-                },
-                error => {}
-            );
-        },
-        async getItemTypes() {
-            const client = APIClient.item;
-            await client.itemTypes.getAll().then(
-                types => {
-                    types.unshift({
-                        item_type_id: "*",
-                        description: this.$__(
-                            "Default rule for all item types"
-                        ),
-                    });
-                    this.itemTypes = types;
-                },
-                error => {}
-            );
-        },
-        async getCircRules() {
-            const client = APIClient.circRule;
-            await client.circRules.getAll({}, { effective: false }).then(
-                rules => {
-                    const { rulesPerTrigger } =
-                        this.splitCircRulesByTriggerNumber(rules);
-                    this.circRules = rulesPerTrigger.length
-                        ? rulesPerTrigger
-                        : rules;
-                },
-                error => {}
-            );
-        },
-        async handleContextChange() {
-            await this.checkForExistingRules();
-        },
-        async checkForExistingRules(routeParams) {
-            // We always pass library_id so we need to check for the existence of either item type or patron category
-            const editMode = routeParams && routeParams.triggerNumber;
-            if (editMode) {
-                this.editMode = editMode;
-                this.triggerBeingEdited = routeParams.triggerNumber;
+            // ensure that no property is set to null as this would delete the rule!
+            if (
+                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_delay`] !==
+                    null &&
+                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_delay`] !==
+                    this.fallbackRuleSet[`overdue_${this.triggerNumber}_delay`]
+            ) {
+                ruleSetToSubmit[`overdue_${this.triggerNumber}_delay`] =
+                    cloneDeep(
+                        this.ruleSetToSubmit[
+                            `overdue_${this.triggerNumber}_delay`
+                        ]
+                    );
             }
-            const library_id =
-                routeParams && routeParams.library_id
-                    ? routeParams.library_id
-                    : this.newRule.library_id || "*";
-            const item_type_id =
-                routeParams && routeParams.item_type_id
-                    ? routeParams.item_type_id
-                    : this.newRule.item_type_id || "*";
-            const patron_category_id =
-                routeParams && routeParams.patron_category_id
-                    ? routeParams.patron_category_id
-                    : this.newRule.patron_category_id || "*";
-            const params = {
-                library_id,
-                item_type_id,
-                patron_category_id,
-            };
 
-            // Fetch effective ruleset for context
-            const client = APIClient.circRule;
-            await client.circRules.getAll({}, params).then(
-                rules => {
-                    this.ruleBeingEdited = rules[0];
-                    this.ruleBeingEdited.context = params;
-                    const regex = /overdue_(\d+)_delay/g;
-                    const numberOfTriggers = Object.keys(rules[0]).filter(
-                        key => regex.test(key) && rules[0][key] !== null
-                    ).length;
-                    const splitRules = this.filterCircRulesByContext(
-                        this.ruleBeingEdited
+            if (
+                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_notice`] !==
+                    null &&
+                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_notice`] !==
+                    this.fallbackRuleSet[`overdue_${this.triggerNumber}_notice`]
+            ) {
+                ruleSetToSubmit[`overdue_${this.triggerNumber}_notice`] =
+                    cloneDeep(
+                        this.ruleSetToSubmit[
+                            `overdue_${this.triggerNumber}_notice`
+                        ]
                     );
-                    this.newTriggerNumber = editMode
-                        ? routeParams.triggerNumber
-                        : numberOfTriggers + 1;
-                    this.assignTriggerValues(
-                        splitRules,
-                        this.newTriggerNumber,
-                        params
+            }
+
+            if (
+                this.ruleSetToSubmit[
+                    `overdue_${this.triggerNumber}_restrict`
+                ] !== null &&
+                this.ruleSetToSubmit[
+                    `overdue_${this.triggerNumber}_restrict`
+                ] !==
+                    this.fallbackRuleSet[
+                        `overdue_${this.triggerNumber}_restrict`
+                    ]
+            ) {
+                ruleSetToSubmit[`overdue_${this.triggerNumber}_restrict`] =
+                    cloneDeep(
+                        this.ruleSetToSubmit[
+                            `overdue_${this.triggerNumber}_restrict`
+                        ]
                     );
+            }
 
-                    this.ruleInfo = {
-                        issuelength: rules[0].issuelength,
-                        decreaseloanholds: rules[0].decreaseloanholds,
-                        fine: rules[0].fine,
-                        chargeperiod: rules[0].chargeperiod,
-                        lengthunit: rules[0].lengthunit,
-                        numberOfTriggers: numberOfTriggers,
-                    };
+            if (
+                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_mtt`] !==
+                    null &&
+                Array.isArray(
+                    this.ruleSetToSubmit[`overdue_${this.triggerNumber}_mtt`]
+                ) &&
+                !isEqual(
+                    this.ruleSetToSubmit[`overdue_${this.triggerNumber}_mtt`],
+                    this.fallbackRuleSet[`overdue_${this.triggerNumber}_mtt`]
+                )
+            ) {
+                ruleSetToSubmit[`overdue_${this.triggerNumber}_mtt`] =
+                    cloneDeep(
+                        this.ruleSetToSubmit[
+                            `overdue_${this.triggerNumber}_mtt`
+                        ].join(",")
+                    );
+            }
 
-                    this.setMinDelay();
-                    this.setMaxDelay();
-                    this.setFilteredLetters();
-                },
-                error => {}
-            );
-        },
-        filterCircRulesByContext(effectiveRule) {
-            const context = effectiveRule.context;
+            ruleSetToSubmit[`overdue_${this.triggerNumber}_has_rules`] = true;
 
-            // Filter rules that match the context
-            let contextRules = this.circRules.filter(rule => {
-                return Object.keys(context).every(key => {
-                    return context[key] === rule.context[key];
-                });
-            });
-
-            // Calculate the number of 'overdue_X_' triggers in the effectiveRule
-            const regex = /overdue_(\d+)_delay/g;
-            const numberOfTriggers = Object.keys(effectiveRule).filter(
-                key => regex.test(key) && effectiveRule[key] !== null
-            ).length;
-
-            // Ensure there is one contextRule per 'X' from 1 to numberOfTriggers
-            for (let i = 1; i <= numberOfTriggers; i++) {
-                // Check if there's already a rule for overdue_X_ in contextRules
-                const matchingRule = contextRules.find(
-                    rule => rule[`overdue_${i}_delay`] !== undefined
-                );
-
-                if (!matchingRule) {
-                    // Create a new rule with the same context and null overdue_X_* keys
-                    const placeholderRule = {
-                        context: { ...context }, // Clone the context
-                        [`overdue_${i}_delay`]: null,
-                        [`overdue_${i}_notice`]: null,
-                        [`overdue_${i}_mtt`]: null,
-                        [`overdue_${i}_restrict`]: null,
-                    };
-
-                    // Add the new rule to contextRules
-                    contextRules.push(placeholderRule);
+            // in edit mode, check for changes from elsewhere to the rule set being edited
+            if (this.editMode === "edit") {
+                const ruleSetInDb = await this.getSelectedRuleSet(this.context);
+                if (
+                    this.hasConflict(
+                        ruleSetInDb,
+                        this.currentRuleSet,
+                        this.triggerNumber
+                    )
+                ) {
+                    this.alertMessage =
+                        "Your changes could not be saved as this circulation trigger was updated elsewhere. Please see the updated trigger below.";
+                    this.$router.push({
+                        path: "/cgi-bin/koha/admin/circulation_triggers/edit",
+                        query: {
+                            library_id: this.context.library_id,
+                            patron_category_id: this.context.patron_category_id,
+                            item_type_id: this.context.item_type_id,
+                            triggerNumber: this.triggerNumber,
+                        },
+                    });
+                    return;
                 }
             }
 
-            // Sort contextRules by the 'X' value in 'overdue_X_delay'
-            contextRules.sort((a, b) => {
-                const getX = rule => {
-                    const match = Object.keys(rule).find(key =>
-                        regex.test(key)
-                    );
-                    return match ? parseInt(match.match(/\d+/)[0], 10) : 0;
+            await this.updateCircRuleSets(ruleSetToSubmit, this.triggerNumber);
+            await this.$router.push({
+                name: "CirculationTriggersList",
+                query: { refresh: Date.now() },
+            });
+        },
+        async setRuleSets() {
+            this.updateTriggerCount();
+            await this.setCurrentRuleSet();
+
+            this.ruleSetToSubmit = cloneDeep(this.currentRuleSet);
+
+            this.setMinDelay();
+            if (this.ruleSetToSubmit === null) {
+                this.ruleSetToSubmit = {
+                    context: this.context,
+                    [`overdue_${this.triggerNumber}_delay`]: this.minDelay,
+                    [`overdue_${this.triggerNumber}_notice`]: null,
+                    [`overdue_${this.triggerNumber}_mtt`]: null,
+                    [`overdue_${this.triggerNumber}_restrict`]: null,
                 };
-
-                return getX(a) - getX(b);
-            });
-
-            return contextRules;
-        },
-        findFallbackRule(currentContext, key) {
-            // Filter rules to only those with non-null values for the specified key and not the current context
-            const relevantRules = this.circRules.filter(rule => {
-                return (
-                    Object.keys(currentContext).some(
-                        key => currentContext[key] !== rule.context[key]
-                    ) &&
-                    rule[key] !== null &&
-                    rule[key] !== undefined
-                );
-            });
-
-            // Function to calculate specificity score
-            const getSpecificityScore = ruleContext => {
-                let score = 0;
-                if (
-                    ruleContext.library_id !== "*" &&
-                    ruleContext.library_id === currentContext.library_id
-                )
-                    score += 4;
-                if (
-                    ruleContext.patron_category_id !== "*" &&
-                    ruleContext.patron_category_id ===
-                        currentContext.patron_category_id
-                )
-                    score += 2;
-                if (
-                    ruleContext.item_type_id !== "*" &&
-                    ruleContext.item_type_id === currentContext.item_type_id
-                )
-                    score += 1;
-                return score;
-            };
-
-            // Sort the rules based on specificity score, descending
-            const sortedRules = relevantRules.sort((a, b) => {
-                return (
-                    getSpecificityScore(b.context) -
-                    getSpecificityScore(a.context)
-                );
-            });
-
-            // If no rule found, return null
-            if (sortedRules.length === 0) {
-                return null;
             }
-
-            // Get the value from the most specific rule
-            const bestRule = sortedRules[0];
-            return bestRule[key];
+            this.setMaxDelay();
+            this.setRuleSetInfo();
+            this.effectiveTriggerFilteredRuleSets =
+                this.setEffectiveTriggerFilteredRuleSet(this.context);
+            this.setFallbackRuleSet();
+            this.setFilteredLetters();
+            this.setAllowSubmission();
+            this.ruleSetInitialized = true;
         },
-        assignTriggerValues(rules, triggerNumber, context = null) {
-            this.newRule = {
-                item_type_id: context
-                    ? context.item_type_id
-                    : rules[triggerNumber - 1].context.item_type_id || "*",
-                library_id: context
-                    ? context.library_id
-                    : rules[triggerNumber - 1].context.library_id || "*",
-                patron_category_id: context
-                    ? context.patron_category_id
-                    : rules[triggerNumber - 1].context.patron_category_id ||
-                      "*",
-                delay: rules[triggerNumber - 1]
-                    ? rules[triggerNumber - 1][`overdue_${triggerNumber}_delay`]
-                    : null,
-                notice: rules[triggerNumber - 1]
-                    ? rules[triggerNumber - 1][
-                          `overdue_${triggerNumber}_notice`
-                      ]
-                    : null,
-                mtt: rules[triggerNumber - 1]
-                    ? rules[triggerNumber - 1][`overdue_${triggerNumber}_mtt`]
-                        ? rules[triggerNumber - 1][
-                              `overdue_${triggerNumber}_mtt`
-                          ].split(",")
-                        : []
-                    : null,
-                restrict: rules[triggerNumber - 1]
-                    ? rules[triggerNumber - 1][
-                          `overdue_${triggerNumber}_restrict`
-                      ]
-                    : null,
+        setContext(query) {
+            this.context.library_id = query.library_id ?? "*";
+            this.context.item_type_id = query.item_type_id ?? "*";
+            this.context.patron_category_id = query.patron_category_id ?? "*";
+        },
+        setEditMode() {
+            this.editMode = this.$route.path.substring(
+                this.$route.path.lastIndexOf("/") + 1
+            );
+        },
+        setRuleSetInfo() {
+            this.ruleSetInfo = {
+                issuelength: this.currentRuleSet.issuelength,
+                decreaseloanholds: this.currentRuleSet.decreaseloanholds,
+                fine: this.currentRuleSet.fine,
+                chargeperiod: this.currentRuleSet.chargeperiod,
+                lengthunit: this.currentRuleSet.lengthunit,
+                triggerCount: this.triggerCounts[this.context.library_id],
             };
-            this.fallbackRule = {
-                delay: this.findFallbackRule(
-                    context,
-                    `overdue_${triggerNumber}_delay`
-                ),
-                notice: this.findFallbackRule(
-                    context,
-                    `overdue_${triggerNumber}_notice`
-                ),
-                mtt: this.findFallbackRule(
-                    context,
-                    `overdue_${triggerNumber}_mtt`
-                ),
-                restrict: this.findFallbackRule(
-                    context,
-                    `overdue_${triggerNumber}_restrict`
-                ),
+        },
+        async setCurrentRuleSet() {
+            this.currentRuleSet = await this.getSelectedRuleSet(
+                this.context,
+                true
+            );
+            // override the context as fetched from the DBto ensure it matches the selected context
+            // FIXME: consider passing the context to trigger table separately
+            this.currentRuleSet.context = this.context;
+        },
+        setTriggerNumber(triggerNumber, library_id) {
+            this.triggerNumber =
+                this.editMode === "edit"
+                    ? triggerNumber
+                    : this.triggerCounts[library_id] + 1;
+        },
+        setFallbackRuleSet() {
+            this.fallbackRuleSet = {
+                [`overdue_${this.triggerNumber}_delay`]: this.findEffectiveRule(
+                    this.context,
+                    "delay",
+                    i
+                ).value,
+            };
+
+            if (this.editMode === "add") {
+                return;
+            }
+            this.fallbackRuleSet = {
+                [`overdue_${this.triggerNumber}_delay`]: this.findEffectiveRule(
+                    this.context,
+                    "delay",
+                    this.triggerNumber
+                ).value,
+                [`overdue_${this.triggerNumber}_notice`]:
+                    this.findEffectiveRule(
+                        this.context,
+                        "notice",
+                        this.triggerNumber
+                    ).value,
+                [`overdue_${this.triggerNumber}_mtt`]: this.findEffectiveRule(
+                    this.context,
+                    "mtt",
+                    this.triggerNumber
+                ).value,
+                [`overdue_${this.triggerNumber}_restrict`]:
+                    this.findEffectiveRule(
+                        this.context,
+                        "restrict",
+                        this.triggerNumber
+                    ).value,
             };
         },
         setMinDelay() {
-            const priorTriggerNumber = parseInt(this.newTriggerNumber) - 1;
-            this.minDelay = this.ruleBeingEdited[
+            if (
+                this.ruleSetToSubmit === null ||
+                this.triggerNumber === 0 ||
+                this.triggerNumber === 1
+            ) {
+                this.minDelay = 0;
+                return;
+            }
+            const priorTriggerNumber = this.triggerNumber - 1;
+            this.minDelay = this.currentRuleSet[
                 `overdue_${priorTriggerNumber}_delay`
             ]
                 ? parseInt(
-                      this.ruleBeingEdited[
-                          `overdue_${priorTriggerNumber}_delay`
-                      ]
+                      this.currentRuleSet[`overdue_${priorTriggerNumber}_delay`]
                   ) + 1
                 : 0;
+            this.ruleSetToSubmit[`overdue_${this.triggerNumber}_delay`] =
+                this.minDelay;
         },
         setMaxDelay() {
-            const nextTriggerNumber = parseInt(this.newTriggerNumber) + 1;
-            this.maxDelay = this.ruleBeingEdited[
+            const nextTriggerNumber = parseInt(this.triggerNumber) + 1;
+            this.maxDelay = this.currentRuleSet?.[
                 `overdue_${nextTriggerNumber}_delay`
             ]
                 ? parseInt(
-                      this.ruleBeingEdited[`overdue_${nextTriggerNumber}_delay`]
+                      this.currentRuleSet[`overdue_${nextTriggerNumber}_delay`]
                   ) - 1
                 : Infinity;
         },
         setFilteredLetters() {
-            let library = this.newRule.library_id;
+            let library = this.context.library_id;
             const branchcodeMatches = letters.filter(
                 letter => letter.branchcode === library
             );
@@ -743,25 +785,85 @@ export default {
 
             // Set to minDelay if it's null or undefined
             if (
-                this.newRule.delay === undefined ||
-                this.newRule.delay === null
+                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_delay`] ===
+                    undefined ||
+                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_delay`] ===
+                    null
             ) {
-                this.newRule.delay = min;
+                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_delay`] =
+                    min;
             }
 
             // Increment within the valid range
             else {
-                this.newRule["delay"] = Math.min(this.newRule.delay + 1, max);
+                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_delay`] =
+                    Math.min(
+                        this.ruleSetToSubmit[
+                            `overdue_${this.triggerNumber}_delay`
+                        ] + 1,
+                        max
+                    );
             }
+            this.setAllowSubmission();
         },
         decrementDelay() {
             // Check for minDelay
             const min = this.minDelay !== undefined ? this.minDelay : 1;
-
             // Decrement only if greater than minDelay
-            if (this.newRule.delay > min) {
-                this.newRule.delay--;
+            if (
+                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_delay`] >
+                min
+            ) {
+                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_delay`]--;
             }
+            this.setAllowSubmission();
+        },
+        setAllowSubmission() {
+            // if notice is set to "", this translates to 'No letter', for which submisison is allowed, and mtt is redundant
+            const noticeAllowSubmissionAndBypassMtt =
+                this.ruleSetToSubmit?.[
+                    `overdue_${this.triggerNumber}_notice`
+                ] === "";
+            if (noticeAllowSubmissionAndBypassMtt) {
+                this.allowSubmission = true;
+                return;
+            }
+
+            // check specificity required as 0 is a value that submission must be allowed for
+            const delayAllowsSubmission =
+                this.ruleSetToSubmit?.[`overdue_${this.triggerNumber}_delay`] !=
+                null;
+            if (delayAllowsSubmission) {
+                this.allowSubmission = true;
+                return;
+            }
+
+            // if notice is set, then ensure at least one transport has been set
+            const noticeAllowSubmisison =
+                this.ruleSetToSubmit?.[
+                    `overdue_${this.triggerNumber}_notice`
+                ] != null;
+            const mttHasItems =
+                this.ruleSetToSubmit?.[`overdue_${this.triggerNumber}_mtt`]
+                    ?.length;
+            if (noticeAllowSubmisison && mttHasItems) {
+                this.allowSubmission = true;
+                return;
+            }
+
+            const restrictAllowsSubmission =
+                this.ruleSetToSubmit?.[
+                    `overdue_${this.triggerNumber}_restrict`
+                ] != null;
+            if (restrictAllowsSubmission) {
+                this.allowSubmission = true;
+                return;
+            }
+            this.allowSubmission = false;
+        },
+        handleSetDelayToNull() {
+            this.ruleSetToSubmit[`overdue_${this.triggerNumber}_delay`] = null;
+            this.setAllowSubmission();
         },
     },
     watch: {
@@ -783,6 +885,10 @@ export default {
 </script>
 
 <style scoped>
+#circulation-trigger-form-add {
+    max-height: 90vh;
+}
+
 form li {
     display: flex;
     align-items: center;
@@ -894,5 +1000,9 @@ input[type="number"] {
 
 .router-link-active {
     margin-left: 10px;
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
 }
 </style>

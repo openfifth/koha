@@ -14,6 +14,10 @@ export class LibraryAPIClient {
                     params,
                     headers,
                 }),
+            get: id =>
+                this.httpClient.get({
+                    endpoint: `/${id}`,
+                }),
         };
     }
 }

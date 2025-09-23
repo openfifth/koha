@@ -2,14 +2,18 @@
     <Toolbar>
         <ToolbarButton
             :to="{
-                name: 'CirculationTriggersFormAdd',
-                query: { library_id: selectedLibrary },
+                name: 'CirculationTriggersFormConfirmContext',
+                query: {
+                    library_id: currentLibraryId,
+                    patron_category_id: currentPatronCategoryId,
+                    item_type_id: currentItemTypeId,
+                },
             }"
             icon="plus"
             :title="$__('Add new trigger')"
         />
     </Toolbar>
-    <div v-if="initialized">
+    <div v-if="filtersInitialized">
         <h1>{{ $__("Circulation triggers") }}</h1>
         <div class="page-section bg-info">
             <p>
@@ -85,35 +89,121 @@
                 }}
             </p>
         </div>
-        <div class="page-section" v-if="initialized">
-            <label for="library_select">{{ $__("Select a library") }}:</label>
-            <v-select
-                id="library_select"
-                v-model="selectedLibrary"
-                label="name"
-                :reduce="lib => lib.library_id"
-                :options="libraries"
-                @update:modelValue="handleLibrarySelection($event)"
-            >
-                <template #search="{ attributes, events }">
-                    <input
-                        :required="!selectedLibrary"
-                        class="vs__search"
-                        v-bind="attributes"
-                        v-on="events"
-                    />
-                </template>
-            </v-select>
+        <div class="page-section" v-if="filtersInitialized">
+            <legend>
+                Filter by
+                <span style="color: blue; font-weight: bold">context</span>
+            </legend>
+            <table>
+                <thead>
+                    <tr>
+                        <th>{{ $__("Library") }}</th>
+                        <th>{{ $__("Category") }}</th>
+                        <th>{{ $__("Item type") }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <v-select
+                                id="library_select"
+                                v-model="currentLibraryId"
+                                label="name"
+                                :reduce="lib => lib.library_id"
+                                :options="libraries"
+                                @update:modelValue="
+                                    filterRuleSetsbySearchParam()
+                                "
+                                :clearable="false"
+                                placeholder="Default rules for all libraries"
+                            >
+                                <template #search="{ attributes, events }">
+                                    <input
+                                        :required="!currentLibraryId"
+                                        class="vs__search"
+                                        v-bind="attributes"
+                                        v-on="events"
+                                    />
+                                </template>
+                            </v-select>
+                        </td>
+                        <td>
+                            <v-select
+                                id="patron_category_select"
+                                v-model="currentPatronCategoryId"
+                                label="name"
+                                :reduce="cat => cat.patron_category_id"
+                                :options="patronCategories"
+                                @update:modelValue="
+                                    filterRuleSetsbySearchParam()
+                                "
+                                placeholder="any"
+                            >
+                                <template #search="{ attributes, events }">
+                                    <input
+                                        :required="!currentPatronCategoryId"
+                                        class="vs__search"
+                                        v-bind="attributes"
+                                        v-on="events"
+                                    />
+                                </template>
+                            </v-select>
+                        </td>
+                        <td>
+                            <v-select
+                                id="item_type_select"
+                                v-model="currentItemTypeId"
+                                label="description"
+                                :reduce="itype => itype.item_type_id"
+                                :options="itemTypes"
+                                @update:modelValue="
+                                    filterRuleSetsbySearchParam()
+                                "
+                                placeholder="any"
+                            >
+                                <template #search="{ attributes, events }">
+                                    <input
+                                        :required="!currentItemTypeId"
+                                        class="vs__search"
+                                        v-bind="attributes"
+                                        v-on="events"
+                                    />
+                                </template>
+                            </v-select>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="toggle-view-all-applicable-wrapper">
+                <label for="filter-rules">{{ $__("Display ") }}</label>
+                <v-select
+                    id="filter-rules"
+                    v-model="displayAllApplicableRules"
+                    :reduce="opt => opt.value"
+                    :options="[
+                        {
+                            value: 0,
+                            label: 'explictly set rules.',
+                        },
+                        {
+                            value: 1,
+                            label: 'all applied rules.',
+                        },
+                    ]"
+                    @update:modelValue="filterRuleSetsbySearchParam()"
+                >
+                </v-select>
+            </div>
         </div>
     </div>
-    <div v-if="initialized">
+    <div v-if="filtersInitialized && ruleSetInitialized">
         <div id="circ_triggers_tabs" class="toptabs numbered">
             <ul class="nav nav-tabs" role="tablist">
                 <li
-                    v-for="(number, i) in numberOfTabs"
+                    v-for="number in triggerCounts[currentLibraryId]"
                     class="nav-item"
                     role="presentation"
-                    :key="`noticeTab${i}`"
+                    :key="`noticeTab_${number}`"
                 >
                     <a
                         href="#"
@@ -124,13 +214,13 @@
                         "
                         @click="changeTabContent"
                         :data-content="`Notice ${number}`"
-                        >{{ $__("Trigger") + " " + number }}</a
-                    >
+                        >{{ $__("Trigger") + " " + number }}
+                    </a>
                 </li>
             </ul>
         </div>
         <div class="tab-content">
-            <template v-for="(number, i) in numberOfTabs">
+            <template v-for="number in triggerCounts[currentLibraryId]">
                 <div
                     class="tab-pane"
                     role="tabpanel"
@@ -138,22 +228,49 @@
                         tabSelected === `Notice ${number}` ? 'show active' : ''
                     "
                     v-if="tabSelected === `Notice ${number}`"
-                    :key="`noticeTabContent${i}`"
+                    :key="`noticeTabContent_${number}`"
                 >
-                    <TriggersTable
-                        :circRules="circRules"
-                        :triggerNumber="number"
-                        :categories="categories"
-                        :itemTypes="itemTypes"
-                        :letters="letters"
-                    />
+                    <div class="page-section">
+                        <TriggersTable
+                            :modal="false"
+                            :actions="true"
+                            :ruleSets="ruleSets"
+                            :triggerNumber="number"
+                        >
+                            <router-link
+                                v-if="isLastTrigger(number)"
+                                :to="{
+                                    name: 'CirculationTriggersFormConfirmTriggerDelete',
+                                    query: {
+                                        triggerNumber: number,
+                                    },
+                                }"
+                                class="btn btn-primary"
+                            >
+                                <i class="fa-solid fa-xmark"></i>
+                                {{ $__("Delete") }}
+                            </router-link>
+                            <div
+                                :class="{
+                                    'page-section bg-info': true,
+                                    'inline-block': isLastTrigger(number),
+                                }"
+                            >
+                                {{
+                                    $__(
+                                        "Bolid italic values denote fallback values where an override has not been set for the context."
+                                    )
+                                }}
+                            </div>
+                        </TriggersTable>
+                    </div>
                 </div>
             </template>
         </div>
     </div>
     <div v-if="showModal" class="modal" role="dialog">
         <div
-            class="modal-dialog modal-dialog-centered modal-lg"
+            class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable"
             role="document"
         >
             <router-view></router-view>
@@ -164,7 +281,6 @@
 <script>
 import Toolbar from "../../Toolbar.vue";
 import ToolbarButton from "../../ToolbarButton.vue";
-import { APIClient } from "../../../fetch/api-client.js";
 import TriggersTable from "./TriggersTable.vue";
 import { inject } from "vue";
 import { storeToRefs } from "pinia";
@@ -172,98 +288,136 @@ import { storeToRefs } from "pinia";
 export default {
     setup() {
         const circRulesStore = inject("circRulesStore");
-        const { splitCircRulesByTriggerNumber } = circRulesStore;
-        const { letters } = storeToRefs(circRulesStore);
+        circRulesStore.init();
+        const {
+            updateTriggerCount,
+            setAllRawRuleSets,
+            setAllEffectiveRuleSets,
+            setAllExhaustiveEffectiveRuleSets,
+            isLastTrigger,
+        } = circRulesStore;
+        const {
+            currentLibraryId,
+            currentPatronCategoryId,
+            currentItemTypeId,
+            itemTypes,
+            libraries,
+            patronCategories,
+            triggerCounts,
+            allExhaustiveEffectiveRuleSets,
+            allEffectiveRuleSets,
+            storeInitialized,
+        } = storeToRefs(circRulesStore);
 
         return {
-            splitCircRulesByTriggerNumber,
-            letters,
+            currentLibraryId,
+            currentPatronCategoryId,
+            currentItemTypeId,
+            itemTypes,
+            libraries,
+            triggerCounts,
+            patronCategories,
+            updateTriggerCount,
+            allExhaustiveEffectiveRuleSets,
+            setAllRawRuleSets,
+            setAllEffectiveRuleSets,
+            setAllExhaustiveEffectiveRuleSets,
+            allEffectiveRuleSets,
+            isLastTrigger,
+            storeInitialized,
             from_branch,
         };
     },
     data() {
         return {
-            initialized: false,
-            libraries: null,
-            selectedLibrary: default_view,
-            circRules: null,
-            numberOfTabs: [1],
+            filtersInitialized: false,
+            ruleSetInitialized: false,
             tabSelected: "Notice 1",
             showModal: false,
+            displayAllApplicableRules: 1,
         };
     },
     beforeRouteEnter(to, from, next) {
-        next(vm => {
-            vm.getLibraries().then(() =>
-                vm.getCategories().then(() =>
-                    vm.getItemTypes().then(() =>
-                        vm.getCircRules({}, true).then(() => {
-                            vm.tabSelected = to.query.trigger
-                                ? `Notice ${to.query.trigger}`
-                                : "Notice 1";
-                            vm.initialized = true;
-                        })
-                    )
-                )
-            );
+        next(async vm => {
+            vm.filtersInitialized = true;
+            await vm.filterRuleSetsbySearchParam();
         });
     },
     methods: {
-        async getLibraries() {
-            const libClient = APIClient.library;
-            await libClient.libraries.getAll().then(
-                libraries => {
-                    libraries.unshift({
-                        library_id: "*",
-                        name: "Default rules for all libraries",
-                    });
-                    this.libraries = libraries;
-                },
-                error => {}
-            );
+        async loadRuleSets() {
+            this.ruleSetInitialized = false;
+            await this.setAllRawRuleSets();
+            this.updateTriggerCount();
+            this.setAllEffectiveRuleSets();
+            this.setAllExhaustiveEffectiveRuleSets();
+            this.storeInitialized = true;
         },
-        async getCategories() {
-            const client = APIClient.patron;
-            await client.patronCategories.getAll().then(
-                categories => {
-                    categories.unshift({
-                        patron_category_id: "*",
-                        name: "Default rule",
-                    });
-                    this.categories = categories;
-                },
-                error => {}
-            );
+        formatSelectedParams() {
+            const selectedParams = {};
+            selectedParams.effective = true;
+            selectedParams.library_id = this.currentLibraryId ?? "*";
+            if (this.currentPatronCategoryId) {
+                selectedParams.patron_category_id =
+                    this.currentPatronCategoryId;
+            }
+            if (this.currentItemTypeId) {
+                selectedParams.item_type_id = this.currentItemTypeId;
+            }
+            return selectedParams;
         },
-        async getItemTypes() {
-            const client = APIClient.item;
-            await client.itemTypes.getAll().then(
-                types => {
-                    types.unshift({
-                        item_type_id: "*",
-                        description: "Default rule",
-                    });
-                    this.itemTypes = types;
-                },
-                error => {}
+        async filterRuleSetsbySearchParam() {
+            await this.loadRuleSets();
+
+            const selectedParams = this.formatSelectedParams();
+            const data = this.displayAllApplicableRules
+                ? this.allExhaustiveEffectiveRuleSets
+                : this.allEffectiveRuleSets;
+
+            // handle searches for any patron category and item type combinations
+            if (
+                !selectedParams.patron_category_id &&
+                !selectedParams.item_type_id
+            ) {
+                this.ruleSets = data;
+                this.ruleSetInitialized = true;
+                return;
+            }
+
+            // handle searches where only the item type is specified
+            if (!selectedParams.patron_category_id) {
+                this.ruleSets = data.filter(
+                    ruleSet =>
+                        ruleSet.context.item_type_id ===
+                            selectedParams.item_type_id &&
+                        ruleSet.context.library_id === selectedParams.library_id
+                );
+                this.ruleSetInitialized = true;
+                return;
+            }
+
+            // handle searches where only the patron category is specified
+            if (!selectedParams.item_type_id) {
+                this.ruleSets = data.filter(
+                    ruleSet =>
+                        ruleSet.context.patron_category_id ===
+                            selectedParams.patron_category_id &&
+                        ruleSet.context.library_id === selectedParams.library_id
+                );
+                this.ruleSetInitialized = true;
+                return;
+            }
+
+            // handle searches where both patron category and item type are specified and one specific rule is retrieved
+            this.ruleSets = data.filter(
+                ruleSet =>
+                    ruleSet.context.item_type_id ===
+                        selectedParams.item_type_id &&
+                    ruleSet.context.patron_category_id ===
+                        selectedParams.patron_category_id &&
+                    ruleSet.context.library_id === selectedParams.library_id
             );
-        },
-        async getCircRules(params = {}) {
-            params.effective = false;
-            const client = APIClient.circRule;
-            await client.circRules.getAll({}, params).then(
-                rules => {
-                    const { numberOfTabs, rulesPerTrigger: circRules } =
-                        this.splitCircRulesByTriggerNumber(rules);
-                    this.numberOfTabs = numberOfTabs;
-                    this.circRules = circRules;
-                },
-                error => {}
-            );
-        },
-        async handleLibrarySelection(e) {
-            if (!e) e = "";
-            await this.getCircRules({ library_id: e });
+            this.ruleSetInitialized = true;
+            return;
         },
         changeTabContent(e) {
             this.tabSelected = e.target.getAttribute("data-content");
@@ -276,23 +430,56 @@ export default {
                 this.showModal = newVal.meta && newVal.meta.showModal;
             },
         },
+        "$route.query.refresh": {
+            async handler(newVal) {
+                if (newVal) {
+                    await this.filterRuleSetsbySearchParam();
+                }
+            },
+            immediate: true,
+        },
     },
     components: { TriggersTable, Toolbar, ToolbarButton },
 };
 </script>
 
 <style scoped>
-.v-select {
+.inline-block {
     display: inline-block;
+    width: calc(100% - 90.25px);
+    margin: 0 0 0 13px;
+}
+.page-section table {
+    width: 100%;
+    table-layout: fixed;
+}
+.page-section th,
+.page-section td {
+    width: 33%;
+}
+.page-section td {
+    padding: 0.5em;
+    vertical-align: top;
+}
+.v-select {
+    display: block;
     background-color: white;
-    width: 30%;
-    margin-left: 10px;
+    margin: 10px;
+    height: auto;
+}
+.vs__search,
+.v__selected {
+    display: inline-block;
+    vertical-align: middle;
 }
 .active {
     cursor: pointer;
 }
 .toptabs {
     margin-bottom: 0;
+}
+.toggle-view-all-applicable-wrapper {
+    margin: 10px;
 }
 
 .modal {
@@ -305,9 +492,12 @@ export default {
     width: 100%;
     height: 100%;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.33);
+    background-color: rgba(0, 0, 0, 0.33);
 }
-.modal-dialog {
-    overflow: auto;
-    height: 90%;
+.modal-dialog,
+.modal-dialog-centered,
+.modal-lg {
+    max-width: 90%;
+    width: fit-content;
 }
 </style>

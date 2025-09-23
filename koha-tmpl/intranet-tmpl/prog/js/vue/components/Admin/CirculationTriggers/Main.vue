@@ -33,6 +33,7 @@ export default {
             name: "No letter",
             code: "",
             branchcode: "",
+            value: "",
         });
         circRulesStore.letters = letters;
 
