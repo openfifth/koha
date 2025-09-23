@@ -1,0 +1,77 @@
+<!-- version 1.0 (2025-06-25) -->
+
+[% USE raw %]
+[% USE Asset %]
+[% USE Koha %]
+[% USE Branches %]
+[% SET footerjs = 1 %]
+[% INCLUDE 'doc-head-open.inc' %]
+<title>Fjärrlånebäställningar</title>
+[% Asset.css("css/mainpage.css") | $raw %]
+[% INCLUDE 'doc-head-close.inc' %]
+</head>
+
+<body id="fjarrlan_requests" class="intranet-main">
+[% INCLUDE 'header.inc' %]
+[% INCLUDE 'home-search.inc' %]
+
+<!--
+<nav id="breadcrumbs" aria-label="Breadcrumb" class="breadcrumb">
+    <ol>
+        <li>
+            <a href="#" aria-current="page">Home</a>
+        </li>
+    </ol>
+</nav>
+-->
+
+    <div class="container-fluid">
+      <div class="row">
+        <div class="col-md-6">
+	        <h3>Fjärrlån - Senast gjorda i Libris</h3>
+          <div class="page-section">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fjärrlånenummer</th>
+                  <th>Titel</th>
+                  <th>Låntagare</th>
+                  <th>Visa?</th>
+                  <!--<th>Importera?</th>-->
+                </tr>
+              </thead>
+              <tbody>
+                [% FOREACH ill_request IN decoded.ill_requests.reverse %]            
+                <tr>
+                  <td><a href="http://iller.libris.kb.se/librisfjarrlan/lf.php?action=search&search_string=[% ill_request.lf_number %]" target="_blank">[% ill_request.lf_number %]</a></td>
+                  <td>[% ill_request.title %]</td>
+                  <td style="white-space:nowrap">[% IF ill_request.user_id.length > 0 %]<a href="/cgi-bin/koha/circ/circulation.pl?findborrower=[% ill_request.user_id %]" target="_blank" >[% ill_request.user_id %]</a>[% ELSE %] (ej angivet) [% END  %]</td>
+                  <td><a href="/cgi-bin/koha/librisill-request.pl?branch=[% ill_request.requesting_library %]&lfnumber=[% ill_request.lf_number %]">Visa</a></td>
+                  <!-- <td><a href="" class="import" title="[% ill_request.bib_id %]">Importera</a></td> -->
+                </tr>
+                [% END %]
+                </tbody>
+            </table>
+          </div>
+        </div>
+      </div> <!-- /.row -->
+    </div> <!-- /.container-fluid -->	    
+
+<!-- the main div is closed in intranet-bottom.inc -->
+[% INCLUDE 'intranet-bottom.inc' %]
+
+<script>
+/*
+  function PopupZ3950(fw, bib_id) {
+    var strQuery = GetZ3950Terms(fw);
+    if(strQuery){
+      window.open("/cgi-bin/koha/cataloguing/z3950_search.pl?biblionumber=0&stdid=" + bib_id + "&z3950_1=1&op=do_search&id=1","z3950search",'width=800,height=500,location=yes,toolbar=no,scrollbars=yes,resize=yes');
+    }
+  }
+
+  function GetZ3950Terms(fw){
+    var strQuery="&frameworkcode=" + fw;
+    return strQuery;
+  }
+*/
+</script>

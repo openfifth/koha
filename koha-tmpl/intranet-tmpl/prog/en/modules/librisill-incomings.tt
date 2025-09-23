@@ -1,0 +1,179 @@
+<!-- version 1.0 (2025-06-25) -->
+
+[% USE raw %]
+[% USE Asset %]
+[% USE Koha %]
+[% USE Branches %]
+[% SET footerjs = 1 %]
+[% INCLUDE 'doc-head-open.inc' %]
+<title>Fjärrlåneförfrågningar från andra bibliotek</title>
+[% Asset.css("css/mainpage.css") | $raw %]
+[% INCLUDE 'doc-head-close.inc' %]
+</head>
+
+<body id="fjarrlan_incomings" class="intranet-main">
+[% INCLUDE 'header.inc' %]
+[% INCLUDE 'home-search.inc' %]
+
+<!--
+<nav id="breadcrumbs" aria-label="Breadcrumb" class="breadcrumb">
+    <ol>
+        <li>
+            <a href="#" aria-current="page">Home</a>
+        </li>
+    </ol>
+</nav>
+-->
+    <div class="container-fluid">
+      <div class="row">
+        <div class="col-md-8">
+	        <h3>Fjärrlån - Inkommande förfrågningar från Libris</h3>
+          <div class="page-section">
+            [% IF NOT decoded.count < 1 %]
+            <table>
+              <thead>
+                <tr>
+                  <th>Beställning</th>
+                  <th>Librisnummer</th>
+                  <th>Titel</th>
+                  <th>Bibliotek</th>
+                  <th>Status</th>
+                  <th>Plocklapp</th>
+                  <th>Adresslapp</th>
+                  [% IF NOT archive %] <th>Behandla</th> [% END %]
+                </tr>
+              </thead>
+              <tbody>
+                [% FOREACH ill_request IN decoded.ill_requests.reverse %]            
+                <tr>
+                  <td class="lf_number"><a href="https://iller.libris.kb.se/librisfjarrlan/lf.php?action=search&search_string=[% ill_request.lf_number %]" target="_blank">[% ill_request.lf_number %]</a></td>
+                  <td class="bib_id"><a href="https://libris.kb.se/bib/[% ill_request.bib_id %]" target="_blank">[% ill_request.bib_id %]</a></td>
+                  <td class="ill_title"><a href="/cgi-bin/koha/catalogue/search.pl?q=[% ill_request.bib_id %]" target="_blank">[% ill_request.title %]</a></td>
+                  <td class="req_library"><a href="/cgi-bin/koha/circ/circulation.pl?findborrower=[% ill_request.requesting_library %]">[% ill_request.requesting_library %]</a></td>
+                  <td class="ill_status">[% ill_request.status %]</td>
+                  <td style="white-space:nowrap;"><a href="https://iller.libris.kb.se/librisfjarrlan/api/illrequests/[% decoded.library_code %]/[% ill_request.lf_number %]?format=pdf" target="_blank">Öppna PDF</a></td>
+                  <td><a href="" target="blank" class="adresslapplink" data="[% ill_request.requesting_library %]">Skriv ut</a></td>
+                  [% IF NOT archive %] <td><button class="behandla btn btn-xs btn-primary" data-bs-toggle="modal" data-bs-target="#behandlaModal" data="[% ill_request.request_id	%]" timestamp="[% ill_request.last_modified %]">Behandla</a></td> [% END %]
+                </tr>
+                [% END %]
+              </tbody>
+            </table>
+            [% ELSE %]
+            <h5>Det finns inga förfrågningar för tillfället...</h5>
+            [% END %]
+          </div>
+        </div>
+      </div> <!-- /.row -->
+    </div> <!-- /.container-fluid -->	
+
+    <div class="modal fade" id="behandlaModal" tabindex="-1" role="dialog" aria-labelledby="behandlaModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title" id="behandlaModalLabel">Behandla fjärrlån</h3>
+                </div>
+                <div class="modal-body">
+                    Här kommer informationen om boken som ska behandlas!
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Stäng</button>
+                    <button id="update_ill" type="button" class="btn btn-primary">Skicka</button>
+                </div>
+            </div>
+        </div>
+    </div>  
+
+<!-- the main div is closed in intranet-bottom.inc -->
+[% INCLUDE 'intranet-bottom.inc' %]
+
+<script>
+    $('.behandla').on('click', function() {
+        var order_id = $(this).attr('data');
+        var timestamp = $(this).attr('timestamp');
+        $('#behandlaModal .modal-body').html(`
+        <table>
+            <tr>
+                <td>Beställning:</td>
+                <td>${$(this).closest('tr').find('.lf_number').text()}</td>
+            </tr>
+            <tr>
+                <td>Titel:</td>
+                <td>${$(this).closest('tr').find('.ill_title').text()}</td>
+            </tr>
+            <!--<tr>
+                <td>Fjärrlånande bibliotek:</td>
+                <td>${$(this).closest('tr').find('.req_library').text()}</td>
+            </tr>-->        
+        </table>
+        
+        <div id="respondill" class="subfield_line" style="padding-top: 15px;">
+            <label for="response_id">Välj åtgärd:</label>
+            <select id="response_id">
+                <option value="1">Utlånad</option>
+                <option value="2">Förkommen</option>
+                <option value="3">Utlånas ej</option>
+                <option value="4">Finns ej</option>
+                <option value="5">F n ej tillgänglig</option>
+                <option value="6">Ej anländ</option>
+                <option value="7">Reserverad för er</option>
+                <option value="8">Övrigt</option>
+                <option value="9" selected>Levererad</option>
+            </select>
+        </div>
+        <br />
+        <label for="response_text">Meddelande:</label>
+
+        <textarea id="response_text" name="response_text" rows="1" cols="50"></textarea>
+        <div style="padding-top: 15px;">
+            <label class="radio-inline">
+                <input id="kr2" class="may_reserve_option" type="radio" name="may_reserve" value="1">
+                Kan reserveras
+            </label>
+            <label class="radio-inline">
+                <input id="kr1" class="may_reserve_option" type="radio" name="may_reserve" value="0">
+                Kan inte reserveras
+            </label>
+        </div>
+
+        `);
+
+        var may_reserve;
+
+        $('.may_reserve_option').on('click', function() {
+            may_reserve = $(this).val();
+            console.log(may_reserve);
+        });
+
+        
+        $('#update_ill').on('click', function(e) {
+            e.preventDefault();
+            var selected = $('#response_id :selected').val();
+            var responsetext = $('#response_text').val();
+            
+            var url = `/cgi-bin/koha/librisill-incomings.pl?order_id=${order_id}&branch=[% decoded.library_code %]&action=response&timestamp=${timestamp}&response_id=${selected}&added_response=${responsetext}`;
+    
+            if (may_reserve) {
+                url += `&may_reserve=${may_reserve}`;
+            }
+            console.log(encodeURI(url));
+            window.location = encodeURI(url);
+
+        });
+        
+    });
+
+  
+/*
+  function PopupZ3950(fw, bib_id) {
+    var strQuery = GetZ3950Terms(fw);
+    if(strQuery){
+      window.open("/cgi-bin/koha/cataloguing/z3950_search.pl?biblionumber=0&stdid=" + bib_id + "&z3950_1=1&op=do_search&id=1","z3950search",'width=800,height=500,location=yes,toolbar=no,scrollbars=yes,resize=yes');
+    }
+  }
+
+  function GetZ3950Terms(fw){
+    var strQuery="&frameworkcode=" + fw;
+    return strQuery;
+  }
+*/
+</script>
