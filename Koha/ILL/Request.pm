@@ -26,6 +26,7 @@ use DateTime;
 use C4::Letters;
 use Mojo::Util     qw(deprecated);
 use File::Basename qw(dirname);
+use Carp           qw( croak );
 
 use Koha::AuthorisedValue;
 use Koha::AuthorisedValues;
@@ -1933,21 +1934,39 @@ sub get_notice {
     my $author    = $self->extended_attributes->find( { type => 'author' } );
     my $metahash  = $self->metadata;
     my @metaarray = ();
+    my $template  = Koha::Notice::Templates->find_effective_template(
+        {
+            module                 => 'ill',
+            code                   => $params->{notice_code},
+            branchcode             => $self->branchcode,
+            message_transport_type => $params->{transport},
+            lang                   => $self->patron ? $self->patron->lang : undef
+        }
+    );
+
+    unless ($template) {
+        croak "No 'ill' " . $params->{notice_code} . " letter transported by " . $params->{transport};
+        return;
+    }
+
     foreach my $key ( sort { lc $a cmp lc $b } keys %{$metahash} ) {
         my $value = $metahash->{$key};
         push @metaarray, "- $key: $value" if $value;
     }
-    my $metastring = join( "\n", @metaarray );
 
+    my $metastring;
+    my $template_hash = $template->unblessed;
+    if ( $template_hash->{is_html} ) {
+        $metastring = join( "<br>\n", @metaarray );
+        $template_hash->{'content-type'} = 'text/html; charset="UTF-8"';
+    } else {
+        $metastring = join( "\n", @metaarray );
+    }
     my $illrequestattributes = { map { $_->type => $_->value } $self->extended_attributes->as_list };
 
     my $letter = C4::Letters::GetPreparedLetter(
-        module                 => 'ill',
-        letter_code            => $params->{notice_code},
-        branchcode             => $self->branchcode,
-        message_transport_type => $params->{transport},
-        lang                   => $self->patron ? $self->patron->lang : undef,
-        tables                 => {
+        letter => $template_hash,
+        tables => {
             illrequests => $self->illrequest_id,
             borrowers   => $self->borrowernumber,
             biblio      => $self->biblio_id,
