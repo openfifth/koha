@@ -27,10 +27,11 @@ export const useCircRulesStore = defineStore("circRules", () => {
         itemTypes: [],
         libraries: [],
         patronCategories: [],
+        lostValues: [],
         userPermissions: null,
         logged_in_library_id: null,
         letters: [],
-        ruleSuffixes: ["delay", "notice", "mtt", "restrict"],
+        ruleSuffixes: ["delay", "notice", "mtt", "restrict", "mark_returned", "lost", "charge"],
         transportTypes: [
             { code: "email", name: "Email" },
             { code: "sms", name: "SMS" },
@@ -96,6 +97,8 @@ export const useCircRulesStore = defineStore("circRules", () => {
             await this.getItemTypes();
             await this.getLibraries();
             await this.getPatronCategories();
+            await this.getLostValues();
+
             // If user can only manage their own library, override the default view
             if (!canManageAnyLibrary.value && store.logged_in_library_id) {
                 this.currentLibraryId = store.logged_in_library_id;
@@ -178,6 +181,12 @@ export const useCircRulesStore = defineStore("circRules", () => {
                 }
             });
             return max;
+        },
+        handleLost(id) {
+            const lostValue = this.lostValues.find(
+                val => val.authorised_value_id === id
+            );
+            return lostValue ? lostValue.description : id;
         },
         hasConflict(oldRuleSet, newRuleSet, triggerNumber) {
             if (
@@ -766,6 +775,21 @@ export const useCircRulesStore = defineStore("circRules", () => {
                 name: $__("Default rule for all categories"),
             });
             this.patronCategories = patronCategories;
+        },
+        async getLostValues() {
+            const client = APIClient.authorised_values;
+            let lostValues = await client.values.get("lost");
+            // coerce id type to string to prevent datatype errors later on
+            lostValues.forEach(
+                val =>
+                    (val.authorised_value_id = String(val.authorised_value_id))
+            );
+            lostValues.sort(this.compareByProperty("description"));
+            lostValues.unshift({
+                authorised_value_id: "*",
+                description: $__("Default rule for all categories"),
+            });
+            this.lostValues = lostValues;
         },
         async getRawSelectedRuleSet(context, effective = false) {
             if (context.library_id === null) {
