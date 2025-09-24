@@ -27,10 +27,20 @@ export const useCircRulesStore = defineStore("circRules", () => {
         itemTypes: [],
         libraries: [],
         patronCategories: [],
+        lostValues: [],
         userPermissions: null,
         user_library_id: null,
         letters: [],
-        ruleSuffixes: ["delay", "notice", "mtt", "restrict"],
+        ruleSuffixes: [
+            "delay",
+            "notice",
+            "mtt",
+            "restrict",
+            "mark_returned",
+            "lost",
+            "charge",
+            "forgive_fine",
+        ],
         transportTypes: [
             { code: "email", name: $__("Email") },
             { code: "sms", name: $__("SMS") },
@@ -96,6 +106,8 @@ export const useCircRulesStore = defineStore("circRules", () => {
             await this.getItemTypes();
             await this.getLibraries();
             await this.getPatronCategories();
+            await this.getLostValues();
+
             // If user can only manage their own library, override the default view
             if (!canManageAnyLibrary.value && store.user_library_id) {
                 this.currentLibraryId = store.user_library_id;
@@ -178,6 +190,10 @@ export const useCircRulesStore = defineStore("circRules", () => {
                 }
             });
             return max;
+        },
+        handleLost(value) {
+            const lostValue = this.lostValues.find(val => val.value === value);
+            return lostValue ? lostValue.description : value;
         },
         hasConflict(oldRuleSet, newRuleSet, triggerNumber) {
             if (
@@ -767,6 +783,18 @@ export const useCircRulesStore = defineStore("circRules", () => {
             });
             this.patronCategories = patronCategories;
         },
+        async getLostValues() {
+            const client = APIClient.authorised_values;
+            let lostValues = await client.values.get("lost");
+            // coerce id type to string to prevent datatype errors later on
+            lostValues.forEach(val => (val.value = String(val.value)));
+            lostValues.sort(this.compareByProperty("description"));
+            lostValues.unshift({
+                value: "",
+                description: $__("No lost value"),
+            });
+            this.lostValues = lostValues;
+        },
         async getRawSelectedRuleSet(context, effective = false) {
             if (context.library_id === null) {
                 context.library_id = "*";
@@ -787,6 +815,14 @@ export const useCircRulesStore = defineStore("circRules", () => {
                 existingRuleSet[`overdue_${triggerNumber}_notice`];
             circRuleSet[`overdue_${triggerNumber}_restrict`] =
                 existingRuleSet[`overdue_${triggerNumber}_restrict`];
+            circRuleSet[`overdue_${triggerNumber}_lost`] =
+                existingRuleSet[`overdue_${triggerNumber}_lost`];
+            circRuleSet[`overdue_${triggerNumber}_charge`] =
+                existingRuleSet[`overdue_${triggerNumber}_charge`];
+            circRuleSet[`overdue_${triggerNumber}_mark_returned`] =
+                existingRuleSet[`overdue_${triggerNumber}_mark_returned`];
+            circRuleSet[`overdue_${triggerNumber}_forgive_fine`] =
+                existingRuleSet[`overdue_${triggerNumber}_forgive_fine`];
             circRuleSet[`overdue_${triggerNumber}_mtt`] =
                 existingRuleSet[`overdue_${triggerNumber}_mtt`];
             const client = APIClient.circRule;
