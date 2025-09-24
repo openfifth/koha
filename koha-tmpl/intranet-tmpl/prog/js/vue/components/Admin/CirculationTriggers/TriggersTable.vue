@@ -32,6 +32,15 @@
             <th>
                 {{ $__("Restricts checkouts") }}
             </th>
+            <th>
+                {{ $__("Set Lost Value") }}
+            </th>
+            <th>
+                {{ $__("Charge Replacement Cost") }}
+            </th>
+            <th>
+                {{ $__("Mark as returned") }}
+            </th>
             <th v-if="actions">
                 {{ $__("Actions") }}
             </th>
@@ -207,6 +216,63 @@
                             }}
                         </span>
                     </td>
+                    <!-- Set Lost Value -->
+                    <td>
+                        <span
+                            :class="{
+                                fallback:
+                                    ruleSet[
+                                        `overdue_${modal ? i + 1 : triggerNumber}_lost`
+                                    ].isFallback,
+                            }"
+                        >
+                            {{
+                                handleLost(
+                                    ruleSet[
+                                        `overdue_${modal ? i + 1 : triggerNumber}_lost`
+                                    ].value
+                                )
+                            }}
+                        </span>
+                    </td>
+                    <!-- Charge Replacement Cost -->
+                    <td>
+                        <span
+                            :class="{
+                                fallback:
+                                    ruleSet[
+                                        `overdue_${modal ? i + 1 : triggerNumber}_charge`
+                                    ].isFallback,
+                            }"
+                        >
+                            {{
+                                handleRestrictions(
+                                    ruleSet[
+                                        `overdue_${modal ? i + 1 : triggerNumber}_charge`
+                                    ].value
+                                )
+                            }}
+                        </span>
+                    </td>
+                    <!-- Mark Returned -->
+                    <td>
+                        <span
+                            :class="{
+                                fallback:
+                                    ruleSet[
+                                        `overdue_${modal ? i + 1 : triggerNumber}_mark_returned`
+                                    ].isFallback,
+                            }"
+                        >
+                            {{
+                                handleRestrictions(
+                                    ruleSet[
+                                        `overdue_${modal ? i + 1 : triggerNumber}_mark_returned`
+                                    ].value
+                                )
+                            }}
+                        </span>
+                    </td>
                     <td class="actions" v-if="actions">
                         <router-link
                             :to="{
@@ -226,12 +292,7 @@
                             {{ $__("Edit") }}</router-link
                         >
                         <router-link
-                            v-if="
-                                ruleSet[
-                                    `overdue_${modal ? i + 1 : triggerNumber}_has_rules`
-                                ].value &&
-                                !isOnlyRuleSetForTrigger(triggerNumber)
-                            "
+                            v-if="!isOnlyRuleSetForTrigger(triggerNumber)"
                             :to="{
                                 name: 'CirculationTriggersFormConfirmReset',
                                 query: {
@@ -250,7 +311,7 @@
                 </tr>
             </template>
             <tr v-if="modal">
-                <td colspan="7"></td>
+                <td colspan="10"></td>
                 <td class="actions">
                     <router-link
                         :to="{
@@ -310,6 +371,7 @@ export default {
             handleContext,
             handleNotice,
             handleTransport,
+            handleLost,
             isOnlyRuleSetForTrigger,
             handleRestrictions,
         } = circRulesStore;
@@ -318,6 +380,7 @@ export default {
             handleContext,
             handleNotice,
             handleTransport,
+            handleLost,
             triggerCounts,
             patronCategories,
             itemTypes,

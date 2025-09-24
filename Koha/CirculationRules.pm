@@ -174,7 +174,19 @@ our $RULE_KINDS = {
         is_monetary  => 1,
         can_be_blank => 1,
     },
+    overdue_X_charge => {
+        scope        => [ 'branchcode', 'categorycode', 'itemtype' ],
+        can_be_blank => 0,
+    },
     overdue_X_delay => {
+        scope        => [ 'branchcode', 'categorycode', 'itemtype' ],
+        can_be_blank => 0,
+    },
+    overdue_X_has_rules => {
+        scope        => [ 'branchcode', 'categorycode', 'itemtype' ],
+        can_be_blank => 0,
+    },
+    overdue_X_mark_returned => {
         scope        => [ 'branchcode', 'categorycode', 'itemtype' ],
         can_be_blank => 0,
     },
@@ -190,7 +202,7 @@ our $RULE_KINDS = {
         scope        => [ 'branchcode', 'categorycode', 'itemtype' ],
         can_be_blank => 0,
     },
-    overdue_X_has_rules => {
+    overdue_X_lost => {
         scope        => [ 'branchcode', 'categorycode', 'itemtype' ],
         can_be_blank => 0,
     },
