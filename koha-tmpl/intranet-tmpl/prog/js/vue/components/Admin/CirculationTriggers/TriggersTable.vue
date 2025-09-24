@@ -350,7 +350,7 @@
                     </tr>
                 </template>
                 <tr v-if="modal">
-                    <td colspan="7"></td>
+                    <td colspan="11"></td>
                     <td class="actions" v-if="displayActions">
                         <button
                             type="button"
