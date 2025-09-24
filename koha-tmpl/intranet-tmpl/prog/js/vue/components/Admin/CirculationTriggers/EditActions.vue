@@ -134,6 +134,197 @@
                     </span>
                 </div>
             </li>
+            <li>
+                <label for="lost">{{ $__("Set Lost Value") }}:</label>
+                <v-select
+                    id="lost"
+                    v-model="ruleSetToSubmit[`overdue_${triggerNumber}_lost`]"
+                    label="description"
+                    :reduce="val => val.authorised_value_id"
+                    :options="lostValues"
+                >
+                    <template #search="{ attributes, events }">
+                        <input
+                            class="vs__search"
+                            v-bind="attributes"
+                            v-on="events"
+                            :placeholder="
+                                ruleSetToSubmit[
+                                    `overdue_${triggerNumber}_lost`
+                                ] === null ||
+                                ruleSetToSubmit[
+                                    `overdue_${triggerNumber}_lost`
+                                ] === undefined
+                                    ? handleLost(
+                                          fallbackRuleSet[
+                                              `overdue_${triggerNumber}_lost`
+                                          ]
+                                      )
+                                    : ''
+                            "
+                        />
+                    </template>
+                </v-select>
+            </li>
+            <li>
+                <label for="charge"
+                    >{{ $__("Charge replacement cost") }}:</label
+                >
+                <div>
+                    <input
+                        type="radio"
+                        id="charge-yes"
+                        v-model="
+                            ruleSetToSubmit[`overdue_${triggerNumber}_charge`]
+                        "
+                        :value="1"
+                    />
+                    {{ $__("Yes") }}
+                    <input
+                        type="radio"
+                        id="charge-no"
+                        v-model="
+                            ruleSetToSubmit[`overdue_${triggerNumber}_charge`]
+                        "
+                        :value="0"
+                    />
+                    {{ $__("No") }}
+                    <input
+                        type="radio"
+                        id="charge-fallback"
+                        v-model="
+                            ruleSetToSubmit[`overdue_${triggerNumber}_charge`]
+                        "
+                        :value="null"
+                    />
+                    {{ $__("Fallback to default") }}
+                    <span
+                        v-if="
+                            fallbackRuleSet[
+                                `overdue_${triggerNumber}_charge`
+                            ] !== null
+                        "
+                    >
+                        ({{
+                            fallbackRuleSet[
+                                `overdue_${triggerNumber}_charge`
+                            ] === 1
+                                ? $__("Yes")
+                                : $__("No")
+                        }})
+                    </span>
+                </div>
+            </li>
+            <li>
+                <label for="mark_returned"
+                    >{{ $__("Mark as returned") }}:</label
+                >
+                <div>
+                    <input
+                        type="radio"
+                        id="mark_returned-yes"
+                        v-model="
+                            ruleSetToSubmit[
+                                `overdue_${triggerNumber}_mark_returned`
+                            ]
+                        "
+                        :value="1"
+                    />
+                    {{ $__("Yes") }}
+                    <input
+                        type="radio"
+                        id="mark_returned-no"
+                        v-model="
+                            ruleSetToSubmit[
+                                `overdue_${triggerNumber}_mark_returned`
+                            ]
+                        "
+                        :value="0"
+                    />
+                    {{ $__("No") }}
+                    <input
+                        type="radio"
+                        id="mark_returned-fallback"
+                        v-model="
+                            ruleSetToSubmit[
+                                `overdue_${triggerNumber}_mark_returned`
+                            ]
+                        "
+                        :value="null"
+                    />
+                    {{ $__("Fallback to default") }}
+                    <span
+                        v-if="
+                            fallbackRuleSet[
+                                `overdue_${triggerNumber}_mark_returned`
+                            ] !== null
+                        "
+                    >
+                        ({{
+                            fallbackRuleSet[
+                                `overdue_${triggerNumber}_mark_returned`
+                            ] === 1
+                                ? $__("Yes")
+                                : $__("No")
+                        }})
+                    </span>
+                </div>
+            </li>
+            <li>
+                <label for="forgive_fine"
+                    >{{ $__("Forgive overdue fine") }}:</label
+                >
+                <div>
+                    <input
+                        type="radio"
+                        id="forgive_fine-yes"
+                        v-model="
+                            ruleSetToSubmit[
+                                `overdue_${triggerNumber}_forgive_fine`
+                            ]
+                        "
+                        :value="1"
+                    />
+                    {{ $__("Yes") }}
+                    <input
+                        type="radio"
+                        id="forgive_fine-no"
+                        v-model="
+                            ruleSetToSubmit[
+                                `overdue_${triggerNumber}_forgive_fine`
+                            ]
+                        "
+                        :value="0"
+                    />
+                    {{ $__("No") }}
+                    <input
+                        type="radio"
+                        id="forgive_fine-fallback"
+                        v-model="
+                            ruleSetToSubmit[
+                                `overdue_${triggerNumber}_forgive_fine`
+                            ]
+                        "
+                        :value="null"
+                    />
+                    {{ $__("Fallback to default") }}
+                    <span
+                        v-if="
+                            fallbackRuleSet[
+                                `overdue_${triggerNumber}_forgive_fine`
+                            ] !== null
+                        "
+                    >
+                        ({{
+                            fallbackRuleSet[
+                                `overdue_${triggerNumber}_forgive_fine`
+                            ] === 1
+                                ? $__("Yes")
+                                : $__("No")
+                        }})
+                    </span>
+                </div>
+            </li>
         </ol>
     </fieldset>
     <div v-else-if="editMode === 'add' || editMode === 'edit'">
@@ -155,6 +346,8 @@ export default {
         handleSetDelayToNull: { type: Function, required: true },
         incrementDelay: { type: Function, required: true },
         decrementDelay: { type: Function, required: true },
+        handleLost: { type: Function, required: true },
+        lostValues: { type: Array, required: true },
     },
 };
 </script>
