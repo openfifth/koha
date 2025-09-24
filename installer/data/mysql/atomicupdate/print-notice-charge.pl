@@ -9,12 +9,14 @@ return {
         my ( $dbh, $out ) = @$args{qw(dbh out)};
 
         # Add print_notice_charge column to categories table
-        $dbh->do(
-            q{ALTER TABLE categories 
+        unless ( column_exists( 'categories', 'print_notice_charge' ) ) {
+            $dbh->do(
+                q{ALTER TABLE categories 
               ADD COLUMN print_notice_charge decimal(28,6) DEFAULT 0.00 
               COMMENT 'charge for print notices (0.00 = disabled)' 
-              AFTER reservefee}
-        );
+              AFTER overduenoticerequired}
+            );
+        }
 
         # Add PRINT_NOTICE debit type
         $dbh->do(
@@ -50,6 +52,9 @@ return {
         }
         );
 
-        say_success( $out, "Added print_notice_charge column to categories table, debit type, and comprehensive print transport entries for print notice charging" );
+        say_success(
+            $out,
+            "Added print_notice_charge column to categories table, debit type, and comprehensive print transport entries for print notice charging"
+        );
     },
 };
