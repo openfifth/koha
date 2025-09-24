@@ -39,6 +39,18 @@
                 <th>
                     {{ $__("Restricts checkouts") }}
                 </th>
+                <th>
+                    {{ $__("Set Lost Value") }}
+                </th>
+                <th>
+                    {{ $__("Charge Replacement Cost") }}
+                </th>
+                <th>
+                    {{ $__("Mark as returned") }}
+                </th>
+                <th>
+                    {{ $__("Forgive overdue fine") }}
+                </th>
                 <th v-if="displayActions">
                     {{ $__("Actions") }}
                 </th>
@@ -203,6 +215,82 @@
                                 }}
                             </span>
                         </td>
+                        <!-- Set Lost Value -->
+                        <td>
+                            <span
+                                :class="{
+                                    fallback:
+                                        ruleSet[
+                                            `overdue_${modal ? i + 1 : triggerNumber}_lost`
+                                        ].isFallback,
+                                }"
+                            >
+                                {{
+                                    handleLost(
+                                        ruleSet[
+                                            `overdue_${modal ? i + 1 : triggerNumber}_lost`
+                                        ].value
+                                    )
+                                }}
+                            </span>
+                        </td>
+                        <!-- Charge Replacement Cost -->
+                        <td>
+                            <span
+                                :class="{
+                                    fallback:
+                                        ruleSet[
+                                            `overdue_${modal ? i + 1 : triggerNumber}_charge`
+                                        ].isFallback,
+                                }"
+                            >
+                                {{
+                                    handleRestrictions(
+                                        ruleSet[
+                                            `overdue_${modal ? i + 1 : triggerNumber}_charge`
+                                        ].value
+                                    )
+                                }}
+                            </span>
+                        </td>
+                        <!-- Mark Returned -->
+                        <td>
+                            <span
+                                :class="{
+                                    fallback:
+                                        ruleSet[
+                                            `overdue_${modal ? i + 1 : triggerNumber}_mark_returned`
+                                        ].isFallback,
+                                }"
+                            >
+                                {{
+                                    handleRestrictions(
+                                        ruleSet[
+                                            `overdue_${modal ? i + 1 : triggerNumber}_mark_returned`
+                                        ].value
+                                    )
+                                }}
+                            </span>
+                        </td>
+                        <!-- Forgive Fine -->
+                        <td>
+                            <span
+                                :class="{
+                                    fallback:
+                                        ruleSet[
+                                            `overdue_${modal ? i + 1 : triggerNumber}_forgive_fine`
+                                        ].isFallback,
+                                }"
+                            >
+                                {{
+                                    handleRestrictions(
+                                        ruleSet[
+                                            `overdue_${modal ? i + 1 : triggerNumber}_forgive_fine`
+                                        ].value
+                                    )
+                                }}
+                            </span>
+                        </td>
                         <td class="actions" v-if="displayActions">
                             <button
                                 type="button"
@@ -331,6 +419,7 @@ export default {
             handleContext,
             handleNotice,
             handleTransport,
+            handleLost,
             isOnlyRuleSetForTrigger,
             handleRestrictions,
         } = circRulesStore;
@@ -339,6 +428,7 @@ export default {
             handleContext,
             handleNotice,
             handleTransport,
+            handleLost,
             triggerCounts,
             patronCategories,
             itemTypes,
