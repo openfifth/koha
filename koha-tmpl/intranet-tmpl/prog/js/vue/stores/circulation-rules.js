@@ -31,7 +31,16 @@ export const useCircRulesStore = defineStore("circRules", () => {
         userPermissions: null,
         user_library_id: null,
         letters: [],
-        ruleSuffixes: ["delay", "notice", "mtt", "restrict", "mark_returned", "lost", "charge"],
+        ruleSuffixes: [
+            "delay",
+            "notice",
+            "mtt",
+            "restrict",
+            "mark_returned",
+            "lost",
+            "charge",
+            "forgive_fine",
+        ],
         transportTypes: [
             { code: "email", name: $__("Email") },
             { code: "sms", name: $__("SMS") },
@@ -811,6 +820,14 @@ export const useCircRulesStore = defineStore("circRules", () => {
                 existingRuleSet[`overdue_${triggerNumber}_notice`];
             circRuleSet[`overdue_${triggerNumber}_restrict`] =
                 existingRuleSet[`overdue_${triggerNumber}_restrict`];
+            circRuleSet[`overdue_${triggerNumber}_lost`] =
+                existingRuleSet[`overdue_${triggerNumber}_lost`];
+            circRuleSet[`overdue_${triggerNumber}_charge`] =
+                existingRuleSet[`overdue_${triggerNumber}_charge`];
+            circRuleSet[`overdue_${triggerNumber}_mark_returned`] =
+                existingRuleSet[`overdue_${triggerNumber}_mark_returned`];
+            circRuleSet[`overdue_${triggerNumber}_forgive_fine`] =
+                existingRuleSet[`overdue_${triggerNumber}_forgive_fine`];
             circRuleSet[`overdue_${triggerNumber}_mtt`] =
                 existingRuleSet[`overdue_${triggerNumber}_mtt`];
             const client = APIClient.circRule;
