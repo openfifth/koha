@@ -78,6 +78,8 @@
                     :handleSetDelayToNull="handleSetDelayToNull"
                     :incrementDelay="incrementDelay"
                     :decrementDelay="decrementDelay"
+                    :handleLost="handleLost"
+                    :lostValues="lostValues"
                 />
             </div>
             <div
@@ -136,9 +138,11 @@ export default {
             hasConflict,
             compareByProperty,
             scrollToElementById,
+            handleLost,
         } = circRulesStore;
         const {
             letters,
+            lostValues,
             libraries,
             itemTypes,
             transportTypes,
@@ -154,6 +158,7 @@ export default {
             letters,
             itemTypes,
             libraries,
+            lostValues,
             transportTypes,
             triggerCounts,
             patronCategories,
@@ -169,6 +174,7 @@ export default {
             logged_in_library_id,
             compareByProperty,
             scrollToElementById,
+            handleLost,
         };
     },
     data() {
@@ -258,6 +264,72 @@ export default {
                     cloneDeep(
                         this.ruleSetToSubmit[
                             `overdue_${this.triggerNumber}_delay`
+                        ]
+                    );
+            }
+
+            if (
+                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_lost`] !==
+                    null &&
+                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_lost`] !==
+                    this.fallbackRuleSet[`overdue_${this.triggerNumber}_lost`]
+            ) {
+                ruleSetToSubmit[`overdue_${this.triggerNumber}_lost`] =
+                    cloneDeep(
+                        this.ruleSetToSubmit[
+                            `overdue_${this.triggerNumber}_lost`
+                        ]
+                    );
+            }
+
+            if (
+                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_charge`] !==
+                    null &&
+                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_charge`] !==
+                    this.fallbackRuleSet[`overdue_${this.triggerNumber}_charge`]
+            ) {
+                ruleSetToSubmit[`overdue_${this.triggerNumber}_charge`] =
+                    cloneDeep(
+                        this.ruleSetToSubmit[
+                            `overdue_${this.triggerNumber}_charge`
+                        ]
+                    );
+            }
+
+            if (
+                this.ruleSetToSubmit[
+                    `overdue_${this.triggerNumber}_mark_returned`
+                ] !== null &&
+                this.ruleSetToSubmit[
+                    `overdue_${this.triggerNumber}_mark_returned`
+                ] !==
+                    this.fallbackRuleSet[
+                        `overdue_${this.triggerNumber}_mark_returned`
+                    ]
+            ) {
+                ruleSetToSubmit[`overdue_${this.triggerNumber}_mark_returned`] =
+                    cloneDeep(
+                        this.ruleSetToSubmit[
+                            `overdue_${this.triggerNumber}_mark_returned`
+                        ]
+                    );
+            }
+
+            if (
+                this.ruleSetToSubmit[
+                    `overdue_${this.triggerNumber}_forgive_fine`
+                ] !== null &&
+                this.ruleSetToSubmit[
+                    `overdue_${this.triggerNumber}_forgive_fine`
+                ] !==
+                    this.fallbackRuleSet[
+                        `overdue_${this.triggerNumber}_forgive_fine`
+                    ]
+            ) {
+                ruleSetToSubmit[`overdue_${this.triggerNumber}_forgive_fine`] =
+                    cloneDeep(
+                        this.ruleSetToSubmit[
+                            `overdue_${this.triggerNumber}_forgive_fine`
                         ]
                     );
             }
@@ -367,6 +439,10 @@ export default {
                     [`overdue_${this.triggerNumber}_delay`]: `${this.minDelay}`,
                     [`overdue_${this.triggerNumber}_notice`]: null,
                     [`overdue_${this.triggerNumber}_mtt`]: null,
+                    [`overdue_${this.triggerNumber}_lost`]: null,
+                    [`overdue_${this.triggerNumber}_charge`]: null,
+                    [`overdue_${this.triggerNumber}_mark_returned`]: null,
+                    [`overdue_${this.triggerNumber}_forgive_fine`]: null,
                     [`overdue_${this.triggerNumber}_restrict`]: null,
                 };
             }
@@ -441,6 +517,29 @@ export default {
                     "delay",
                     this.triggerNumber
                 ).value,
+                [`overdue_${this.triggerNumber}_lost`]: this.findEffectiveRule(
+                    this.context,
+                    "lost",
+                    this.triggerNumber
+                ).value,
+                [`overdue_${this.triggerNumber}_charge`]:
+                    this.findEffectiveRule(
+                        this.context,
+                        "charge",
+                        this.triggerNumber
+                    ).value,
+                [`overdue_${this.triggerNumber}_mark_returned`]:
+                    this.findEffectiveRule(
+                        this.context,
+                        "mark_returned",
+                        this.triggerNumber
+                    ).value,
+                [`overdue_${this.triggerNumber}_forgive_fine`]:
+                    this.findEffectiveRule(
+                        this.context,
+                        "forgive_fine",
+                        this.triggerNumber
+                    ).value,
                 [`overdue_${this.triggerNumber}_notice`]:
                     this.findEffectiveRule(
                         this.context,
@@ -579,14 +678,49 @@ export default {
             }
 
             // if notice is set, then ensure at least one transport has been set
-            const noticeAllowSubmisison =
+            const noticeAllowsSubmisison =
                 this.ruleSetToSubmit?.[
                     `overdue_${this.triggerNumber}_notice`
                 ] != null;
             const mttHasItems =
                 this.ruleSetToSubmit?.[`overdue_${this.triggerNumber}_mtt`]
                     ?.length;
-            if (noticeAllowSubmisison && mttHasItems) {
+            if (noticeAllowsSubmisison && mttHasItems) {
+                this.allowSubmission = true;
+                return;
+            }
+
+            const lostValueHasItems =
+                this.ruleSetToSubmit?.[`overdue_${this.triggerNumber}_lost`] !=
+                null;
+            if (lostValueHasItems) {
+                this.allowSubmission = true;
+                return;
+            }
+
+            const chargeAllowsSubmission =
+                this.ruleSetToSubmit?.[
+                    `overdue_${this.triggerNumber}_charge`
+                ] != null;
+            if (chargeAllowsSubmission) {
+                this.allowSubmission = true;
+                return;
+            }
+
+            const markReturnedAllowsSubmission =
+                this.ruleSetToSubmit?.[
+                    `overdue_${this.triggerNumber}_mark_returned`
+                ] != null;
+            if (markReturnedAllowsSubmission) {
+                this.allowSubmission = true;
+                return;
+            }
+
+            const forgiveFineAllowsSubmission =
+                this.ruleSetToSubmit?.[
+                    `overdue_${this.triggerNumber}_forgive_fine`
+                ] != null;
+            if (forgiveFineAllowsSubmission) {
                 this.allowSubmission = true;
                 return;
             }
