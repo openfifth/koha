@@ -89,6 +89,15 @@
                     <th>
                         {{ $__("Restricts checkouts") }}
                     </th>
+                    <th>
+                        {{ $__("Set Lost Value") }}
+                    </th>
+                    <th>
+                        {{ $__("Charge Replacement Cost") }}
+                    </th>
+                    <th>
+                        {{ $__("Mark as returned") }}
+                    </th>
                 </thead>
                 <tbody v-if="initialized">
                     <tr>
@@ -161,7 +170,7 @@
                                         ].value,
                                         "email",
                                         !effectiveRuleSet[
-                                            `overdue_${modal ? i + 1 : triggerNumber}_notice`
+                                            `overdue_${triggerNumber}_notice`
                                         ].value
                                     )
                                 }}
@@ -189,7 +198,7 @@
                                         ].value,
                                         "print",
                                         !effectiveRuleSet[
-                                            `overdue_${modal ? i + 1 : triggerNumber}_notice`
+                                            `overdue_${triggerNumber}_notice`
                                         ].value
                                     )
                                 }}
@@ -216,7 +225,7 @@
                                             `overdue_${triggerNumber}_mtt`
                                         ].value,
                                         !effectiveRuleSet[
-                                            `overdue_${modal ? i + 1 : triggerNumber}_notice`
+                                            `overdue_${triggerNumber}_notice`
                                         ].value
                                     )
                                 }}
@@ -241,6 +250,78 @@
                                     handleRestrictions(
                                         effectiveRuleSet[
                                             `overdue_${triggerNumber}_restrict`
+                                        ].value
+                                    )
+                                }}
+                            </span>
+                        </td>
+                        <!-- Set Lost Value -->
+                        <td>
+                            <span
+                                v-if="
+                                    effectiveRuleSet[
+                                        `overdue_${triggerNumber}_lost`
+                                    ]
+                                "
+                                :class="{
+                                    fallback:
+                                        effectiveRuleSet[
+                                            `overdue_${triggerNumber}_lost`
+                                        ].isFallback,
+                                }"
+                            >
+                                {{
+                                    handleLost(
+                                        effectiveRuleSet[
+                                            `overdue_${triggerNumber}_lost`
+                                        ].value
+                                    )
+                                }}
+                            </span>
+                        </td>
+                        <!-- Charge Replacement Cost -->
+                        <td>
+                            <span
+                                v-if="
+                                    effectiveRuleSet[
+                                        `overdue_${triggerNumber}_charge`
+                                    ]
+                                "
+                                :class="{
+                                    fallback:
+                                        effectiveRuleSet[
+                                            `overdue_${triggerNumber}_charge`
+                                        ].isFallback,
+                                }"
+                            >
+                                {{
+                                    handleRestrictions(
+                                        effectiveRuleSet[
+                                            `overdue_${triggerNumber}_charge`
+                                        ].value
+                                    )
+                                }}
+                            </span>
+                        </td>
+                        <!-- Mark Returned -->
+                        <td>
+                            <span
+                                v-if="
+                                    effectiveRuleSet[
+                                        `overdue_${triggerNumber}_mark_returned`
+                                    ]
+                                "
+                                :class="{
+                                    fallback:
+                                        effectiveRuleSet[
+                                            `overdue_${triggerNumber}_mark_returned`
+                                        ].isFallback,
+                                }"
+                            >
+                                {{
+                                    handleRestrictions(
+                                        effectiveRuleSet[
+                                            `overdue_${triggerNumber}_mark_returned`
                                         ].value
                                     )
                                 }}
@@ -282,6 +363,7 @@ export default {
             formatTriggerSpecificRuleSetForDisplay,
             deleteRuleSet,
             handleRestrictions,
+            handleLost,
         } = circRulesStore;
         const { libraries, itemTypes, patronCategories } =
             storeToRefs(circRulesStore);
@@ -296,6 +378,7 @@ export default {
             formatTriggerSpecificRuleSetForDisplay,
             deleteRuleSet,
             handleRestrictions,
+            handleLost,
         };
     },
     data() {

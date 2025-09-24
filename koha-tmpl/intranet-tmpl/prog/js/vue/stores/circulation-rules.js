@@ -399,6 +399,16 @@ export const useCircRulesStore = defineStore("circRules", {
             if (ruleSet[`overdue_${triggerNumber}_notice`] !== null) {
                 rulesForDeletion[`overdue_${triggerNumber}_notice`] = null;
             }
+            if (ruleSet[`overdue_${triggerNumber}_lost`] !== null) {
+                rulesForDeletion[`overdue_${triggerNumber}_lost`] = null;
+            }
+            if (ruleSet[`overdue_${triggerNumber}_charge`] !== null) {
+                rulesForDeletion[`overdue_${triggerNumber}_charge`] = null;
+            }
+            if (ruleSet[`overdue_${triggerNumber}_mark_returned`] !== null) {
+                rulesForDeletion[`overdue_${triggerNumber}_mark_returned`] =
+                    null;
+            }
             if (ruleSet[`overdue_${triggerNumber}_restrict`] !== null) {
                 rulesForDeletion[`overdue_${triggerNumber}_restrict`] = null;
             }
