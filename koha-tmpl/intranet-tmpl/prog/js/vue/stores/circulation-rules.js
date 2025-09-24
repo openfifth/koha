@@ -121,6 +121,14 @@ export const useCircRulesStore = defineStore("circRules", {
                 oldRuleSet[`overdue_${triggerNumber}_restrict`] !==
                     newRuleSet[`overdue_${triggerNumber}_restrict`] ||
                 !isEqual(
+                    oldRuleSet[`overdue_${triggerNumber}_lost`],
+                    newRuleSet[`overdue_${triggerNumber}_lost`]
+                ) ||
+                oldRuleSet[`overdue_${triggerNumber}_charge`] !==
+                    newRuleSet[`overdue_${triggerNumber}_charge`] ||
+                oldRuleSet[`overdue_${triggerNumber}_mark_returned`] !==
+                    newRuleSet[`overdue_${triggerNumber}_mark_returned`] ||
+                !isEqual(
                     oldRuleSet[`overdue_${triggerNumber}_mtt`],
                     newRuleSet[`overdue_${triggerNumber}_mtt`]
                 )
@@ -494,6 +502,12 @@ export const useCircRulesStore = defineStore("circRules", {
                 existingRuleSet[`overdue_${triggerNumber}_notice`];
             circRuleSet[`overdue_${triggerNumber}_restrict`] =
                 existingRuleSet[`overdue_${triggerNumber}_restrict`];
+            circRuleSet[`overdue_${triggerNumber}_lost`] =
+                existingRuleSet[`overdue_${triggerNumber}_lost`];
+            circRuleSet[`overdue_${triggerNumber}_charge`] =
+                existingRuleSet[`overdue_${triggerNumber}_charge`];
+            circRuleSet[`overdue_${triggerNumber}_mark_returned`] =
+                existingRuleSet[`overdue_${triggerNumber}_mark_returned`];
             circRuleSet[`overdue_${triggerNumber}_mtt`] =
                 existingRuleSet[`overdue_${triggerNumber}_mtt`];
             circRuleSet[`overdue_${triggerNumber}_has_rules`] =

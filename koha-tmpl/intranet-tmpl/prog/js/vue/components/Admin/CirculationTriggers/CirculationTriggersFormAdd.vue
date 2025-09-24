@@ -274,6 +274,150 @@
                             </span>
                         </div>
                     </li>
+                    <li>
+                        <label for="lost">{{ $__("Set Lost Value") }}:</label>
+                        <v-select
+                            id="lost"
+                            v-model="
+                                ruleSetToSubmit[`overdue_${triggerNumber}_lost`]
+                            "
+                            label="description"
+                            :reduce="val => val.authorised_value_id"
+                            :options="lostValues"
+                        >
+                            <template #search="{ attributes, events }">
+                                <input
+                                    class="vs__search"
+                                    v-bind="attributes"
+                                    v-on="events"
+                                    :placeholder="
+                                        ruleSetToSubmit[
+                                            `overdue_${triggerNumber}_lost`
+                                        ] === null ||
+                                        ruleSetToSubmit[
+                                            `overdue_${triggerNumber}_lost`
+                                        ] === undefined
+                                            ? handleLost(
+                                                  fallbackRuleSet[
+                                                      `overdue_${triggerNumber}_lost`
+                                                  ]
+                                              )
+                                            : ''
+                                    "
+                                />
+                            </template>
+                        </v-select>
+                    </li>
+                    <li>
+                        <label for="charge"
+                            >{{ $__("Charge replacement cost") }}:</label
+                        >
+                        <div>
+                            <input
+                                type="radio"
+                                id="charge-yes"
+                                v-model="
+                                    ruleSetToSubmit[
+                                        `overdue_${triggerNumber}_charge`
+                                    ]
+                                "
+                                :value="1"
+                            />
+                            {{ $__("Yes") }}
+                            <input
+                                type="radio"
+                                id="charge-no"
+                                v-model="
+                                    ruleSetToSubmit[
+                                        `overdue_${triggerNumber}_charge`
+                                    ]
+                                "
+                                :value="0"
+                            />
+                            {{ $__("No") }}
+                            <input
+                                type="radio"
+                                id="charge-fallback"
+                                v-model="
+                                    ruleSetToSubmit[
+                                        `overdue_${triggerNumber}_charge`
+                                    ]
+                                "
+                                :value="null"
+                            />
+                            {{ $__("Fallback to default") }}
+                            <span
+                                v-if="
+                                    fallbackRuleSet[
+                                        `overdue_${triggerNumber}_charge`
+                                    ] !== null
+                                "
+                            >
+                                ({{
+                                    fallbackRuleSet[
+                                        `overdue_${triggerNumber}_charge`
+                                    ] === 1
+                                        ? $__("Yes")
+                                        : $__("No")
+                                }})
+                            </span>
+                        </div>
+                    </li>
+                    <li>
+                        <label for="mark_returned"
+                            >{{ $__("Mark as returned") }}:</label
+                        >
+                        <div>
+                            <input
+                                type="radio"
+                                id="mark_returned-yes"
+                                v-model="
+                                    ruleSetToSubmit[
+                                        `overdue_${triggerNumber}_mark_returned`
+                                    ]
+                                "
+                                :value="1"
+                            />
+                            {{ $__("Yes") }}
+                            <input
+                                type="radio"
+                                id="mark_returned-no"
+                                v-model="
+                                    ruleSetToSubmit[
+                                        `overdue_${triggerNumber}_mark_returned`
+                                    ]
+                                "
+                                :value="0"
+                            />
+                            {{ $__("No") }}
+                            <input
+                                type="radio"
+                                id="mark_returned-fallback"
+                                v-model="
+                                    ruleSetToSubmit[
+                                        `overdue_${triggerNumber}_mark_returned`
+                                    ]
+                                "
+                                :value="null"
+                            />
+                            {{ $__("Fallback to default") }}
+                            <span
+                                v-if="
+                                    fallbackRuleSet[
+                                        `overdue_${triggerNumber}_mark_returned`
+                                    ] !== null
+                                "
+                            >
+                                ({{
+                                    fallbackRuleSet[
+                                        `overdue_${triggerNumber}_mark_returned`
+                                    ] === 1
+                                        ? $__("Yes")
+                                        : $__("No")
+                                }})
+                            </span>
+                        </div>
+                    </li>
                 </ol>
             </fieldset>
             <div v-else-if="editMode === 'add' || editMode === 'edit'">
@@ -429,9 +573,11 @@ export default {
             setEffectiveTriggerFilteredRuleSet,
             updateCircRuleSets,
             hasConflict,
+            handleLost,
         } = circRulesStore;
         const {
             letters,
+            lostValues,
             libraries,
             itemTypes,
             transportTypes,
@@ -444,6 +590,7 @@ export default {
             letters,
             itemTypes,
             libraries,
+            lostValues,
             transportTypes,
             triggerCounts,
             patronCategories,
@@ -454,6 +601,7 @@ export default {
             updateCircRuleSets,
             hasConflict,
             storeInitialized,
+            handleLost,
         };
     },
     data() {
@@ -539,6 +687,53 @@ export default {
                     cloneDeep(
                         this.ruleSetToSubmit[
                             `overdue_${this.triggerNumber}_delay`
+                        ]
+                    );
+            }
+
+            if (
+                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_lost`] !==
+                    null &&
+                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_lost`] !==
+                    this.fallbackRuleSet[`overdue_${this.triggerNumber}_lost`]
+            ) {
+                ruleSetToSubmit[`overdue_${this.triggerNumber}_lost`] =
+                    cloneDeep(
+                        this.ruleSetToSubmit[
+                            `overdue_${this.triggerNumber}_lost`
+                        ]
+                    );
+            }
+
+            if (
+                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_charge`] !==
+                    null &&
+                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_charge`] !==
+                    this.fallbackRuleSet[`overdue_${this.triggerNumber}_charge`]
+            ) {
+                ruleSetToSubmit[`overdue_${this.triggerNumber}_charge`] =
+                    cloneDeep(
+                        this.ruleSetToSubmit[
+                            `overdue_${this.triggerNumber}_charge`
+                        ]
+                    );
+            }
+
+            if (
+                this.ruleSetToSubmit[
+                    `overdue_${this.triggerNumber}_mark_returned`
+                ] !== null &&
+                this.ruleSetToSubmit[
+                    `overdue_${this.triggerNumber}_mark_returned`
+                ] !==
+                    this.fallbackRuleSet[
+                        `overdue_${this.triggerNumber}_mark_returned`
+                    ]
+            ) {
+                ruleSetToSubmit[`overdue_${this.triggerNumber}_mark_returned`] =
+                    cloneDeep(
+                        this.ruleSetToSubmit[
+                            `overdue_${this.triggerNumber}_mark_returned`
                         ]
                     );
             }
@@ -641,6 +836,9 @@ export default {
                     [`overdue_${this.triggerNumber}_delay`]: this.minDelay,
                     [`overdue_${this.triggerNumber}_notice`]: null,
                     [`overdue_${this.triggerNumber}_mtt`]: null,
+                    [`overdue_${this.triggerNumber}_lost`]: null,
+                    [`overdue_${this.triggerNumber}_charge`]: null,
+                    [`overdue_${this.triggerNumber}_mark_returned`]: null,
                     [`overdue_${this.triggerNumber}_restrict`]: null,
                 };
             }
@@ -706,6 +904,23 @@ export default {
                     "delay",
                     this.triggerNumber
                 ).value,
+                [`overdue_${this.triggerNumber}_lost`]: this.findEffectiveRule(
+                    this.context,
+                    "lost",
+                    this.triggerNumber
+                ).value,
+                [`overdue_${this.triggerNumber}_charge`]:
+                    this.findEffectiveRule(
+                        this.context,
+                        "charge",
+                        this.triggerNumber
+                    ).value,
+                [`overdue_${this.triggerNumber}_mark_returned`]:
+                    this.findEffectiveRule(
+                        this.context,
+                        "mark_returned",
+                        this.triggerNumber
+                    ).value,
                 [`overdue_${this.triggerNumber}_notice`]:
                     this.findEffectiveRule(
                         this.context,
@@ -839,14 +1054,40 @@ export default {
             }
 
             // if notice is set, then ensure at least one transport has been set
-            const noticeAllowSubmisison =
+            const noticeAllowsSubmisison =
                 this.ruleSetToSubmit?.[
                     `overdue_${this.triggerNumber}_notice`
                 ] != null;
             const mttHasItems =
                 this.ruleSetToSubmit?.[`overdue_${this.triggerNumber}_mtt`]
                     ?.length;
-            if (noticeAllowSubmisison && mttHasItems) {
+            if (noticeAllowsSubmisison && mttHasItems) {
+                this.allowSubmission = true;
+                return;
+            }
+
+            const lostValueHasItems =
+                this.ruleSetToSubmit?.[`overdue_${this.triggerNumber}_lost`]
+                    ?.length;
+            if (lostValueHasItems) {
+                this.allowSubmission = true;
+                return;
+            }
+
+            const chargeAllowsSubmission =
+                this.ruleSetToSubmit?.[
+                    `overdue_${this.triggerNumber}_charge`
+                ] != null;
+            if (chargeAllowsSubmission) {
+                this.allowSubmission = true;
+                return;
+            }
+
+            const markReturnedAllowsSubmission =
+                this.ruleSetToSubmit?.[
+                    `overdue_${this.triggerNumber}_mark_returned`
+                ] != null;
+            if (markReturnedAllowsSubmission) {
                 this.allowSubmission = true;
                 return;
             }
