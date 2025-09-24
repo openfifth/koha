@@ -29,15 +29,15 @@ Koha::File::Transport::Local - Local file system implementation of file transpor
 
 =head2 Class methods
 
-=head3 connect
+=head3 _connect
 
-    my $success = $self->connect;
+    my $success = $self->_connect;
 
 Validates that the configured directories exist and have appropriate permissions.
 
 =cut
 
-sub connect {
+sub _connect {
     my ($self) = @_;
     my $operation = "connection";
 
@@ -118,21 +118,19 @@ sub connect {
     return 1;
 }
 
-=head3 upload_file
+=head3 _upload_file
 
-    my $success =  $transport->upload_file($local_file, $remote_file);
-
-Copies a local file to the upload directory.
+Internal method that performs the local file system upload operation.
 
 Returns true on success or undefined on failure.
 
 =cut
 
-sub upload_file {
+sub _upload_file {
     my ( $self, $local_file, $remote_file ) = @_;
     my $operation = "upload";
 
-    my $upload_dir  = $self->upload_directory || $self->{current_directory} || '.';
+    my $upload_dir  = $self->{current_directory} || $self->upload_directory || '.';
     my $destination = File::Spec->catfile( $upload_dir, $remote_file );
 
     unless ( copy( $local_file, $destination ) ) {
@@ -160,21 +158,19 @@ sub upload_file {
     return 1;
 }
 
-=head3 download_file
+=head3 _download_file
 
-    my $success =  $transport->download_file($remote_file, $local_file);
-
-Copies a file from the download directory to a local file.
+Internal method that performs the local file system download operation.
 
 Returns true on success or undefined on failure.
 
 =cut
 
-sub download_file {
+sub _download_file {
     my ( $self, $remote_file, $local_file ) = @_;
     my $operation = 'download';
 
-    my $download_dir = $self->download_directory || $self->{current_directory} || '.';
+    my $download_dir = $self->{current_directory} || $self->download_directory || '.';
     my $source       = File::Spec->catfile( $download_dir, $remote_file );
 
     unless ( -f $source ) {
@@ -216,9 +212,9 @@ sub download_file {
     return 1;
 }
 
-=head3 change_directory
+=head3 _change_directory
 
-    my $success = $server->change_directory($directory);
+    my $success = $server->_change_directory($directory);
 
 Sets the current working directory for file operations.
 
@@ -226,7 +222,7 @@ Returns true on success or undefined on failure.
 
 =cut
 
-sub change_directory {
+sub _change_directory {
     my ( $self, $remote_directory ) = @_;
     my $operation = 'change_directory';
 
@@ -258,21 +254,20 @@ sub change_directory {
     return 1;
 }
 
-=head3 list_files
+=head3 _list_files
 
-    my $files = $server->list_files;
-
-Returns an array reference of hashrefs with file information found in the current directory.
+Internal method that performs the local file system file listing operation.
+Returns an array reference of hashrefs with file information.
 Each hashref contains: filename, longname, size, perms, mtime.
 Each hashref contains: filename, longname, size, perms, mtime, type.
 
 =cut
 
-sub list_files {
+sub _list_files {
     my ($self) = @_;
     my $operation = "list";
 
-    my $directory = $self->download_directory || $self->{current_directory} || '.';
+    my $directory = $self->{current_directory} || $self->download_directory || '.';
 
     unless ( -d $directory ) {
         $self->add_message(
@@ -349,21 +344,19 @@ sub list_files {
     return \@files;
 }
 
-=head3 rename_file
+=head3 _rename_file
 
-    my $success = $server->rename_file($old_name, $new_name);
-
-Renames a file in the current directory.
+Internal method that performs the local file system file rename operation.
 
 Returns true on success or undefined on failure.
 
 =cut
 
-sub rename_file {
+sub _rename_file {
     my ( $self, $old_name, $new_name ) = @_;
     my $operation = "rename";
 
-    my $directory = $self->download_directory || $self->{current_directory} || '.';
+    my $directory = $self->{current_directory} || $self->download_directory || '.';
     my $old_path  = File::Spec->catfile( $directory, $old_name );
     my $new_path  = File::Spec->catfile( $directory, $new_name );
 
@@ -406,15 +399,28 @@ sub rename_file {
     return 1;
 }
 
-=head3 disconnect
+=head3 _is_connected
 
-    $server->disconnect();
+Internal method to check if transport is currently connected.
+For local transport, always returns true as local filesystem is always accessible.
+
+=cut
+
+sub _is_connected {
+    my ($self) = @_;
+
+    return 1;    # Local filesystem is always "connected"
+}
+
+=head3 _disconnect
+
+    $server->_disconnect();
 
 For local transport, this is a no-op as there are no connections to close.
 
 =cut
 
-sub disconnect {
+sub _disconnect {
     my ($self) = @_;
 
     # No-op for local transport
