@@ -27,7 +27,8 @@ use Mojolicious::Plugin::OAuth2;
 use JSON::Validator::Schema::OpenAPIv2;
 
 use Try::Tiny qw( catch try );
-use JSON      qw( decode_json );
+use JSON      qw( encode_json decode_json );
+use XML::LibXML;
 
 =head1 NAME
 
@@ -70,12 +71,74 @@ sub startup {
             Koha::Caches->flush_L1_caches();
             Koha::Cache::Memory::Lite->flush();
 
+            # Convert XML payload to JSON and validate against schema
+            if ( $c->req->headers->content_type && $c->req->headers->content_type =~ /application\/xml/ ) {
+                try {
+                    my $xml = $c->req->body;
+
+                    # Use cached parser for performance
+                    my $parser = $c->app->defaults->{'koha.xml.parser'};
+                    unless ($parser) {
+
+                        # Fallback if parser not cached
+                        $parser = XML::LibXML->new();
+                        $parser->recover(1);
+                        $parser->no_network(1);
+                    }
+
+                    my $doc  = $parser->parse_string($xml);
+                    my $root = $doc->documentElement();
+                    my $json = $self->parse_xml( $c, $root );
+
+                    $c->req->body( JSON::encode_json($json) );
+
+                    unless ( $self->validate_json_payload( $c, $json ) ) {
+                        return $c->render(
+                            status => 400,
+                            json   => { error => 'Invalid XML payload: Schema validation failed' }
+                        );
+                    }
+                } catch {
+                    return $c->render(
+                        status => 400,
+                        json   => {
+                            error   => 'Invalid XML payload: Parse error',
+                            details => "$_"
+                        }
+                    );
+                }
+            }
+
             return $next->();
+        }
+    );
+
+    $self->hook(
+        after_dispatch => sub {
+            my ($c) = @_;
+
+            # Check if the response header content_type is application/xml
+            if ( $c->res->headers->content_type && $c->res->headers->content_type eq 'application/xml' ) {
+
+                # Convert JSON to XML using cached parser
+                try {
+                    my $json_data = decode_json( $c->res->body );
+                    my $xml       = $self->to_xml( $c, $json_data );
+                    $c->res->body($xml);
+                } catch {
+
+                    # Log error but don't break response
+                    $c->app->log->error("Failed to convert response to XML: $_");
+                }
+            }
+
+            return;
         }
     );
 
     # Force charset=utf8 in Content-Type header for JSON responses
     $self->types->type( json => 'application/json; charset=utf8' );
+    $self->types->type( xml  => 'application/xml' );
 
     # MARC-related types
     $self->types->type( marcxml => 'application/marcxml+xml' );
@@ -102,6 +165,38 @@ sub startup {
         $schema->resolve($spec_file);
 
         my $spec = $schema->bundle->data;
+
+        # Store the validator and related objects for performance optimization
+        $self->defaults->{'koha.openapi.validator'} = $schema;
+        $self->defaults->{'koha.openapi.spec'}      = $spec;
+        $self->defaults->{'koha.openapi.spec_file'} = $spec_file;
+
+        # Pre-create and cache XML parser for performance
+        my $xml_parser = XML::LibXML->new();
+        $xml_parser->recover(1);       # Enable error recovery
+        $xml_parser->no_network(1);    # Disable network access for security
+        $self->defaults->{'koha.xml.parser'} = $xml_parser;
+
+        # Pre-index schema definitions for faster lookups
+        my $definitions  = $spec->{definitions} || {};
+        my $schema_index = {};
+        foreach my $def_name ( keys %$definitions ) {
+            my $def = $definitions->{$def_name};
+            if ( $def->{properties} ) {
+                my @array_props = ();
+                foreach my $prop_name ( keys %{ $def->{properties} } ) {
+                    my $prop = $def->{properties}->{$prop_name};
+                    if ( $prop->{type} && $prop->{type} eq 'array' ) {
+                        push @array_props, $prop_name;
+                    }
+                }
+                $schema_index->{$def_name} = {
+                    properties       => $def->{properties},
+                    array_properties => \@array_props
+                };
+            }
+        }
+        $self->defaults->{'koha.schema.index'} = $schema_index;
 
         $self->plugin(
             'Koha::REST::Plugin::PluginRoutes' => {
@@ -176,6 +271,189 @@ sub startup {
     $self->plugin('Koha::REST::Plugin::Auth::IdP');
     $self->plugin('Koha::REST::Plugin::Auth::PublicRoutes');
     $self->plugin( 'Mojolicious::Plugin::OAuth2' => $oauth_configuration );
+}
+
+sub to_xml {
+    my ( $self, $c, $json ) = @_;
+    my $xml = XML::LibXML::Document->new( '1.0', 'UTF-8' );
+
+    my $root_key = ( keys %$json )[0];
+    my $root     = $xml->createElement($root_key);
+    $xml->setDocumentElement($root);
+
+    $self->_json_to_xml( $json->{$root_key}, $root, $xml );
+
+    return $xml->toString;
+}
+
+sub _json_to_xml {
+    my ( $self, $json, $parent, $doc ) = @_;
+
+    if ( ref $json eq 'HASH' ) {
+        foreach my $key ( keys %$json ) {
+            my $value = $json->{$key};
+            if ( ref $value eq 'HASH' ) {
+                my $elem = $doc->createElement($key);
+                $parent->appendChild($elem);
+                $self->_json_to_xml( $value, $elem, $doc );
+            } elsif ( ref $value eq 'ARRAY' ) {
+                foreach my $item (@$value) {
+                    my $elem = $doc->createElement($key);
+                    $parent->appendChild($elem);
+                    $self->_json_to_xml( $item, $elem, $doc );
+                }
+            } else {
+                my $elem = $doc->createElement($key);
+                $elem->appendText($value);
+                $parent->appendChild($elem);
+            }
+        }
+    } elsif ( ref $json eq 'ARRAY' ) {
+        foreach my $item (@$json) {
+            my $elem = $doc->createElement('item');
+            $parent->appendChild($elem);
+            $self->_json_to_xml( $item, $elem, $doc );
+        }
+    } else {
+        my $elem = $doc->createElement('value');
+        $elem->appendText($json);
+        $parent->appendChild($elem);
+    }
+}
+
+=head3 validate_json_payload
+
+=cut
+
+sub validate_json_payload {
+    my ( $self, $c, $payload ) = @_;
+
+    # Use cached validator for performance
+    my $validator = $c->app->defaults->{'koha.openapi.validator'};
+
+    unless ($validator) {
+
+        # Fallback to loading validator if not cached
+        my $spec_file = $c->app->defaults->{'koha.openapi.spec_file'}
+            || $self->home->rel_file("api/v1/swagger/swagger_bundle.json");
+        if ( !-f $spec_file ) {
+            $spec_file = $self->home->rel_file("api/v1/swagger/swagger.yaml");
+        }
+
+        $validator = JSON::Validator::Schema::OpenAPIv2->new;
+        $validator->resolve($spec_file);
+    }
+
+    # Validate the JSON payload against the schema
+    my @errors = $validator->validate($payload);
+
+    # Log validation errors for debugging
+    if (@errors) {
+        $c->app->log->debug( "JSON payload validation errors: " . join( ", ", map { $_->message } @errors ) );
+    }
+
+    # Return 1 if the payload is valid, 0 otherwise
+    return @errors ? 0 : 1;
+}
+
+sub parse_xml {
+    my ( $self, $c, $node ) = @_;
+    my $hash = {};
+
+    # Use cached schema index for performance
+    my $schema_index = $c->app->defaults->{'koha.schema.index'};
+
+    unless ($schema_index) {
+
+        # Fallback to loading schema if not cached
+        my $validator = $c->app->defaults->{'koha.openapi.validator'};
+        unless ($validator) {
+            my $spec_file = $self->home->rel_file("api/v1/swagger/swagger_bundle.json");
+            if ( !-f $spec_file ) {
+                $spec_file = $self->home->rel_file("api/v1/swagger/swagger.yaml");
+            }
+            $validator = JSON::Validator::Schema::OpenAPIv2->new($spec_file);
+        }
+
+        my $definitions = $validator->data->{definitions} || {};
+        $schema_index = {};
+        foreach my $def_name ( keys %$definitions ) {
+            my $def = $definitions->{$def_name};
+            if ( $def->{properties} ) {
+                my @array_props = ();
+                foreach my $prop_name ( keys %{ $def->{properties} } ) {
+                    my $prop = $def->{properties}->{$prop_name};
+                    if ( $prop->{type} && $prop->{type} eq 'array' ) {
+                        push @array_props, $prop_name;
+                    }
+                }
+                $schema_index->{$def_name} = {
+                    properties       => $def->{properties},
+                    array_properties => \@array_props
+                };
+            }
+        }
+    }
+
+    $self->_parse_node( $node, $hash, 0, $schema_index );
+
+    return $hash;
+}
+
+sub _parse_node {
+    my ( $self, $node, $hash, $is_array, $schema_index ) = @_;
+
+    my $name = $node->localName();
+
+    # Use pre-indexed schema for performance
+    my $schema_def       = $schema_index->{$name}    || {};
+    my $properties       = $schema_def->{properties} || {};
+    my @array_properties = @{ $schema_def->{array_properties} || [] };
+
+    # Performance optimization: pre-indexed array properties eliminates the need
+    # to iterate through all properties on every node
+
+    if ( $node->hasChildNodes() ) {
+        my $child_hash = {};
+        foreach my $child ( $node->childNodes() ) {
+            if ( $child->nodeType() == 1 ) {    # 1 is the node type for elements
+                if ( grep { $_ eq $child->localName() } @array_properties ) {
+                    $self->_parse_node( $child, $child_hash, 1, $schema_index );
+                } else {
+                    $self->_parse_node( $child, $child_hash, 0, $schema_index );
+                }
+            }
+        }
+        if (%$child_hash) {
+            if ( $is_array || exists $hash->{$name} ) {
+                if ( ref( $hash->{$name} ) eq 'ARRAY' ) {
+                    push @{ $hash->{$name} }, $child_hash;
+                } else {
+                    $hash->{$name} = [$child_hash];
+                }
+            } else {
+                $hash->{$name} = $child_hash;
+            }
+        } else {
+            my $text = $node->textContent();
+            $text =~ s/^\s+//;    # remove leading whitespace
+            $text =~ s/\s+$//;    # remove trailing whitespace
+            if ( $is_array || exists $hash->{$name} ) {
+                if ( ref( $hash->{$name} ) eq 'ARRAY' ) {
+                    push @{ $hash->{$name} }, $text;
+                } else {
+                    $hash->{$name} = [$text];
+                }
+            } else {
+                $hash->{$name} = $text;
+            }
+        }
+    } else {
+        my $text = $node->textContent();
+        $text =~ s/^\s+//;    # remove leading whitespace
+        $text =~ s/\s+$//;    # remove trailing whitespace
+        $hash->{$name} = $text;
+    }
 }
 
 1;
