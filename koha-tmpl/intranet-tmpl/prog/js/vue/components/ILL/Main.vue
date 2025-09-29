@@ -107,7 +107,4 @@ textarea {
     pointer-events: none;
     font-weight: 700;
 }
-.btn-toolbar .btn {
-    margin-right: 5px;
-}
 </style>

@@ -3792,6 +3792,7 @@ CREATE TABLE `iso18626_requests` (
   `status` enum('RequestReceived','ExpectToSupply','WillSupply','Loaned', 'Overdue', 'Recalled', 'RetryPossible', 'Unfilled', 'HoldReturn', 'ReleaseHoldReturn', 'CopyCompleted', 'LoanCompleted', 'CompletedWithoutReturn', 'Cancelled') DEFAULT 'RequestReceived' COMMENT 'Current ISO18626 status of request',
   `service_type` enum('Copy','Loan','CopyOrLoan') NOT NULL COMMENT 'ISO18626 service type',
   `pending_requesting_agency_action` enum('Cancel','Renew') DEFAULT NULL COMMENT 'ISO18626 Requesting Agency action that requires a manual response (yes or no)',
+  /* TODO: Track last_status_change_timestamp, this is needed for ISO18626 message statusInfo.lastChange data */
   PRIMARY KEY (`iso18626_request_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;

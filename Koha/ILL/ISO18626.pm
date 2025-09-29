@@ -127,7 +127,7 @@ sub confirmation_response {
         my $requestingAgencyMessage = $iso18626_request->add_message( { type => $message_type, message => $body } );
 
         # Verify if the provided action is supported
-        my $supported_action_types = supported_action_types();
+        my $supported_action_types = supported_action_types($iso18626_request);
         return {
             status  => 400,
             openapi => error_response(
@@ -226,17 +226,23 @@ sub message_types {
 
 =head3 supported_action_types
 
+    Returns an array of supported action types for a given ISO18626 request.
+    Returns an empty array if the request has already been completed.
+
 =cut
 
 sub supported_action_types {
+    my ($iso18626_request) = @_;
 
-    #TODO: Actions that are commented out are not yet implemented/supported
+    return []
+        if $iso18626_request->status =~ /^(?:Cancelled|CopyCompleted|CompletedWithoutReturn|LoanCompleted|Unfilled)$/;
 
     return [
         'StatusRequest',
         'Received',
         'Cancel',
 
+        # TODO: Uncomment these once implemented
         #'Renew',
         #'HoldReturn',
         #'ShippedReturn',

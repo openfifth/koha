@@ -49,8 +49,13 @@ import {
 export function useBaseResource(resourceConfig) {
     const router = useRouter();
     const route = useRoute();
-    const { setConfirmationDialog, setMessage, setError, setWarning } =
-        inject("mainStore");
+    const {
+        setConfirmationDialog,
+        setMessage,
+        setError,
+        setWarning,
+        updateConfirmationDialogInputs,
+    } = inject("mainStore");
     const navigationStore = inject("navigationStore");
     const { breadcrumbMetadata } = storeToRefs(navigationStore);
 
@@ -721,6 +726,9 @@ export function useBaseResource(resourceConfig) {
         setMessage,
         setError,
         setWarning,
+        updateConfirmationDialogInputs,
+        format_date,
+        patron_to_html,
         build_url,
         route,
         router,

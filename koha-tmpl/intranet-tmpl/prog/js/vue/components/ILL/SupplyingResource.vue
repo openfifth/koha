@@ -21,8 +21,13 @@ export default {
     setup(props) {
         const router = useRouter();
 
-        const { setConfirmationDialog, setMessage, setError } =
-            inject("mainStore");
+        const {
+            setConfirmationDialog,
+            setMessage,
+            updateConfirmationDialogInputs,
+        } = inject("mainStore");
+
+        const conditionalInputs = ref([]);
 
         const statuses = ref([
             {
@@ -50,6 +55,14 @@ export default {
                     "RetryPossible",
                     "Unfilled",
                 ],
+                action_inputs: [
+                    {
+                        name: "expectedDeliveryDate",
+                        type: "date",
+                        label: $__("Expected delivery date"),
+                    },
+                ],
+                index: 0,
             },
             {
                 id: "WillSupply",
@@ -64,6 +77,7 @@ export default {
                     "CopyCompleted",
                     "Unfilled",
                 ],
+                action_inputs: [],
             },
             {
                 id: "Loaned",
@@ -77,6 +91,7 @@ export default {
                     "LoanCompleted",
                     "CompletedWithoutReturn",
                 ], //[ 'Recalled', 'HoldReturn' ]
+                action_inputs: [],
             },
             {
                 id: "Overdue",
@@ -86,6 +101,7 @@ export default {
                 button_label: $__("Mark as ovedue"),
                 icon: "fa-box",
                 next_actions: ["LoanCompleted", "CompletedWithoutReturn"], //[ 'Recalled', 'HoldReturn', 'LoanCompleted' ]
+                action_inputs: [],
             },
             {
                 id: "Recalled",
@@ -95,6 +111,7 @@ export default {
                 button_label: $__("Ask for recall"),
                 icon: "fa-box",
                 next_actions: ["LoanCompleted", "CompletedWithoutReturn"],
+                action_inputs: [],
             },
             {
                 id: "RetryPossible",
@@ -104,6 +121,193 @@ export default {
                 button_label: $__("Ask for retry"),
                 icon: "fa-repeat",
                 next_actions: [],
+                action_inputs: [
+                    {
+                        name: "reasonRetry",
+                        label: $__("Reason retry"),
+                        required: true,
+                        type: "select",
+                        onSelected: resource => {
+                            conditionalInputs.value = [];
+                            if (resource.reasonRetry == "MultiVolAvail") {
+                                conditionalInputs.value.push({
+                                    name: "volume",
+                                    type: "text",
+                                    label: $__("Volume"),
+                                    required: false,
+                                });
+                            } else if (
+                                resource.reasonRetry == "MustMeetLoanCondition"
+                            ) {
+                                conditionalInputs.value.push({
+                                    name: "loanCondition",
+                                    label: $__("Loan condition"),
+                                    required: false,
+                                    type: "select",
+                                    allowMultipleChoices: true,
+                                    options: [
+                                        {
+                                            value: "LibraryUseOnly",
+                                            description: __(
+                                                "Use in library only"
+                                            ),
+                                        },
+                                        {
+                                            value: "WatchLibraryUseOnly",
+                                            description: __(
+                                                "Supervised use in library only"
+                                            ),
+                                        },
+                                        {
+                                            value: "NoReproduction",
+                                            description: __("No reproduction"),
+                                        },
+                                        {
+                                            value: "SignatureRequired",
+                                            description:
+                                                __("Signature required"),
+                                        },
+                                        {
+                                            value: "SpecCollSupervReq",
+                                            description: __(
+                                                "Special collections supervision required"
+                                            ),
+                                        },
+                                    ],
+                                    requiredKey: "value",
+                                    selectLabel: "description",
+                                });
+                            } else if (
+                                resource.reasonRetry == "ReqFormatNotPossible"
+                            ) {
+                                conditionalInputs.value.push({
+                                    name: "itemFormat",
+                                    type: "text",
+                                    label: $__("Item format"),
+                                    required: false,
+                                });
+                            } else if (
+                                resource.reasonRetry == "ReqServTypeNotPossible"
+                            ) {
+                                conditionalInputs.value.push({
+                                    name: "serviceType",
+                                    type: "select",
+                                    label: $__("Service type"),
+                                    required: false,
+                                    options: [
+                                        //TODO: Only show the 2 options that dont match current resource's service_type
+                                        {
+                                            value: "Copy",
+                                            description: __("Copy"),
+                                        },
+                                        {
+                                            value: "CopyOrLoan",
+                                            description: __("CopyOrLoan"),
+                                        },
+                                        {
+                                            value: "Loan",
+                                            description: __("Loan"),
+                                        },
+                                    ],
+                                    requiredKey: "value",
+                                    selectLabel: "description",
+                                });
+                            }
+                            updateConfirmationDialogInputs(
+                                getDialogInputs(resource)
+                            );
+                        },
+                        vselectStyle: {
+                            dropdownMaxHeight: "150px",
+                        },
+                        options: [
+                            {
+                                value: "AtBindery",
+                                description: __("At bindery"),
+                            },
+                            {
+                                value: "CostExceedsMaxCost",
+                                description: __("Cost exceeds max cost"),
+                            },
+                            {
+                                value: "CourierNotSupp",
+                                description: __("Courier not supported"),
+                            },
+                            {
+                                value: "MultiVolAvail",
+                                description: __(
+                                    "More than one volume fulfil the request"
+                                ),
+                            },
+                            {
+                                value: "MustMeetLoanCondition",
+                                description: __("Loan condition shall be met"),
+                            },
+                            {
+                                value: "NotCurrentAvailableForILL",
+                                description: __(
+                                    "Not currently available for ILL"
+                                ),
+                            },
+                            {
+                                value: "NotFoundAsCited",
+                                description: __("Not found as cited"),
+                            },
+                            {
+                                value: "OnLoan",
+                                description: __("On loan"),
+                            },
+                            {
+                                value: "OnOrder",
+                                description: __("On order"),
+                            },
+                            {
+                                value: "ReqDelDateNotPossible",
+                                description: __(
+                                    "Requested delivery date not possible"
+                                ),
+                            },
+                            {
+                                value: "ReqDelMethodNotSupp",
+                                description: __(
+                                    "Requested delivery method not supported"
+                                ),
+                            },
+                            {
+                                value: "ReqEditionNotPossible",
+                                description: __(
+                                    "Requested edition cannot be provided"
+                                ),
+                            },
+                            {
+                                value: "ReqFormatNotPossible",
+                                description: __(
+                                    "Requested format not possible"
+                                ),
+                            },
+                            {
+                                value: "ReqPayMethodNotSupported",
+                                description: __(
+                                    "Requested payment method not supported"
+                                ),
+                            },
+                            {
+                                value: "ReqServLevelNotSupp",
+                                description: __(
+                                    "Requested service level not supported"
+                                ),
+                            },
+                            {
+                                value: "ReqServTypeNotPossible",
+                                description: __(
+                                    "Requested service type not possible"
+                                ),
+                            },
+                        ],
+                        requiredKey: "value",
+                        selectLabel: "description",
+                    },
+                ],
             },
             {
                 id: "Unfilled",
@@ -114,6 +318,44 @@ export default {
                 icon: "fa-calendar-days",
                 btn_class: "btn btn-danger",
                 next_actions: [],
+                action_inputs: [
+                    {
+                        name: "reasonUnfilled",
+                        label: $__("Reason unfilled"),
+                        required: true,
+                        type: "select",
+                        options: [
+                            {
+                                value: "NonCirculating",
+                                description: __(
+                                    "Non-circulating (e.g. handbook)"
+                                ),
+                            },
+                            {
+                                value: "NotAvailableForILL",
+                                description: __("Not available for ILL"),
+                            },
+                            {
+                                value: "NotHeld",
+                                description: __("Not held"),
+                            },
+                            {
+                                value: "NotOnShelf",
+                                description: __("Not on shelf"),
+                            },
+                            {
+                                value: "PolicyProblem",
+                                description: __("Policy problem"),
+                            },
+                            {
+                                value: "PoorCondition",
+                                description: __("Poor condition"),
+                            },
+                        ],
+                        requiredKey: "value",
+                        selectLabel: "description",
+                    },
+                ],
             },
             //HoldReturn
             //ReleaseHoldReturn
@@ -128,6 +370,8 @@ export default {
                 next_actions: [],
                 dont_show: iso18626_request =>
                     iso18626_request.service_type === "Loan",
+                index: -20,
+                action_inputs: [],
             },
             {
                 id: "LoanCompleted",
@@ -138,6 +382,7 @@ export default {
                 icon: "fa-check",
                 btn_class: "btn btn-primary",
                 next_actions: [],
+                action_inputs: [],
             },
             {
                 id: "CompletedWithoutReturn",
@@ -148,15 +393,17 @@ export default {
                 icon: "fa-check",
                 btn_class: "btn btn-primary",
                 next_actions: [],
+                action_inputs: [],
             },
             {
                 id: "Cancelled",
                 confirm_message: $__(
-                    "The supplying library has cancelled the request (as indicated by the requesting library)"
+                    "You are responding to this request's cancellation action (as indicated by the requesting library)"
                 ),
                 button_label: $__("Cancel"),
                 icon: "fa-check",
                 btn_class: "btn btn-danger",
+                next_actions: [],
                 action_inputs: [
                     {
                         name: "answerYesNo",
@@ -171,37 +418,24 @@ export default {
             },
         ]);
 
-        const progressRequest = (action, iso18626_request) => {
-            const statusToUpdate = statuses.value.find(
-                status => status.id === action
+        const statusToUpdate = ref({});
+        const action = ref();
+
+        const progressRequest = (actionClicked, iso18626_request) => {
+            statusToUpdate.value = statuses.value.find(
+                status => status.id === actionClicked
             );
+            action.value = actionClicked;
             setConfirmationDialog(
                 {
+                    size: "modal-lg",
                     title: $__(
                         "Update this request's status to <strong>%s</strong>?"
-                    ).format(action),
-                    message: statusToUpdate.confirm_message,
+                    ).format(actionClicked),
+                    message: statusToUpdate.value.confirm_message,
                     accept_label: $__("Confirm"),
                     cancel_label: $__("Cancel"),
-                    inputs: [
-                        ...(statusToUpdate.action_inputs
-                            ? statusToUpdate.action_inputs
-                            : []),
-                        {
-                            name: "messageInfoNote",
-                            type: "textarea",
-                            label: $__("Message note"),
-                            required: false,
-                        },
-                        {
-                            name: "status",
-                            type: "text",
-                            hide: 1,
-                            value: action,
-                            label: $__("Status"),
-                            required: false,
-                        },
-                    ],
+                    inputs: getDialogInputs(),
                 },
                 (callback_result, inputFields) => {
                     const client = APIClient.ill.supplying;
@@ -237,6 +471,49 @@ export default {
             );
         };
 
+        const getDialogInputs = inputValues => {
+            if (inputValues && statusToUpdate.value.action_inputs) {
+                for (const actionInput of statusToUpdate.value.action_inputs) {
+                    if (
+                        inputValues &&
+                        inputValues.hasOwnProperty(actionInput.name)
+                    ) {
+                        actionInput.value = inputValues[actionInput.name];
+                    }
+                }
+            }
+
+            return [
+                ...(statusToUpdate.value.action_inputs
+                    ? statusToUpdate.value.action_inputs
+                    : []),
+                ...(conditionalInputs.value ? conditionalInputs.value : []),
+                {
+                    name: "messageInfoNote",
+                    type: "textarea",
+                    textAreaRows: 7,
+                    label: $__("Message note"),
+                    placeholder: $__(
+                        "Note to be sent to the requesting agency"
+                    ),
+                    value:
+                        inputValues &&
+                        inputValues.hasOwnProperty("messageInfoNote")
+                            ? inputValues.messageInfoNote
+                            : "",
+                    required: false,
+                },
+                {
+                    name: "status",
+                    type: "text",
+                    hide: 1,
+                    value: action.value,
+                    label: $__("Status"),
+                    required: false,
+                },
+            ];
+        };
+
         const additionalToolbarButtons = resource => {
             const show_buttons = [];
             const currentStatus = statuses.value.find(
@@ -259,6 +536,7 @@ export default {
                         cssClass: nextStatusDef.btn_class,
                         title: nextStatusDef.button_label,
                         icon: nextStatusDef.icon,
+                        index: nextStatusDef.index,
                         onClick: () =>
                             progressRequest(nextStatusDef.id, resource),
                     });

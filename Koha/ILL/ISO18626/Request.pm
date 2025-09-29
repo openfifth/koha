@@ -153,9 +153,15 @@ sub progress_request {
     my $resulting_status = $self->status;
     my $old_status       = $self->status;
     my $new_status       = $params->{status};
-    my $reasonForMessage = 'RequestResponse';
-    my $messageInfoNote  = $params->{messageInfoNote} // undef;
-    my $answerYesNo      = $params->{answerYesNo}     // undef;
+
+    my $reasonForMessage     = 'RequestResponse';
+    my $messageInfoNote      = $params->{messageInfoNote}      // undef;
+    my $answerYesNo          = $params->{answerYesNo}          // undef;
+    my $expectedDeliveryDate = $params->{expectedDeliveryDate} // undef;
+    my $reasonUnfilled       = $params->{reasonUnfilled}       // undef;
+    my $reasonRetry          = $params->{reasonRetry}          // undef;
+    my $volume               = $params->{volume}               // undef;
+    my $loanCondition        = $params->{loanCondition}        // undef;
 
     if ( $actor eq 'requestingAgency' ) {
         return unless $params->{message};
@@ -218,24 +224,22 @@ sub progress_request {
                 reasonForMessage => $reasonForMessage,
                 $answerYesNo     ? ( answerYesNo => $answerYesNo )     : (),
                 $messageInfoNote ? ( note        => $messageInfoNote ) : (),
-
-                # reasonUnfilled => undef, #Only present if $resulting_status is Unfilled
-                # reasonRetry    => undef, #Only present if $resulting_status is RetryPossible (?)
+                $reasonUnfilled && $resulting_status eq 'Unfilled'      ? ( reasonUnfilled => $reasonUnfilled ) : (),
+                $reasonRetry    && $resulting_status eq 'RetryPossible' ? ( reasonRetry    => $reasonRetry )    : (),
             },
             statusInfo => {
                 status => $resulting_status,
-
-                # expectedDeliveryDate => 'date',
+                $expectedDeliveryDate ? ( expectedDeliveryDate => $expectedDeliveryDate ) : (),
                 dueDate    => '2023-03-15 14:30:00',    #TODO: Add due date
-                lastChange => '2023-03-15 14:30:00',
+                lastChange => '2023-03-15 14:30:00',    #TODO: Add $self->last_status_change_timestamp here
             },
             $resulting_status eq 'RetryPossible'
             ? (
-                retryInfo => {                          # To be used only when status = RetryPossible
-                    loanCondition  => ['LibraryUseOnly'],    # Use when messageInfo.reasonRetry is used
-                    edition        => ['edition_string'],
-                    itemFormat     => ['PaperCopy'],
-                    volume         => ['volume_string'],
+                retryInfo => {
+                    $loanCondition ? ( loanCondition => $loanCondition ) : (),
+                    edition    => ['edition_string'],
+                    itemFormat => ['PaperCopy'],
+                    $volume ? ( volume => [ split /,/, $volume ] ) : (),
                     serviceType    => 'Copy',
                     serviceLevel   => ['Urgent'],
                     deliveryMethod => ['Email'],
