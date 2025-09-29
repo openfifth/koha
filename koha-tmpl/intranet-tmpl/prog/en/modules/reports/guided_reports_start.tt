@@ -900,7 +900,7 @@
                                 [% IF ( template_id ) %]
                                     <input type="hidden" name="template" value="[% template_id | html %]" />
                                 [% END %]
-                                <button type="submit" class="btn btn-primary">Run the report</button>
+                                <button type="submit" class="btn btn-primary"><i class="fa fa-play"></i> Run the report</button>
                             </fieldset>
                         </form>
                     [% END # / IF ( auth_val_error ) %]
@@ -1847,6 +1847,18 @@
             }
         }
 
+        const toggleReportRunButton = (element => {
+            if ($(element).attr('disabled') === undefined) {
+                $(element).attr('disabled', 'disabled');
+                $(element).addClass('disabled');
+                $(element).find('i.fa-play').first().replaceWith('<i class=\"fa fa-spinner fa-spin\" style=\"--fa-animation-duration: 2s;\"></i>');
+            } else {
+                $(element).removeAttr('disabled');
+                $(element).removeClass('disabled');
+                $(element).find('i.fa-spinner').first().replaceWith('<i class=\"fa fa-play\"></i>');
+            }
+        });
+
         $(document).ready(function(){
 
             var activeTab = localStorage.getItem("sql_reports_activetab");
@@ -2312,6 +2324,48 @@
                 var limit = $(this).data("limit");
                 $("#limit").val( limit );
                 $("#limitselect").submit();
+            });
+
+            // Apply select2 to all select fields having a "multiple" attribute
+            let selectFields = document.querySelectorAll('#report_param_form select[multiple]');
+            selectFields.forEach((selectField) => {
+                selectField.style.minWidth = '320px';
+                $(selectField).select2();
+            });
+
+            $('a[href*="/cgi-bin/koha/reports/guided_reports.pl"]').each((idx, element) => {
+                const params = new URLSearchParams($(element).attr('href'));
+                const op = params.get('op');
+
+                if (op !== 'run') {
+                    return;
+                }
+
+                $(element).on('click', event => {
+                    event.preventDefault();
+                    const href = $(element).attr('href');
+
+                    toggleReportRunButton(element);
+                    setTimeout(() => {
+                        toggleReportRunButton(element);
+                    }, 120000);
+
+                    window.location.href = href;
+                    return false;
+                });
+            });
+
+            $('#report_param_form').on('submit', event => {
+                const button = $('button[type="submit"]');
+
+                if (button.length < 1) {
+                    return;
+                }
+
+                toggleReportRunButton(button);
+                setTimeout(() => {
+                    toggleReportRunButton(button);
+                }, 120000);
             });
         });
 
