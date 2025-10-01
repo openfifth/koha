@@ -66,11 +66,33 @@ FIXME : if no replacement price, borrower just doesn't get charged?
 sub chargelostitem {
     my $dbh = C4::Context->dbh();
     my ( $borrowernumber, $itemnumber, $replacementprice, $description ) = @_;
-    my $item  = Koha::Items->find($itemnumber);
-    my $itype = $item->itemtype;
+    my $patron = Koha::Patrons->find($borrowernumber);
+    my $item   = Koha::Items->find($itemnumber);
+    my $itype  = $item->itemtype;
     $replacementprice //= 0;
-    my $defaultreplacecost        = $itype->defaultreplacecost;
-    my $processfee                = $itype->processfee;
+    my $defaultreplacecost = $itype->defaultreplacecost;
+
+    my $lost_control_pref = C4::Context->preference('LostChargesControl');
+    my $lost_control_branch;
+    if ( $lost_control_pref eq 'PatronLibrary' ) {
+        $lost_control_branch = $patron->branchcode;
+    } elsif ( $lost_control_pref eq 'PickupLibrary' ) {
+        $lost_control_branch = C4::Context->userenv ? C4::Context->userenv->{'branch'} : undef;
+    } else {    # $lost_control_pref eq 'ItemHomeLibrary'
+        $lost_control_branch =
+            ( C4::Context->preference('HomeOrHoldingBranch') eq 'homebranch' )
+            ? $item->homebranch
+            : $item->holdingbranch;
+    }
+
+    my $processfee = Koha::CirculationRules->get_effective_rule_value(
+        {
+            rule_name    => "lost_item_processing_fee",
+            categorycode => undef,
+            itemtype     => $itype->itemtype,
+            branchcode   => $lost_control_branch
+        }
+    ) // 0;
     my $usedefaultreplacementcost = C4::Context->preference("useDefaultReplacementCost");
     my $processingfeenote         = C4::Context->preference("ProcessingFeeNote");
 
