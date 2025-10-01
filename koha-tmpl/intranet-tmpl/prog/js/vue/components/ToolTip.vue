@@ -35,4 +35,7 @@ export default {
 .tooltip_helper:hover {
     cursor: pointer;
 }
+.tooltip {
+    z-index: 100000000;
+}
 </style>
