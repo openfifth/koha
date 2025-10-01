@@ -111,6 +111,7 @@
             :disabled="disabled"
             :multiple="attr.allowMultipleChoices"
             @option:selected="attr.onSelected && attr.onSelected(resource)"
+            @update:modelValue="attr.onUpdated && attr.onUpdated(resource)"
         >
             <template v-if="attr.required" #search="{ attributes, events }">
                 <input
