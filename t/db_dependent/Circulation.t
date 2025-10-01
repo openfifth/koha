@@ -156,7 +156,6 @@ my $itemtype = $builder->build(
             rentalcharge       => 0,
             rentalcharge_daily => 0,
             defaultreplacecost => undef,
-            processfee         => undef
         }
     }
 )->{itemtype};

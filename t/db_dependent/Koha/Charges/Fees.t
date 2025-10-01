@@ -68,7 +68,6 @@ my $itemtype = $builder->build_object(
             rentalcharge_hourly          => '0.00',
             rentalcharge_hourly_calendar => 1,
             rentalcharge                 => '0.00',
-            processfee                   => '0.00',
             defaultreplacecost           => '0.00',
         },
     }

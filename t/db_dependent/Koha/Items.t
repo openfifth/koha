@@ -465,9 +465,14 @@ subtest 'store' => sub {
                     notforloan         => 0,
                     rentalcharge       => 0,
                     defaultreplacecost => undef,
-                    processfee         => $processfee_amount,
                     rentalcharge_daily => 0,
                 }
+            }
+        );
+        Koha::CirculationRules->set_rule(
+            {
+                itemtype  => $item_type->itemtype, branchcode => undef, rule_value => $processfee_amount,
+                rule_name => 'lost_item_processing_fee'
             }
         );
         my $library = $builder->build_object( { class => 'Koha::Libraries' } );
@@ -1048,7 +1053,6 @@ subtest 'store' => sub {
                         notforloan         => 0,
                         rentalcharge       => 0,
                         defaultreplacecost => undef,
-                        processfee         => 0,
                         rentalcharge_daily => 0,
                     }
                 }
@@ -1166,7 +1170,6 @@ subtest 'store' => sub {
             my $patron             = $builder->build_object( { class => 'Koha::Patrons' } );
             my $barcode            = 'KD123456794';
             my $replacement_amount = 100;
-            my $processfee_amount  = 20;
 
             my $item_type = $builder->build_object(
                 {
@@ -1175,7 +1178,6 @@ subtest 'store' => sub {
                         notforloan         => 0,
                         rentalcharge       => 0,
                         defaultreplacecost => undef,
-                        processfee         => 0,
                         rentalcharge_daily => 0,
                     }
                 }
@@ -1579,7 +1581,6 @@ subtest 'store' => sub {
             my $patron             = $builder->build_object( { class => 'Koha::Patrons' } );
             my $barcode            = 'KD123456795';
             my $replacement_amount = 100;
-            my $processfee_amount  = 20;
 
             my $item_type = $builder->build_object(
                 {
@@ -1588,7 +1589,6 @@ subtest 'store' => sub {
                         notforloan         => 0,
                         rentalcharge       => 0,
                         defaultreplacecost => undef,
-                        processfee         => 0,
                         rentalcharge_daily => 0,
                     }
                 }

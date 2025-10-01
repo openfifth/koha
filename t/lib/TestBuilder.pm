@@ -682,7 +682,6 @@ sub _gen_default_values {
             rentalcharge_daily  => 0,
             rentalcharge_hourly => 0,
             defaultreplacecost  => 0,
-            processfee          => 0,
             notforloan          => 0,
             bookable            => 0,
         },
