@@ -53,7 +53,6 @@ subtest 'list() tests' => sub {
                 rentalcharge_hourly          => 0.60,
                 rentalcharge_hourly_calendar => 1,
                 defaultreplacecost           => 1000.0,
-                processfee                   => 20.0,
                 notforloan                   => 0,
                 imageurl          => 'https://upload.wikimedia.org/wikipedia/commons/1/1f/202208_test-tube-4.svg',
                 summary           => 'An item type for testing',

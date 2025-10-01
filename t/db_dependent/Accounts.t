@@ -607,7 +607,6 @@ subtest "C4::Accounts::chargelostitem tests" => sub {
             value  => {
                 rentalcharge       => 0,
                 defaultreplacecost => undef,
-                processfee         => undef,
             }
         }
     );
@@ -617,7 +616,6 @@ subtest "C4::Accounts::chargelostitem tests" => sub {
             value  => {
                 rentalcharge       => 0,
                 defaultreplacecost => 16.32,
-                processfee         => undef,
             }
         }
     );
@@ -627,7 +625,6 @@ subtest "C4::Accounts::chargelostitem tests" => sub {
             value  => {
                 rentalcharge       => 0,
                 defaultreplacecost => undef,
-                processfee         => 8.16,
             }
         }
     );
@@ -637,8 +634,19 @@ subtest "C4::Accounts::chargelostitem tests" => sub {
             value  => {
                 rentalcharge       => 0,
                 defaultreplacecost => 4.08,
-                processfee         => 2.04,
             }
+        }
+    );
+    my $one_rule = Koha::CirculationRules->set_rule(
+        {
+            itemtype  => $itype_no_replace_fee->{itemtype}, branchcode => undef, rule_value => 8.16,
+            rule_name => 'lost_item_processing_fee'
+        }
+    );
+    my $two_rule = Koha::CirculationRules->set_rule(
+        {
+            itemtype  => $itype_replace_fee->{itemtype}, branchcode => undef, rule_value => 2.04,
+            rule_name => 'lost_item_processing_fee'
         }
     );
     my $cli_borrowernumber = $builder->build( { source => 'Borrower' } )->{'borrowernumber'};
