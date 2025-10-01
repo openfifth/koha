@@ -160,8 +160,33 @@ sub progress_request {
     my $expectedDeliveryDate = $params->{expectedDeliveryDate} // undef;
     my $reasonUnfilled       = $params->{reasonUnfilled}       // undef;
     my $reasonRetry          = $params->{reasonRetry}          // undef;
-    my $volume               = $params->{volume}               // undef;
-    my $loanCondition        = $params->{loanCondition}        // undef;
+
+    my $courierName =
+        (      $params->{courierName}
+            && $params->{reasonRetry} eq 'ReqDelMethodNotSupp'
+            && $params->{deliveryMethod}
+            && grep { $_ eq 'Courier' } @{ $params->{deliveryMethod} } ) ? $params->{courierName} : undef;
+    my $deliveryMethod = $params->{deliveryMethod}
+        && $params->{reasonRetry} eq 'ReqDelMethodNotSupp' ? $params->{deliveryMethod} : undef;
+    my $edition =
+        $params->{edition} && $params->{reasonRetry} eq 'ReqEditionNotPossible' ? $params->{edition} : undef;
+    my $itemFormat =
+        $params->{itemFormat} && $params->{reasonRetry} eq 'ReqFormatNotPossible' ? $params->{itemFormat} : undef;
+    my $loanCondition = $params->{loanCondition}
+        && $params->{reasonRetry} eq 'MustMeetLoanCondition' ? $params->{loanCondition} : undef;
+    my $offeredCostsCurrencyCode = $params->{offeredCostsCurrencyCode}
+        && $params->{reasonRetry} eq 'CostExceedsMaxCost' ? $params->{offeredCostsCurrencyCode} : undef;
+    my $offeredCostsMonetaryValue = $params->{offeredCostsMonetaryValue}
+        && $params->{reasonRetry} eq 'CostExceedsMaxCost' ? $params->{offeredCostsMonetaryValue} : undef;
+    my $paymentMethod =
+          $params->{paymentMethod} && $params->{reasonRetry} eq 'ReqPayMethodNotSupported'
+        ? $params->{paymentMethod}
+        : undef;
+    my $serviceLevel = $params->{serviceLevel}
+        && $params->{reasonRetry} eq 'ReqServLevelNotSupp' ? $params->{serviceLevel} : undef;
+    my $serviceType =
+        $params->{serviceType} && $params->{reasonRetry} eq 'ReqServTypeNotPossible' ? $params->{serviceType} : undef;
+    my $volume = $params->{volume} && $params->{reasonRetry} eq 'MultiVolAvail' ? $params->{volume} : undef;
 
     if ( $actor eq 'requestingAgency' ) {
         return unless $params->{message};
@@ -236,18 +261,22 @@ sub progress_request {
             $resulting_status eq 'RetryPossible'
             ? (
                 retryInfo => {
-                    $loanCondition ? ( loanCondition => $loanCondition ) : (),
-                    edition    => ['edition_string'],
-                    itemFormat => ['PaperCopy'],
-                    $volume ? ( volume => [ split /,/, $volume ] ) : (),
-                    serviceType    => 'Copy',
-                    serviceLevel   => ['Urgent'],
-                    deliveryMethod => ['Email'],
-                    courierName    => [ 'Fedex', 'UPS' ],    # Only if deliveryMethod = 'Courier'
-                    offeredCosts   => [ { currencyCode => 'EUR', monetaryValue => '50.00' } ],
-                    ,    # Only if $request->billingInfo->maximumCosts not null and lower than supplying agency costs
-                    paymentMethod => [ 'BankTransfer', 'DebitCard' ]
-                    , # Only if ReasonRetry or ReqPayMethodNotSupp is used not null and lower than supplying agency costs
+                    $loanCondition  ? ( loanCondition  => $loanCondition )          : (),
+                    $edition        ? ( edition        => [ split /,/, $edition ] ) : (),
+                    $itemFormat     ? ( itemFormat     => $itemFormat )             : (),
+                    $volume         ? ( volume         => [ split /,/, $volume ] )  : (),
+                    $serviceType    ? ( serviceType    => $serviceType )            : (),
+                    $serviceLevel   ? ( serviceLevel   => $serviceLevel )           : (),
+                    $deliveryMethod ? ( deliveryMethod => $deliveryMethod )         : (),
+                    $courierName    ? ( courierName    => $courierName )            : (),
+                    $offeredCostsMonetaryValue && $offeredCostsCurrencyCode
+                    ? (
+                        offeredCosts => [
+                            { currencyCode => $offeredCostsCurrencyCode, monetaryValue => $offeredCostsMonetaryValue }
+                        ]
+                        )
+                    : (),
+                    $paymentMethod ? ( paymentMethod => $paymentMethod ) : (),
                     retryBefore => '2023-03-15 14:30:00',
                     retryAfter  => '2023-03-15 14:30:00'
                 }

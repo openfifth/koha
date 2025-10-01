@@ -5,11 +5,11 @@
     ></BaseResource>
 </template>
 <script>
-import { useRoute, useRouter } from "vue-router";
+import { useRouter } from "vue-router";
+import { ISO18626 } from "./ISO18626.js";
 import BaseResource from "../BaseResource.vue";
 import { useBaseResource } from "../../composables/base-resource.js";
 import { inject, ref } from "vue";
-import { storeToRefs } from "pinia";
 import { APIClient } from "../../fetch/api-client.js";
 import { $__ } from "@koha-vue/i18n";
 
@@ -20,6 +20,7 @@ export default {
 
     setup(props) {
         const router = useRouter();
+        const { getCodesForElement } = ISO18626();
 
         const {
             setConfirmationDialog,
@@ -124,67 +125,238 @@ export default {
                 action_inputs: [
                     {
                         name: "reasonRetry",
-                        label: $__("Reason retry"),
+                        label: $__("Reason for retry"),
                         required: true,
+                        toolTip: $__(
+                            "Specify the reason why a retry from the requesting agency is necessary"
+                        ),
                         type: "select",
                         onSelected: resource => {
                             conditionalInputs.value = [];
-                            if (resource.reasonRetry == "MultiVolAvail") {
+                            if (resource.reasonRetry == "CostExceedsMaxCost") {
+                                conditionalInputs.value.push({
+                                    name: "offeredCostsCurrencyCode",
+                                    type: "select",
+                                    label: $__("Currency code"),
+                                    required: true,
+                                    toolTip: $__(
+                                        "Specify the currency code for the offered costs"
+                                    ),
+                                    options: [
+                                        {
+                                            value: "USD",
+                                            description: __("USD"),
+                                        },
+                                        {
+                                            value: "EUR",
+                                            description: __("EUR"),
+                                        },
+                                        {
+                                            value: "GBP",
+                                            description: __("GBP"),
+                                        },
+                                        {
+                                            value: "AUD",
+                                            description: __("AUD"),
+                                        },
+                                        {
+                                            value: "SEK",
+                                            description: __("SEK"),
+                                        },
+                                    ],
+                                    requiredKey: "value",
+                                    selectLabel: "description",
+                                });
+                                conditionalInputs.value.push({
+                                    name: "offeredCostsMonetaryValue",
+                                    type: "number",
+                                    label: $__("Monetary value"),
+                                    required: true,
+                                    toolTip: $__(
+                                        "Specify the monetary value for the offered costs"
+                                    ),
+                                });
+                            } else if (
+                                resource.reasonRetry == "MultiVolAvail"
+                            ) {
                                 conditionalInputs.value.push({
                                     name: "volume",
                                     type: "text",
-                                    label: $__("Volume"),
-                                    required: false,
+                                    label: $__("Volume(s)"),
+                                    required: true,
+                                    placeholder: "14,15",
+                                    toolTip: $__(
+                                        "Specify which volume(s) are available, separated by comma ','"
+                                    ),
                                 });
                             } else if (
                                 resource.reasonRetry == "MustMeetLoanCondition"
                             ) {
                                 conditionalInputs.value.push({
                                     name: "loanCondition",
-                                    label: $__("Loan condition"),
-                                    required: false,
+                                    label: $__("Loan condition(s)"),
+                                    required: true,
                                     type: "select",
+                                    toolTip: $__(
+                                        "Specify the condition(s) of use that need to be met once the requested item is delivered"
+                                    ),
                                     allowMultipleChoices: true,
-                                    options: [
-                                        {
-                                            value: "LibraryUseOnly",
-                                            description: __(
-                                                "Use in library only"
-                                            ),
-                                        },
-                                        {
-                                            value: "WatchLibraryUseOnly",
-                                            description: __(
-                                                "Supervised use in library only"
-                                            ),
-                                        },
-                                        {
-                                            value: "NoReproduction",
-                                            description: __("No reproduction"),
-                                        },
-                                        {
-                                            value: "SignatureRequired",
-                                            description:
-                                                __("Signature required"),
-                                        },
-                                        {
-                                            value: "SpecCollSupervReq",
-                                            description: __(
-                                                "Special collections supervision required"
-                                            ),
-                                        },
-                                    ],
+                                    options:
+                                        getCodesForElement("loanCondition"),
                                     requiredKey: "value",
                                     selectLabel: "description",
+                                });
+                            } else if (
+                                resource.reasonRetry == "ReqDelMethodNotSupp"
+                            ) {
+                                conditionalInputs.value.push({
+                                    name: "deliveryMethod",
+                                    type: "select",
+                                    vselectStyle: {
+                                        dropdownMaxHeight: "150px",
+                                    },
+                                    toolTip: $__(
+                                        "Specify which delivery method(s) can be supplied"
+                                    ),
+                                    allowMultipleChoices: true,
+                                    label: $__("Delivery method(s)"),
+                                    required: true,
+                                    options:
+                                        getCodesForElement("deliveryMethod"),
+                                    requiredKey: "value",
+                                    selectLabel: "description",
+                                    onUpdated: inputValues => {
+                                        const deliveryMethods =
+                                            inputValues.deliveryMethod;
+                                        if (
+                                            deliveryMethods &&
+                                            deliveryMethods.includes("Courier")
+                                        ) {
+                                            const existingInput =
+                                                conditionalInputs.value.find(
+                                                    input =>
+                                                        input.name ===
+                                                        "courierName"
+                                                );
+                                            if (!existingInput) {
+                                                conditionalInputs.value.push({
+                                                    name: "courierName",
+                                                    type: "select",
+                                                    vselectStyle: {
+                                                        dropdownMaxHeight:
+                                                            "150px",
+                                                    },
+                                                    allowMultipleChoices: true,
+                                                    toolTip: $__(
+                                                        "Specify which courier(s) can be used"
+                                                    ),
+                                                    label: $__(
+                                                        "Courier name(s)"
+                                                    ),
+                                                    required: true,
+                                                    options:
+                                                        getCodesForElement(
+                                                            "courierName"
+                                                        ),
+                                                    requiredKey: "value",
+                                                    selectLabel: "description",
+                                                });
+                                                updateConfirmationDialogInputs(
+                                                    getDialogInputs(inputValues)
+                                                );
+                                            }
+                                        } else {
+                                            const existingInput =
+                                                conditionalInputs.value.find(
+                                                    input =>
+                                                        input.name ===
+                                                        "courierName"
+                                                );
+                                            if (existingInput) {
+                                                const index =
+                                                    conditionalInputs.value.indexOf(
+                                                        existingInput
+                                                    );
+                                                if (index > -1) {
+                                                    conditionalInputs.value.splice(
+                                                        index,
+                                                        1
+                                                    );
+                                                    updateConfirmationDialogInputs(
+                                                        getDialogInputs(
+                                                            inputValues
+                                                        )
+                                                    );
+                                                }
+                                            }
+                                        }
+                                    },
+                                });
+                            } else if (
+                                resource.reasonRetry == "ReqEditionNotPossible"
+                            ) {
+                                conditionalInputs.value.push({
+                                    name: "edition",
+                                    type: "text",
+                                    toolTip: $__(
+                                        "Specify which edition(s) are available, separated by comma ','"
+                                    ),
+                                    label: $__("Edition(s)"),
+                                    required: true,
+                                    placeholder: "14,15",
                                 });
                             } else if (
                                 resource.reasonRetry == "ReqFormatNotPossible"
                             ) {
                                 conditionalInputs.value.push({
                                     name: "itemFormat",
-                                    type: "text",
-                                    label: $__("Item format"),
-                                    required: false,
+                                    type: "select",
+                                    vselectStyle: {
+                                        dropdownMaxHeight: "150px",
+                                    },
+                                    toolTip: $__(
+                                        "Specify which format(s) can be supplied"
+                                    ),
+                                    allowMultipleChoices: true,
+                                    label: $__("Item format(s)"),
+                                    required: true,
+                                    options: getCodesForElement("itemFormat"),
+                                    requiredKey: "value",
+                                    selectLabel: "description",
+                                });
+                            } else if (
+                                resource.reasonRetry ==
+                                "ReqPayMethodNotSupported"
+                            ) {
+                                conditionalInputs.value.push({
+                                    name: "paymentMethod",
+                                    type: "select",
+                                    toolTip: $__(
+                                        "Specify which payment method(s) can be used"
+                                    ),
+                                    allowMultipleChoices: true,
+                                    label: $__("Payment method(s)"),
+                                    required: true,
+                                    options:
+                                        getCodesForElement("paymentMethod"),
+                                    requiredKey: "value",
+                                    selectLabel: "description",
+                                });
+                            } else if (
+                                resource.reasonRetry == "ReqServLevelNotSupp"
+                            ) {
+                                conditionalInputs.value.push({
+                                    name: "serviceLevel",
+                                    type: "select",
+                                    toolTip: $__(
+                                        "Select which service level(s) are supported"
+                                    ),
+                                    allowMultipleChoices: true,
+                                    label: $__("Service level(s)"),
+                                    required: true,
+                                    options: getCodesForElement("serviceLevel"),
+                                    requiredKey: "value",
+                                    selectLabel: "description",
                                 });
                             } else if (
                                 resource.reasonRetry == "ReqServTypeNotPossible"
@@ -192,8 +364,11 @@ export default {
                                 conditionalInputs.value.push({
                                     name: "serviceType",
                                     type: "select",
+                                    toolTip: $__(
+                                        "Select the service type which can be supplied"
+                                    ),
                                     label: $__("Service type"),
-                                    required: false,
+                                    required: true,
                                     options: [
                                         //TODO: Only show the 2 options that dont match current resource's service_type
                                         {
@@ -220,90 +395,7 @@ export default {
                         vselectStyle: {
                             dropdownMaxHeight: "150px",
                         },
-                        options: [
-                            {
-                                value: "AtBindery",
-                                description: __("At bindery"),
-                            },
-                            {
-                                value: "CostExceedsMaxCost",
-                                description: __("Cost exceeds max cost"),
-                            },
-                            {
-                                value: "CourierNotSupp",
-                                description: __("Courier not supported"),
-                            },
-                            {
-                                value: "MultiVolAvail",
-                                description: __(
-                                    "More than one volume fulfil the request"
-                                ),
-                            },
-                            {
-                                value: "MustMeetLoanCondition",
-                                description: __("Loan condition shall be met"),
-                            },
-                            {
-                                value: "NotCurrentAvailableForILL",
-                                description: __(
-                                    "Not currently available for ILL"
-                                ),
-                            },
-                            {
-                                value: "NotFoundAsCited",
-                                description: __("Not found as cited"),
-                            },
-                            {
-                                value: "OnLoan",
-                                description: __("On loan"),
-                            },
-                            {
-                                value: "OnOrder",
-                                description: __("On order"),
-                            },
-                            {
-                                value: "ReqDelDateNotPossible",
-                                description: __(
-                                    "Requested delivery date not possible"
-                                ),
-                            },
-                            {
-                                value: "ReqDelMethodNotSupp",
-                                description: __(
-                                    "Requested delivery method not supported"
-                                ),
-                            },
-                            {
-                                value: "ReqEditionNotPossible",
-                                description: __(
-                                    "Requested edition cannot be provided"
-                                ),
-                            },
-                            {
-                                value: "ReqFormatNotPossible",
-                                description: __(
-                                    "Requested format not possible"
-                                ),
-                            },
-                            {
-                                value: "ReqPayMethodNotSupported",
-                                description: __(
-                                    "Requested payment method not supported"
-                                ),
-                            },
-                            {
-                                value: "ReqServLevelNotSupp",
-                                description: __(
-                                    "Requested service level not supported"
-                                ),
-                            },
-                            {
-                                value: "ReqServTypeNotPossible",
-                                description: __(
-                                    "Requested service type not possible"
-                                ),
-                            },
-                        ],
+                        options: getCodesForElement("reasonRetry"),
                         requiredKey: "value",
                         selectLabel: "description",
                     },
@@ -324,34 +416,7 @@ export default {
                         label: $__("Reason unfilled"),
                         required: true,
                         type: "select",
-                        options: [
-                            {
-                                value: "NonCirculating",
-                                description: __(
-                                    "Non-circulating (e.g. handbook)"
-                                ),
-                            },
-                            {
-                                value: "NotAvailableForILL",
-                                description: __("Not available for ILL"),
-                            },
-                            {
-                                value: "NotHeld",
-                                description: __("Not held"),
-                            },
-                            {
-                                value: "NotOnShelf",
-                                description: __("Not on shelf"),
-                            },
-                            {
-                                value: "PolicyProblem",
-                                description: __("Policy problem"),
-                            },
-                            {
-                                value: "PoorCondition",
-                                description: __("Poor condition"),
-                            },
-                        ],
+                        options: getCodesForElement("reasonUnfilled"),
                         requiredKey: "value",
                         selectLabel: "description",
                     },
@@ -422,6 +487,7 @@ export default {
         const action = ref();
 
         const progressRequest = (actionClicked, iso18626_request) => {
+            conditionalInputs.value = [];
             statusToUpdate.value = statuses.value.find(
                 status => status.id === actionClicked
             );
@@ -479,6 +545,18 @@ export default {
                         inputValues.hasOwnProperty(actionInput.name)
                     ) {
                         actionInput.value = inputValues[actionInput.name];
+                    }
+                }
+            }
+
+            if (inputValues && conditionalInputs.value) {
+                for (const conditionalInput of conditionalInputs.value) {
+                    if (
+                        inputValues &&
+                        inputValues.hasOwnProperty(conditionalInput.name)
+                    ) {
+                        conditionalInput.value =
+                            inputValues[conditionalInput.name];
                     }
                 }
             }
