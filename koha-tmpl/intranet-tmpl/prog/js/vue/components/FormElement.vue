@@ -274,6 +274,14 @@ export default {
                 return disabledAttr || false;
             }
         });
+        const getVselectStyle = computed(() => {
+            if (props.attr.vselectStyle) {
+                return props.attr.vselectStyle;
+            } else if (props.vselectStyle) {
+                return props.vselectStyle;
+            }
+            return { dropdownMaxHeight: "350px", dropdownMinWidth: "160px" }; //v-select defaults
+        });
 
         const fieldInputError = ref(false);
         const checkForInputError = () => {
@@ -292,6 +300,7 @@ export default {
             getElementId,
             requiredComponent,
             selectOptions,
+            getVselectStyle,
             disabled,
             fieldInputError,
             checkForInputError,
@@ -326,5 +335,9 @@ input[type="number"] {
 
 .filters > input[type="radio"] {
     min-width: 0 !important;
+}
+:deep() {
+    --vs-dropdown-max-height: v-bind(getVselectStyle.dropdownMaxHeight);
+    --vs-dropdown-min-width: v-bind(getVselectStyle.dropdownMinWidth);
 }
 </style>
