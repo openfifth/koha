@@ -320,4 +320,23 @@ export default {
     padding: 0.4em;
     /* float: right; */
 }
+
+:deep(.modal-body form .v-select) {
+    width: 50%;
+}
+
+:deep(.modal-body .v-select),
+:deep(
+    .modal-body
+        input:not([type="submit"]):not([type="search"]):not(
+            [type="button"]
+        ):not([type="checkbox"]):not([type="radio"])
+),
+:deep(.modal-body textarea) {
+    min-width: 50%;
+}
+
+:deep(.modal-body .flatpickr-input) {
+    width: 50%;
+}
 </style>
