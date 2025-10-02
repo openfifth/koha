@@ -61,6 +61,9 @@ export default {
                         name: "expectedDeliveryDate",
                         type: "date",
                         label: $__("Expected delivery date"),
+                        toolTip: $__(
+                            "Date and time the supplying library expects to deliver the item."
+                        ),
                     },
                 ],
                 index: 0,
@@ -121,8 +124,24 @@ export default {
                 ),
                 button_label: $__("Ask for retry"),
                 icon: "fa-repeat",
-                next_actions: [],
+                next_actions: ["Cancelled", "Unfilled"],
                 action_inputs: [
+                    {
+                        name: "retryBefore",
+                        label: $__("Retry before"),
+                        type: "date",
+                        toolTip: $__(
+                            "Specify that a retry should be attempted before the specified date."
+                        ),
+                    },
+                    {
+                        name: "retryAfter",
+                        label: $__("Retry after"),
+                        type: "date",
+                        toolTip: $__(
+                            "Specify that a retry should be attempted only after the specified date."
+                        ),
+                    },
                     {
                         name: "reasonRetry",
                         label: $__("Reason for retry"),
@@ -407,7 +426,7 @@ export default {
                     "The supplying library cannot fill the request. The explanation may be provided in the ReasonUnfilled data element"
                 ),
                 button_label: $__("Unfilled"),
-                icon: "fa-calendar-days",
+                icon: "fa-ban",
                 btn_class: "btn btn-danger",
                 next_actions: [],
                 action_inputs: [
@@ -466,7 +485,7 @@ export default {
                     "You are responding to this request's cancellation action (as indicated by the requesting library)"
                 ),
                 button_label: $__("Cancel"),
-                icon: "fa-check",
+                icon: "fa-xmark",
                 btn_class: "btn btn-danger",
                 next_actions: [],
                 action_inputs: [

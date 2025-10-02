@@ -182,6 +182,8 @@ sub progress_request {
           $params->{paymentMethod} && $params->{reasonRetry} eq 'ReqPayMethodNotSupported'
         ? $params->{paymentMethod}
         : undef;
+    my $retryBefore  = $params->{retryBefore} && $new_status eq 'RetryPossible' ? $params->{retryBefore} : undef;
+    my $retryAfter   = $params->{retryAfter}  && $new_status eq 'RetryPossible' ? $params->{retryAfter}  : undef;
     my $serviceLevel = $params->{serviceLevel}
         && $params->{reasonRetry} eq 'ReqServLevelNotSupp' ? $params->{serviceLevel} : undef;
     my $serviceType =
@@ -277,8 +279,8 @@ sub progress_request {
                         )
                     : (),
                     $paymentMethod ? ( paymentMethod => $paymentMethod ) : (),
-                    retryBefore => '2023-03-15 14:30:00',
-                    retryAfter  => '2023-03-15 14:30:00'
+                    $retryBefore   ? ( retryBefore   => $retryBefore )   : (),
+                    $retryAfter    ? ( retryAfter    => $retryAfter )    : (),
                 }
                 )
             : (),

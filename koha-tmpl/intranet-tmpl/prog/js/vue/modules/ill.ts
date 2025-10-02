@@ -19,6 +19,7 @@ import {
     faRepeat,
     faBox,
     faCalendarDays,
+    faBan,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import vSelect from "vue-select";
@@ -38,7 +39,8 @@ library.add(
     faXmark,
     faRepeat,
     faBox,
-    faCalendarDays
+    faCalendarDays,
+    faBan
 );
 
 import App from "../components/ILL/Main.vue";
