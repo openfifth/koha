@@ -418,16 +418,31 @@ function updateLink(val,op,target){
             target.$("a.cart"+val).html( "<i class=\"fa fa-fw fa-shopping-cart\"></i> " + __("In your cart") ).addClass("incart");
             target.$("a.cartR"+val).show();
         } else {
-            target.$("a.cart"+val).html( "<i class=\"fa fa-fw fa-shopping-cart\"></i> " + __("Add to cart") ).removeClass("incart").addClass("addtocart cart"+val);
-            target.$("a.cartR"+val).hide();
+            target
+                .$("a.cart" + val)
+                .html(
+                    '<i class="fa fa-fw fa-shopping-cart"></i> ' +
+                        __("Add to cart")
+                )
+                .removeClass("incart")
+                .addClass("addtocart cart" + val)
+                .focus();
+            target.$("a.cartR" + val).hide();
         }
     } else {
         if(op == "add"){
             $("a.cart"+val).html( "<i class=\"fa fa-fw fa-shopping-cart\"></i> " + __("In your cart") ).addClass("incart");
             $("a.cartR"+val).show();
         } else {
-            $("a.cart"+val).html( "<i class=\"fa fa-fw fa-shopping-cart\"></i> " + __("Add to cart") ).removeClass("incart").addClass("addtocart cart"+val);
-            $("a.cartR"+val).hide();
+            $("a.cart" + val)
+                .html(
+                    '<i class="fa fa-fw fa-shopping-cart"></i> ' +
+                        __("Add to cart")
+                )
+                .removeClass("incart")
+                .addClass("addtocart cart" + val)
+                .focus();
+            $("a.cartR" + val).hide();
         }
     }
 }
