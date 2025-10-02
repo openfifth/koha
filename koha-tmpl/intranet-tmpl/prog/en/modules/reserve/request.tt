@@ -25,7 +25,7 @@
 <title>[% FILTER collapse %]
     [% UNLESS ( multi_hold ) %]
         [% title_in_title = INCLUDE 'biblio-title-head.inc' %]
-        [% tx("Place a hold on {title}", { title = title_in_title }) | html %] &rsaquo;
+        [% tx("Place hold on {title}", { title = title_in_title }) | html %] &rsaquo;
     [% ELSE %]
         [% t("Confirm holds") | html %] &rsaquo;
     [% END %]
@@ -238,7 +238,7 @@
             [% END %]
 
             [% UNLESS ( multi_hold ) %]
-                <h2>Place a hold on [% INCLUDE 'biblio-title.inc' link = 1 %] [% IF biblio.author %] by [% biblio.author | html %][% END %]</h2>
+                <h2>Place hold on [% INCLUDE 'biblio-title.inc' link = 1 %] [% IF biblio.author %] by [% biblio.author | html %][% END %]</h2>
 
                 [% IF ( patron && reserve_charge ) %]
                     <div class="alert alert-warning" id="reserve_fee">

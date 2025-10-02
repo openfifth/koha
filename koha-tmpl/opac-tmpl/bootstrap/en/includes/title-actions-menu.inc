@@ -3,14 +3,14 @@
         [% UNLESS ( items.norequests ) %]
             [% IF ( shelf AND op == 'view' ) # Lists view has more granular checking of hold availability %]
                 [% IF ( items.allow_onshelf_holds ) %]
-                    <span class="actions"><a class="btn btn-link btn-sm" aria-label="Place a hold on [% items.title | html %]" href="/cgi-bin/koha/opac-reserve.pl?biblionumber=[% items.biblionumber | html %]"><i class="fa fa-fw fa-bookmark" aria-hidden="true"></i> Place hold</a></span>
+                    <span class="actions"><a class="btn btn-link btn-sm" aria-label="Place hold on [% items.title | html %]" href="/cgi-bin/koha/opac-reserve.pl?biblionumber=[% items.biblionumber | html %]"><i class="fa fa-fw fa-bookmark" aria-hidden="true"></i> Place hold</a></span>
                 [% ELSE %]
                     [% IF ( items.itemsissued ) %]
-                        <span class="actions"><a class="btn btn-link btn-sm" aria-label="Place a hold on [% items.title | html %]" href="/cgi-bin/koha/opac-reserve.pl?biblionumber=[% items.biblionumber | html %]"><i class="fa fa-fw fa-bookmark" aria-hidden="true"></i> Place hold</a></span>
+                        <span class="actions"><a class="btn btn-link btn-sm" aria-label="Place hold on [% items.title | html %]" href="/cgi-bin/koha/opac-reserve.pl?biblionumber=[% items.biblionumber | html %]"><i class="fa fa-fw fa-bookmark" aria-hidden="true"></i> Place hold</a></span>
                     [% END %]
                 [% END %]
             [% ELSE %]
-                <span class="actions"><a class="btn btn-link btn-sm" aria-label="Place a hold on [% items.title | html %]" href="/cgi-bin/koha/opac-reserve.pl?biblionumber=[% items.biblionumber | html %]"><i class="fa fa-fw fa-bookmark" aria-hidden="true"></i> Place hold</a></span>
+                <span class="actions"><a class="btn btn-link btn-sm" aria-label="Place hold on [% items.title | html %]" href="/cgi-bin/koha/opac-reserve.pl?biblionumber=[% items.biblionumber | html %]"><i class="fa fa-fw fa-bookmark" aria-hidden="true"></i> Place hold</a></span>
             [% END %]
         [% END # / UNLESS items.norequests %]
     [% END # / OPACHoldRequests %]
