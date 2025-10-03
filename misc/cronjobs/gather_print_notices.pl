@@ -25,6 +25,7 @@ my (
     $ods,
     $delimiter,
     @letter_codes,
+    @branchcodes,
     $send,
     @emails,
 );
@@ -41,6 +42,7 @@ GetOptions(
     'ods'     => \$ods,
     'd|delimiter:s' => \$delimiter,
     'letter_code:s' => \@letter_codes,
+    'branchcode:s' => \@branchcodes,
     'send!'         => \$send,
     'e|email:s'     => \@emails,
 ) || pod2usage(1);
@@ -75,6 +77,8 @@ if ( $ods and @letter_codes != 1 ) {
 
 $delimiter ||= q|,|;
 
+cronlogaction({ info => $command_line_options });
+
 my $today_iso     = output_pref( { dt => dt_from_string, dateonly => 1, dateformat => 'iso' } ) ;
 my $today_syspref = output_pref( { dt => dt_from_string, dateonly => 1 } );
 
@@ -87,6 +91,12 @@ my @all_messages = @{ GetPrintMessages() };
         grep { $_ eq $letter_code } @letter_codes
     ) ? $_ : ()
 } @all_messages if @letter_codes;
+
+# Filter by branchcode
+@all_messages = grep {
+    my $bc = $_->{branchcode};
+    grep { $bc eq $_ } @branchcodes;
+} @all_messages if @branchcodes;
 exit unless @all_messages;
 
 my ( $html_filenames, $csv_filenames, $ods_filenames );
@@ -383,6 +393,11 @@ This is the same as the csv parameter but using csv2odf to generate an ods file 
 
 Filter print messages by letter_code.
 Several letter_code parameters can be given.
+
+=item B<--branchcode>
+
+Filter print messages by branchcode.
+Several branchcode parameters can be given.
 
 =item B<-e|--email>
 
