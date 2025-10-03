@@ -192,19 +192,29 @@ sub process_invoice_service_charges {
                 }
             )->first;
 
+            # Calculate adjustment amount based on CalculateFundValuesIncludingTax syspref
+            my $adjustment_amount = calculate_adjustment_amount( $amount, $alc_data->{tax_amount} );
+
             if ( !$existing && !$dry_run ) {
+                # Calculate tax rate percentage for storage in note
+                my $tax_rate_pct = 0;
+                if ( $amount && $amount != 0 ) {
+                    $tax_rate_pct = sprintf( "%.0f", ( $alc_data->{tax_amount} / $amount ) * 100 );
+                }
+
                 my $note = sprintf(
-                    'Invoice-level %s from EDI (ALC+%s, MOA+8) - Service: %s%s',
+                    'Invoice-level %s from EDI (ALC+%s, MOA+8) - Service: %s%s | Tax Rate: %s%%',
                     $type,
                     ( $type eq 'charge' ? 'C' : 'A' ),
                     $service_code,
-                    $description ? " ($description)" : ''
+                    $description ? " ($description)" : '',
+                    $tax_rate_pct
                 );
 
                 my $adjustment = $schema->resultset('AqinvoiceAdjustment')->create(
                     {
                         invoiceid     => $koha_invoice->invoiceid,
-                        adjustment    => $amount,
+                        adjustment    => $adjustment_amount,
                         reason        => $reason,
                         budget_id     => $budget_id,
                         note          => $note,
@@ -212,11 +222,23 @@ sub process_invoice_service_charges {
                     }
                 );
 
-                print "  Created invoice-level adjustment ID " . $adjustment->adjustment_id . " for $amount\n"
+                print "  Created invoice-level adjustment ID " . $adjustment->adjustment_id . " for $adjustment_amount"
+                    . " (charge: $amount, tax: " . $alc_data->{tax_amount} . ")\n"
                     if $verbose;
+                $logger->info( "EDI Service Charges:      Created invoice-level adjustment ID "
+                        . $adjustment->adjustment_id
+                        . " for invoice "
+                        . $koha_invoice->invoicenumber
+                        . ": adjustment=$adjustment_amount (charge=$amount, tax=" . $alc_data->{tax_amount}
+                        . "), budget_id=$budget_id, service_code=$service_code" );
                 $adjustments_created++;
             } elsif ( !$existing ) {
-                print "  Would create invoice-level $type adjustment: $amount\n";
+                print "  Would create invoice-level $type adjustment: $adjustment_amount"
+                    . " (charge: $amount, tax: " . $alc_data->{tax_amount} . ")\n";
+                $logger->info( "EDI Service Charges: [DRY-RUN] Would create invoice-level adjustment for invoice "
+                        . $koha_invoice->invoicenumber
+                        . ": adjustment=$adjustment_amount (charge=$amount, tax=" . $alc_data->{tax_amount}
+                        . "), budget_id=$budget_id, service_code=$service_code" );
                 $adjustments_created++;
             }
         }
@@ -274,21 +296,31 @@ sub process_invoice_service_charges {
                     my $original_ordernumber = $line->ordernumber();
                     my $received_order = find_received_order_for_invoice($original_ordernumber, $koha_invoice);
                     my $actual_ordernumber = $received_order ? $received_order->ordernumber : undef;
-                    
+
+                    # Calculate tax rate percentage for storage in note
+                    my $tax_rate_pct = 0;
+                    if ( $amount && $amount != 0 ) {
+                        $tax_rate_pct = sprintf( "%.0f", ( $alc_data->{tax_amount} / $amount ) * 100 );
+                    }
+
                     my $note = sprintf(
-                        'EDI %s: Order #%s%s | EDI Line: %s | Service: %s%s',
+                        'EDI %s: Order #%s%s | EDI Line: %s | Service: %s%s | Tax Rate: %s%%',
                         ucfirst($type),
                         $actual_ordernumber || $original_ordernumber || 'Unknown',
                         ($actual_ordernumber && $actual_ordernumber != $original_ordernumber) ? " (split from #$original_ordernumber)" : '',
                         $line->line_item_number,
                         $service_code,
-                        $description ? " ($description)" : ''
+                        $description ? " ($description)" : '',
+                        $tax_rate_pct
                     );
+
+                    # Calculate adjustment amount based on CalculateFundValuesIncludingTax syspref
+                    my $adjustment_amount = calculate_adjustment_amount( $amount, $alc_data->{tax_amount} );
 
                     my $adjustment = $schema->resultset('AqinvoiceAdjustment')->create(
                         {
                             invoiceid     => $koha_invoice->invoiceid,
-                            adjustment    => $amount,
+                            adjustment    => $adjustment_amount,
                             reason        => $reason,
                             budget_id     => $budget_id,
                             note          => $note,
@@ -296,13 +328,30 @@ sub process_invoice_service_charges {
                         }
                     );
 
-                    print "  Created adjustment ID " . $adjustment->adjustment_id . " for $amount\n" if $verbose;
-                    $logger->info( "Created $type adjustment for invoice " . $koha_invoice->invoiceid . ": $amount" );
+                    print "  Created adjustment ID " . $adjustment->adjustment_id . " for $adjustment_amount"
+                        . " (charge: $amount, tax: " . $alc_data->{tax_amount} . ")\n" if $verbose;
+                    $logger->info( "EDI Service Charges:      Created line-level adjustment ID "
+                            . $adjustment->adjustment_id
+                            . " for line "
+                            . $line->line_item_number
+                            . " in invoice "
+                            . $koha_invoice->invoicenumber
+                            . ": adjustment=$adjustment_amount (charge=$amount, tax=" . $alc_data->{tax_amount}
+                            . "), budget_id=$budget_id, service_code=$service_code, order="
+                            . ( $actual_ordernumber || $edi_ordernumber || 'unknown' ) );
 
                     # Adjust the orderline to avoid double-counting service charges
                     # Service charges are included in MOA+128/203 totals but we're extracting them separately
                     if ( $type eq 'charge' && $received_order ) {
-                        adjust_orderline_for_service_charge( $received_order, $amount, $verbose, $original_ordernumber, $line );
+                        adjust_orderline_for_service_charge(
+                            $received_order, $amount, $alc_data->{tax_amount}, $verbose, $edi_ordernumber,
+                            $line
+                        );
+                    } elsif ( $type eq 'charge' && !$received_order ) {
+                        $logger->warn(
+                            "EDI Service Charges: Cannot adjust orderline for service charge - no received order found for line "
+                                . $line->line_item_number
+                                . " (original order $edi_ordernumber)" );
                     }
                 } else {
                     # For dry-run, also show the split order handling
@@ -314,10 +363,21 @@ sub process_invoice_service_charges {
                     if ($actual_ordernumber && $actual_ordernumber != $original_ordernumber) {
                         $order_info .= " (split from #$original_ordernumber)";
                     }
-                    
+
+                    # Calculate adjustment amount based on CalculateFundValuesIncludingTax syspref
+                    my $adjustment_amount = calculate_adjustment_amount( $amount, $alc_data->{tax_amount} );
+
                     print "  Would create $type adjustment for invoice "
                         . $koha_invoice->invoiceid
-                        . ": $amount (Budget: $budget_id) [Order: $order_info]\n";
+                        . ": $adjustment_amount (charge: $amount, tax: " . $alc_data->{tax_amount}
+                        . ") [Budget: $budget_id] [Order: $order_info]\n";
+                    $logger->info( "EDI Service Charges: [DRY-RUN] Would create line-level adjustment for line "
+                            . $line->line_item_number
+                            . " in invoice "
+                            . $koha_invoice->invoicenumber
+                            . ": adjustment=$adjustment_amount (charge=$amount, tax=" . $alc_data->{tax_amount}
+                            . "), budget_id=$budget_id, service_code=$service_code, order=$order_info" );
+
                     if ( $type eq 'charge' ) {
                         if ($received_order) {
                             print "  Would adjust orderline $order_info to correct price based on EDI PRI data\n";
@@ -353,6 +413,11 @@ sub get_message_allowances_charges {
         last if $seg->tag eq 'LIN';    # Stop at first line item
 
         if ( $seg->tag eq 'ALC' ) {
+            # Push any pending ALC that has an amount before starting new one
+            if ( $current_alc && defined $current_alc->{amount} ) {
+                push @allowances_charges, $current_alc;
+            }
+
             my $qualifier    = $seg->elem(0);
             my $service_code = $seg->elem( 4, 0 ) || '';
             my $service_desc = $seg->elem( 4, 3 ) || '';
@@ -361,15 +426,23 @@ sub get_message_allowances_charges {
                 type         => ( $qualifier eq 'C' ) ? 'charge' : 'allowance',
                 service_code => $service_code,
                 description  => $service_desc,
-                amount       => undef
+                amount       => undef,
+                tax_amount   => 0    # Default to 0 if no tax segment found
             };
         } elsif ( $seg->tag eq 'MOA' && $current_alc ) {
             if ( $seg->elem( 0, 0 ) eq '8' ) {
                 $current_alc->{amount} = $seg->elem( 0, 1 );
-                push @allowances_charges, $current_alc;
-                $current_alc = undef;
+            }
+            # Check if this is MOA+124 (tax amount on charge/allowance)
+            elsif ( $seg->elem( 0, 0 ) eq '124' && defined $current_alc->{amount} ) {
+                $current_alc->{tax_amount} = $seg->elem( 0, 1 );
             }
         }
+    }
+
+    # Push any remaining ALC that has an amount
+    if ( $current_alc && defined $current_alc->{amount} ) {
+        push @allowances_charges, $current_alc;
     }
 
     return \@allowances_charges;
@@ -401,9 +474,13 @@ sub get_line_allowances_charges {
     my @allowances_charges = ();
     my $current_alc        = undef;
 
-    # Iterate through the line segments to find ALC + MOA+8 pairs
+    # Iterate through the line segments to find ALC + MOA+8 + MOA+124 sequences
     foreach my $seg ( @{ $line->{segs} } ) {
         if ( $seg->tag eq 'ALC' ) {
+            # Push any pending ALC that has an amount before starting new one
+            if ( $current_alc && defined $current_alc->{amount} ) {
+                push @allowances_charges, $current_alc;
+            }
 
             # Parse the ALC segment
             my $qualifier    = $seg->elem(0);               # C = Charge, A = Allowance
@@ -414,17 +491,25 @@ sub get_line_allowances_charges {
                 type         => ( $qualifier eq 'C' ) ? 'charge' : 'allowance',
                 service_code => $service_code,
                 description  => $service_desc,
-                amount       => undef
+                amount       => undef,
+                tax_amount   => 0    # Default to 0 if no tax segment found
             };
         } elsif ( $seg->tag eq 'MOA' && $current_alc ) {
 
             # Check if this is MOA+8 (allowance or charge amount)
             if ( $seg->elem( 0, 0 ) eq '8' ) {
                 $current_alc->{amount} = $seg->elem( 0, 1 );
-                push @allowances_charges, $current_alc;
-                $current_alc = undef;    # Reset for next ALC
+            }
+            # Check if this is MOA+124 (tax amount on charge/allowance)
+            elsif ( $seg->elem( 0, 0 ) eq '124' && defined $current_alc->{amount} ) {
+                $current_alc->{tax_amount} = $seg->elem( 0, 1 );
             }
         }
+    }
+
+    # Push any remaining ALC that has an amount
+    if ( $current_alc && defined $current_alc->{amount} ) {
+        push @allowances_charges, $current_alc;
     }
 
     return \@allowances_charges;
@@ -464,6 +549,20 @@ sub map_vendor_to_budget_id {
     return '';
 }
 
+sub calculate_adjustment_amount {
+    my ( $charge_amount, $tax_amount ) = @_;
+
+    # Adjustments are added directly to budget calculations
+    # Check if we should include tax based on the syspref
+    if ( C4::Context->preference('CalculateFundValuesIncludingTax') ) {
+        # Include tax in adjustment amount to match order line calculations
+        return $charge_amount + $tax_amount;
+    }
+
+    # Return tax-exclusive amount
+    return $charge_amount;
+}
+
 sub find_received_order_for_invoice {
     my ($original_ordernumber, $koha_invoice) = @_;
     
@@ -497,7 +596,7 @@ sub find_received_order_for_invoice {
 }
 
 sub adjust_orderline_for_service_charge {
-    my ( $order_to_adjust, $service_charge_amount, $verbose, $original_ordernumber, $edi_line ) = @_;
+    my ( $order_to_adjust, $service_charge_amount, $service_charge_tax, $verbose, $original_ordernumber, $edi_line ) = @_;
 
     return unless $order_to_adjust;
 
@@ -535,11 +634,15 @@ sub adjust_orderline_for_service_charge {
     }
     
     # Calculate per-unit service charge to subtract (to avoid double-counting)
-    my $per_unit_service_charge = $service_charge_amount / $quantity;
-    
+    # MOA+8 is tax-exclusive, MOA+124 is the tax on the charge
+    my $per_unit_service_charge_excl = $service_charge_amount / $quantity;
+    my $per_unit_service_charge_tax  = $service_charge_tax / $quantity;
+    my $per_unit_service_charge_incl = $per_unit_service_charge_excl + $per_unit_service_charge_tax;
+
     # Subtract service charges from base prices since we're creating separate adjustments
-    my $final_unit_price_inc = $base_unit_price_inc - $per_unit_service_charge;
-    my $final_unit_price_exc = $base_unit_price_exc - $per_unit_service_charge;
+    # Use tax-exclusive for the tax-excluded price, tax-inclusive for the tax-included price
+    my $final_unit_price_exc = $base_unit_price_exc - $per_unit_service_charge_excl;
+    my $final_unit_price_inc = $base_unit_price_inc - $per_unit_service_charge_incl;
 
     # Set the order to the correct price (base EDI price - service charges)
     $order_to_adjust->update(
@@ -551,10 +654,18 @@ sub adjust_orderline_for_service_charge {
 
     my $order_type = ($actual_ordernumber != $original_ordernumber) ? "received order $actual_ordernumber (split from $original_ordernumber)" : "order $actual_ordernumber";
     print
-        "  Set $order_type unit price to $final_unit_price_inc (EDI base: $base_unit_price_inc - service charge: $per_unit_service_charge)\n"
+        "  Set $order_type unit price_inc to $final_unit_price_inc (EDI base: $base_unit_price_inc - service charge incl tax: $per_unit_service_charge_incl)\n"
         if $verbose;
+    print
+        "  Set $order_type unit price_exc to $final_unit_price_exc (EDI base: $base_unit_price_exc - service charge excl tax: $per_unit_service_charge_excl)\n"
+        if $verbose;
+
+    # Single focused log message per EDI line segment showing adjustment and calculation
     $logger->info(
-        "Set $order_type price from EDI data minus service charges: base=$base_unit_price_inc, service_charge=$per_unit_service_charge, final=$final_unit_price_inc"
+        "EDI Service Charges: Processed EDI line with service charge - Order: $order_type, Quantity: $quantity, "
+        . "EDI base price_inc: $base_unit_price_inc, EDI base price_exc: $base_unit_price_exc, "
+        . "Service charge (excl tax): $per_unit_service_charge_excl, Service charge tax: $per_unit_service_charge_tax, "
+        . "Final price_inc: $final_unit_price_inc, Final price_exc: $final_unit_price_exc"
     );
 }
 
