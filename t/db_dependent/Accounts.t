@@ -581,7 +581,7 @@ subtest 'balance' => sub {
 };
 
 subtest "C4::Accounts::chargelostitem tests" => sub {
-    plan tests => 3;
+    plan tests => 4;
 
     my $branch     = $builder->build( { source => 'Branch' } );
     my $branchcode = $branch->{branchcode};
@@ -683,6 +683,7 @@ subtest "C4::Accounts::chargelostitem tests" => sub {
 
         t::lib::Mocks::mock_preference( 'item-level_itypes',         '1' );
         t::lib::Mocks::mock_preference( 'useDefaultReplacementCost', '0' );
+        t::lib::Mocks::mock_preference( 'LostChargesControl',        'ItemHomeLibrary' );
 
         C4::Accounts::chargelostitem( $cli_borrowernumber, $cli_itemnumber1, 0, "Perdedor" );
         $lostfine = Koha::Account::Lines->find(
@@ -887,8 +888,134 @@ subtest "C4::Accounts::chargelostitem tests" => sub {
         $procfee->delete();
     };
 
+    subtest "further processing fee application tests" => sub {
+        plan tests => 8;
+
+        my $branch_1 = $builder->build_object( { class => 'Koha::Libraries' } );
+        my $branch_2 = $builder->build_object( { class => 'Koha::Libraries' } );
+        my $branch_3 = $builder->build_object( { class => 'Koha::Libraries' } );
+        my $branch_4 = $builder->build_object( { class => 'Koha::Libraries' } );
+
+        my $one_rule = Koha::CirculationRules->set_rule(
+            {
+                itemtype  => undef, branchcode => $branch_1->branchcode, rule_value => 1,
+                rule_name => 'lost_item_processing_fee'
+            }
+        );
+        my $two_rule = Koha::CirculationRules->set_rule(
+            {
+                itemtype  => undef, branchcode => $branch_2->branchcode, rule_value => 2,
+                rule_name => 'lost_item_processing_fee'
+            }
+        );
+        my $three_rule = Koha::CirculationRules->set_rule(
+            {
+                itemtype  => undef, branchcode => $branch_3->branchcode, rule_value => 3,
+                rule_name => 'lost_item_processing_fee'
+            }
+        );
+        my $four_rule = Koha::CirculationRules->set_rule(
+            {
+                itemtype  => undef, branchcode => $branch_4->branchcode, rule_value => 4,
+                rule_name => 'lost_item_processing_fee'
+            }
+        );
+
+        t::lib::Mocks::mock_preference( 'LostChargesControl', 'PatronLibrary' );
+        diag("Test LostChargesControl = PatronLibrary");
+
+        my $borrower =
+            $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $branch_1->branchcode } } );
+        my $item = $builder->build_sample_item( { homebranch => $branch_4->branchcode } );
+        C4::Accounts::chargelostitem( $borrower->borrowernumber, $item->itemnumber, '1', "Branch 1 used" );
+        $procfee = Koha::Account::Lines->find(
+            {
+                borrowernumber  => $borrower->borrowernumber, itemnumber => $item->itemnumber,
+                debit_type_code => 'PROCESSING'
+            }
+        );
+        ok( $procfee, "Processing fee created" );
+        is( $procfee->amount + 0, 1, "Processing fee chosen correctly" );
+
+        t::lib::Mocks::mock_preference( 'LostChargesControl', 'PickupLibrary' );
+        diag("Test LostChargesControl = PickupLibrary");
+        $context->mock(
+            'userenv',
+            sub {
+                return {
+                    number => $borrower->borrowernumber,
+                    branch => $branch_2->branchcode,
+                };
+            }
+        );
+
+        # We can use same borrower - from branch 1
+        $item = $builder->build_sample_item( { homebranch => $branch_4->branchcode } )
+            ;    # new item to ensure we don't create a duplicate charge
+        C4::Accounts::chargelostitem( $borrower->borrowernumber, $item->itemnumber, '2', "Branch 2 used" );
+        $procfee = Koha::Account::Lines->find(
+            {
+                borrowernumber  => $borrower->borrowernumber, itemnumber => $item->itemnumber,
+                debit_type_code => 'PROCESSING'
+            }
+        );
+        ok( $procfee, "Processing fee created" );
+        is( $procfee->amount + 0, 2, "Processing fee chosen correctly" );
+
+        t::lib::Mocks::mock_preference( 'LostChargesControl', 'ItemHomeLibrary' );
+        diag("Test LostChargesControl = ItemhomeLibrary");
+
+        t::lib::Mocks::mock_preference( 'HomeOrHoldingBranch', 'homebranch' );
+        diag("    Test LostChargesControl = ItemhomeLibrary and HomeOrHoldingBranch = homebranch");
+
+        # We can use same borrower - from branch 1
+        $item = $builder->build_sample_item( { library => $branch_3->branchcode } );
+        $item->holdingbranch( $branch_4->branchcode )
+            ->store;    #build sample items makes them the same, ensure they are different
+        C4::Accounts::chargelostitem( $borrower->borrowernumber, $item->itemnumber, '3', "Branch 3 used" );
+        $procfee = Koha::Account::Lines->find(
+            {
+                borrowernumber  => $borrower->borrowernumber, itemnumber => $item->itemnumber,
+                debit_type_code => 'PROCESSING'
+            }
+        );
+        ok( $procfee, "Processing fee created" );
+        is( $procfee->amount + 0, 3, "Processing fee chosen correctly" );
+
+        t::lib::Mocks::mock_preference( 'HomeOrHoldingBranch', 'holdingbranch' );
+        diag("    Test LostChargesControl = ItemhomeLibrary and HomeOrHoldingBranch = holdingbranch");
+
+        # We can use same borrower - from branch 1
+        $item = $builder->build_sample_item( { library => $branch_4->branchcode } );
+        $item->homebranch( $branch_3->branchcode )
+            ->store;    #build sample items makes them the same, ensure they are different
+        C4::Accounts::chargelostitem( $borrower->borrowernumber, $item->itemnumber, '4', "Branch 4 used" );
+        $procfee = Koha::Account::Lines->find(
+            {
+                borrowernumber  => $borrower->borrowernumber, itemnumber => $item->itemnumber,
+                debit_type_code => 'PROCESSING'
+            }
+        );
+        ok( $procfee, "Processing fee created" );
+        is( $procfee->amount + 0, 4, "Processing fee chosen correctly" );
+
+    };
+
     subtest "basic fields tests" => sub {
         plan tests => 12;
+
+        my $staff    = $builder->build( { source => 'Borrower' } );
+        my $staff_id = $staff->{borrowernumber};
+        $context->mock(
+            'userenv',
+            sub {
+                return {
+                    flags  => 1,
+                    number => $staff_id,
+                    branch => $branchcode,
+                };
+            }
+        );
 
         t::lib::Mocks::mock_preference( 'ProcessingFeeNote', 'Test Note' );
         C4::Accounts::chargelostitem( $cli_borrowernumber, $cli_itemnumber4, '1.99', "Perdedor" );
