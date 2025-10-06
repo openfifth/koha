@@ -196,11 +196,8 @@ sub process_invoice_service_charges {
             my $adjustment_amount = calculate_adjustment_amount( $amount, $alc_data->{tax_amount} );
 
             if ( !$existing && !$dry_run ) {
-                # Calculate tax rate percentage for storage in note
-                my $tax_rate_pct = 0;
-                if ( $amount && $amount != 0 ) {
-                    $tax_rate_pct = sprintf( "%.0f", ( $alc_data->{tax_amount} / $amount ) * 100 );
-                }
+                # Use tax rate from EDI TAX segment
+                my $tax_rate_pct = $alc_data->{tax_rate} || 0;
 
                 my $note = sprintf(
                     'Invoice-level %s from EDI (ALC+%s, MOA+8) - Service: %s%s | Tax Rate: %s%%',
@@ -297,11 +294,8 @@ sub process_invoice_service_charges {
                     my $received_order = find_received_order_for_invoice($original_ordernumber, $koha_invoice);
                     my $actual_ordernumber = $received_order ? $received_order->ordernumber : undef;
 
-                    # Calculate tax rate percentage for storage in note
-                    my $tax_rate_pct = 0;
-                    if ( $amount && $amount != 0 ) {
-                        $tax_rate_pct = sprintf( "%.0f", ( $alc_data->{tax_amount} / $amount ) * 100 );
-                    }
+                    # Use tax rate from EDI TAX segment
+                    my $tax_rate_pct = $alc_data->{tax_rate} || 0;
 
                     my $note = sprintf(
                         'EDI %s: Order #%s%s | EDI Line: %s | Service: %s%s | Tax Rate: %s%%',
@@ -427,8 +421,16 @@ sub get_message_allowances_charges {
                 service_code => $service_code,
                 description  => $service_desc,
                 amount       => undef,
-                tax_amount   => 0    # Default to 0 if no tax segment found
+                tax_amount   => 0,       # Default to 0 if no tax segment found
+                tax_rate     => 0        # Default to 0 if no tax segment found
             };
+        } elsif ( $seg->tag eq 'TAX' && $current_alc ) {
+            # Parse TAX segment: TAX+7+VAT+++:::20+S
+            # Element 4,3 contains the tax rate percentage
+            if ( $seg->elem(0) eq '7' ) {  # Tax category
+                my $rate = $seg->elem( 4, 3 );
+                $current_alc->{tax_rate} = $rate if defined $rate;
+            }
         } elsif ( $seg->tag eq 'MOA' && $current_alc ) {
             if ( $seg->elem( 0, 0 ) eq '8' ) {
                 $current_alc->{amount} = $seg->elem( 0, 1 );
@@ -492,8 +494,16 @@ sub get_line_allowances_charges {
                 service_code => $service_code,
                 description  => $service_desc,
                 amount       => undef,
-                tax_amount   => 0    # Default to 0 if no tax segment found
+                tax_amount   => 0,       # Default to 0 if no tax segment found
+                tax_rate     => 0        # Default to 0 if no tax segment found
             };
+        } elsif ( $seg->tag eq 'TAX' && $current_alc ) {
+            # Parse TAX segment: TAX+7+VAT+++:::20+S
+            # Element 4,3 contains the tax rate percentage
+            if ( $seg->elem(0) eq '7' ) {  # Tax category
+                my $rate = $seg->elem( 4, 3 );
+                $current_alc->{tax_rate} = $rate if defined $rate;
+            }
         } elsif ( $seg->tag eq 'MOA' && $current_alc ) {
 
             # Check if this is MOA+8 (allowance or charge amount)
