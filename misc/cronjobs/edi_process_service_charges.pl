@@ -654,11 +654,18 @@ sub adjust_orderline_for_service_charge {
     my $final_unit_price_exc = $base_unit_price_exc - $per_unit_service_charge_excl;
     my $final_unit_price_inc = $base_unit_price_inc - $per_unit_service_charge_incl;
 
+    # Recalculate tax_value_on_receiving based on the adjusted price
+    # The tax_rate_on_receiving was already set from the EDI invoice message
+    # Formula: tax_value = quantity * unitprice_tax_excluded * tax_rate
+    my $tax_rate = $order_to_adjust->tax_rate_on_receiving || 0;
+    my $adjusted_tax_value = $quantity * $final_unit_price_exc * $tax_rate;
+
     # Set the order to the correct price (base EDI price - service charges)
     $order_to_adjust->update(
         {
             unitprice_tax_included => $final_unit_price_inc,
             unitprice_tax_excluded => $final_unit_price_exc,
+            tax_value_on_receiving => $adjusted_tax_value,
         }
     );
 
@@ -669,13 +676,17 @@ sub adjust_orderline_for_service_charge {
     print
         "  Set $order_type unit price_exc to $final_unit_price_exc (EDI base: $base_unit_price_exc - service charge excl tax: $per_unit_service_charge_excl)\n"
         if $verbose;
+    print
+        "  Recalculated tax_value_on_receiving to $adjusted_tax_value (quantity: $quantity × price_exc: $final_unit_price_exc × rate: $tax_rate)\n"
+        if $verbose;
 
     # Single focused log message per EDI line segment showing adjustment and calculation
     $logger->info(
         "EDI Service Charges: Processed EDI line with service charge - Order: $order_type, Quantity: $quantity, "
         . "EDI base price_inc: $base_unit_price_inc, EDI base price_exc: $base_unit_price_exc, "
         . "Service charge (excl tax): $per_unit_service_charge_excl, Service charge tax: $per_unit_service_charge_tax, "
-        . "Final price_inc: $final_unit_price_inc, Final price_exc: $final_unit_price_exc"
+        . "Final price_inc: $final_unit_price_inc, Final price_exc: $final_unit_price_exc, "
+        . "Tax rate: $tax_rate, Adjusted tax_value: $adjusted_tax_value"
     );
 }
 
