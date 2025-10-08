@@ -806,6 +806,28 @@ subtest 'is_superlibrarian() tests' => sub {
     $schema->storage->txn_rollback;
 };
 
+subtest 'is_superlibrarian() tests' => sub {
+
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    my $patron = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+
+            value => { flags => 4 }
+        }
+    );
+
+    my %permissions = $patron->permissions;
+
+    is( scalar keys %permissions, 1, "Patron has one module permission" );
+    is( $permissions{catalogue},  1, "Patron has catalogue permission" );
+
+    $schema->storage->txn_rollback;
+};
+
 subtest 'extended_attributes' => sub {
 
     plan tests => 16;
