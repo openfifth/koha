@@ -329,7 +329,7 @@ sub build_query_compat {
     while ( my ( $oand, $otor, $index ) = $ea->() ) {
         $query_cgi .= '&' if $query_cgi;
         $query_cgi .= 'idx=' . uri_escape_utf8( $index // '') . '&q=' . uri_escape_utf8( $oand );
-        $query_cgi .= '&op=' . uri_escape_utf8( $otor ) if $otor;
+        $query_cgi .= '&op=' . uri_escape_utf8($otor) if $otor =~ /^(AND|OR|NOT)$/i;
     }
     $query_cgi .= '&scan=1' if ( $scan );
 
