@@ -17,6 +17,7 @@
 [% SET CookieConsentBar = AdditionalContents.get( location => "CookieConsentBar", lang => lang, library => branchcode || default_branch ) %]
 [% SET CookieConsentPopup = AdditionalContents.get( location => "CookieConsentPopup", lang => lang, library => branchcode || default_branch ) %]
 [% SET AllPublicBranches = Branches.all(  search_params => { public => 1 }, selected => opac_name ) %]
+[% SET ShowLabelsForSearchInputs = Koha.Preference('OPACShowLabelsForSearchInputs') %]
 
 <button id="scrolltocontent">Skip to main content</button>
 <div id="wrapper">
@@ -204,54 +205,58 @@
                                     <form name="searchform" method="get" action="/cgi-bin/koha/opac-search.pl" id="searchform">
                                         <div class="row gx-2">
                                             <div class="col-sm-auto order-2 order-sm-2">
-                                            <label for="masthead_search" class="visually-hidden">Search the catalog by:</label>
+                                                [% IF ( ShowLabelsForSearchInputs ) %]
+                                                    <label for="masthead_search">Search catalog by:</label>
+                                                [% ELSE %]
+                                                    <label for="masthead_search" class="visually-hidden">Search catalog by:</label>
+                                                [% END %]
                                                 <select name="idx" id="masthead_search" class="form-select">
                                                     [% IF ( ms_kw ) %]
-                                                        <option selected="selected" value="" data-placeholder="[% t("Search the catalog by keyword") | html %]">Library catalog</option>
+                                                        <option selected="selected" value="" data-placeholder="[% t("Search catalog by keyword") | html %]">Library catalog</option>
                                                     [% ELSE %]
-                                                        <option value="" data-placeholder="[% t("Search the catalog by keyword") | html %]">Library catalog</option>
+                                                        <option value="" data-placeholder="[% t("Search catalog by keyword") | html %]">Library catalog</option>
                                                     [% END # /ms_kw %]
                                                     [% IF ( ms_ti ) %]
-                                                        <option selected="selected" value="ti" data-placeholder="[% t("Search the catalog by title") | html %]">Title</option>
+                                                        <option selected="selected" value="ti" data-placeholder="[% t("Search catalog by title") | html %]">Title</option>
                                                     [% ELSE %]
-                                                        <option value="ti" data-placeholder="[% t("Search the catalog by title") | html %]">Title</option>
+                                                        <option value="ti" data-placeholder="[% t("Search catalog by title") | html %]">Title</option>
                                                     [% END # /ms_ti %]
                                                     [% IF ( ms_au ) %]
-                                                        <option selected="selected" value="au" data-placeholder="[% t("Search the catalog by author") | html %]">Author</option>
+                                                        <option selected="selected" value="au" data-placeholder="[% t("Search catalog by author") | html %]">Author</option>
                                                     [% ELSE %]
-                                                        <option value="au" data-placeholder="[% t("Search the catalog by author") | html %]">Author</option>
+                                                        <option value="au" data-placeholder="[% t("Search catalog by author") | html %]">Author</option>
                                                     [% END # /ms_au%]
                                                     [% IF ( ms_su ) %]
-                                                        <option selected="selected" value="su" data-placeholder="[% t("Search the catalog by subject") | html %]">Subject</option>
+                                                        <option selected="selected" value="su" data-placeholder="[% t("Search catalog by subject") | html %]">Subject</option>
                                                     [% ELSE %]
-                                                        <option value="su" data-placeholder="[% t("Search the catalog by subject") | html %]">Subject</option>
+                                                        <option value="su" data-placeholder="[% t("Search catalog by subject") | html %]">Subject</option>
                                                     [% END # /ms_su %]
                                                     [% IF ( ms_nb ) %]
-                                                        <option selected="selected" value="nb" data-placeholder="[% t("Search the catalog by ISBN") | html %]">ISBN</option>
+                                                        <option selected="selected" value="nb" data-placeholder="[% t("Search catalog by ISBN") | html %]">ISBN</option>
                                                     [% ELSE %]
-                                                        <option value="nb" data-placeholder="[% t("Search the catalog by ISBN") | html %]">ISBN</option>
+                                                        <option value="nb" data-placeholder="[% t("Search catalog by ISBN") | html %]">ISBN</option>
                                                     [% END # /ms_nb%]
                                                     [% IF ( ms_ns ) %]
-                                                        <option selected="selected" value="ns" data-placeholder="[% t("Search the catalog by ISSN") | html %]">ISSN</option>
+                                                        <option selected="selected" value="ns" data-placeholder="[% t("Search catalog by ISSN") | html %]">ISSN</option>
                                                     [% ELSE %]
-                                                        <option value="ns" data-placeholder="[% t("Search the catalog by ISSN") | html %]">ISSN</option>
+                                                        <option value="ns" data-placeholder="[% t("Search catalog by ISSN") | html %]">ISSN</option>
                                                     [% END # /ms_ns%]
                                                     [% IF ( ms_se ) %]
-                                                        <option selected="selected" value="se" data-placeholder="[% t("Search the catalog by series") | html %]">Series</option>
+                                                        <option selected="selected" value="se" data-placeholder="[% t("Search catalog by series") | html %]">Series</option>
                                                     [% ELSE %]
-                                                        <option value="se" data-placeholder="[% t("Search the catalog by series") | html %]">Series</option>
+                                                        <option value="se" data-placeholder="[% t("Search catalog by series") | html %]">Series</option>
                                                     [% END # /ms_se %]
                                                     [% IF ( Koha.Preference('OPACNumbersPreferPhrase') ) %]
                                                         [% IF ( ms_callnumcommaphr ) %]
-                                                            <option selected="selected" value="callnum,phr" data-placeholder="[% t("Search the catalog by call number") | html %]">Call number</option>
+                                                            <option selected="selected" value="callnum,phr" data-placeholder="[% t("Search catalog by call number") | html %]">Call number</option>
                                                         [% ELSE %]
-                                                            <option value="callnum,phr" data-placeholder="[% t("Search the catalog by call number") | html %]">Call number</option>
+                                                            <option value="callnum,phr" data-placeholder="[% t("Search catalog by call number") | html %]">Call number</option>
                                                         [% END #/ms_callnumcommaphr %]
                                                     [% ELSE %]
                                                         [% IF ( ms_callnum ) %]
-                                                            <option selected="selected" value="callnum" data-placeholder="[% t("Search the catalog by call number") | html %]">Call number</option>
+                                                            <option selected="selected" value="callnum" data-placeholder="[% t("Search catalog by call number") | html %]">Call number</option>
                                                         [% ELSE %]
-                                                            <option value="callnum" data-placeholder="[% t("Search the catalog by call number") | html %]">Call number</option>
+                                                            <option value="callnum" data-placeholder="[% t("Search catalog by call number") | html %]">Call number</option>
                                                         [% END # /ms_callnum %]
                                                     [% END # /IF OPACNumbersPreferPhrase %]
                                                 </select>
@@ -259,16 +264,30 @@
 
                                             <div class="col order-4 order-sm-3">
                                                 [% IF ( !Koha.Preference( 'OpacAddMastheadLibraryPulldown' ) == 1 && mylibraryfirst ) %]
-                                                <label for="translControl1" class="visually-hidden">Search the catalog by keyword in [% Branches.GetName( mylibraryfirst ) | html %]</label>
-                                                    <input type="text" class="transl1 form-control form-control-filtered" id="translControl1" name="q" value="[% ms_value | html %]" data-bs-toggle="tooltip" data-bs-placement="top" title="Searching in [% Branches.GetName( mylibraryfirst ) | html %] only" placeholder="Search the catalog by keyword" /><span id="translControl"></span>
+                                                    [% IF ( ShowLabelsForSearchInputs ) %]
+                                                        <label for="translControl1" class="visually-hidden">Search catalog by keyword in [% Branches.GetName( mylibraryfirst ) | html %]:</label>
+                                                    [% ELSE %]
+                                                        <label for="translControl1" class="visually-hidden">Search catalog by keyword in [% Branches.GetName( mylibraryfirst ) | html %]:</label>
+                                                    [% END %]
+                                                    <input type="text" class="transl1 form-control form-control-filtered" id="translControl1" name="q" value="[% ms_value | html %]" data-bs-toggle="tooltip" data-bs-placement="top" title="Searching in [% Branches.GetName( mylibraryfirst ) | html %] only" placeholder="Search catalog by keyword" /><span id="translControl"></span>
                                                 [% ELSE %]
-                                                <label for="translControl1" class="visually-hidden">Search the catalog by keyword</label>
-                                                    <input type="text" class="transl1 form-control" id="translControl1" name="q" value="[% ms_value | html %]" placeholder="Search the catalog by keyword" /><span id="translControl"></span>
+                                                    [% IF ( ShowLabelsForSearchInputs ) %]
+                                                        <label for="translControl1">Search catalog by term:</label>
+                                                    [% ELSE %]
+                                                        <label for="translControl1" class="visually-hidden">Search catalog by term:</label>
+                                                    [% END %]
+                                                    <input type="text" class="transl1 form-control" id="translControl1" name="q" value="[% ms_value | html %]" placeholder="Search catalog by keyword" />
+                                                    <span id="translControl"></span>
                                                 [% END # /ms_value %]
                                             </div> <!-- /.col -->
 
                                             [% IF ( Koha.Preference( 'OpacAddMastheadLibraryPulldown' ) == 1 && AllPublicBranches.size > 1 ) %]
                                                 <div class="col-sm col-md-3 col-lg-2 order-3 order-sm-4">
+                                                    [% IF ( ShowLabelsForSearchInputs ) %]
+                                                        <label for="select_library">Search catalog in:</label>
+                                                    [% ELSE %]
+                                                        <label for="select_library" class="visually-hidden">Search catalog in:</label>
+                                                    [% END %]
                                                     <select name="limit" id="select_library" class="form-select">
                                                         <option value="">All libraries</option>
 
@@ -312,7 +331,7 @@
                                                 [% END # / opac_limit_override %]
                                             [% END # / OpacAddMastheadLibraryPulldown %]
 
-                                            <div class="order-5 col-sm-auto">
+                                            <div class="order-5 col-sm-auto align-content-end">
                                                 <button type="submit" id="searchsubmit" class="btn btn-primary" title="Search" aria-label="Search">
                                                     <i class="fa fa-search" aria-hidden="true"></i>
                                                 </button>

@@ -14,7 +14,8 @@
 </head>
 [% INCLUDE 'bodytag.inc' bodyid='advsearch' bodyclass='scrollto' %]
 [% INCLUDE 'masthead.inc' %]
-[% SET AllPublicBranches = Branches.all(  search_params => { public => 1 } ) %]
+[% SET AllPublicBranches = Branches.all( selected => opac_name, search_params => { public => 1 } ) %]
+[% SET ShowLabelsForSearchInputs = Koha.Preference('OPACShowLabelsForSearchInputs') %]
 
 <form id="advsearch_form" action="/cgi-bin/koha/opac-search.pl" method="get">
     <input type="hidden" name="advsearch" value="1"/>
@@ -38,11 +39,14 @@
                             [% ELSE %]
                                 <div class="advanced-search-terms">
                             [% END # /IF ( expanded_options ) %]
-                                [% FOREACH search_box IN [ 1, 2, 3] %]
-                                    <div class="search-term-row">
+                                [% FOREACH search_box IN [1, 2, 3] %]
+                                    <div class="search-term-row" data-row-idx="[% loop.index | html %]">
                                         <div class="search-term-input">
                                             [% IF ( expanded_options ) %]
-                                                    <select name="op" class="form-select">
+                                                    [% IF ( ShowLabelsForSearchInputs ) %]
+                                                        <label for="op_[% loop.index | html %]">Combine with</label>
+                                                    [% END %]
+                                                    <select id="op_[% loop.index | html %]" name="op" class="form-select">
                                                         <option value="AND" selected="selected">and</option>
                                                         <option value="OR">or</option>
                                                         <option value="NOT">not</option>
@@ -59,7 +63,10 @@
                                         </div> <!-- .search-term-input -->
 
                                         <div class="search-term-input">
-                                            <select class="form-select" name="idx" aria-label="Choose search type for field [% loop.index + 1 | html %]" id="search-field_[% loop.index | html %]">
+                                            [% IF ( ShowLabelsForSearchInputs ) %]
+                                                <label for="idx_[% loop.index | html %]">Search in</label>
+                                            [% END %]
+                                            <select class="form-select" name="idx" id="idx_[% loop.index | html %]" aria-label="Choose search type for field [% loop.index + 1 | html %]" id="search-field_[% loop.index | html %]">
                                                 <option value="kw">Keyword</option>
                                                 [% IF ( expanded_options ) %]
                                                     <option value="kw,phr">&nbsp;&nbsp;&nbsp;&nbsp; Keyword phrase</option>
@@ -114,7 +121,10 @@
                                             </select> <!-- /#search-field_[% loop.index | html %] -->
                                         </div> <!-- .search-term-input -->
                                         <div class="search-term-input">
-                                            <input class="form-control" type="text" name="q" aria-label="Enter field [% loop.index + 1 | html %] search terms" value="" />
+                                            [% IF ( ShowLabelsForSearchInputs ) %]
+                                                <label for="q_[% loop.index | html %]">Enter search here</label>
+                                            [% END %]
+                                            <input class="form-control" type="text" name="q" id="q_[% loop.index | html %]" aria-label="Enter field [% loop.index + 1 | html %] search terms" value="" />
                                         </div> <!-- .search-term-input -->
                                         [% IF ( expanded_options ) %]
                                             <div class="search-term-input">
@@ -476,15 +486,63 @@ $(document).ready(function() {
             } else {
                 $("#categoryloop").prop('disabled',false);
             }
-            if ( $("#categoryloop").val() != "" ){
-                $("#branchloop").val("").prop('disabled',true);
-            } else {
-                $("#branchloop").prop('disabled',false);
-            }
-        }
-        branch_limit();
-        $("#branchloop,#categoryloop").on("change",function(){
-            branch_limit();
+
+            $('.search-term-row .search-term-input label[for^="op_"]').first().prop("disabled",true).hide();
+            $('.search-term-row .search-term-input select#op_0').prop("disabled",true).hide();
+
+            [% IF ( ReturnToSearch ) %]
+                if (form_serialized = JSON.parse( Cookies.get("form_serialized") ) ) {
+                    // Add missing term inputs if there were more than 3
+                    var count = (form_serialized.match(/&q=/g) || []).length;
+                    for(var i = 3 ; i < count ; i++) {
+                        $("a.ButtonPlus:last").click();
+                    }
+                    $('#advsearch form').deserialize(form_serialized);
+                }
+                if (form_serialized_limits = JSON.parse( Cookies.get("form_serialized_limits") ) ) {
+                    $('#language-limit')     .val(form_serialized_limits[0]);
+                    $('#branchloop')         .val(form_serialized_limits[1]);
+                    $('#subtype_audience')   .val(form_serialized_limits[2]);
+                    $('#subtype_content')    .val(form_serialized_limits[3]);
+                    $('#subtype_format')     .val(form_serialized_limits[4]);
+                    $('#subtype_additional') .val(form_serialized_limits[5]);
+                    $('#locloop')            .val(form_serialized_limits[6]);
+                }
+            [% ELSE %]
+                //Clear all form cookies
+                Cookies.remove("form_serialized", { path: '/'});
+                Cookies.remove("form_serialized_limits", { path: '/'});
+                Cookies.remove("search_path_code", { path: '/'});
+            [% END %]
+            $('#advsearch_form').submit(function() {
+                $('[name^="limit"]').each(function(){
+                    if( $(this).val() == '' ){
+                        $(this).prop("disabled","disabled");
+                    }
+                });
+                $(".search-term-row").each(function(){
+                    if( $(this).find('input[name="q"]').val() == "" ){
+                        $(this).find('input[name="q"]').prop("disabled","disabled");
+                        $(this).find('select[name="op"]').prop("disabled","disabled");
+                        $(this).find('select[name="idx"]').prop("disabled","disabled");
+                    }
+                });
+                form_serialized = $(this).serialize();
+                Cookies.set("form_serialized", JSON.stringify( form_serialized ), { path: '/', sameSite: 'Lax' });
+                form_serialized_limits = [
+                    $('#language-limit').val(),   $('#branchloop').val(),
+                    $('#subtype_audience').val(), $('#subtype_content').val(),
+                    $('#subtype_format').val(),   $('#subtype_additional').val(),
+                    $('#locloop').val()
+                ];
+                Cookies.set("form_serialized_limits", JSON.stringify( form_serialized_limits ),{ path: '/', sameSite: 'Lax' });
+                [% IF ( expanded_options ) %]
+                    Cookies.set("search_path_code", 'exs', { path: '/', sameSite: 'Lax' });
+                [% ELSE %]
+                    Cookies.set("search_path_code", 'ads', { path: '/', sameSite: 'Lax' });
+                [% END %]
+            });
+
         });
     [% END %]
 
@@ -492,7 +550,11 @@ $(document).ready(function() {
         $("#advsearches li:first a").tab("show");
     }
 
+    $('.search-term-row .search-term-input label[for^="op_"]').first().prop("disabled",true).hide();
     $('.search-term-row .search-term-input select[name="op"]').first().prop("disabled",true).hide();
+
+    // set to current idx, which is row 3 (0-counting)
+    sessionStorage.setItem('search-term-row-idx', 2);
 
     [% IF ( ReturnToSearch ) %]
         if (form_serialized = JSON.parse( Cookies.get("form_serialized") ) ) {
@@ -555,8 +617,20 @@ $(document).ready(function() {
         $('.ButtonLess').show();
         var thisLine = $(this).parent().parent();
         var newLine = thisLine.clone();
+        var newIdx = getNewSearchRowIdx();
+
+        $(newLine).attr('data-row-idx', newIdx);
         $(newLine).find('.search-term-input select[name="op"]').first().prop("disabled",false).show();
+
+        $(newLine).find('select[id^="op_"]').first().attr('id', 'op_' + newIdx);
+        $(newLine).find('label[for^="op_"]').first().attr('for', 'op_' + newIdx);
+        $(newLine).find('select[id^="idx_"]').first().attr('id', 'idx_' + newIdx);
+        $(newLine).find('label[for^="idx_"]').first().attr('for', 'idx_' + newIdx);
+        $(newLine).find('input[id^="q_"]').first().attr('id', 'q_' + newIdx);
+        $(newLine).find('label[for^="q_"]').first().attr('for', 'q_' + newIdx);
+        $(newLine).find('input#q_' + newIdx).attr('aria-label', _('Enter field ' + (newIdx + 1) + ' search terms'));
         newLine.find('input').val('');
+
         thisLine.after(newLine);
     });
 
@@ -584,6 +658,15 @@ $(document).ready(function() {
         } else {
             firstInput.focus();
         }
+    });
+
+    const getNewSearchRowIdx = (() => {
+        const currentIdx = Number(sessionStorage.getItem('search-term-row-idx'));
+        const newIdx = currentIdx + 1;
+
+        sessionStorage.setItem('search-term-row-idx', newIdx);
+
+        return newIdx;
     });
 </script>
 [% END %]

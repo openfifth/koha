@@ -222,6 +222,13 @@ th {
 #advsearches,
 #booleansearch {
     label {
+        color: #727272;
+        display: block;
+        font-size: 110%;
+        font-weight: bold;
+    }
+
+    label[for^="search-field_"] {
         display: inline;
     }
 }
