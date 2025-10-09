@@ -102,7 +102,9 @@ const loadRouterAndMount = async () => {
     try {
         await router.isReady();
         app.mount("#acquisitions");
-    } catch (err) {}
+    } catch (err) {
+        console.log(err)
+    }
 };
 
 loadRouterAndMount();

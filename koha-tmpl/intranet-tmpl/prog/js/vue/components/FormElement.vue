@@ -16,7 +16,6 @@
             :maxlength="attr.maxlength"
             :disabled="disabled"
             @update:modelValue="checkForInputErrorAndRunOnChangeHandler()"
-            :disabled="disabled"
             :formatInputValue="attr.formatInputValue"
             :resource="resource"
         />
@@ -30,7 +29,6 @@
             :disabled="disabled"
             @update:modelValue="checkForInputErrorAndRunOnChangeHandler()"
             :classNames="attr.class"
-            :disabled="disabled"
         />
     </template>
     <template v-else-if="attr.type == 'textarea'">
@@ -43,7 +41,6 @@
             :required="attr.required ? true : false"
             :disabled="disabled"
             @update:modelValue="checkForInputErrorAndRunOnChangeHandler()"
-            :disabled="disabled"
         />
     </template>
     <template v-else-if="attr.type == 'checkbox'">

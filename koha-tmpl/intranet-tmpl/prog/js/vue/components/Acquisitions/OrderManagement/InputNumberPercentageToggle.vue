@@ -1,6 +1,6 @@
 <template>
     <div style="display: flex; min-width: 30%">
-        <InputNumberElement
+        <InputNumber
             id="percentageToggleField"
             v-model="resource[toggleValue]"
             :size="6"
@@ -33,7 +33,7 @@
 
 <script>
 import { ref } from "vue";
-import InputNumberElement from "../../Elements/InputNumberElement.vue";
+import InputNumber from "../../Elements/InputNumber.vue";
 import { $__ } from "@koha-vue/i18n";
 
 export default {
@@ -90,7 +90,7 @@ export default {
         };
     },
     components: {
-        InputNumberElement,
+        InputNumber,
     },
     emits: ["toggleChanged"],
 };
