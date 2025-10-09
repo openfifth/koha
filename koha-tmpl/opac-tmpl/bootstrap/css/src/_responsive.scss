@@ -221,12 +221,6 @@
 
 @media only screen and ( max-width: 700px ) {
     /* Screens below 700 pixels wide */
-    #opac-main-search {
-        label {
-            display: none;
-        }
-    }
-
     #logo {
         background: transparent url( "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 13 13'><g><g><path d='M2.2 6.6V13h2.83V8.9H8.2V13h2.83V6.6z'/><path d='M13.23 6.64H0L6.6 0z'/></g></g></svg>" ) no-repeat;
         margin: 14px;

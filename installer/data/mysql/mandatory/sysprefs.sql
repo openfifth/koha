@@ -576,6 +576,7 @@ INSERT INTO systempreferences ( `variable`, `value`, `options`, `explanation`, `
 ('OPACShibOnly','0',NULL,'If ON enables shibboleth only authentication for the opac','YesNo'),
 ('OPACShowCheckoutName','0',NULL,'Displays in the OPAC the name of patron who has checked out the material. WARNING: Most sites should leave this off. It is intended for corporate or special sites which need to track who has the item.','YesNo'),
 ('OPACShowHoldQueueDetails','none','none|priority|holds|holds_priority','Show holds details in OPAC','Choice'),
+('OPACShowLabelsForSearchInputs', '0', NULL, 'If enabled, show labels beside each input field related to search inputs', 'YesNo'),
 ('OPACShowLibraries', '1', NULL, 'If enabled, a "Libraries" link appears in the OPAC pointing to a page with library information', 'YesNo'),
 ('OPACShowMusicalInscripts','0',NULL,'Display musical inscripts on the OPAC record details page when available.','YesNo'),
 ('OPACShowOpenURL', '0', NULL, 'Enable display of OpenURL links in OPAC search results and detail page', 'YesNo'),

@@ -33,6 +33,7 @@
 [% INCLUDE 'bodytag.inc' bodyid='advsearch' bodyclass='scrollto' %]
 [% INCLUDE 'masthead.inc' %]
 [% SET AllPublicBranches = Branches.all( selected => opac_name, search_params => { public => 1 } ) %]
+[% SET ShowLabelsForSearchInputs = Koha.Preference('OPACShowLabelsForSearchInputs') %]
 
 <form id="advsearch_form" action="/cgi-bin/koha/opac-search.pl" method="get">
     <input type="hidden" name="advsearch" value="1" />
@@ -57,7 +58,10 @@
                                     <div class="search-term-row">
                                         <div class="search-term-input">
                                             [% IF ( expanded_options ) %]
-                                                <select name="op" class="form-select">
+                                                [% IF ( ShowLabelsForSearchInputs ) %]
+                                                    <label for="op_[% loop.index | html %]">Combine with</label>
+                                                [% END %]
+                                                <select name="op" id="op_[% loop.index | html %]" class="form-select">
                                                     <option value="AND" selected="selected">and</option>
                                                     <option value="OR">or</option>
                                                     <option value="NOT">not</option>
@@ -75,7 +79,10 @@
                                         <!-- .search-term-input -->
 
                                         <div class="search-term-input">
-                                            <select class="form-select" name="idx" aria-label="Choose search type for field [% loop.index + 1 | html %]" id="search-field_[% loop.index | html %]">
+                                            [% IF ( ShowLabelsForSearchInputs ) %]
+                                                <label for="idx_[% loop.index | html %]">Search in</label>
+                                            [% END %]
+                                            <select class="form-select" name="idx" id="idx_[% loop.index | html %]" aria-label="Choose search type for field [% loop.index + 1 | html %]" id="search-field_[% loop.index | html %]">
                                                 <option value="kw" data-placeholder="Search by keyword">Keyword</option>
                                                 [% IF ( expanded_options ) %]
                                                     <option value="kw,phr" data-placeholder="Search by keyword phrase">&nbsp;&nbsp;&nbsp;&nbsp; Keyword phrase</option>
@@ -131,11 +138,15 @@
                                         </div>
                                         <!-- .search-term-input -->
                                         <div class="search-term-input">
-                                            <input class="form-control" type="text" name="q" aria-label="Enter field [% loop.index + 1 | html %] search terms" value="" placeholder="" />
+                                            [% IF ( ShowLabelsForSearchInputs ) %]
+                                                <label for="q_[% loop.index | html %]">Enter search here</label>
+                                            [% END %]
+                                            <input class="form-control" type="text" name="q" id="q_[% loop.index | html %]" aria-label="Enter field [% loop.index + 1 | html %] search terms" value="" placeholder="" />
                                         </div>
                                         <!-- .search-term-input -->
                                         [% IF ( expanded_options ) %]
                                             <div class="search-term-input">
+                                                <label>&nbsp;</label>
                                                 <a class="ButtonPlus" title="Add another field" href="#">
                                                     <i class="fa fa-plus-square" aria-hidden="true"></i>
                                                 </a>
@@ -553,7 +564,8 @@
                 $("#advsearches li:first a").tab("show");
             }
 
-            $('.search-term-row .search-term-input select[name="op"]').first().prop("disabled",true).hide();
+            $('.search-term-row .search-term-input label[for^="op_"]').first().prop("disabled",true).hide();
+            $('.search-term-row .search-term-input select#op_0').prop("disabled",true).hide();
 
             [% IF ( ReturnToSearch ) %]
                 if (form_serialized = JSON.parse( Cookies.get("form_serialized") ) ) {
