@@ -10,7 +10,7 @@ import BaseResource from "../../BaseResource.vue";
 import { APIClient } from "../../../fetch/api-client.js";
 import { useBaseResource } from "../../../composables/base-resource";
 import { $__ } from "@koha-vue/i18n";
-import { inject } from "vue";
+import { computed, inject, ref } from "vue";
 import { storeToRefs } from "pinia";
 import { useRoute } from "vue-router";
 
@@ -31,6 +31,11 @@ export default {
 
         const route = useRoute();
         const queryParams = route.query;
+
+        const createItemsWhen = ref(sysprefs.value.acq_create_items);
+        const createItems = computed(() => {
+            return createItemsWhen.value;
+        });
 
         const baseResource = useBaseResource({
             resourceName: "orderline",
@@ -123,6 +128,9 @@ export default {
                         { description: $__("Cataloging"), value: "cataloging" },
                     ],
                     defaultValue: sysprefs.value.acq_create_items,
+                    onChange: resource => {
+                        createItemsWhen.value = resource.create_items;
+                    },
                     hideIn: ["List"],
                 },
                 {
@@ -153,6 +161,10 @@ export default {
                             type: "string",
                             value: queryParams.biblionumber,
                         },
+                        createItems: {
+                            type: "object",
+                            value: createItems,
+                        },
                     },
                     hideIn: ["List"],
                 },
@@ -178,6 +190,10 @@ export default {
                         frameworkCode: {
                             type: "string",
                             value: "ACQ",
+                        },
+                        createItems: {
+                            type: "object",
+                            value: createItems,
                         },
                     },
                     hideIn: ["List"],
@@ -290,8 +306,11 @@ export default {
                     label: $__("Quantity"),
                     defaultValue: null,
                     size: 6,
-                    disabled: () => {
-                        return sysprefs.value.acq_create_items === "ordering";
+                    disabled: resource => {
+                        return (
+                            sysprefs.value.acq_create_items === "ordering" &&
+                            resource.create_items === "ordering"
+                        );
                     },
                     hideIn: ["List"],
                 },
@@ -424,7 +443,7 @@ export default {
                         },
                         relationshipStrings: {
                             nameLowerCase: $__("fund distribution"),
-                            namePlural: $__("fund distributions"),
+                            namePlural: $__("funds"),
                             nameUpperCase: $__("Fund distribution"),
                         },
                         newRelationshipDefaultAttrs: {

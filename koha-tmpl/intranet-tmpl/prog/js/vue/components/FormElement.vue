@@ -73,7 +73,7 @@
                     "
                     v-model="resource[attr.name]"
                     @change="
-                        attr.onChange && attr.onChange.bind(this, resource)
+                        attr.onChange && attr.onChange.call(this, resource)
                     "
                 />
             </label>

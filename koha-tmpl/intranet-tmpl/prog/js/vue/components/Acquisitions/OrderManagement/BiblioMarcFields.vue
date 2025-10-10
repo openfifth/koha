@@ -1,14 +1,16 @@
 <template>
-    <h3 style="margin-top: 1em">{{ $__("Bibliographic information") }}</h3>
-    <ol>
-        <li v-for="(attr, index) in biblioFields" v-bind:key="index">
-            <FormElement
-                :resource="resource.biblio"
-                :attr="attr"
-                :index="index"
-            />
-        </li>
-    </ol>
+    <div v-if="createItems.value === 'ordering'">
+        <h3 style="margin-top: 1em">{{ $__("Bibliographic information") }}</h3>
+        <ol>
+            <li v-for="(attr, index) in biblioFields" v-bind:key="index">
+                <FormElement
+                    :resource="resource.biblio"
+                    :attr="attr"
+                    :index="index"
+                />
+            </li>
+        </ol>
+    </div>
 </template>
 
 <script>
@@ -24,6 +26,7 @@ export default {
         useAcqFramework: { type: Boolean, default: false },
         unimarc: { type: Boolean, default: false },
         biblionumber: { type: String, default: null },
+        createItems: Object,
     },
     inheritAttrs: false,
     setup(props) {
@@ -38,7 +41,7 @@ export default {
                 name: "title",
                 type: "text",
                 label: $__("Title"),
-                required: true,
+                required: resource => props.createItems.value === "ordering",
             },
             { name: "author", type: "text", label: $__("Author") },
             { name: "publisher_code", type: "text", label: $__("Publisher") },

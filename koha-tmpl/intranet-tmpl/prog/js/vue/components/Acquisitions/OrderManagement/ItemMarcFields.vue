@@ -1,38 +1,40 @@
 <template>
-    <form @submit="onSubmit($event)">
-        <fieldset v-if="initialized" class="rows" id="itemfieldset">
-            <legend>{{ $__("Item") }}</legend>
-            <div class="marc_editor">
-                <ol>
-                    <li
-                        v-for="(attr, index) in frameworkFields"
-                        v-bind:key="index"
-                    >
-                        <div
-                            class="subfield_line"
-                            :id="`subfield${attr.subfield}`"
+    <div v-if="createItems.value === 'ordering'">
+        <form @submit="onSubmit($event)">
+            <fieldset v-if="initialized" class="rows" id="itemfieldset">
+                <legend>{{ $__("Item") }}</legend>
+                <div class="marc_editor">
+                    <ol>
+                        <li
+                            v-for="(attr, index) in frameworkFields"
+                            v-bind:key="index"
                         >
-                            <FormElement
-                                :resource="fieldValues"
-                                :attr="attr"
-                                :index="index"
-                            />
-                            <a
-                                v-if="attr.valueBuilder"
-                                href="#"
-                                :id="attr.id"
-                                :class="`buttonDot tag_editor framework_plugin ${attr.noPopup ? 'disabled' : ''}`"
-                                :title="
-                                    attr.noPopup ? 'No popup' : 'Tag editor'
-                                "
-                                :data-plugin="attr.dataPlugin"
-                            ></a>
-                        </div>
-                    </li>
-                </ol>
-            </div>
-        </fieldset>
-    </form>
+                            <div
+                                class="subfield_line"
+                                :id="`subfield${attr.subfield}`"
+                            >
+                                <FormElement
+                                    :resource="fieldValues"
+                                    :attr="attr"
+                                    :index="index"
+                                />
+                                <a
+                                    v-if="attr.valueBuilder"
+                                    href="#"
+                                    :id="attr.id"
+                                    :class="`buttonDot tag_editor framework_plugin ${attr.noPopup ? 'disabled' : ''}`"
+                                    :title="
+                                        attr.noPopup ? 'No popup' : 'Tag editor'
+                                    "
+                                    :data-plugin="attr.dataPlugin"
+                                ></a>
+                            </div>
+                        </li>
+                    </ol>
+                </div>
+            </fieldset>
+        </form>
+    </div>
 </template>
 
 <script>
@@ -44,6 +46,7 @@ export default {
         orderNumber: String,
         biblioNumber: String,
         frameworkCode: String,
+        createItems: Object,
     },
     setup(props) {
         const frameworkFields = ref(null);
@@ -74,7 +77,11 @@ export default {
                 const fieldDefinition = {
                     name: field.kohafield.split(".").pop(),
                     label: field.subfield + " - " + field.marc_lib,
-                    required: field.mandatory,
+                    required: resource => {
+                        if (props.createItems.value !== "ordering")
+                            return false;
+                        return field.mandatory ? true : false;
+                    },
                     type,
                     placeholder: "",
                     subfield: field.subfield,
