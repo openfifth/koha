@@ -2,7 +2,7 @@
     <label
         v-if="attr.label"
         :for="getElementId"
-        :class="{ required: attr.required }"
+        :class="{ required }"
         :style="{ ...attr.style }"
         >{{ attr.label }}:</label
     >
@@ -11,7 +11,7 @@
             :id="getElementId"
             v-model="resource[attr.name]"
             :placeholder="getPlaceholder"
-            :required="attr.required ? true : false"
+            :required="required"
             :size="attr.size"
             :maxlength="attr.maxlength"
             :disabled="disabled"
@@ -25,7 +25,7 @@
             :id="getElementId"
             v-model="resource[attr.name]"
             :placeholder="getPlaceholder"
-            :required="attr.required ? true : false"
+            :required="required"
             :disabled="disabled"
             @update:modelValue="checkForInputErrorAndRunOnChangeHandler()"
             :classNames="attr.class"
@@ -38,7 +38,7 @@
             :rows="attr.textAreaRows"
             :cols="attr.textAreaCols"
             :placeholder="getPlaceholder"
-            :required="attr.required ? true : false"
+            :required="required"
             :disabled="disabled"
             @update:modelValue="checkForInputErrorAndRunOnChangeHandler()"
         />
@@ -110,14 +110,14 @@
             :label="attr.selectLabel"
             :reduce="av => selectRequiredKey(av)"
             :options="selectOptions"
-            :required="!resource[attr.name] && attr.required"
+            :required="!resource[attr.name] && required"
             :disabled="disabled"
             :multiple="attr.allowMultipleChoices"
             @update:modelValue="
                 attr.onSelected && attr.onSelected($event, options, resource)
             "
         >
-            <template v-if="attr.required" #search="{ attributes, events }">
+            <template v-if="required" #search="{ attributes, events }">
                 <input
                     :required="!resource[attr.name]"
                     class="vs__search"
@@ -201,7 +201,7 @@
         }}</span>
     </template>
     <ToolTip v-if="attr.toolTip" :toolTip="attr.toolTip"></ToolTip>
-    <span v-if="attr.required" class="required">{{ $__("Required") }}</span>
+    <span v-if="required" class="required">{{ $__("Required") }}</span>
     <span style="margin-left: 5px" class="error" v-if="fieldInputError">
         {{ attr.formErrorMessage }}
     </span>
@@ -296,6 +296,14 @@ export default {
                 return disabledAttr || false;
             }
         });
+        const required = computed(() => {
+            const requiredAttr = props.required || props.attr.required;
+            if (typeof requiredAttr === "function") {
+                return requiredAttr(props.resource);
+            } else {
+                return requiredAttr || false;
+            }
+        });
 
         const fieldInputError = ref(false);
         const checkForInputErrorAndRunOnChangeHandler = () => {
@@ -330,6 +338,7 @@ export default {
             checkForInputErrorAndRunOnChangeHandler,
             getPlaceholder,
             getHint,
+            required,
         };
     },
     name: "FormElement",
