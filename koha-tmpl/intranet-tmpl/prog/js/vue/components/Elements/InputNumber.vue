@@ -8,11 +8,13 @@
         :size="size"
         :maxlength="maxlength"
         :disabled="disabled"
+        @blur="isInputActive = false"
+        @focus="isInputActive = true"
     />
 </template>
 
 <script>
-import { computed } from "vue";
+import { computed, ref } from "vue";
 export default {
     props: {
         id: String,
@@ -22,22 +24,31 @@ export default {
         size: Number | null,
         maxlength: Number | null,
         disabled: Boolean,
+        formatInputValue: Function,
+        resource: Object,
     },
     emits: ["update:modelValue"],
     setup(props, { emit }) {
+        const isInputActive = ref(false);
         const model = computed({
             get() {
-                return typeof props.modelValue !== "undefined" &&
-                    props.modelValue !== null &&
-                    props.modelValue !== ""
-                    ? parseFloat(props.modelValue)
-                    : props.modelValue;
+                if (props.formatInputValue == null) {
+                    return props.modelValue;
+                }
+                if (isInputActive.value) {
+                    return props.modelValue;
+                } else {
+                    return props.formatInputValue(
+                        props.modelValue,
+                        props.resource
+                    );
+                }
             },
             set(value) {
                 emit("update:modelValue", value);
             },
         });
-        return { model };
+        return { model, isInputActive };
     },
     name: "InputNumber",
 };
