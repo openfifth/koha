@@ -820,7 +820,7 @@ $(document).ready(function () {
     populateBackendFilter();
 
     // Clear all filters
-    $(".clear_search").click(function () {
+    $("#illfilter_form .clear_search").click(function () {
         clearSearch();
     });
 });
