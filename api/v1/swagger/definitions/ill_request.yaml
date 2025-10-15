@@ -18,6 +18,10 @@ properties:
     type:
       - integer
       - "null"
+  managedby:
+    type:
+      - integer
+      - "null"
     description: Internal patron id
   due_date:
     type:
@@ -136,6 +140,11 @@ properties:
       - "null"
     description: The id_prefix of the request (x-koha-embed)
   patron:
+    type:
+      - object
+      - "null"
+    description: The linked patron object (x-koha-embed)
+  manager:
     type:
       - object
       - "null"

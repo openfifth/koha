@@ -7,6 +7,7 @@
 [% USE TablesSettings %]
 [% USE Price %]
 [% PROCESS 'i18n.inc' %]
+[% PROCESS 'manageable-mixin.inc' %]
 [% SET footerjs = 1 %]
 [% INCLUDE 'doc-head-open.inc' %]
 <title
@@ -391,6 +392,10 @@
                                 <label for="borrowernumber">Patron ID:</label>
                                 <input name="borrowernumber" id="borrowernumber" type="text" value="[% request.borrowernumber | html %]" />
                             </li>
+                            [% PROCESS select_manager_form
+                                manager => request.manager
+                                required_permission => CAN_user_ill
+                            %]
                             <li class="biblio_id">
                                 <label for="biblio_id" class="biblio_id">Bibliographic record ID:</label>
                                 <input name="biblio_id" id="biblio_id" type="text" value="[% request.biblio_id | html %]" />
@@ -642,6 +647,10 @@
                                     <a href="[% borrowerlink | url %]" title="View borrower details"> [% request.patron.firstname _ " " _ request.patron.surname _ " [" _ request.patron.cardnumber _ "]" | html %] </a>
                                 </li>
                             [% END %]
+                            [% PROCESS select_manager_show
+                                manager => request.manager
+                                display => "fieldset"
+                            %]
                             [% IF request.biblio_id %]
                                 <li class="biblio_id">
                                     <span class="label biblio_id">Bibliographic record ID:</span>
@@ -1117,6 +1126,13 @@
     [% INCLUDE 'js-patron-format.inc' %]
     [% INCLUDE 'calendar.inc' %]
     [% INCLUDE 'select2.inc' %]
+    [% IF op == 'edit_action' %]
+        [% INCLUDE 'select_manager.inc'
+            add_modal => 1
+            manager => request.manager
+            filter => 'ill_users'
+        %]
+    [% END %]
     [% IF metadata_enrichment_services %]
         <script>
             var ill_check_availability_syspref = '[% Koha.Preference('ILLCheckAvailability') | html %]';

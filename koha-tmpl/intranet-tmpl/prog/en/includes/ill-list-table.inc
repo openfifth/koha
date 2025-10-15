@@ -19,6 +19,7 @@
             <th scope="col" data-datatype="related-object" data-related="extended_attributes" data-related-key="type" data-related-value="type" data-related-search-on="value">Request type</th>
             <th scope="col">Order ID</th>
             <th scope="col">Patron</th>
+            <th scope="col">Managed by</th>
             <th scope="col">Bibliographic record ID</th>
             <th scope="col">Library</th>
             <th scope="col">Status</th>
