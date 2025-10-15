@@ -1157,6 +1157,9 @@ modules:
             -
               columnname: patron
             -
+              columnname: managedby
+              is_hidden: 1
+            -
               columnname: biblio_id
             -
               columnname: library_branchname
