@@ -31,7 +31,7 @@ my $schema  = Koha::Database->new->schema;
 my $builder = t::lib::TestBuilder->new;
 
 subtest 'Polymorphic object creation' => sub {
-    plan tests => 6;
+    plan tests => 7;
 
     $schema->storage->txn_begin;
 
@@ -91,6 +91,8 @@ subtest 'Polymorphic object creation' => sub {
     );
 
     can_ok( $local_transport, 'rename_file' );
+
+    can_ok( $local_transport, 'delete_file' );
 
     $schema->storage->txn_rollback;
 };
