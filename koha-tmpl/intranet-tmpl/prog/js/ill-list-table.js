@@ -226,7 +226,8 @@ $(document).ready(function() {
             'ill_batch',
             'library',
             'id_prefix',
-            'patron'
+            'patron',
+            'manager',
         ],
         "order": [[0, 'desc']],
         "stateSave": true, // remember state on page reload
@@ -326,6 +327,17 @@ $(document).ready(function() {
                 "data": "patron.firstname:patron.surname:patron.cardnumber",
                 "render": function(data, type, row, meta) {
                     return (row.patron) ? $patron_to_html( row.patron, { display_cardnumber: true, url: true } ) : ''; }                    },
+            {
+                data: "manager.firstname:manager.surname:manager.cardnumber",
+                render: function (data, type, row, meta) {
+                    return row.manager
+                        ? $patron_to_html(row.manager, {
+                                display_cardnumber: true,
+                                url: true,
+                            })
+                        : __("Nobody");
+                },
+            },
             {
                 "data": "biblio_id",
                 "orderable": true,
