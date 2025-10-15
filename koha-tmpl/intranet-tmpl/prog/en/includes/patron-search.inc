@@ -117,7 +117,7 @@
 [%# - Browse by last name %]
 [%# - The table %]
 [%# Get the following parameters: %]
-[%# - filter: can be 'suggestions_managers', 'orders_managers', 'funds_owners', 'funds_users' or 'erm_users' to filter patrons on their permissions %]
+[%# - filter: can be 'suggestions_managers', 'orders_managers', 'funds_owners', 'funds_users', 'erm_users' or 'ill_users' to filter patrons on their permissions %]
 [%# - table_id: the ID of the table %]
 [%# open_on_row_click: See patron_search_js %]
 [%# columns: See patron_search_js %]
@@ -135,6 +135,8 @@
         <div class="alert alert-info">Only staff with superlibrarian or acquisitions permissions (or budget_modify permission if granular permissions are enabled) are returned in the search results</div>
     [% ELSIF filter == 'erm_users' %]
         <div class="alert alert-info">Only staff with superlibrarian or ERM permissions are returned in the search results</div>
+    [% ELSIF filter == 'ill_users' %]
+        <div class="alert alert-info">Only staff with superlibrarian or ILL permissions are returned in the search results</div>
     [% END %]
 
     <div class="browse">
@@ -337,6 +339,8 @@
                 let patron_search_url = '/api/v1/acquisitions/funds/users';
             [% CASE 'erm_users' %]
                 let patron_search_url = '/api/v1/erm/users';
+            [% CASE 'ill_users' %]
+                let patron_search_url = '/api/v1/ill/users';
             [% CASE %]
                 let patron_search_url = '/api/v1/patrons';
             [% END %]
