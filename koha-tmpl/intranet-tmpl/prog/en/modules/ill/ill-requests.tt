@@ -7,6 +7,7 @@
 [% USE TablesSettings %]
 [% USE Price %]
 [% PROCESS 'i18n.inc' %]
+[% PROCESS 'manageable-mixin.inc' %]
 [% SET footerjs = 1 %]
 [% INCLUDE 'doc-head-open.inc' %]
 <title
@@ -408,6 +409,10 @@
                                     <label for="borrowernumber">Patron ID:</label>
                                     <input name="borrowernumber" id="borrowernumber" type="text" value="[% request.borrowernumber | html %]" />
                                 </li>
+                                [% PROCESS select_manager_form
+                                    manager => request.manager
+                                    required_permission => CAN_user_ill
+                                %]
                                 <li class="biblio_id">
                                     <label for="biblio_id" class="biblio_id">Bibliographic record ID:</label>
                                     <input name="biblio_id" id="biblio_id" type="text" value="[% request.biblio_id | html %]" />
@@ -659,6 +664,7 @@
                                         <a href="[% borrowerlink | url %]" title="View borrower details"> [% request.patron.firstname _ " " _ request.patron.surname _ " [" _ request.patron.cardnumber _ "]" | html %] </a>
                                     </li>
                                 [% END %]
+                                [% PROCESS select_manager_show manager => request.manager display => "fieldset" %]
                                 [% IF request.biblio_id %]
                                     <li class="biblio_id">
                                         <span class="label biblio_id">Bibliographic record ID:</span>
@@ -1207,6 +1213,9 @@
             [% Asset.js("js/ill-availability-partner.js") | $raw %]
         [% END %]
         [% Asset.js("lib/jquery/plugins/multiple-select/multiple-select.min.js") | $raw %]
+        [% IF op == 'edit_action' %]
+            [% INCLUDE 'select_manager.inc' add_modal => 1 manager => request.manager filter => 'ill_users' %]
+        [% END %]
     [% END # UNLESS blocking_error %]
 [% END %]
 <!-- prettier-ignore-start -->
