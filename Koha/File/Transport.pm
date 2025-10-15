@@ -225,6 +225,82 @@ sub download_file {
     die "Subclass must implement download_file";
 }
 
+=head3 delete_file
+
+    my $success = $transport->delete_file($remote_file, \%options);
+
+Deletes a file from the remote server. Automatically establishes a connection if needed.
+
+B<Parameters:>
+
+=over 4
+
+=item * C<$remote_file> - Remote filename (not a path, just the filename) (required)
+
+=item * C<\%options> - Optional hashref with keys:
+
+=over 4
+
+=item * C<path> - Directory path containing the file. If provided, uses this directory
+for this operation only (simplified API). If omitted, behavior depends on whether
+change_directory() has been called explicitly (see DESCRIPTION).
+
+=back
+
+=back
+
+B<Usage Patterns:>
+
+    # Pattern 1: Simplified API with custom path
+    $transport->delete_file('old.txt', { path => '/temp/' });
+
+    # Pattern 2: Simplified API with configured download_directory
+    $transport->delete_file('old.txt');
+
+    # Pattern 3: Traditional API with explicit directory
+    $transport->change_directory('/temp/');
+    $transport->delete_file('old.txt');
+
+B<Returns:> True on success, undef on failure. Check object_messages() for details.
+
+=cut
+
+sub delete_file {
+    my ( $self, $remote_file, $options ) = @_;
+
+    return unless $self->_ensure_connected();
+
+    # Only auto-change directory if:
+    # 1. Options provided with custom path (simplified API), OR
+    # 2. No explicit directory set by user AND default download_directory exists (traditional API)
+    if ( $options && $options->{path} ) {
+
+        # Simplified API - use custom path
+        return unless $self->_auto_change_directory( 'download', $options->{path} );
+    } elsif ( !$self->{_user_set_directory} ) {
+
+        # Traditional API - use default directory only if user hasn't set one
+        return unless $self->_auto_change_directory( 'download', undef );
+    }
+
+    return $self->_delete_file($remote_file);
+}
+
+=head3 _delete_file
+
+    $transport->_delete_file($remote_file);
+
+Internal method that performs the protocol-specific file deletion operation.
+Must be implemented by subclasses. Called by delete_file after connection
+and directory management.
+
+=cut
+
+sub _delete_file {
+    my ($self) = @_;
+    die "Subclass must implement _delete_file";
+}
+
 =head3 change_directory
 
     my $files = $transport->change_directory($path);

@@ -126,6 +126,35 @@ sub download_file {
     return 1;
 }
 
+=head3 _delete_file
+
+    my $success = $server->_delete_file($filename);
+
+Passed a filename, this will delete the file from the current directory of the server connection.
+
+Returns true on success or undefined on failure.
+
+=cut
+
+sub _delete_file {
+    my ( $self, $remote_file ) = @_;
+    my $operation = "delete";
+
+    $self->{connection}->delete($remote_file) or return $self->_abort_operation( $operation, $remote_file );
+
+    $self->add_message(
+        {
+            message => $operation,
+            type    => 'success',
+            payload => {
+                remote_file => $remote_file,
+            }
+        }
+    );
+
+    return 1;
+}
+
 =head3 change_directory
 
     my $success = $server->change_directory($directory);

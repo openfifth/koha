@@ -397,6 +397,64 @@ sub rename_file {
     return 1;
 }
 
+=head3 _delete_file
+
+    $server->_delete_file();
+
+Deletes a file in the current directory.
+
+Returns true on success or undefined on failure.
+
+=cut
+
+sub _delete_file {
+    my ( $self, $remote_file ) = @_;
+    my $operation = "delete";
+
+    my $directory = $self->{current_directory} || $self->download_directory || '.';
+    my $source    = File::Spec->catfile( $directory, $remote_file );
+
+    # Check if the file exists
+    unless ( -e $source ) {
+        $self->add_message(
+            {
+                message => $operation,
+                type    => 'error',
+                payload => {
+                    error => "File not found: $source",
+                    path  => $source
+                }
+            }
+        );
+        return;
+    }
+
+    # Attempt to delete the file
+    unless ( unlink $source ) {
+        $self->add_message(
+            {
+                message => $operation,
+                type    => 'error',
+                payload => {
+                    error => "File could not be deleted: $!",
+                    path  => $source
+                }
+            }
+        );
+        return;    # Return undef on failure
+    }
+
+    $self->add_message(
+        {
+            message => $operation,
+            type    => 'success',
+            payload => { path => $source }
+        }
+    );
+
+    return 1;
+}
+
 =head3 disconnect
 
     $server->disconnect();
