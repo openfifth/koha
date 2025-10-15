@@ -258,7 +258,8 @@
                                     [% END %]
                                 </td>
                             </tr>
-                            [% PROCESS select_manager_show
+                            [%
+                                PROCESS select_manager_show
                                 manager => suggestion.manager
                                 display => "table"
                             %]
@@ -598,7 +599,8 @@
                                     <label for="managedon">Managed on:</label>
                                     <input type="text" id="managedon" name="manageddate" class="flatpickr" size="10" maxlength="10" value="[% default_manageddate | html %]" />[% INCLUDE 'date-format.inc' %]
                                 </li>
-                                [% PROCESS select_manager_form
+                                [%
+                                    PROCESS select_manager_form
                                     manager => suggestion.manager
                                     notify_option => 1
                                     required_permission => CAN_user_suggestions_suggestions_manage
@@ -879,14 +881,16 @@
                                                     <div class="col-sm-2">
                                                         <fieldset class="brief">
                                                             <span class="label">Update manager</span>
-                                                            <a
-                                                                href="#patron_search_modal_manager_[% suggestion.suggestiontype | uri %]"
-                                                                id="set_manager_[% suggestion.suggestiontype | uri %]"
-                                                                data-tab="[% suggestion.suggestiontype | uri %]"
-                                                                class="set_manager"
-                                                                data-bs-toggle="modal"
-                                                                ><i class="fa fa-search"></i> Select manager</a
-                                                            >
+                                                            [% hash_href_val = "patron_search_modal_manager_" _ suggestion.suggestiontype %]
+                                                            [% id_val = "set_manager_" _ suggestion.suggestiontype %]
+                                                            [% data_tab_val = suggestion.suggestiontype %]
+
+                                                            [%
+                                                                PROCESS select_manager_button
+                                                                href = hash_href_val
+                                                                id = id_val
+                                                                data_tab = data_tab_val
+                                                            %]
                                                             <span id="managedby_name-[% suggestion.suggestiontype | html %]"></span>
                                                         </fieldset>
                                                         <fieldset class="action">
@@ -1216,7 +1220,8 @@
 
 [% MACRO jsinclude BLOCK %]
     [% INCLUDE 'calendar.inc' %]
-    [% INCLUDE 'select_manager.inc'
+    [%
+        INCLUDE 'select_manager.inc'
         manager => suggestion.manager
     %]
     <script nonce="[% Koha.CSPNonce | $raw %]">
