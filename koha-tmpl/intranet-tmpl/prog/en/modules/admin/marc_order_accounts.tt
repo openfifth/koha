@@ -117,6 +117,20 @@
                         <input type="text" name="description" id="description" size="20" value="[% account.description | html %]" />
                     </li>
                     <li>
+                        <label for="file_transport_id">File transport: </label>
+                        <select name="file_transport_id" id="file_transport_id">
+                            <option value="">Select a file transport configuration</option>
+                            [% FOREACH transport IN file_transports %]
+                                [% IF transport.file_transport_id == account.file_transport_id %]
+                                    <option value="[% transport.file_transport_id | html %]" selected="selected">[% transport.name | html %] ([% transport.transport | upper | html %] - [% transport.host | html %])</option>
+                                [% ELSE %]
+                                    <option value="[% transport.file_transport_id | html %]">[% transport.name | html %] ([% transport.transport | upper | html %] - [% transport.host | html %])</option>
+                                [% END %]
+                            [% END %]
+                        </select>
+                        <div class="hint"> Select a file transport configuration for this EDI account. File transports can be managed in <a href="/cgi-bin/koha/admin/file_transports.pl">Administration &rsaquo; File transports</a>. </div>
+                    </li>
+                    <li>
                         <label for="download_directory">Download directory: </label>
                         <input type="text" name="download_directory" id="download_directory" size="20" value="[% account.download_directory | html %]" />
                         <div class="hint">The download directory specifies the directory in your Koha installation that should be searched for new files.</div>
