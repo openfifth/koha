@@ -163,7 +163,26 @@ sub log_status_change {
                 )
             }
         );
+        $self->auto_set_manager( $params->{request} );
     }
+}
+
+=head3 auto_set_manager
+
+    $self->auto_set_manager($params->{request})
+
+Automatically set managedby to the staff member updating this request's status if request does not yet have a manager
+
+=cut
+
+sub auto_set_manager {
+    my ( $self, $illrequest ) = @_;
+
+    my $userenv    = C4::Context->userenv();
+    my $usernumber = ( ref($userenv) eq 'HASH' ) ? $userenv->{'number'} : 0;
+    my $patron     = Koha::Patrons->find($usernumber);
+    $illrequest->managedby($usernumber)->store()
+        if $patron && $patron->has_permission('ill') && $illrequest && !$illrequest->managedby;
 }
 
 =head3 log_something
