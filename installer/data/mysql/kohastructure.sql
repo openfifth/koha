@@ -3786,6 +3786,7 @@ DROP TABLE IF EXISTS `illrequests`;
 CREATE TABLE `illrequests` (
   `illrequest_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT COMMENT 'ILL request number',
   `borrowernumber` int(11) DEFAULT NULL COMMENT 'Patron associated with request',
+  `managedby` int(11) DEFAULT NULL COMMENT 'Staff member manager of request',
   `biblio_id` int(11) DEFAULT NULL COMMENT 'Potential bib linked to request',
   `deleted_biblio_id` int(11) DEFAULT NULL COMMENT 'Deleted bib linked to request',
   `due_date` datetime DEFAULT NULL COMMENT 'Custom date due specified by backend, leave NULL for default date_due calculation',
@@ -3807,6 +3808,7 @@ CREATE TABLE `illrequests` (
   `batch_id` int(11) DEFAULT NULL COMMENT 'Optional ID of batch that this request belongs to',
   PRIMARY KEY (`illrequest_id`),
   KEY `illrequests_bnfk` (`borrowernumber`),
+  KEY `illrequests_manfk` (`managedby`),
   KEY `illrequests_bcfk_2` (`branchcode`),
   KEY `illrequests_safk` (`status_alias`),
   KEY `illrequests_bibfk` (`biblio_id`),
@@ -3814,6 +3816,7 @@ CREATE TABLE `illrequests` (
   CONSTRAINT `illrequests_bcfk_2` FOREIGN KEY (`branchcode`) REFERENCES `branches` (`branchcode`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `illrequests_bibfk` FOREIGN KEY (`biblio_id`) REFERENCES `biblio` (`biblionumber`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `illrequests_bnfk` FOREIGN KEY (`borrowernumber`) REFERENCES `borrowers` (`borrowernumber`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `illrequests_manfk` FOREIGN KEY (`managedby`) REFERENCES `borrowers` (`borrowernumber`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `illrequests_ibfk` FOREIGN KEY (`batch_id`) REFERENCES `illbatches` (`ill_batch_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `illrequests_safk` FOREIGN KEY (`status_alias`) REFERENCES `authorised_values` (`authorised_value`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
