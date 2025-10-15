@@ -8,6 +8,7 @@
 [% USE TablesSettings %]
 [% PROCESS 'i18n.inc' %]
 [% PROCESS 'patron-search.inc' %]
+[% PROCESS 'manageable-mixin.inc' %]
 [% SET footerjs = 1 %]
 [% INCLUDE 'doc-head-open.inc' %]
 <title
@@ -257,18 +258,10 @@
                                     [% END %]
                                 </td>
                             </tr>
-                            <tr>
-                                <th>Managed by:</th>
-                                <td>[% suggestion.manageddate | $KohaDates %]</td>
-                                <td>
-                                    [% IF ( suggestion.manager.borrowernumber ) %]
-                                        <a href="/cgi-bin/koha/members/moremember.pl?borrowernumber=[% suggestion.manager.borrowernumber | uri %]"
-                                            >[% suggestion.manager.surname | html %], [% suggestion.manager.firstname | html %] ([% suggestion.manager.cardnumber | html %])</a
-                                        >
-                                        [% Branches.GetName( suggestion.manager.branchcode ) | html %] ([% suggestion.manager.category.description | html %])
-                                    [% END %]
-                                </td>
-                            </tr>
+                            [% PROCESS select_manager_show
+                                manager => suggestion.manager
+                                display => "table"
+                            %]
                             <tr>
                                 <th>Accepted on:</th>
                                 <td>[% suggestion.accepteddate | $KohaDates %]</td>
@@ -605,42 +598,11 @@
                                     <label for="managedon">Managed on:</label>
                                     <input type="text" id="managedon" name="manageddate" class="flatpickr" size="10" maxlength="10" value="[% default_manageddate | html %]" />[% INCLUDE 'date-format.inc' %]
                                 </li>
-                                <li>
-                                    <label for="managedby_name">by:</label>
-                                    <div>
-                                        <span id="managedby_name" name="managedby_name">
-                                            [% IF CAN_user_suggestions_suggestions_manage %]
-                                                <a href="/cgi-bin/koha/members/moremember.pl?borrowernumber=[% logged_in_user.borrowernumber | uri %]">You</a>
-                                            [% ELSE %]
-                                                Nobody
-                                            [% END %]
-                                        </span>
-                                        [% IF suggestion.manager.borrowernumber && logged_in_user.borrowernumber != suggestion.manager.borrowernumber %]
-                                            | Previously was [% INCLUDE 'patron-title.inc' patron=suggestion.manager hide_patron_infos_if_needed=1 %] [% Branches.GetName( suggestion.manager.branchcode ) | html %]
-                                            ([% suggestion.manager.category.description | html %])
-                                        [% END %]
-                                        <br />
-                                        <a href="#patron_search_modal_manager" id="edit_manager" data-bs-toggle="modal"><i class="fa fa-search"></i> Select manager</a>
-                                        [% IF suggestion.manager.borrowernumber && logged_in_user.borrowernumber != suggestion.manager.borrowernumber %]
-                                            <a id="restore_previous_manager" href="#"><i class="fa fa-trash-can"></i> Keep existing manager</a>
-                                        [% END %]
-                                        [% IF CAN_user_suggestions_suggestions_manage %]
-                                            <input type="hidden" name="managedby" id="managedby" value="[% logged_in_user.borrowernumber | html %]" />
-                                        [% END %]
-
-                                        <br />
-                                        <label for="notify">Notify manager:</label>
-                                        <input
-                                            type="checkbox"
-                                            id="notify"
-                                            name="notify"
-                                            value="notify"
-                                            disabled="disabled"
-                                            title="A NOTIFY_MANAGER notice will be generated and send to the manager if a valid email address is defined. This can be checked if a new manager has been selected."
-                                        />
-                                    </div>
-                                    <!-- /div -->
-                                </li>
+                                [% PROCESS select_manager_form
+                                    manager => suggestion.manager
+                                    notify_option => 1
+                                    required_permission => CAN_user_suggestions_suggestions_manage
+                                %]
                             </ol>
                         </fieldset>
 
@@ -1254,43 +1216,10 @@
 
 [% MACRO jsinclude BLOCK %]
     [% INCLUDE 'calendar.inc' %]
-    <script>
-        function select_manager(borrowernumber, borrower) {
-            let tab = $('#suggestiontabs .active table').data('tab-name');
-            if ( tab ) {
-                var managedby_name = $("#managedby_name-"+tab);
-                var managedby = $("#managedby-"+tab);
-            } else {
-                var managedby_name = $("#managedby_name");
-                var managedby = $("#managedby");
-            }
-            managedby_name.empty();
-            managedby.val('');
-            var borrowername = borrower.firstname + ' ' + borrower.surname;
-            if (borrowernumber) {
-                var managerlink = '<a href="/cgi-bin/koha/members/moremember.pl'
-                    + '?borrowernumber=' + borrowernumber + '">'
-                    + borrowername + '</a>';
-                managedby_name.html(managerlink);
-                managedby.val(borrowernumber);
-            }
-
-            [% IF op == "save" %]
-                var notify = $('#notify');
-                if ( notify.length ) {
-                    [% IF suggestion.manager %]
-                        if ( borrowernumber == [% logged_in_user.borrowernumber | html %] || borrowernumber == [% suggestion.manager.borrowernumber | html %] ) {
-                    [% ELSE %]
-                        if ( borrowernumber == [% logged_in_user.borrowernumber | html %] ) {
-                    [% END %]
-                        $(notify).prop('checked', false).prop('disabled', true);
-                    } else {
-                        $(notify).prop('disabled', false);
-                    }
-                }
-            [% END %]
-        }
-
+    [% INCLUDE 'select_manager.inc'
+        manager => suggestion.manager
+    %]
+    <script nonce="[% Koha.CSPNonce | $raw %]">
         function select_suggester(borrowernumber, borrower) {
             $.ajax({
                 type: 'GET',
@@ -1702,22 +1631,6 @@
                     $(".select-reason").show().find("option[value='']").attr("selected","selected");
                     $("#other_reason").hide();
                 });
-
-                $("#restore_previous_manager").on("click",function(e){
-                    e.preventDefault();
-
-                    $("#managedby_name").empty();
-                    $("#managedby").val('');
-                    var borrowername = "[% suggestion.manager.firstname | html %] [% suggestion.manager.surname | html %]";
-                    var managerlink = '<a href="/cgi-bin/koha/members/moremember.pl'
-                        + '?borrowernumber=[% suggestion.manager.borrowernumber | html %]">'
-                        + borrowername + '</a>';
-                    $('#managedby_name').html(managerlink);
-                    $('#managedby').val([% suggestion.manager.borrowernumber | html %]);
-                    $('#notify').prop('checked', false).prop('disabled', true);
-                });
-
-
             });
         </script>
     [% END %]
