@@ -14,6 +14,7 @@
         preview_on_name_click => 1,
         table_id => 'patron_search_modal_manager_table',
         callback => 'select_manager'
+        empty_table_settings => 1
     %]
 [% END %]
 <script>
