@@ -64,11 +64,7 @@
 
     [% IF ( showsql || execute || editsql || save_successful ) %]
         [% UNLESS ( errors ) # Unless there are errors saving a report %]
-            <div class="btn-group">
-                <a id="runreport" class="btn btn-default" href="/cgi-bin/koha/reports/guided_reports.pl?id=[% id | html %]&amp;op=run">
-                    <i class="fa fa-play"></i> Run report
-                </a>
-            </div>
+            <div class="btn-group"> [% INCLUDE 'throttled-button.inc' element_type='link' id='runreport' href='/cgi-bin/koha/reports/guided_reports.pl?id=' _ id _ '&op=run' classes='btn btn-default' label=t('Run report') %] </div>
             [% IF templates.count %]
             <div class="btn-group">
                 <button type="button" class="btn btn-default dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true"
