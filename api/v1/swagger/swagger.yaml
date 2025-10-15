@@ -461,6 +461,8 @@ paths:
     $ref: ./paths/ill_batchstatuses.yaml#/~1ill~1batchstatuses
   "/ill/batchstatuses/{ill_batchstatus_code}":
     $ref: "./paths/ill_batchstatuses.yaml#/~1ill~1batchstatuses~1{ill_batchstatus_code}"
+  /ill/users:
+    $ref: ./paths/ill_users.yaml#/~1ill~1users
   "/import_batches/{import_batch_id}/records/{import_record_id}/matches/chosen":
     $ref: "./paths/import_batches.yaml#/~1import_batches~1{import_batch_id}~1records~1{import_record_id}~1matches~1chosen"
   /import_batch_profiles:
@@ -1368,6 +1370,9 @@ tags:
   - description: "Manage item groups\n"
     name: item_groups
     x-displayName: Item groups
+  - description: "Manage ILL users\n"
+    name: ill_users
+    x-displayName: ILL users
   - description: "Manage record sources\n"
     name: record_sources
     x-displayName: Record source
