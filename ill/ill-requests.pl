@@ -305,6 +305,7 @@ if ($backends_available) {
                     ? $params->{status_alias}
                     : "-1";
                 $request->status_alias($alias);
+                $request->managedby( $params->{managedby} );
                 $request->store;
                 my $backend_result = {
                     error   => 0,

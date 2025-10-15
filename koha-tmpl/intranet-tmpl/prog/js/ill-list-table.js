@@ -294,6 +294,7 @@ $(document).ready(function () {
                 "library",
                 "id_prefix",
                 "patron",
+                "manager",
             ],
             order: [[0, "desc"]],
             stateSave: true, // remember state on page reload
@@ -427,6 +428,17 @@ $(document).ready(function () {
                                   url: true,
                               })
                             : "";
+                    },
+                },
+                {
+                    data: "manager.firstname:manager.surname:manager.cardnumber",
+                    render: function (data, type, row, meta) {
+                        return row.manager
+                            ? $patron_to_html(row.manager, {
+                                  display_cardnumber: true,
+                                  url: true,
+                              })
+                            : __("Nobody");
                     },
                 },
                 {

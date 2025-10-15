@@ -1145,6 +1145,9 @@ modules:
             -
               columnname: patron
             -
+              columnname: managedby
+              is_hidden: 1
+            -
               columnname: library_branchname
             -
               columnname: status

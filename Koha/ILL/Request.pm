@@ -1407,6 +1407,22 @@ sub get_type_disclaimer_date {
     return $attr->value;
 }
 
+=head3 manager
+
+    my $manager = $request->manager();
+
+Return the Koha::Patron object found by $self->managedby
+
+=cut
+
+sub manager {
+    my ($self) = @_;
+
+    my $manager_rs = $self->_result->manager;
+    return unless $manager_rs;
+    return Koha::Patron->_new_from_dbic($manager_rs);
+}
+
 =head3 check_limits
 
     my $ok = $requests->check_limits( {
