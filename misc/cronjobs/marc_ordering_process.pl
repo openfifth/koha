@@ -23,7 +23,7 @@ marc_ordering_process.pl - cron script to retrieve MARC files and create order l
 
 =head1 SYNOPSIS
 
-./marc_ordering_process.pl [-c|--confirm] [-v|--verbose]
+./marc_ordering_process.pl [-c|--confirm] [-v|--verbose] [--dr|--delete-remote] [--rr|--rename-remote] ext]
 
 or, in crontab:
 # Once every day
@@ -50,6 +50,14 @@ Without this parameter no changes will be made
 
 Delete the file once it has been processed
 
+=item B<--dr|--delete-remote>
+
+Delete the remote file once it has been downloaded
+
+=item B<-rr|--rename-remove ext>
+
+Rename the remote file once it has been downloaded, adding the given file extension
+
 =back
 
 =cut
@@ -62,18 +70,21 @@ use File::Copy   qw( copy move );
 use Koha::Script -cron;
 use Koha::MarcOrder;
 use Koha::MarcOrderAccounts;
+use Koha::File::Transports;
 
 use C4::Log qw( cronlogaction );
 
 my $command_line_options = join( " ", @ARGV );
 cronlogaction( { info => $command_line_options } );
 
-my ( $help, $verbose, $confirm, $delete );
+my ( $help, $verbose, $confirm, $delete, $rename_ext, $delete_remote );
 GetOptions(
-    'h|help'    => \$help,
-    'v|verbose' => \$verbose,
-    'c|confirm' => \$confirm,
-    'd|delete'  => \$delete,
+    'h|help'             => \$help,
+    'v|verbose'          => \$verbose,
+    'c|confirm'          => \$confirm,
+    'd|delete'           => \$delete,
+    'dr|delete-remote'   => \$delete_remote,
+    'rr|rename-remote=s' => \$rename_ext,
 ) || pod2usage(1);
 
 pod2usage(0) if $help;
@@ -91,6 +102,8 @@ if ( scalar(@accounts) == 0 ) {
     print "No accounts found - you must create a MARC order account for this cronjob to run\n" if $verbose;
 }
 
+my $valid_file_extensions = qr/\.(mrc|marcxml|mrk)$/i;
+
 foreach my $acct (@accounts) {
     if ($verbose) {
         say sprintf "Starting MARC ordering process for %s", $acct->vendor->name;
@@ -98,8 +111,54 @@ foreach my $acct (@accounts) {
     }
 
     my $working_dir = $acct->download_directory;
+
+    my $file_transport = $acct->file_transport_id ? Koha::File::Transports->find( $acct->file_transport_id ) : undef;
+    if ($file_transport) {
+        if ( $file_transport->connect() ) {
+            my $download_dir = $file_transport->download_directory;
+
+            my $success = $download_dir ? $file_transport->change_directory($download_dir) : 1;
+            if ( $download_dir && !$success ) {
+                say "Failed to change to download directory: $download_dir";
+            } else {
+
+                # Get file list
+                my $file_list = $file_transport->list_files();
+                if ($file_list) {
+
+                    # Process files matching our criteria
+                    foreach my $file ( @{$file_list} ) {
+                        my $filename = $file->{filename};
+
+                        if ( $filename =~ $valid_file_extensions ) {
+
+                            my $local_file = "$working_dir/$filename";
+
+                            # Download the file
+                            if ( $file_transport->download_file( $filename, $local_file ) ) {
+                                if ($rename_ext) {
+                                    $file_transport->rename_file( $filename, "$filename.$rename_ext" );
+                                } elsif ($delete_remote) {
+                                    $file_transport->delete_file($filename);
+                                }
+                            } else {
+                                say "Failed to download file: $filename";
+                            }
+                        }
+                    }
+
+                } else {
+                    say "Failed to get file list from transport";
+                }
+
+            }
+        } else {
+            say "Failed to connect to file transport: " . $file_transport->id;
+        }
+    }
+
     opendir my $dir, $working_dir or die "Can't open filepath";
-    my @files = grep { /\.(mrc|marcxml|mrk)/i } readdir $dir;
+    my @files = grep { /$valid_file_extensions/ } readdir $dir;
     closedir $dir;
     print "No new files found\n" if scalar(@files) == 0;
 

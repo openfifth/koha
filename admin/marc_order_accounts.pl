@@ -38,6 +38,7 @@ use Koha::MarcOrderAccount;
 use Koha::MarcOrderAccounts;
 
 my $input = CGI->new;
+our $schema = Koha::Database->new()->schema();
 
 my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
     {
@@ -59,6 +60,13 @@ if ( $op eq 'acct_form' ) {
     $template->param( budgets => $budgets );
     my @matchers = C4::Matcher::GetMatcherList();
     $template->param( available_matchers => \@matchers );
+
+    # Get available file transports for selection
+    my @file_transports = $schema->resultset('FileTransport')->search(
+        {},
+        { order_by => { -asc => 'name' } }
+    );
+    $template->param( file_transports => \@file_transports );
 
     show_account( $input, $template );
 } elsif ( $op eq 'delete_acct' ) {
@@ -82,6 +90,7 @@ if ( $op eq 'acct_form' ) {
             match_field        => scalar $input->param('match_field'),
             match_value        => scalar $input->param('match_value'),
             basket_name_field  => scalar $input->param('basket_name_field'),
+            file_transport_id  => scalar $input->param('file_transport_id') || undef,
         };
 
         if ( scalar $input->param('id') ) {
