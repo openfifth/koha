@@ -336,6 +336,48 @@ subtest 'trim_form_params() tests' => sub {
         $trimmed_params->{type}, $trimmed_params->{type},
         'already trimmed param remains unchanged'
     );
+};
+
+subtest 'auto_set_manager' => sub {
+
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    my $librarian = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { flags => 2**22 }
+        }
+    );
+    my $password = 'thePassword123';
+    $librarian->set_password( { password => $password, skip_validation => 1 } );
+
+    my $logger      = Koha::ILL::Request::Logger->new;
+    my $ill_request = $builder->build_sample_ill_request( { managedby => undef } );
+
+    t::lib::Mocks::mock_userenv( { patron => $librarian } );
+    $logger->log_status_change(
+        {
+            request => $ill_request,
+            value   => 'NEW'
+        }
+    );
+
+    is( $librarian->borrowernumber, $ill_request->managedby, 'Managed by correctly set' );
+
+    my $unauthorized_patron = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { flags => 0 }
+        }
+    );
+    my $unauth_password = 'thePassword123';
+    $unauthorized_patron->set_password( { password => $unauth_password, skip_validation => 1 } );
+    my $unauth_userid = $unauthorized_patron->userid;
+    t::lib::Mocks::mock_userenv( { patron => $librarian } );
+    my $no_manager_ill_request = $builder->build_sample_ill_request( { managedby => undef } );
+    is( undef, $no_manager_ill_request->managedby, 'Managed by correctly undef' );
 
     $schema->storage->txn_rollback;
 };
