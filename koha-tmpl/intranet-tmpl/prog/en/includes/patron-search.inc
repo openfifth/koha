@@ -228,6 +228,7 @@
 [%# display_search_description: boolean, default off. Display the description of the search %]
 [%# adjust_history: boolean, default off. Change the current url when a first letter is selected %]
 [%# defer_loading: boolean, default on. If true, it will not load the table until a search is triggered %]
+[%# empty_table_settings: boolean, default off. If true, it will ensure no table_settings are utilized %]
 [% BLOCK patron_search_js %]
 
     [% IF redirect_if_one_result && !redirect_url %]
@@ -281,6 +282,8 @@
             av_bsort1,
             av_bsort2,
         };
+
+        var empty_table_settings = '[% empty_table_settings | html %]'
 
         [% IF Koha.Preference('ExtendedPatronAttributes') %]
             [% SET extended_attribute_types = ExtendedAttributeTypes.codes( staff_searchable => 1, searched_by_default => 1 ) %]
@@ -790,7 +793,7 @@
                         },
                     [% END %]
                     fixedHeader: false,
-                }, typeof table_settings !== 'undefined' ? table_settings : null, 1, additional_filters, filters_options, external_filter_nodes, parent_block.find(".search_description"), additional_search_descriptions );
+                }, typeof table_settings !== 'undefined' && !empty_table_settings ? table_settings : null, 1, additional_filters, filters_options, external_filter_nodes, parent_block.find(".search_description"), additional_search_descriptions );
 
                 patron_search_form.on('submit', filter);
                 patron_search_form.on('submit', update_search_type);
