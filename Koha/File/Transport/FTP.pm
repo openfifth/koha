@@ -169,7 +169,7 @@ sub change_directory {
     my ( $self, $remote_directory ) = @_;
     my $operation = "change_directory";
 
-    $self->{connection}->cwd($remote_directory) or return $self->_abort_operation($operation);
+    $self->{connection}->cwd($remote_directory) or return $self->_abort_operation( $operation, $remote_directory );
 
     $self->add_message(
         {
@@ -282,8 +282,27 @@ sub disconnect {
     return 1;
 }
 
+=head3 _is_connected
+
+Internal method to check if transport is currently connected.
+
+=cut
+
+sub _is_connected {
+    my ($self) = @_;
+
+    return $self->{connection} && $self->{connection}->pwd();
+}
+
+=head3 _abort_operation
+
+Helper method to abort the current operation and return.
+
+=cut
+
+
 sub _abort_operation {
-    my ( $self, $operation ) = @_;
+    my ( $self, $operation, $path ) = @_;
 
     $self->add_message(
         {
@@ -291,7 +310,8 @@ sub _abort_operation {
             type    => 'error',
             payload => {
                 detail => $self->{connection} ? $self->{connection}->status  : '',
-                error  => $self->{connection} ? $self->{connection}->message : $@
+                error  => $self->{connection} ? $self->{connection}->message : $@,
+                path   => $path               ? $path                        : $self->{connection}->pwd,
             }
         }
     );
