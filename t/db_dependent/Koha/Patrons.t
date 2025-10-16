@@ -1799,7 +1799,7 @@ subtest 'BorrowersLog tests' => sub {
 $schema->storage->txn_rollback;
 
 subtest 'Test Koha::Patrons::merge' => sub {
-    plan tests => 113;
+    plan tests => 117;
 
     my $schema = Koha::Database->new()->schema();
 
