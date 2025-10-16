@@ -167,6 +167,21 @@ __PACKAGE__->set_primary_key("file_transport_id");
 
 =head1 RELATIONS
 
+=head2 marc_order_accounts
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::MarcOrderAccount>
+
+=cut
+
+__PACKAGE__->has_many(
+  "marc_order_accounts",
+  "Koha::Schema::Result::MarcOrderAccount",
+  { "foreign.file_transport_id" => "self.file_transport_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 vendor_edi_accounts
 
 Type: has_many
@@ -183,8 +198,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-10-14 20:25:57
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:aepVBfAwINe8dLAE5xLi1A
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-10-16 14:35:38
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:XjJBXlR5+u5lH8+bIsr1Eg
 
 __PACKAGE__->add_columns(
     '+passive' => { is_boolean => 1 },
