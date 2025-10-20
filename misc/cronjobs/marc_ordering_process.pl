@@ -70,7 +70,6 @@ use File::Copy   qw( copy move );
 use Koha::Script -cron;
 use Koha::MarcOrder;
 use Koha::MarcOrderAccounts;
-use Koha::File::Transports;
 
 use C4::Log qw( cronlogaction );
 
@@ -112,7 +111,7 @@ foreach my $acct (@accounts) {
 
     my $working_dir = $acct->download_directory;
 
-    my $file_transport = $acct->file_transport_id ? Koha::File::Transports->find( $acct->file_transport_id ) : undef;
+    my $file_transport = $acct->file_transport;
     if ($file_transport) {
         if ( $file_transport->connect() ) {
             my $download_dir = $file_transport->download_directory;
