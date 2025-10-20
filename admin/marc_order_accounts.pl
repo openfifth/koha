@@ -36,9 +36,9 @@ use Koha::MarcOrder;
 use Koha::Acquisition::Booksellers;
 use Koha::MarcOrderAccount;
 use Koha::MarcOrderAccounts;
+use Koha::File::Transports;
 
 my $input = CGI->new;
-our $schema = Koha::Database->new()->schema();
 
 my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
     {
@@ -62,10 +62,10 @@ if ( $op eq 'acct_form' ) {
     $template->param( available_matchers => \@matchers );
 
     # Get available file transports for selection
-    my @file_transports = $schema->resultset('FileTransport')->search(
+    my @file_transports = Koha::File::Transports->search(
         {},
         { order_by => { -asc => 'name' } }
-    );
+    )->as_list;
     $template->param( file_transports => \@file_transports );
 
     show_account( $input, $template );
