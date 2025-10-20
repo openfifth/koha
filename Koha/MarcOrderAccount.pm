@@ -52,6 +52,27 @@ sub budget {
     return Koha::Acquisition::Fund->_new_from_dbic($budget_rs);
 }
 
+=head3 file_transport
+
+Returns the Koha::File::Transport::(S)FTP object for this account, if one is configured.
+
+    my $transport = $account->file_transport;
+
+=cut
+
+sub file_transport {
+    my ($self) = @_;
+    my $transport_rs = $self->_result->file_transport;
+    return unless $transport_rs;
+
+    # Use Koha::File::Transports to determine the correct polymorphic class
+    require Koha::File::Transports;
+    my $transports = Koha::File::Transports->new;
+    my $class      = $transports->object_class($transport_rs);
+
+    return $class->_new_from_dbic($transport_rs);
+}
+
 =head3 _type
 
 =cut
