@@ -3776,9 +3776,9 @@ sub is_anonymous {
     return ( $anonymous_patron && $self->borrowernumber eq $anonymous_patron ) ? 1 : 0;
 }
 
-=head3 get_permissions
+=head3 permissions
 
-my $flags = $patron->get_permissons
+my $flags = $patron->permissions
 
 Returns a structure such as:
 {
