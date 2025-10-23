@@ -281,12 +281,6 @@
                                                 [% END %]
                                             </li>
                                         [% END %]
-
-                                        <!--  Add a hidden 'negcap' field -->
-                                        <li id="negcap" style="position: absolute; left: -2000px;">
-                                            negcap <input type="text" name="negcap"/>
-                                        </li>
-
                                     </ol>
                                 </fieldset>
                                 <fieldset class="action">
