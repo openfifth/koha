@@ -261,7 +261,7 @@ return {
             }
         }
 
-        $dbh->do(q|DROP TABLE overduerules|);
-        $dbh->do(q|DROP TABLE overduerules_transport_types|);
+        $dbh->do(q|DROP TABLE overduerules_transport_types|) if TableExists('overduerules_transport_types');
+        $dbh->do(q|DROP TABLE overduerules|)                 if TableExists('overduerules');
     }
 };
