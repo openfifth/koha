@@ -1,12 +1,12 @@
 use utf8;
-package Koha::Schema::Result::HoldGroupTargetHold;
+package Koha::Schema::Result::HoldGroupsTargetHold;
 
 # Created by DBIx::Class::Schema::Loader
 # DO NOT MODIFY THE FIRST PART OF THIS FILE
 
 =head1 NAME
 
-Koha::Schema::Result::HoldGroupTargetHold
+Koha::Schema::Result::HoldGroupsTargetHold
 
 =cut
 
@@ -15,11 +15,11 @@ use warnings;
 
 use base 'DBIx::Class::Core';
 
-=head1 TABLE: C<hold_group_target_holds>
+=head1 TABLE: C<hold_groups_target_holds>
 
 =cut
 
-__PACKAGE__->table("hold_group_target_holds");
+__PACKAGE__->table("hold_groups_target_holds");
 
 =head1 ACCESSORS
 
@@ -70,7 +70,7 @@ __PACKAGE__->set_primary_key("hold_group_id", "reserve_id");
 
 =head1 UNIQUE CONSTRAINTS
 
-=head2 C<hold_group_id>
+=head2 C<uq_hold_group_target_holds_hold_group_id>
 
 =over 4
 
@@ -80,9 +80,9 @@ __PACKAGE__->set_primary_key("hold_group_id", "reserve_id");
 
 =cut
 
-__PACKAGE__->add_unique_constraint("hold_group_id", ["hold_group_id"]);
+__PACKAGE__->add_unique_constraint("uq_hold_group_target_holds_hold_group_id", ["hold_group_id"]);
 
-=head2 C<reserve_id>
+=head2 C<uq_hold_group_target_holds_reserve_id>
 
 =over 4
 
@@ -92,7 +92,7 @@ __PACKAGE__->add_unique_constraint("hold_group_id", ["hold_group_id"]);
 
 =cut
 
-__PACKAGE__->add_unique_constraint("reserve_id", ["reserve_id"]);
+__PACKAGE__->add_unique_constraint("uq_hold_group_target_holds_reserve_id", ["reserve_id"]);
 
 =head1 RELATIONS
 
@@ -127,8 +127,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-10-23 13:01:15
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:NtAC7d08ku24na/QpXzS1g
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-11-03 12:49:32
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:EcoFIWRBGVt/lqf0nL6TaQ
 
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration

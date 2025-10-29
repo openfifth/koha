@@ -440,17 +440,17 @@ __PACKAGE__->belongs_to(
   },
 );
 
-=head2 hold_group_target_hold
+=head2 hold_groups_target_hold
 
 Type: might_have
 
-Related object: L<Koha::Schema::Result::HoldGroupTargetHold>
+Related object: L<Koha::Schema::Result::HoldGroupsTargetHold>
 
 =cut
 
 __PACKAGE__->might_have(
-  "hold_group_target_hold",
-  "Koha::Schema::Result::HoldGroupTargetHold",
+  "hold_groups_target_hold",
+  "Koha::Schema::Result::HoldGroupsTargetHold",
   { "foreign.reserve_id" => "self.reserve_id" },
   { cascade_copy => 0, cascade_delete => 0 },
 );
@@ -516,8 +516,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-10-23 13:01:15
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:gThGGm5pjnkd2qyr8GWdCw
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-11-03 12:49:32
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:fFALXRvgTXlIrfGQJlAbhw
 
 __PACKAGE__->belongs_to(
   "item",
