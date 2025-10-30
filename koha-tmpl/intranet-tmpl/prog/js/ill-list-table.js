@@ -159,6 +159,7 @@ $(document).ready(function () {
         },
         "-or": function () {
             let patron = $("#illfilter_patron").val();
+            let managed_by = $("#illfilter_managed_by").val();
             let status = $("#illfilter_status").val();
             let status_alias = $("#illfilter_status_alias").val();
             let filters = [];
@@ -172,6 +173,13 @@ $(document).ready(function () {
                     table_prefix: "patron",
                 });
                 subquery_and.push(patronquery);
+            }
+
+            if (managed_by) {
+                let managed_byquery = buildPatronSearchQuery(managed_by, {
+                    table_prefix: "manager",
+                });
+                subquery_and.push(managed_byquery);
             }
 
             if (status && status.length > 0) {
@@ -270,6 +278,7 @@ $(document).ready(function () {
         illfilter_datemodified_end: "#illfilter_datemodified_end",
         illfilter_branchname: "#illfilter_branchname",
         illfilter_patron: "#illfilter_patron",
+        illfilter_managed_by: "#illfilter_managed_by",
     };
 
     let table_id = "#ill-requests";
@@ -591,6 +600,7 @@ $(document).ready(function () {
             "illfilter_backend",
             "illfilter_branchname",
             "illfilter_patron",
+            "illfilter_managed_by",
             "illfilter_keyword",
         ];
         filters.forEach(filter => {
