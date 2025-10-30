@@ -48,6 +48,10 @@
                 <label for="illfilter_patron">Patron:</label>
                 <input type="text" name="illfilter_patron" id="illfilter_patron" />
             </li>
+            <li>
+                <label for="illfilter_managed_by">Managed by:</label>
+                <input type="text" name="illfilter_managed_by" id="illfilter_managed_by" />
+            </li>
         </ol>
     </fieldset>
     <fieldset class="action">
