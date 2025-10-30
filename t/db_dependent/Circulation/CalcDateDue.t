@@ -2,7 +2,8 @@
 
 use Modern::Perl;
 
-use Test::More tests => 23;
+use Test::NoWarnings;
+use Test::More tests => 27;
 use Test::MockModule;
 use DBI;
 use DateTime;
@@ -452,6 +453,66 @@ $expected_duetime = $now->clone->add( days => 2 )->subtract( hours => 4 );
 is(
     $date, $expected_duetime,
     "Loan period was extended (but considers the holiday) because ConsiderLibraryHoursInCirculation is set to open time"
+);
+
+# Bug 38940 - Test that ConsiderLibraryHoursInCirculation='close' works when tomorrow has no hours
+# This tests the scenario where a library is closed the next day (e.g., weekend)
+# but should still shorten loans to today's closing time
+
+my $library2 = $builder->build( { source => 'Branch' } );
+Koha::CirculationRules->set_rules(
+    {
+        categorycode => $borrower->categorycode,
+        itemtype     => $itemtype,
+        branchcode   => $library2->{branchcode},
+        rules        => {
+            issuelength => 3,         # loan period is 3 hours
+            lengthunit  => 'hours',
+            daysmode    => '',
+        }
+    }
+);
+
+# Set up hours for Friday (day 5): open 10:00, close 16:00
+# Saturday (day 6) will have NO hours (null), simulating a weekend
+my $friday_open  = DateTime->new( year => 2023, month => 5, day => 5, hour => 10 )->hms;
+my $friday_close = DateTime->new( year => 2023, month => 5, day => 5, hour => 16 )->hms;
+my $friday_now   = DateTime->new( year => 2023, month => 5, day => 5, hour => 14 );        # 2PM on Friday
+
+# Only set hours for Friday (day 5), leaving Saturday (day 6) with null hours
+Koha::Library::Hour->new(
+    { day => 5, library_id => $library2->{branchcode}, open_time => $friday_open, close_time => $friday_close } )
+    ->store;
+
+t::lib::Mocks::mock_preference( 'useDaysMode',                       'Days' );
+t::lib::Mocks::mock_preference( 'ConsiderLibraryHoursInCirculation', 'close' );
+
+# Test with 'close' mode - should shorten to 4PM today even though tomorrow has no hours
+$date             = C4::Circulation::CalcDateDue( $friday_now, $itemtype, $library2->{branchcode}, $borrower );
+$expected_duetime = $friday_now->clone->set( hour => 16, minute => 0 );
+is(
+    $date, $expected_duetime,
+    "Bug 38940: Loan period shortened to closing time when next day has null hours (ConsiderLibraryHoursInCirculation='close')"
+);
+
+# Test with 'open' mode - should fall back to regular 3-hour loan since tomorrow has no hours
+t::lib::Mocks::mock_preference( 'ConsiderLibraryHoursInCirculation', 'open' );
+$date             = C4::Circulation::CalcDateDue( $friday_now, $itemtype, $library2->{branchcode}, $borrower );
+$expected_duetime = $friday_now->clone->add( hours => 3 );
+is(
+    $date, $expected_duetime,
+    "Bug 38940: Loan period not extended when next day has null hours (ConsiderLibraryHoursInCirculation='open' falls back to standard loan)"
+);
+
+# Test the same scenario with Calendar daysmode
+t::lib::Mocks::mock_preference( 'useDaysMode',                       'Calendar' );
+t::lib::Mocks::mock_preference( 'ConsiderLibraryHoursInCirculation', 'close' );
+
+$date             = C4::Circulation::CalcDateDue( $friday_now, $itemtype, $library2->{branchcode}, $borrower );
+$expected_duetime = $friday_now->clone->set( hour => 16, minute => 0 );
+is(
+    $date, $expected_duetime,
+    "Bug 38940: Loan period shortened with Calendar mode when next day has null hours (ConsiderLibraryHoursInCirculation='close')"
 );
 
 $cache->clear_from_cache($key);
