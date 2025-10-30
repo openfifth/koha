@@ -3980,35 +3980,46 @@ sub CalcDateDue {
         ;    # get open hours of next day
 
     # Defend against missing library hours definitions
-    if ( !$todayhours || !$tomorrowhours ) { $considerlibraryhours = 'ignore' }
+    # For 'close' mode, we only need today's hours
+    # For 'open' mode, we need both today's and tomorrow's hours
+    if ( !$todayhours ) {
+        $considerlibraryhours = 'ignore';
+    } elsif ( $considerlibraryhours eq 'open' && !$tomorrowhours ) {
+        $considerlibraryhours = 'ignore';
+    }
 
     my @open = undef;
-    if ( $considerlibraryhours ne 'ignore' and $todayhours->close_time and $tomorrowhours->open_time ) {
+    if ( $considerlibraryhours ne 'ignore' and $todayhours and $todayhours->close_time ) {
         @close             = split( ":", $todayhours->close_time );
         $library_close     = $library_close->set( hour => $close[0], minute => $close[1] );
         $potential_datedue = $potential_datedue->add( hours => $loanlength->{$length_key} )
             ;    # datedue without consideration for open hours
-        @open = split( ":", $tomorrowhours->open_time );
+        if ( $considerlibraryhours eq 'open' and $tomorrowhours and $tomorrowhours->open_time ) {
+            @open = split( ":", $tomorrowhours->open_time );
+        }
     }
 
     # calculate the datedue as normal
     if ( $daysmode eq 'Days' )
     {    # ignoring calendar
         if ( $loanlength->{lengthunit} eq 'hours' ) {
-            if ( $considerlibraryhours ne 'ignore' and $potential_datedue > $library_close and $todayhours->close_time and $tomorrowhours->open_time ) {
+            if (    $considerlibraryhours ne 'ignore'
+                and $potential_datedue > $library_close
+                and $todayhours->close_time )
+            {
                 if ( $considerlibraryhours eq 'close' ) {
 
                     # datedue will be after the library closes on that day
                     # shorten loan period to end when library closes
                     $datedue->set( hour => $close[0], minute => $close[1] );
-                } elsif ( $considerlibraryhours eq 'open' ) {
+                } elsif ( $considerlibraryhours eq 'open' and $tomorrowhours and $tomorrowhours->open_time ) {
 
                     # datedue will be after the library closes on that day
                     # extend loan period to when library opens following day
                     $datedue->add( days => 1 )->set( hour => $open[0], minute => $open[1] );
                 } else {
 
-                    # ignore library open hours
+                    # ignore library open hours or can't extend to tomorrow (no tomorrow hours)
                     $datedue->add( hours => $loanlength->{$length_key} );
                 }
             } else {
@@ -4023,14 +4034,17 @@ sub CalcDateDue {
         }
     } else {
         my $dur;
-        if ($loanlength->{lengthunit} eq 'hours') {
-            if ( $considerlibraryhours ne 'ignore' and $potential_datedue > $library_close and $todayhours->close_time and $tomorrowhours->open_time ) {
+        if ( $loanlength->{lengthunit} eq 'hours' ) {
+            if (    $considerlibraryhours ne 'ignore'
+                and $potential_datedue > $library_close
+                and $todayhours->close_time )
+            {
                 if ( $considerlibraryhours eq 'close' ) {
 
                     # datedue will be after the library closes on that day
                     # shorten loan period to end when library closes by hardcoding due time
                     $datedue->set( hour => $close[0], minute => $close[1] );
-                } elsif ( $considerlibraryhours eq 'open' ) {
+                } elsif ( $considerlibraryhours eq 'open' and $tomorrowhours and $tomorrowhours->open_time ) {
 
                     # datedue will be after the library closes on that day
                     # extend loan period to when library opens following day by hardcoding due time for next open day
@@ -4038,7 +4052,7 @@ sub CalcDateDue {
                     $datedue->set( hour => $open[0], minute => $open[1] );
                 } else {
 
-                    # ignore library open hours
+                    # ignore library open hours or can't extend to tomorrow (no tomorrow hours)
                     $dur = DateTime::Duration->new( hours => $loanlength->{$length_key} );
                 }
             } else {
