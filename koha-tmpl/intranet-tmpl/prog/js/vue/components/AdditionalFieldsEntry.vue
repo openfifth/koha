@@ -1,131 +1,136 @@
 <template>
-    <fieldset
-        v-if="available_fields.length"
-        class="rows"
-        id="additional_fields"
-    >
-        <legend>{{ $__("Additional fields") }}</legend>
-        <ol>
+    <template v-if="available_fields.length">
+        <li class="additional-fields-header">
+            <label></label>
+            <h3>{{ $__("Additional fields") }}</h3>
+        </li>
+        <template
+            v-for="available_field in available_fields"
+            v-bind:key="available_field.extended_attribute_type_id"
+        >
             <template
-                v-for="available_field in available_fields"
-                v-bind:key="available_field.extended_attribute_type_id"
+                v-if="
+                    available_field.authorised_value_category_name &&
+                    !available_field.repeatable
+                "
             >
-                <template
-                    v-if="
-                        available_field.authorised_value_category_name &&
-                        !available_field.repeatable
-                    "
-                >
-                    <li>
-                        <label
-                            :for="
-                                `additional_field_` +
-                                available_field.extended_attribute_type_id
-                            "
-                            >{{ available_field.name }}:
-                        </label>
-                        <v-select
-                            :id="
-                                `additional_field_` +
-                                available_field.extended_attribute_type_id
-                            "
-                            :name="available_field.name"
-                            v-model="
-                                current_additional_fields_values[
-                                    available_field.extended_attribute_type_id
-                                ]
-                            "
-                            :options="
-                                av_options[
-                                    available_field
-                                        .authorised_value_category_name
-                                ]
-                            "
-                        />
-                    </li>
-                </template>
-                <template
-                    v-if="
-                        available_field.authorised_value_category_name &&
-                        available_field.repeatable
-                    "
-                >
-                    <li>
-                        <label
-                            :for="
-                                `additional_field_` +
-                                available_field.extended_attribute_type_id
-                            "
-                            >{{ available_field.name }}:
-                        </label>
-                        <v-select
-                            :id="
-                                `additional_field_` +
-                                available_field.extended_attribute_type_id
-                            "
-                            :name="available_field.name"
-                            :multiple="available_field.repeatable"
-                            v-model="
-                                current_additional_fields_values[
-                                    available_field.extended_attribute_type_id
-                                ]
-                            "
-                            :options="
-                                av_options[
-                                    available_field
-                                        .authorised_value_category_name
-                                ]
-                            "
-                        />
-                    </li>
-                </template>
-
-                <template
-                    v-if="!available_field.authorised_value_category_name"
-                >
-                    <li
-                        v-for="current in current_additional_fields_values[
+                <li>
+                    <label
+                        :for="
+                            `additional_field_` +
                             available_field.extended_attribute_type_id
-                        ]"
-                        v-bind:key="current.id"
-                    >
-                        <label
-                            :for="
+                        "
+                        >{{ available_field.name }}:
+                    </label>
+                    <v-select
+                        :id="
+                            `additional_field_` +
+                            available_field.extended_attribute_type_id
+                        "
+                        :name="available_field.name"
+                        v-model="
+                            current_additional_fields_values[
+                                available_field.extended_attribute_type_id
+                            ]
+                        "
+                        :options="
+                            av_options[
+                                available_field.authorised_value_category_name
+                            ]
+                        "
+                    />
+                </li>
+            </template>
+            <template
+                v-if="
+                    available_field.authorised_value_category_name &&
+                    available_field.repeatable
+                "
+            >
+                <li>
+                    <label
+                        :for="
+                            `additional_field_` +
+                            available_field.extended_attribute_type_id
+                        "
+                        >{{ available_field.name }}:
+                    </label>
+                    <v-select
+                        :id="
+                            `additional_field_` +
+                            available_field.extended_attribute_type_id
+                        "
+                        :name="available_field.name"
+                        :multiple="available_field.repeatable"
+                        v-model="
+                            current_additional_fields_values[
+                                available_field.extended_attribute_type_id
+                            ]
+                        "
+                        :options="
+                            av_options[
+                                available_field.authorised_value_category_name
+                            ]
+                        "
+                    />
+                </li>
+            </template>
+
+            <template v-if="!available_field.authorised_value_category_name">
+                <li
+                    v-for="current in current_additional_fields_values[
+                        available_field.extended_attribute_type_id
+                    ]"
+                    v-bind:key="current.id"
+                >
+                    <label
+                        :for="
+                            `additional_field_` +
+                            available_field.extended_attribute_type_id
+                        "
+                        >{{ available_field.name }}:
+                    </label>
+                    <span class="input-group">
+                        <input
+                            type="text"
+                            v-model="current.value"
+                            :id="
                                 `additional_field_` +
                                 available_field.extended_attribute_type_id
                             "
-                            >{{ available_field.name }}:
-                        </label>
-                        <input type="text" v-model="current.value" />
+                            class="input-with-clear"
+                        />
+                        <button
+                            v-if="current.value"
+                            type="button"
+                            class="clear-button"
+                            @click="clearField(current, $event)"
+                            :aria-label="$__('Clear')"
+                            tabindex="-1"
+                        >
+                            <i class="fa fa-times"></i>
+                        </button>
+                    </span>
+                    <template v-if="available_field.repeatable">
                         <a
                             href="#"
-                            class="clear_attribute"
-                            @click="clearField(current, $event)"
+                            class="btn btn-default btn-sm"
+                            @click="
+                                cloneField(available_field, current, $event)
+                            "
                         >
-                            <i class="fa fa-fw fa-trash-can"></i>
-                            {{ $__("Clear") }}
+                            <i class="fa fa-fw fa-plus"></i>
+                            {{ $__("New") }}
                         </a>
-                        <template v-if="available_field.repeatable">
-                            <a
-                                href="#"
-                                class="clone_attribute"
-                                @click="
-                                    cloneField(available_field, current, $event)
-                                "
-                            >
-                                <i class="fa fa-fw fa-plus"></i>
-                                {{ $__("New") }}
-                            </a>
-                        </template>
-                    </li>
-                </template>
+                    </template>
+                </li>
             </template>
-        </ol>
-    </fieldset>
+        </template>
+    </template>
 </template>
 
 <script>
-import { onBeforeMount, watch, ref, reactive } from "vue";
+import { onBeforeMount, watch, ref, reactive, nextTick } from "vue";
 import { APIClient } from "../fetch/api-client.js";
 
 export default {
@@ -149,16 +154,32 @@ export default {
         });
 
         const clearField = (current_field, event) => {
-            event.preventDefault();
+            if (event) {
+                event.preventDefault();
+            }
             current_field.value = "";
         };
         const cloneField = (available_field, current, event) => {
             event.preventDefault();
-            current_additional_fields_values[
-                available_field.extended_attribute_type_id
-            ].push({
-                value: current.value,
+            const fieldArray =
+                current_additional_fields_values[
+                    available_field.extended_attribute_type_id
+                ];
+            fieldArray.push({
+                value: "",
                 label: available_field.name,
+            });
+
+            // Focus the newly created field after DOM updates
+            nextTick(() => {
+                const fieldId = `additional_field_${available_field.extended_attribute_type_id}`;
+                const inputs = document.querySelectorAll(
+                    `input[id="${fieldId}"]`
+                );
+                if (inputs.length > 0) {
+                    // Focus the last input (the newly added one)
+                    inputs[inputs.length - 1].focus();
+                }
             });
         };
 
@@ -311,3 +332,74 @@ export default {
     emits: ["additional-fields-changed"],
 };
 </script>
+
+<style scoped>
+/* Header for additional fields section */
+.additional-fields-header {
+    border-top: 1px solid #ddd;
+    margin-top: 1em;
+    padding-top: 1em;
+}
+
+.additional-fields-header h3 {
+    margin: 0;
+    font-size: 110%;
+    font-weight: bold;
+    color: #696969;
+}
+
+.additional-fields-header label {
+    /* Empty label for alignment with other fields */
+    width: 10rem;
+}
+
+/* Input group container for positioning */
+.input-group {
+    position: relative;
+    display: inline;
+}
+
+/* Input with clear button gets padding for the button */
+input.input-with-clear {
+    padding-right: 2rem;
+}
+
+.clear-button {
+    position: absolute;
+    right: 0.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    line-height: 1;
+    transition: color 0.15s ease-in-out;
+    z-index: 10;
+    height: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+}
+
+.clear-button:hover {
+    color: #333;
+}
+
+.clear-button:focus {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+.clear-button i {
+    font-size: 1rem;
+}
+
+/* New button spacing */
+.btn.btn-sm {
+    margin-left: 0.5rem;
+}
+</style>
