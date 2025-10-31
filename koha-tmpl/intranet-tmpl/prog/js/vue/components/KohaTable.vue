@@ -115,13 +115,44 @@ export default {
                         searchable_field => {
                             var _customRender = (function (searchable_field) {
                                 var _render = function (data, type, row, meta) {
-                                    return row._strings.additional_field_values
-                                        .filter(
-                                            field =>
-                                                field.field_id ==
-                                                searchable_field.extended_attribute_type_id
-                                        )
-                                        .map(el => el.value_str);
+                                    const fieldValues =
+                                        row._strings.additional_field_values
+                                            .filter(
+                                                field =>
+                                                    field.field_id ==
+                                                    searchable_field.extended_attribute_type_id
+                                            )
+                                            .map(el => el.value_str);
+
+                                    if (fieldValues.length === 0) {
+                                        return "";
+                                    }
+
+                                    const valueStr = fieldValues[0];
+
+                                    // Check if there are multiple comma-separated values
+                                    if (valueStr && valueStr.includes(",")) {
+                                        const values = valueStr
+                                            .split(",")
+                                            .map(v => v.trim())
+                                            .filter(v => v);
+                                        if (values.length > 1) {
+                                            // Return as unordered list
+                                            return (
+                                                '<ul class="additional-field-list">' +
+                                                values
+                                                    .map(
+                                                        v =>
+                                                            "<li>" + v + "</li>"
+                                                    )
+                                                    .join("") +
+                                                "</ul>"
+                                            );
+                                        }
+                                    }
+
+                                    // Single value, return as-is
+                                    return valueStr;
                                 };
                                 return _render;
                             })(searchable_field);
@@ -341,3 +372,17 @@ export default {
     },
 };
 </script>
+
+<style>
+/* Additional fields list styling in datatable */
+.additional-field-list {
+    margin: 0;
+    padding-left: 1.2em;
+    list-style-type: disc;
+}
+
+.additional-field-list li {
+    padding: 0.1rem 0;
+    line-height: 1.4;
+}
+</style>
