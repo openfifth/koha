@@ -106,9 +106,19 @@
                             class="clear-button"
                             @click="clearField(current, $event)"
                             :aria-label="$__('Clear')"
+                            :title="$__('Clear')"
                             tabindex="-1"
                         >
-                            <i class="fa fa-times"></i>
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="10"
+                                height="10"
+                                viewBox="0 0 10 10"
+                            >
+                                <path
+                                    d="M6.895455 5l2.842897-2.842898c.348864-.348863.348864-.914488 0-1.263636L9.106534.261648c-.348864-.348864-.914489-.348864-1.263636 0L5 3.104545 2.157102.261648c-.348863-.348864-.914488-.348864-1.263636 0L.261648.893466c-.348864.348864-.348864.914489 0 1.263636L3.104545 5 .261648 7.842898c-.348864.348863-.348864.914488 0 1.263636l.631818.631818c.348864.348864.914773.348864 1.263636 0L5 6.895455l2.842898 2.842897c.348863.348864.914772.348864 1.263636 0l.631818-.631818c.348864-.348864.348864-.914489 0-1.263636L6.895455 5z"
+                                ></path>
+                            </svg>
                         </button>
                     </span>
                     <template v-if="available_field.repeatable">
@@ -359,9 +369,10 @@ export default {
     display: inline;
 }
 
-/* Input with clear button gets padding for the button */
+/* Input with clear button gets padding for the button and matches select2 styling */
 input.input-with-clear {
-    padding-right: 2rem;
+    padding: 0.375rem 2rem 0.375rem 0.75rem;
+    line-height: 1.5;
 }
 
 .clear-button {
@@ -394,8 +405,8 @@ input.input-with-clear {
     border-radius: 2px;
 }
 
-.clear-button i {
-    font-size: 1rem;
+.clear-button svg {
+    fill: currentColor;
 }
 
 /* New button spacing */
