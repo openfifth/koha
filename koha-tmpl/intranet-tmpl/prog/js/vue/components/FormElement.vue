@@ -15,6 +15,9 @@
             :size="attr.size"
             :maxlength="attr.maxlength"
             :disabled="disabled"
+            :clearable="
+                attr.clearable !== undefined ? attr.clearable : undefined
+            "
             @update:modelValue="checkForInputError()"
         />
     </template>
@@ -25,6 +28,9 @@
             :placeholder="attr.placeholder || attr.label"
             :required="attr.required ? true : false"
             :disabled="disabled"
+            :clearable="
+                attr.clearable !== undefined ? attr.clearable : undefined
+            "
             @update:modelValue="checkForInputError()"
         />
     </template>
@@ -37,6 +43,9 @@
             :placeholder="attr.placeholder || attr.label"
             :required="attr.required ? true : false"
             :disabled="disabled"
+            :clearable="
+                attr.clearable !== undefined ? attr.clearable : undefined
+            "
             @update:modelValue="checkForInputError()"
         />
     </template>
