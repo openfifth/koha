@@ -137,7 +137,12 @@ export default {
                                             .map(v => v.trim())
                                             .filter(v => v);
                                         if (values.length > 1) {
-                                            // Return as unordered list
+                                            // For export, return newline-separated values
+                                            // CSV/Excel export will properly quote cells containing newlines
+                                            if (type === "export") {
+                                                return values.join("\n");
+                                            }
+                                            // For display, return as unordered list
                                             return (
                                                 '<ul class="additional-field-list">' +
                                                 values
