@@ -1511,6 +1511,21 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 illrequests_managedbies
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::Illrequest>
+
+=cut
+
+__PACKAGE__->has_many(
+  "illrequests_managedbies",
+  "Koha::Schema::Result::Illrequest",
+  { "foreign.managedby" => "self.borrowernumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 issues
 
 Type: has_many
@@ -2212,8 +2227,8 @@ Composing rels: L</user_permissions> -> permission
 __PACKAGE__->many_to_many("permissions", "user_permissions", "permission");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-10-29 16:44:27
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:SSJcjPvlr82qecmbk1Q8iA
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-11-03 14:19:07
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:NHrhTcf4p6JW5fNgfYiqeQ
 
 __PACKAGE__->belongs_to(
   "library",
