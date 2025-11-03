@@ -40,6 +40,14 @@ ILL request number
 
 Patron associated with request
 
+=head2 managedby
+
+  data_type: 'integer'
+  is_foreign_key: 1
+  is_nullable: 1
+
+Staff member manager of request
+
 =head2 biblio_id
 
   data_type: 'integer'
@@ -201,6 +209,8 @@ __PACKAGE__->add_columns(
     is_nullable => 0,
   },
   "borrowernumber",
+  { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
+  "managedby",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
   "biblio_id",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
@@ -370,6 +380,26 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 managedby
+
+Type: belongs_to
+
+Related object: L<Koha::Schema::Result::Borrower>
+
+=cut
+
+__PACKAGE__->belongs_to(
+  "managedby",
+  "Koha::Schema::Result::Borrower",
+  { borrowernumber => "managedby" },
+  {
+    is_deferrable => 1,
+    join_type     => "LEFT",
+    on_delete     => "SET NULL",
+    on_update     => "CASCADE",
+  },
+);
+
 =head2 status_alias
 
 Type: belongs_to
@@ -391,8 +421,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-03-07 16:59:58
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:+LJD6O0ZLhsml2/43CSgBg
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-11-03 14:19:07
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:/61JmhVPxDt1TYOpljcPvg
 
 __PACKAGE__->has_many(
   "comments",
