@@ -30,8 +30,7 @@ else
     exit 1
 fi
 
-usage()
-{
+usage() {
     local scriptname=$(basename $0)
 
     cat <<EOF
@@ -56,8 +55,7 @@ $scriptname -h|--help
 EOF
 }
 
-start_es_indexer()
-{
+start_es_indexer() {
     local name=$1
 
     if ! is_es_indexer_running $name; then
@@ -84,8 +82,7 @@ start_es_indexer()
     fi
 }
 
-stop_es_indexer()
-{
+stop_es_indexer() {
     local name=$1
 
     if is_es_indexer_running $name; then
@@ -111,8 +108,7 @@ stop_es_indexer()
     fi
 }
 
-restart_es_indexer()
-{
+restart_es_indexer() {
     local name=$1
     local queue=$2
 
@@ -139,8 +135,7 @@ restart_es_indexer()
     fi
 }
 
-es_indexer_status()
-{
+es_indexer_status() {
     local name=$1
 
     if is_es_indexer_running $name; then
@@ -152,8 +147,7 @@ es_indexer_status()
     fi
 }
 
-set_action()
-{
+set_action() {
     if [ "$op" = "" ]; then
         op=$1
     else
@@ -163,37 +157,47 @@ set_action()
 
 op=""
 quiet="no"
-batch_size=$(get_es_indexer_batch_size ${name})
+batch_size=10
 
 # Read command line parameters
 while [ $# -gt 0 ]; do
 
     case "$1" in
-        -h|--help)
-            usage ; exit 0 ;;
-        -q|--quiet)
-            quiet="yes"
-            shift ;;
-        --batch_size)
-            batch_size="$2"
-            shift 2 ;;
-        --start)
-            set_action "start"
-            shift ;;
-        --stop)
-            set_action "stop"
-            shift ;;
-        --restart)
-            set_action "restart"
-            shift ;;
-        --status)
-            set_action "status"
-            shift ;;
-        -*)
-            die "Error: invalid option switch ($1)" ;;
-        *)
-            # We expect the remaining stuff are the instance names
-            break ;;
+    -h | --help)
+        usage
+        exit 0
+        ;;
+    -q | --quiet)
+        quiet="yes"
+        shift
+        ;;
+    --batch_size)
+        batch_size="$2"
+        shift 2
+        ;;
+    --start)
+        set_action "start"
+        shift
+        ;;
+    --stop)
+        set_action "stop"
+        shift
+        ;;
+    --restart)
+        set_action "restart"
+        shift
+        ;;
+    --status)
+        set_action "status"
+        shift
+        ;;
+    -*)
+        die "Error: invalid option switch ($1)"
+        ;;
+    *)
+        # We expect the remaining stuff are the instance names
+        break
+        ;;
     esac
 
 done
@@ -216,18 +220,25 @@ if [ $# -gt 0 ]; then
 
         if is_instance $name; then
 
+            adjust_paths_git_install $name
+            worker_DAEMON="${KOHA_HOME}/${KOHA_BINDIR}/workers/es_indexer_daemon.pl"
+            export PERL5LIB
+
+            batch_size=$(get_es_indexer_batch_size ${name})
+
             case $op in
-                "start")
-                    start_es_indexer $name
-                    ;;
-                "stop")
-                    stop_es_indexer $name
-                    ;;
-                "restart")
-                    restart_es_indexer $name
-                    ;;
-                "status")
-                    es_indexer_status $name
+            "start")
+                start_es_indexer $name
+                ;;
+            "stop")
+                stop_es_indexer $name
+                ;;
+            "restart")
+                restart_es_indexer $name
+                ;;
+            "status")
+                es_indexer_status $name
+                ;;
             esac
 
         else
