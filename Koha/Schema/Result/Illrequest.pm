@@ -40,6 +40,14 @@ ILL request number
 
 Patron associated with request
 
+=head2 managedby
+
+  data_type: 'integer'
+  is_foreign_key: 1
+  is_nullable: 1
+
+Staff member manager of request
+
 =head2 biblio_id
 
   data_type: 'integer'
@@ -200,6 +208,8 @@ __PACKAGE__->add_columns(
     is_nullable => 0,
   },
   "borrowernumber",
+  { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
+  "managedby",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
   "biblio_id",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
