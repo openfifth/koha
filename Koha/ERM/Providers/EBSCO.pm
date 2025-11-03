@@ -254,8 +254,12 @@ sub request {
         undef, ( $payload ? encode_json($payload) : undef )
     );
     $request->header( 'x-api-key' => $config->{api_key} );
-    $request->header( 'content-type' => 'application/json; charset=UTF-8' );
-    my $ua = LWP::UserAgent->new;
+
+    if ( $url !~ m{/packages\?orderby=} ) {
+        $request->header( 'content-type' => 'application/json; charset=UTF-8' );
+    }
+
+    my $ua       = LWP::UserAgent->new;
     my $response = $ua->simple_request($request);
     if ( $response->code >= 400 ) {
         my $result = decode_json( $response->decoded_content );
