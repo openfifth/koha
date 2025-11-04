@@ -44,6 +44,8 @@ export default {
                 resourceTableUrl:
                     APIClient.sip2.httpClient._baseURL + "institutions",
             },
+            beforeDoResourceDelete: resource =>
+                beforeDoResourceDelete(resource),
             resourceAttrs: [
                 {
                     name: "name",
@@ -153,6 +155,24 @@ export default {
             ],
             props: props,
         });
+
+        const beforeDoResourceDelete = async resource => {
+            const accounts = await APIClient.sip2.accounts.getAll({
+                sip_institution_id: resource.sip_institution_id,
+            });
+
+            if (accounts.length > 0) {
+                baseResource.i18n.deleteConfirmationMessage = $__(
+                    "You're removing institution %s. <br> It has %s associated accounts (%s), which will also be removed. Are you sure?"
+                ).format(
+                    resource.name,
+                    accounts.length,
+                    accounts.map(a => a.login_id).join(", ")
+                );
+            } else {
+                baseResource.i18n.deleteConfirmationBody = null;
+            }
+        };
 
         const tableOptions = {
             url: () => baseResource.getResourceTableUrl(),

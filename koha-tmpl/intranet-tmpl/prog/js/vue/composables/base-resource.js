@@ -238,41 +238,59 @@ export function useBaseResource(resourceConfig) {
      * @return {void}
      */
     const doResourceDelete = (resource, callback) => {
-        let resourceId = resource
-            ? resource[resourceConfig.idAttr]
-            : resourceConfig.newResource[resourceConfig.idAttr];
-        let resourceName = resource
-            ? resource[resourceConfig.nameAttr]
-            : resourceConfig.newResource[resourceConfig.nameAttr];
-
-        setConfirmationDialog(
-            {
-                title: i18n.deleteConfirmationMessage,
-                message: resourceName,
-                accept_label: $__("Yes, delete"),
-                cancel_label: $__("No, do not delete"),
-            },
-            () => {
-                resourceConfig.apiClient.delete(resourceId).then(
-                    success => {
-                        setMessage(
-                            i18n.deleteSuccessMessage.format(resourceName),
-                            true
-                        );
-                        if (typeof callback === "function") {
-                            callback();
-                        } else {
-                            if (resourceConfig.props.routeAction === "list") {
-                                callback.ajax.reload();
-                            } else {
-                                goToResourceList();
-                            }
-                        }
-                    },
-                    error => {}
-                );
+        const runBeforeDelete = () => {
+            if (
+                resourceConfig &&
+                typeof resourceConfig.beforeDoResourceDelete === "function"
+            ) {
+                const result = resourceConfig.beforeDoResourceDelete(resource);
+                if (result && typeof result.then === "function") {
+                    return result;
+                }
             }
-        );
+            return Promise.resolve();
+        };
+
+        runBeforeDelete().then(() => {
+            let resourceId = resource
+                ? resource[resourceConfig.idAttr]
+                : resourceConfig.newResource[resourceConfig.idAttr];
+            let resourceName = resource
+                ? resource[resourceConfig.nameAttr]
+                : resourceConfig.newResource[resourceConfig.nameAttr];
+
+            setConfirmationDialog(
+                {
+                    title: i18n.deleteConfirmationMessage,
+                    message: resourceName,
+                    accept_label: $__("Yes, delete"),
+                    cancel_label: $__("No, do not delete"),
+                },
+                () => {
+                    resourceConfig.apiClient.delete(resourceId).then(
+                        success => {
+                            setMessage(
+                                i18n.deleteSuccessMessage.format(resourceName),
+                                true
+                            );
+
+                            if (typeof after_delete_callback === "function") {
+                                after_delete_callback();
+                            } else {
+                                if (
+                                    resourceConfig.props.routeAction === "list"
+                                ) {
+                                    callback.ajax.reload();
+                                } else {
+                                    goToResourceList();
+                                }
+                            }
+                        },
+                        error => {}
+                    );
+                }
+            );
+        });
     };
 
     /**
