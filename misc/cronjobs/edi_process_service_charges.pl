@@ -200,12 +200,14 @@ sub process_invoice_service_charges {
                 my $tax_rate_pct = $alc_data->{tax_rate} || 0;
 
                 my $note = sprintf(
-                    'Invoice-level %s from EDI (ALC+%s, MOA+8) - Service: %s%s | Tax Rate: %s%%',
+                    'Invoice-level %s from EDI (ALC+%s, MOA+8) - Service: %s%s | Tax Rate: %s%% | EDI_EXCL: %s | EDI_TAX: %s',
                     $type,
                     ( $type eq 'charge' ? 'C' : 'A' ),
                     $service_code,
                     $description ? " ($description)" : '',
-                    $tax_rate_pct
+                    $tax_rate_pct,
+                    $amount,
+                    $alc_data->{tax_amount} || 0
                 );
 
                 my $adjustment = $schema->resultset('AqinvoiceAdjustment')->create(
@@ -298,14 +300,16 @@ sub process_invoice_service_charges {
                     my $tax_rate_pct = $alc_data->{tax_rate} || 0;
 
                     my $note = sprintf(
-                        'EDI %s: Order #%s%s | EDI Line: %s | Service: %s%s | Tax Rate: %s%%',
+                        'EDI %s: Order #%s%s | EDI Line: %s | Service: %s%s | Tax Rate: %s%% | EDI_EXCL: %s | EDI_TAX: %s',
                         ucfirst($type),
                         $actual_ordernumber || $original_ordernumber || 'Unknown',
                         ($actual_ordernumber && $actual_ordernumber != $original_ordernumber) ? " (split from #$original_ordernumber)" : '',
                         $line->line_item_number,
                         $service_code,
                         $description ? " ($description)" : '',
-                        $tax_rate_pct
+                        $tax_rate_pct,
+                        $amount,
+                        $alc_data->{tax_amount} || 0
                     );
 
                     # Calculate adjustment amount based on CalculateFundValuesIncludingTax syspref
