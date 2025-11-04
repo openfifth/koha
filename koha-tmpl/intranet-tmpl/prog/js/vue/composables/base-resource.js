@@ -262,7 +262,9 @@ export function useBaseResource(resourceConfig) {
             setConfirmationDialog(
                 {
                     title: i18n.deleteConfirmationMessage,
-                    message: resourceName,
+                    message: i18n.deleteConfirmationBody
+                        ? i18n.deleteConfirmationBody
+                        : resourceName,
                     accept_label: $__("Yes, delete"),
                     cancel_label: $__("No, do not delete"),
                 },

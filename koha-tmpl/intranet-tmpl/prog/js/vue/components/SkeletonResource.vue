@@ -88,6 +88,9 @@ export default {
                 deleteConfirmationMessage: $__(
                     "Are you sure you want to remove this skeleton?"
                 ),
+                deleteConfirmationBody: $__(
+                    null // "Optional - Dialog content body when deleting a resource. Defaults to resource's nameAttr value"
+                ),
                 deleteSuccessMessage: $__("Skeleton %s deleted"),
                 displayName: $__("Skeleton"),
                 editLabel: $__("Edit skeleton #%s"),

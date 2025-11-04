@@ -162,7 +162,7 @@ export default {
             });
 
             if (accounts.length > 0) {
-                baseResource.i18n.deleteConfirmationMessage = $__(
+                baseResource.i18n.deleteConfirmationBody = $__(
                     "You're removing institution %s. <br> It has %s associated accounts (%s), which will also be removed. Are you sure?"
                 ).format(
                     resource.name,
