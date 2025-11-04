@@ -52,9 +52,11 @@ export class SIP2APIClient {
                             "institution,custom_item_fields,item_fields,custom_patron_fields,patron_attributes,screen_msg_regexs,sort_bin_mappings,system_preference_overrides",
                     },
                 }),
-            getAll: params =>
+            getAll: (query, params) =>
                 this.httpClient.getAll({
                     endpoint: "accounts",
+                    query,
+                    params: params,
                 }),
             delete: id =>
                 this.httpClient.delete({
