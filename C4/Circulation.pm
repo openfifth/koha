@@ -4534,21 +4534,48 @@ sub LostItem {
             or warn "_FixOverduesOnReturn($borrowernumber, $itemnumber...) failed!";    # zero is OK, check defined
 
         if ( C4::Context->preference('WhenLostChargeReplacementFee') ) {
+            my $desc = sprintf(
+                "%s %s %s",
+                $issues->{'title'}          || q{},
+                $issues->{'barcode'}        || q{},
+                $issues->{'itemcallnumber'} || q{},
+            );
+
+            my $interface =
+                ( $mark_lost_from && $mark_lost_from eq 'cronjob' )
+                ? 'cron'
+                : C4::Context->interface;
+
+            my $item_obj  = Koha::Items->find($itemnumber);
+            my $issue_obj = Koha::Checkouts->search(
+                {
+                    itemnumber     => $itemnumber,
+                    borrowernumber => $borrowernumber,
+                }
+            )->next;
+            my $rule_branch = Koha::Checkout->branch_for_fee_context(
+                fee_type => 'LOST',
+                patron   => $patron,
+                item     => $item_obj,
+                issue    => $issue_obj,
+            );
+            my $issue_id = $issues->{issue_id} // ( $issue_obj ? $issue_obj->issue_id : undef );
+
             C4::Accounts::chargelostitem(
                 $borrowernumber,
                 $itemnumber,
-                $issues->{'replacementprice'},
-                sprintf(
-                    "%s %s %s",
-                    $issues->{'title'}          || q{},
-                    $issues->{'barcode'}        || q{},
-                    $issues->{'itemcallnumber'} || q{},
-                ),
+                ( ( $issues->{'replacementprice'} // 0 ) + 0 ),
+                $desc,
+                {
+                    interface  => $interface,
+                    library_id => $rule_branch,
+                    issue_id   => $issue_id,
+                }
             );
-
-            #FIXME : Should probably have a way to distinguish this from an item that really was returned.
-            #warn " $issues->{'borrowernumber'}  /  $itemnumber ";
         }
+
+        #FIXME : Should probably have a way to distinguish this from an item that really was returned.
+        #warn " $issues->{'borrowernumber'}  /  $itemnumber ";
 
         MarkIssueReturned( $borrowernumber, $itemnumber, undef, $patron->privacy, $params ) if $mark_returned;
     }
