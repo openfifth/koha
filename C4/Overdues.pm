@@ -647,7 +647,17 @@ sub UpdateFine {
             };
             my $desc = $letter ? $letter->{content} : sprintf( "Item %s - due %s", $itemnum, output_pref($due) );
 
-            my $account = Koha::Account->new( { patron_id => $borrowernumber } );
+            my $account   = Koha::Account->new( { patron_id => $borrowernumber } );
+            my $item_obj  = Koha::Items->find($itemnum);
+            my $issue_obj = Koha::Checkouts->find($issue_id);
+
+            my $rule_branch = Koha::Checkout->branch_for_fee_context(
+                fee_type => 'OVERDUE',
+                patron   => $patron,
+                item     => $item_obj,
+                issue    => $issue_obj,
+            );
+
             $accountline = $account->add_debit(
                 {
                     amount      => $amount,
@@ -655,7 +665,7 @@ sub UpdateFine {
                     note        => undef,
                     user_id     => undef,
                     interface   => C4::Context->interface,
-                    library_id  => undef,       #FIXME: Should we grab the checkout or circ-control branch here perhaps?
+                    library_id  => $rule_branch,
                     type        => 'OVERDUE',
                     item_id     => $itemnum,
                     issue_id    => $issue_id,

@@ -34,6 +34,9 @@ use Pod::Usage   qw( pod2usage );
 use C4::Circulation qw( LostItem MarkIssueReturned );
 use C4::Context;
 use C4::Log qw( cronlogaction );
+use Koha::Checkout;
+use Koha::Checkouts;
+use Koha::Items;
 use Koha::ItemTypes;
 use Koha::Patron::Categories;
 use Koha::Patrons;
@@ -522,7 +525,23 @@ foreach my $startrange ( sort keys %$lost ) {
             if ($confirm) {
                 Koha::Items->find( $row->{itemnumber} )->itemlost($lostvalue)->store;
                 if ( $charge && $charge eq $lostvalue ) {
-                    LostItem( $row->{'itemnumber'}, 'cronjob', $mark_returned );
+                    my $patron = Koha::Patrons->find( $row->{borrowernumber} );
+                    my $item   = Koha::Items->find( $row->{itemnumber} );
+                    my $issue  = Koha::Checkouts->search(
+                        {
+                            itemnumber     => $row->{itemnumber},
+                            borrowernumber => $row->{borrowernumber},
+                        }
+                    )->next;
+
+                    my $rule_branch = Koha::Checkout->branch_for_fee_context(
+                        fee_type => 'LOST',
+                        patron   => $patron,
+                        item     => $item,
+                        issue    => $issue,
+                    );
+
+                    LostItem( $row->{itemnumber}, 'cronjob', $mark_returned, { library_id => $rule_branch } );
                 } elsif ($mark_returned) {
                     $patron ||= Koha::Patrons->find( $row->{borrowernumber} );
                     MarkIssueReturned( $row->{borrowernumber}, $row->{itemnumber}, undef, $patron->privacy );

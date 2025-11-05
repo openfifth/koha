@@ -33,7 +33,10 @@ use C4::Members;
 use Koha::Account;
 use Koha::Account::Lines;
 use Koha::Account::Offsets;
+use Koha::CirculationRules;
+use Koha::Checkouts;
 use Koha::Items;
+use Koha::Patrons;
 
 =head1 NAME
 
@@ -65,12 +68,17 @@ FIXME : if no replacement price, borrower just doesn't get charged?
 
 sub chargelostitem {
     my $dbh = C4::Context->dbh();
-    my ( $borrowernumber, $itemnumber, $replacementprice, $description ) = @_;
+    my ( $borrowernumber, $itemnumber, $replacementprice, $description, $opts ) = @_;
+    $opts ||= {};
+
     my $patron = Koha::Patrons->find($borrowernumber);
     my $item   = Koha::Items->find($itemnumber);
     my $itype  = $item->itemtype;
     $replacementprice //= 0;
-    my $defaultreplacecost = $itype->defaultreplacecost;
+
+    my $defaultreplacecost        = $itype->defaultreplacecost;
+    my $usedefaultreplacementcost = C4::Context->preference("useDefaultReplacementCost");
+    my $processingfeenote         = C4::Context->preference("ProcessingFeeNote");
 
     my $lost_control_pref = C4::Context->preference('LostChargesControl');
     my $lost_control_branch;
@@ -85,40 +93,44 @@ sub chargelostitem {
             : $item->holdingbranch;
     }
 
-    my $processfee = Koha::CirculationRules->get_effective_rule_value(
-        {
-            rule_name    => "lost_item_processing_fee",
-            categorycode => undef,
-            itemtype     => $itype->itemtype,
-            branchcode   => $lost_control_branch
+    my $interface  = $opts->{interface} // C4::Context->interface;
+    my $library_id = defined $opts->{library_id} ? $opts->{library_id} : $lost_control_branch;
+
+    my $issue_id = $opts->{issue_id};
+    if ( !defined $issue_id ) {
+        my $checkout = Koha::Checkouts->find( { itemnumber => $itemnumber } );
+        if ( !$checkout && $item->in_bundle ) {
+            my $host = $item->bundle_host;
+            $checkout = $host->checkout;
         }
-    ) // 0;
-    my $usedefaultreplacementcost = C4::Context->preference("useDefaultReplacementCost");
-    my $processingfeenote         = C4::Context->preference("ProcessingFeeNote");
+        $issue_id = $checkout ? $checkout->issue_id : undef;
+    }
 
     if ( $usedefaultreplacementcost && $replacementprice == 0 && $defaultreplacecost ) {
         $replacementprice = $defaultreplacecost;
     }
-    my $checkout = Koha::Checkouts->find( { itemnumber => $itemnumber } );
-    if ( !$checkout && $item->in_bundle ) {
-        my $host = $item->bundle_host;
-        $checkout = $host->checkout;
-    }
-    my $issue_id = $checkout ? $checkout->issue_id : undef;
 
     my $account = Koha::Account->new( { patron_id => $borrowernumber } );
 
-    # first make sure the borrower hasn't already been charged for this item (for this issuance)
     my $existing_charges = $account->lines->search(
         {
-            itemnumber      => $itemnumber,
+            item_id         => $itemnumber,
             debit_type_code => 'LOST',
-            issue_id        => $issue_id
+            issue_id        => $issue_id,
         }
     )->count();
 
     # OK, they haven't
     unless ($existing_charges) {
+
+        my $processfee = Koha::CirculationRules->get_effective_rule_value(
+            {
+                rule_name    => "lost_item_processing_fee",
+                categorycode => undef,
+                itemtype     => $itype->itemtype,
+                branchcode   => $library_id,
+            }
+        ) // 0;
 
         #add processing fee
         if ( $processfee && $processfee > 0 ) {
@@ -129,10 +141,10 @@ sub chargelostitem {
                     note        => $processingfeenote,
                     user_id     => C4::Context->userenv ? C4::Context->userenv->{'number'} : undef,
                     interface   => C4::Context->interface,
-                    library_id  => C4::Context->userenv ? C4::Context->userenv->{'branch'} : undef,
+                    library_id  => $library_id,
                     type        => 'PROCESSING',
                     item_id     => $itemnumber,
-                    issue_id    => $issue_id,
+                    ( defined $issue_id ? ( issue_id => $issue_id ) : () ),
                 }
             );
         }
@@ -146,10 +158,10 @@ sub chargelostitem {
                     note        => undef,
                     user_id     => C4::Context->userenv ? C4::Context->userenv->{'number'} : undef,
                     interface   => C4::Context->interface,
-                    library_id  => C4::Context->userenv ? C4::Context->userenv->{'branch'} : undef,
+                    library_id  => $library_id,
                     type        => 'LOST',
                     item_id     => $itemnumber,
-                    issue_id    => $issue_id,
+                    ( defined $issue_id ? ( issue_id => $issue_id ) : () ),
                 }
             );
         }
