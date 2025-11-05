@@ -24,6 +24,7 @@ use DateTime;
 use Try::Tiny qw( catch try );
 
 use C4::Circulation qw( AddRenewal CanBookBeRenewed LostItem MarkIssueReturned );
+use Koha::Checkout;
 use Koha::Booking;
 use Koha::Checkouts::Renewals;
 use Koha::Checkouts::ReturnClaims;
@@ -360,6 +361,52 @@ sub claim_returned {
             Koha::Exception->throw("Unhandled exception");
         }
     };
+}
+
+=head2 branch_for_fee_context
+
+my $branchcode = Koha::Checkout->branch_for_fee_context(
+        fee_type => 'OVERDUE' | 'LOST' | 'PROCESSING',
+        );
+
+Determines which branch’s rules should apply to a fee based on system preferences and available context. For LOST/PROCESSING it honors LostChargesControl; for OVERDUE it honors CircControl. It also respects HomeOrHoldingBranch when choosing the item’s branch. Returns a branchcode (string) or undef if it cannot be determined.
+
+=cut
+
+sub branch_for_fee_context {
+    my ( $class, %args ) = @_;
+
+    my $fee_type = $args{fee_type} // 'OVERDUE';
+
+    # Choose the controlling preference depending on fee type
+    my $control_pref =
+        ( $fee_type eq 'LOST' || $fee_type eq 'PROCESSING' )
+        ? C4::Context->preference('LostChargesControl')
+        : C4::Context->preference('CircControl');
+
+    # Item branch selection (home vs holding)
+    my $hoh_pref    = C4::Context->preference('HomeOrHoldingBranch') // 'home';
+    my $use_holding = ( $hoh_pref =~ /holding/i ) ? 1 : 0;
+
+    # Support Koha objects OR plain hashes
+    my $patron_branch  = eval { $args{patron}->branchcode }  // ( $args{patron} && $args{patron}->{branchcode} );
+    my $issuing_branch = eval { $args{issue}->branchcode }   // ( $args{issue}  && $args{issue}->{branchcode} );
+    my $item_home      = eval { $args{item}->homebranch }    // ( $args{item}   && $args{item}->{homebranch} );
+    my $item_holding   = eval { $args{item}->holdingbranch } // ( $args{item}   && $args{item}->{holdingbranch} );
+    my $item_branch    = $use_holding ? ( $item_holding // $item_home ) : $item_home;
+
+    # Normalize empty strings to undef so // works as intended
+    for my $ref ( \$patron_branch, \$issuing_branch, \$item_home, \$item_holding, \$item_branch ) {
+        $$ref = undef if defined $$ref && $$ref eq '';
+    }
+
+    # Resolution order depends on controlling pref
+    my $resolved =
+          ( defined $control_pref && $control_pref eq 'PatronLibrary' ) ? $patron_branch
+        : ( defined $control_pref && $control_pref eq 'PickupLibrary' )
+        ? ( $issuing_branch // $patron_branch // $item_branch )
+        : $item_branch;    # ItemLibrary (default)
+    return $resolved;
 }
 
 =head2 Internal methods
