@@ -3,7 +3,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 27;
+use Test::More tests => 32;
 use Test::MockModule;
 use DBI;
 use DateTime;
@@ -513,6 +513,179 @@ $expected_duetime = $friday_now->clone->set( hour => 16, minute => 0 );
 is(
     $date, $expected_duetime,
     "Bug 38940: Loan period shortened with Calendar mode when next day has null hours (ConsiderLibraryHoursInCirculation='close')"
+);
+
+# Bug 38940 follow-up - Test that ConsiderLibraryHoursInCirculation='open' extends to next open day
+# when tomorrow is marked as a holiday in the calendar (even though it has operating hours defined)
+
+my $library3 = $builder->build( { source => 'Branch' } );
+Koha::CirculationRules->set_rules(
+    {
+        categorycode => $borrower->categorycode,
+        itemtype     => $itemtype,
+        branchcode   => $library3->{branchcode},
+        rules        => {
+            issuelength => 4,         # loan period is 4 hours
+            lengthunit  => 'hours',
+            daysmode    => '',
+        }
+    }
+);
+
+# Set up hours for Friday (day 5), Saturday (day 6), and Monday (day 1)
+# Friday: 09:00-17:00, Saturday: 09:00-17:00, Monday: 09:00-17:00
+my $fri_open  = DateTime->new( year => 2023, month => 5, day => 5, hour => 10 )->hms;
+my $fri_close = DateTime->new( year => 2023, month => 5, day => 5, hour => 17 )->hms;
+my $sat_open  = DateTime->new( year => 2023, month => 5, day => 6, hour => 10 )->hms;
+my $sat_close = DateTime->new( year => 2023, month => 5, day => 6, hour => 17 )->hms;
+my $mon_open  = DateTime->new( year => 2023, month => 5, day => 1, hour => 10 )->hms;
+my $mon_close = DateTime->new( year => 2023, month => 5, day => 1, hour => 17 )->hms;
+my $friday_14 = DateTime->new( year => 2023, month => 5, day => 5, hour => 14 );        # 2PM on Friday
+
+# Set operating hours for Friday (day 5), Saturday (day 6), and Monday (day 1)
+Koha::Library::Hour->new(
+    { day => 5, library_id => $library3->{branchcode}, open_time => $fri_open, close_time => $fri_close } )->store;
+Koha::Library::Hour->new(
+    { day => 6, library_id => $library3->{branchcode}, open_time => $sat_open, close_time => $sat_close } )->store;
+Koha::Library::Hour->new(
+    { day => 1, library_id => $library3->{branchcode}, open_time => $mon_open, close_time => $mon_close } )->store;
+
+# Mark Saturday and Sunday as holidays in the calendar
+my $calendar3 = C4::Calendar->new( branchcode => $library3->{branchcode} );
+$calendar3->insert_week_day_holiday(
+    weekday     => 6,
+    title       => 'Saturday',
+    description => 'Saturday closure'
+);
+$calendar3->insert_week_day_holiday(
+    weekday     => 0,
+    title       => 'Sunday',
+    description => 'Sunday closure'
+);
+
+t::lib::Mocks::mock_preference( 'useDaysMode',                       'Calendar' );
+t::lib::Mocks::mock_preference( 'ConsiderLibraryHoursInCirculation', 'open' );
+
+# Test with 'open' mode - should extend to Monday's opening time (skipping Saturday and Sunday holidays)
+$date             = C4::Circulation::CalcDateDue( $friday_14, $itemtype, $library3->{branchcode}, $borrower );
+$expected_duetime = DateTime->new( year => 2023, month => 5, day => 8, hour => 10, minute => 0 );
+is(
+    $date, $expected_duetime,
+    "Bug 38940 follow-up: Loan period extended to Monday opening when Saturday/Sunday are calendar holidays (ConsiderLibraryHoursInCirculation='open')"
+);
+
+# Test with 'close' mode - should still shorten to Friday's closing time (calendar holidays don't affect today)
+t::lib::Mocks::mock_preference( 'ConsiderLibraryHoursInCirculation', 'close' );
+$date             = C4::Circulation::CalcDateDue( $friday_14, $itemtype, $library3->{branchcode}, $borrower );
+$expected_duetime = $friday_14->clone->set( hour => 17, minute => 0 );
+is(
+    $date, $expected_duetime,
+    "Bug 38940 follow-up: Loan period shortened to closing time, unaffected by weekend holidays (ConsiderLibraryHoursInCirculation='close')"
+);
+
+# Test the same with Days mode (ignoring calendar) - should use tomorrow's hours directly
+t::lib::Mocks::mock_preference( 'useDaysMode',                       'Days' );
+t::lib::Mocks::mock_preference( 'ConsiderLibraryHoursInCirculation', 'open' );
+$date             = C4::Circulation::CalcDateDue( $friday_14, $itemtype, $library3->{branchcode}, $borrower );
+$expected_duetime = DateTime->new( year => 2023, month => 5, day => 6, hour => 10, minute => 0 );
+is(
+    $date, $expected_duetime,
+    "Bug 38940 follow-up: In Days mode, extends to Saturday (ignoring calendar holidays)"
+);
+
+# Test scenario where next open day has no operating hours - should fall back to ignoring library hours
+my $library4 = $builder->build( { source => 'Branch' } );
+Koha::CirculationRules->set_rules(
+    {
+        categorycode => $borrower->categorycode,
+        itemtype     => $itemtype,
+        branchcode   => $library4->{branchcode},
+        rules        => {
+            issuelength => 4,
+            lengthunit  => 'hours',
+            daysmode    => '',
+        }
+    }
+);
+
+# Set up hours only for Friday (day 5)
+Koha::Library::Hour->new(
+    { day => 5, library_id => $library4->{branchcode}, open_time => $fri_open, close_time => $fri_close } )->store;
+
+# Mark Saturday and Sunday as holidays, and don't define hours for Monday
+my $calendar4 = C4::Calendar->new( branchcode => $library4->{branchcode} );
+$calendar4->insert_week_day_holiday(
+    weekday     => 6,
+    title       => 'Saturday',
+    description => 'Saturday closure'
+);
+$calendar4->insert_week_day_holiday(
+    weekday     => 0,
+    title       => 'Sunday',
+    description => 'Sunday closure'
+);
+
+t::lib::Mocks::mock_preference( 'useDaysMode',                       'Calendar' );
+t::lib::Mocks::mock_preference( 'ConsiderLibraryHoursInCirculation', 'open' );
+
+# Should fall back to standard loan since no suitable open day with hours found
+$date             = C4::Circulation::CalcDateDue( $friday_14, $itemtype, $library4->{branchcode}, $borrower );
+$expected_duetime = $friday_14->clone->add( hours => 4 );
+is(
+    $date, $expected_duetime,
+    "Bug 38940 follow-up: Falls back to standard loan when next open day has no operating hours"
+);
+
+# Test with a single day holiday (not weekly repeating)
+my $library5 = $builder->build( { source => 'Branch' } );
+Koha::CirculationRules->set_rules(
+    {
+        categorycode => $borrower->categorycode,
+        itemtype     => $itemtype,
+        branchcode   => $library5->{branchcode},
+        rules        => {
+            issuelength => 4,
+            lengthunit  => 'hours',
+            daysmode    => '',
+        }
+    }
+);
+
+# Set hours for all days of the week (0-6)
+for my $day ( 0 .. 6 ) {
+    Koha::Library::Hour->new(
+        { day => $day, library_id => $library5->{branchcode}, open_time => $fri_open, close_time => $fri_close } )
+        ->store;
+}
+
+# Mark Saturday May 6, 2023 and Sunday May 7, 2023 as single day holidays
+my $calendar5         = C4::Calendar->new( branchcode => $library5->{branchcode} );
+my $specific_saturday = DateTime->new( year => 2023, month => 5, day => 6 );
+$calendar5->insert_single_holiday(
+    day         => $specific_saturday->day,
+    month       => $specific_saturday->month,
+    year        => $specific_saturday->year,
+    title       => 'Public Holiday',
+    description => 'Special bank holiday'
+);
+my $specific_sunday = DateTime->new( year => 2023, month => 5, day => 7 );
+$calendar5->insert_single_holiday(
+    day         => $specific_sunday->day,
+    month       => $specific_sunday->month,
+    year        => $specific_sunday->year,
+    title       => 'Sunday',
+    description => 'Sunday closure'
+);
+
+t::lib::Mocks::mock_preference( 'useDaysMode',                       'Calendar' );
+t::lib::Mocks::mock_preference( 'ConsiderLibraryHoursInCirculation', 'open' );
+
+# Should extend to Monday (skipping Saturday public holiday and Sunday which has no hours)
+$date             = C4::Circulation::CalcDateDue( $friday_14, $itemtype, $library5->{branchcode}, $borrower );
+$expected_duetime = DateTime->new( year => 2023, month => 5, day => 8, hour => 10, minute => 0 );
+is(
+    $date, $expected_duetime,
+    "Bug 38940 follow-up: Extends to Monday when Saturday is single-day holiday"
 );
 
 $cache->clear_from_cache($key);

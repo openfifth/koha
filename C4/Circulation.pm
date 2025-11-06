@@ -3988,13 +3988,49 @@ sub CalcDateDue {
         $considerlibraryhours = 'ignore';
     }
 
+    # For 'open' mode, if tomorrow is a calendar holiday, find the next open day
+    my $next_open_day;
+    my $next_open_hours;
+    if ( $considerlibraryhours eq 'open' && $daysmode ne 'Days' ) {
+        my $calendar     = Koha::Calendar->new( branchcode => $branch, days_mode => $daysmode );
+        my $check_day    = $datedue->clone->add( days => 1 );
+        my $days_forward = 1;
+
+        # Look ahead up to 7 days to find next open day with defined hours
+        while ( $days_forward <= 7 ) {
+            if ( !$calendar->is_holiday($check_day) ) {
+
+                # This day is not a holiday, check if it has operating hours
+                my $check_dayofweek = $check_day->day_of_week;
+                if ( $check_dayofweek == 7 ) {
+                    $check_dayofweek = 0;
+                }
+                my $check_hours = Koha::Library::Hours->find( { library_id => $branch, day => $check_dayofweek } );
+                if ( $check_hours && $check_hours->open_time ) {
+                    $next_open_day   = $check_day;
+                    $next_open_hours = $check_hours;
+                    last;
+                }
+            }
+            $check_day->add( days => 1 );
+            $days_forward++;
+        }
+
+        # If we couldn't find a suitable day, fall back to ignoring library hours
+        if ( !$next_open_day ) {
+            $considerlibraryhours = 'ignore';
+        }
+    }
+
     my @open = undef;
     if ( $considerlibraryhours ne 'ignore' and $todayhours and $todayhours->close_time ) {
         @close             = split( ":", $todayhours->close_time );
         $library_close     = $library_close->set( hour => $close[0], minute => $close[1] );
         $potential_datedue = $potential_datedue->add( hours => $loanlength->{$length_key} )
             ;    # datedue without consideration for open hours
-        if ( $considerlibraryhours eq 'open' and $tomorrowhours and $tomorrowhours->open_time ) {
+        if ( $considerlibraryhours eq 'open' and $next_open_hours and $next_open_hours->open_time ) {
+            @open = split( ":", $next_open_hours->open_time );
+        } elsif ( $considerlibraryhours eq 'open' and $tomorrowhours and $tomorrowhours->open_time ) {
             @open = split( ":", $tomorrowhours->open_time );
         }
     }
@@ -4012,11 +4048,20 @@ sub CalcDateDue {
                     # datedue will be after the library closes on that day
                     # shorten loan period to end when library closes
                     $datedue->set( hour => $close[0], minute => $close[1] );
-                } elsif ( $considerlibraryhours eq 'open' and $tomorrowhours and $tomorrowhours->open_time ) {
+                } elsif ( $considerlibraryhours eq 'open' and @open ) {
 
                     # datedue will be after the library closes on that day
-                    # extend loan period to when library opens following day
-                    $datedue->add( days => 1 )->set( hour => $open[0], minute => $open[1] );
+                    # extend loan period to when library opens on next open day
+                    if ($next_open_day) {
+
+                        # Use the calculated next open day (accounting for calendar holidays)
+                        my $days_to_add = $next_open_day->delta_days($datedue)->in_units('days');
+                        $datedue->add( days => $days_to_add )->set( hour => $open[0], minute => $open[1] );
+                    } else {
+
+                        # Tomorrow is open and not a holiday
+                        $datedue->add( days => 1 )->set( hour => $open[0], minute => $open[1] );
+                    }
                 } else {
 
                     # ignore library open hours or can't extend to tomorrow (no tomorrow hours)
@@ -4044,11 +4089,20 @@ sub CalcDateDue {
                     # datedue will be after the library closes on that day
                     # shorten loan period to end when library closes by hardcoding due time
                     $datedue->set( hour => $close[0], minute => $close[1] );
-                } elsif ( $considerlibraryhours eq 'open' and $tomorrowhours and $tomorrowhours->open_time ) {
+                } elsif ( $considerlibraryhours eq 'open' and @open ) {
 
                     # datedue will be after the library closes on that day
-                    # extend loan period to when library opens following day by hardcoding due time for next open day
-                    $dur = DateTime::Duration->new( days => 1 );
+                    # extend loan period to when library opens on next open day by hardcoding due time for next open day
+                    if ($next_open_day) {
+
+                        # Use the calculated next open day (accounting for calendar holidays)
+                        my $days_to_add = $next_open_day->delta_days($datedue)->in_units('days');
+                        $dur = DateTime::Duration->new( days => $days_to_add );
+                    } else {
+
+                        # Tomorrow is open and not a holiday
+                        $dur = DateTime::Duration->new( days => 1 );
+                    }
                     $datedue->set( hour => $open[0], minute => $open[1] );
                 } else {
 
