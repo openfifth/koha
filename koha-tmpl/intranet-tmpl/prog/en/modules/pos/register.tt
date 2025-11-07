@@ -68,8 +68,21 @@
             <div id="error_message" class="alert alert-warning"> Failed to start cashup. Please try again. </div>
         [% END %]
 
+        [% IF ( error_cashup_missing_param ) %]
+            <div id="error_message" class="alert alert-warning"> Missing required parameter for cashup: [% error_message | html %] </div>
+        [% END %]
+
+        [% IF ( error_cashup_amount_invalid ) %]
+            <div id="error_message" class="alert alert-warning"> The cashup amount must be a positive number greater than zero. </div>
+        [% END %]
+
         [% IF ( error_cashup_complete ) %]
-            <div id="error_message" class="alert alert-warning"> Failed to complete cashup. Please try again. </div>
+            <div id="error_message" class="alert alert-warning">
+                Failed to complete cashup. Please try again.
+                [% IF error_details %]
+                    <br /><strong>Error details:</strong> [% error_details | html %]
+                [% END %]
+            </div>
         [% END %]
 
         [% IF ( error_refund_permission ) %]
