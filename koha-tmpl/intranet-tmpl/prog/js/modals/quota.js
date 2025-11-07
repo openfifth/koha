@@ -3,6 +3,9 @@
         .getElementById("quotaModal")
         ?.addEventListener("show.bs.modal", handleShowQuotaModal);
     document
+        .getElementById("quotaModal")
+        ?.addEventListener("hidden.bs.modal", handleHideQuotaModal);
+    document
         .getElementById("quotaForm")
         ?.addEventListener("submit", handleQuotaSubmit);
     document
@@ -27,9 +30,18 @@
         const quotaId = formData.get("quota_id");
         const patronId = formData.get("patron_id");
         const description = formData.get("description");
-        const startDate = formData.get("start_date");
-        const endDate = formData.get("end_date");
         const allocation = formData.get("allocation");
+
+        const quotaStartPicker =
+            document.getElementById("quota_from")._flatpickr;
+        const quotaEndPicker = document.getElementById("quota_to")._flatpickr;
+
+        const startDate = quotaStartPicker.selectedDates[0]
+            ? flatpickr.formatDate(quotaStartPicker.selectedDates[0], "Y-m-d")
+            : null;
+        const endDate = quotaEndPicker.selectedDates[0]
+            ? flatpickr.formatDate(quotaEndPicker.selectedDates[0], "Y-m-d")
+            : null;
 
         const quotaUrl = quotaId
             ? `/api/v1/patrons/${patronId}/quotas/${quotaId}`
@@ -49,10 +61,21 @@
             })
         );
         if (error || !response.ok) {
+            let errorMessage = __("Failure");
+
+            try {
+                const errorData = await response.json();
+                if (errorData.error) {
+                    errorMessage = errorData.error;
+                }
+            } catch (e) {
+                // If parsing fails, use default message
+            }
+
             const alertContainer = document.getElementById("quota_result");
             alertContainer.outerHTML = `
                 <div id="quota_result" class="alert alert-danger">
-                    ${__("Failure")}
+                    ${errorMessage}
                 </div>
             `;
 
@@ -70,6 +93,12 @@
         const button = e.relatedTarget;
         if (!button) {
             return;
+        }
+
+        const alertContainer = document.getElementById("quota_result");
+        if (alertContainer) {
+            alertContainer.className = "";
+            alertContainer.innerHTML = "";
         }
 
         const quotaModalLabel = document.getElementById("quotaLabel");
@@ -114,6 +143,18 @@
         return;
     }
 
+    function handleHideQuotaModal() {
+        document.getElementById("quota_description").value = "";
+        document.getElementById("quota_from")._flatpickr.clear();
+        document.getElementById("quota_to")._flatpickr.clear();
+        document.getElementById("quota_allocation").value = "";
+        document.getElementById("quota_id").value = "";
+        const alertContainer = document.getElementById("quota_result");
+        if (alertContainer) {
+            alertContainer.innerHTML = "";
+        }
+    }
+
     async function handleDeleteSubmit(e) {
         e.preventDefault();
 
@@ -136,10 +177,21 @@
             })
         );
         if (error || !response.ok) {
+            let errorMessage = __("Failure");
+
+            try {
+                const errorData = await response.json();
+                if (errorData.error) {
+                    errorMessage = errorData.error;
+                }
+            } catch (e) {
+                // If parsing fails, use default message
+            }
+
             const alertContainer = document.getElementById("quota_result");
             alertContainer.outerHTML = `
                 <div id="quota_result" class="alert alert-danger">
-                    ${__("Failure")}
+                    ${errorMessage}
                 </div>
             `;
 
