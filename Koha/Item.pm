@@ -2334,49 +2334,53 @@ sub add_to_bundle {
 
     my $BundleNotLoanValue = C4::Context->preference('BundleNotLoanValue');
 
-    try {
-        $schema->txn_do(
-            sub {
+    $schema->txn_do(
+        sub {
+            try {
+                $schema->safe_do(
+                    sub {
 
-                Koha::Exceptions::Item::Bundle::BundleIsCheckedOut->throw if $self->checkout;
+                        Koha::Exceptions::Item::Bundle::BundleIsCheckedOut->throw if $self->checkout;
 
-                my $checkout = $bundle_item->checkout;
-                if ($checkout) {
-                    unless ( $options->{force_checkin} ) {
-                        Koha::Exceptions::Item::Bundle::ItemIsCheckedOut->throw();
+                        my $checkout = $bundle_item->checkout;
+                        if ($checkout) {
+                            unless ( $options->{force_checkin} ) {
+                                Koha::Exceptions::Item::Bundle::ItemIsCheckedOut->throw();
+                            }
+
+                            my $branchcode = C4::Context->userenv->{'branch'};
+                            my ($success) = C4::Circulation::AddReturn( $bundle_item->barcode, $branchcode );
+
+                            if ($success) {
+
+                                # HoldsQueue doesn't seem to mind bundles, not sure if this is correct, but rebuild for now
+                                Koha::BackgroundJob::BatchUpdateBiblioHoldsQueue->new->enqueue(
+                                    { biblio_ids => [ $self->biblionumber ] } )
+                                    if C4::Context->preference('RealTimeHoldsQueue');
+                            } else {
+                                Koha::Exceptions::Checkin::FailedCheckin->throw();
+                            }
+                        }
+
+                        my $holds = $bundle_item->current_holds;
+                        if ( $holds->count ) {
+                            unless ( $options->{ignore_holds} ) {
+                                Koha::Exceptions::Item::Bundle::ItemHasHolds->throw();
+                            }
+                        }
+
+                        $self->_result->add_to_item_bundles_hosts( { item => $bundle_item->itemnumber } );
+
+                        $bundle_item->notforloan($BundleNotLoanValue)->store();
                     }
+                );
+            } catch {
 
-                    my $branchcode = C4::Context->userenv->{'branch'};
-                    my ($success) = C4::Circulation::AddReturn( $bundle_item->barcode, $branchcode );
-
-                    if ($success) {
-
-                        # HoldsQueue doesn't seem to mind bundles, not sure if this is correct, but rebuild for now
-                        Koha::BackgroundJob::BatchUpdateBiblioHoldsQueue->new->enqueue(
-                            { biblio_ids => [ $self->biblionumber ] } )
-                            if C4::Context->preference('RealTimeHoldsQueue');
-                    } else {
-                        Koha::Exceptions::Checkin::FailedCheckin->throw();
-                    }
-                }
-
-                my $holds = $bundle_item->current_holds;
-                if ( $holds->count ) {
-                    unless ( $options->{ignore_holds} ) {
-                        Koha::Exceptions::Item::Bundle::ItemHasHolds->throw();
-                    }
-                }
-
-                $self->_result->add_to_item_bundles_hosts( { item => $bundle_item->itemnumber } );
-
-                $bundle_item->notforloan($BundleNotLoanValue)->store();
-            }
-        );
-    } catch {
-
-        # Use centralized exception translation instead of duplicated code
-        $schema->translate_exception($_);
-    };
+                # Propagate any exception (already translated by safe_do if needed)
+                $_->rethrow();
+            };
+        }
+    );
 }
 
 =head3 remove_from_bundle
