@@ -87,7 +87,10 @@ export const useCircRulesStore = defineStore("circRules", {
             return value.includes(type) ? $__("Yes") : $__("No");
         },
         hasConflict(oldRuleSet, newRuleSet, triggerNumber) {
-            if (!oldRuleSet) {
+            if (
+                !oldRuleSet ||
+                oldRuleSet[`overdue_${triggerNumber}_has_rules`] === null
+            ) {
                 return false;
             }
             return (
