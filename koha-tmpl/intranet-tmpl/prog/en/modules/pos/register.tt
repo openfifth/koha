@@ -96,7 +96,15 @@
         [% IF cashup_in_progress %]
             <div class="alert alert-warning">
                 <i class="fa-solid fa-info-circle"></i>
-                Cashup in progress - started [% cashup_in_progress.timestamp | $KohaDates with_hours => 1 %]. You can continue to make transactions while counting cash.
+                Cashup in progress - started [% cashup_in_progress.timestamp | $KohaDates with_hours => 1 %]. You can continue to make transactions while counting cash. (<a
+                    data-bs-toggle="modal"
+                    data-cashup="[% cashup_in_progress.id | html %]"
+                    data-register="[% register.description | html %]"
+                    data-in-progress="true"
+                    href="#cashupSummaryModal"
+                    class="button"
+                    >Preview cashup summary</a
+                >)
             </div>
         [% END %]
 

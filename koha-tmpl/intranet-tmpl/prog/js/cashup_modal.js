@@ -3,7 +3,18 @@ $(document).ready(function () {
         var button = $(e.relatedTarget);
         var cashup = button.data("cashup");
         var description = button.data("register");
+        var inProgress = button.data("in-progress") || false;
         var summary_modal = $(this);
+
+        // Update title based on whether this is a preview
+        if (inProgress) {
+            summary_modal
+                .find("#cashupSummaryLabel")
+                .text("Cashup summary preview");
+        } else {
+            summary_modal.find("#cashupSummaryLabel").text("Cashup summary");
+        }
+
         summary_modal.find("#register_description").text(description);
         $.ajax({
             url: "/api/v1/cashups/" + cashup,
@@ -16,6 +27,24 @@ $(document).ready(function () {
                 summary_modal.find("#from_date").text(from_date);
                 let to_date = $datetime(data.summary.to_date);
                 summary_modal.find("#to_date").text(to_date);
+
+                // Add preview notice if this is an in-progress cashup
+                if (inProgress) {
+                    var previewNotice = summary_modal.find(".preview-notice");
+                    if (previewNotice.length === 0) {
+                        summary_modal
+                            .find(".modal-body > ul")
+                            .before(
+                                '<div class="alert alert-info preview-notice">' +
+                                    '<i class="fa-solid fa-info-circle"></i> ' +
+                                    "<strong>Preview:</strong> This summary shows the expected cashup amounts. " +
+                                    "A reconciliation record may be added when you complete the cashup." +
+                                    "</div>"
+                            );
+                    }
+                } else {
+                    summary_modal.find(".preview-notice").remove();
+                }
 
                 // Check for reconciliation (surplus or deficit) from dedicated fields
                 var surplus = data.summary.surplus_total;
