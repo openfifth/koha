@@ -3,7 +3,20 @@ $(document).ready(function () {
         var button = $(e.relatedTarget);
         var cashup = button.data("cashup");
         var description = button.data("register");
+        var inProgress = button.data("in-progress") || false;
         var summary_modal = $(this);
+
+        // Update title based on whether this is a preview
+        if (inProgress) {
+            summary_modal
+                .find("#cashupSummaryLabel")
+                .text(__("Cashup summary preview"));
+        } else {
+            summary_modal
+                .find("#cashupSummaryLabel")
+                .text(__("Cashup summary"));
+        }
+
         summary_modal.find("#register_description").text(description);
         $.ajax({
             url: "/api/v1/cashups/" + cashup,
@@ -16,6 +29,28 @@ $(document).ready(function () {
                 summary_modal.find("#from_date").text(from_date);
                 let to_date = $datetime(data.summary.to_date);
                 summary_modal.find("#to_date").text(to_date);
+
+                // Add preview notice if this is an in-progress cashup
+                if (inProgress) {
+                    var previewNotice = summary_modal.find(".preview-notice");
+                    if (previewNotice.length === 0) {
+                        summary_modal
+                            .find(".modal-body > ul")
+                            .before(
+                                '<div class="alert alert-info preview-notice">' +
+                                    '<i class="fa-solid fa-info-circle"></i> ' +
+                                    "<strong>" +
+                                    __("Preview:") +
+                                    "</strong> " +
+                                    __(
+                                        "This summary shows the expected cashup amounts. A reconciliation record may be added when you complete the cashup."
+                                    ) +
+                                    "</div>"
+                            );
+                    }
+                } else {
+                    summary_modal.find(".preview-notice").remove();
+                }
 
                 // Check for reconciliation (surplus or deficit) from dedicated fields
                 var surplus = data.summary.surplus_total;
@@ -71,7 +106,9 @@ $(document).ready(function () {
 
                 // 1. Total (sum of all transactions)
                 tfoot.append(
-                    "<tr class='total-row'><td><strong>Total</strong></td><td><strong>" +
+                    "<tr class='total-row'><td><strong>" +
+                        __("Total") +
+                        "</strong></td><td><strong>" +
                         data.summary.total.format_price() +
                         "</strong></td></tr>"
                 );
@@ -94,7 +131,9 @@ $(document).ready(function () {
                 }
                 if (cashCollected !== null) {
                     tfoot.append(
-                        "<tr><td><strong>Cash collected</strong></td><td><strong>" +
+                        "<tr><td><strong>" +
+                            __("Cash collected") +
+                            "</strong></td><td><strong>" +
                             cashCollected.format_price() +
                             "</strong></td></tr>"
                     );
@@ -109,8 +148,9 @@ $(document).ready(function () {
                     ) {
                         tfoot.append(
                             "<tr><td><strong>" +
-                                escape_str(type.payment_type) +
-                                " collected" +
+                                __x("{payment_type} collected", {
+                                    payment_type: escape_str(type.payment_type),
+                                }) +
                                 "</strong></td><td><strong>" +
                                 type.total.format_price() +
                                 "</strong></td></tr>"
@@ -133,14 +173,14 @@ $(document).ready(function () {
                     if (surplus) {
                         reconciliationClass =
                             "reconciliation-result text-warning";
-                        reconciliationLabel = "Cashup surplus";
+                        reconciliationLabel = __("Cashup surplus");
                         reconciliationAmount =
                             "+" + Math.abs(surplus).format_price();
                         reconciliationNote = data.summary.surplus_note;
                     } else if (deficit) {
                         reconciliationClass =
                             "reconciliation-result text-danger";
-                        reconciliationLabel = "Cashup deficit";
+                        reconciliationLabel = __("Cashup deficit");
                         reconciliationAmount =
                             "-" + Math.abs(deficit).format_price();
                         reconciliationNote = data.summary.deficit_note;
