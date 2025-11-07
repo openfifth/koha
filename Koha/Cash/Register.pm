@@ -291,6 +291,15 @@ sub start_cashup {
 
     my $expected_amount = abs( $self->outstanding_accountlines->total( { payment_type => [ 'CASH', 'SIP00' ] } ) );
 
+    # Prevent starting a cashup when there are no cash transactions
+    unless ( $expected_amount > 0 ) {
+        Koha::Exceptions::Object::BadValue->throw(
+            error => "Cannot start cashup with zero cash transactions",
+            type  => 'amount',
+            value => $expected_amount
+        );
+    }
+
     # Create the CASHUP_START action using centralized exception handling
     my $schema = $self->_result->result_source->schema;
     my $rs     = $schema->safe_do(

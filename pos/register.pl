@@ -117,6 +117,8 @@ if ( !$registers->count ) {
             if ($@) {
                 if ( $@->isa('Koha::Exceptions::Object::DuplicateID') ) {
                     $template->param( error_cashup_in_progress => 1 );
+                } elsif ( $@->isa('Koha::Exceptions::Object::BadValue') ) {
+                    $template->param( error_cashup_no_transactions => 1 );
                 } else {
                     $template->param( error_cashup_start => 1 );
                 }

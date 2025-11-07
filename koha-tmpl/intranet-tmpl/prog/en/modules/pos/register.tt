@@ -56,6 +56,10 @@
             <div id="error_message" class="alert alert-warning"> A cashup is already in progress for this register. </div>
         [% END %]
 
+        [% IF ( error_cashup_no_transactions ) %]
+            <div id="error_message" class="alert alert-info"> Cannot start cashup - there are no cash transactions in this register since the last cashup. </div>
+        [% END %]
+
         [% IF ( error_no_cashup_start ) %]
             <div id="error_message" class="alert alert-warning"> No cashup session has been started. Please start a cashup before attempting to complete it. </div>
         [% END %]
