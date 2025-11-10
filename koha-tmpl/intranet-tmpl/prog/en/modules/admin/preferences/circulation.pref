@@ -1392,7 +1392,7 @@ Circulation:
                   1: Use
                   0: "Don't use"
             - "course reserves."
-    Batch checkout:
+    Batch checkin and batch checkout:
         -
             - pref: BatchCheckouts
               choices:
@@ -1404,6 +1404,12 @@ Circulation:
             - pref: BatchCheckoutsValidCategories
               choices: patron-categories
               class: multiple
+        -
+            - Default choices for the batch checkin feature:
+            - pref: BatchCheckinDefaults
+              choices: authval
+              class: multiple
+              source: BATCH_CHECKIN_DEFAULTS
     Housebound module:
         -
             - pref: HouseboundModule
