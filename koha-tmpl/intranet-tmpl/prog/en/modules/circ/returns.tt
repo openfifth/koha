@@ -1303,6 +1303,20 @@
                 <div id="batch-mode-setting" class="circ-setting">
                     <input type="checkbox" id="batch-mode-toggle" name="batch_mode" value="batch_mode" />
                     <label for="batch-mode-toggle">Enable batch mode for multiple returns</label>
+
+                    <div id="batch-mode-more-settings" class="" style="margin-left:50px;">
+                        <input type="checkbox" id="batch-mode-keep-selection" name="keep_selection" value="keep_selection" />
+                        <label for="batch-mode-toggle">Remember batch mode settings</label>
+                        <br/>
+                        <input type="checkbox" id="batch-mode-ignore-notissued" name="ignore_notissued" value="ignore_notissued" />
+                        <label for="batch-mode-toggle">Hide 'not checked out'-warnings</label>
+                        <br/>
+                        <input type="checkbox" id="batch-mode-confirm-hold" name="confirm_hold" value="confirm_hold" />
+                        <label for="batch-mode-toggle">Confirm hold when found</label>
+                        <br/>
+                        <input type="checkbox" id="batch-mode-confirm-transfer" name="confirm_transfer" value="confirm_transfer" />
+                        <label for="batch-mode-toggle">Confirm transfer when found</label>
+                    </div>
                 </div>
 
                 [% IF Koha.Preference('ExpireReservesMaxPickUpDelayCharge') %]
@@ -1372,14 +1386,37 @@
                                         <div class="alert alert-info">Item transferred to [% result.messages.TransferTo %]</div>
                                     [% ELSIF code == 'NeedsTransfer' %]
                                         <div class="alert alert-warning">Item needs transfer</div>
+                                    [% ELSIF code == 'RecallNeedsTransfer' %]
+                                        <div class="alert alert-warning">Recall needs transfer</div>
                                     [% ELSIF code == 'NotIssued' %]
-                                        <div class="alert alert-warning">Item was not checked out</div>
+                                        <div class="alert alert-warning notissued">Item was not checked out</div>
                                     [% ELSIF code == 'WasLost' %]
                                         <div class="alert alert-info">Item was lost, now found</div>
                                     [% ELSIF code == 'withdrawn' %]
                                         <div class="alert alert-warning">Item is withdrawn</div>
-                                    [% ELSIF code == 'Debarred' %]
+                                    [% ELSIF code.match('Debarred|ForeverDebarred|PrevDebarred') %]
                                         <div class="alert alert-danger">Patron is restricted</div>
+                                    [% ELSIF code == 'ResFound' %]
+                                        <div class="alert alert-warning">Hold found</div>
+                                    [% ELSIF code == 'RecallFound' %]
+                                        <div class="alert alert-warning">Recall found</div>
+                                    [% ELSIF code == 'BadBarcode' %]
+                                        <div class="alert alert-warning">Bad barcode</div>
+                                    [% ELSIF code == 'TransferArrived' %]
+                                        <div class="alert alert-info">Transfer arrived from [% result.messages.TransferArrived %]</div>
+                                    [% ELSIF code == 'TransferredRecall' %]
+                                        <div class="alert alert-info">Recalled item has been transferred</div>
+                                    [% ELSIF code == 'WrongTransfer' %]
+                                        <div class="alert alert-warning">This item is still on transfer to [% result.messages.WrongTransfer %]</div>
+                                    [% ELSIF code == 'Wrongbranch'%]
+                                        <div class="alert alert-warning">This item cannot be returned to this branch</div>
+                                    [% ELSIF code == 'UpdateLastSeenError'%]
+                                        <div class="alert alert-warning">Error: Patron's last seen date could not be updated; see system logs.</div>
+                                    [% ELSIF code.match('Transfer(To|Trigger)|WrongTransferItem|WasReturned|LostItem.+|ProcessingFeeRefunded') # ignore %]
+                                    [% ELSIF code.match('ClaimAutoResolved|ReturnClaims') # ignored too for now %]
+                                    [% ELSIF code == 'InBundle' # TODO %]
+                                    [% ELSE # unexpected codes %]
+                                        <div class="alert alert-warning">Received code [% code %] from AddReturn. Contact support.</div>
                                     [% END %]
                                 [% END %]
                             </td>
@@ -1641,6 +1678,53 @@
             var newin = window.open(link, "popup", "width=600,height=400,resizable=1,toolbar=0,scrollbars=1,top");
             $("#barcode").focus();
         }
+        function ApplyBatchCheckinSettings() {
+            // check local storage key, fallback to system preference
+            var batch_mode_settings = localStorage.getItem("batch_mode_settings") ||
+                '[% Koha.Preference('BatchCheckinDefaults') %]';
+
+            if ( batch_mode_settings.match('BATCH_CHECKIN_ENABLED') ) {
+                $("#show-circ-settings a").trigger('click');
+                $('#batch-mode-toggle').prop('checked', true).trigger('change');
+            }
+            if ( batch_mode_settings.match('BATCH_CHECKIN_KEEP_SELECTION') )
+                $('#batch-mode-keep-selection').prop('checked', true);
+            if ( batch_mode_settings.match('BATCH_CHECKIN_IGNORE_NOTISSUED') ) {
+                $('#batch-mode-ignore-notissued').prop('checked', true);
+                $('div.alert.notissued').hide();
+            }
+
+            // Confirm hold setting depends on HoldsAutoFill
+            if ( "[% Koha.Preference('HoldsAutoFill') %]" == "1" )
+                $('#batch-mode-confirm-hold')
+                    .attr('title', '[% t("Forced by preference HoldsAutoFill") %]' )
+                    .prop('checked', true).prop('disabled', true);
+            else if ( batch_mode_settings.match('BATCH_CHECKIN_CONFIRM_HOLD') )
+                $('#batch-mode-confirm-hold').prop('checked', true);
+
+            // Confirm transfer setting depends on AutomaticItemReturn
+            if ( "[% Koha.Preference('AutomaticItemReturn') %]" == "1" )
+                $('#batch-mode-confirm-transfer')
+                    .attr('title', '[% t("Forced by preference AutomaticItemReturn") %]' )
+                    .prop('checked', true).prop('disabled', true);
+            else if ( batch_mode_settings.match('BATCH_CHECKIN_CONFIRM_TRANSFER') )
+                $('#batch-mode-confirm-transfer').prop('checked', true);
+        }
+        function ChangeBatchCheckinSettings() {
+            // if user does not want to keep, we remove his settings in localStorage
+            if( !$('#batch-mode-keep-selection').prop('checked') ) {
+                localStorage.removeItem("batch_mode_settings");
+                return;
+            }
+
+            // Save current settings
+            var batch_mode_settings = 'BATCH_CHECKIN_KEEP_SELECTION,';
+            if ( $('#batch-mode-toggle').prop('checked') ) batch_mode_settings += 'BATCH_CHECKIN_ENABLED,';
+            if ( $('#batch-mode-ignore-notissued').prop('checked') ) batch_mode_settings += 'BATCH_CHECKIN_IGNORE_NOTISSUED,';
+            if ( $('#batch-mode-confirm-hold').prop('checked') ) batch_mode_settings += 'BATCH_CHECKIN_CONFIRM_HOLD,';
+            if ( $('#batch-mode-confirm-transfer').prop('checked') ) batch_mode_settings += 'BATCH_CHECKIN_CONFIRM_TRANSFER,';
+            localStorage.setItem( "batch_mode_settings", batch_mode_settings );
+        }
         $(document).ready(function () {
             $("#checkin-form").preventDoubleFormSubmit();
 
@@ -1899,6 +1983,7 @@
                             "white-space": "pre-wrap",
                             resize: "vertical",
                         });
+                    $("#batch-mode-more-settings").show();
                 } else {
                     // Switch back to single-line mode
                     $barcodeTextarea
@@ -1912,6 +1997,7 @@
                             "white-space": "nowrap",
                             resize: "none",
                         });
+                    $("#batch-mode-more-settings").hide();
                 }
                 $barcodeTextarea.focus();
             });
@@ -1935,6 +2021,7 @@
                     // Set a debounce timer to submit after RFID scanning finishes
                     debounceTimer = setTimeout(function () {
                         isReceivingRFIDInput = false;
+                        ChangeBatchCheckinSettings();
                         $("#checkin-form").submit();
                     }, 500); // 500ms delay after last input
                 }
@@ -1994,6 +2081,8 @@
                     });
                 }
             });
+
+            ApplyBatchCheckinSettings();
         });
     </script>
 [% END %]
