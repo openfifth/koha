@@ -157,7 +157,6 @@ if ( $op eq 'list' ) {
         my $patron = Koha::Patrons->find( { borrowernumber => $loggedinuser } );
 
         $params->{cardnumber} = $patron->cardnumber;
-        $params->{branchcode} = $patron->branchcode;
         $params->{opac}       = 1;
         $params->{lang}       = C4::Languages::getlanguage($query);
         my $backend_result = $request->backend_create($params);
