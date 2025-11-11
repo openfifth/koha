@@ -68,9 +68,10 @@ if ( !$registers->count ) {
     my $cashup_in_progress = $cash_register->cashup_in_progress();
 
     $template->param(
-        register           => $cash_register,
-        accountlines       => $accountlines,
-        cashup_in_progress => $cashup_in_progress,
+        register                     => $cash_register,
+        accountlines                 => $accountlines,
+        cashup_in_progress           => $cashup_in_progress,
+        reconciliation_note_required => C4::Context->preference('CashupReconciliationNoteRequired'),
     );
 
     my $transactions_range_from = $input->param('trange_f');
@@ -160,7 +161,13 @@ if ( !$registers->count ) {
                     } elsif ( $@->isa('Koha::Exceptions::Object::DuplicateID') ) {
                         $template->param( error_cashup_already_completed => 1 );
                     } elsif ( $@->isa('Koha::Exceptions::MissingParameter') ) {
-                        $template->param( error_cashup_missing_param => 1, error_message => $@ );
+
+                        # Check if this is a reconciliation note error specifically
+                        if ( $@->error =~ /Reconciliation note is required/ ) {
+                            $template->param( error_reconciliation_note_required => 1 );
+                        } else {
+                            $template->param( error_cashup_missing_param => 1, error_message => $@ );
+                        }
                     } elsif ( $@->isa('Koha::Exceptions::Account::AmountNotPositive') ) {
                         $template->param( error_cashup_amount_invalid => 1 );
                     } else {

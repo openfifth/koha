@@ -15,12 +15,12 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with Koha; if not, see <https://www.gnu.org/licenses>.
+# along with Koha; if not, see <http://www.gnu.org/licenses>.
 
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 10;
+use Test::More tests => 11;
 
 use Test::Exception;
 
@@ -29,6 +29,7 @@ use Koha::Account;
 use Koha::Account::CreditTypes;
 use Koha::Account::DebitTypes;
 
+use t::lib::Mocks;
 use t::lib::TestBuilder;
 
 my $builder = t::lib::TestBuilder->new;
@@ -1577,6 +1578,130 @@ subtest 'add_cashup' => sub {
         }
         'Koha::Exceptions::Object::FKConstraint', 'add_cashup throws FK constraint exception with invalid manager_id';
     };
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'required_reconciliation_note' => sub {
+    plan tests => 4;
+
+    $schema->storage->txn_begin;
+
+    my $register = $builder->build_object( { class => 'Koha::Cash::Registers' } );
+    my $manager  = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $patron   = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $account  = $patron->account;
+
+    # Create a cash transaction
+    my $fine = $account->add_debit(
+        {
+            amount    => '10.00',
+            type      => 'OVERDUE',
+            interface => 'cron'
+        }
+    );
+
+    my $payment = $account->pay(
+        {
+            cash_register => $register->id,
+            amount        => '10.00',
+            credit_type   => 'PAYMENT',
+            payment_type  => 'CASH',
+            lines         => [$fine]
+        }
+    );
+
+    # Enable the required note preference
+    t::lib::Mocks::mock_preference( 'CashupReconciliationNoteRequired', 1 );
+
+    # Test 1: Missing note with discrepancy throws exception
+    throws_ok {
+        $register->add_cashup(
+            {
+                manager_id => $manager->id,
+                amount     => '15.00'         # Creates discrepancy
+            }
+        );
+    }
+    'Koha::Exceptions::MissingParameter',
+        'Missing reconciliation note with discrepancy throws MissingParameter exception when preference enabled';
+
+    # Test 2: Note provided with discrepancy succeeds
+    my $cashup1;
+    lives_ok {
+        $cashup1 = $register->add_cashup(
+            {
+                manager_id          => $manager->id,
+                amount              => '15.00',
+                reconciliation_note => 'Found extra money'
+            }
+        );
+    }
+    'Cashup with note and discrepancy succeeds when preference enabled';
+
+    # Test 3: No note with no discrepancy succeeds (note only required for discrepancies)
+    my $register2 = $builder->build_object( { class => 'Koha::Cash::Registers' } );
+    my $fine2     = $account->add_debit(
+        {
+            amount    => '20.00',
+            type      => 'OVERDUE',
+            interface => 'cron'
+        }
+    );
+
+    my $payment2 = $account->pay(
+        {
+            cash_register => $register2->id,
+            amount        => '20.00',
+            credit_type   => 'PAYMENT',
+            payment_type  => 'CASH',
+            lines         => [$fine2]
+        }
+    );
+
+    my $cashup2;
+    lives_ok {
+        $cashup2 = $register2->add_cashup(
+            {
+                manager_id => $manager->id,
+                amount     => '20.00'         # Exact amount, no discrepancy
+            }
+        );
+    }
+    'Cashup without note succeeds when there is no discrepancy';
+
+    # Test 4: Preference disabled allows missing note even with discrepancy
+    t::lib::Mocks::mock_preference( 'CashupReconciliationNoteRequired', 0 );
+
+    my $register3 = $builder->build_object( { class => 'Koha::Cash::Registers' } );
+    my $fine3     = $account->add_debit(
+        {
+            amount    => '10.00',
+            type      => 'OVERDUE',
+            interface => 'cron'
+        }
+    );
+
+    my $payment3 = $account->pay(
+        {
+            cash_register => $register3->id,
+            amount        => '10.00',
+            credit_type   => 'PAYMENT',
+            payment_type  => 'CASH',
+            lines         => [$fine3]
+        }
+    );
+
+    my $cashup3;
+    lives_ok {
+        $cashup3 = $register3->add_cashup(
+            {
+                manager_id => $manager->id,
+                amount     => '15.00'         # Creates discrepancy
+            }
+        );
+    }
+    'Missing note with discrepancy succeeds when preference disabled';
 
     $schema->storage->txn_rollback;
 };

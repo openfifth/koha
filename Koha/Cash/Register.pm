@@ -395,6 +395,16 @@ sub add_cashup {
     # Calculate difference (actual - expected)
     my $difference = $amount - $expected_amount;
 
+    # Validate reconciliation note requirement if there's a discrepancy
+    if ( $difference != 0 ) {
+        my $note_required = C4::Context->preference('CashupReconciliationNoteRequired') // 0;
+
+        if ( $note_required && !defined $reconciliation_note ) {
+            Koha::Exceptions::MissingParameter->throw(
+                error => "Reconciliation note is required when cashup amount differs from expected amount" );
+        }
+    }
+
     # Use database transaction to ensure consistency
     my $schema = $self->_result->result_source->schema;
     my $cashup;
