@@ -469,12 +469,24 @@
                                 <span id="reconciliation_text"></span>
                             </li>
                             <li id="reconciliation_note_field" style="display: none;">
-                                <label for="reconciliation_note" id="reconciliation_note_label">Note (optional):</label>
-                                <textarea id="reconciliation_note" name="reconciliation_note" rows="3" cols="40" maxlength="1000" placeholder="Enter a note explaining the surplus or deficit..."></textarea>
-                                [% IF reconciliation_note_required %]
-                                    <span class="required">Required</span>
+                                <label for="reconciliation_note" id="reconciliation_note_label">Note:</label>
+                                [% IF reconciliation_note_avs %]
+                                    <select id="reconciliation_note" name="reconciliation_note">
+                                        <option value="">-- Select a reason --</option>
+                                        [% FOREACH av IN reconciliation_note_avs %]
+                                            <option value="[% av.authorised_value | html %]">[% av.lib | html %]</option>
+                                        [% END %]
+                                    </select>
+                                    [% IF reconciliation_note_required %]
+                                        <span class="required">Required</span>
+                                    [% END %]
+                                [% ELSE %]
+                                    <textarea id="reconciliation_note" name="reconciliation_note" rows="3" cols="40" maxlength="1000" placeholder="Enter a note explaining the surplus or deficit..."></textarea>
+                                    [% IF reconciliation_note_required %]
+                                        <span class="required">Required</span>
+                                    [% END %]
+                                    <div class="hint">Maximum 1000 characters</div>
                                 [% END %]
-                                <div class="hint">Maximum 1000 characters</div>
                             </li>
                         </ol>
                     </fieldset>
@@ -584,6 +596,16 @@
     [% INCLUDE 'datatables.inc' %]
     [% INCLUDE 'format_price.inc' %]
     [% INCLUDE 'js-date-format.inc' %]
+    <script>
+        // Map of authorized value codes to descriptions for reconciliation notes
+        var reconciliation_note_avs = {
+            [% IF reconciliation_note_avs %]
+                [% FOREACH av IN reconciliation_note_avs %]
+                    "[% av.authorised_value | html %]": "[% av.lib | html %]"[% UNLESS loop.last %],[% END %]
+                [% END %]
+            [% END %]
+        };
+    </script>
     [% Asset.js("js/cashup_modal.js") | $raw %]
     [% Asset.js("js/modal_printer.js") | $raw %]
     [% INCLUDE 'calendar.inc' %]

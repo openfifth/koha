@@ -63,3 +63,7 @@ Accounting:
                 1: "Require"
                 0: "Don't require"
             - a reconciliation note when completing cashup with discrepancies between expected and actual amounts.
+        -
+            - "Use authorized value category "
+            - pref: CashupReconciliationNoteAuthorisedValue
+            - " for reconciliation notes during cashup. Leave empty to allow free text entry."

@@ -15,7 +15,7 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with Koha; if not, see <https://www.gnu.org/licenses>.
+# along with Koha; if not, see <http://www.gnu.org/licenses>.
 
 use Modern::Perl;
 use CGI;
@@ -67,10 +67,22 @@ if ( !$registers->count ) {
     my $accountlines       = $cash_register->outstanding_accountlines();
     my $cashup_in_progress = $cash_register->cashup_in_progress();
 
+    # Get authorized values for reconciliation notes if configured
+    my $note_av_category = C4::Context->preference('CashupReconciliationNoteAuthorisedValue');
+    my $reconciliation_note_avs;
+    if ($note_av_category) {
+        require Koha::AuthorisedValues;
+        $reconciliation_note_avs = Koha::AuthorisedValues->search(
+            { category => $note_av_category },
+            { order_by => { '-asc' => 'lib' } }
+        );
+    }
+
     $template->param(
         register                     => $cash_register,
         accountlines                 => $accountlines,
         cashup_in_progress           => $cashup_in_progress,
+        reconciliation_note_avs      => $reconciliation_note_avs,
         reconciliation_note_required => C4::Context->preference('CashupReconciliationNoteRequired'),
     );
 

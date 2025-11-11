@@ -198,13 +198,23 @@ $(document).ready(function () {
 
                     // Add note if present
                     if (reconciliationNote) {
+                        // Check if note is an authorized value code and use description if available
+                        var noteDisplay = reconciliationNote;
+                        if (
+                            typeof reconciliation_note_avs !== "undefined" &&
+                            reconciliation_note_avs[reconciliationNote]
+                        ) {
+                            noteDisplay =
+                                reconciliation_note_avs[reconciliationNote];
+                        }
+
                         tfoot.append(
                             "<tr class='" +
                                 reconciliationClass +
                                 "'><td colspan='2'><em>" +
                                 __("Note:") +
                                 " " +
-                                escape_str(reconciliationNote) +
+                                escape_str(noteDisplay) +
                                 "</em></td></tr>"
                         );
                     }
