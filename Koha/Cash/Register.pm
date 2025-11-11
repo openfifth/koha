@@ -18,6 +18,7 @@ package Koha::Cash::Register;
 use Modern::Perl;
 use DateTime;
 use Scalar::Util qw( looks_like_number );
+use Try::Tiny;
 
 use Koha::Account;
 use Koha::Account::Lines;
@@ -300,19 +301,30 @@ sub start_cashup {
         );
     }
 
-    # Create the CASHUP_START action using centralized exception handling
-    my $schema = $self->_result->result_source->schema;
-    my $rs     = $schema->safe_do(
-        sub {
-            return $self->_result->add_to_cash_register_actions(
-                {
-                    code       => 'CASHUP_START',
-                    manager_id => $manager_id,
-                    amount     => $expected_amount
+    # Create the CASHUP_START action with exception handling
+    my $rs;
+    try {
+        $rs = $self->_result->add_to_cash_register_actions(
+            {
+                code       => 'CASHUP_START',
+                manager_id => $manager_id,
+                amount     => $expected_amount
+            }
+        )->discard_changes;
+    }
+    catch {
+        if ( ref($_) eq 'DBIx::Class::Exception' ) {
+            if ( $_->{msg} =~ /Cannot add or update a child row: a foreign key constraint fails/ ) {
+                if ( $_->{msg} =~ /FOREIGN KEY \(`(?<column>.*?)`\)/ ) {
+                    Koha::Exceptions::Object::FKConstraint->throw(
+                        error     => 'Broken FK constraint',
+                        broken_fk => $+{column}
+                    );
                 }
-            )->discard_changes;
+            }
         }
-    );
+        $_->rethrow();
+    };
 
     return Koha::Cash::Register::Cashup->_new_from_dbic($rs);
 }
@@ -411,18 +423,30 @@ sub add_cashup {
 
     $schema->txn_do(
         sub {
-            # Create the cashup action - safe_do handles exception translation
-            my $rs = $schema->safe_do(
-                sub {
-                    return $self->_result->add_to_cash_register_actions(
-                        {
-                            code       => 'CASHUP',
-                            manager_id => $manager_id,
-                            amount     => $amount
+            # Create the cashup action with exception handling
+            my $rs;
+            try {
+                $rs = $self->_result->add_to_cash_register_actions(
+                    {
+                        code       => 'CASHUP',
+                        manager_id => $manager_id,
+                        amount     => $amount
+                    }
+                )->discard_changes;
+            }
+            catch {
+                if ( ref($_) eq 'DBIx::Class::Exception' ) {
+                    if ( $_->{msg} =~ /Cannot add or update a child row: a foreign key constraint fails/ ) {
+                        if ( $_->{msg} =~ /FOREIGN KEY \(`(?<column>.*?)`\)/ ) {
+                            Koha::Exceptions::Object::FKConstraint->throw(
+                                error     => 'Broken FK constraint',
+                                broken_fk => $+{column}
+                            );
                         }
-                    )->discard_changes;
+                    }
                 }
-            );
+                $_->rethrow();
+            };
             $cashup = Koha::Cash::Register::Cashup->_new_from_dbic($rs);
 
             # Create reconciliation accountline if there's a difference
