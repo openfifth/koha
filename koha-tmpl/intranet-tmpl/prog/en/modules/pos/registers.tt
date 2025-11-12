@@ -472,11 +472,11 @@
             $("#income").text('[% ctotal | $Price %] ([% cctotal | $Price %])');
             $("#outgoing").text('[% dtotal | $Price %] ([% cdtotal | $Price %])');
 
-            var registers_table = $("#registers").kohaTable({
+            var registers_table = $("#registers").dataTable($.extend(true, {}, dataTablesDefaults, {
                 columnDefs: [{ targets: [ -1, 0 ], orderable: false }],
                 searching: false,
                 paginationType: "full",
-            });
+            }));
 
             // Real-time reconciliation calculation for cashup modal
             $("#amount").on("input", function() {

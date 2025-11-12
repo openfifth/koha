@@ -624,7 +624,7 @@
     [% Asset.js("js/modal_printer.js") | $raw %]
     [% INCLUDE 'calendar.inc' %]
     <script>
-        var sales_table = $("#sales").kohaTable({
+        var sales_table = $("#sales").dataTable($.extend(true, {}, dataTablesDefaults, {
             orderFixed: [ 0, 'asc'],
             ordering: false,
             columnDefs: [ {
@@ -649,9 +649,9 @@
             initComplete: function() {
                 $("#sales").show();
             }
-        });
+        }));
 
-        var past_sales_table = $("#past_sales").kohaTable({
+        var past_sales_table = $("#past_sales").dataTable($.extend(true, {}, dataTablesDefaults, {
             orderFixed: [ 0, 'asc'],
             ordering: false,
             columnDefs: [ {
@@ -671,7 +671,7 @@
                 },
                 endRender: null,
             }
-        });
+        }));
 
         $("#issueRefundModal").on("shown.bs.modal", function(e){
            var button = $(e.relatedTarget);
