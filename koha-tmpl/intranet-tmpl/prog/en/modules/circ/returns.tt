@@ -1674,6 +1674,7 @@
         [% Asset.js("js/modals/add_catalog_concern.js") | $raw %]
     [% END %]
     <script nonce="[% Koha.CSPNonce | $raw %]">
+        var debounceInterval = '[% debounceInterval %]' || 500;
         function Dopop(link) {
             var newin = window.open(link, "popup", "width=600,height=400,resizable=1,toolbar=0,scrollbars=1,top");
             $("#barcode").focus();
@@ -2023,7 +2024,7 @@
                         isReceivingRFIDInput = false;
                         ChangeBatchCheckinSettings();
                         $("#checkin-form").submit();
-                    }, 500); // 500ms delay after last input
+                    }, debounceInterval); // delay after last input
                 }
             });
 
