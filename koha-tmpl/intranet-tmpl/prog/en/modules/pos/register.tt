@@ -30,7 +30,11 @@
     [% END #/ WRAPPER breadcrumbs %]
 [% END #/ WRAPPER sub-header.inc %]
 
-[% WRAPPER 'main-container.inc' aside='pos-menu' %]
+<div class="main container-fluid">
+    <div class="row">
+        <div class="col-md-10 order-md-2 order-sm-1">
+            <main>
+                [% INCLUDE 'messages.inc' %]
 
     [% IF ( error_registers ) %]
         <div id="error_message" class="alert alert-info">
@@ -422,7 +426,17 @@
             </table>
         </div>
     [% END %]
-[% END %]
+
+            </main> <!-- /.main -->
+        </div> <!-- /.col-md-10.order-md-2 -->
+
+        <div class="col-md-2 order-sm-2 order-md-1">
+            <aside>
+                [% INCLUDE 'pos-menu.inc' %]
+            </aside>
+        </div> <!-- /.col-md-2.order-md-1 -->
+    </div> <!-- /.row -->
+</div> <!-- /.main.container-fluid -->
 
 <!-- Confirm cashup modal -->
 <div class="modal" id="confirmCashupModal" tabindex="-1" role="dialog" aria-labelledby="confirmCashupLabel">
