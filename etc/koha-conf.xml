@@ -381,5 +381,8 @@
    </intranet>
  </content_security_policy>
 
+ <!-- Interval currently used for batch checkin only -->
+ <rfid_debounce_interval>5000</rfid_debounce_interval>
+
 </config>
 </yazgfs>
