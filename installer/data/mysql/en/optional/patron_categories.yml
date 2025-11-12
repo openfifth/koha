@@ -54,6 +54,7 @@ tables:
           dateofbirthrequired: 18
           enrolmentfee: '0.000000'
           overduenoticerequired: 1
+          print_notice_charge: '0.000000'
           category_type: 'A'
           can_be_guarantee: 0
 
@@ -64,6 +65,7 @@ tables:
           dateofbirthrequired: 18
           enrolmentfee: '0.000000'
           overduenoticerequired: 1
+          print_notice_charge: '0.000000'
           category_type: 'A'
           can_be_guarantee: 0
 
@@ -74,6 +76,7 @@ tables:
           dateofbirthrequired: 18
           enrolmentfee: '0.000000'
           overduenoticerequired: 1
+          print_notice_charge: '0.000000'
           category_type: 'A'
           can_be_guarantee: 0
 
@@ -85,6 +88,7 @@ tables:
           dateofbirthrequired: 5
           enrolmentfee: '0.000000'
           overduenoticerequired: 1
+          print_notice_charge: '0.000000'
           category_type: 'C'
           can_be_guarantee: 1
 
@@ -95,6 +99,7 @@ tables:
           dateofbirthrequired: 5
           enrolmentfee: '0.000000'
           overduenoticerequired: 1
+          print_notice_charge: '0.000000'
           category_type: 'C'
           can_be_guarantee: 1
 
@@ -105,6 +110,7 @@ tables:
           dateofbirthrequired: 5
           enrolmentfee: '0.000000'
           overduenoticerequired: 1
+          print_notice_charge: '0.000000'
           category_type: 'C'
           can_be_guarantee: 1
 
@@ -116,6 +122,7 @@ tables:
           dateofbirthrequired: 18
           enrolmentfee: '0.000000'
           overduenoticerequired: 0
+          print_notice_charge: '0.000000'
           category_type: 'P'
           can_be_guarantee: 1
 
@@ -126,6 +133,7 @@ tables:
           dateofbirthrequired: 5
           enrolmentfee: '0.000000'
           overduenoticerequired: 1
+          print_notice_charge: '0.000000'
           category_type: 'P'
           can_be_guarantee: 1
 
@@ -137,6 +145,7 @@ tables:
           dateofbirthrequired: 18
           enrolmentfee: '0.000000'
           overduenoticerequired: 1
+          print_notice_charge: '0.000000'
           category_type: 'I'
           can_be_guarantee: 0
 
@@ -147,6 +156,7 @@ tables:
           dateofbirthrequired: 18
           enrolmentfee: '0.000000'
           overduenoticerequired: 1
+          print_notice_charge: '0.000000'
           category_type: 'I'
           can_be_guarantee: 0
 
@@ -157,6 +167,7 @@ tables:
           dateofbirthrequired: 18
           enrolmentfee: '0.000000'
           overduenoticerequired: 1
+          print_notice_charge: '0.000000'
           category_type: 'I'
           can_be_guarantee: 0
 
@@ -168,5 +179,6 @@ tables:
           dateofbirthrequired: 18
           enrolmentfee: '0.000000'
           overduenoticerequired: 0
+          print_notice_charge: '0.000000'
           category_type: 'S'
           can_be_guarantee: 0
