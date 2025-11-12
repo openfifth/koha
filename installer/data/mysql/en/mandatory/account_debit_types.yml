@@ -144,3 +144,11 @@ tables:
           default_amount: ~
           is_system: "1"
           restricts_checkouts: "0"
+
+        - code: "PRINT_NOTICE"
+          description: "Print notice charge"
+          can_be_invoiced: "0"
+          can_be_sold: "0"
+          default_amount: 0.50
+          is_system: "1"
+          restricts_checkouts: "0"
