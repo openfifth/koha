@@ -108,8 +108,11 @@
   [% IF type %]
       [% INCLUDE "${cwd}/shared-includes/forms/${type}.inc" %]
   [% END %]
-  [% INCLUDE "${cwd}/shared-includes/notes.inc" %]
-  [% INCLUDE "${cwd}/shared-includes/custom_fields.inc" %]
+  <legend>Additional information</legend>
+  <fieldset class="rows">
+    [% INCLUDE "${cwd}/shared-includes/notes.inc" %]
+    [% INCLUDE "${cwd}/shared-includes/custom_fields.inc" %]
+  </fieldset>
   <fieldset class="action">
     <input id="ill-submit" class="btn btn-primary" type="submit" value="Create"/>
     <a class="cancel" href="/cgi-bin/koha/opac-illrequests.pl">Cancel</a>

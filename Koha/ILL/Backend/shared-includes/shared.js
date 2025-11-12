@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
     $('#add-new-fields').click(function(e) {
         e.preventDefault();
         var row = '<li class="form-horizontal">' +
+            "<label>&nbsp;</label>" +
             '<input type="text" class="custom-name ' +
             ( opac ? 'form-control input-fluid custom-field-input' : '') +
             '" name="custom_key" placeholder="'+__('key')+'">' +
