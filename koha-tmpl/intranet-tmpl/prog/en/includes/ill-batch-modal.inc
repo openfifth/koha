@@ -71,6 +71,9 @@
                                 [% IF Koha.Preference('ILLCheckAvailability') %]
                                     <th scope="col">Availability</th>
                                 [% END %]
+                                [% IF Koha.Preference('AutoILLBackendPriority') %]
+                                    <th scope="col">Auto backend</th>
+                                [% END %]
                                 <th scope="col"></th>
                             </tr>
                         </thead>
