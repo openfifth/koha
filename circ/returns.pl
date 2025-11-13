@@ -342,8 +342,13 @@ if ( $batch_barcodes && $op eq 'cud-checkin' ) {
 
             # Do the actual return unless confirmation needed
             unless ( $needs_confirm || $bundle_confirm ) {
+
+                # Call AddReturn, check if we want to confirm a transfer automatically
+                my $original_override = $ENV{"OVERRIDE_SYSPREF_AutomaticItemReturn"};
+                $ENV{"OVERRIDE_SYSPREF_AutomaticItemReturn"} = 1 if $query->param('confirm_transfer');
                 my ( $batch_returned, $batch_messages, $batch_issue, $batch_borrower ) =
                     AddReturn( $batch_barcode, $userenv_branch, $exemptfine, $return_date );
+                $ENV{"OVERRIDE_SYSPREF_AutomaticItemReturn"} = $original_override || q{};
 
                 $batch_result{success}  = $batch_returned;
                 $batch_result{messages} = $batch_messages;
@@ -364,6 +369,15 @@ if ( $batch_barcodes && $op eq 'cud-checkin' ) {
                         borrowernumber => $batch_issue ? $batch_issue->borrowernumber : undef,
                         not_returned   => 1,
                     };
+                }
+
+                # Confirm a hold?
+                my $resFound = $batch_messages->{ResFound};
+                if ( $query->param('confirm_hold') && $resFound ) {
+                    my $hold = Koha::Holds->find( $resFound->{reserve_id} );    # TODO Not found
+                    my $diffBranchSend;
+                    $diffBranchSend = $resFound->{branchcode} if $userenv_branch ne $resFound->{branchcode};
+                    confirm_hold( $batch_item, $hold, $diffBranchSend, $desk_id ) if $hold;
                 }
             } else {
                 $batch_result{needs_confirm}  = $needs_confirm;
