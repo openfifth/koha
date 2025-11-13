@@ -584,7 +584,7 @@ export default {
                     hideIn: ["List"],
                 },
                 {
-                    name: "receiving note",
+                    name: "receiving_note",
                     group: $__("Notes"),
                     type: "textarea",
                     textAreaRows: 5,
@@ -595,7 +595,7 @@ export default {
                     hideIn: ["List"],
                 },
                 {
-                    name: "vendor note",
+                    name: "vendor_note",
                     group: $__("Notes"),
                     type: "textarea",
                     textAreaRows: 5,
@@ -657,6 +657,13 @@ export default {
             delete orderline.price_summary;
             delete orderline.remainderToDistribute;
             delete orderline.vendor;
+            delete orderline.calculated_item_costs;
+            delete orderline.discount;
+
+            if (orderline.quantity_ordered === null) {
+                // Throw error if create_items === "ordering" and none created
+                orderline.quantity_ordered = 1;
+            }
 
             if (orderline_id) {
                 const acq_client = APIClient.acquisition;

@@ -60,6 +60,7 @@ properties:
       - partial
       - unsubscribed
       - cancelled
+      - null
     description: Status of the orderline
   payment_status:
     type:
@@ -71,6 +72,7 @@ properties:
       - paid
       - unpaid
       - cancelled
+      - null
     description: Payment status of the orderline
   is_continuous:
     type: boolean

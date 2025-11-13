@@ -31,31 +31,6 @@ Koha::Acquisition::OrderManagement::Orderline Object class
 
 =head2 Class methods
 
-=head3 store
-
-=cut
-
-sub store {
-    my ($self) = @_;
-
-    $self->set_lib_group_visibility() if $self->lib_group_visibility;
-    $self = $self->SUPER::store();
-    return $self;
-}
-
-# =head3 _library_group_visibility_parameters
-
-# Configure library group limits
-
-# =cut
-
-# sub _library_group_visibility_parameters {
-#     return {
-#         class             => "Orderline",
-#         visibility_column => "lib_group_visibility",
-#     };
-# }
-
 =head2 Internal methods
 
 =head3 _type
@@ -63,7 +38,7 @@ sub store {
 =cut
 
 sub _type {
-    return 'Orderline';
+    return 'AcqOrderline';
 }
 
 1;
