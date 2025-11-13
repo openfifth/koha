@@ -114,6 +114,24 @@ for my $counter ( $query->multi_param("checkin_counter") ) {
 
 my $op = $query->param('op') // '';
 
+# Routine for handling the confirm hold part of cud-affect_reserve.
+# Reused during batch checkin.
+sub confirm_hold {
+    my ( $item, $hold, $diffBranchSend, $desk_id ) = @_;
+
+    # diffBranchSend tells ModReserveAffect whether document is expected in this library or not,
+    # i.e., whether to apply waiting status
+    ModReserveAffect( $item->itemnumber, $hold->borrowernumber, $diffBranchSend, $hold->reserve_id, $desk_id );
+
+    if ($diffBranchSend) {
+        my $tobranch = $hold->pickup_library();
+
+        # Add transfer, enqueue if one is already in the queue, and immediately set to in transit
+        my $transfer = $item->request_transfer( { to => $tobranch, reason => 'Reserve', enqueue => 1 } );
+        $transfer->transit;
+    }
+}
+
 ############
 # Deal with the requests....
 my $itemnumber = $query->param('itemnumber');
@@ -146,18 +164,7 @@ if ( $query->param('reserve_id') && $op eq 'cud-affect_reserve' ) {
         }
     } else {
         my $diffBranchSend = ( $userenv_branch ne $diffBranchReturned ) ? $diffBranchReturned : undef;
-
-        # diffBranchSend tells ModReserveAffect whether document is expected in this library or not,
-        # i.e., whether to apply waiting status
-        ModReserveAffect( $itemnumber, $borrowernumber, $diffBranchSend, $reserve_id, $desk_id );
-
-        if ($diffBranchSend) {
-            my $tobranch = $hold->pickup_library();
-
-            # Add transfer, enqueue if one is already in the queue, and immediately set to in transit
-            my $transfer = $item->request_transfer( { to => $tobranch, reason => 'Reserve', enqueue => 1 } );
-            $transfer->transit;
-        }
+        confirm_hold( $item, $hold, $diffBranchSend, $desk_id );
     }
 }
 
@@ -704,15 +711,8 @@ if ( $messages->{'ResFound'} ) {
         my $biblio = $item->biblio;
 
         my $diffBranchSend = !$branchCheck ? $reserve->{branchcode} : undef;
-        ModReserveAffect( $itemnumber, $reserve->{borrowernumber}, $diffBranchSend, $reserve->{reserve_id}, $desk_id );
-
-        if ($diffBranchSend) {
-            my $tobranch = Koha::Libraries->find( $reserve->{branchcode} );
-
-            # Add transfer, enqueue if one is already in the queue, and immediately set to in transit
-            my $transfer = $item->request_transfer( { to => $tobranch, reason => 'Reserve', enqueue => 1 } );
-            $transfer->transit;
-        }
+        my $hold           = Koha::Holds->find( $reserve->{reserve_id} );      #TODO Hold not found
+        confirm_hold( $item, $hold, $diffBranchSend, $desk_id ) if $hold;
 
         $template->param(
             hold_auto_filled => 1,
