@@ -1114,6 +1114,9 @@ sub quote_item {
                     if ( $new_item->{$lsq_field} ) {
                         $item_hash->{$lsq_field} = $new_item->{$lsq_field};
                     }
+                    if ( $new_item->{$lsl_field} ) {
+                        $item_hash->{$lsl_field} = $new_item->{$lsl_field};
+                    }
                     if ( $new_item->{itemcallnumber} ) {
                         $item_hash->{itemcallnumber} = $new_item->{itemcallnumber};
                     }
