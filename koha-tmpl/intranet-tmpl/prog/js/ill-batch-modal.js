@@ -157,11 +157,10 @@
         });
         $('#ill-batch-modal').on('hidden.bs.modal', function () {
             // Reset our state when we close the modal
-            // TODO: need to also reset progress bar and already processed identifiers
             delete idEl.dataset.batchId;
             delete idEl.dataset.backend;
             batchId = null;
-            tableEl.style.display = 'none';
+            $("#identifier-table_wrapper").hide();
             tableContent.data = [];
             progressTotals.data = {
                 total: 0,
@@ -171,6 +170,8 @@
             textarea.value = '';
             batch.data = {};
             cancelButton.innerHTML = cancelButtonOriginalText;
+            hideProgress();
+            hideErrors();
             // Remove event listeners we created
             removeEventListeners();
         });
@@ -190,11 +191,13 @@
             isUpdate = true;
             setModalHeading();
             finishButton.removeAttribute("disabled");
-            createButton.style.display = "none";
+            hideCreateButton();
         } else {
             batch.data = emptyBatch;
             setModalHeading();
             finishButton.style.display = "none";
+            createButton.style.display = "inline-block";
+            createButton.setAttribute("disabled", 1);
         }
         fetchStatuses();
         finishButtonEventListener();
@@ -382,7 +385,7 @@
         createButton.removeEventListener('click', createBatch);
         identifierTable.removeEventListener('click', toggleMetadata);
         identifierTable.removeEventListener('click', removeRow);
-        createRequestsButton.remove('click', requestRequestable);
+        createRequestsButton.removeEventListener('click', requestRequestable);
     };
 
     function finishButtonEventListener() {
@@ -616,6 +619,11 @@
         el.style.display = 'block';
     }
 
+    function hideProgress() {
+        var el = document.getElementById("create-progress");
+        el.style.display = "none";
+    }
+
     function showCreateRequestsButton() {
         var data = progressTotals.data;
         var el = document.getElementById('create-requests');
@@ -707,6 +715,8 @@
         // Now build and display the table
         if (!table) {
             buildTable();
+        } else {
+            tableEl.parentElement.style.display = "block";
         }
 
         // We may be appending new values to an existing table,
@@ -760,7 +770,7 @@
     }
 
     function hideCreateButton() {
-        createButton.remove();
+        createButton.style.display = "none";
     }
 
     async function populateMetadata(identifier) {
