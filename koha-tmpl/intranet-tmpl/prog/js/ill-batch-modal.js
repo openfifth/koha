@@ -10,6 +10,9 @@
     // Delay between API requests
     var debounceDelay = 1000;
 
+    // Global var to determine if requests are being created
+    var creatingRequests = false;
+
     // Elements we work frequently with
     var textarea = document.getElementById("identifiers_input");
     var nameInput = document.getElementById("name");
@@ -233,16 +236,82 @@
         createRequestsButton.setAttribute("disabled", true);
         createRequestsButton.setAttribute("aria-disabled", true);
         setFinishButton();
-        var toCheck = tableContent.data;
-        toCheck.forEach(function (row) {
+        const toCheck = tableContent.data;
+        const promises = [];
+
+        creatingRequests = true;
+        toCheck.forEach(function (row, i) {
             if (
                 !row.requestId &&
                 Object.keys(row.metadata).length > 0 &&
                 !submissionSent[row.value]
             ) {
                 submissionSent[row.value] = 1;
-                makeLocalSubmission(row.value, row.metadata);
+                promises.push(makeLocalSubmission(row.value, row.metadata, i));
             }
+        });
+        Promise.all(promises).then(() => {
+            creatingRequests = false;
+        });
+    }
+
+    async function populateAutoILL(row) {
+        let metadata = row.metadata;
+        metadata.branchcode = batch.data.library_id;
+        metadata.cardnumber = batch.data.cardnumber;
+        var prepped = encodeURIComponent(
+            base64EncodeUnicode(JSON.stringify(metadata))
+        );
+
+        const withTimeout = (promise, backendName) =>
+            Promise.race([
+                promise,
+                new Promise(resolve =>
+                    setTimeout(
+                        () =>
+                            resolve({
+                                name: backendName,
+                                error: "Verification timed out",
+                            }),
+                        10000
+                    )
+                ),
+            ]);
+
+        const fetchPromises = have_batch_auto_backends.map(backend =>
+            withTimeout(
+                fetch(backend.endpoint + prepped)
+                    .then(res => res.json())
+                    .then(responseData => ({
+                        name: backend.name,
+                        success: responseData.success,
+                        warning: responseData.warning,
+                        error: responseData.error
+                            ? responseData.error
+                            : responseData.errors
+                              ? responseData.errors
+                                    .map(error => error.message)
+                                    .join(", ")
+                              : undefined,
+                    })),
+                backend.name
+            )
+        );
+
+        return Promise.all(fetchPromises).then(results => {
+            const firstSuccessIndex = results.findIndex(
+                item => item.success === "" || !!item.success
+            );
+            results = results.map((item, i) => ({
+                ...item,
+                suggested: i === firstSuccessIndex ? 1 : 0,
+            }));
+            if (!results.some(item => item.suggested === 1)) {
+                results.push({ name: "Standard", success: "", suggested: 1 });
+            } else {
+                results.push({ name: "Standard", success: "", suggested: 0 });
+            }
+            return results;
         });
     }
 
@@ -296,7 +365,12 @@
 
     // Create a local submission and update our local state
     // upon success
-    function makeLocalSubmission(identifier, metadata) {
+    function makeLocalSubmission(identifier, metadata, i) {
+        const checked_backend = document.querySelector(
+            `input[name="auto_backend_${i}"]:checked`
+        );
+        let selected_backend = checked_backend ? checked_backend.value : null;
+
         // Prepare extended_attributes in array format for POST
         var extended_attributes = [];
         for (const [key, value] of Object.entries(metadata)) {
@@ -305,12 +379,14 @@
 
         var payload = {
             ill_batch_id: batchId,
-            ill_backend_id: batch.data.backend,
+            ill_backend_id: selected_backend
+                ? selected_backend
+                : batch.data.backend,
             patron_id: batch.data.patron.patron_id,
             library_id: batch.data.library_id,
             extended_attributes: extended_attributes,
         };
-        window
+        return window
             .doCreateSubmission(payload)
             .then(function (response) {
                 return response.json();
@@ -319,6 +395,7 @@
                 tableContent.data = tableContent.data.map(function (row) {
                     if (row.value === identifier) {
                         row.requestId = data.ill_request_id;
+                        row.ill_backend_id = data.ill_backend_id;
                         row.requestStatus = data.status;
                     }
                     return row;
@@ -719,6 +796,7 @@
                 row.metadata = {};
                 row.failed = {};
                 row.availability_hits = {};
+                row.auto_backends = {};
                 row.requestId = null;
                 deduped.push(row);
             }
@@ -777,6 +855,14 @@
                 try {
                     var availability = await populateAvailability(row);
                     row.availability_hits = availability || {};
+                } catch (e) {
+                    //do nothing
+                }
+            }
+            if (have_batch_auto_backends.length) {
+                try {
+                    var request_auto_backends = await populateAutoILL(row);
+                    row.auto_backends = request_auto_backends || {};
                 } catch (e) {
                     //do nothing
                 }
@@ -1004,6 +1090,73 @@
         return data.requestStatus || "-";
     }
 
+    function createRequestAutoBackend(data, row_index) {
+        if (creatingRequests && !data.ill_backend_id) {
+            return ill_batch_request_creating;
+        }
+
+        if (data.failed.length > 0) {
+            return data.failed;
+        }
+
+        if (Object.keys(data.auto_backends).length === 0) {
+            return ill_populate_waiting;
+        }
+
+        if (data.ill_backend_id) {
+            return "<strong>" + data.ill_backend_id + "</strong>";
+        }
+
+        let html = data.auto_backends
+            .map((item, i) => {
+                const checked = item.suggested ? "checked" : "";
+                const disabled =
+                    data.ill_backend_id ||
+                    item.success === "" ||
+                    !!item.success ||
+                    item.warning === "" ||
+                    !!item.warning
+                        ? ""
+                        : "disabled";
+                const color =
+                    item.success === "" || !!item.success
+                        ? "green"
+                        : item.warning === "" || !!item.warning
+                          ? "#8a6804"
+                          : "red";
+                const statusIcon =
+                    item.success === "" || !!item.success
+                        ? '<i class="fa-solid fa-check"></i> '
+                        : item.error === "" || !!item.error
+                          ? '<i class="fa-solid fa-xmark"></i> '
+                          : item.warning === "" || !!item.warning
+                            ? '<i class="fa-solid fa-exclamation-circle"></i> '
+                            : "";
+                return `
+                <label style="color: ${color};">
+                    <input type="radio" name="auto_backend_${row_index}" value="${item.name}" ${checked} ${disabled}>
+                    <span class="d-inline-block text-center align-middle" style="width:1em;">
+                        ${statusIcon}
+                    </span>
+                     ${item.name}
+                </label>
+                ${
+                    item.success || item.warning || item.error
+                        ? `
+                <a href="#" data-bs-toggle="tooltip" style="color: ${color};"
+                title="${item.success || item.warning || item.error}">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                </a>`
+                        : ""
+                }
+                <br>
+            `;
+            })
+            .join("");
+
+        return html.trim();
+    }
+
     function createRequestAvailability(x, y, data) {
         // If the fetch failed
         if (data.failed.length > 0) {
@@ -1035,6 +1188,12 @@
 
     function buildTable(identifiers) {
         table = $("#identifier-table").kohaTable({
+            drawCallback: function () {
+                const tooltipTriggerList = Array.from(
+                    document.querySelectorAll('[data-bs-toggle="tooltip"]')
+                );
+                tooltipTriggerList.forEach(el => new bootstrap.Tooltip(el));
+            },
             processing: true,
             ordering: false,
             paging: false,
@@ -1071,6 +1230,20 @@
                               data: "",
                               width: "13%",
                               render: createRequestAvailability,
+                          },
+                      ]
+                    : []),
+                ...(have_batch_auto_backends.length
+                    ? [
+                          {
+                              data: "",
+                              width: "25%",
+                              render: function (data, type, row, meta) {
+                                  return createRequestAutoBackend(
+                                      row,
+                                      meta.row
+                                  );
+                              },
                           },
                       ]
                     : []),
