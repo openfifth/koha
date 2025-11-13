@@ -25,6 +25,7 @@
 
 [% MACRO jsinclude BLOCK %]
     [% Asset.js("js/cataloging.js") | $raw %]
+    [% Asset.js("js/additem.js") | $raw %]
     [% INCLUDE 'calendar.inc' %]
     [% INCLUDE 'datatables.inc' %]
     [% INCLUDE 'js-patron-format.inc' %]

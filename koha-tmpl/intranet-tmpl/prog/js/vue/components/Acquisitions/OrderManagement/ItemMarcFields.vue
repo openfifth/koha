@@ -1,44 +1,92 @@
 <template>
     <div v-if="createItems.value === 'ordering'">
-        <form @submit="onSubmit($event)">
-            <fieldset v-if="initialized" class="rows" id="itemfieldset">
-                <legend>{{ $__("Item") }}</legend>
-                <div class="marc_editor">
-                    <ol>
-                        <li
-                            v-for="(attr, index) in frameworkFields"
-                            v-bind:key="index"
+        <!-- <fieldset v-if="initialized" class="rows" id="itemfieldset"> -->
+        <div id="items_list" v-if="orderNumber" class="page-section">
+            <p>
+                <strong>{{ $__("Items list") }}</strong>
+            </p>
+            <div style="width: 100%; overflow: auto">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="no-export">Actions</th>
+                            <th>Barcode</th>
+                            <th>Home library</th>
+                            <th>Holding library</th>
+                            <th>Not for loan</th>
+                            <th>Restricted</th>
+                            <th>Location</th>
+                            <th>Call number</th>
+                            <th>Copy number</th>
+                            <th>Inventory number</th>
+                            <th>Collection</th>
+                            <th>Item type</th>
+                            <th>Materials</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr
+                            v-for="item in items"
+                            :key="item.item_id"
+                            :idblock="`itemblock${item.item_id}`"
                         >
-                            <div
-                                class="subfield_line"
-                                :id="`subfield${attr.subfield}`"
-                            >
-                                <FormElement
-                                    :resource="fieldValues"
-                                    :attr="attr"
-                                    :index="index"
-                                />
-                                <a
-                                    v-if="attr.valueBuilder"
-                                    href="#"
-                                    :id="attr.id"
-                                    :class="`buttonDot tag_editor framework_plugin ${attr.noPopup ? 'disabled' : ''}`"
-                                    :title="
-                                        attr.noPopup ? 'No popup' : 'Tag editor'
-                                    "
-                                    :data-plugin="attr.dataPlugin"
-                                ></a>
-                            </div>
-                        </li>
-                    </ol>
-                </div>
-            </fieldset>
-        </form>
+                            <td>&nbsp;</td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <fieldset class="rows" id="itemfieldset">
+            <legend>{{ $__("Item") }}</legend>
+            <div id="outeritemblock" class="marc_editor">
+                <!-- <ol>
+                    <li
+                        v-for="(attr, index) in frameworkFields"
+                        v-bind:key="index"
+                    >
+                        <div
+                            class="subfield_line"
+                            :id="`subfield${attr.subfield}`"
+                        >
+                            <FormElement
+                                :resource="fieldValues"
+                                :attr="attr"
+                                :index="index"
+                            />
+                            <a
+                                v-if="attr.valueBuilder"
+                                href="#"
+                                :id="attr.id"
+                                :class="`buttonDot tag_editor framework_plugin ${attr.noPopup ? 'disabled' : ''}`"
+                                :title="
+                                    attr.noPopup ? 'No popup' : 'Tag editor'
+                                "
+                                :data-plugin="attr.dataPlugin"
+                            ></a>
+                        </div>
+                    </li>
+                </ol> -->
+            </div>
+        </fieldset>
     </div>
 </template>
 
 <script>
-import { onBeforeMount, ref } from "vue";
+import { onBeforeMount, onMounted, ref } from "vue";
 import { APIClient } from "../../../fetch/api-client.js";
 import FormElement from "../../FormElement.vue";
 export default {
@@ -47,6 +95,7 @@ export default {
         biblioNumber: String,
         frameworkCode: String,
         createItems: Object,
+        items: Array,
     },
     setup(props) {
         const frameworkFields = ref(null);
@@ -116,74 +165,78 @@ export default {
             return visibleFields;
         };
 
-        onBeforeMount(() => {
-            APIClient.marc_framework.frameworkMarcFields
-                .get(props.frameworkCode)
-                .then(
-                    frameworkMarcFields => {
-                        frameworkFields.value = formatMarcFields(
-                            frameworkMarcFields.iteminformation
-                        );
-                        initialized.value = true;
-                        eval(valueBuilders.value);
-                        $(document).ready(function () {
-                            function callClickPluginEventHandler(event) {
-                                event.preventDefault();
-                                callPluginEventHandler.call(this, event);
-                            }
-
-                            function callPluginEventHandler(event) {
-                                event.stopPropagation();
-
-                                const plugin =
-                                    event.target.getAttribute("data-plugin");
-                                if (
-                                    plugin &&
-                                    plugin in Koha.frameworkPlugins &&
-                                    event.type in Koha.frameworkPlugins[plugin]
-                                ) {
-                                    event.data = {};
-                                    if (
-                                        event.target.classList.contains(
-                                            "framework_plugin"
-                                        ) ||
-                                        event.target.classList.contains(
-                                            "buttonDot"
-                                        )
-                                    ) {
-                                        event.data.id = event.target
-                                            .closest(".subfield_line")
-                                            .querySelector(
-                                                "input.input_marceditor"
-                                            ).id;
-                                    } else {
-                                        event.data.id = event.target.id;
-                                    }
-
-                                    Koha.frameworkPlugins[plugin][
-                                        event.type
-                                    ].call(this, event);
-                                }
-                            }
-
-                            // We use delegated event handlers here so that dynamically added elements
-                            // (like when cloning a field or a subfield) respond to these events
-                            // without having to re-attach events manually
-                            $(".marc_editor").on(
-                                "click",
-                                ".tag_editor.framework_plugin",
-                                callClickPluginEventHandler
-                            );
-                            $(".marc_editor").on(
-                                "focusin focusout change mousedown mouseup keydown keyup",
-                                "input.input_marceditor.framework_plugin",
-                                callPluginEventHandler
-                            );
-                        });
-                    },
-                    error => {}
-                );
+        onMounted(() => {
+            cloneItemBlock(0, "barcode");
         });
+
+        // onBeforeMount(() => {
+        //     APIClient.marc_framework.frameworkMarcFields
+        //         .get(props.frameworkCode)
+        //         .then(
+        //             frameworkMarcFields => {
+        //                 frameworkFields.value = formatMarcFields(
+        //                     frameworkMarcFields.iteminformation
+        //                 );
+        //                 initialized.value = true;
+        //                 eval(valueBuilders.value);
+        //                 $(document).ready(function () {
+        //                     function callClickPluginEventHandler(event) {
+        //                         event.preventDefault();
+        //                         callPluginEventHandler.call(this, event);
+        //                     }
+
+        //                     function callPluginEventHandler(event) {
+        //                         event.stopPropagation();
+
+        //                         const plugin =
+        //                             event.target.getAttribute("data-plugin");
+        //                         if (
+        //                             plugin &&
+        //                             plugin in Koha.frameworkPlugins &&
+        //                             event.type in Koha.frameworkPlugins[plugin]
+        //                         ) {
+        //                             event.data = {};
+        //                             if (
+        //                                 event.target.classList.contains(
+        //                                     "framework_plugin"
+        //                                 ) ||
+        //                                 event.target.classList.contains(
+        //                                     "buttonDot"
+        //                                 )
+        //                             ) {
+        //                                 event.data.id = event.target
+        //                                     .closest(".subfield_line")
+        //                                     .querySelector(
+        //                                         "input.input_marceditor"
+        //                                     ).id;
+        //                             } else {
+        //                                 event.data.id = event.target.id;
+        //                             }
+
+        //                             Koha.frameworkPlugins[plugin][
+        //                                 event.type
+        //                             ].call(this, event);
+        //                         }
+        //                     }
+
+        //                     // We use delegated event handlers here so that dynamically added elements
+        //                     // (like when cloning a field or a subfield) respond to these events
+        //                     // without having to re-attach events manually
+        //                     $(".marc_editor").on(
+        //                         "click",
+        //                         ".tag_editor.framework_plugin",
+        //                         callClickPluginEventHandler
+        //                     );
+        //                     $(".marc_editor").on(
+        //                         "focusin focusout change mousedown mouseup keydown keyup",
+        //                         "input.input_marceditor.framework_plugin",
+        //                         callPluginEventHandler
+        //                     );
+        //                 });
+        //             },
+        //             error => {}
+        //         );
+        // });
 
         return {
             frameworkFields,

@@ -42,6 +42,10 @@ my $builder = sub {
 /* from: cataloguing/value_builder/dateaccessioned.pl */
 \$(document).ready(function(){
     \$("#$function_name").flatpickr({
+        altInput: true,
+        allowInput: true,
+        altInputClass: 'flatpickr-input',
+        dateFormat: "Y-m-d",
         onReady: function(selectedDates, dateStr, instance) {
             let options = maskitoDateOptionsGenerator({
                 mode: altinput_dateformat,

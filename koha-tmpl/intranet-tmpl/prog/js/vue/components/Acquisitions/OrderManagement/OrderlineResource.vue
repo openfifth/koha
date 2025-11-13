@@ -168,36 +168,36 @@ export default {
                     },
                     hideIn: ["List"],
                 },
-                {
-                    name: "items",
-                    group: $__("Catalog details"),
-                    type: "component",
-                    componentPath:
-                        "@koha-vue/components/Acquisitions/OrderManagement/ItemMarcFields.vue",
-                    componentProps: {
-                        resource: {
-                            type: "resource",
-                            value: null,
-                        },
-                        biblionumber: {
-                            type: "string",
-                            value: queryParams.biblionumber,
-                        },
-                        ordernumber: {
-                            type: "string",
-                            value: queryParams.ordernumber,
-                        },
-                        frameworkCode: {
-                            type: "string",
-                            value: "ACQ",
-                        },
-                        createItems: {
-                            type: "object",
-                            value: createItems,
-                        },
-                    },
-                    hideIn: ["List"],
-                },
+                // {
+                //     name: "items",
+                //     group: $__("Catalog details"),
+                //     type: "component",
+                //     componentPath:
+                //         "@koha-vue/components/Acquisitions/OrderManagement/ItemMarcFields.vue",
+                //     componentProps: {
+                //         resource: {
+                //             type: "resource",
+                //             value: null,
+                //         },
+                //         biblionumber: {
+                //             type: "string",
+                //             value: queryParams.biblionumber,
+                //         },
+                //         ordernumber: {
+                //             type: "string",
+                //             value: queryParams.ordernumber,
+                //         },
+                //         frameworkCode: {
+                //             type: "string",
+                //             value: "ACQ",
+                //         },
+                //         createItems: {
+                //             type: "object",
+                //             value: createItems,
+                //         },
+                //     },
+                //     hideIn: ["List"],
+                // },
                 {
                     name: "patrons_to_notify",
                     group: $__("Patrons to notify"),
