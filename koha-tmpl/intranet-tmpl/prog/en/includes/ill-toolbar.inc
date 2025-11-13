@@ -26,16 +26,20 @@
         [% END %]
         [% IF have_batch.size > 0 && metadata_enrichment_services %]
             <div id="ill-batch">
-                <div class="dropdown btn-group">
-                    <button class="btn btn-default dropdown-toggle" type="button" id="ill-batch-backend-dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                        <i class="fa fa-plus"></i> New ILL requests batch
-                    </button>
-                    <ul class="dropdown-menu" aria-labelledby="ill-batch-backend-dropdown">
-                        [% FOREACH backend IN have_batch %]
-                            <li><a class="dropdown-item" href="#" role="button" onclick="window.openBatchModal(null, '[% backend | html %]')">[% backend | html %]</a></li>
-                        [% END %]
-                    </ul>
-                </div>
+                [% IF Koha.Preference('AutoILLBackendPriority') %]
+                    <a class="btn btn-default" href="#" role="button" onclick="window.openBatchModal(null, 'Standard')"> <i class="fa fa-plus"></i> New ILL requests batch </a>
+                [% ELSE %]
+                    <div class="dropdown btn-group">
+                        <button class="btn btn-default dropdown-toggle" type="button" id="ill-batch-backend-dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                            <i class="fa fa-plus"></i> New ILL requests batch
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="ill-batch-backend-dropdown">
+                            [% FOREACH backend IN have_batch %]
+                                <li><a class="dropdown-item" href="#" role="button" onclick="window.openBatchModal(null, '[% backend | html %]')">[% backend | html %]</a></li>
+                            [% END %]
+                        </ul>
+                    </div>
+                [% END %]
                 <a class="btn btn-default" type="button" href="/cgi-bin/koha/ill/ill-requests.pl?method=batch_list"> <i class="fa fa-tasks"></i> Batch requests </a>
             </div>
         [% END %]
