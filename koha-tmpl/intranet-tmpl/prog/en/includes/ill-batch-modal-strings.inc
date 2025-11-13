@@ -16,6 +16,7 @@
     var ill_populate_waiting = _("Retrieving...");
     var ill_populate_failed = _("Failed to retrieve");
     var ill_button_remove = _("Remove");
+    var ill_batch_request_creating = _("Creating...");
     var ill_batch_create_api_fail = _("Unable to create batch request");
     var ill_batch_update_api_fail = _("Unable to update batch request");
     var ill_batch_item_remove = _("Are you sure you want to remove this item from the batch?");
