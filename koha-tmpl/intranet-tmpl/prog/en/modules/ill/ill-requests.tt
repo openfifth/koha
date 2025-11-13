@@ -1154,6 +1154,11 @@
             [% ELSE %]
             var auto_backends = [];
             [% END %]
+            [% IF have_batch_auto_backends_json.length > 0 %]
+            var have_batch_auto_backends = [% have_batch_auto_backends_json | $raw %];
+            [% ELSE %]
+            var have_batch_auto_backends = [];
+            [% END %]
             [% IF metadata.length > 0 %]
             var metadata = "[% metadata | $raw %]";
             [% END %]
