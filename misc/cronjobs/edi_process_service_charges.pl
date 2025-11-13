@@ -195,6 +195,15 @@ sub process_invoice_service_charges {
             # Calculate adjustment amount based on CalculateFundValuesIncludingTax syspref
             my $adjustment_amount = calculate_adjustment_amount( $amount, $alc_data->{tax_amount} );
 
+            # Skip £0 adjustments - SAP/Basware doesn't allow 0 values on GL lines (ticket 149681)
+            if ( $adjustment_amount == 0 ) {
+                print "  Skipping invoice-level £0 adjustment\n" if $verbose;
+                $logger->info( "EDI Service Charges: Skipped invoice-level £0 adjustment for invoice "
+                        . $koha_invoice->invoicenumber
+                        . ": service_code=$service_code" );
+                next;
+            }
+
             if ( !$existing && !$dry_run ) {
                 # Use tax rate from EDI TAX segment
                 my $tax_rate_pct = $alc_data->{tax_rate} || 0;
@@ -288,6 +297,20 @@ sub process_invoice_service_charges {
 
                 print "  Vendor: $vendor_name -> Budget: $budget_id\n" if $verbose && $vendor_name;
 
+                # Calculate adjustment amount based on CalculateFundValuesIncludingTax syspref
+                my $adjustment_amount = calculate_adjustment_amount( $amount, $alc_data->{tax_amount} );
+
+                # Skip £0 adjustments - SAP/Basware doesn't allow 0 values on GL lines (ticket 149681)
+                if ( $adjustment_amount == 0 ) {
+                    print "  Skipping line-level £0 adjustment for line " . $line->line_item_number . "\n" if $verbose;
+                    $logger->info( "EDI Service Charges: Skipped line-level £0 adjustment for line "
+                            . $line->line_item_number
+                            . " in invoice "
+                            . $koha_invoice->invoicenumber
+                            . ": service_code=$service_code" );
+                    next;
+                }
+
                 if ( !$dry_run ) {
 
                     # Create the invoice adjustment with enhanced order linkage
@@ -311,9 +334,6 @@ sub process_invoice_service_charges {
                         $amount,
                         $alc_data->{tax_amount} || 0
                     );
-
-                    # Calculate adjustment amount based on CalculateFundValuesIncludingTax syspref
-                    my $adjustment_amount = calculate_adjustment_amount( $amount, $alc_data->{tax_amount} );
 
                     my $adjustment = $schema->resultset('AqinvoiceAdjustment')->create(
                         {
@@ -361,9 +381,6 @@ sub process_invoice_service_charges {
                     if ($actual_ordernumber && $actual_ordernumber != $original_ordernumber) {
                         $order_info .= " (split from #$original_ordernumber)";
                     }
-
-                    # Calculate adjustment amount based on CalculateFundValuesIncludingTax syspref
-                    my $adjustment_amount = calculate_adjustment_amount( $amount, $alc_data->{tax_amount} );
 
                     print "  Would create $type adjustment for invoice "
                         . $koha_invoice->invoiceid
