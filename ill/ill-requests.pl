@@ -66,14 +66,15 @@ my ( $template, $patronnumber, $cookie ) = get_template_and_user(
 );
 
 # Are we able to actually work?
-my $cfg                = Koha::ILL::Request::Config->new;
-my $backends           = $cfg->available_backends;
-my $has_branch         = $cfg->has_branch;
-my $backends_available = ( scalar @{$backends} > 0 );
+my $cfg                 = Koha::ILL::Request::Config->new;
+my $backends            = $cfg->available_backends;
+my $has_branch          = $cfg->has_branch;
+my $backends_available  = ( scalar @{$backends} > 0 );
+my $have_batch_backends = have_batch_backends($backends);
 $template->param(
     backends_available => $backends_available,
     has_branch         => $has_branch,
-    have_batch         => have_batch_backends($backends)
+    have_batch         => $have_batch_backends
 );
 
 if ( grep( /FreeForm/, @{$backends} ) ) {
@@ -95,6 +96,17 @@ if ($backends_available) {
     my $batch_availability_services = get_ill_availability($enrichment_services);
     if ( scalar @{$batch_availability_services} > 0 ) {
         $template->param( batch_availability_services => encode_json($batch_availability_services) );
+    }
+
+    # Establish what backends are up for batch autoILL, if enabled
+    my $confirm_auto  = Koha::ILL::Request::Workflow::ConfirmAuto->new( $params, 'staff' );
+    my @auto_backends = $confirm_auto->get_priority_backends('staff');
+    if ( scalar @auto_backends > 0 && scalar @$have_batch_backends > 0 ) {
+        my @have_batch_auto_backends = grep {
+            my $a = $_;
+            grep { $_ eq $a->{name} } @$have_batch_backends
+        } @auto_backends;
+        $template->param( have_batch_auto_backends_json => scalar encode_json( \@have_batch_auto_backends ) );
     }
 
     if ( $op eq 'illview' ) {
@@ -137,7 +149,6 @@ if ($backends_available) {
         my $history_check   = Koha::ILL::Request::Workflow::HistoryCheck->new( $params, 'staff' );
         my $availability    = Koha::ILL::Request::Workflow::Availability->new( $params, 'staff' );
         my $type_disclaimer = Koha::ILL::Request::Workflow::TypeDisclaimer->new( $params, 'staff' );
-        my $confirm_auto    = Koha::ILL::Request::Workflow::ConfirmAuto->new( $params, 'staff' );
 
         # ILLHistoryCheck operation
         if ( $history_check->show_history_check($request) ) {
