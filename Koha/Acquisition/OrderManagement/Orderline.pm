@@ -22,6 +22,7 @@ use base qw(Koha::Object::Mixin::AdditionalFields Koha::Object);
 
 use Koha::Acquisition::OrderManagement::OrderlineUser;
 use Koha::Acquisition::OrderManagement::OrderlineManager;
+use Koha::Acquisition::OrderManagement::OrderlineFundDistributions;
 
 =head1 NAME
 
@@ -61,6 +62,32 @@ sub add_patron_relationships {
             )->store;
         }
     }
+}
+
+=head3 fund_distributions
+
+=cut
+
+sub fund_distributions {
+    my ( $self, $fund_distributions ) = @_;
+
+    if ($fund_distributions) {
+        my $schema = $self->_result->result_source->schema;
+        $schema->txn_do(
+            sub {
+                $self->fund_distributions->delete;
+
+                for my $distribution (@$fund_distributions) {
+                    delete $distribution->{fund};
+                    delete $distribution->{currency};
+                    delete $distribution->{taxIncluded};
+                    $self->_result->add_to_acq_orderline_fund_distributions($distribution);
+                }
+            }
+        );
+    }
+    my $fund_distributions_rs = $self->_result->acq_orderline_fund_distributions;
+    return Koha::Acquisition::OrderManagement::OrderlineFundDistributions->_new_from_dbic($fund_distributions_rs);
 }
 
 =head2 Internal methods

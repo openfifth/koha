@@ -1,4 +1,4 @@
-package Koha::Acquisition::OrderManagement::OrderlineManagers;
+package Koha::Acquisition::OrderManagement::OrderlineFundDistribution;
 
 # Copyright 2024 PTFS Europe
 
@@ -18,13 +18,14 @@ package Koha::Acquisition::OrderManagement::OrderlineManagers;
 # along with Koha; if not, see <http://www.gnu.org/licenses>.
 
 use Modern::Perl;
-use base qw(Koha::Objects);
+use base qw(Koha::Object);
 
-use Koha::Acquisition::OrderManagement::OrderlineManager;
+use Mojo::JSON qw(decode_json);
+use JSON       qw ( encode_json );
 
 =head1 NAME
 
-Koha::Acquisition::OrderManagement::OrderlineManagers object set class
+Koha::Acquisition::OrderManagement::OrderlineFundDistribution Object class
 
 =head1 API
 
@@ -37,15 +38,7 @@ Koha::Acquisition::OrderManagement::OrderlineManagers object set class
 =cut
 
 sub _type {
-    return 'AcqOrderlineManager';
-}
-
-=head3 object_class
-
-=cut
-
-sub object_class {
-    return 'Koha::Acquisition::OrderManagement::OrderlineManager';
+    return 'AcqOrderlineFundDistribution';
 }
 
 1;

@@ -1,4 +1,4 @@
-package Koha::Acquisition::OrderManagement::OrderlineManagers;
+package Koha::Acquisition::OrderManagement::OrderlineFundDistributions;
 
 # Copyright 2024 PTFS Europe
 
@@ -20,11 +20,11 @@ package Koha::Acquisition::OrderManagement::OrderlineManagers;
 use Modern::Perl;
 use base qw(Koha::Objects);
 
-use Koha::Acquisition::OrderManagement::OrderlineManager;
+use Koha::Acquisition::OrderManagement::OrderlineFundDistributions;
 
 =head1 NAME
 
-Koha::Acquisition::OrderManagement::OrderlineManagers object set class
+Koha::Acquisition::OrderManagement::OrderlineFundDistributions object set class
 
 =head1 API
 
@@ -37,7 +37,7 @@ Koha::Acquisition::OrderManagement::OrderlineManagers object set class
 =cut
 
 sub _type {
-    return 'AcqOrderlineManager';
+    return 'AcqOrderlineFundDistribution';
 }
 
 =head3 object_class
@@ -45,7 +45,7 @@ sub _type {
 =cut
 
 sub object_class {
-    return 'Koha::Acquisition::OrderManagement::OrderlineManager';
+    return 'Koha::Acquisition::OrderManagement::OrderlineFundDistributions';
 }
 
 1;

@@ -449,7 +449,6 @@ export default {
                         newRelationshipDefaultAttrs: {
                             type: "object",
                             value: {
-                                orderline_id: null,
                                 fund_id: null,
                                 percentage: null,
                                 distributed_amount_oc: null,
@@ -457,8 +456,8 @@ export default {
                                 distributed_amount: null,
                                 tax_rate: null,
                                 tax_value: null,
-                                distibuted_amount_tax_excluded: null,
-                                distibuted_amount_tax_included: null,
+                                distributed_amount_tax_excluded: null,
+                                distributed_amount_tax_included: null,
                             },
                         },
                         resource: {
@@ -659,6 +658,7 @@ export default {
             delete orderline.vendor;
             delete orderline.calculated_item_costs;
             delete orderline.discount;
+            delete orderline.totalDistributedAmount;
 
             if (orderline.quantity_ordered === null) {
                 // Throw error if create_items === "ordering" and none created

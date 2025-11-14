@@ -93,7 +93,7 @@ tax rate on ordering
 
 tax value on ordering
 
-=head2 distibuted_amount_tax_excluded
+=head2 distributed_amount_tax_excluded
 
   data_type: 'decimal'
   is_nullable: 0
@@ -101,7 +101,7 @@ tax value on ordering
 
 distributed amount minus tax
 
-=head2 distibuted_amount_tax_included
+=head2 distributed_amount_tax_included
 
   data_type: 'decimal'
   is_nullable: 0
@@ -130,9 +130,9 @@ __PACKAGE__->add_columns(
   { data_type => "decimal", is_nullable => 0, size => [6, 4] },
   "tax_value",
   { data_type => "decimal", is_nullable => 0, size => [28, 6] },
-  "distibuted_amount_tax_excluded",
+  "distributed_amount_tax_excluded",
   { data_type => "decimal", is_nullable => 0, size => [28, 6] },
-  "distibuted_amount_tax_included",
+  "distributed_amount_tax_included",
   { data_type => "decimal", is_nullable => 0, size => [28, 6] },
 );
 
@@ -181,9 +181,25 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-08-18 10:28:31
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:kI+KTDD+vNCR5zgmek+d9g
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-11-14 17:14:49
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:L1uYrDxWoS9W3nUGjkC7OA
 
+
+=head2 koha_object_class
+
+=cut
+
+sub koha_object_class {
+    'Koha::Acquisition::OrderManagement::OrderlineFundDistribution';
+}
+
+=head2 koha_objects_class
+
+=cut
+
+sub koha_objects_class {
+    'Koha::Acquisition::OrderManagement::OrderlineFundDistributions';
+}
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration
 1;

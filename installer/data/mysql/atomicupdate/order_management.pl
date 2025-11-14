@@ -114,8 +114,8 @@ return {
                 `distributed_amount` decimal(28,6) NOT NULL COMMENT 'distribution amount in the active currency',
                 `tax_rate` decimal(6,4) NOT NULL COMMENT 'tax rate on ordering',
                 `tax_value` decimal(28,6) NOT NULL COMMENT 'tax value on ordering',
-                `distibuted_amount_tax_excluded` decimal(28,6) NOT NULL COMMENT 'distributed amount minus tax',
-                `distibuted_amount_tax_included` decimal(28,6) NOT NULL COMMENT 'distributed amount including tax',
+                `distributed_amount_tax_excluded` decimal(28,6) NOT NULL COMMENT 'distributed amount minus tax',
+                `distributed_amount_tax_included` decimal(28,6) NOT NULL COMMENT 'distributed amount including tax',
                 PRIMARY KEY (`orderline_fund_distribution_id`),
                 FOREIGN KEY (`orderline_id`) REFERENCES `acq_orderlines` (`orderline_id`),
                 FOREIGN KEY (`fund_id`) REFERENCES `funds` (`fund_id`)
