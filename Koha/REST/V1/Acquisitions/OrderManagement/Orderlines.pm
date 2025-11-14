@@ -77,7 +77,6 @@ sub add {
 
         my $body = $c->req->json;
 
-        #calculated_item_costs
         #biblio
         #items
         #extended_attributes
@@ -85,19 +84,24 @@ sub add {
         #patrons_to_notify
         #managed_by
 
-        delete $body->{calculated_item_costs};
         delete $body->{biblio};
         delete $body->{extended_attributes};
         delete $body->{fund_distributions};
         delete $body->{patrons_to_notify};
         delete $body->{managed_by};
 
+        my $extended_attributes = delete $body->{extended_attributes} // [];
+
         $body->{status}         = "new";
         $body->{payment_status} = "pending";
 
         my $orderline = Koha::Acquisition::OrderManagement::Orderline->new_from_api($body)->store->discard_changes;
-        $c->res->headers->location( $c->req->url->to_string . '/' . $orderline->orderline_id );
 
+        my @extended_attributes =
+            map { { 'id' => $_->{field_id}, 'value' => $_->{value} } } @{$extended_attributes};
+        $orderline->extended_attributes( \@extended_attributes );
+
+        $c->res->headers->location( $c->req->url->to_string . '/' . $orderline->orderline_id );
         return $c->render(
             status  => 201,
             openapi => $c->objects->to_api($orderline)
