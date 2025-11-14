@@ -941,6 +941,21 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 acq_orderline_users
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::AcqOrderlineUser>
+
+=cut
+
+__PACKAGE__->has_many(
+  "acq_orderline_users",
+  "Koha::Schema::Result::AcqOrderlineUser",
+  { "foreign.borrowernumber" => "self.borrowernumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 acq_orderlines
 
 Type: has_many
@@ -2266,6 +2281,16 @@ Composing rels: L</course_instructors> -> course
 
 __PACKAGE__->many_to_many("courses", "course_instructors", "course");
 
+=head2 orderlines
+
+Type: many_to_many
+
+Composing rels: L</acq_orderline_users> -> orderline
+
+=cut
+
+__PACKAGE__->many_to_many("orderlines", "acq_orderline_users", "orderline");
+
 =head2 ordernumbers
 
 Type: many_to_many
@@ -2287,8 +2312,8 @@ Composing rels: L</user_permissions> -> permission
 __PACKAGE__->many_to_many("permissions", "user_permissions", "permission");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-10-29 16:44:27
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:SSJcjPvlr82qecmbk1Q8iA
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-11-14 11:18:01
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:6mhQqDXQeqP9GrLiP2zqaQ
 
 __PACKAGE__->belongs_to(
     "library",
@@ -2355,4 +2380,5 @@ sub koha_object_class {
     'Koha::Patron';
 }
 
+# You can replace this text with custom code or comments, and it will be preserved on regeneration
 1;

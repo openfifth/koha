@@ -491,6 +491,21 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 acq_orderline_users
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::AcqOrderlineUser>
+
+=cut
+
+__PACKAGE__->has_many(
+  "acq_orderline_users",
+  "Koha::Schema::Result::AcqOrderlineUser",
+  { "foreign.orderline_id" => "self.orderline_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 biblionumber
 
 Type: belongs_to
@@ -631,9 +646,19 @@ __PACKAGE__->belongs_to(
   },
 );
 
+=head2 borrowernumbers
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-08-18 10:28:31
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:y/FAK75NVbVD4wITu3HDVg
+Type: many_to_many
+
+Composing rels: L</acq_orderline_users> -> borrowernumber
+
+=cut
+
+__PACKAGE__->many_to_many("borrowernumbers", "acq_orderline_users", "borrowernumber");
+
+
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-11-14 11:14:26
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:oRke9OXrch0I6VEa+uL1vg
 
 
 =head2 koha_object_class
@@ -660,7 +685,7 @@ __PACKAGE__->has_many(
         my ($args) = @_;
 
         return {
-            "$args->{foreign_alias}.record_id" => { -ident => "$args->{self_alias}.id" },
+            "$args->{foreign_alias}.record_id" => { -ident => "$args->{self_alias}.orderline_id" },
 
             "$args->{foreign_alias}.field_id" =>
                 { -in => \'(SELECT id FROM additional_fields WHERE tablename LIKE "acq_orderlines")' },
@@ -676,7 +701,7 @@ __PACKAGE__->has_many(
         my ($args) = @_;
 
         return {
-            "$args->{foreign_alias}.record_id" => { -ident => "$args->{self_alias}.id" },
+            "$args->{foreign_alias}.record_id" => { -ident => "$args->{self_alias}.orderline_id" },
 
             "$args->{foreign_alias}.field_id" =>
                 { -in => \'(SELECT id FROM additional_fields WHERE tablename LIKE "acq_orderlines")' },
