@@ -85,17 +85,18 @@ sub add {
         #managed_by
 
         delete $body->{biblio};
-        delete $body->{extended_attributes};
         delete $body->{fund_distributions};
-        delete $body->{patrons_to_notify};
         delete $body->{managed_by};
 
         my $extended_attributes = delete $body->{extended_attributes} // [];
+        my $patrons_to_notify   = delete $body->{patrons_to_notify}   // [];
 
         $body->{status}         = "new";
         $body->{payment_status} = "pending";
 
         my $orderline = Koha::Acquisition::OrderManagement::Orderline->new_from_api($body)->store->discard_changes;
+
+        $orderline->add_patrons_to_notify( { patrons_to_notify => $patrons_to_notify } );
 
         my @extended_attributes =
             map { { 'id' => $_->{field_id}, 'value' => $_->{value} } } @{$extended_attributes};
