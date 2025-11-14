@@ -276,3 +276,286 @@ describe("ILL Batches", () => {
         cy.get("#identifier-table_wrapper").should("not.be.visible");
     });
 });
+
+describe("AutoILLBackendPriority syspref", () => {
+    let original_plugin_restricted;
+    let kohaconf = "/etc/koha/sites/kohadev/koha-conf.xml";
+    beforeEach(() => {
+        cy.login();
+        cy.task("query", {
+            sql: "SELECT value FROM systempreferences WHERE variable='ILLModule'",
+        }).then(rows => {
+            cy.wrap(rows[0].value).as("syspref_ILLModule");
+        });
+        cy.set_syspref("ILLModule", 1);
+        cy.task("query", {
+            sql: "SELECT value FROM systempreferences WHERE variable='AutoILLBackendPriority'",
+        }).then(rows => {
+            cy.wrap(rows[0].value).as("syspref_AutoILLBackendPriority");
+        });
+        cy.set_syspref("AutoILLBackendPriority", "PluginBackend");
+        cy.task("readXmlElementValue", {
+            filePath: kohaconf,
+            element: "plugins_restricted",
+        }).then(value => {
+            original_plugin_restricted = value;
+            if (value == "1") {
+                cy.task("modifyXmlElement", {
+                    filePath: kohaconf,
+                    element: "plugins_restricted",
+                    value: "0",
+                });
+            }
+        });
+        cy.title().should("eq", "Koha staff interface");
+        cy.get("a.icon_administration").contains("Koha administration").click();
+        cy.get("a").contains("Manage plugins").click();
+        cy.get("a#upload_plugin").contains("Upload plugin").click();
+
+        cy.get("#uploadfile").click();
+        cy.get("#uploadfile").selectFile(
+            "t/cypress/fixtures/koha-plugin-ill-metadata-enrichment.kpz"
+        );
+        cy.get("input").contains("Upload").click();
+
+        // Install dummy backend plugin compatibly with AutoILLBackendPriority and ILL batches
+        cy.visit("/cgi-bin/koha/plugins/plugins-home.pl");
+        cy.get("a#upload_plugin").contains("Upload plugin").click();
+        cy.get("#uploadfile").click();
+        cy.get("#uploadfile").selectFile(
+            "t/cypress/fixtures/koha-plugin-ill-backend.kpz"
+        );
+        cy.get("input").contains("Upload").click();
+
+        cy.intercept("GET", "/api/v1/ill/batchstatuses", {
+            statusCode: 200,
+            body: batchstatuses,
+        }).as("get-batchstatuses");
+    });
+    afterEach(function () {
+        //Restore ILLModule sys pref original value
+        cy.set_syspref("ILLModule", this.syspref_ILLModule);
+        // Restore AutoILLBackendPriority original value
+        cy.set_syspref(
+            "AutoILLBackendPriority",
+            this.syspref_AutoILLBackendPriority
+        );
+        //Restore plugins_restricted original value
+        cy.task("modifyXmlElement", {
+            filePath: kohaconf,
+            element: "plugins_restricted",
+            value: original_plugin_restricted,
+        });
+        //Clean-up created test batches
+        cy.task("query", {
+            sql: "DELETE from illbatches",
+        });
+        //Clean-up installed plugin(s)
+        cy.task("query", {
+            sql: "DELETE from plugin_data",
+        });
+        cy.task("query", {
+            sql: "DELETE from plugin_methods",
+        });
+    });
+
+    it("AutoILLBackendPriority: Backend error", function () {
+        // ILL toolbar
+        cy.visit("/cgi-bin/koha/ill/ill-requests.pl");
+        cy.get("#ill-batch-backend-dropdown").should("not.exist");
+        cy.get(".ill-toolbar a.btn-default")
+            .contains("New ILL requests batch")
+            .click();
+        cy.wait("@get-batchstatuses");
+
+        // Modal
+        cy.get("#ill-batch-modal").should("be.visible");
+        cy.get("#ill-batch-modal #button_create_batch")
+            .should("exist")
+            .and("be.disabled");
+
+        // Create a batch
+        cy.get("#ill-batch-modal #name").type("second test batch");
+        cy.get("#ill-batch-modal #batchcardnumber").type("42");
+        cy.get("#ill-batch-modal #branchcode").select("Centerville");
+        cy.get("#ill-batch-modal #button_create_batch")
+            .should("exist")
+            .and("not.be.disabled");
+        cy.get("#ill-batch-modal #button_create_batch").click();
+        cy.get("#ill-batch-modal #add_batch_items").should("be.visible");
+
+        // Add identifiers + Mock plugin (pubmedid) API responses
+        let pubmedid = "123";
+        cy.intercept(
+            "GET",
+            "/api/v1/contrib/pubmed/esummary?pmid=" + pubmedid,
+            {
+                statusCode: 200,
+                body: pubmedid_metadata_response,
+            }
+        ).as("get-pubmedid-metadata");
+        cy.intercept("POST", "/api/v1/contrib/pubmed/parse_to_ill", {
+            statusCode: 200,
+            body: parse_to_ill_response,
+        }).as("get-parse_to_ill");
+        cy.intercept(
+            "GET",
+            "/api/v1/contrib/pluginbackend/ill_backend_availability_pluginbackend*",
+            {
+                statusCode: 404,
+                body: {
+                    error: "Provided ISBN is not available in PluginBackend",
+                },
+            }
+        ).as("get-backend_availability_response");
+
+        cy.get("#ill-batch-modal #identifiers_input").type(pubmedid);
+        cy.get("#ill-batch-modal #process-button")
+            .contains("Process identifiers")
+            .click();
+        cy.wait("@get-pubmedid-metadata");
+        cy.wait("@get-parse_to_ill");
+        cy.wait("@get-backend_availability_response");
+        cy.get("#identifier-table .dt-column-title")
+            .contains("Auto backend")
+            .should("exist");
+        cy.get("#ill-batch-modal #create-requests-button").should("exist");
+
+        //Plugin backend came back with error, Standard should be checked
+        cy.get("input[name='auto_backend_0']").first().should("not.be.checked");
+        cy.get("input[name='auto_backend_0']").eq(1).should("be.checked");
+    });
+
+    it("AutoILLBackendPriority: Backend warning", function () {
+        // ILL toolbar
+        cy.visit("/cgi-bin/koha/ill/ill-requests.pl");
+        cy.get("#ill-batch-backend-dropdown").should("not.exist");
+        cy.get(".ill-toolbar a.btn-default")
+            .contains("New ILL requests batch")
+            .click();
+        cy.wait("@get-batchstatuses");
+
+        // Modal
+        cy.get("#ill-batch-modal").should("be.visible");
+        cy.get("#ill-batch-modal #button_create_batch")
+            .should("exist")
+            .and("be.disabled");
+
+        // Create a batch
+        cy.get("#ill-batch-modal #name").type("second test batch");
+        cy.get("#ill-batch-modal #batchcardnumber").type("42");
+        cy.get("#ill-batch-modal #branchcode").select("Centerville");
+        cy.get("#ill-batch-modal #button_create_batch")
+            .should("exist")
+            .and("not.be.disabled");
+        cy.get("#ill-batch-modal #button_create_batch").click();
+        cy.get("#ill-batch-modal #add_batch_items").should("be.visible");
+
+        // Add identifiers + Mock plugin (pubmedid) API responses
+        let pubmedid = "123";
+        cy.intercept(
+            "GET",
+            "/api/v1/contrib/pubmed/esummary?pmid=" + pubmedid,
+            {
+                statusCode: 200,
+                body: pubmedid_metadata_response,
+            }
+        ).as("get-pubmedid-metadata");
+        cy.intercept("POST", "/api/v1/contrib/pubmed/parse_to_ill", {
+            statusCode: 200,
+            body: parse_to_ill_response,
+        }).as("get-parse_to_ill");
+        cy.intercept(
+            "GET",
+            "/api/v1/contrib/pluginbackend/ill_backend_availability_pluginbackend*",
+            {
+                statusCode: 200,
+                body: {
+                    warning:
+                        "May be placed but will have to go through human verification",
+                },
+            }
+        ).as("get-backend_availability_response");
+
+        cy.get("#ill-batch-modal #identifiers_input").type(pubmedid);
+        cy.get("#ill-batch-modal #process-button")
+            .contains("Process identifiers")
+            .click();
+        cy.wait("@get-pubmedid-metadata");
+        cy.wait("@get-parse_to_ill");
+        cy.wait("@get-backend_availability_response");
+        cy.get("#identifier-table .dt-column-title")
+            .contains("Auto backend")
+            .should("exist");
+        cy.get("#ill-batch-modal #create-requests-button").should("exist");
+
+        //Plugin backend came back with warning, Standard should be checked
+        cy.get("input[name='auto_backend_0']").first().should("not.be.checked");
+        cy.get("input[name='auto_backend_0']").eq(1).should("be.checked");
+    });
+
+    it("AutoILLBackendPriority: Backend success", function () {
+        // ILL toolbar
+        cy.visit("/cgi-bin/koha/ill/ill-requests.pl");
+        cy.get("#ill-batch-backend-dropdown").should("not.exist");
+        cy.get(".ill-toolbar a.btn-default")
+            .contains("New ILL requests batch")
+            .click();
+        cy.wait("@get-batchstatuses");
+
+        // Modal
+        cy.get("#ill-batch-modal").should("be.visible");
+        cy.get("#ill-batch-modal #button_create_batch")
+            .should("exist")
+            .and("be.disabled");
+
+        // Create a batch
+        cy.get("#ill-batch-modal #name").type("second test batch");
+        cy.get("#ill-batch-modal #batchcardnumber").type("42");
+        cy.get("#ill-batch-modal #branchcode").select("Centerville");
+        cy.get("#ill-batch-modal #button_create_batch")
+            .should("exist")
+            .and("not.be.disabled");
+        cy.get("#ill-batch-modal #button_create_batch").click();
+        cy.get("#ill-batch-modal #add_batch_items").should("be.visible");
+
+        // Add identifiers + Mock plugin (pubmedid) API responses
+        let pubmedid = "123";
+        cy.intercept(
+            "GET",
+            "/api/v1/contrib/pubmed/esummary?pmid=" + pubmedid,
+            {
+                statusCode: 200,
+                body: pubmedid_metadata_response,
+            }
+        ).as("get-pubmedid-metadata");
+        cy.intercept("POST", "/api/v1/contrib/pubmed/parse_to_ill", {
+            statusCode: 200,
+            body: parse_to_ill_response,
+        }).as("get-parse_to_ill");
+        cy.intercept(
+            "GET",
+            "/api/v1/contrib/pluginbackend/ill_backend_availability_pluginbackend*",
+            {
+                statusCode: 200,
+                body: { success: "" },
+            }
+        ).as("get-backend_availability_response");
+
+        cy.get("#ill-batch-modal #identifiers_input").type(pubmedid);
+        cy.get("#ill-batch-modal #process-button")
+            .contains("Process identifiers")
+            .click();
+        cy.wait("@get-pubmedid-metadata");
+        cy.wait("@get-parse_to_ill");
+        cy.wait("@get-backend_availability_response");
+        cy.get("#identifier-table .dt-column-title")
+            .contains("Auto backend")
+            .should("exist");
+        cy.get("#ill-batch-modal #create-requests-button").should("exist");
+
+        //Plugin backend came back with success, PluginBackend should be checked
+        cy.get("input[name='auto_backend_0']").first().should("be.checked");
+        cy.get("input[name='auto_backend_0']").eq(1).should("not.be.checked");
+    });
+});
