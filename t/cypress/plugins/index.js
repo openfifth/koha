@@ -26,6 +26,8 @@ const { getBasicAuthHeader } = require("./auth.js");
 
 const { query } = require("./db.js");
 
+const { modifyXmlElement, readXmlElementValue } = require("./xml.js");
+
 const { apiGet, apiPost, apiPut, apiDelete } = require("./api-client.js");
 
 /**
@@ -52,6 +54,7 @@ const { apiGet, apiPost, apiPut, apiDelete } = require("./api-client.js");
  * - API Access: apiGet, apiPost, apiPut, apiDelete
  * - Database Access: query
  * - Authentication: getBasicAuthHeader
+ * - XML files Access: modifyXmlElement, readXmlElementValue
  *
  * @example
  * // Usage in Cypress tests
@@ -104,6 +107,8 @@ module.exports = (on, config) => {
         },
         deleteSampleObjects,
         query,
+        modifyXmlElement,
+        readXmlElementValue,
 
         apiGet(args) {
             return apiGet({ ...args, baseUrl, authHeader });
