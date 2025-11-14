@@ -872,6 +872,7 @@ table {
         thead {
             tr {
                 th {
+                    vertical-align: middle;
 
                     &.dt-orderable-asc span.dt-column-order::before,
                     &.dt-ordering-asc span.dt-column-order::before,
@@ -891,14 +892,6 @@ table {
                     &.dt-orderable-desc span.dt-column-order::after,
                     &.dt-ordering-desc span.dt-column-order::after {
                         content: "\f0d7"; /* fa-cart-down */
-                    }
-
-                    &.dt-orderable-asc,
-                    &.dt-orderable-desc,
-                    &.dt-ordering-asc,
-                    &.dt-ordering-desc {
-                        padding-right: 30px;
-                        position: relative;
                     }
 
                     span.dt-column-order::before,
@@ -935,6 +928,20 @@ table {
                     &.dt-ordering-desc span.dt-column-order::after {
                         color: #006100;
                         opacity: 1;
+                    }
+
+                    div {
+                        &.dt-column-footer,
+                        &.dt-column-header {
+                            align-items: center;
+                            display: flex;
+                            gap: 4px;
+                            justify-content: space-between;
+
+                            span.dt-column-title {
+                                flex-grow: 1;
+                            }
+                        }
                     }
                 }
             }
