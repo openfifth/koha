@@ -491,6 +491,21 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 acq_orderline_managers
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::AcqOrderlineManager>
+
+=cut
+
+__PACKAGE__->has_many(
+  "acq_orderline_managers",
+  "Koha::Schema::Result::AcqOrderlineManager",
+  { "foreign.orderline_id" => "self.orderline_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 acq_orderline_users
 
 Type: has_many
@@ -650,15 +665,25 @@ __PACKAGE__->belongs_to(
 
 Type: many_to_many
 
+Composing rels: L</acq_orderline_managers> -> borrowernumber
+
+=cut
+
+__PACKAGE__->many_to_many("borrowernumbers", "acq_orderline_managers", "borrowernumber");
+
+=head2 borrowernumbers_2s
+
+Type: many_to_many
+
 Composing rels: L</acq_orderline_users> -> borrowernumber
 
 =cut
 
-__PACKAGE__->many_to_many("borrowernumbers", "acq_orderline_users", "borrowernumber");
+__PACKAGE__->many_to_many("borrowernumbers_2s", "acq_orderline_users", "borrowernumber");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-11-14 11:14:26
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:oRke9OXrch0I6VEa+uL1vg
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-11-14 12:39:42
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:bO87Ti07Y+51MFZotj3dAw
 
 
 =head2 koha_object_class

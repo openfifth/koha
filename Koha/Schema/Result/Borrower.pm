@@ -941,6 +941,21 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 acq_orderline_managers
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::AcqOrderlineManager>
+
+=cut
+
+__PACKAGE__->has_many(
+  "acq_orderline_managers",
+  "Koha::Schema::Result::AcqOrderlineManager",
+  { "foreign.borrowernumber" => "self.borrowernumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 acq_orderline_users
 
 Type: has_many
@@ -2285,11 +2300,21 @@ __PACKAGE__->many_to_many("courses", "course_instructors", "course");
 
 Type: many_to_many
 
+Composing rels: L</acq_orderline_managers> -> orderline
+
+=cut
+
+__PACKAGE__->many_to_many("orderlines", "acq_orderline_managers", "orderline");
+
+=head2 orderlines_2s
+
+Type: many_to_many
+
 Composing rels: L</acq_orderline_users> -> orderline
 
 =cut
 
-__PACKAGE__->many_to_many("orderlines", "acq_orderline_users", "orderline");
+__PACKAGE__->many_to_many("orderlines_2s", "acq_orderline_users", "orderline");
 
 =head2 ordernumbers
 
@@ -2312,8 +2337,8 @@ Composing rels: L</user_permissions> -> permission
 __PACKAGE__->many_to_many("permissions", "user_permissions", "permission");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-11-14 11:18:01
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:6mhQqDXQeqP9GrLiP2zqaQ
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-11-14 12:42:57
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:8eJk0eVfO+7LhuA9F+KVbQ
 
 __PACKAGE__->belongs_to(
     "library",

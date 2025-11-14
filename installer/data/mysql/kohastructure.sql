@@ -245,6 +245,23 @@ FOREIGN KEY (`fund_id`) REFERENCES `funds` (`fund_id`)
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `acq_orderline_managers`
+--
+
+DROP TABLE IF EXISTS `acq_orderline_managers`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+
+CREATE TABLE `acq_orderline_managers` (
+`orderline_id` INT(11) NOT NULL COMMENT 'orderline the user is for',
+`borrowernumber` INT(11) NOT NULL COMMENT 'the user',
+PRIMARY KEY (`orderline_id`,`borrowernumber`),
+FOREIGN KEY (`orderline_id`) REFERENCES `acq_orderlines` (`orderline_id`),
+FOREIGN KEY (`borrowernumber`) REFERENCES `borrowers` (`borrowernumber`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `acq_orderline_users`
 --
 

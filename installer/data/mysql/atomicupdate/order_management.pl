@@ -141,9 +141,27 @@ return {
             }
             );
 
-            say_success( $out, "Added new table 'acq_orderline_fund_distribution'" );
+            say_success( $out, "Added new table 'acq_orderline_users'" );
         } else {
-            say_info( $out, "Table 'acq_orderline_fund_distribution' already exists" );
+            say_info( $out, "Table 'acq_orderline_users' already exists" );
+        }
+
+        unless ( TableExists('acq_orderline_managers') ) {
+            $dbh->do(
+                q{
+                CREATE TABLE `acq_orderline_managers` (
+                `orderline_id` INT(11) NOT NULL COMMENT 'orderline the user is for',
+                `borrowernumber` INT(11) NOT NULL COMMENT 'the user',
+                PRIMARY KEY (`orderline_id`,`borrowernumber`),
+                FOREIGN KEY (`orderline_id`) REFERENCES `acq_orderlines` (`orderline_id`),
+                FOREIGN KEY (`borrowernumber`) REFERENCES `borrowers` (`borrowernumber`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            }
+            );
+
+            say_success( $out, "Added new table 'acq_orderline_managers'" );
+        } else {
+            say_info( $out, "Table 'acq_orderline_managers' already exists" );
         }
 
         $dbh->do(

@@ -21,6 +21,7 @@ use Modern::Perl;
 use base qw(Koha::Object::Mixin::AdditionalFields Koha::Object);
 
 use Koha::Acquisition::OrderManagement::OrderlineUser;
+use Koha::Acquisition::OrderManagement::OrderlineManager;
 
 =head1 NAME
 
@@ -30,22 +31,35 @@ Koha::Acquisition::OrderManagement::Orderline Object class
 
 =head2 Class methods
 
-=head3 add_patrons_to_notify
+=head3 add_patron_relationships
 
 =cut
 
-sub add_patrons_to_notify {
+sub add_patron_relationships {
     my ( $self, $args ) = @_;
 
     my $patrons_to_notify = $args->{patrons_to_notify};
+    my $managed_by        = $args->{managed_by};
 
-    foreach my $patron (@$patrons_to_notify) {
-        Koha::Acquisition::OrderManagement::OrderlineUser->new(
-            {
-                orderline_id   => $self->orderline_id,
-                borrowernumber => $patron
-            }
-        )->store;
+    if ($patrons_to_notify) {
+        foreach my $patron (@$patrons_to_notify) {
+            Koha::Acquisition::OrderManagement::OrderlineUser->new(
+                {
+                    orderline_id   => $self->orderline_id,
+                    borrowernumber => $patron
+                }
+            )->store;
+        }
+    }
+    if ($managed_by) {
+        foreach my $patron (@$managed_by) {
+            Koha::Acquisition::OrderManagement::OrderlineManager->new(
+                {
+                    orderline_id   => $self->orderline_id,
+                    borrowernumber => $patron
+                }
+            )->store;
+        }
     }
 }
 
