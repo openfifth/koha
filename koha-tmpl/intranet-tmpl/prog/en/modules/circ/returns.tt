@@ -1963,9 +1963,8 @@
                 ],
             });
 
-            // Debounce variables for RFID batch input
+            // Debounce variable for RFID batch input
             let debounceTimer;
-            let isReceivingRFIDInput = false;
 
             // Batch mode toggle functionality
             $("#batch-mode-toggle").on("change", function () {
@@ -2005,43 +2004,26 @@
 
             // Handle RFID input with debouncing
             $("#barcode").on("input paste", function (e) {
-                const currentValue = $(this).val();
-
-                // Clear any existing timer
-                clearTimeout(debounceTimer);
-
-                // Check if this looks like RFID batch input (contains newlines)
-                if (currentValue.includes("\n")) {
-                    isReceivingRFIDInput = true;
-
-                    // Auto-enable batch mode if not already enabled
-                    if (!$("#batch-mode-toggle").is(":checked")) {
-                        $("#batch-mode-toggle").prop("checked", true).trigger("change");
-                    }
-
-                    // Set a debounce timer to submit after RFID scanning finishes
+                clearTimeout(debounceTimer); // Clear any existing timer
+                if ($(this).val().match("\n$")) {
+                    // After a newline (in batch mode), set debounce timer
+                    // Form submits when there is no further input
                     debounceTimer = setTimeout(function () {
-                        isReceivingRFIDInput = false;
-                        ChangeBatchCheckinSettings();
                         $("#checkin-form").submit();
                     }, debounceInterval); // delay after last input
                 }
             });
 
-            // Prevent immediate form submission on Enter if receiving RFID input
+            // Only submit after Enter in single mode
             $("#barcode").on("keydown", function (e) {
-                if (e.which === 13 && isReceivingRFIDInput) {
+                if (e.which === 13 && !$("#batch-mode-toggle").prop("checked")) {
                     e.preventDefault();
-                    return false;
+                    $("#checkin-form").submit();
                 }
             });
 
-            // Prevent form submission during RFID input
             $("#checkin-form").on("submit", function (e) {
-                if (isReceivingRFIDInput) {
-                    e.preventDefault();
-                    return false;
-                }
+                ChangeBatchCheckinSettings();
             });
 
             if (!Koha.prefs.TransfersBlockCirc && Koha.prefs.AutomaticConfirmTransfer) {
