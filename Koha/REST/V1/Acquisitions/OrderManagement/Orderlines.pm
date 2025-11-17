@@ -74,37 +74,43 @@ sub add {
     my $c = shift->openapi->valid_input or return;
 
     return try {
+        Koha::Database->new->schema->txn_do(
+            sub {
 
-        my $body = $c->req->json;
+                my $body = $c->req->json;
 
-        #biblio
-        #items
-        #fund_distributions
+                #biblio
+                #items
+                #fund_distributions
 
-        delete $body->{biblio};
+                delete $body->{biblio};
 
-        my $extended_attributes = delete $body->{extended_attributes} // [];
-        my $patrons_to_notify   = delete $body->{patrons_to_notify}   // [];
-        my $managed_by          = delete $body->{managed_by}          // [];
-        my $fund_distributions  = delete $body->{fund_distributions}  // [];
+                my $extended_attributes = delete $body->{extended_attributes} // [];
+                my $patrons_to_notify   = delete $body->{patrons_to_notify}   // [];
+                my $managed_by          = delete $body->{managed_by}          // [];
+                my $fund_distributions  = delete $body->{fund_distributions}  // [];
 
-        $body->{status}         = "new";
-        $body->{payment_status} = "pending";
+                $body->{status}         = "new";
+                $body->{payment_status} = "pending";
 
-        my $orderline = Koha::Acquisition::OrderManagement::Orderline->new_from_api($body)->store->discard_changes;
+                my $orderline =
+                    Koha::Acquisition::OrderManagement::Orderline->new_from_api($body)->store->discard_changes;
 
-        $orderline->add_patron_relationships( { patrons_to_notify => $patrons_to_notify, managed_by => $managed_by } );
-        $orderline->fund_distributions($fund_distributions);
+                $orderline->add_patron_relationships(
+                    { patrons_to_notify => $patrons_to_notify, managed_by => $managed_by } );
+                $orderline->fund_distributions($fund_distributions);
 
-        my @extended_attributes =
-            map { { 'id' => $_->{field_id}, 'value' => $_->{value} } } @{$extended_attributes};
-        $orderline->extended_attributes( \@extended_attributes );
+                my @extended_attributes =
+                    map { { 'id' => $_->{field_id}, 'value' => $_->{value} } } @{$extended_attributes};
+                $orderline->extended_attributes( \@extended_attributes );
 
-        $c->res->headers->location( $c->req->url->to_string . '/' . $orderline->orderline_id );
-        return $c->render(
-            status  => 201,
-            openapi => $c->objects->to_api($orderline)
-        );
+                $c->res->headers->location( $c->req->url->to_string . '/' . $orderline->orderline_id );
+                return $c->render(
+                    status  => 201,
+                    openapi => $c->objects->to_api($orderline)
+                );
+            }
+        )
     } catch {
         return $c->unhandled_exception($_);
     };
