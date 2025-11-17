@@ -92,6 +92,13 @@
         description: Access forbidden
         schema:
           $ref: "../swagger.yaml#/definitions/error"
+      "409":
+        description: |
+          Conflict creating the resource. Possible `error_code` attribute values:
+
+          * `duplicate`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
       "500":
         description: |
           Internal server error. Possible `error_code` attribute values:

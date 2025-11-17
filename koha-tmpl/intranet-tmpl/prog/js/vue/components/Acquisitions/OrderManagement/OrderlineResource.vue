@@ -633,6 +633,139 @@ export default {
             },
         };
 
+        const handleAPIFormSubmission = (orderline, orderline_id) => {
+            if (orderline_id) {
+                const acq_client = APIClient.acquisition;
+                acq_client.orderlines.update(orderline, orderline_id).then(
+                    success => {
+                        baseResource.setMessage($__("Orderline updated"));
+                        baseResource.router.push({ name: "OrderlineList" });
+                    },
+                    error => {}
+                );
+            } else {
+                const acq_client = APIClient.acquisition;
+                acq_client.orderlines.create(orderline).then(
+                    success => {
+                        baseResource.setMessage($__("Orderline created"));
+                        baseResource.router.push({ name: "OrderlineList" });
+                    },
+                    error => {
+                        if (error.message === "bib_match") {
+                            const handleCheckboxes = (fields, key) => {
+                                const relevantKeys = Object.keys(fields).filter(
+                                    key =>
+                                        ![
+                                            "orderline",
+                                            "duplicate_biblio",
+                                        ].includes(key)
+                                );
+                                const valueOfCheckboxUsed = fields[key];
+                                relevantKeys.forEach(rk => {
+                                    if (valueOfCheckboxUsed && rk !== key) {
+                                        fields[rk] = false;
+                                    }
+                                });
+                            };
+                            baseResource.setConfirmationDialog(
+                                {
+                                    title: $__("Duplicate warning"),
+                                    message:
+                                        $__(
+                                            "The details you entered match an existing record in your catalog: "
+                                        ) +
+                                        `<a href='/cgi-bin/koha/catalogue/detail.pl?biblionumber=${error.duplicate_biblio.biblionumber}'>${error.duplicate_biblio.title}</a>`,
+                                    accept_label: $__("Select"),
+                                    cancel_label: $__("Cancel"),
+                                    inputs: [
+                                        {
+                                            name: "duplicate_biblio",
+                                            type: "hidden",
+                                            value: error.duplicate_biblio,
+                                        },
+                                        {
+                                            name: "orderline",
+                                            type: "hidden",
+                                            value: error.orderline,
+                                        },
+                                        {
+                                            name: "use_existing",
+                                            type: "checkbox",
+                                            label: $__("Use existing record"),
+                                            value: true,
+                                            onChange: fields => {
+                                                handleCheckboxes(
+                                                    fields,
+                                                    "use_existing"
+                                                );
+                                            },
+                                            hint: $__(
+                                                "Do not create a duplicate record. Add an order from the existing record in your catalog."
+                                            ),
+                                        },
+                                        {
+                                            name: "cancel",
+                                            type: "checkbox",
+                                            label: $__(
+                                                "Cancel and return to order"
+                                            ),
+                                            value: false,
+                                            onChange: fields => {
+                                                handleCheckboxes(
+                                                    fields,
+                                                    "cancel"
+                                                );
+                                            },
+                                            hint: $__(
+                                                "Return to the basket without making a new order."
+                                            ),
+                                        },
+                                        {
+                                            name: "create_new",
+                                            type: "checkbox",
+                                            label: $__("Create new record"),
+                                            value: false,
+                                            onChange: fields => {
+                                                handleCheckboxes(
+                                                    fields,
+                                                    "create_new"
+                                                );
+                                            },
+                                            hint: $__(
+                                                "Create a new record with the details you entered."
+                                            ),
+                                        },
+                                    ],
+                                    size: "modal-lg",
+                                },
+                                handleDuplicateBiblio
+                            );
+                        }
+                    }
+                );
+            }
+        };
+
+        const handleDuplicateBiblio = (confirmation, inputFields) => {
+            const {
+                duplicate_biblio,
+                orderline,
+                use_existing,
+                cancel,
+                create_new,
+            } = inputFields;
+
+            orderline.confirm_not_duplicate = true;
+            if (cancel) return;
+            if (create_new) {
+                handleAPIFormSubmission(orderline, orderline.orderline_id);
+            }
+            if (use_existing) {
+                orderline.biblionumber = duplicate_biblio.biblionumber;
+                handleAPIFormSubmission(orderline, orderline.orderline_id);
+            }
+        };
+
         const onFormSave = (e, orderlineToSave) => {
             e.preventDefault();
             // TODOs:
@@ -665,25 +798,7 @@ export default {
                 orderline.quantity_ordered = 1;
             }
 
-            if (orderline_id) {
-                const acq_client = APIClient.acquisition;
-                acq_client.orderlines.update(orderline, orderline_id).then(
-                    success => {
-                        baseResource.setMessage($__("Orderline updated"));
-                        baseResource.router.push({ name: "OrderlineList" });
-                    },
-                    error => {}
-                );
-            } else {
-                const acq_client = APIClient.acquisition;
-                acq_client.orderlines.create(orderline).then(
-                    success => {
-                        baseResource.setMessage($__("Orderline created"));
-                        baseResource.router.push({ name: "OrderlineList" });
-                    },
-                    error => {}
-                );
-            }
+            handleAPIFormSubmission(orderline, orderline_id);
         };
 
         return {

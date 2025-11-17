@@ -125,12 +125,12 @@ sub biblio {
             my ( $duplicate_biblionumber, $duplicate_title ) = FindDuplicate($record);
 
             if ($duplicate_biblionumber) {
-
-                # ACQTODO: Duplicate check in UI
+                Koha::Exceptions::DuplicateObject->throw($duplicate_biblionumber);
             }
         }
 
         my ( $biblionumber, $bibitemnum ) = AddBiblio( $record, '' );
+        $self->biblionumber($biblionumber)->store;
 
         #ACQTODO: Suggestion modification?
     }

@@ -73,20 +73,21 @@ sub get {
 sub add {
     my $c = shift->openapi->valid_input or return;
 
+    my $body           = $c->req->json;
+    my %orderline_copy = %$body;
+
+    #ACQTODO: items
+
+    my $extended_attributes   = delete $body->{extended_attributes}   // [];
+    my $patrons_to_notify     = delete $body->{patrons_to_notify}     // [];
+    my $managed_by            = delete $body->{managed_by}            // [];
+    my $fund_distributions    = delete $body->{fund_distributions}    // [];
+    my $biblio                = delete $body->{biblio}                // {};
+    my $confirm_not_duplicate = delete $body->{confirm_not_duplicate} // 0;
+
     return try {
         Koha::Database->new->schema->txn_do(
             sub {
-
-                my $body = $c->req->json;
-
-                #ACQTODO: items
-
-                my $extended_attributes   = delete $body->{extended_attributes}   // [];
-                my $patrons_to_notify     = delete $body->{patrons_to_notify}     // [];
-                my $managed_by            = delete $body->{managed_by}            // [];
-                my $fund_distributions    = delete $body->{fund_distributions}    // [];
-                my $biblio                = delete $body->{biblio}                // {};
-                my $confirm_not_duplicate = delete $body->{confirm_not_duplicate} // 0;
 
                 $body->{status}         = "new";
                 $body->{payment_status} = "pending";
@@ -97,7 +98,8 @@ sub add {
                 $orderline->add_patron_relationships(
                     { patrons_to_notify => $patrons_to_notify, managed_by => $managed_by } );
                 $orderline->fund_distributions($fund_distributions);
-                $orderline->biblio( { biblio_data => $biblio, confirm_not_duplicate => $confirm_not_duplicate } );
+                $orderline->biblio( { biblio_data => $biblio, confirm_not_duplicate => $confirm_not_duplicate } )
+                    unless $orderline->biblionumber;
 
                 my @extended_attributes =
                     map { { 'id' => $_->{field_id}, 'value' => $_->{value} } } @{$extended_attributes};
@@ -111,6 +113,19 @@ sub add {
             }
         )
     } catch {
+        if ( blessed $_ ) {
+            if ( $_->isa('Koha::Exceptions::DuplicateObject') ) {
+                my $duplicate_biblio = Koha::Biblios->find( $_->error );
+
+                return $c->render(
+                    status  => 409,
+                    openapi => {
+                        error     => "bib_match",      new_biblio     => $biblio, duplicate_biblio => $duplicate_biblio,
+                        orderline => \%orderline_copy, dialog_confirm => 1
+                    }
+                );
+            }
+        }
         return $c->unhandled_exception($_);
     };
 }
