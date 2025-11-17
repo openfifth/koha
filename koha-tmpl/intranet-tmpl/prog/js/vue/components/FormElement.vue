@@ -183,6 +183,9 @@
             @additional-fields-changed="additionalFieldsChanged"
         ></AdditionalFieldsEntry>
     </template>
+    <template v-else-if="attr.type == 'hidden'">
+        <input type="hidden" />
+    </template>
     <template v-else>
         <span>{{
             $__("Programming error: unknown type %s").format(attr.type)
