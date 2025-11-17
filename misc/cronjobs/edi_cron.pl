@@ -46,6 +46,14 @@ my $pidfile = "$logdir/edicron.pid";
 
 my $pid_handle = check_pidfile();
 
+# Pre-load all plugins to avoid transaction issues (Bug 36736)
+# This ensures plugin BEGIN blocks run before any transactions are started,
+# preventing connection resets that would break active transactions
+if ( C4::Context->config('enable_plugins') ) {
+    require Koha::Plugins;
+    Koha::Plugins->get_enabled_plugins();
+}
+
 my $schema = Koha::Database->new()->schema();
 
 my @edi_accts = $schema->resultset('VendorEdiAccount')->all();
