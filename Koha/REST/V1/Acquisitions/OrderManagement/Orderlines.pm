@@ -79,16 +79,14 @@ sub add {
 
                 my $body = $c->req->json;
 
-                #biblio
-                #items
-                #fund_distributions
+                #ACQTODO: items
 
-                delete $body->{biblio};
-
-                my $extended_attributes = delete $body->{extended_attributes} // [];
-                my $patrons_to_notify   = delete $body->{patrons_to_notify}   // [];
-                my $managed_by          = delete $body->{managed_by}          // [];
-                my $fund_distributions  = delete $body->{fund_distributions}  // [];
+                my $extended_attributes   = delete $body->{extended_attributes}   // [];
+                my $patrons_to_notify     = delete $body->{patrons_to_notify}     // [];
+                my $managed_by            = delete $body->{managed_by}            // [];
+                my $fund_distributions    = delete $body->{fund_distributions}    // [];
+                my $biblio                = delete $body->{biblio}                // {};
+                my $confirm_not_duplicate = delete $body->{confirm_not_duplicate} // 0;
 
                 $body->{status}         = "new";
                 $body->{payment_status} = "pending";
@@ -99,6 +97,7 @@ sub add {
                 $orderline->add_patron_relationships(
                     { patrons_to_notify => $patrons_to_notify, managed_by => $managed_by } );
                 $orderline->fund_distributions($fund_distributions);
+                $orderline->biblio( { biblio_data => $biblio, confirm_not_duplicate => $confirm_not_duplicate } );
 
                 my @extended_attributes =
                     map { { 'id' => $_->{field_id}, 'value' => $_->{value} } } @{$extended_attributes};

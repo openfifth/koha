@@ -19,6 +19,8 @@ package Koha::Util::MARC;
 
 use Modern::Perl;
 
+use C4::Biblio qw( GetMarcFromKohaField GetMarcStructure IsMarcStructureInternal );
+
 use constant OCLC_REGEX => qr/OCoLC/i;    # made it case insensitive, includes the various oclc suffixes too
 
 =head1 NAME
@@ -282,6 +284,56 @@ sub oclc_number {
             }
         )
     );
+}
+
+=head3 FillWithDefaultValues
+
+FillWithDefaultValues( $marc_record, $params );
+
+This will update the record with default value defined in the ACQ framework.
+For all existing fields, if a default value exists and there are no subfield, it will be created.
+If the field does not exist, it will be created too.
+
+If the parameter only_mandatory => 1 is passed via $params, only the mandatory
+defaults are being applied to the record.
+
+=cut
+
+sub FillWithDefaultValues {
+    my ( $record, $params ) = @_;
+    my $mandatory = $params->{only_mandatory};
+    my $tagslib   = GetMarcStructure( 1, 'ACQ', { unsafe => 1 } );
+    if ($tagslib) {
+        my ($itemfield) = GetMarcFromKohaField('items.itemnumber');
+        for my $tag ( sort keys %$tagslib ) {
+            next unless $tag;
+            next if $tag == $itemfield;
+            for my $subfield ( sort keys %{ $tagslib->{$tag} } ) {
+                next if IsMarcStructureInternal( $tagslib->{$tag}{$subfield} );
+                next if $mandatory && !$tagslib->{$tag}{$subfield}{mandatory};
+                my $defaultvalue = $tagslib->{$tag}{$subfield}{defaultvalue};
+                if ( defined $defaultvalue and $defaultvalue ne '' ) {
+                    my @fields = $record->field($tag);
+                    if (@fields) {
+                        for my $field (@fields) {
+                            if ( $field->is_control_field ) {
+                                $field->update($defaultvalue) if not defined $field->data;
+                            } elsif ( not defined $field->subfield($subfield) ) {
+                                $field->add_subfields( $subfield => $defaultvalue );
+                            }
+                        }
+                    } else {
+                        if ( $tag < 10 ) {    # is_control_field
+                            $record->insert_fields_ordered( MARC::Field->new( $tag, $defaultvalue ) );
+                        } else {
+                            $record->insert_fields_ordered(
+                                MARC::Field->new( $tag, '', '', $subfield => $defaultvalue ) );
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 1;

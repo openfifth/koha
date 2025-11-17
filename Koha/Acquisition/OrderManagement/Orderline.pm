@@ -23,6 +23,10 @@ use base qw(Koha::Object::Mixin::AdditionalFields Koha::Object);
 use Koha::Acquisition::OrderManagement::OrderlineUser;
 use Koha::Acquisition::OrderManagement::OrderlineManager;
 use Koha::Acquisition::OrderManagement::OrderlineFundDistributions;
+use Koha::Util::MARC;
+
+use C4::Biblio qw( AddBiblio TransformKohaToMarc );
+use C4::Search qw( FindDuplicate );
 
 =head1 NAME
 
@@ -88,6 +92,52 @@ sub fund_distributions {
     }
     my $fund_distributions_rs = $self->_result->acq_orderline_fund_distributions;
     return Koha::Acquisition::OrderManagement::OrderlineFundDistributions->_new_from_dbic($fund_distributions_rs);
+}
+
+=head3 biblio
+
+=cut
+
+sub biblio {
+    my ( $self, $args ) = @_;
+
+    my $biblio_data           = $args->{biblio_data};
+    my $confirm_not_duplicate = $args->{confirm_not_duplicate};
+
+    if ($biblio_data) {
+        my $record = TransformKohaToMarc(
+            {
+                "biblio.title"                 => $biblio_data->{title}            || '',
+                "biblio.author"                => $biblio_data->{author}           || '',
+                "biblio.seriestitle"           => $biblio_data->{series}           || '',
+                "biblioitems.isbn"             => $biblio_data->{isbn}             || '',
+                "biblioitems.ean"              => $biblio_data->{ean}              || '',
+                "biblioitems.publishercode"    => $biblio_data->{publisher_code}   || '',
+                "biblioitems.publicationyear"  => $biblio_data->{publicationyear}  || '',
+                "biblio.copyrightdate"         => $biblio_data->{publicationyear}  || '',
+                "biblioitems.itemtype"         => $biblio_data->{itemtype}         || '',
+                "biblioitems.editionstatement" => $biblio_data->{editionstatement} || '',
+            }
+        );
+        Koha::Util::MARC::FillWithDefaultValues($record);
+
+        if ( !$confirm_not_duplicate ) {
+            my ( $duplicate_biblionumber, $duplicate_title ) = FindDuplicate($record);
+
+            if ($duplicate_biblionumber) {
+
+                # ACQTODO: Duplicate check in UI
+            }
+        }
+
+        my ( $biblionumber, $bibitemnum ) = AddBiblio( $record, '' );
+
+        #ACQTODO: Suggestion modification?
+    }
+
+    my $rs = $self->_result->biblionumber;
+    return unless $rs;
+    return Koha::Biblio->_new_from_dbic($rs);
 }
 
 =head2 Internal methods
