@@ -295,6 +295,10 @@ export default {
                 }
                 return col;
             });
+            if (!props.instancedResource.tableOptions.hasOwnProperty("url")) {
+                props.instancedResource.tableOptions.url =
+                    props.instancedResource.table.resourceTableUrl;
+            }
             return props.instancedResource.tableOptions;
         });
 
