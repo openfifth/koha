@@ -177,13 +177,13 @@ export default {
                     },
                     tableColumnDefinition: {
                         title: $__("Summary"),
-                        data: "biblio",
-                        searchable: false,
-                        orderable: false,
+                        data: "biblio.title",
+                        searchable: true,
+                        orderable: true,
                         render(data, type, row, meta) {
                             return row.biblio
                                 ? '<a href="/cgi-bin/koha/catalogue/detail.pl?biblionumber=' +
-                                      row.biblio.biblionumber +
+                                      row.biblio.biblio_id +
                                       '" class="show">' +
                                       escape_str(row.biblio.title) +
                                       "</a>"
@@ -267,9 +267,9 @@ export default {
                     relationshipRequiredKey: "library_id",
                     tableColumnDefinition: {
                         title: $__("Managing library"),
-                        data: "managing_branch",
-                        searchable: false,
-                        orderable: false,
+                        data: "managing_library.name",
+                        searchable: true,
+                        orderable: true,
                         render(data, type, row, meta) {
                             return row.managing_library
                                 ? '<a href="/cgi-bin/koha/admin/branches.pl?op=view&branchcode=' +
@@ -330,7 +330,7 @@ export default {
                     ),
                     tableColumnDefinition: {
                         title: $__("Vendor"),
-                        data: "vendor_id",
+                        data: "vendor.name",
                         searchable: true,
                         orderable: true,
                         render: function (data, type, row, meta) {

@@ -735,5 +735,48 @@ __PACKAGE__->has_many(
     { cascade_copy => 0, cascade_delete => 0 },
 );
 
+
+=head2 biblio
+
+Type: belongs_to
+
+Related object: L<Koha::Schema::Result::Biblio>
+
+=cut
+
+__PACKAGE__->belongs_to(
+    "biblio",
+    "Koha::Schema::Result::Biblio",
+    { biblionumber => "biblionumber" },
+    {
+        is_deferrable => 1,
+        join_type     => "LEFT",
+        on_delete     => "RESTRICT",
+        on_update     => "RESTRICT",
+    },
+);
+
+
+=head2 managing_library
+
+Type: belongs_to
+
+Related object: L<Koha::Schema::Result::Branch>
+
+=cut
+
+__PACKAGE__->belongs_to(
+    "managing_library",
+    "Koha::Schema::Result::Branch",
+    { branchcode => "managing_branch" },
+    {
+        is_deferrable => 1,
+        join_type     => "LEFT",
+        on_delete     => "CASCADE",
+        on_update     => "CASCADE",
+    },
+);
+
+
 # You can replace this text with custom code or comments, and it will be preserved on regeneration
 1;
