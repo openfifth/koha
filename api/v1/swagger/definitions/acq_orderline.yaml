@@ -4,6 +4,7 @@ properties:
   orderline_id:
     type: number
     description: Unique identifier for the orderline
+    readOnly: true
   biblionumber:
     type:
       - number
@@ -193,6 +194,27 @@ properties:
       - array
       - "null"
     description: patrons who are able to manage the order
+  estimated_delivery_date:
+    type:
+     - string
+     - "null"
+    format: date-time
+  edi_line_item_id:
+    type:
+     - string
+     - "null"
+  edi_suppliers_reference_number:
+    type:
+     - string
+     - "null"
+  edi_suppliers_reference_qualifier:
+    type:
+     - string
+     - "null"
+  edi_suppliers_report:
+    type:
+     - string
+     - "null"
   fund_distributions:
     description: Fund distributions for the orderline
     type:
@@ -209,3 +231,17 @@ properties:
     type:
       - object
       - "null"
+  vendor:
+    description: Information about the vendor
+    type:
+      - object
+      - "null"
+  biblio:
+    description: Information about the biblio attached to the orderline
+    type:
+      - object
+      - "null"
+additionalProperties: false
+required:
+  - orderline_id
+  - quantity_ordered
