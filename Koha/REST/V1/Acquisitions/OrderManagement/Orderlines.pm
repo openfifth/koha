@@ -91,6 +91,8 @@ sub add {
 
                 $body->{status}         = "new";
                 $body->{payment_status} = "pending";
+                my $user = $c->stash('koha.user');
+                $body->{created_by} = $user->borrowernumber;
 
                 my $orderline =
                     Koha::Acquisition::OrderManagement::Orderline->new_from_api($body)->store->discard_changes;
