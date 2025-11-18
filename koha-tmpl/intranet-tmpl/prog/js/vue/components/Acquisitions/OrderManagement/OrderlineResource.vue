@@ -49,7 +49,8 @@ export default {
             },
             apiClient: APIClient.acquisition.orderlines,
             table: {
-                resourceTableUrl: APIClient.acquisition._baseURL + "orderlines",
+                resourceTableUrl:
+                    APIClient.acquisition.httpClient._baseURL + "orderlines",
             },
             i18n: {
                 deleteConfirmationMessage: $__(
@@ -66,7 +67,13 @@ export default {
             props,
             moduleStore: "acquisitionsStore",
             resourceAttrs: [
-                //TODO: orderline templates
+                //ACQTODO: orderline templates
+                {
+                    name: "orderline_id",
+                    label: $__("ID"),
+                    type: "text",
+                    hideIn: ["Form", "Show"],
+                },
                 {
                     name: "is_continuous",
                     group: $__("Order type"),
@@ -109,6 +116,7 @@ export default {
                         },
                     },
                     value: "",
+                    hideIn: ["List"],
                 },
                 {
                     name: "acquisition_method",
@@ -116,6 +124,7 @@ export default {
                     group: $__("Acquisition method"),
                     label: $__("Acquisition method"),
                     avCat: "av_acquisition_method",
+                    hideIn: ["List"],
                 },
                 {
                     name: "create_items",
@@ -166,7 +175,22 @@ export default {
                             value: createItems,
                         },
                     },
-                    hideIn: ["List"],
+                    tableColumnDefinition: {
+                        title: $__("Summary"),
+                        data: "biblio",
+                        searchable: false,
+                        orderable: false,
+                        render(data, type, row, meta) {
+                            return row.biblio
+                                ? '<a href="/cgi-bin/koha/catalogue/detail.pl?biblionumber=' +
+                                      row.biblio.biblionumber +
+                                      '" class="show">' +
+                                      escape_str(row.biblio.title) +
+                                      "</a>"
+                                : "";
+                        },
+                    },
+                    hideIn: [],
                 },
                 // {
                 //     name: "items",
@@ -241,7 +265,22 @@ export default {
                     relationshipAPIClient: APIClient.libraries.libraries,
                     relationshipOptionLabelAttr: "name",
                     relationshipRequiredKey: "library_id",
-                    hideIn: ["List"],
+                    tableColumnDefinition: {
+                        title: $__("Managing library"),
+                        data: "managing_branch",
+                        searchable: false,
+                        orderable: false,
+                        render(data, type, row, meta) {
+                            return row.managing_library
+                                ? '<a href="/cgi-bin/koha/admin/branches.pl?op=view&branchcode=' +
+                                      row.managing_branch +
+                                      '" class="show">' +
+                                      escape_str(row.managing_library.name) +
+                                      "</a>"
+                                : row.managing_branch;
+                        },
+                    },
+                    hideIn: [],
                 },
                 {
                     name: "managed_by",
@@ -289,6 +328,21 @@ export default {
                     hint: $__(
                         "If you leave the vendor empty the orderline can only be saved as a draft"
                     ),
+                    tableColumnDefinition: {
+                        title: $__("Vendor"),
+                        data: "vendor_id",
+                        searchable: true,
+                        orderable: true,
+                        render: function (data, type, row, meta) {
+                            return row.vendor_id != undefined
+                                ? '<a href="/cgi-bin/koha/acquisition/vendors/' +
+                                      row.vendor_id +
+                                      '">' +
+                                      escape_str(row.vendor.name) +
+                                      "</a>"
+                                : "";
+                        },
+                    },
                     onSelected: (e, options, resource) => {
                         const vendor = options.find(option => option.id === e);
                         // resource.tax_rate = vendor.tax_rate;
@@ -297,7 +351,7 @@ export default {
                             fd.tax_rate = vendor.tax_rate;
                         });
                     },
-                    hideIn: ["List"],
+                    hideIn: [],
                 },
                 {
                     name: "quantity_ordered",
@@ -312,7 +366,7 @@ export default {
                             resource.create_items === "ordering"
                         );
                     },
-                    hideIn: ["List"],
+                    hideIn: [],
                 },
                 {
                     name: "vendor_price",
@@ -322,7 +376,7 @@ export default {
                     label: $__("Price"),
                     defaultValue: null,
                     size: 6,
-                    hideIn: ["List"],
+                    hideIn: [],
                 },
                 {
                     name: "vendor_price_currency",
@@ -348,6 +402,7 @@ export default {
                         }
                     },
                     defaultValue: null,
+                    hideIn: ["List"],
                 },
                 {
                     name: "uncertain_price",
@@ -502,6 +557,25 @@ export default {
                             hideIn: ["List", "Show"],
                         },
                     ],
+                    tableColumnDefinition: {
+                        title: $__("Fund(s)"),
+                        data: "fund_distributions",
+                        searchable: false,
+                        orderable: false,
+                        render: function (data, type, row, meta) {
+                            let fundList;
+                            row.fund_distributions.forEach((fd, i) => {
+                                fundList +=
+                                    '<a href="/cgi-bin/koha/acquisitions/fund_management/fund/' +
+                                    fd.fund_id +
+                                    '">' +
+                                    escape_str(row.fund.name) +
+                                    "</a>";
+                                if (i + 1 !== row.fund_distributions.length)
+                                    fundList += "\n";
+                            });
+                        },
+                    },
                     hideIn: ["List"],
                 },
                 {
@@ -580,7 +654,7 @@ export default {
                     type: "textarea",
                     textAreaRows: 5,
                     label: $__("Internal note"),
-                    hideIn: ["List"],
+                    hideIn: [],
                 },
                 {
                     name: "receiving_note",
@@ -599,7 +673,7 @@ export default {
                     type: "textarea",
                     textAreaRows: 5,
                     label: $__("Vendor note"),
-                    hideIn: ["List"],
+                    hideIn: [],
                 },
                 {
                     name: "estimated_delivery_date",
@@ -607,19 +681,18 @@ export default {
                     group: $__("Notes"),
                     label: $__("Estimated delivery date"),
                     value: "",
+                    hideIn: ["List"],
                 },
             ],
         });
 
-        const tableURL = () => {
-            return "";
-        };
-
         const tableOptions = {
-            url: tableURL(),
             table_settings: null,
             add_filters: true,
             add_filters: true,
+            options: {
+                embed: "vendor,biblio,managing_library",
+            },
             actions: {
                 0: ["show"],
                 "-1": [

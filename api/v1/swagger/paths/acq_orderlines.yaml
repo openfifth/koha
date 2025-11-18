@@ -25,6 +25,9 @@
           enum:
             - extended_attributes
             - +strings
+            - vendor
+            - biblio
+            - managing_library
         collectionFormat: csv
     responses:
       '200':
@@ -132,6 +135,9 @@
           enum:
             - extended_attributes
             - +strings
+            - vendor
+            - biblio
+            - managing_library
         collectionFormat: csv
     produces:
       - application/json

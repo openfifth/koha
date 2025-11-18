@@ -241,6 +241,11 @@ properties:
     type:
       - object
       - "null"
+  managing_library:
+    description: Information about the managing library for the orderline
+    type:
+      - object
+      - "null"
 additionalProperties: false
 required:
   - orderline_id

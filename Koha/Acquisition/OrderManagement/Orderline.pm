@@ -24,6 +24,8 @@ use Koha::Acquisition::OrderManagement::OrderlineUser;
 use Koha::Acquisition::OrderManagement::OrderlineManager;
 use Koha::Acquisition::OrderManagement::OrderlineFundDistributions;
 use Koha::Util::MARC;
+use Koha::Acquisition::Bookseller;
+use Koha::Library;
 
 use C4::Biblio qw( AddBiblio TransformKohaToMarc );
 use C4::Search qw( FindDuplicate );
@@ -138,6 +140,30 @@ sub biblio {
     my $rs = $self->_result->biblionumber;
     return unless $rs;
     return Koha::Biblio->_new_from_dbic($rs);
+}
+
+=head3 vendor
+
+Return the vendor for this orderline
+
+=cut
+
+sub vendor {
+    my ($self) = @_;
+    my $vendor_rs = $self->_result->vendor;
+    return unless $vendor_rs;
+    return Koha::Acquisition::Bookseller->_new_from_dbic($vendor_rs);
+}
+
+=head3 managing_library
+
+=cut
+
+sub managing_library {
+    my ($self) = @_;
+    my $managing_library_rs = $self->_result->managing_branch;
+    return unless $managing_library_rs;
+    return Koha::Library->_new_from_dbic($managing_library_rs);
 }
 
 =head2 Internal methods

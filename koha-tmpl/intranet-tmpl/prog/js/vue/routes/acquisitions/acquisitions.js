@@ -277,7 +277,7 @@ export const routes = [
                                 alternateLeftMenu: "AcqMenu",
                             },
                             {
-                                path: ":fiscal_period_id",
+                                path: ":orderline_id",
                                 component: markRaw(ResourceWrapper),
                                 name: "OrderlineShow",
                                 title: "Show orderline",
@@ -293,7 +293,7 @@ export const routes = [
                                 alternateLeftMenu: "AcqMenu",
                             },
                             {
-                                path: "edit/:fiscal_period_id",
+                                path: "edit/:orderline_id",
                                 component: markRaw(ResourceWrapper),
                                 name: "OrderlineFormAddEdit",
                                 title: "Edit orderline",

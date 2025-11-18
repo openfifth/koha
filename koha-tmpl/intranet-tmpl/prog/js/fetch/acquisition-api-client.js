@@ -345,7 +345,8 @@ export class AcquisitionAPIClient {
                     endpoint: "orderlines/" + id,
                     ...(headers && {
                         headers: {
-                            "x-koha-embed": "extended_attributes,+strings",
+                            "x-koha-embed":
+                                "extended_attributes,+strings,vendor",
                             ...headers,
                         },
                     }),
