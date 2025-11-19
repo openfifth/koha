@@ -227,6 +227,42 @@ export default {
                                 : "";
                         },
                     },
+                    showElement: {
+                        type: "text",
+                        label: $__("ISBD / Title information"),
+                        format: biblio => {
+                            let biblioString = "";
+                            const fieldsToAppend = [
+                                "title",
+                                "author",
+                                "isbn",
+                                "publisher",
+                                "publication_year",
+                            ];
+                            fieldsToAppend.forEach(field => {
+                                if (biblioString.length) biblioString += " ";
+                                if (field == "author" && biblio.author)
+                                    biblioString += "by ";
+                                if (field == "isbn" && biblio.isbn)
+                                    biblioString += "ISBN: ";
+
+                                if (biblio[field])
+                                    biblioString += biblio[field];
+
+                                if (!["title"].includes(field) && biblio[field])
+                                    biblioString += ".";
+                                if (field == "title" && !biblio.author)
+                                    biblioString += ".";
+                            });
+                            return biblioString;
+                        },
+                        link: {
+                            href: "/cgi-bin/koha/catalogue/detail.pl",
+                            params: {
+                                biblionumber: "biblionumber",
+                            },
+                        },
+                    },
                     hideIn: [],
                 },
                 // {
