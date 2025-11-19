@@ -89,8 +89,8 @@ sub add {
         Koha::Database->new->schema->txn_do(
             sub {
 
-                $body->{status}         = "new";
-                $body->{payment_status} = "pending";
+                $body->{status}         = "NEW";
+                $body->{payment_status} = "PENDING";
                 my $user = $c->stash('koha.user');
                 $body->{created_by} = $user->borrowernumber;
 
