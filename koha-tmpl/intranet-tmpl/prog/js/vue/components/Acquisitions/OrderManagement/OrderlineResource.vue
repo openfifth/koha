@@ -21,6 +21,8 @@ export default {
         embedEvent: Function,
     },
     setup(props) {
+        const format_date = $date;
+
         const acquisitionsStore = inject("acquisitionsStore");
         const { currencies, sysprefs } = storeToRefs(acquisitionsStore);
         const {
@@ -35,6 +37,17 @@ export default {
         const createItemsWhen = ref(sysprefs.value.acq_create_items);
         const createItems = computed(() => {
             return createItemsWhen.value;
+        });
+
+        const orderlineStatuses = ref({
+            draft: "DRAFT",
+            new: "NEW",
+            ordered: "ORDERED",
+            continuing: "CONTINUING",
+            complete: "COMPLETE",
+            partial: "PARTIAL",
+            unsubscribed: "UNSUBSCRIBED",
+            cancelled: "CANCELLED",
         });
 
         const baseResource = useBaseResource({
@@ -730,6 +743,30 @@ export default {
                     label: $__("Estimated delivery date"),
                     value: "",
                     hideIn: ["List", "Show"],
+                },
+                {
+                    name: "status",
+                    type: "text",
+                    group: $__("General information"),
+                    label: $__("Status"),
+                    format: status => orderlineStatuses.value[status],
+                    hideIn: ["List", "Form"],
+                },
+                {
+                    name: "created_date",
+                    type: "date",
+                    group: $__("General information"),
+                    label: $__("Created on"),
+                    format: format_date,
+                    hideIn: ["List", "Form"],
+                },
+                {
+                    name: "modified_date",
+                    type: "date",
+                    group: $__("General information"),
+                    label: $__("Last modified"),
+                    format: format_date,
+                    hideIn: ["List", "Form"],
                 },
             ],
         });
