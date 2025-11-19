@@ -40,7 +40,9 @@ export default {
         if (props.linkData?.href && props.linkData.params) {
             props.linkData.href += "?";
             Object.keys(props.linkData.params).forEach(key => {
-                props.linkData.href += `${key}=${formattedParams.value[key]}&`;
+                const paramValue =
+                    formattedParams.value[key] || props.linkData.params[key];
+                props.linkData.href += `${key}=${paramValue}&`;
             });
             props.linkData.href = props.linkData.href.slice(0, -1);
         }

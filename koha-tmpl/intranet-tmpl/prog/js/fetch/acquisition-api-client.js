@@ -343,13 +343,11 @@ export class AcquisitionAPIClient {
             get: (id, headers) =>
                 this.httpClient.get({
                     endpoint: "orderlines/" + id,
-                    ...(headers && {
-                        headers: {
-                            "x-koha-embed":
-                                "extended_attributes,+strings,vendor",
-                            ...headers,
-                        },
-                    }),
+                    headers: {
+                        "x-koha-embed":
+                            "extended_attributes,+strings,vendor,managing_library",
+                        ...headers,
+                    },
                 }),
             getAll: (query, params, headers) =>
                 this.httpClient.getAll({

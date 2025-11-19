@@ -72,15 +72,29 @@ export default {
                     name: "orderline_id",
                     label: $__("ID"),
                     type: "text",
-                    hideIn: ["Form", "Show"],
+                    group: $__("General information"),
+                    hideIn: ["Form"],
                 },
                 {
                     name: "is_continuous",
-                    group: $__("Order type"),
                     type: "checkbox",
-                    label: $__("Continuous"),
-                    value: false,
-                    hint: $__(
+                    group: component =>
+                        component === "Form"
+                            ? $__("Order type")
+                            : $__("Order information"),
+                    label: component =>
+                        component === "Form"
+                            ? $__("Continuous")
+                            : $__("Order type"),
+                    showElement: {
+                        type: "text",
+                        format: orderline =>
+                            orderline.is_continuous
+                                ? $__("Continuous")
+                                : $__("One-Time"),
+                    },
+                    defaultValue: false,
+                    toolTip: $__(
                         "Use continuous if you will receive multiple invoices, e.g. for serial subscriptions. If you use the option 'continuous' the option to create items when ordering is disabled. Items can be created on receiving or later in the catalog (without link to the order line)"
                     ),
                     hideIn: ["List"],
@@ -92,7 +106,7 @@ export default {
                     label: $__("Renewal required"),
                     value: false,
                     disabled: resource => !resource.is_continuous,
-                    hideIn: ["List"],
+                    hideIn: ["List", "Show"],
                 },
                 {
                     name: "review_interval",
@@ -102,7 +116,7 @@ export default {
                     placeholder: $__("Review interval (days)"),
                     value: null,
                     disabled: resource => !resource.is_continuous,
-                    hideIn: ["List"],
+                    hideIn: ["List", "Show"],
                 },
                 {
                     name: "planned_cancellation_date",
@@ -116,12 +130,15 @@ export default {
                         },
                     },
                     value: "",
-                    hideIn: ["List"],
+                    hideIn: ["List", "Show"],
                 },
                 {
                     name: "acquisition_method",
                     type: "select",
-                    group: $__("Acquisition method"),
+                    group: component =>
+                        component === "Form"
+                            ? $__("Acquisition method")
+                            : $__("Order information"),
                     label: $__("Acquisition method"),
                     avCat: "av_acquisition_method",
                     hideIn: ["List"],
@@ -140,7 +157,7 @@ export default {
                     onChange: resource => {
                         createItemsWhen.value = resource.create_items;
                     },
-                    hideIn: ["List"],
+                    hideIn: ["List", "Show"],
                 },
                 {
                     name: "biblio",
@@ -255,16 +272,30 @@ export default {
                     //     value: "owner",
                     //     format: patron_to_html,
                     // },
-                    hideIn: ["List"],
+                    hideIn: ["List", "Show"],
                 },
                 {
                     name: "managing_branch",
-                    group: $__("Library management"),
+                    group: component =>
+                        component === "Form"
+                            ? $__("Library management")
+                            : $__("Order information"),
                     type: "relationshipSelect",
                     label: $__("Managing library"),
                     relationshipAPIClient: APIClient.libraries.libraries,
                     relationshipOptionLabelAttr: "name",
                     relationshipRequiredKey: "library_id",
+                    showElement: {
+                        type: "text",
+                        value: "managing_library.name",
+                        link: {
+                            href: "/cgi-bin/koha/admin/branches.pl",
+                            params: {
+                                op: "view",
+                                branchcode: "managing_branch",
+                            },
+                        },
+                    },
                     tableColumnDefinition: {
                         title: $__("Managing library"),
                         data: "managing_library.name",
@@ -315,12 +346,23 @@ export default {
                     //     value: "owner",
                     //     format: patron_to_html,
                     // },
-                    hideIn: ["List"],
+                    hideIn: ["List", "Show"],
                 },
                 {
                     name: "vendor_id",
-                    group: $__("Vendor selection"),
+                    group: component =>
+                        component === "Form"
+                            ? $__("Vendor selection")
+                            : $__("Order information"),
                     type: "relationshipSelect",
+                    showElement: {
+                        type: "text",
+                        value: "vendor.name",
+                        link: {
+                            href: "/cgi-bin/koha/acquisition/vendors",
+                            slug: "vendor_id",
+                        },
+                    },
                     label: $__("Vendor"),
                     relationshipAPIClient: APIClient.acquisition.vendors,
                     relationshipOptionLabelAttr: "name",
@@ -410,7 +452,7 @@ export default {
                     type: "checkbox",
                     label: $__("Uncertain price"),
                     value: false,
-                    hideIn: ["List"],
+                    hideIn: ["List", "Show"],
                 },
                 {
                     name: "discount",
@@ -433,7 +475,7 @@ export default {
                             value: "discount_amount_oc",
                         },
                     },
-                    hideIn: ["List"],
+                    hideIn: ["List", "Show"],
                 },
                 // {
                 //     name: "replacement_price",
@@ -467,7 +509,7 @@ export default {
                             value: null,
                         },
                     },
-                    hideIn: ["List"],
+                    hideIn: ["List", "Show"],
                 },
                 {
                     name: "calculated_amount_oc",
@@ -576,7 +618,7 @@ export default {
                             });
                         },
                     },
-                    hideIn: ["List"],
+                    hideIn: ["List", "Show"],
                 },
                 {
                     name: "distribution_exchange_rate",
@@ -595,7 +637,7 @@ export default {
                             fd.calculateDistributedAmount(fd);
                         });
                     },
-                    hideIn: ["List"],
+                    hideIn: ["List", "Show"],
                 },
                 {
                     name: "replacement_price",
@@ -610,7 +652,7 @@ export default {
                             getActiveCurrency.currency;
                         return formatValueWithCurrency(value, currency);
                     },
-                    hideIn: ["List"],
+                    hideIn: ["List", "Show"],
                 },
                 {
                     name: "calculated_item_costs",
@@ -631,14 +673,14 @@ export default {
                     group: $__("Reporting information"),
                     type: "text",
                     label: $__("Statistic 1"),
-                    hideIn: ["List"],
+                    hideIn: ["List", "Show"],
                 },
                 {
                     name: "statistic2",
                     group: $__("Reporting information"),
                     type: "text",
                     label: $__("Statistic 2"),
-                    hideIn: ["List"],
+                    hideIn: ["List", "Show"],
                 },
                 {
                     name: "urgent_order",
@@ -646,11 +688,14 @@ export default {
                     type: "checkbox",
                     label: $__("Rush / urgent order"),
                     value: false,
-                    hideIn: ["List"],
+                    hideIn: ["List", "Show"],
                 },
                 {
                     name: "internal_note",
-                    group: $__("Notes"),
+                    group: component =>
+                        component === "Form"
+                            ? $__("Notes")
+                            : $__("Order information"),
                     type: "textarea",
                     textAreaRows: 5,
                     label: $__("Internal note"),
@@ -665,11 +710,14 @@ export default {
                     hint: $__(
                         "The receiving note will be displayed when you receive the order line"
                     ),
-                    hideIn: ["List"],
+                    hideIn: ["List", "Show"],
                 },
                 {
                     name: "vendor_note",
-                    group: $__("Notes"),
+                    group: component =>
+                        component === "Form"
+                            ? $__("Notes")
+                            : $__("Order information"),
                     type: "textarea",
                     textAreaRows: 5,
                     label: $__("Vendor note"),
@@ -681,7 +729,7 @@ export default {
                     group: $__("Notes"),
                     label: $__("Estimated delivery date"),
                     value: "",
-                    hideIn: ["List"],
+                    hideIn: ["List", "Show"],
                 },
             ],
         });
