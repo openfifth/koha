@@ -50,12 +50,24 @@ sub store {
     return $self->SUPER::store;
 }
 
+=head3 delete
+
+delete
+
+=cut
+
 sub delete {
     my ($self) = @_;
 
     _update_config_timestamp();
     return $self->SUPER::delete;
 }
+
+=head3 _update_config_timestamp
+
+Updates the sip2_resource_last_modified timestamp in cache
+
+=cut
 
 sub _update_config_timestamp {
     my $cache = Koha::Caches->get_instance();
