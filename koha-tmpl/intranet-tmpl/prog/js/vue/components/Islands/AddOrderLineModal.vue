@@ -42,6 +42,7 @@
                                         :data-booksellerid="vendorid"
                                         :data-basketno="basketno"
                                         value="Submit"
+                                        @click="searchToOrder()"
                                     />
                                 </form>
                             </li>
@@ -152,9 +153,23 @@ export default {
         const { setCustomModal } = mainStore;
 
         const ermEnabled = props.erm === "1" && props.ermmodule !== "0";
+
+        function searchToOrder() {
+            var date = new Date();
+            var cookieData = "";
+            date.setTime(date.getTime() + 10 * 60 * 1000);
+            cookieData += props.basketno + "/" + props.vendorid;
+            Cookies.set("searchToOrder", cookieData, {
+                path: "/",
+                expires: date,
+                sameSite: "Lax",
+            });
+        }
+
         return {
             ermEnabled,
             setCustomModal,
+            searchToOrder,
         };
     },
 };
