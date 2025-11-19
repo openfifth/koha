@@ -146,10 +146,15 @@ export default {
             formGroupsDisplayMode: "accordion",
             showGroupsDisplayMode: "splitScreen",
             splitScreenGroupings: [
-                { name: "Details", pane: 1 },
-                { name: "Aliases", pane: 1 },
-                { name: "Ordering information", pane: 2 },
-                { name: "Interfaces", pane: 2 },
+                {
+                    pane: 1,
+                    groups: ["Details", "Aliases", "Ordering information"],
+                },
+                {
+                    pane: 2,
+                    groups: ["Contacts", "Interfaces", "Subscription details"],
+                },
+                { pane: "break", groups: ["Contracts"] },
             ],
             additionalToolbarButtons,
             defaultToolbarButtons,
@@ -356,7 +361,7 @@ export default {
                         {
                             type: "component",
                             componentPath:
-                                "@koha-vue/components/Vendors/VendorContacts.vue",
+                                "@koha-vue/components/Acquisitions/Vendors/VendorContacts.vue",
                             indexRequired: true,
                             componentProps: {
                                 contact: {
@@ -914,6 +919,7 @@ export default {
                 {
                     type: "component",
                     name: $__("Contracts"),
+                    group: $__("Contracts"),
                     hidden: vendor => vendor.contracts.length,
                     componentPath:
                         "@koha-vue/components/RelationshipTableDisplay.vue",
@@ -1020,19 +1026,18 @@ export default {
                             value: $__("contracts"),
                         },
                     },
-                    splitPane: null,
                 },
                 {
                     type: "component",
                     name: $__("Subscription details"),
+                    group: $__("Subscription details"),
                     componentPath:
-                        "@koha-vue/components/Vendors/VendorSubscriptions.vue",
+                        "@koha-vue/components/Acquisitions/Vendors/VendorSubscriptions.vue",
                     componentProps: {
                         vendor: {
                             type: "resource",
                         },
                     },
-                    splitPane: "right",
                 },
             ];
         };

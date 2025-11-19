@@ -78,8 +78,10 @@ export default {
             formGroupsDisplayMode: "accordion",
             showGroupsDisplayMode: "splitScreen",
             splitScreenGroupings: [
-                { name: "Order information", pane: 1 },
-                { name: "General information", pane: 2 },
+                { pane: 1, groups: ["Order information"] },
+                { pane: 2, groups: ["General information"] },
+                { pane: "break", groups: ["Catalog details"] },
+                { pane: 3, groups: ["Accounting details"] },
             ],
             extendedAttributesResourceType: "orderline",
             props,

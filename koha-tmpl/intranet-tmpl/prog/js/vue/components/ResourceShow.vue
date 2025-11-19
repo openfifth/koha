@@ -58,6 +58,7 @@
         >
             <template #splitPane="{ paneFieldList }">
                 <fieldset
+                    style="margin-bottom: 0.9em"
                     class="rows"
                     v-for="(group, counter) in paneFieldList"
                     v-bind:key="counter"
@@ -160,10 +161,6 @@ export default {
                     return {
                         name: field.name,
                         fields: [field],
-                        ...(props.instancedResource.showGroupsDisplayMode ===
-                        "splitScreen"
-                            ? { splitPane: field.splitPane }
-                            : {}),
                     };
                 });
 

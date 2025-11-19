@@ -484,19 +484,6 @@ export function useBaseResource(resourceConfig) {
                 acc[acc.length - 1].fields.push(...groupFields);
                 return [...acc];
             }
-            if (
-                component === "Show" &&
-                resourceConfig.showGroupsDisplayMode === "splitScreen" &&
-                resourceConfig.splitScreenGroupings.length > 0
-            ) {
-                const splitScreenGrouping =
-                    resourceConfig.splitScreenGroupings.find(
-                        g => g.name === group
-                    );
-                if (splitScreenGrouping) {
-                    groupInfo.splitPane = splitScreenGrouping.pane;
-                }
-            }
             if (component === "Show" && resource) {
                 groupFields.forEach(field => {
                     if (

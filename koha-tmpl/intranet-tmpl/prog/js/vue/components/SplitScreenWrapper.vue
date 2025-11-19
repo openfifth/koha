@@ -1,18 +1,21 @@
 <template>
-    <div class="row" style="margin-bottom: 0.9em">
+    <template v-for="pane in panesToDisplay" :key="pane.pane">
         <div
-            v-for="pane in panesToDisplay"
-            :key="pane.pane"
-            :class="columnSizeClass"
+            v-if="pane.type === 'splitPane'"
+            class="row"
+            style="margin-bottom: 0.9em"
         >
-            <slot name="splitPane" :paneFieldList="pane.fields"></slot>
+            <div
+                v-for="splitPane in pane.paneGroup"
+                :key="splitPane.pane"
+                :class="columnSizeClass(pane)"
+            >
+                <slot name="splitPane" :paneFieldList="splitPane.fields"></slot>
+            </div>
         </div>
-    </div>
-    <template v-if="determineGroupsForPane(null).length > 0">
-        <slot
-            name="splitPane"
-            :paneFieldList="determineGroupsForPane(null)"
-        ></slot>
+        <template v-else>
+            <slot name="splitPane" :paneFieldList="pane.fields"></slot>
+        </template>
     </template>
 </template>
 
@@ -29,39 +32,51 @@ export default {
                 grp => grp.name === group
             );
         };
-        const determineGroupsForPane = pane => {
-            const groups = props.fieldList.filter(
-                group => group.splitPane == pane
+        const determineGroupsForPane = paneGroups => {
+            const groups = props.fieldList.filter(group =>
+                paneGroups.includes(group.name)
             );
             return groups.sort(
                 (a, b) => getPaneSortOrder(a.name) - getPaneSortOrder(b.name)
             );
         };
         const panesToDisplay = computed(() => {
-            return props.splitScreenGroupings
-                .reduce((acc, group) => {
-                    const isPaneAssigned = acc.find(
-                        pane => pane.pane == group.pane
-                    );
-                    if (isPaneAssigned) return acc;
+            return props.splitScreenGroupings.reduce((acc, curr) => {
+                if (curr.pane.toString().includes("break")) {
                     acc.push({
-                        pane: group.pane,
-                        fields: determineGroupsForPane(group.pane),
+                        pane: curr.pane.toString(),
+                        fields: determineGroupsForPane(curr.groups),
                     });
                     return acc;
-                }, [])
-                .sort((a, b) => a.pane - b.pane);
+                }
+                if (
+                    acc.length === 0 ||
+                    acc[acc.length - 1]?.pane?.includes("break")
+                ) {
+                    acc.push({
+                        type: "splitPane",
+                        paneGroup: [
+                            {
+                                pane: curr.pane,
+                                fields: determineGroupsForPane(curr.groups),
+                            },
+                        ],
+                    });
+                } else {
+                    acc[acc.length - 1].paneGroup.push({
+                        pane: curr.pane,
+                        fields: determineGroupsForPane(curr.groups),
+                    });
+                }
+                return acc;
+            }, []);
         });
-        const numberOfPanes = computed(() => {
-            return panesToDisplay.value.length;
-        });
-        const columnSizeClass = computed(() => {
-            return `col-sm-${Math.floor(12 / numberOfPanes.value)}`;
-        });
+        const columnSizeClass = pane => {
+            return `col-sm-${Math.floor(12 / pane.paneGroup.length)}`;
+        };
         return {
             determineGroupsForPane,
             panesToDisplay,
-            numberOfPanes,
             columnSizeClass,
         };
     },
