@@ -43,6 +43,21 @@ sub check_pod_coverage {
     $package_name =~ s|/|::|g;
     $package_name =~ s|\.pm$||;
 
-    my $coverage = Pod::Coverage->new( package => $package_name );
+    # 1) Try loading the package manually
+    my $require_path = $file;
+    $require_path =~ s|::|/|g;    # convert back just in case
+    my $error;
+
+    eval { require $require_path; };
+    if ($@) {
+        return "Module died while loading '$package_name': $@";
+    }
+
+    # 2) Now safely ask Pod::Coverage
+    my $coverage = eval { Pod::Coverage->new( package => $package_name ); };
+    if ($@) {
+        return "Pod::Coverage died for '$package_name': $@";
+    }
+
     return $coverage->uncovered;
 }
