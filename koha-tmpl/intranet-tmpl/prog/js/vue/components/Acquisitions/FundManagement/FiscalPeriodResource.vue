@@ -158,6 +158,26 @@ export default {
                     },
                     hideIn: ["List"],
                 },
+                {
+                    name: "managing_branch",
+                    type: "relationshipSelect",
+                    label: $__("Managing library"),
+                    relationshipAPIClient: APIClient.libraries.libraries,
+                    relationshipOptionLabelAttr: "name",
+                    relationshipRequiredKey: "library_id",
+                    showElement: {
+                        type: "text",
+                        value: "managing_library.name",
+                        link: {
+                            href: "/cgi-bin/koha/admin/branches.pl",
+                            params: {
+                                op: "view",
+                                branchcode: "managing_branch",
+                            },
+                        },
+                    },
+                    hideIn: ["List"],
+                },
             ],
         });
 
