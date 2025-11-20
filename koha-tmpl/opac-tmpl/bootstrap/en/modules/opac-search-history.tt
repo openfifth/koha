@@ -280,7 +280,7 @@
     <div class="selections-toolbar toolbar">
         <div class="check_control">
             <a class="CheckAll btn btn-link btn-sm" href="#">Select all</a>
-            <a class="CheckNone btn btn-link btn-sm" href="#">Clear all</a>
+            <a class="CheckNone btn btn-link btn-sm" disabled="disabled" style="display:none" href="#">Clear all</a>
         </div>
         <div class="links">
             <span class="selections">Select searches to: </span>
@@ -362,16 +362,27 @@
 
     function enableCheckboxActions(form){
         // Enable/disable controls if checkboxes are checked
+        var allBoxes = $(form).find("input:checkbox");
         var checkedBoxes = $(form).find("input:checkbox:checked");
+
         if ($(checkedBoxes).size()) {
             $(form).find(".selections").html(_("With selected searches: "));
             $(form).find(".selections-toolbar .links a").removeClass("disabled");
             $(form).find(".remove-selected").removeClass("disabled");
+            $('.CheckAll').first().removeAttr('disabled').show();
+            $('.CheckNone').first().removeAttr('disabled').show();
+
+            if ($(checkedBoxes).size() == $(allBoxes).size())
+                $('.CheckAll').first().attr('disabled', 'disabled').hide();
         } else {
             $(form).find(".selections").html(_("Select searches to: "));
             $(form).find(".selections-toolbar .links a").addClass("disabled");
             $(form).find(".remove-selected").addClass("disabled");
+            $('.CheckAll').first().removeAttr('disabled').show();
+            $('.CheckNone').first().attr('disabled', 'disabled').hide();
         }
+
+        
     }
 
 
