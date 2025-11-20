@@ -12,6 +12,7 @@ import SysprefAPIClient from "@fetch/system-preferences-api-client";
 import SIP2APIClient from "@fetch/sip2-api-client";
 import PreservationAPIClient from "@fetch/preservation-api-client";
 import MarcFrameworkAPIClient from "@fetch/marc-framework-api-client";
+import BiblioAPIClient from "@fetch/biblio-api-client";
 import LibraryAPIClient from "@fetch/library-api-client";
 
 export const APIClient = {
@@ -28,6 +29,7 @@ export const APIClient = {
     preservation: new PreservationAPIClient(HttpClient),
     record_sources: new RecordSourcesAPIClient(HttpClient),
     libraries: new LibraryAPIClient(HttpClient),
+    biblios: new BiblioAPIClient(HttpClient),
 };
 
 export default APIClient;
