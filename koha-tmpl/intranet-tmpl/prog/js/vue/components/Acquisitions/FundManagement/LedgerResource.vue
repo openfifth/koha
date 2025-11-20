@@ -10,7 +10,7 @@ import BaseResource from "../../BaseResource.vue";
 import { APIClient } from "../../../fetch/api-client.js";
 import { useBaseResource } from "../../../composables/base-resource";
 import { $__ } from "@koha-vue/i18n";
-import { inject, onUnmounted } from "vue";
+import { inject } from "vue";
 import { storeToRefs } from "pinia";
 
 export default {
@@ -23,40 +23,9 @@ export default {
         const patron_to_html = $patron_to_html;
 
         const acquisitionsStore = inject("acquisitionsStore");
-        const {
-            getVisibleGroups,
-            libraryGroups,
-            visibleGroups,
-            currencies,
-            getLibGroupFilter,
-        } = storeToRefs(acquisitionsStore);
+        const { currencies } = storeToRefs(acquisitionsStore);
 
-        const {
-            filterGroupsBasedOnOwner,
-            filterOwnersBasedOnGroup,
-            resetOwnersAndVisibleGroups,
-            formatLibraryGroupIds,
-            formatValueWithCurrency,
-        } = acquisitionsStore;
-
-        const filterGroupsBySelectedFiscalPeriod = (e, options, resource) => {
-            if (!e || !options) {
-                visibleGroups.value = [];
-                resource.lib_group_visibility = [];
-                return;
-            }
-            const chosenFP = options.find(fp => fp.fiscal_period_id === e);
-
-            const applicableGroups = formatLibraryGroupIds(
-                chosenFP.lib_group_visibility
-            );
-            visibleGroups.value = applicableGroups;
-            resetOwnersAndVisibleGroups(applicableGroups);
-
-            if (e !== resource.fiscal_period_id) {
-                resource.lib_group_visibility = [];
-            }
-        };
+        const { formatValueWithCurrency } = acquisitionsStore;
 
         const additionalToolbarButtons = (resource, componentData) => {
             const { instancedResource } = componentData;
@@ -134,7 +103,6 @@ export default {
                     relationshipAPIClient: APIClient.acquisition.fiscalPeriods,
                     relationshipOptionLabelAttr: "code",
                     relationshipRequiredKey: "fiscal_period_id",
-                    onSelected: filterGroupsBySelectedFiscalPeriod,
                     showElement: {
                         type: "text",
                         value: "fiscal_period.code",
@@ -207,12 +175,7 @@ export default {
                             type: "object",
                             value: {
                                 permission: "acquisition.budget_manage",
-                                lib_group_visibility: getLibGroupFilter,
                             },
-                        },
-                        selectCallback: {
-                            type: "function",
-                            value: filterGroupsBasedOnOwner,
                         },
                         fieldName: {
                             type: "string",
@@ -225,30 +188,6 @@ export default {
                         format: patron_to_html,
                     },
                     hideIn: ["List"],
-                },
-                {
-                    name: "lib_group_visibility",
-                    requiredKey: "id",
-                    selectLabel: "title",
-                    type: "select",
-                    label: $__("Visible to:"),
-                    options: getVisibleGroups,
-                    required: true,
-                    onSelected: filterOwnersBasedOnGroup,
-                    hideIn: [
-                        "List",
-                        ...(!libraryGroups.value ? ["Form", "Show"] : []),
-                    ],
-                    showElement: {
-                        type: "table",
-                        columnData: "lib_group_limits",
-                        columns: [
-                            { name: $__("ID"), value: "id" },
-                            { name: $__("Title"), value: "title" },
-                        ],
-                        hidden: resource => resource.lib_group_limits.length,
-                    },
-                    allowMultipleChoices: true,
                 },
                 {
                     name: "over_spend_allowed",
@@ -304,7 +243,6 @@ export default {
                     hideIn: ["List"],
                 },
             ],
-            libraryGroups: libraryGroups.value,
         });
 
         const tableURL = () => {
@@ -364,7 +302,6 @@ export default {
             delete ledger.patron;
             delete ledger.patron_str;
             delete ledger.owner;
-            delete ledger.lib_group_limits;
             delete ledger.fiscal_period;
 
             if (ledger_id) {
@@ -391,15 +328,6 @@ export default {
         const afterResourceFetch = (componentData, resource, caller) => {
             componentData.resource.value.oe_warning_percent =
                 resource.oe_warning_percent * 100;
-            if (caller === "form") {
-                componentData.resource.value.lib_group_visibility =
-                    formatLibraryGroupIds(resource.lib_group_visibility);
-                filterGroupsBySelectedFiscalPeriod(
-                    resource.fiscal_period_id,
-                    componentData.instancedResource.libraryGroups,
-                    componentData.resource.value
-                );
-            }
         };
 
         const afterNewResourceCreate = (resource, componentData) => {
@@ -410,10 +338,6 @@ export default {
             }
             return resource;
         };
-
-        onUnmounted(() => {
-            resetOwnersAndVisibleGroups();
-        });
 
         return {
             ...baseResource,

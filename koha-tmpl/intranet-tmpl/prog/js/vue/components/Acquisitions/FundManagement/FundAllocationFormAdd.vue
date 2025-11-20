@@ -108,7 +108,6 @@ export default {
             note: "",
             currency: "",
             allocation_amount: null,
-            lib_group_visibility: "",
         });
         const selectedFund = ref(null);
         const isSubFund = ref(false);
@@ -135,8 +134,6 @@ export default {
                         result.fiscal_period_id;
                     fund_allocation.value.currency = result.currency;
                     fund_allocation.value.owner_id = result.owner_id;
-                    fund_allocation.value.lib_group_visibility =
-                        result.lib_group_visibility;
                 },
                 error => {}
             );

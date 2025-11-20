@@ -38,7 +38,6 @@ Koha::Acquisition::FundManagement::FiscalPeriod Object class
 sub store {
     my ( $self, $args ) = @_;
 
-    $self->set_lib_group_visibility() if $self->lib_group_visibility;
     $self->SUPER::store;
 
     $self->cascade_to_ledgers unless $args->{no_cascade};
@@ -48,16 +47,15 @@ sub store {
 
 =head3 cascade_to_ledgers
 
-This method cascades changes to the values of the "lib_group_visibility" and "status" properties to all ledgers attached to this fiscal period
+This method cascades changes to the values of the "status" property to all ledgers attached to this fiscal period
 
 =cut
 
 sub cascade_to_ledgers {
     my ( $self, $args ) = @_;
 
-    my @ledgers              = $self->ledgers->as_list;
-    my $lib_group_visibility = $self->lib_group_visibility;
-    my $status               = $self->status;
+    my @ledgers = $self->ledgers->as_list;
+    my $status  = $self->status;
 
     foreach my $ledger (@ledgers) {
         my $status_updated = $self->cascade_status(
@@ -66,13 +64,7 @@ sub cascade_to_ledgers {
                 child         => $ledger
             }
         );
-        my $visibility_updated = $self->cascade_lib_group_visibility(
-            {
-                parent_visibility => $lib_group_visibility,
-                child             => $ledger
-            }
-        );
-        $ledger->store() if $status_updated || $visibility_updated;
+        $ledger->store() if $status_updated;
     }
 }
 
@@ -86,19 +78,6 @@ sub _object_hierarchy {
         parent   => undef,
         child    => 'ledger',
         children => 'ledgers'
-    };
-}
-
-=head3 _library_group_visibility_parameters
-
-Configure library group limits
-
-=cut
-
-sub _library_group_visibility_parameters {
-    return {
-        class             => "FiscalPeriod",
-        visibility_column => "lib_group_visibility",
     };
 }
 

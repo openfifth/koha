@@ -41,8 +41,6 @@ Koha::Acquisition::FundManagement::FundAllocation Object class
 sub store {
     my ( $self, $args ) = @_;
 
-    $self->set_lib_group_visibility() if $self->lib_group_visibility;
-
     if ( $self->allocation_amount < 0 ) {
         $self->will_allocation_breach_spend_limits;
     }
@@ -122,19 +120,6 @@ sub will_allocation_breach_spend_limits {
 sub _object_hierarchy {
     return {
         object => 'fund_allocation',
-    };
-}
-
-=head3 _library_group_visibility_parameters
-
-Configure library group limits
-
-=cut
-
-sub _library_group_visibility_parameters {
-    return {
-        class             => "FundAllocation",
-        visibility_column => "lib_group_visibility",
     };
 }
 

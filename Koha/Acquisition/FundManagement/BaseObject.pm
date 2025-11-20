@@ -18,7 +18,7 @@ package Koha::Acquisition::FundManagement::BaseObject;
 # along with Koha; if not, see <http://www.gnu.org/licenses>.
 
 use Modern::Perl;
-use base qw(Koha::Object Koha::Object::Limit::LibraryGroup);
+use base qw(Koha::Object);
 
 use Scalar::Util qw( looks_like_number );
 
@@ -39,42 +39,6 @@ This class must always be subclassed.
 =head2 Class Methods
 
 =cut
-
-=head3 cascade_lib_group_visibility
-
-This method will update the visibility if the parent visibility has changed.
-This only works if library groups have been removed i.e. new groups are not automatically cascaded
-to prevent data being made visible where it shouldn't be.
-
-=cut
-
-sub cascade_lib_group_visibility {
-    my ( $self, $args ) = @_;
-
-    my $parent_visibility = $args->{parent_visibility};
-    my $child             = $args->{child};
-    my $change_detected;
-
-    if ( $child->lib_group_visibility ne $parent_visibility ) {
-        my @child_groups     = split( /\|/, $child->lib_group_visibility );
-        my @parent_groups    = split( /\|/, $parent_visibility );
-        my @groups_to_keep   = ();
-        my @groups_to_delete = ();
-
-        foreach my $group (@child_groups) {
-            push( @groups_to_keep,   $group ) if grep( /^$group$/,  @parent_groups ) && $group ne '';
-            push( @groups_to_delete, $group ) if !grep( /^$group$/, @parent_groups ) && $group ne '';
-        }
-
-        if ( scalar(@groups_to_delete) == 0 ) {
-            $change_detected = 0;
-        } else {
-            $change_detected = 1;
-            $child->set_lib_group_visibility( { new_visibility => \@groups_to_keep } );
-        }
-    }
-    return $change_detected;
-}
 
 =head3 cascade_status
 

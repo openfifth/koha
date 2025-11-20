@@ -10,8 +10,6 @@ import BaseResource from "../../BaseResource.vue";
 import { APIClient } from "../../../fetch/api-client.js";
 import { useBaseResource } from "../../../composables/base-resource";
 import { $__ } from "@koha-vue/i18n";
-import { inject, onUnmounted } from "vue";
-import { storeToRefs } from "pinia";
 
 export default {
     props: {
@@ -21,17 +19,6 @@ export default {
     },
     setup(props) {
         const patron_to_html = $patron_to_html;
-
-        const acquisitionsStore = inject("acquisitionsStore");
-        const { getVisibleGroups, libraryGroups, getLibGroupFilter } =
-            storeToRefs(acquisitionsStore);
-
-        const {
-            filterGroupsBasedOnOwner,
-            filterOwnersBasedOnGroup,
-            resetOwnersAndVisibleGroups,
-            formatLibraryGroupIds,
-        } = acquisitionsStore;
 
         const additionalToolbarButtons = (resource, componentData) => {
             const { instancedResource } = componentData;
@@ -157,12 +144,7 @@ export default {
                             type: "object",
                             value: {
                                 permission: "acquisition.period_manage",
-                                lib_group_visibility: getLibGroupFilter,
                             },
-                        },
-                        selectCallback: {
-                            type: "function",
-                            value: filterGroupsBasedOnOwner,
                         },
                         fieldName: {
                             type: "string",
@@ -175,30 +157,6 @@ export default {
                         format: patron_to_html,
                     },
                     hideIn: ["List"],
-                },
-                {
-                    name: "lib_group_visibility",
-                    requiredKey: "id",
-                    selectLabel: "title",
-                    type: "select",
-                    label: $__("Visible to"),
-                    options: getVisibleGroups,
-                    required: true,
-                    onSelected: filterOwnersBasedOnGroup,
-                    hideIn: [
-                        "List",
-                        ...(!libraryGroups.value ? ["Form", "Show"] : []),
-                    ],
-                    showElement: {
-                        type: "table",
-                        columnData: "lib_group_limits",
-                        columns: [
-                            { name: $__("ID"), value: "id" },
-                            { name: $__("Title"), value: "title" },
-                        ],
-                        hidden: resource => resource.lib_group_limits.length,
-                    },
-                    allowMultipleChoices: true,
                 },
             ],
         });
@@ -269,22 +227,10 @@ export default {
             }
         };
 
-        const afterResourceFetch = (componentData, resource, caller) => {
-            if (caller === "form") {
-                componentData.resource.value.lib_group_visibility =
-                    formatLibraryGroupIds(resource.lib_group_visibility);
-            }
-        };
-
-        onUnmounted(() => {
-            resetOwnersAndVisibleGroups();
-        });
-
         return {
             ...baseResource,
             tableOptions,
             onSubmit,
-            afterResourceFetch,
         };
     },
     components: { BaseResource },

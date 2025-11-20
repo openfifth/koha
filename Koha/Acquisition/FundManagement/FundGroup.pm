@@ -38,7 +38,6 @@ Koha::Acquisition::FundManagement::FundGroup Object class
 sub store {
     my ($self) = @_;
 
-    $self->set_lib_group_visibility() if $self->lib_group_visibility;
     $self = $self->SUPER::store();
     return $self;
 }
@@ -53,19 +52,6 @@ sub funds {
     my ($self) = @_;
     my $fund_rs = $self->_result->funds;
     return Koha::Acquisition::FundManagement::Funds->_new_from_dbic($fund_rs);
-}
-
-=head3 _library_group_visibility_parameters
-
-Configure library group limits
-
-=cut
-
-sub _library_group_visibility_parameters {
-    return {
-        class             => "FundGroup",
-        visibility_column => "lib_group_visibility",
-    };
 }
 
 =head2 Internal methods

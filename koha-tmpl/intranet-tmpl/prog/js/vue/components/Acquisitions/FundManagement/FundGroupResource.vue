@@ -10,7 +10,7 @@ import BaseResource from "../../BaseResource.vue";
 import { APIClient } from "../../../fetch/api-client.js";
 import { useBaseResource } from "../../../composables/base-resource";
 import { $__ } from "@koha-vue/i18n";
-import { inject, onUnmounted } from "vue";
+import { inject } from "vue";
 import { storeToRefs } from "pinia";
 
 export default {
@@ -21,14 +21,7 @@ export default {
     },
     setup(props) {
         const acquisitionsStore = inject("acquisitionsStore");
-        const { getVisibleGroups, libraryGroups, currencies } =
-            storeToRefs(acquisitionsStore);
-
-        const {
-            filterOwnersBasedOnGroup,
-            resetOwnersAndVisibleGroups,
-            formatLibraryGroupIds,
-        } = acquisitionsStore;
+        const { currencies } = storeToRefs(acquisitionsStore);
 
         const baseResource = useBaseResource({
             resourceName: "fund_group",
@@ -74,30 +67,6 @@ export default {
                     options: currencies.value,
                     defaultValue: null,
                     required: true,
-                },
-                {
-                    name: "lib_group_visibility",
-                    requiredKey: "id",
-                    selectLabel: "title",
-                    type: "select",
-                    label: $__("Visible to"),
-                    options: getVisibleGroups.value,
-                    required: true,
-                    onSelected: filterOwnersBasedOnGroup,
-                    hideIn: [
-                        "List",
-                        ...(!libraryGroups.value ? ["Form", "Show"] : []),
-                    ],
-                    showElement: {
-                        type: "table",
-                        columnData: "lib_group_limits",
-                        columns: [
-                            { name: $__("ID"), value: "id" },
-                            { name: $__("Title"), value: "title" },
-                        ],
-                        hidden: resource => resource.lib_group_limits.length,
-                    },
-                    allowMultipleChoices: true,
                 },
             ],
         });
@@ -160,22 +129,10 @@ export default {
             }
         };
 
-        const afterResourceFetch = (componentData, resource, caller) => {
-            if (caller === "form") {
-                componentData.resource.value.lib_group_visibility =
-                    formatLibraryGroupIds(resource.lib_group_visibility);
-            }
-        };
-
-        onUnmounted(() => {
-            resetOwnersAndVisibleGroups();
-        });
-
         return {
             ...baseResource,
             tableOptions,
             onSubmit,
-            afterResourceFetch,
         };
     },
     components: { BaseResource },

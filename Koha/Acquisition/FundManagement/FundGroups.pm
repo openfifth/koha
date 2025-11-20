@@ -30,20 +30,6 @@ Koha::Acquisition::FundManagement::FundGroups object set class
 
 =head2 Class methods
 
-=head3 search
-
-=cut
-
-sub search {
-    my ( $self, $params, $attributes ) = @_;
-
-    my $class = ref($self) ? ref($self) : $self;
-
-    ( $params, $attributes ) = $self->define_library_group_limits( $params, $attributes );
-
-    return $self->SUPER::search( $params, $attributes );
-}
-
 =head2 Internal methods
 
 =head3 _type

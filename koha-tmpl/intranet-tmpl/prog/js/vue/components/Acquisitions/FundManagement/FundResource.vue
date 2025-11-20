@@ -10,8 +10,7 @@ import BaseResource from "../../BaseResource.vue";
 import { APIClient } from "../../../fetch/api-client.js";
 import { useBaseResource } from "../../../composables/base-resource";
 import { $__ } from "@koha-vue/i18n";
-import { computed, inject, onUnmounted, ref } from "vue";
-import { storeToRefs } from "pinia";
+import { computed, inject, ref } from "vue";
 
 export default {
     props: {
@@ -26,14 +25,7 @@ export default {
         const patron_to_html = $patron_to_html;
 
         const acquisitionsStore = inject("acquisitionsStore");
-        const { getVisibleGroups, libraryGroups, visibleGroups } =
-            storeToRefs(acquisitionsStore);
-
-        const {
-            resetOwnersAndVisibleGroups,
-            formatLibraryGroupIds,
-            formatValueWithCurrency,
-        } = acquisitionsStore;
+        const { formatValueWithCurrency } = acquisitionsStore;
 
         const ledgersQuery = ref({});
         const fundsQuery = ref({});
@@ -50,31 +42,18 @@ export default {
             if (!e && resource.ledger_id) {
                 fundGroupsQuery.value = {
                     currency: resource.currency,
-                    lib_group_visibility: resource.lib_group_visibility,
                 };
                 fundsQuery.value = {
                     ledger_id: resource.ledger_id,
                 };
-                const applicableGroups = formatLibraryGroupIds(
-                    resource.ledger.lib_group_visibility
-                );
-                visibleGroups.value = applicableGroups;
-                resetOwnersAndVisibleGroups(applicableGroups);
                 return;
             }
             const selectedLedger = options.find(
                 ledger => ledger.ledger_id === e
             );
             if (selectedLedger) {
-                const applicableGroups = formatLibraryGroupIds(
-                    selectedLedger.lib_group_visibility
-                );
-                visibleGroups.value = applicableGroups;
-                resetOwnersAndVisibleGroups(applicableGroups);
-
                 fundGroupsQuery.value = {
                     currency: selectedLedger.currency,
-                    lib_group_visibility: applicableGroups,
                 };
                 fundsQuery.value = {
                     ledger_id: e,
@@ -92,14 +71,12 @@ export default {
             if (!e) {
                 ledgersQuery.value = {};
                 resource.ledger_id = null;
-                resource.lib_group_visibility = [];
                 return;
             }
             ledgersQuery.value = { fiscal_period_id: e };
 
             if (e !== resource.fiscal_period_id) {
                 resource.ledger_id = null;
-                resource.lib_group_visibility = [];
             }
         };
 
@@ -357,29 +334,6 @@ export default {
                     hideIn: ["List"],
                 },
                 {
-                    name: "lib_group_visibility",
-                    requiredKey: "id",
-                    selectLabel: "title",
-                    type: "select",
-                    label: $__("Visible to"),
-                    options: getVisibleGroups.value,
-                    required: true,
-                    hideIn: [
-                        "List",
-                        ...(!libraryGroups.value ? ["Form", "Show"] : []),
-                    ],
-                    showElement: {
-                        type: "table",
-                        columnData: "lib_group_limits",
-                        columns: [
-                            { name: $__("ID"), value: "id" },
-                            { name: $__("Title"), value: "title" },
-                        ],
-                        hidden: resource => resource.lib_group_limits.length,
-                    },
-                    allowMultipleChoices: true,
-                },
-                {
                     name: "over_spend_allowed",
                     type: "boolean",
                     label: $__("Overspend allowed"),
@@ -433,7 +387,6 @@ export default {
                     hideIn: ["List"],
                 },
             ],
-            libraryGroups: libraryGroups.value,
         });
 
         const tableURL = () => {
@@ -507,7 +460,6 @@ export default {
             }
             delete fund.last_updated;
             delete fund.owner;
-            delete fund.lib_group_limits;
             delete fund.fund_allocations;
             delete fund.ledger;
             delete fund.fund_group;
@@ -539,8 +491,6 @@ export default {
             componentData.resource.value.oe_warning_percent =
                 resource.oe_warning_percent * 100;
             if (caller === "form") {
-                componentData.resource.value.lib_group_visibility =
-                    formatLibraryGroupIds(resource.lib_group_visibility);
                 filterLedgersBySelectedFiscalPeriod(
                     null,
                     null,
@@ -815,10 +765,6 @@ export default {
             }
             return resource;
         };
-
-        onUnmounted(() => {
-            resetOwnersAndVisibleGroups();
-        });
 
         return {
             ...baseResource,

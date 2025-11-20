@@ -41,7 +41,6 @@ Koha::Acquisition::FundManagement::Fund Object class
 sub store {
     my ( $self, $args ) = @_;
 
-    $self->set_lib_group_visibility() if $self->lib_group_visibility;
     $self->SUPER::store;
 
     unless ( $args->{no_cascade} ) {
@@ -101,23 +100,16 @@ sub has_sub_funds {
 
 =head3 cascade_to_fund_allocations
 
-This method cascades changes to the values of the "lib_group_visibility" and "status" properties to all fund_allocations attached to this fund
+This method cascades changes to the values of the "status" property to all fund_allocations attached to this fund
 
 =cut
 
 sub cascade_to_fund_allocations {
     my ( $self, $args ) = @_;
 
-    my @fund_allocations     = $self->fund_allocations->as_list;
-    my $lib_group_visibility = $self->lib_group_visibility;
+    my @fund_allocations = $self->fund_allocations->as_list;
 
     foreach my $fund_allocation (@fund_allocations) {
-        my $visibility_updated = $self->cascade_lib_group_visibility(
-            {
-                parent_visibility => $lib_group_visibility,
-                child             => $fund_allocation
-            }
-        );
         my @data_to_cascade = ( 'fiscal_period_id', 'currency', 'owner_id', 'ledger_id' );
         my $data_updated    = $self->cascade_data(
             {
@@ -126,30 +118,23 @@ sub cascade_to_fund_allocations {
                 properties => \@data_to_cascade
             }
         );
-        $fund_allocation->store() if $visibility_updated || $data_updated;
+        $fund_allocation->store() if $data_updated;
     }
 }
 
 =head3 cascade_to_sub_funds
 
-This method cascades changes to the values of the "lib_group_visibility" and "status" properties to all sub_funds attached to this fund
+This method cascades changes to the values of the "status" properties to all sub_funds attached to this fund
 
 =cut
 
 sub cascade_to_sub_funds {
     my ( $self, $args ) = @_;
 
-    my $sub_funds            = $self->sub_funds;
-    my $lib_group_visibility = $self->lib_group_visibility;
-    my $status               = $self->status;
+    my $sub_funds = $self->sub_funds;
+    my $status    = $self->status;
 
     foreach my $sub_fund (@$sub_funds) {
-        my $visibility_updated = $self->cascade_lib_group_visibility(
-            {
-                parent_visibility => $lib_group_visibility,
-                child             => $sub_fund
-            }
-        );
         my $status_updated = $self->cascade_status(
             {
                 parent_status => $status,
@@ -164,7 +149,7 @@ sub cascade_to_sub_funds {
                 properties => \@data_to_cascade
             }
         );
-        $sub_fund->store() if $status_updated || $visibility_updated || $data_updated;
+        $sub_fund->store() if $status_updated || $data_updated;
     }
 }
 
@@ -178,19 +163,6 @@ sub _object_hierarchy {
         parent   => 'ledger',
         child    => 'sub_fund',
         children => 'sub_funds'
-    };
-}
-
-=head3 _library_group_visibility_parameters
-
-Configure library group limits
-
-=cut
-
-sub _library_group_visibility_parameters {
-    return {
-        class             => "Fund",
-        visibility_column => "lib_group_visibility",
     };
 }
 

@@ -3,7 +3,7 @@ import { permissionsMatrix } from "../data/permissionsMatrix";
 import { reactive, computed, toRefs } from "vue";
 import { withAuthorisedValueActions } from "../composables/authorisedValues";
 import { permissionsActions } from "../composables/permissions";
-import { libraryGroupsActions } from "../composables/libraryGroups";
+
 
 export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
     const store = reactive({
@@ -11,10 +11,8 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
             loggedInUser: null,
             userflags: null,
         },
-        libraryGroups: null,
         settings: null,
         permittedUsers: null,
-        visibleGroups: null,
         libGroupFilter: "",
         navigationBlocked: false,
         currentPermission: null,
@@ -31,111 +29,6 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
     const actions = {
         ...withAuthorisedValueActions(store),
         ...permissionsActions(store),
-        ...libraryGroupsActions(store),
-        _findBranchCodesInGroup(groups) {
-            const codes = [];
-            groups.forEach(group => {
-                group.libraries.forEach(lib => {
-                    if (!codes.find(code => code === lib.branchcode)) {
-                        codes.push(lib.branchcode);
-                    }
-                });
-            });
-            return codes;
-        },
-        filterUsersByPermissions(
-            operation,
-            branchcodes = null,
-            returnAll = false
-        ) {
-            const filteredUsers = [];
-            store.permittedUsers.forEach(user => {
-                user.displayName = user.firstname + " " + user.surname;
-                if (returnAll) {
-                    filteredUsers.push(user);
-                } else {
-                    const userPermitted = permissionsActions(
-                        store
-                    ).isUserPermitted(operation, user.permissions);
-                    if (userPermitted) {
-                        filteredUsers.push(user);
-                    }
-                }
-            });
-            if (branchcodes) {
-                return filteredUsers.filter(user => {
-                    return branchcodes.includes(user.branchcode);
-                });
-            } else {
-                return filteredUsers;
-            }
-        },
-        // isUserPermitted(operation, flags) {
-        //     const userflags = flags ? flags : this.user.userflags;
-        //     if (!operation) return true;
-        //     if (this.permissionsMatrix[operation].length === 0) return true;
-
-        //     const { acquisition, parameters, superlibrarian } = userflags;
-        //     if (operation === "manageSettings") {
-        //         let checkResult = false;
-        //         if (
-        //             superlibrarian ||
-        //             parameters === 1 ||
-        //             parameters.manage_sysprefs
-        //         ) {
-        //             checkResult = true;
-        //         } else {
-        //             checkResult = false;
-        //         }
-        //         return checkResult;
-        //     }
-
-        //     if (acquisition === 1 || superlibrarian) {
-        //         return true;
-        //     } else {
-        //         const checks = this.permissionsMatrix[operation].map(
-        //             permission => {
-        //                 if (acquisition[permission]) {
-        //                     return true;
-        //                 } else {
-        //                     return false;
-        //                 }
-        //             }
-        //         );
-        //         const failedChecks = checks.filter(check => !check).length;
-        //         return failedChecks > 0 ? false : true;
-        //     }
-        // },
-        filterGroupsBasedOnOwner(e, data) {
-            if (!e) {
-                store.visibleGroups = this.filterLibGroupsByUsersBranchcode();
-                data.lib_group_visibility = null;
-            } else {
-                const { library_id: branchcode } = e;
-                store.visibleGroups = this.filterLibGroupsByUsersBranchcode(
-                    branchcode,
-                    store.visibleGroups
-                );
-            }
-        },
-        filterOwnersBasedOnGroup(e, data) {
-            const libGroups = this.filterLibGroupsByUsersBranchcode(
-                null,
-                store.visibleGroups
-            );
-            if (!e.length) {
-                store.visibleGroups = libGroups;
-                data.owner_id = null;
-            }
-            store.libGroupFilter = e;
-        },
-        resetOwnersAndVisibleGroups(groups) {
-            store.libGroupFilter = "";
-            store.visibleGroups = this.filterLibGroupsByUsersBranchcode(
-                null,
-                groups
-            );
-        },
         formatValueWithCurrency(value, currency) {
             const { symbol } = store.currencies.find(
                 curr => curr.currency === currency
@@ -157,14 +50,6 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
         modulesEnabled: computed(() => {
             const modulesEnabled = store.settings.modulesEnabled;
             return modulesEnabled.value ? modulesEnabled.value : "";
-        }),
-        getVisibleGroups: computed(() => {
-            return store.visibleGroups?.length
-                ? store.visibleGroups
-                : actions.filterLibGroupsByUsersBranchcode();
-        }),
-        getLibGroupFilter: computed(() => {
-            return store.libGroupFilter;
         }),
     };
 

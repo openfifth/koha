@@ -50,19 +50,12 @@ export default {
         const { loading, loaded, setError } = mainStore;
 
         const acquisitionsStore = inject("acquisitionsStore");
-        const {
-            filterUsersByPermissions,
-            filterLibGroupsByUsersBranchcode,
-            setLibraryGroups,
-            loadAuthorisedValues,
-        } = acquisitionsStore;
+        const { loadAuthorisedValues } = acquisitionsStore;
         const {
             user,
             settings,
-            libraryGroups,
             permittedUsers,
             modulesEnabled,
-            visibleGroups,
             currencies,
             authorisedValues,
             userPermissions,
@@ -75,52 +68,43 @@ export default {
         onBeforeMount(() => {
             loading();
 
-            const libraryClient = APIClient.libraries;
-            libraryClient.libraryGroups.getAll().then(
-                libraryGroups => {
-                    setLibraryGroups(libraryGroups);
-                    loadAuthorisedValues(
-                        authorisedValues.value,
-                        acquisitionsStore
-                    ).then(() => {
-                        const client = APIClient.acquisition;
-                        client.config.get("fund_management").then(result => {
-                            userPermissions.value = result.permissions;
-                            permittedUsers.value = permitted_patrons;
-                            const { permission } = route.meta.self;
-                            const permissionRequired = permission
-                                ? permission
-                                : null;
-                            user.value.loggedInUser = logged_in_user;
-                            user.value.loggedInUser.loggedInBranch =
-                                logged_in_branch.branchcode;
-                            user.value.userflags = userflags;
-                            currencies.value = currencyList;
-                            const { acquisition, superlibrarian } =
-                                user.value.userflags;
-                            if (!acquisition && !superlibrarian) {
-                                return setError(
-                                    $__(
-                                        "You do not have permission to access this module. Please contact your system administrator."
-                                    ),
-                                    false
-                                );
-                            }
-                            visibleGroups.value =
-                                filterLibGroupsByUsersBranchcode();
-                            settings.value = {
-                                modulesEnabled: {
-                                    value: "funds",
-                                },
-                            };
-                            userPermitted.value = true;
-                            loaded();
-                            initialized.value = true;
-                        });
+            loadAuthorisedValues(
+                authorisedValues.value,
+                acquisitionsStore
+            ).then(() => {
+                const client = APIClient.acquisition;
+                client.config.get("fund_management").then(result => {
+                    userPermissions.value = result.permissions;
+                    permittedUsers.value = permitted_patrons;
+                    const { permission } = route.meta.self;
+                    const permissionRequired = permission ? permission : null;
+                    user.value.loggedInUser = logged_in_user;
+                    user.value.loggedInUser.loggedInBranch =
+                        logged_in_branch.branchcode;
+                    user.value.userflags = userflags;
+                    currencies.value = currencyList;
+                    sysprefs.value = result.sysprefs;
+                    gstValues.value = result.gst_values.map(gv => {
+                        return {
+                            label: `${Number(gv.option * 100).format_price()}%`,
+                            value: gv.option,
+                        };
                     });
-                },
-                error => {}
-            );
+                    const { acquisition, superlibrarian } =
+                        user.value.userflags;
+                    if (!acquisition && !superlibrarian) {
+                        return setError(
+                            $__(
+                                "You do not have permission to access this module. Please contact your system administrator."
+                            ),
+                            false
+                        );
+                    }
+                    userPermitted.value = true;
+                    loaded();
+                    initialized.value = true;
+                });
+            });
         });
 
         return {
@@ -129,14 +113,9 @@ export default {
             loaded,
             settings,
             user,
-            libraryGroups,
             permittedUsers,
             modulesEnabled,
-            visibleGroups,
-            filterUsersByPermissions,
-            filterLibGroupsByUsersBranchcode,
             currencies,
-            setLibraryGroups,
             initialized,
             userPermitted,
             authorisedValues,

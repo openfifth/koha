@@ -18,7 +18,7 @@ package Koha::Acquisition::FundManagement::BaseObjects;
 # along with Koha; if not, see <http://www.gnu.org/licenses>.
 
 use Modern::Perl;
-use base qw(Koha::Objects Koha::Objects::Limit::LibraryGroup);
+use base qw(Koha::Objects);
 
 use Koha::Acquisition::FundManagement::BaseObject;
 
@@ -30,18 +30,6 @@ Koha::Acquisition::FundManagement::BaseObjects object set class
 
 =head2 Class methods
 
-=head3 search
-
 =cut
-
-sub search {
-    my ( $self, $params, $attributes ) = @_;
-
-    my $class = ref($self) ? ref($self) : $self;
-
-    ( $params, $attributes ) = $self->define_library_group_limits( $params, $attributes );
-
-    return $self->SUPER::search( $params, $attributes );
-}
 
 1;
