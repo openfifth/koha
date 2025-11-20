@@ -18,6 +18,7 @@ import { computed, onBeforeMount, ref } from "vue";
 import FormElement from "../../FormElement.vue";
 import { APIClient } from "../../../fetch/api-client";
 import { $__ } from "@koha-vue/i18n";
+import { useRoute } from "vue-router";
 
 export default {
     components: { FormElement },
@@ -31,6 +32,7 @@ export default {
     inheritAttrs: false,
     setup(props) {
         const itemTypes = ref([]);
+        const route = useRoute();
 
         const getItemTypes = computed(() => {
             return itemTypes.value;
@@ -44,10 +46,10 @@ export default {
                 required: resource => props.createItems.value === "ordering",
             },
             { name: "author", type: "text", label: $__("Author") },
-            { name: "publisher_code", type: "text", label: $__("Publisher") },
-            { name: "editionstatement", type: "text", label: $__("Edition") },
+            { name: "publisher", type: "text", label: $__("Publisher") },
+            { name: "edition_statement", type: "text", label: $__("Edition") },
             {
-                name: "publicationyear",
+                name: "publication_year",
                 type: "text",
                 label: $__("Publication year"),
             },
@@ -55,7 +57,7 @@ export default {
             ...(props.unimarc
                 ? [{ name: "ean", type: "text", label: $__("EAN") }]
                 : []),
-            { name: "series", type: "text", label: $__("Series") },
+            { name: "series_title", type: "text", label: $__("Series") },
             ...(!props.biblionumber
                 ? [
                       {
@@ -72,9 +74,20 @@ export default {
 
         onBeforeMount(() => {
             props.resource.biblio = {};
-            APIClient.item.item_types.getAll().then(itemtypes => {
-                itemTypes.value = itemtypes;
-            });
+            APIClient.item.item_types
+                .getAll()
+                .then(itemtypes => {
+                    itemTypes.value = itemtypes;
+                })
+                .then(() => {
+                    if (route.query.biblionumber) {
+                        APIClient.biblios.biblios
+                            .get(route.query.biblionumber)
+                            .then(biblio => {
+                                props.resource.biblio = biblio;
+                            });
+                    }
+                });
         });
 
         return {

@@ -301,7 +301,10 @@
     [% IF ( CAN_user_acquisition_order_manage ) %]
         [% IF ( searchtoorder_basketno && searchtoorder_vendorid ) %]
             <div class="btn-group">
-                <a class="btn btn-default" href="/cgi-bin/koha/acqui/neworderempty.pl?booksellerid=[% searchtoorder_vendorid | uri %]&amp;basketno=[% searchtoorder_basketno | uri %]&amp;biblionumber=[% biblionumber | uri %]" role="button"
+                <a
+                    class="btn btn-default"
+                    href="/cgi-bin/koha/acquisitions/order_management/orderlines/add?vendor_id=[% searchtoorder_vendorid | uri %]&amp;basketno=[% searchtoorder_basketno | uri %]&amp;biblionumber=[% biblionumber | uri %]"
+                    role="button"
                     ><i class="fa fa-shopping-basket"></i> Add order</a
                 >
             </div>

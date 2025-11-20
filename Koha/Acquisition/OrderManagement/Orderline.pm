@@ -109,16 +109,16 @@ sub biblio {
     if ($biblio_data) {
         my $record = TransformKohaToMarc(
             {
-                "biblio.title"                 => $biblio_data->{title}            || '',
-                "biblio.author"                => $biblio_data->{author}           || '',
-                "biblio.seriestitle"           => $biblio_data->{series}           || '',
-                "biblioitems.isbn"             => $biblio_data->{isbn}             || '',
-                "biblioitems.ean"              => $biblio_data->{ean}              || '',
-                "biblioitems.publishercode"    => $biblio_data->{publisher_code}   || '',
-                "biblioitems.publicationyear"  => $biblio_data->{publicationyear}  || '',
-                "biblio.copyrightdate"         => $biblio_data->{publicationyear}  || '',
-                "biblioitems.itemtype"         => $biblio_data->{itemtype}         || '',
-                "biblioitems.editionstatement" => $biblio_data->{editionstatement} || '',
+                "biblio.title"                 => $biblio_data->{title}             || '',
+                "biblio.author"                => $biblio_data->{author}            || '',
+                "biblio.seriestitle"           => $biblio_data->{series_title}      || '',
+                "biblioitems.isbn"             => $biblio_data->{isbn}              || '',
+                "biblioitems.ean"              => $biblio_data->{ean}               || '',
+                "biblioitems.publishercode"    => $biblio_data->{publisher}         || '',
+                "biblioitems.publicationyear"  => $biblio_data->{publication_year}  || '',
+                "biblio.copyrightdate"         => $biblio_data->{publication_year}  || '',
+                "biblioitems.itemtype"         => $biblio_data->{itemtype}          || '',
+                "biblioitems.editionstatement" => $biblio_data->{edition_statement} || '',
             }
         );
         Koha::Util::MARC::FillWithDefaultValues($record);
