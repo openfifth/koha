@@ -45,13 +45,14 @@ name for the fund group
 
 currency of the fund allocation
 
-=head2 lib_group_visibility
+=head2 managing_branch
 
   data_type: 'varchar'
+  is_foreign_key: 1
   is_nullable: 1
-  size: 255
+  size: 10
 
-library groups the fund allocation is visible to
+branch responsible
 
 =cut
 
@@ -62,8 +63,8 @@ __PACKAGE__->add_columns(
   { data_type => "varchar", is_nullable => 1, size => 255 },
   "currency",
   { data_type => "varchar", is_nullable => 1, size => 10 },
-  "lib_group_visibility",
-  { data_type => "varchar", is_nullable => 1, size => 255 },
+  "managing_branch",
+  { data_type => "varchar", is_foreign_key => 1, is_nullable => 1, size => 10 },
 );
 
 =head1 PRIMARY KEY
@@ -95,9 +96,29 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 managing_branch
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2024-12-30 13:46:15
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:ZokNYrWcp6oyR3wVeJekuw
+Type: belongs_to
+
+Related object: L<Koha::Schema::Result::Branch>
+
+=cut
+
+__PACKAGE__->belongs_to(
+  "managing_branch",
+  "Koha::Schema::Result::Branch",
+  { branchcode => "managing_branch" },
+  {
+    is_deferrable => 1,
+    join_type     => "LEFT",
+    on_delete     => "CASCADE",
+    on_update     => "CASCADE",
+  },
+);
+
+
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-11-20 11:09:21
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum://972mfly3AQM7gMhIbmTw
 
 sub koha_object_class {
     'Koha::Acquisition::FundManagement::FundGroup';

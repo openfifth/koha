@@ -139,7 +139,7 @@
           - funds
           - funds.fund_allocations
           - owner
-          - lib_group_limits
+          - managing_library
         collectionFormat: csv
     produces:
       - application/json

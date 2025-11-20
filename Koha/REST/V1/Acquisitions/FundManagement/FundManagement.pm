@@ -66,17 +66,6 @@ sub list_users {
         my $patrons_rs = Koha::Patrons->search->filter_by_have_permission( $query->{permission} );
         my $patrons    = $c->objects->search($patrons_rs);
 
-        my $lib_group_visibility = $query->{lib_group_visibility};
-        if ( defined $lib_group_visibility ) {
-            $patrons = Koha::Acquisition::FundManagement::BaseObjects->filter_by_library_group_based_on_branchcode(
-                {
-                    lib_group_visibility => $lib_group_visibility,
-                    objects              => $patrons,
-                    match_field          => 'library_id',
-                }
-            );
-        }
-
         return $c->render(
             status  => 200,
             openapi => $patrons

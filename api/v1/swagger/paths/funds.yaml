@@ -140,7 +140,7 @@
           - ledger
           - fund_allocations
           - owner
-          - lib_group_limits
+          - managing_library
           - fund_group
           - sub_funds
         collectionFormat: csv

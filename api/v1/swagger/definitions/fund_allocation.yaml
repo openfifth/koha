@@ -70,12 +70,11 @@ properties:
       - integer
       - "null"
     description: Owner of the fund
-  lib_group_visibility:
+  managing_branch:
     type:
       - string
-      - array
       - "null"
-    description: Library group visibility
+    description: Branch responsible for managing the resource
   fiscal_period:
     type: object
     description: Fiscal_period

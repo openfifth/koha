@@ -564,9 +564,9 @@ __PACKAGE__->has_many(
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:CbYWsA9Nt//ekI0vcBjGiQ
 
 __PACKAGE__->add_columns(
-    '+active' => { is_boolean => 1 },
-    '+gstreg' => { is_boolean => 1 },
-    '+listincgst' => { is_boolean => 1 },
+    '+active'        => { is_boolean => 1 },
+    '+gstreg'        => { is_boolean => 1 },
+    '+listincgst'    => { is_boolean => 1 },
     '+invoiceincgst' => { is_boolean => 1 },
 );
 
@@ -637,4 +637,5 @@ sub koha_objects_class {
     'Koha::Acquisition::Booksellers';
 }
 
+# You can replace this text with custom code or comments, and it will be preserved on regeneration
 1;

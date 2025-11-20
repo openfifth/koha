@@ -186,13 +186,14 @@ amount to trigger a block on the fund for overspend
 
 time of the last update to the fund
 
-=head2 lib_group_visibility
+=head2 managing_branch
 
   data_type: 'varchar'
+  is_foreign_key: 1
   is_nullable: 1
-  size: 255
+  size: 10
 
-library groups the fund is visible to
+branch responsible
 
 =cut
 
@@ -267,8 +268,8 @@ __PACKAGE__->add_columns(
     default_value => \"current_timestamp",
     is_nullable => 0,
   },
-  "lib_group_visibility",
-  { data_type => "varchar", is_nullable => 1, size => 255 },
+  "managing_branch",
+  { data_type => "varchar", is_foreign_key => 1, is_nullable => 1, size => 10 },
 );
 
 =head1 PRIMARY KEY
@@ -352,6 +353,26 @@ __PACKAGE__->belongs_to(
   "ledger",
   "Koha::Schema::Result::Ledger",
   { ledger_id => "ledger_id" },
+  {
+    is_deferrable => 1,
+    join_type     => "LEFT",
+    on_delete     => "CASCADE",
+    on_update     => "CASCADE",
+  },
+);
+
+=head2 managing_branch
+
+Type: belongs_to
+
+Related object: L<Koha::Schema::Result::Branch>
+
+=cut
+
+__PACKAGE__->belongs_to(
+  "managing_branch",
+  "Koha::Schema::Result::Branch",
+  { branchcode => "managing_branch" },
   {
     is_deferrable => 1,
     join_type     => "LEFT",

@@ -3525,9 +3525,10 @@ CREATE TABLE `fiscal_period` (
   `status` TINYINT(1) DEFAULT '1' COMMENT 'is the fiscal period currently active',
   `last_updated` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'time of the last update to the fiscal period',
   `owner_id` INT(11) DEFAULT NULL COMMENT 'owner of the fiscal period',
-  `lib_group_visibility` VARCHAR(255) DEFAULT NULL COMMENT 'library groups the fiscal period is visible to',
+  `managing_branch` varchar(10) DEFAULT NULL COMMENT 'branch responsible',
   PRIMARY KEY (`fiscal_period_id`),
-  FOREIGN KEY (`owner_id`) REFERENCES `borrowers` (`borrowernumber`)
+  FOREIGN KEY (`owner_id`) REFERENCES `borrowers` (`borrowernumber`),
+  FOREIGN KEY (`managing_branch`) REFERENCES `branches` (`branchcode`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -3551,12 +3552,13 @@ CREATE TABLE `fund_allocation` (
   `type` enum('encumbered','spent', 'transfer', 'credit') DEFAULT NULL COMMENT 'type of the fund allocation',
   `is_transfer` TINYINT(1) DEFAULT '0' COMMENT 'is the fund allocation a transfer to/from another fund',
   `last_updated` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'time of the last update to the fund allocation',
-  `lib_group_visibility` VARCHAR(255) DEFAULT NULL COMMENT 'library groups the fund allocation is visible to',
+  `managing_branch` varchar(10) DEFAULT NULL COMMENT 'branch responsible',
   PRIMARY KEY (`fund_allocation_id`),
   FOREIGN KEY (`fund_id`) REFERENCES `funds` (`fund_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   FOREIGN KEY (`ledger_id`) REFERENCES `ledgers` (`ledger_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   FOREIGN KEY (`fiscal_period_id`) REFERENCES `fiscal_period` (`fiscal_period_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  FOREIGN KEY (`owner_id`) REFERENCES `borrowers` (`borrowernumber`)
+  FOREIGN KEY (`owner_id`) REFERENCES `borrowers` (`borrowernumber`),
+  FOREIGN KEY (`managing_branch`) REFERENCES `branches` (`branchcode`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -3571,8 +3573,9 @@ CREATE TABLE `fund_group` (
   `fund_group_id` INT(11) NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(255) DEFAULT NULL COMMENT 'name for the fund group',
   `currency` VARCHAR(10) DEFAULT NULL COMMENT 'currency of the fund allocation',
-  `lib_group_visibility` VARCHAR(255) DEFAULT NULL COMMENT 'library groups the fund allocation is visible to',
-  PRIMARY KEY (`fund_group_id`)
+  `managing_branch` varchar(10) DEFAULT NULL COMMENT 'branch responsible',
+  PRIMARY KEY (`fund_group_id`),
+  FOREIGN KEY (`managing_branch`) REFERENCES `branches` (`branchcode`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -3604,12 +3607,13 @@ CREATE TABLE `funds` (
   `os_warning_sum` decimal(28,2) DEFAULT 0.00 COMMENT 'amount to trigger a warning for overspend',
   `os_limit_sum` decimal(28,2) DEFAULT 0.00 COMMENT 'amount to trigger a block on the fund for overspend',
   `last_updated` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'time of the last update to the fund',
-  `lib_group_visibility` VARCHAR(255) DEFAULT NULL COMMENT 'library groups the fund is visible to',
+  `managing_branch` varchar(10) DEFAULT NULL COMMENT 'branch responsible',
   PRIMARY KEY (`fund_id`),
   FOREIGN KEY (`ledger_id`) REFERENCES `ledgers` (`ledger_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   FOREIGN KEY (`fiscal_period_id`) REFERENCES `fiscal_period` (`fiscal_period_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   FOREIGN KEY (`fund_group_id`) REFERENCES `fund_group` (`fund_group_id`) ON DELETE SET NULL ON UPDATE CASCADE,
-  FOREIGN KEY (`owner_id`) REFERENCES `borrowers` (`borrowernumber`)
+  FOREIGN KEY (`owner_id`) REFERENCES `borrowers` (`borrowernumber`),
+  FOREIGN KEY (`managing_branch`) REFERENCES `branches` (`branchcode`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -4558,7 +4562,7 @@ CREATE TABLE `ledgers` (
   `status` TINYINT(1) DEFAULT '1' COMMENT 'is the ledger currently active',
   `last_updated` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'time of the last update to the ledger',
   `owner_id` INT(11) DEFAULT NULL COMMENT 'owner of the ledger',
-  `lib_group_visibility` VARCHAR(255) DEFAULT NULL COMMENT 'library groups the ledger is visible to',
+  `managing_branch` varchar(10) DEFAULT NULL COMMENT 'branch responsible',
   `spend_limit` decimal(28,2) DEFAULT 0.00 COMMENT 'spend limit for the ledger',
   `over_spend_allowed` TINYINT(1) DEFAULT '1' COMMENT 'is an overspend allowed on the ledger',
   `oe_warning_percent` decimal(5,4) DEFAULT 0.0000 COMMENT 'percentage limit for overencumbrance',
@@ -4567,7 +4571,8 @@ CREATE TABLE `ledgers` (
   `os_limit_sum` decimal(28,2) DEFAULT 0.00 COMMENT 'amount to trigger a block on the ledger for overspend',
   PRIMARY KEY (`ledger_id`),
   FOREIGN KEY (`fiscal_period_id`) REFERENCES `fiscal_period` (`fiscal_period_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  FOREIGN KEY (`owner_id`) REFERENCES `borrowers` (`borrowernumber`)
+  FOREIGN KEY (`owner_id`) REFERENCES `borrowers` (`borrowernumber`),
+  FOREIGN KEY (`managing_branch`) REFERENCES `branches` (`branchcode`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

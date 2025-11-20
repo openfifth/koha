@@ -256,32 +256,32 @@ sub transfer {
 
                 my $allocation_from = Koha::Acquisition::FundManagement::FundAllocation->new(
                     {
-                        fund_id              => $fund_id_from,
-                        sub_fund_id          => $body->{sub_fund_id_from},
-                        ledger_id            => $fund_transferring_from->ledger_id,
-                        fiscal_period_id     => $fund_transferring_from->fiscal_period_id,
-                        allocation_amount    => -$body->{transfer_amount},
-                        reference            => $body->{reference},
-                        note                 => $note_from,
-                        currency             => $fund_transferring_from->currency,
-                        owner_id             => $fund_transferring_from->owner_id,
-                        lib_group_visibility => $fund_transferring_from->lib_group_visibility,
-                        is_transfer          => 1
+                        fund_id           => $fund_id_from,
+                        sub_fund_id       => $body->{sub_fund_id_from},
+                        ledger_id         => $fund_transferring_from->ledger_id,
+                        fiscal_period_id  => $fund_transferring_from->fiscal_period_id,
+                        allocation_amount => -$body->{transfer_amount},
+                        reference         => $body->{reference},
+                        note              => $note_from,
+                        currency          => $fund_transferring_from->currency,
+                        owner_id          => $fund_transferring_from->owner_id,
+                        managing_branch   => $fund_transferring_from->managing_branch,
+                        is_transfer       => 1
                     }
                 )->store();
                 my $allocation_to = Koha::Acquisition::FundManagement::FundAllocation->new(
                     {
-                        fund_id              => $fund_id_to,
-                        sub_fund_id          => $body->{sub_fund_id_to},
-                        ledger_id            => $fund_transferring_to->ledger_id,
-                        fiscal_period_id     => $fund_transferring_to->fiscal_period_id,
-                        allocation_amount    => $body->{transfer_amount},
-                        reference            => $body->{reference},
-                        note                 => $note_to,
-                        currency             => $fund_transferring_to->currency,
-                        owner_id             => $fund_transferring_to->owner_id,
-                        lib_group_visibility => $fund_transferring_to->lib_group_visibility,
-                        is_transfer          => 1
+                        fund_id           => $fund_id_to,
+                        sub_fund_id       => $body->{sub_fund_id_to},
+                        ledger_id         => $fund_transferring_to->ledger_id,
+                        fiscal_period_id  => $fund_transferring_to->fiscal_period_id,
+                        allocation_amount => $body->{transfer_amount},
+                        reference         => $body->{reference},
+                        note              => $note_to,
+                        currency          => $fund_transferring_to->currency,
+                        owner_id          => $fund_transferring_to->owner_id,
+                        managing_branch   => $fund_transferring_to->managing_branch,
+                        is_transfer       => 1
                     }
                 )->store();
 

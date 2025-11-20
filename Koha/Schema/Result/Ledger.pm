@@ -102,13 +102,14 @@ time of the last update to the ledger
 
 owner of the ledger
 
-=head2 lib_group_visibility
+=head2 managing_branch
 
   data_type: 'varchar'
+  is_foreign_key: 1
   is_nullable: 1
-  size: 255
+  size: 10
 
-library groups the ledger is visible to
+branch responsible
 
 =head2 spend_limit
 
@@ -191,8 +192,8 @@ __PACKAGE__->add_columns(
   },
   "owner_id",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
-  "lib_group_visibility",
-  { data_type => "varchar", is_nullable => 1, size => 255 },
+  "managing_branch",
+  { data_type => "varchar", is_foreign_key => 1, is_nullable => 1, size => 10 },
   "spend_limit",
   {
     data_type => "decimal",
@@ -296,6 +297,26 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 managing_branch
+
+Type: belongs_to
+
+Related object: L<Koha::Schema::Result::Branch>
+
+=cut
+
+__PACKAGE__->belongs_to(
+  "managing_branch",
+  "Koha::Schema::Result::Branch",
+  { branchcode => "managing_branch" },
+  {
+    is_deferrable => 1,
+    join_type     => "LEFT",
+    on_delete     => "CASCADE",
+    on_update     => "CASCADE",
+  },
+);
+
 =head2 owner
 
 Type: belongs_to
@@ -317,8 +338,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-08-05 10:10:56
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:5Xn6n9orNXrxz6WV6VnUxw
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-11-20 11:09:21
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:Ru3NjyhXHX20Tp10I234yA
 
 __PACKAGE__->add_columns(
     '+status'                   => { is_boolean => 1 },

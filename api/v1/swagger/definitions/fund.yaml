@@ -70,12 +70,11 @@ properties:
       - integer
       - "null"
     description: Owner of the fund
-  lib_group_visibility:
+  managing_branch:
     type:
       - string
-      - array
       - "null"
-    description: Library group visibility
+    description: Branch responsible for managing the resource
   spend_limit:
     type:
       - number
@@ -141,9 +140,6 @@ properties:
     description: Owner of the ledger
     items:
       $ref: "patron.yaml"
-  lib_group_limits:
-    type: array
-    description: Library groups this vendor belongs to
   allocation_decrease:
     type:
       - integer

@@ -95,13 +95,14 @@ time of the last update to the fiscal period
 
 owner of the fiscal period
 
-=head2 lib_group_visibility
+=head2 managing_branch
 
   data_type: 'varchar'
+  is_foreign_key: 1
   is_nullable: 1
-  size: 255
+  size: 10
 
-library groups the fiscal period is visible to
+branch responsible
 
 =cut
 
@@ -134,8 +135,8 @@ __PACKAGE__->add_columns(
   },
   "owner_id",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
-  "lib_group_visibility",
-  { data_type => "varchar", is_nullable => 1, size => 255 },
+  "managing_branch",
+  { data_type => "varchar", is_foreign_key => 1, is_nullable => 1, size => 10 },
 );
 
 =head1 PRIMARY KEY
@@ -197,6 +198,26 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 managing_branch
+
+Type: belongs_to
+
+Related object: L<Koha::Schema::Result::Branch>
+
+=cut
+
+__PACKAGE__->belongs_to(
+  "managing_branch",
+  "Koha::Schema::Result::Branch",
+  { branchcode => "managing_branch" },
+  {
+    is_deferrable => 1,
+    join_type     => "LEFT",
+    on_delete     => "CASCADE",
+    on_update     => "CASCADE",
+  },
+);
+
 =head2 owner
 
 Type: belongs_to
@@ -218,8 +239,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-08-05 10:10:56
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:le5Kbhd8FJIT0D9GLdcypw
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-11-20 11:09:21
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:vJSnOmR6oGKpn9xL3xjvlQ
 
 __PACKAGE__->add_columns(
     '+status' => { is_boolean => 1 },
