@@ -489,6 +489,7 @@ export default {
             delete fund.fund_group;
             delete fund.fiscal_period;
             delete fund.sub_funds;
+            delete fund.managing_library;
 
             if (fund_id) {
                 const acq_client = APIClient.acquisition;

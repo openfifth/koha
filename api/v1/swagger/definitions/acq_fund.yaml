@@ -160,4 +160,14 @@ properties:
       - integer
       - "null"
     description: The total value of the fund
+  managing_library:
+    description: Information about the managing library for the fund
+    type:
+      - object
+      - "null"
+  parent_fund:
+    description: Information about the parent_fund
+    type:
+      - object
+      - "null"
 additionalProperties: false

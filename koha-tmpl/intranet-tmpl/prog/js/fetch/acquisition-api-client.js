@@ -100,7 +100,7 @@ export class AcquisitionAPIClient {
                 this.httpClient.get({
                     endpoint: "fiscal_periods/" + id,
                     headers: {
-                        "x-koha-embed": "owner",
+                        "x-koha-embed": "owner,managing_library",
                         ...headers,
                     },
                 }),
@@ -147,7 +147,7 @@ export class AcquisitionAPIClient {
                 this.httpClient.get({
                     endpoint: "ledgers/" + id,
                     headers: {
-                        "x-koha-embed": "owner,fiscal_period",
+                        "x-koha-embed": "owner,managing_library,fiscal_period",
                         ...headers,
                     },
                 }),
@@ -194,7 +194,7 @@ export class AcquisitionAPIClient {
                     endpoint: "funds/" + id,
                     headers: {
                         "x-koha-embed":
-                            "owner,fiscal_period,fund_group,ledger,fund_allocations,sub_funds",
+                            "owner,managing_library,fiscal_period,fund_group,ledger,fund_allocations,sub_funds",
                         ...headers,
                     },
                 }),

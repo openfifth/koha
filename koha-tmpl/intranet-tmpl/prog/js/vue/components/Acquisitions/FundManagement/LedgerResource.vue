@@ -331,6 +331,7 @@ export default {
             delete ledger.patron_str;
             delete ledger.owner;
             delete ledger.fiscal_period;
+            delete ledger.managing_library;
 
             if (ledger_id) {
                 const acq_client = APIClient.acquisition;

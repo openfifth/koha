@@ -228,6 +228,8 @@ export default {
             delete fiscal_period.last_updated;
             delete fiscal_period.patron;
             delete fiscal_period.patron_str;
+            delete fiscal_period.owner;
+            delete fiscal_period.managing_library;
 
             if (fiscal_period_id) {
                 const acq_client = APIClient.acquisition;

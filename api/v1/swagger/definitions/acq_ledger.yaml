@@ -103,4 +103,9 @@ properties:
     description: Owner of the ledger
     items:
       $ref: "patron.yaml"
+  managing_library:
+    description: Information about the managing library for the ledger
+    type:
+      - object
+      - "null"
 additionalProperties: false

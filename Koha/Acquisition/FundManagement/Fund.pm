@@ -166,6 +166,17 @@ sub _object_hierarchy {
     };
 }
 
+=head3 managing_library
+
+=cut
+
+sub managing_library {
+    my ($self) = @_;
+    my $managing_library_rs = $self->_result->managing_branch;
+    return unless $managing_library_rs;
+    return Koha::Library->_new_from_dbic($managing_library_rs);
+}
+
 =head2 Internal methods
 
 =head3 _type
