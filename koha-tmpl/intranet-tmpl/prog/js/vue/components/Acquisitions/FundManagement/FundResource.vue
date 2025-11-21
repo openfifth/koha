@@ -252,7 +252,7 @@ export default {
                                   link: {
                                       name: "FundShow",
                                       params: {
-                                          fund_id: "parent_fund_id",
+                                          fund_id: "fund_parent_id",
                                       },
                                   },
                               },

@@ -83,6 +83,18 @@ sub sub_funds {
     return $sub_funds;
 }
 
+=head3 parent_fund
+
+Embeds the parent fund to a child fund
+
+=cut
+
+sub parent_fund {
+    my ($self) = @_;
+    my $fund_rs = $self->_result->parent_fund;
+    return Koha::Acquisition::FundManagement::Fund->_new_from_dbic($fund_rs);
+}
+
 =head3 has_sub_funds
 
 Checks if a fund has sub funds

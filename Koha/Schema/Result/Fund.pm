@@ -454,5 +454,26 @@ __PACKAGE__->belongs_to(
     },
 );
 
+
+=head2 parent_fund
+
+Type: belongs_to
+
+Related object: L<Koha::Schema::Result::Fund>
+
+=cut
+
+__PACKAGE__->belongs_to(
+    "parent_fund",
+    "Koha::Schema::Result::Fund",
+    { fund_id => "fund_parent_id" },
+    {
+        is_deferrable => 1,
+        join_type     => "LEFT",
+        on_delete     => "CASCADE",
+        on_update     => "CASCADE",
+    },
+);
+
 # You can replace this text with custom code or comments, and it will be preserved on regeneration
 1;

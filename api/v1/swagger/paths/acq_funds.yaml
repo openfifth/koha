@@ -143,6 +143,7 @@
           - managing_library
           - fund_group
           - sub_funds
+          - parent_fund
         collectionFormat: csv
     produces:
       - application/json
