@@ -197,6 +197,8 @@ The total is made up of all the fund allocations against the object
 sub total_allocations {
     my ($self) = @_;
 
+    # ACQTODO - THIS WILL NEED UPDATING IN LINE WITH NEW FUND DISTRIBUTION STRUCTURE
+
     my $fund_allocations = $self->fund_allocations;
     my $total            = 0;
     foreach my $fund_allocation ( $fund_allocations->as_list ) {
@@ -216,6 +218,8 @@ The total is made up of all the fund allocations against the object that are not
 sub total_spent {
     my ($self) = @_;
 
+    # ACQTODO - THIS WILL NEED UPDATING IN LINE WITH NEW FUND DISTRIBUTION STRUCTURE
+
     my $fund_allocations = $self->fund_allocations->search( { type => { '!=', 'encumbered' } } );
     my $total            = 0;
     foreach my $fund_allocation ( $fund_allocations->as_list ) {
@@ -234,6 +238,8 @@ The total is made up of all the fund allocations against the object that are enc
 
 sub total_encumbered {
     my ($self) = @_;
+
+    # ACQTODO - THIS WILL NEED UPDATING IN LINE WITH NEW FUND DISTRIBUTION STRUCTURE
 
     my $fund_allocations = $self->fund_allocations->search( { type => 'encumbered' } );
     my $total            = 0;
@@ -255,23 +261,27 @@ The total is made up of the spend_limits for all the child objects attached to t
 sub check_spend_limits {
     my ( $self, $args ) = @_;
 
-    my $child_class  = $self->_object_hierarchy->{children};
-    my @children     = $self->$child_class->as_list;
-    my $total        = $args->{new_allocation}  || 0;
-    my $spend_limit  = $args->{new_spend_limit} || $self->spend_limit || 0;
-    my $id_field     = $self->_object_hierarchy->{child} . "_id";
-    my $id_to_ignore = $args->{id_to_ignore} || 0;
+    # ACQTODO - THIS WILL NEED UPDATING IN LINE WITH NEW FUND DISTRIBUTION STRUCTURE
 
-    return { within_limit => 1 } if !$spend_limit > 0;
+    # my $child_class  = $self->_object_hierarchy->{children};
+    # my @children     = $self->$child_class->as_list;
+    # my $total        = $args->{new_allocation}  || 0;
+    # my $spend_limit  = $args->{new_spend_limit} || $self->spend_limit || 0;
+    # my $id_field     = $self->_object_hierarchy->{child} . "_id";
+    # my $id_to_ignore = $args->{id_to_ignore} || 0;
 
-    foreach my $child (@children) {
-        my $spend_limit = $child->spend_limit;
-        $total += $spend_limit if $child->$id_field != $id_to_ignore;
-    }
+    # return { within_limit => 1 } if !$spend_limit > 0;
 
-    my $limit_check   = $spend_limit >= $total        ? 1                     : 0;
-    my $breach_amount = ( $total - $spend_limit ) > 0 ? $total - $spend_limit : 0;
-    return { within_limit => $limit_check, breach_amount => $breach_amount };
+    # foreach my $child (@children) {
+    #     my $spend_limit = $child->spend_limit;
+    #     $total += $spend_limit if $child->$id_field != $id_to_ignore;
+    # }
+
+    # my $limit_check   = $spend_limit >= $total        ? 1                     : 0;
+    # my $breach_amount = ( $total - $spend_limit ) > 0 ? $total - $spend_limit : 0;
+    # return { within_limit => $limit_check, breach_amount => $breach_amount };
+
+    return { within_limit => 1, breach_amount => 0 };
 }
 
 =head3 is_spend_limit_breached
@@ -286,59 +296,63 @@ It takes into account whether over spend or over encumbrance are allowed on the 
 sub is_spend_limit_breached {
     my ( $self, $args ) = @_;
 
-    my $over_spend_allowed;
-    if ( $self->_type() ne 'FiscalPeriod' ) {
-        $over_spend_allowed =
-            defined $args->{over_spend_allowed} ? $args->{over_spend_allowed} : $self->over_spend_allowed;
-        return { within_limit => 1 } if $over_spend_allowed;
-    }
+    # ACQTODO - THIS WILL NEED UPDATING IN LINE WITH NEW FUND DISTRIBUTION STRUCTURE
 
-    my $new_allocation = $args->{new_allocation};
+    # my $over_spend_allowed;
+    # if ( $self->_type() ne 'FiscalPeriod' ) {
+    #     $over_spend_allowed =
+    #         defined $args->{over_spend_allowed} ? $args->{over_spend_allowed} : $self->over_spend_allowed;
+    #     return { within_limit => 1 } if $over_spend_allowed;
+    # }
 
-    my $previous_allocation_amount = $args->{previous_allocation_amount} || 0;
-    my $new_allocation_amount =
-        defined $new_allocation && ref($new_allocation) eq 'Koha::Acquisition::FundManagement::FundAllocation'
-        ? -$new_allocation->allocation_amount
-        : looks_like_number($new_allocation) ? $new_allocation
-        :                                      0;
-    my $new_allocation_type = defined $new_allocation
-        && ref($new_allocation) eq 'Koha::Acquisition::FundManagement::FundAllocation' ? $new_allocation->type : '';
-    my $spend_limit       = $self->spend_limit;
-    my $total_allocations = -$self->total_allocations + $new_allocation_amount - $previous_allocation_amount;
-    my $total_spent =
-        $new_allocation_type ne 'encumbered'
-        ? -$self->total_spent + $new_allocation_amount - $previous_allocation_amount
-        : -$self->total_spent - $previous_allocation_amount;
+    # my $new_allocation = $args->{new_allocation};
 
-    my $overspent = $total_allocations > $spend_limit;
+    # my $previous_allocation_amount = $args->{previous_allocation_amount} || 0;
+    # my $new_allocation_amount =
+    #     defined $new_allocation && ref($new_allocation) eq 'Koha::Acquisition::FundManagement::FundAllocation'
+    #     ? -$new_allocation->allocation_amount
+    #     : looks_like_number($new_allocation) ? $new_allocation
+    #     :                                      0;
+    # my $new_allocation_type = defined $new_allocation
+    #     && ref($new_allocation) eq 'Koha::Acquisition::FundManagement::FundAllocation' ? $new_allocation->type : '';
+    # my $spend_limit       = $self->spend_limit;
+    # my $total_allocations = -$self->total_allocations + $new_allocation_amount - $previous_allocation_amount;
+    # my $total_spent =
+    #     $new_allocation_type ne 'encumbered'
+    #     ? -$self->total_spent + $new_allocation_amount - $previous_allocation_amount
+    #     : -$self->total_spent - $previous_allocation_amount;
 
-    my $breach_amount = $total_allocations - $spend_limit;
-    if ( $self->_type() eq 'FiscalPeriod' ) {
-        return { within_limit => 1 } if !$overspent;
-        return { within_limit => 0, breach_amount => $breach_amount };
-    }
+    # my $overspent = $total_allocations > $spend_limit;
 
-    my $oe_warning_percent = $self->oe_warning_percent > 0 ? $self->oe_warning_percent : 1;
-    my $oe_limit_amount    = $self->oe_limit_amount > 0    ? $self->oe_limit_amount    : $self->spend_limit;
-    my $os_warning_sum     = $self->os_warning_sum > 0     ? $self->os_warning_sum     : $self->spend_limit;
-    my $os_limit_sum =
-          $self->os_limit_sum > 0
-        ? $self->os_limit_sum
-        : $self->spend_limit;
-    my $oe_warning = $total_allocations - ( $oe_warning_percent * $spend_limit );
-    my $oe_limit   = $total_allocations - $oe_limit_amount;
-    my $os_warning = $total_spent - $os_warning_sum;
-    my $os_limit   = $total_spent - $os_limit_sum;
+    # my $breach_amount = $total_allocations - $spend_limit;
+    # if ( $self->_type() eq 'FiscalPeriod' ) {
+    #     return { within_limit => 1 } if !$overspent;
+    #     return { within_limit => 0, breach_amount => $breach_amount };
+    # }
 
-    my $warnings = {
-        oe_warning => $oe_warning >= 0 ? 1         : 0,
-        oe_limit   => $oe_limit > 0    ? $oe_limit : 0,
-        os_warning => $os_warning >= 0 ? 1         : 0,
-        os_limit   => $os_limit > 0    ? $os_limit : 0,
-    };
+    # my $oe_warning_percent = $self->oe_warning_percent > 0 ? $self->oe_warning_percent : 1;
+    # my $oe_limit_amount    = $self->oe_limit_amount > 0    ? $self->oe_limit_amount    : $self->spend_limit;
+    # my $os_warning_sum     = $self->os_warning_sum > 0     ? $self->os_warning_sum     : $self->spend_limit;
+    # my $os_limit_sum =
+    #       $self->os_limit_sum > 0
+    #     ? $self->os_limit_sum
+    #     : $self->spend_limit;
+    # my $oe_warning = $total_allocations - ( $oe_warning_percent * $spend_limit );
+    # my $oe_limit   = $total_allocations - $oe_limit_amount;
+    # my $os_warning = $total_spent - $os_warning_sum;
+    # my $os_limit   = $total_spent - $os_limit_sum;
 
-    return { within_limit => 1, %$warnings } if !$overspent;
-    return { within_limit => 0, breach_amount => $breach_amount, %$warnings };
+    # my $warnings = {
+    #     oe_warning => $oe_warning >= 0 ? 1         : 0,
+    #     oe_limit   => $oe_limit > 0    ? $oe_limit : 0,
+    #     os_warning => $os_warning >= 0 ? 1         : 0,
+    #     os_limit   => $os_limit > 0    ? $os_limit : 0,
+    # };
+
+    # return { within_limit => 1, %$warnings } if !$overspent;
+    # return { within_limit => 0, breach_amount => $breach_amount, %$warnings };
+
+    return { within_limit => 1 };
 }
 
 =head3 add_accounting_values
@@ -356,45 +370,47 @@ sub add_accounting_values {
 
     my $data = $args->{data};
 
-    my @allocations = ();
+    # ACQTODO - THIS WILL NEED UPDATING IN LINE WITH NEW FUND DISTRIBUTION STRUCTURE
 
-    if ( defined $data->{funds} ) {
-        foreach my $fund ( @{ $data->{funds} } ) {
-            if ( defined $fund->{fund_allocations} ) {
-                my @fund_allocations = @{ $fund->{fund_allocations} };
-                push( @allocations, @fund_allocations );
-            }
-            if ( defined $fund->{sub_funds} ) {
-                foreach my $sub_fund ( @{ $fund->{sub_funds} } ) {
-                    if ( defined $sub_fund->{fund_allocations} ) {
-                        my @fund_allocations = @{ $sub_fund->{fund_allocations} };
-                        push( @allocations, @fund_allocations );
-                    }
-                }
-            }
-        }
-    }
-    if ( defined $data->{fund_allocations} ) {
-        push( @allocations, @{ $data->{fund_allocations} } );
-    }
+    # my @allocations = ();
 
-    if ( scalar(@allocations) > 0 ) {
-        my $allocation_increase = 0;
-        my $allocation_decrease = 0;
-        my $net_transfers       = 0;
+    # if ( defined $data->{funds} ) {
+    #     foreach my $fund ( @{ $data->{funds} } ) {
+    #         if ( defined $fund->{fund_allocations} ) {
+    #             my @fund_allocations = @{ $fund->{fund_allocations} };
+    #             push( @allocations, @fund_allocations );
+    #         }
+    #         if ( defined $fund->{sub_funds} ) {
+    #             foreach my $sub_fund ( @{ $fund->{sub_funds} } ) {
+    #                 if ( defined $sub_fund->{fund_allocations} ) {
+    #                     my @fund_allocations = @{ $sub_fund->{fund_allocations} };
+    #                     push( @allocations, @fund_allocations );
+    #                 }
+    #             }
+    #         }
+    #     }
+    # }
+    # if ( defined $data->{fund_allocations} ) {
+    #     push( @allocations, @{ $data->{fund_allocations} } );
+    # }
 
-        foreach my $allocation (@allocations) {
-            $allocation_increase += $allocation->{allocation_amount} if $allocation->{allocation_amount} > 0;
-            $allocation_decrease += $allocation->{allocation_amount} if $allocation->{allocation_amount} < 0;
-            $net_transfers       += $allocation->{allocation_amount} if $allocation->{is_transfer};
-        }
+    # if ( scalar(@allocations) > 0 ) {
+    #     my $allocation_increase = 0;
+    #     my $allocation_decrease = 0;
+    #     my $net_transfers       = 0;
 
-        my $total_allocation = $allocation_increase + $allocation_decrease;
-        $data->{total_allocation}    = $total_allocation;
-        $data->{allocation_decrease} = $allocation_decrease;
-        $data->{allocation_increase} = $allocation_increase;
-        $data->{net_transfers}       = $net_transfers;
-    }
+    #     foreach my $allocation (@allocations) {
+    #         $allocation_increase += $allocation->{allocation_amount} if $allocation->{allocation_amount} > 0;
+    #         $allocation_decrease += $allocation->{allocation_amount} if $allocation->{allocation_amount} < 0;
+    #         $net_transfers       += $allocation->{allocation_amount} if $allocation->{is_transfer};
+    #     }
+
+    #     my $total_allocation = $allocation_increase + $allocation_decrease;
+    #     $data->{total_allocation}    = $total_allocation;
+    #     $data->{allocation_decrease} = $allocation_decrease;
+    #     $data->{allocation_increase} = $allocation_increase;
+    #     $data->{net_transfers}       = $net_transfers;
+    # }
     return $data;
 }
 
@@ -442,30 +458,32 @@ It returns an error string if updating the field values will cause a conflict
 sub verify_updated_fields {
     my ( $self, $args ) = @_;
 
-    my $updated_fields = $args->{updated_fields};
+    # ACQTODO - THIS WILL NEED UPDATING IN LINE WITH NEW FUND DISTRIBUTION STRUCTURE
 
-    my $error;
-    if (   defined $updated_fields->{over_spend_allowed}
-        && !$updated_fields->{over_spend_allowed}
-        && $updated_fields->{over_spend_allowed} != $self->over_spend_allowed )
-    {
-        $error = $self->handle_spending_block_changes(
-            {
-                spend => $updated_fields->{over_spend_allowed},
-            }
-        );
-        return $error if $error;
-    }
+    # my $updated_fields = $args->{updated_fields};
 
-    my $over_spend_allowed =
-        defined $updated_fields->{over_spend_allowed}
-        ? $updated_fields->{over_spend_allowed}
-        : $self->over_spend_allowed;
-    if ( defined $updated_fields->{spend_limit} && $updated_fields->{spend_limit} != $self->spend_limit ) {
-        $error = $self->handle_spend_limit_changes(
-            { new_limit => $updated_fields->{spend_limit}, over_spend_allowed => $over_spend_allowed } );
-        return $error if $error;
-    }
+    # my $error;
+    # if (   defined $updated_fields->{over_spend_allowed}
+    #     && !$updated_fields->{over_spend_allowed}
+    #     && $updated_fields->{over_spend_allowed} != $self->over_spend_allowed )
+    # {
+    #     $error = $self->handle_spending_block_changes(
+    #         {
+    #             spend => $updated_fields->{over_spend_allowed},
+    #         }
+    #     );
+    #     return $error if $error;
+    # }
+
+    # my $over_spend_allowed =
+    #     defined $updated_fields->{over_spend_allowed}
+    #     ? $updated_fields->{over_spend_allowed}
+    #     : $self->over_spend_allowed;
+    # if ( defined $updated_fields->{spend_limit} && $updated_fields->{spend_limit} != $self->spend_limit ) {
+    #     $error = $self->handle_spend_limit_changes(
+    #         { new_limit => $updated_fields->{spend_limit}, over_spend_allowed => $over_spend_allowed } );
+    #     return $error if $error;
+    # }
 
     return;
 }
@@ -483,15 +501,17 @@ It checks whether the object is overspent or overspent and encumbered and return
 sub handle_spending_block_changes {
     my ( $self, $args ) = @_;
 
-    my $object_hierarchy = $self->_object_hierarchy();
+    # ACQTODO - THIS WILL NEED UPDATING IN LINE WITH NEW FUND DISTRIBUTION STRUCTURE
 
-    my $result = $self->is_spend_limit_breached( { new_allocation => undef, over_spend_allowed => $args->{spend} } );
+    # my $object_hierarchy = $self->_object_hierarchy();
 
-    return
-          "You cannot prevent overspend on a "
-        . _format_object_name( $object_hierarchy->{object} )
-        . " that is already overspent"
-        if !$result->{within_limit};
+    # my $result = $self->is_spend_limit_breached( { new_allocation => undef, over_spend_allowed => $args->{spend} } );
+
+    # return
+    #       "You cannot prevent overspend on a "
+    #     . _format_object_name( $object_hierarchy->{object} )
+    #     . " that is already overspent"
+    #     if !$result->{within_limit};
 
     return;
 }
@@ -511,45 +531,47 @@ If the spend limit is decreased, it checks that the sum
 sub handle_spend_limit_changes {
     my ( $self, $args ) = @_;
 
-    my $new_limit          = $args->{new_limit};
-    my $over_spend_allowed = $args->{over_spend_allowed};
-    my $object_hierarchy   = $self->_object_hierarchy();
+    # ACQTODO - THIS WILL NEED UPDATING IN LINE WITH NEW FUND DISTRIBUTION STRUCTURE
 
-    if ( $new_limit < -$self->total_allocations && !$over_spend_allowed ) {
-        return
-              "Spend limit cannot be less than the "
-            . $object_hierarchy->{object}
-            . " spend when overspend is not allowed";
-    }
+    # my $new_limit          = $args->{new_limit};
+    # my $over_spend_allowed = $args->{over_spend_allowed};
+    # my $object_hierarchy   = $self->_object_hierarchy();
 
-    my $parent_object = $object_hierarchy->{parent};
-    my $parent        = $self->$parent_object;
-    my $id_field      = $object_hierarchy->{object} . "_id";
+    # if ( $new_limit < -$self->total_allocations && !$over_spend_allowed ) {
+    #     return
+    #           "Spend limit cannot be less than the "
+    #         . $object_hierarchy->{object}
+    #         . " spend when overspend is not allowed";
+    # }
 
-    my $result = $parent->check_spend_limits( { new_allocation => $new_limit, id_to_ignore => $self->$id_field } );
+    # my $parent_object = $object_hierarchy->{parent};
+    # my $parent        = $self->$parent_object;
+    # my $id_field      = $object_hierarchy->{object} . "_id";
 
-    return
-          "Spend limit breached for the "
-        . _format_object_name( $object_hierarchy->{parent} )
-        . ", please reduce the spend limit on the "
-        . _format_object_name( $object_hierarchy->{object} ) . " by "
-        . $result->{breach_amount}
-        . " or increase the spend limit for the "
-        . _format_object_name( $object_hierarchy->{parent} )
-        unless $result->{within_limit};
+    # my $result = $parent->check_spend_limits( { new_allocation => $new_limit, id_to_ignore => $self->$id_field } );
 
-    $result = $self->check_spend_limits( { new_spend_limit => $new_limit } );
+    # return
+    #       "Spend limit breached for the "
+    #     . _format_object_name( $object_hierarchy->{parent} )
+    #     . ", please reduce the spend limit on the "
+    #     . _format_object_name( $object_hierarchy->{object} ) . " by "
+    #     . $result->{breach_amount}
+    #     . " or increase the spend limit for the "
+    #     . _format_object_name( $object_hierarchy->{parent} )
+    #     unless $result->{within_limit};
 
-    return
-          "The "
-        . _format_object_name( $object_hierarchy->{object} )
-        . " spend limit is less than the total of the spend limits for the "
-        . _format_object_name( $object_hierarchy->{children} )
-        . " below, please increase spend limit by "
-        . $result->{breach_amount}
-        . " or decrease the spend limit for the "
-        . _format_object_name( $object_hierarchy->{children} )
-        unless $result->{within_limit};
+    # $result = $self->check_spend_limits( { new_spend_limit => $new_limit } );
+
+    # return
+    #       "The "
+    #     . _format_object_name( $object_hierarchy->{object} )
+    #     . " spend limit is less than the total of the spend limits for the "
+    #     . _format_object_name( $object_hierarchy->{children} )
+    #     . " below, please increase spend limit by "
+    #     . $result->{breach_amount}
+    #     . " or decrease the spend limit for the "
+    #     . _format_object_name( $object_hierarchy->{children} )
+    #     unless $result->{within_limit};
 
     return;
 }
