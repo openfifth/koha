@@ -7,6 +7,7 @@
                 v-bind="formattedTableOptions"
                 :searchable_additional_fields="searchable_additional_fields"
                 :searchable_av_options="searchable_av_options"
+                v-on="tableEventList"
             ></KohaTable>
         </div>
     </div>
@@ -93,6 +94,22 @@ export default {
                 initialized.value = true;
             }
         });
+        const tableEventList = computed(() => {
+            return Object.keys(props.tableOptions.actions).reduce(
+                (acc, key) => {
+                    const actions = props.tableOptions.actions[key];
+                    actions.forEach(action => {
+                        if (typeof action === "object") {
+                            const actionName = Object.keys(action)[0];
+                            if (!action[actionName].callback) return acc;
+                            acc[actionName] = action[actionName].callback;
+                        }
+                    });
+                    return acc;
+                },
+                {}
+            );
+        });
 
         return {
             table,
@@ -104,6 +121,7 @@ export default {
             getResourceCount,
             getSearchableAdditionalFields,
             getSearchableAVOptions,
+            tableEventList,
         };
     },
     props: {
