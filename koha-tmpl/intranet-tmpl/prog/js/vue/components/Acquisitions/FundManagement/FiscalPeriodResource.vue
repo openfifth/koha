@@ -258,10 +258,111 @@ export default {
             }
         };
 
+        const appendToShow = componentData => {
+            const { resource } = componentData;
+            return [
+                ...(resource.ledgers?.length
+                    ? [
+                          {
+                              type: "component",
+                              name: $__("Ledgers"),
+                              componentPath:
+                                  "@koha-vue/components/RelationshipTableDisplay.vue",
+                              componentProps: {
+                                  tableOptions: {
+                                      type: "object",
+                                      value: {
+                                          columns: [
+                                              {
+                                                  title: __("Name"),
+                                                  data: "name:ledger_id",
+                                                  searchable: true,
+                                                  orderable: true,
+                                                  render: function (
+                                                      data,
+                                                      type,
+                                                      row,
+                                                      meta
+                                                  ) {
+                                                      return (
+                                                          '<a href="/cgi-bin/koha/fund_management/ledger/' +
+                                                          row.ledger_id +
+                                                          '" class="show">' +
+                                                          escape_str(
+                                                              `${row.name}`
+                                                          ) +
+                                                          "</a>"
+                                                      );
+                                                  },
+                                              },
+                                              {
+                                                  title: __("Code"),
+                                                  data: "code",
+                                                  searchable: true,
+                                                  orderable: true,
+                                              },
+                                              {
+                                                  title: __("Status"),
+                                                  data: "status",
+                                                  searchable: true,
+                                                  orderable: true,
+                                                  render: function (
+                                                      data,
+                                                      type,
+                                                      row,
+                                                      meta
+                                                  ) {
+                                                      return row.status
+                                                          ? __("Active")
+                                                          : __("Inactive");
+                                                  },
+                                              },
+                                          ],
+                                          url:
+                                              APIClient.acquisition.httpClient
+                                                  ._baseURL + "ledgers",
+                                          table_settings: null,
+                                          add_filters: true,
+                                          actions: {
+                                              0: ["show"],
+                                          },
+                                      },
+                                  },
+                                  apiClient: {
+                                      type: "object",
+                                      value: APIClient.acquisition.ledgers,
+                                  },
+                                  filters: {
+                                      type: "filter",
+                                      keys: {
+                                          fiscal_period_id: {
+                                              property: "fiscal_period_id",
+                                          },
+                                      },
+                                  },
+                                  resource: {
+                                      type: "resource",
+                                  },
+                                  resourceName: {
+                                      type: "string",
+                                      value: "ledger",
+                                  },
+                                  resourceNamePlural: {
+                                      type: "string",
+                                      value: "ledgers",
+                                  },
+                              },
+                          },
+                      ]
+                    : []),
+            ];
+        };
+
         return {
             ...baseResource,
             tableOptions,
             onFormSave,
+            appendToShow,
         };
     },
     components: { BaseResource },

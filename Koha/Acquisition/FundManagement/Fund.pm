@@ -92,6 +92,7 @@ Embeds the parent fund to a child fund
 sub parent_fund {
     my ($self) = @_;
     my $fund_rs = $self->_result->parent_fund;
+    return unless $fund_rs;
     return Koha::Acquisition::FundManagement::Fund->_new_from_dbic($fund_rs);
 }
 

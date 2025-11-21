@@ -368,12 +368,128 @@ export default {
             return resource;
         };
 
+        const appendToShow = componentData => {
+            const { resource } = componentData;
+            return [
+                ...(resource.funds?.length
+                    ? [
+                          {
+                              type: "component",
+                              name: $__("Funds"),
+                              componentPath:
+                                  "@koha-vue/components/RelationshipTableDisplay.vue",
+                              componentProps: {
+                                  tableOptions: {
+                                      type: "object",
+                                      value: {
+                                          columns: [
+                                              {
+                                                  title: __("Name"),
+                                                  data: "name:fund_id",
+                                                  searchable: true,
+                                                  orderable: true,
+                                                  render: function (
+                                                      data,
+                                                      type,
+                                                      row,
+                                                      meta
+                                                  ) {
+                                                      return (
+                                                          '<a href="/cgi-bin/koha/fund_management/fund/' +
+                                                          row.fund_id +
+                                                          '" class="show">' +
+                                                          escape_str(
+                                                              `${row.name}`
+                                                          ) +
+                                                          "</a>"
+                                                      );
+                                                  },
+                                              },
+                                              {
+                                                  title: __("Code"),
+                                                  data: "code",
+                                                  searchable: true,
+                                                  orderable: true,
+                                              },
+                                              {
+                                                  title: __("Status"),
+                                                  data: "status",
+                                                  searchable: true,
+                                                  orderable: true,
+                                                  render: function (
+                                                      data,
+                                                      type,
+                                                      row,
+                                                      meta
+                                                  ) {
+                                                      return row.status
+                                                          ? __("Active")
+                                                          : __("Inactive");
+                                                  },
+                                              },
+                                              {
+                                                  title: __("Fund value"),
+                                                  data: "fund_value",
+                                                  searchable: true,
+                                                  orderable: true,
+                                                  render: function (
+                                                      data,
+                                                      type,
+                                                      row,
+                                                      meta
+                                                  ) {
+                                                      return formatValueWithCurrency(
+                                                          row.fund_value,
+                                                          row.currency
+                                                      );
+                                                  },
+                                              },
+                                          ],
+                                          url:
+                                              APIClient.acquisition.httpClient
+                                                  ._baseURL + "funds",
+                                          table_settings: null,
+                                          add_filters: true,
+                                          actions: {
+                                              0: ["show"],
+                                          },
+                                      },
+                                  },
+                                  apiClient: {
+                                      type: "object",
+                                      value: APIClient.acquisition.funds,
+                                  },
+                                  filters: {
+                                      type: "filter",
+                                      keys: {
+                                          ledger_id: { property: "ledger_id" },
+                                      },
+                                  },
+                                  resource: {
+                                      type: "resource",
+                                  },
+                                  resourceName: {
+                                      type: "string",
+                                      value: "fund",
+                                  },
+                                  resourceNamePlural: {
+                                      type: "string",
+                                      value: "funds",
+                                  },
+                              },
+                          },
+                      ]
+                    : []),
+            ];
+        };
+
         return {
             ...baseResource,
             tableOptions,
             onFormSave,
             afterResourceFetch,
             afterNewResourceCreate,
+            appendToShow,
         };
     },
     components: { BaseResource },

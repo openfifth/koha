@@ -539,7 +539,8 @@ export default {
                               type: "component",
                               name: $__("Allocations"),
                               hidden: fund => fund.fund_id,
-                              componentPath: "./RelationshipTableDisplay.vue",
+                              componentPath:
+                                  "@koha-vue/components/RelationshipTableDisplay.vue",
                               componentProps: {
                                   tableOptions: {
                                       type: "object",
@@ -668,7 +669,8 @@ export default {
                               type: "component",
                               name: $__("Sub funds"),
                               hidden: fund => fund.fund_id,
-                              componentPath: "./RelationshipTableDisplay.vue",
+                              componentPath:
+                                  "@koha-vue/components/RelationshipTableDisplay.vue",
                               componentProps: {
                                   tableOptions: {
                                       type: "object",
@@ -753,7 +755,9 @@ export default {
                                   filters: {
                                       type: "filter",
                                       keys: {
-                                          fund_id: { property: "fund_id" },
+                                          fund_parent_id: {
+                                              property: "fund_id",
+                                          },
                                       },
                                   },
                                   resource: {
