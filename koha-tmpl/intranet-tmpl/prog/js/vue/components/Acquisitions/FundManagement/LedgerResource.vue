@@ -395,9 +395,9 @@ export default {
                                                       meta
                                                   ) {
                                                       return (
-                                                          '<a href="/cgi-bin/koha/fund_management/fund/' +
+                                                          '<a href="/cgi-bin/koha/acquisitions/fund_management/fund/' +
                                                           row.fund_id +
-                                                          '" class="show">' +
+                                                          '" class="showFund">' +
                                                           escape_str(
                                                               `${row.name}`
                                                           ) +
@@ -451,7 +451,28 @@ export default {
                                           table_settings: null,
                                           add_filters: true,
                                           actions: {
-                                              0: ["show"],
+                                              0: [
+                                                  {
+                                                      showFund: {
+                                                          callback: (
+                                                              fund,
+                                                              dt,
+                                                              event
+                                                          ) => {
+                                                              event?.preventDefault();
+                                                              baseResource.router.push(
+                                                                  {
+                                                                      name: "FundShow",
+                                                                      params: {
+                                                                          fund_id:
+                                                                              fund.fund_id,
+                                                                      },
+                                                                  }
+                                                              );
+                                                          },
+                                                      },
+                                                  },
+                                              ],
                                           },
                                       },
                                   },

@@ -285,9 +285,9 @@ export default {
                                                       meta
                                                   ) {
                                                       return (
-                                                          '<a href="/cgi-bin/koha/fund_management/ledger/' +
+                                                          '<a href="/cgi-bin/koha/acquisitions/fund_management/ledger/' +
                                                           row.ledger_id +
-                                                          '" class="show">' +
+                                                          '" class="showLedger">' +
                                                           escape_str(
                                                               `${row.name}`
                                                           ) +
@@ -324,7 +324,28 @@ export default {
                                           table_settings: null,
                                           add_filters: true,
                                           actions: {
-                                              0: ["show"],
+                                              0: [
+                                                  {
+                                                      showLedger: {
+                                                          callback: (
+                                                              ledger,
+                                                              dt,
+                                                              event
+                                                          ) => {
+                                                              event?.preventDefault();
+                                                              baseResource.router.push(
+                                                                  {
+                                                                      name: "LedgerShow",
+                                                                      params: {
+                                                                          ledger_id:
+                                                                              ledger.ledger_id,
+                                                                      },
+                                                                  }
+                                                              );
+                                                          },
+                                                      },
+                                                  },
+                                              ],
                                           },
                                       },
                                   },
