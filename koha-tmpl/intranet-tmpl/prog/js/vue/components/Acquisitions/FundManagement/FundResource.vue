@@ -112,7 +112,7 @@ export default {
                             query: {
                                 fund_id: resource.fund_id,
                                 ...(isSubFund.value && {
-                                    sub_fund_id: resource.sub_fund_id,
+                                    fund_parent_id: resource.fund_parent_id,
                                 }),
                             },
                         },
@@ -234,7 +234,7 @@ export default {
                           },
                       ]
                     : []),
-                ...(!isSubFund.value
+                ...(!isSubFund.value || props.routeAction === "list"
                     ? [
                           {
                               name: "fund_parent_id",
@@ -256,7 +256,23 @@ export default {
                                       },
                                   },
                               },
-                              hideIn: ["List"],
+                              tableColumnDefinition: {
+                                  title: $__("Parent fund"),
+                                  data: "parent_fund.name",
+                                  searchable: true,
+                                  orderable: true,
+                                  render(data, type, row, meta) {
+                                      return row.parent_fund
+                                          ? '<a href="/cgi-bin/koha/acquisitions/fund_management/fund' +
+                                                row.parent_fund.fund_id +
+                                                '" class="show">' +
+                                                escape_str(
+                                                    row.parent_fund.name
+                                                ) +
+                                                "</a>"
+                                          : "";
+                                  },
+                              },
                           },
                       ]
                     : []),
@@ -431,7 +447,7 @@ export default {
             url: tableURL(),
             table_settings: null,
             add_filters: true,
-            options: { embed: "sub_funds,fund_allocations" },
+            options: { embed: "sub_funds,fund_allocations,parent_fund" },
             add_filters: true,
             ...(!props.embedded && {
                 actions: {

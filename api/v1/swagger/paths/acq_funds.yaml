@@ -21,6 +21,7 @@
           - fund_allocations
           - owner
           - sub_funds
+          - parent_fund
         collectionFormat: csv
       - $ref: "../swagger.yaml#/parameters/match"
       - $ref: "../swagger.yaml#/parameters/order_by"
