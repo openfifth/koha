@@ -21,6 +21,7 @@ use Koha::Logger;
 
 use File::Spec;
 use IO::File;
+use JSON qw( decode_json encode_json );
 use Net::SFTP::Foreign;
 use Try::Tiny;
 
@@ -51,9 +52,9 @@ sub connect {
     # Use key-based auth if available, otherwise password auth
     my $key_file = $self->_locate_key_file;
     $self->{connection} = Net::SFTP::Foreign->new(
-        host     => $self->host,
-        port     => $self->port,
-        user     => $self->user_name,
+        host => $self->host,
+        port => $self->port,
+        user => $self->user_name,
         $key_file ? ( key_path => $key_file ) : ( password => scalar $self->plain_text_password ),
         timeout   => $self->DEFAULT_TIMEOUT,
         stderr_fh => $stderr_fh,
