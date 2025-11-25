@@ -423,7 +423,7 @@ export default {
                     relationshipAPIClient: APIClient.acquisition.vendors,
                     relationshipOptionLabelAttr: "name",
                     relationshipRequiredKey: "id",
-                    hint: $__(
+                    toolTip: $__(
                         "If you leave the vendor empty the orderline can only be saved as a draft"
                     ),
                     tableColumnDefinition: {
@@ -763,7 +763,7 @@ export default {
                     type: "textarea",
                     textAreaRows: 5,
                     label: $__("Receiving note"),
-                    hint: $__(
+                    toolTip: $__(
                         "The receiving note will be displayed when you receive the order line"
                     ),
                     hideIn: ["List", "Show"],
@@ -900,7 +900,7 @@ export default {
                                                     "use_existing"
                                                 );
                                             },
-                                            hint: $__(
+                                            toolTip: $__(
                                                 "Do not create a duplicate record. Add an order from the existing record in your catalog."
                                             ),
                                         },
@@ -917,7 +917,7 @@ export default {
                                                     "cancel"
                                                 );
                                             },
-                                            hint: $__(
+                                            toolTip: $__(
                                                 "Return to the basket without making a new order."
                                             ),
                                         },
@@ -932,7 +932,7 @@ export default {
                                                     "create_new"
                                                 );
                                             },
-                                            hint: $__(
+                                            toolTip: $__(
                                                 "Create a new record with the details you entered."
                                             ),
                                         },
