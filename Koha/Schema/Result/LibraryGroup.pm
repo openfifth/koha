@@ -111,6 +111,14 @@ Use this group to identify libraries as pick up location for holds
 
 Use this group to identify libraries as part of float group
 
+=head2 ft_acquisitions
+
+  data_type: 'tinyint'
+  default_value: 0
+  is_nullable: 0
+
+Use this group to identify libraries for use in the acquisitions module
+
 =head2 created_on
 
   data_type: 'timestamp'
@@ -152,6 +160,8 @@ __PACKAGE__->add_columns(
   "ft_local_hold_group",
   { data_type => "tinyint", default_value => 0, is_nullable => 0 },
   "ft_local_float_group",
+  { data_type => "tinyint", default_value => 0, is_nullable => 0 },
+  "ft_acquisitions",
   { data_type => "tinyint", default_value => 0, is_nullable => 0 },
   "created_on",
   {
@@ -266,8 +276,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-08-05 10:16:23
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:qZ7t2CuUaI+ds7dSu3WiHQ
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-11-26 16:00:42
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:7r9P+4chkI6QzrsKodwAlw
 
 
 =head2 koha_object_class
@@ -297,6 +307,7 @@ __PACKAGE__->add_columns(
     '+ft_local_hold_group'    => { is_boolean => 1 },
     '+ft_search_groups_opac'  => { is_boolean => 1 },
     '+ft_search_groups_staff' => { is_boolean => 1 },
+    '+ft_acquisitions' => { is_boolean => 1 },
 );
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration
