@@ -516,6 +516,9 @@ sub build_patron_status {
         $resp .= $patron->build_custom_field_string($server);
         $resp .= $patron->build_patron_attributes_string($server);
 
+        my $branchcode =
+            $server->{account}->{patron_branchcode_in_ao} ? $patron->branchcode : $fields->{ (FID_INST_ID) };
+        $resp .= add_field( FID_INST_ID, $branchcode, $server );
     } else {
 
         # Invalid patron (cardnumber)
@@ -533,9 +536,10 @@ sub build_patron_status {
             and $resp .= add_field( FID_VALID_PATRON, 'N', $server );
 
         $resp .= maybe_add( FID_SCREEN_MSG, INVALID_CARD, $server );
+
+        $resp .= add_field( FID_INST_ID, $fields->{ (FID_INST_ID) }, $server );
     }
 
-    $resp .= add_field( FID_INST_ID, $fields->{ (FID_INST_ID) }, $server );
     return $resp;
 }
 
@@ -1090,7 +1094,8 @@ sub handle_patron_info {
         $resp .= add_count( 'patron_info/recall_items',  scalar @{ $patron->recall_items } );
         $resp .= add_count( 'patron_info/unavail_holds', scalar @{ $patron->unavail_holds } );
 
-        $resp .= add_field( FID_INST_ID, ( $ils->institution_id || 'SIP2' ), $server );
+        my $branchcode = $server->{account}->{patron_branchcode_in_ao} ? $patron->branchcode : $ils->institution_id;
+        $resp .= add_field( FID_INST_ID, ( $branchcode || 'SIP2' ), $server );
 
         # while the patron ID we got from the SC is valid, let's
         # use the one returned from the ILS, just in case...

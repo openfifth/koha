@@ -6215,7 +6215,7 @@ DROP TABLE IF EXISTS `sip_accounts`;
 CREATE TABLE `sip_accounts` (
   `sip_account_id` int(11) NOT NULL AUTO_INCREMENT,
   `sip_institution_id` int(11) NOT NULL COMMENT 'Foreign key to sip_institutions.sip_institution_id',
-  `ae_field_template` text DEFAULT NULL,
+  `ae_field_template` varchar(255) DEFAULT NULL,
   `allow_additional_materials_checkout` tinyint(1) DEFAULT NULL,
   `allow_empty_passwords` tinyint(1) DEFAULT NULL,
   `allow_fields` varchar(255) DEFAULT NULL,
