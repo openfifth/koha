@@ -114,9 +114,12 @@
                                 }}</a>
                             </li>
                             <li>
-                                <a href="#">{{
-                                    $__("Without a bibliographic record")
-                                }}</a>
+                                <a
+                                    href="/cgi-bin/koha/acquisitions/order_management/orderlines/add?no_biblio=true"
+                                    >{{
+                                        $__("Without a bibliographic record")
+                                    }}</a
+                                >
                             </li>
                         </ul>
                     </fieldset>

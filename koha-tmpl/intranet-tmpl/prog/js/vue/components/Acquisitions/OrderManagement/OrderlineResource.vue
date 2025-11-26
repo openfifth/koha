@@ -38,6 +38,7 @@ export default {
         const createItems = computed(() => {
             return createItemsWhen.value;
         });
+        const nonBibliographic = ref(route.query.no_biblio || false);
 
         const orderlineStatuses = ref({
             draft: "DRAFT",
@@ -49,6 +50,13 @@ export default {
             unsubscribed: "UNSUBSCRIBED",
             cancelled: "CANCELLED",
         });
+
+        const createItemsDefault = () => {
+            if (nonBibliographic.value) {
+                return "cataloging";
+            }
+            return sysprefs.value.acq_create_items;
+        };
 
         const baseResource = useBaseResource({
             resourceName: "orderline",
@@ -173,98 +181,114 @@ export default {
                         { description: $__("Receiving"), value: "receiving" },
                         { description: $__("Cataloging"), value: "cataloging" },
                     ],
-                    defaultValue: sysprefs.value.acq_create_items,
+                    defaultValue: createItemsDefault(),
                     onChange: resource => {
                         createItemsWhen.value = resource.create_items;
                     },
                     hideIn: ["List", "Show"],
                 },
-                {
-                    name: "biblio",
-                    group: $__("Catalog details"),
-                    type: "component",
-                    componentPath:
-                        "@koha-vue/components/Acquisitions/OrderManagement/BiblioMarcFields.vue",
-                    componentProps: {
-                        resource: {
-                            type: "resource",
-                            value: null,
-                        },
-                        unimarc: {
-                            type: "boolean",
-                            value: sysprefs.value.marc_flavour === "UNIMARC",
-                        },
-                        useAcqFramework: {
-                            type: "boolean",
-                            value:
-                                sysprefs.value
-                                    .use_acq_framework_for_biblio_records ===
-                                "0"
-                                    ? false
-                                    : true,
-                        },
-                        biblionumber: {
-                            type: "string",
-                            value: queryParams.biblionumber,
-                        },
-                        createItems: {
-                            type: "object",
-                            value: createItems,
-                        },
-                    },
-                    tableColumnDefinition: {
-                        title: $__("Summary"),
-                        data: "biblio.title",
-                        searchable: true,
-                        orderable: true,
-                        render(data, type, row, meta) {
-                            return row.biblio
-                                ? '<a href="/cgi-bin/koha/catalogue/detail.pl?biblionumber=' +
-                                      row.biblio.biblio_id +
-                                      '" class="show">' +
-                                      escape_str(row.biblio.title) +
-                                      "</a>"
-                                : "";
-                        },
-                    },
-                    showElement: {
-                        type: "text",
-                        label: $__("ISBD / Title information"),
-                        format: biblio => {
-                            let biblioString = "";
-                            const fieldsToAppend = [
-                                "title",
-                                "author",
-                                "isbn",
-                                "publisher",
-                                "publication_year",
-                            ];
-                            fieldsToAppend.forEach(field => {
-                                if (biblioString.length) biblioString += " ";
-                                if (field == "author" && biblio.author)
-                                    biblioString += "by ";
-                                if (field == "isbn" && biblio.isbn)
-                                    biblioString += "ISBN: ";
+                ...(!nonBibliographic.value
+                    ? [
+                          {
+                              name: "biblio",
+                              group: $__("Catalog details"),
+                              type: "component",
+                              componentPath:
+                                  "@koha-vue/components/Acquisitions/OrderManagement/BiblioMarcFields.vue",
+                              componentProps: {
+                                  resource: {
+                                      type: "resource",
+                                      value: null,
+                                  },
+                                  unimarc: {
+                                      type: "boolean",
+                                      value:
+                                          sysprefs.value.marc_flavour ===
+                                          "UNIMARC",
+                                  },
+                                  useAcqFramework: {
+                                      type: "boolean",
+                                      value:
+                                          sysprefs.value
+                                              .use_acq_framework_for_biblio_records ===
+                                          "0"
+                                              ? false
+                                              : true,
+                                  },
+                                  biblionumber: {
+                                      type: "string",
+                                      value: queryParams.biblionumber,
+                                  },
+                                  createItems: {
+                                      type: "object",
+                                      value: createItems,
+                                  },
+                              },
+                              tableColumnDefinition: {
+                                  title: $__("Summary"),
+                                  data: "biblio.title",
+                                  searchable: true,
+                                  orderable: true,
+                                  render(data, type, row, meta) {
+                                      return row.biblio
+                                          ? '<a href="/cgi-bin/koha/catalogue/detail.pl?biblionumber=' +
+                                                row.biblio.biblio_id +
+                                                '" class="show">' +
+                                                escape_str(row.biblio.title) +
+                                                "</a>"
+                                          : "";
+                                  },
+                              },
+                              showElement: {
+                                  type: "text",
+                                  label: $__("ISBD / Title information"),
+                                  format: biblio => {
+                                      let biblioString = "";
+                                      const fieldsToAppend = [
+                                          "title",
+                                          "author",
+                                          "isbn",
+                                          "publisher",
+                                          "publication_year",
+                                      ];
+                                      fieldsToAppend.forEach(field => {
+                                          if (biblioString.length)
+                                              biblioString += " ";
+                                          if (
+                                              field == "author" &&
+                                              biblio.author
+                                          )
+                                              biblioString += "by ";
+                                          if (field == "isbn" && biblio.isbn)
+                                              biblioString += "ISBN: ";
 
-                                if (biblio[field])
-                                    biblioString += biblio[field];
+                                          if (biblio[field])
+                                              biblioString += biblio[field];
 
-                                if (!["title"].includes(field) && biblio[field])
-                                    biblioString += ".";
-                                if (field == "title" && !biblio.author)
-                                    biblioString += ".";
-                            });
-                            return biblioString;
-                        },
-                        link: {
-                            href: "/cgi-bin/koha/catalogue/detail.pl",
-                            params: {
-                                biblionumber: "biblionumber",
-                            },
-                        },
-                    },
-                    hideIn: [],
-                },
+                                          if (
+                                              !["title"].includes(field) &&
+                                              biblio[field]
+                                          )
+                                              biblioString += ".";
+                                          if (
+                                              field == "title" &&
+                                              !biblio.author
+                                          )
+                                              biblioString += ".";
+                                      });
+                                      return biblioString;
+                                  },
+                                  link: {
+                                      href: "/cgi-bin/koha/catalogue/detail.pl",
+                                      params: {
+                                          biblionumber: "biblionumber",
+                                      },
+                                  },
+                              },
+                              hideIn: [],
+                          },
+                      ]
+                    : []),
                 // {
                 //     name: "items",
                 //     group: $__("Catalog details"),
