@@ -464,6 +464,16 @@ export default {
                 group: "Details",
             },
             {
+                name: "patron_branchcode_in_ao",
+                type: "boolean",
+                label: __("Send patron home library in AO"),
+                hideIn: ["List"],
+                group: "Details",
+                toolTip: __(
+                    "Send patron branchcode in AO field for patron status and patron information responses"
+                ),
+            },
+            {
                 name: "show_checkin_message",
                 type: "boolean",
                 label: __("Show checkin message"),
