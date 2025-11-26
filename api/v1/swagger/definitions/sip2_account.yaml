@@ -58,6 +58,11 @@ properties:
     type:
     - boolean
     - 'null'
+  patron_branchcode_in_ao:
+    description: patron branchcode in ao
+    type:
+    - boolean
+    - 'null'
   cv_send_00_on_success:
     description: cv send 00 on success
     type:
