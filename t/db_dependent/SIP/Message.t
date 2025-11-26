@@ -64,7 +64,7 @@ subtest 'Testing Patron Status Request V2' => sub {
 subtest 'Testing Patron Info Request V2' => sub {
     my $schema = Koha::Database->new->schema;
     $schema->storage->txn_begin;
-    plan tests => 32;
+    plan tests => 35;
     $C4::SIP::Sip::protocol_version = 2;
     test_request_patron_info_v2();
     $schema->storage->txn_rollback;
@@ -1070,8 +1070,9 @@ sub test_request_patron_status_v2 {
 }
 
 sub test_request_patron_info_v2 {
-    my $builder    = t::lib::TestBuilder->new();
-    my $branchcode = $builder->build( { source => 'Branch' } )->{branchcode};
+    my $builder     = t::lib::TestBuilder->new();
+    my $branchcode  = $builder->build( { source => 'Branch' } )->{branchcode};
+    my $branchcode2 = $builder->build( { source => 'Branch' } )->{branchcode};
     my ( $response, $findpatron );
     my $mocks = create_mocks( \$response, \$findpatron, \$branchcode );
 
@@ -1079,13 +1080,15 @@ sub test_request_patron_info_v2 {
         {
             source => 'Borrower',
             value  => {
-                password => hash_password(PATRON_PW),
+                password   => hash_password(PATRON_PW),
+                branchcode => $branchcode2,
             },
         }
     );
     my $card        = $patron2->{cardnumber};
     my $sip_patron2 = C4::SIP::ILS::Patron->new($card);
     $findpatron = $sip_patron2;
+
     my $siprequest =
           PATRON_INFO
         . 'engYYYYMMDDZZZZHHMMSS'
@@ -1128,6 +1131,19 @@ sub test_request_patron_info_v2 {
     check_field(
         $respcode, $response, FID_PERSONAL_NAME, 'X' . $patron2->{surname} . 'Y',
         'Check customized patron name'
+    );
+
+    # Test patron_branchcode_in_ao
+    $server->{account}->{patron_branchcode_in_ao} = "1";
+    $msg = C4::SIP::Sip::MsgType->new( $siprequest, 0 );
+    undef $response;
+    is( $patron2->{branchcode},   $branchcode2, "Patron created with correct home library" );
+    is( $sip_patron2->branchcode, $branchcode2, "SIP Patron created with correct home library" );
+    $msg->handle_patron_info($server);
+    $respcode = substr( $response, 0, 2 );
+    check_field(
+        $respcode, $response, FID_INST_ID, $patron2->{branchcode},
+        "Patron home library is in the AO field( patron = $patron2->{branchcode}, INST = $branchcode"
     );
 
     # Test hide_fields

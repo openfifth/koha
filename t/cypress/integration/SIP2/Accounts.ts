@@ -12,6 +12,7 @@ function get_account() {
         convert_nonprinting_characters: "",
         cr_item_field: "collection_code",
         ct_always_send: false,
+        patron_branchcode_in_ao: false,
         cv_send_00_on_success: false,
         cv_triggers_alert: false,
         custom_item_fields: [],
