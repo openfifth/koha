@@ -448,6 +448,26 @@ sub library_hours {
     return Koha::Library::Hours->_new_from_dbic($library_hours_rs);
 }
 
+=head3 acquisitions_library_groups
+
+=cut
+
+sub acquisitions_library_groups {
+    my ($self) = @_;
+
+    my @acq_library_groups;
+
+    my $library_groups = $self->library_groups;
+    while ( my $library_group = $library_groups->next ) {
+        my $root = Koha::Library::Groups->get_root_ancestor( { id => $library_group->id } );
+        if ( $root->ft_acquisitions ) {
+            push @acq_library_groups, $root->all_libraries;
+        }
+    }
+
+    return \@acq_library_groups;
+}
+
 =head2 Internal methods
 
 =head3 _type

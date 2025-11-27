@@ -141,6 +141,11 @@ properties:
       - array
       - "null"
     description: The library's defined desks (x-koha-embed)
+  acquisitions_library_groups:
+    type:
+      - array
+      - "null"
+    description: The library's groups relevant to acquisitions
 additionalProperties: false
 required:
   - library_id

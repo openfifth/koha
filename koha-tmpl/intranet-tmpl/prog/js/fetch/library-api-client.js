@@ -9,11 +9,12 @@ export class LibraryAPIClient extends HttpClient {
 
     get libraries() {
         return {
-            getAll: (query, params) =>
+            getAll: (query, params, headers) =>
                 this.getAll({
                     endpoint: "",
                     query,
                     params,
+                    headers,
                 }),
         };
     }

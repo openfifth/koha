@@ -106,6 +106,7 @@
             - desks
             - smtp_server
             - library_hours
+            - acquisitions_library_groups
         collectionFormat: csv
     produces:
       - application/json
