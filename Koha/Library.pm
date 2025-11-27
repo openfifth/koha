@@ -461,7 +461,8 @@ sub acquisitions_library_groups {
     while ( my $library_group = $library_groups->next ) {
         my $root = Koha::Library::Groups->get_root_ancestor( { id => $library_group->id } );
         if ( $root->ft_acquisitions ) {
-            push @acq_library_groups, $root->all_libraries;
+            my @group_libraries = $root->all_libraries;
+            push @acq_library_groups, { group => $root, libraries => \@group_libraries };
         }
     }
 
