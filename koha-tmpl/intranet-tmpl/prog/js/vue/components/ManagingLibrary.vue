@@ -46,7 +46,7 @@ export default {
         const baseElement = useBaseElement({ ...props });
 
         const groupAccess = ref(
-            props.resource?.managing_library?.acquisitions_library_groups
+            props.resource?.managing_library?.acquisitions_library_groups || []
         );
         const groupAccessList = computed(() => {
             return groupAccess.value.map(alg => alg.name).join(", ");

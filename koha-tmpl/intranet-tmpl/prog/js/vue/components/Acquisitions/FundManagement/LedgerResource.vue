@@ -86,27 +86,31 @@ export default {
                     required: true,
                     type: "text",
                     label: $__("Name"),
-                },
-                {
-                    name: "description",
-                    type: "textarea",
-                    label: $__("Description"),
-                    required: true,
+                    group: $__("Information and status"),
                 },
                 {
                     name: "code",
                     required: true,
                     type: "text",
                     label: $__("Code"),
+                    group: $__("Information and status"),
+                },
+                {
+                    name: "description",
+                    type: "textarea",
+                    label: $__("Description"),
+                    group: $__("Information and status"),
+                    required: true,
                 },
                 {
                     name: "fiscal_period_id",
-                    required: true,
                     type: "relationshipSelect",
                     label: $__("Fiscal period"),
+                    group: $__("Information and status"),
                     relationshipAPIClient: APIClient.acquisition.fiscalPeriods,
                     relationshipOptionLabelAttr: "code",
                     relationshipRequiredKey: "fiscal_period_id",
+                    disabled: true,
                     showElement: {
                         type: "text",
                         value: "fiscal_period.code",
@@ -123,18 +127,21 @@ export default {
                     name: "status",
                     type: "boolean",
                     label: $__("Active"),
+                    group: $__("Information and status"),
                     defaultValue: true,
                 },
                 {
                     name: "external_id",
                     type: "text",
                     label: $__("External ID"),
+                    group: $__("Information and status"),
                     hideIn: ["List"],
                 },
                 {
                     name: "currency",
                     type: "select",
                     label: $__("Currency"),
+                    group: $__("Financial controlling"),
                     selectLabel: "currency",
                     requiredKey: "currency",
                     options: currencies.value,
@@ -146,6 +153,7 @@ export default {
                     name: "spend_limit",
                     type: "number",
                     label: $__("Spend limit"),
+                    group: $__("Financial controlling"),
                     defaultValue: 0,
                     size: 6,
                     format: (value, resource) =>
@@ -156,6 +164,7 @@ export default {
                     name: "owner_id",
                     type: "component",
                     label: $__("Owner"),
+                    group: $__("Management in library"),
                     componentPath: "@koha-vue/components/PatronSearch.vue",
                     required: true,
                     componentProps: {
@@ -199,19 +208,42 @@ export default {
                 },
                 {
                     name: "managing_branch",
-                    type: "relationshipSelect",
                     label: $__("Managing library"),
-                    relationshipAPIClient: APIClient.libraries.libraries,
-                    relationshipOptionLabelAttr: "name",
-                    relationshipRequiredKey: "library_id",
-                    showElement: {
-                        type: "text",
-                        value: "managing_library.name",
-                        link: {
-                            href: "/cgi-bin/koha/admin/branches.pl",
-                            params: {
-                                op: "view",
-                                branchcode: "managing_branch",
+                    group: $__("Management in library"),
+                    type: "component",
+                    componentPath: "@koha-vue/components/ManagingLibrary.vue",
+                    componentProps: {
+                        relationshipAPIClient: {
+                            type: "object",
+                            value: APIClient.libraries.libraries,
+                        },
+                        relationshipOptionLabelAttr: {
+                            type: "string",
+                            value: "name",
+                        },
+                        relationshipRequiredKey: {
+                            type: "string",
+                            value: "library_id",
+                        },
+                        name: {
+                            type: "string",
+                            value: "managing_branch",
+                        },
+                        resource: {
+                            type: "resource",
+                        },
+                        routeAction: {
+                            type: "string",
+                            value: props.routeAction,
+                        },
+                        linkData: {
+                            type: "object",
+                            value: {
+                                href: "/cgi-bin/koha/admin/branches.pl",
+                                params: {
+                                    op: "view",
+                                    branchcode: "managing_branch",
+                                },
                             },
                         },
                     },
@@ -221,12 +253,14 @@ export default {
                     name: "over_spend_allowed",
                     type: "boolean",
                     label: $__("Overspend allowed"),
+                    group: $__("Financial controlling"),
                     hideIn: ["List"],
                 },
                 {
                     name: "oe_warning_percent",
                     type: "number",
                     label: $__("Overencumbrance warning percentage"),
+                    group: $__("Financial controlling"),
                     placeholder: $__(
                         "The percentage at which a warning is triggered"
                     ),
@@ -238,6 +272,7 @@ export default {
                     name: "oe_limit_amount",
                     type: "number",
                     label: $__("Overencumbrance limit amount"),
+                    group: $__("Financial controlling"),
                     placeholder: $__(
                         "The amount at which a block is triggered"
                     ),
@@ -249,7 +284,8 @@ export default {
                 {
                     name: "os_warning_sum",
                     type: "number",
-                    label: $__("Overspend warning sum"),
+                    label: $__("Overspend warning amount"),
+                    group: $__("Financial controlling"),
                     placeholder: $__(
                         "The amount at which a warning is triggered"
                     ),
@@ -262,6 +298,7 @@ export default {
                     name: "os_limit_sum",
                     type: "number",
                     label: $__("Overspend limit sum"),
+                    group: $__("Financial controlling"),
                     placeholder: $__(
                         "The amount at which a block is triggered"
                     ),
