@@ -79,6 +79,14 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
             const currencyToRate = getters.getSystemCurrencyRate(currencyTo);
             return (currencyToRate * 100) / (currencyFromRate * 100);
         },
+        getLibrariesFromGroups(libraryGroups) {
+            return libraryGroups.reduce((acc, alg) => {
+                alg.libraries.forEach(lib => {
+                    acc.push(lib.branchname);
+                });
+                return acc;
+            }, []);
+        },
     };
 
     return {

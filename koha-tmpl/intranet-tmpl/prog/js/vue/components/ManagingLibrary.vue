@@ -20,7 +20,8 @@
 import FormRelationshipSelect from "./FormRelationshipSelect.vue";
 import LinkWrapper from "./LinkWrapper.vue";
 import { useBaseElement } from "../composables/base-element.js";
-import { computed, ref } from "vue";
+import { computed, inject, ref } from "vue";
+import { storeToRefs } from "pinia";
 
 export default {
     components: { FormRelationshipSelect, LinkWrapper },
@@ -45,18 +46,15 @@ export default {
     setup(props) {
         const baseElement = useBaseElement({ ...props });
 
+        const acquisitionsStore = inject("acquisitionsStore");
+
+        const { getLibrariesFromGroups } = acquisitionsStore;
+
         const groupAccess = ref(
             props.resource?.managing_library?.acquisitions_library_groups || []
         );
         const groupAccessList = computed(() => {
-            return groupAccess.value
-                .reduce((acc, alg) => {
-                    alg.libraries.forEach(lib => {
-                        acc.push(lib.branchname);
-                    });
-                    return acc;
-                }, [])
-                .join(", ");
+            return getLibrariesFromGroups(groupAccess.value).join(", ");
         });
 
         const setGroupAccessValue = (e, options, resource) => {
