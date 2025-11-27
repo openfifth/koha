@@ -167,21 +167,63 @@ export default {
                     },
                     hideIn: ["List"],
                 },
+                // {
+                //     name: "managing_branch",
+                //     type: "relationshipSelect",
+                //     label: $__("Managing library"),
+                //     relationshipAPIClient: APIClient.libraries.libraries,
+                //     relationshipOptionLabelAttr: "name",
+                //     relationshipRequiredKey: "library_id",
+                //     showElement: {
+                //         type: "text",
+                //         value: "managing_library.name",
+                //         link: {
+                //             href: "/cgi-bin/koha/admin/branches.pl",
+                //             params: {
+                //                 op: "view",
+                //                 branchcode: "managing_branch",
+                //             },
+                //         },
+                //     },
+                //     hideIn: ["List"],
+                // },
                 {
                     name: "managing_branch",
-                    type: "relationshipSelect",
                     label: $__("Managing library"),
-                    relationshipAPIClient: APIClient.libraries.libraries,
-                    relationshipOptionLabelAttr: "name",
-                    relationshipRequiredKey: "library_id",
-                    showElement: {
-                        type: "text",
-                        value: "managing_library.name",
-                        link: {
-                            href: "/cgi-bin/koha/admin/branches.pl",
-                            params: {
-                                op: "view",
-                                branchcode: "managing_branch",
+                    type: "component",
+                    componentPath: "@koha-vue/components/ManagingLibrary.vue",
+                    componentProps: {
+                        relationshipAPIClient: {
+                            type: "object",
+                            value: APIClient.libraries.libraries,
+                        },
+                        relationshipOptionLabelAttr: {
+                            type: "string",
+                            value: "name",
+                        },
+                        relationshipRequiredKey: {
+                            type: "string",
+                            value: "library_id",
+                        },
+                        name: {
+                            type: "string",
+                            value: "managing_branch",
+                        },
+                        resource: {
+                            type: "resource",
+                        },
+                        routeAction: {
+                            type: "string",
+                            value: props.routeAction,
+                        },
+                        linkData: {
+                            type: "object",
+                            value: {
+                                href: "/cgi-bin/koha/admin/branches.pl",
+                                params: {
+                                    op: "view",
+                                    branchcode: "managing_branch",
+                                },
                             },
                         },
                     },
@@ -230,6 +272,7 @@ export default {
             delete fiscal_period.patron_str;
             delete fiscal_period.owner;
             delete fiscal_period.managing_library;
+            delete fiscal_period.ledgers;
 
             if (fiscal_period_id) {
                 const acq_client = APIClient.acquisition;
