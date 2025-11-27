@@ -71,6 +71,7 @@ export default {
                 {
                     name: "fiscal_period_id",
                     label: $__("ID"),
+                    group: $__("Information and status"),
                     type: "text",
                     hideIn: ["Form", "Show"],
                 },
@@ -79,23 +80,27 @@ export default {
                     required: true,
                     type: "text",
                     label: $__("Code"),
+                    group: $__("Information and status"),
                 },
                 {
                     name: "description",
                     type: "textarea",
                     label: $__("Description"),
+                    group: $__("Information and status"),
                     required: true,
                 },
                 {
                     name: "status",
                     type: "boolean",
                     label: $__("Active"),
+                    group: $__("Information and status"),
                     defaultValue: true,
                 },
                 {
                     name: "start_date",
                     type: "date",
                     label: $__("Start date"),
+                    group: $__("Information and status"),
                     required: true,
                     componentProps: {
                         required: {
@@ -112,20 +117,66 @@ export default {
                     name: "end_date",
                     type: "date",
                     label: $__("End date"),
+                    group: $__("Information and status"),
                     required: false,
                 },
                 {
                     name: "spend_limit",
                     type: "number",
                     label: $__("Spend limit"),
+                    group: $__("Information and status"),
                     defaultValue: null,
                     size: 6,
+                    hideIn: ["List"],
+                },
+                {
+                    name: "managing_branch",
+                    label: $__("Managing library"),
+                    group: $__("Management and restrictions"),
+                    type: "component",
+                    componentPath: "@koha-vue/components/ManagingLibrary.vue",
+                    componentProps: {
+                        relationshipAPIClient: {
+                            type: "object",
+                            value: APIClient.libraries.libraries,
+                        },
+                        relationshipOptionLabelAttr: {
+                            type: "string",
+                            value: "name",
+                        },
+                        relationshipRequiredKey: {
+                            type: "string",
+                            value: "library_id",
+                        },
+                        name: {
+                            type: "string",
+                            value: "managing_branch",
+                        },
+                        resource: {
+                            type: "resource",
+                        },
+                        routeAction: {
+                            type: "string",
+                            value: props.routeAction,
+                        },
+                        linkData: {
+                            type: "object",
+                            value: {
+                                href: "/cgi-bin/koha/admin/branches.pl",
+                                params: {
+                                    op: "view",
+                                    branchcode: "managing_branch",
+                                },
+                            },
+                        },
+                    },
                     hideIn: ["List"],
                 },
                 {
                     name: "owner_id",
                     type: "component",
                     label: $__("Owner"),
+                    group: $__("Management and restrictions"),
                     componentPath: "@koha-vue/components/PatronSearch.vue",
                     required: true,
                     componentProps: {
@@ -164,68 +215,6 @@ export default {
                         type: "text",
                         value: "owner",
                         format: patron_to_html,
-                    },
-                    hideIn: ["List"],
-                },
-                // {
-                //     name: "managing_branch",
-                //     type: "relationshipSelect",
-                //     label: $__("Managing library"),
-                //     relationshipAPIClient: APIClient.libraries.libraries,
-                //     relationshipOptionLabelAttr: "name",
-                //     relationshipRequiredKey: "library_id",
-                //     showElement: {
-                //         type: "text",
-                //         value: "managing_library.name",
-                //         link: {
-                //             href: "/cgi-bin/koha/admin/branches.pl",
-                //             params: {
-                //                 op: "view",
-                //                 branchcode: "managing_branch",
-                //             },
-                //         },
-                //     },
-                //     hideIn: ["List"],
-                // },
-                {
-                    name: "managing_branch",
-                    label: $__("Managing library"),
-                    type: "component",
-                    componentPath: "@koha-vue/components/ManagingLibrary.vue",
-                    componentProps: {
-                        relationshipAPIClient: {
-                            type: "object",
-                            value: APIClient.libraries.libraries,
-                        },
-                        relationshipOptionLabelAttr: {
-                            type: "string",
-                            value: "name",
-                        },
-                        relationshipRequiredKey: {
-                            type: "string",
-                            value: "library_id",
-                        },
-                        name: {
-                            type: "string",
-                            value: "managing_branch",
-                        },
-                        resource: {
-                            type: "resource",
-                        },
-                        routeAction: {
-                            type: "string",
-                            value: props.routeAction,
-                        },
-                        linkData: {
-                            type: "object",
-                            value: {
-                                href: "/cgi-bin/koha/admin/branches.pl",
-                                params: {
-                                    op: "view",
-                                    branchcode: "managing_branch",
-                                },
-                            },
-                        },
                     },
                     hideIn: ["List"],
                 },
