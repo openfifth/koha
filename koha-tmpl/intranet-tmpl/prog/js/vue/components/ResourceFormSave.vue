@@ -133,16 +133,6 @@ export default {
 
         const resourceToSave = computed(() => {
             if (resource.value) return resource.value;
-            if (props.instancedResource.afterNewResourceCreate) {
-                const formattedResource =
-                    props.instancedResource.afterNewResourceCreate(
-                        props.instancedResource.newResource,
-                        props.instancedResource
-                    );
-                return reactive(formattedResource);
-            } else {
-                return reactive(props.instancedResource.newResource);
-            }
         });
 
         const resourceForm = computed({
@@ -173,7 +163,18 @@ export default {
                     "form"
                 );
             } else {
-                initialized.value = true;
+                if (props.instancedResource.afterNewResourceCreate) {
+                    const formattedResource =
+                        props.instancedResource.afterNewResourceCreate(
+                            props.instancedResource.newResource,
+                            props.instancedResource,
+                            initialized
+                        );
+                    resource.value = formattedResource;
+                } else {
+                    resource.value = props.instancedResource.newResource;
+                    initialized.value = true;
+                }
             }
         });
 
