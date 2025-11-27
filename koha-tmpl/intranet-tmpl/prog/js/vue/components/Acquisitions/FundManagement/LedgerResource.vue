@@ -23,9 +23,10 @@ export default {
         const patron_to_html = $patron_to_html;
 
         const acquisitionsStore = inject("acquisitionsStore");
-        const { currencies } = storeToRefs(acquisitionsStore);
+        const { currencies, user } = storeToRefs(acquisitionsStore);
 
-        const { formatValueWithCurrency } = acquisitionsStore;
+        const { formatValueWithCurrency, getLibrariesFromGroups } =
+            acquisitionsStore;
 
         const additionalToolbarButtons = (resource, componentData) => {
             const { instancedResource } = componentData;
@@ -396,11 +397,49 @@ export default {
                 resource.oe_warning_percent * 100;
         };
 
-        const afterNewResourceCreate = (resource, componentData) => {
+        const afterNewResourceCreate = (
+            resource,
+            componentData,
+            initialized
+        ) => {
             if (componentData.route.query.fiscal_period_id) {
                 resource.fiscal_period_id = parseInt(
                     componentData.route.query.fiscal_period_id
                 );
+                APIClient.acquisition.fiscalPeriods
+                    .get(resource.fiscal_period_id)
+                    .then(fiscalPeriod => {
+                        if (
+                            fiscalPeriod.managing_library
+                                ?.acquisitions_library_groups
+                        ) {
+                            const groupNames =
+                                fiscalPeriod.managing_library?.acquisitions_library_groups.map(
+                                    alg => alg.group.title
+                                );
+                            baseResource.setMessage(
+                                $__(
+                                    "Access restriction for group(s) %s"
+                                ).format(groupNames.join(", "))
+                            );
+
+                            resource.managing_branch =
+                                user.value.loggedInUser.loggedInBranch;
+                            const branchAttr = componentData.resourceAttrs.find(
+                                ra => ra.name === "managing_branch"
+                            );
+                            const branchNames = getLibrariesFromGroups(
+                                fiscalPeriod.managing_library
+                                    ?.acquisitions_library_groups
+                            );
+                            branchAttr.componentProps.query = {
+                                type: "object",
+                                value: { branchname: { "-in": branchNames } },
+                            };
+
+                            initialized.value = true;
+                        }
+                    });
             }
             return resource;
         };
