@@ -159,6 +159,12 @@ export default {
                     size: 6,
                     format: (value, resource) =>
                         formatValueWithCurrency(value, resource.currency),
+                    formatInputValue: (value, resource) => {
+                        return formatValueWithCurrency(
+                            value,
+                            resource.currency
+                        );
+                    },
                     hideIn: ["List"],
                 },
                 {

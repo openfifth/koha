@@ -127,6 +127,12 @@ export default {
                     group: $__("Information and status"),
                     defaultValue: null,
                     size: 6,
+                    formatInputValue: (value, resource) => {
+                        return formatValueWithCurrency(
+                            value,
+                            resource.currency
+                        );
+                    },
                     hideIn: ["List"],
                 },
                 {
