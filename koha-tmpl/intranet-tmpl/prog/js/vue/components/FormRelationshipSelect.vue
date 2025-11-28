@@ -48,7 +48,7 @@ export default {
             default: {},
         },
     },
-    setup(props) {
+    setup(props, { emit }) {
         const relatedResources = ref(null);
         const relatedResourcesLoaded = ref(false);
         const queryParameters = ref(props.query);
@@ -59,6 +59,7 @@ export default {
                 result => {
                     relatedResources.value = result;
                     relatedResourcesLoaded.value = true;
+                    emit("resourcesLoaded", props.resource[props.name], result);
                 },
                 error => {}
             );
@@ -106,5 +107,6 @@ export default {
             queryParameters,
         };
     },
+    emits: ["resourcesLoaded"],
 };
 </script>

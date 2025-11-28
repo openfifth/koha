@@ -3,6 +3,7 @@
         <FormRelationshipSelect
             v-bind="$props"
             :onSelected="setGroupAccessValue"
+            @resourcesLoaded="setGroupAccessValue"
         />
     </template>
     <template v-else>
@@ -21,7 +22,6 @@ import FormRelationshipSelect from "./FormRelationshipSelect.vue";
 import LinkWrapper from "./LinkWrapper.vue";
 import { useBaseElement } from "../composables/base-element.js";
 import { computed, inject, ref } from "vue";
-import { storeToRefs } from "pinia";
 
 export default {
     components: { FormRelationshipSelect, LinkWrapper },
