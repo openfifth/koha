@@ -32,6 +32,18 @@ properties:
   effective_bookable:
     type: boolean
     description: Allow bookings on this item.
+  effective_home_library_id:
+    type:
+      - string
+      - "null"
+    description: Effective home library id - shows display branch if item is on an active display, otherwise regular home branch
+    maxLength: 10
+  effective_holding_library_id:
+    type:
+      - string
+      - "null"
+    description: Effective holding library id - shows display holding branch if item is on an active display, otherwise regular holding branch
+    maxLength: 10
   home_library_id:
     type:
       - string
@@ -197,6 +209,12 @@ properties:
       - "null"
     description: Authorized value for the collection code associated with this item
     maxLength: 80
+  effective_collection_code:
+    type:
+      - string
+      - "null"
+    description: Effective collection code - shows display collection code if item is on an active display, otherwise regular collection code
+    maxLength: 80
   materials_notes:
     type:
       - string
@@ -223,6 +241,13 @@ properties:
       - string
       - "null"
     description: Effective itemtype defining the type for this item_id
+    maxLength: 10
+  effective_location:
+    type:
+      - string
+      - "null"
+    description: Effective location code - shows display location if item is on an active display, otherwise regular location
+    maxLength: 80
   extended_subfields:
     type:
       - string
@@ -258,6 +283,14 @@ properties:
     type: array
     description: An array of all return claims associated with this item
   return_claim:
+    type:
+      - object
+      - "null"
+  effective_home_library:
+    type:
+      - object
+      - "null"
+  effective_holding_library:
     type:
       - object
       - "null"
