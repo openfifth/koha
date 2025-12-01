@@ -21,6 +21,7 @@
           type: string
           enum:
             - +strings
+            - active_display
             - biblio
             - effective_bookable
         collectionFormat: csv
@@ -89,6 +90,8 @@
           type: string
           enum:
             - +strings
+            - active_display
+            - biblio
             - effective_bookable
         collectionFormat: csv
     consumes:

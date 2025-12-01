@@ -50,6 +50,9 @@
             - biblio
             - item
             - item+strings
+            - item.active_display
+            - item.effective_holding_library
+            - item.effective_home_library
             - item.holding_library
             - item.home_library
             - item.item_group
