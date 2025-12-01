@@ -1,0 +1,34 @@
+---
+type: object
+properties:
+  display_item_id:
+    type: integer
+    description: primary key
+  display_id:
+    type: integer
+    description: foreign key to link to displays.display_id
+  active:
+    type: boolean
+    description: Whether or not the display is enabled, and the display dates are in range
+  itemnumber:
+    type: integer
+    description: items.itemnumber for the item on display
+  biblionumber:
+    type: integer
+    description: biblio.biblionumber for the bibliographic record on display
+  date_added:
+    description: the date the item was added to the display
+    type:
+      - string
+      - "null"
+    format: date
+  date_remove:
+    description: the date the item should be removed from the display
+    type:
+      - string
+      - "null"
+    format: date
+additionalProperties: false
+required:
+  - display_id
+  - itemnumber
