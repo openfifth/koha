@@ -1,0 +1,114 @@
+---
+"/public/displays":
+  get:
+    x-mojo-to: Displays#list_public
+    operationId: listDisplaysPublic
+    tags:
+      - displays
+    summary: List displays (public)
+    produces:
+      - application/json
+    parameters:
+      - name: enabled
+        in: query
+        description: Filter by enabled status
+        required: false
+        type: boolean
+      - name: display_branch
+        in: query
+        description: Filter by display branch
+        required: false
+        type: string
+      - $ref: "../swagger.yaml#/parameters/match"
+      - $ref: "../swagger.yaml#/parameters/order_by"
+      - $ref: "../swagger.yaml#/parameters/page"
+      - $ref: "../swagger.yaml#/parameters/per_page"
+      - $ref: "../swagger.yaml#/parameters/q_param"
+      - $ref: "../swagger.yaml#/parameters/q_body"
+      - $ref: "../swagger.yaml#/parameters/request_id_header"
+      - name: x-koha-embed
+        in: header
+        required: false
+        description: Embed list sent as a request header
+        type: array
+        items:
+          type: string
+          enum:
+            - display_items
+            - library
+            - item_type
+            - +strings
+        collectionFormat: csv
+    responses:
+      "200":
+        description: A list of displays
+        schema:
+          type: array
+          items:
+            $ref: "../swagger.yaml#/definitions/display"
+      "400":
+        description: |
+          Bad request. Possible `error_code` attribute values:
+
+            * `invalid_query`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+"/public/displays/{display_id}":
+  get:
+    x-mojo-to: Displays#get_public
+    operationId: getDisplayPublic
+    tags:
+      - displays
+    summary: Get display (public)
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/display_id_pp"
+      - name: x-koha-embed
+        in: header
+        required: false
+        description: Embed list sent as a request header
+        type: array
+        items:
+          type: string
+          enum:
+            - display_items
+            - library
+            - item_type
+            - +strings
+        collectionFormat: csv
+    produces:
+      - application/json
+    responses:
+      "200":
+        description: A display
+        schema:
+          $ref: "../swagger.yaml#/definitions/display"
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Display not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
