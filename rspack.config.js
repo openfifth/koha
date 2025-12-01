@@ -20,6 +20,8 @@ module.exports = [
         },
         entry: {
             erm: "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/erm.ts",
+            display:
+                "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/display.ts",
             preservation:
                 "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/preservation.ts",
             "admin/record_sources":
