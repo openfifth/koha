@@ -46,6 +46,8 @@ use C4::XSLT     qw( XSLTParse4Display );
 use C4::Reserves qw( GetReserveStatus );
 use C4::Charset  qw( SetUTF8Flag );
 use Koha::AuthorisedValues;
+use Koha::Displays;
+use Koha::Items;
 use Koha::ItemTypes;
 use Koha::Libraries;
 use Koha::Logger;
@@ -1681,10 +1683,156 @@ sub searchResults {
     # FIXME - We build an authorised values hash here, using the default framework
     # though it is possible to have different authvals for different fws.
 
+    ## get metadatas
+    my $collections = {
+        map { $_->{authorised_value} => $_->{lib} } Koha::AuthorisedValues->get_descriptions_by_koha_field(
+            { frameworkcode => '', kohafield => 'items.ccode' }
+        )
+    };
     my $shelflocations = {
         map { $_->{authorised_value} => $_->{lib} } Koha::AuthorisedValues->get_descriptions_by_koha_field(
             { frameworkcode => '', kohafield => 'items.location' }
         )
+    };
+    my $itemtypes = Koha::ItemTypes->search_with_localization;
+    my %itemtypes = map { $_->{itemtype} => $_ } @{ $itemtypes->unblessed };
+
+    # Caches shared across all display-aware helper closures
+    my $display_cache  = {};
+    my $item_obj_cache = {};
+
+    # Returns a Koha::Item object for the given itemnumber, cached per result set
+    my $get_item_obj = sub {
+        my ($itemnumber) = @_;
+        unless ( exists $item_obj_cache->{$itemnumber} ) {
+            $item_obj_cache->{$itemnumber} = Koha::Items->find($itemnumber);
+        }
+        return $item_obj_cache->{$itemnumber};
+    };
+
+    # Helper function to get effective location for search results
+    my $get_effective_collection_code = sub {
+        my ($item) = @_;
+        return $collections->{ $item->{ccode} } unless C4::Context->preference('UseDisplayModule');
+
+        my $item_obj = $get_item_obj->( $item->{itemnumber} );
+        return $collections->{ $item->{ccode} } unless $item_obj;
+
+        my $effective_collection_code = $item_obj->effective_collection_code;
+
+        # If it starts with "DISPLAY:", validate against displays table
+        if ( $effective_collection_code =~ /^DISPLAY:\s*(.+)$/ ) {
+            my $display_name = $1;
+
+            # Use cache to avoid repeated database queries
+            if ( !exists $display_cache->{$display_name} ) {
+                my $display = Koha::Displays->search( { display_name => $display_name } )->next;
+                $display_cache->{$display_name} = $display ? $display->display_name : undef;
+            }
+            return $display_cache->{$display_name}
+                ? "DISPLAY: " . $display_cache->{$display_name}
+                : $effective_collection_code;
+        } else {
+            return $collections->{$effective_collection_code};
+        }
+    };
+    my $get_effective_itemtype = sub {
+        my ($item) = @_;
+        return $itemtypes{ $item->{itype} }{translated_description} unless C4::Context->preference('UseDisplayModule');
+
+        my $item_obj = $get_item_obj->( $item->{itemnumber} );
+        return $itemtypes{ $item->{itype} }{translated_description} unless $item_obj;
+
+        my $effective_itemtype = $item_obj->effective_itemtype;
+
+        # If it starts with "DISPLAY:", validate against displays table
+        if ( $effective_itemtype =~ /^DISPLAY:\s*(.+)$/ ) {
+            my $display_name = $1;
+
+            # Use cache to avoid repeated database queries
+            if ( !exists $display_cache->{$display_name} ) {
+                my $display = Koha::Displays->search( { display_name => $display_name } )->next;
+                $display_cache->{$display_name} = $display ? $display->display_name : undef;
+            }
+            return $display_cache->{$display_name}
+                ? "DISPLAY: " . $display_cache->{$display_name}
+                : $effective_itemtype;
+        } else {
+            return $itemtypes{$effective_itemtype}{translated_description};
+        }
+    };
+    my $get_effective_location = sub {
+        my ($item) = @_;
+        return $shelflocations->{ $item->{location} } unless C4::Context->preference('UseDisplayModule');
+
+        my $item_obj = $get_item_obj->( $item->{itemnumber} );
+        return $shelflocations->{ $item->{location} } unless $item_obj;
+
+        my $effective_loc = $shelflocations->{ $item_obj->effective_location };
+
+        # If it starts with "DISPLAY:", validate against displays table
+        if ( $effective_loc =~ /^DISPLAY:\s*(.+)$/ ) {
+            my $display_name = $1;
+
+            # Use cache to avoid repeated database queries
+            if ( !exists $display_cache->{$display_name} ) {
+                my $display = Koha::Displays->search( { display_name => $display_name } )->next;
+                $display_cache->{$display_name} = $display ? $display->display_name : undef;
+            }
+            return $display_cache->{$display_name} ? "DISPLAY: " . $display_cache->{$display_name} : $effective_loc;
+        } else {
+            return $effective_loc;
+        }
+    };
+    my $get_effective_homebranch = sub {
+        my ($item) = @_;
+        return $item->{homebranch} unless C4::Context->preference('UseDisplayModule');
+
+        my $item_obj = $get_item_obj->( $item->{itemnumber} );
+        return $item->{homebranch} unless $item_obj;
+
+        my $effective_homebranch = $item_obj->effective_homebranch;
+
+        # If it starts with "DISPLAY:", validate against displays table
+        if ( $effective_homebranch =~ /^DISPLAY:\s*(.+)$/ ) {
+            my $display_name = $1;
+
+            # Use cache to avoid repeated database queries
+            if ( !exists $display_cache->{$display_name} ) {
+                my $display = Koha::Displays->search( { display_name => $display_name } )->next;
+                $display_cache->{$display_name} = $display ? $display->display_name : undef;
+            }
+            return $display_cache->{$display_name}
+                ? "Display: " . $display_cache->{$display_name}
+                : $effective_homebranch;
+        } else {
+            return $effective_homebranch;
+        }
+    };
+    my $get_effective_holdingbranch = sub {
+        my ($item) = @_;
+        return $item->{holdingbranch} unless C4::Context->preference('UseDisplayModule');
+
+        my $item_obj = $get_item_obj->( $item->{itemnumber} );
+        return $item->{holdingbranch} unless $item_obj;
+
+        my $effective_holdingbranch = $item_obj->effective_holdingbranch;
+
+        # If it starts with "DISPLAY:", validate against displays table
+        if ( $effective_holdingbranch =~ /^DISPLAY:\s*(.+)$/ ) {
+            my $display_name = $1;
+
+            # Use cache to avoid repeated database queries
+            if ( !exists $display_cache->{$display_name} ) {
+                my $display = Koha::Displays->search( { display_name => $display_name } )->next;
+                $display_cache->{$display_name} = $display ? $display->display_name : undef;
+            }
+            return $display_cache->{$display_name}
+                ? "DISPLAY: " . $display_cache->{$display_name}
+                : $effective_holdingbranch;
+        } else {
+            return $effective_holdingbranch;
+        }
     };
 
     # get notforloan authorised value list (see $shelflocations  FIXME)
@@ -1695,10 +1843,6 @@ sub searchResults {
         }
     );
     my $notforloan_authorised_value = $av->count ? $av->next->authorised_value : undef;
-
-    #Get itemtype hash
-    my $itemtypes = Koha::ItemTypes->search_with_localization;
-    my %itemtypes = map { $_->{itemtype} => $_ } @{ $itemtypes->unblessed };
 
     #search item field code
     my ( $itemtag, undef ) = &GetMarcFromKohaField("items.itemnumber");
@@ -1865,7 +2009,12 @@ sub searchResults {
                 next;
             }
 
-            $item->{description} = $itemtypes{ $item->{itype} }{translated_description} if $item->{itype};
+            $item->{collectioncode} = $get_effective_collection_code->($item) if $item->{ccode};
+            $item->{description}    = $get_effective_itemtype->($item)        if $item->{itype};
+            $item->{location}       = $get_effective_location->($item)        if $item->{location};
+
+            $item->{homebranch}    = $get_effective_homebranch->($item)    if $item->{homebranch};
+            $item->{holdingbranch} = $get_effective_holdingbranch->($item) if $item->{holdingbranch};
 
             # OPAC hidden items
             if ($is_opac) {
@@ -1892,6 +2041,23 @@ sub searchResults {
                 $item->{'branchcode'} = $item->{$otherbranch};
             }
 
+            if ( C4::Context->preference('UseDisplayModule') ) {
+                my @displays;
+                my @display_items = Koha::DisplayItems->search(
+                    { itemnumber => $item->{itemnumber} },
+                    {
+                        order_by => { '-desc' => 'date_added' },
+                    }
+                )->as_list;
+
+                foreach my $display_item (@display_items) {
+                    push @displays, $display_item->display;
+                }
+
+                $item->{display_items} = \@display_items if @display_items;
+                $item->{displays}      = \@displays      if @displays;
+            }
+
             my $prefix =
                   ( $item->{$hbranch}       ? $item->{$hbranch} . '--' : q{} )
                 . ( $item->{location}       ? $item->{location}        : q{} )
@@ -1913,15 +2079,15 @@ sub searchResults {
                 $onloan_items->{$key}->{count}++ if $item->{$hbranch};
                 $onloan_items->{$key}->{branchname}     = $item->{branchname};
                 $onloan_items->{$key}->{branchcode}     = $item->{branchcode};
-                $onloan_items->{$key}->{location}       = $shelflocations->{ $item->{location} } if $item->{location};
+                $onloan_items->{$key}->{location}       = $item->{location};
                 $onloan_items->{$key}->{itemcallnumber} = $item->{itemcallnumber};
                 $onloan_items->{$key}->{description}    = $item->{description};
                 $onloan_items->{$key}->{imageurl}       = getitemtypeimagelocation(
                     $search_context->{'interface'},
                     $itemtypes{ $item->{itype} }->{imageurl}
                 );
-                $onloan_items->{$key}->{collectioncode} =
-                    GetAuthorisedValueDesc( '', '', $item->{ccode}, '', '', 'CCODE' );
+                $onloan_items->{$key}->{collectioncode} = $item->{collectioncode};
+                $onloan_items->{$key}->{displays}       = $item->{displays};
 
                 # if something's checked out and lost, mark it as 'long overdue'
                 if ( $item->{itemlost} ) {
@@ -2024,14 +2190,14 @@ sub searchResults {
                         GetAuthorisedValueDesc( '', '', $item->{notforloan}, '', '', $notforloan_authorised_value )
                         if $notforloan_authorised_value and $item->{notforloan};
                     $other_items->{$key}->{count}++ if $item->{$hbranch};
-                    $other_items->{$key}->{location}    = $shelflocations->{ $item->{location} } if $item->{location};
+                    $other_items->{$key}->{location}    = $item->{location};
                     $other_items->{$key}->{description} = $item->{description};
                     $other_items->{$key}->{imageurl}    = getitemtypeimagelocation(
                         $search_context->{'interface'},
                         $itemtypes{ $item->{itype} // q{} }->{imageurl}
                     );
-                    $other_items->{$key}->{collectioncode} =
-                        GetAuthorisedValueDesc( '', '', $item->{ccode}, '', '', 'CCODE' );
+                    $other_items->{$key}->{collectioncode} = $item->{collectioncode};
+                    $other_items->{$key}->{displays}       = $item->{displays};
                 }
 
                 # item is available
@@ -2045,14 +2211,13 @@ sub searchResults {
                     }
                     $available_items->{$prefix}->{branchavailablecount} = $branch_available_count;
                     $available_items->{$prefix}->{branchcode}           = $item->{branchcode};
-                    $available_items->{$prefix}->{location}             = $shelflocations->{ $item->{location} }
-                        if $item->{location};
-                    $available_items->{$prefix}->{imageurl} = getitemtypeimagelocation(
+                    $available_items->{$prefix}->{location}             = $item->{location};
+                    $available_items->{$prefix}->{imageurl}             = getitemtypeimagelocation(
                         $search_context->{'interface'},
                         $itemtypes{ $item->{itype} // q{} }->{imageurl}
                     );
-                    $available_items->{$prefix}->{collectioncode} =
-                        GetAuthorisedValueDesc( '', '', $item->{ccode}, '', '', 'CCODE' );
+                    $available_items->{$prefix}->{collectioncode} = $item->{collectioncode};
+                    $available_items->{$prefix}->{displays}       = $item->{displays};
                 }
             }
         }    # notforloan, item level and biblioitem level
