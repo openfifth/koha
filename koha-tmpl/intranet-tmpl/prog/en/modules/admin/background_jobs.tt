@@ -183,6 +183,14 @@
                 '_str': _("Batch item record modification").escapeHtml()
             },
             {
+                '_id': 'batch_add_display_items',
+                '_str': _("Batch add display items").escapeHtml()
+            },
+            {
+                '_id': 'batch_delete_display_items',
+                '_str': _("Batch delete display items").escapeHtml()
+            },
+            {
                 '_id': 'batch_item_record_deletion',
                 '_str': _("Batch item record deletion").escapeHtml()
             },
