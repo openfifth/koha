@@ -721,11 +721,13 @@ if ( not $viewallitems and $items->count > $max_items_to_display ) {
             $can_holds_be_placed || $patron && IsAvailableForItemLevelRequest( $item, $patron, undef );
 
         # get collection code description, too
-        my $ccode = $item->ccode;
+        my $ccode = $item->effective_collection_code;
         $item_info->{'ccode'} = $collections->{$ccode}
-            if defined($ccode)
-            && $collections
-            && exists( $collections->{$ccode} );
+            if defined($ccode) && $collections && exists( $collections->{$ccode} );
+
+        my $location = $item->effective_location;
+        $item_info->{'location_description'} = $shelflocations->{$location}
+            if defined($location) && $shelflocations && exists( $shelflocations->{$location} );
 
         my $copynumber = $item->copynumber;
         $item_info->{copynumber} = $copynumbers->{$copynumber}
@@ -733,11 +735,30 @@ if ( not $viewallitems and $items->count > $max_items_to_display ) {
             && defined($copynumber)
             && exists( $copynumbers->{$copynumber} ) );
 
-        if ( defined $item->location ) {
-            $item_info->{'location_description'} = $shelflocations->{ $item->location };
+        $item_info->{holding_branch} = $item->holding_branch;
+        $item_info->{home_branch}    = $item->home_branch;
+
+        if ( C4::Context->preference('UseDisplayModule') && $item->effective_home_library ) {
+            my $effective_home_library           = $item->effective_home_library;
+            my $effective_home_library_opac_info = $effective_home_library->opac_info( { lang => $lang } );
+
+            $item_info->{home_library_info} = $effective_home_library_opac_info
+                if ($effective_home_library_opac_info);
+
+            $item_info->{home_branch} = $effective_home_library;
         }
 
-        my $itemtype = $item->itemtype;
+        if ( C4::Context->preference('UseDisplayModule') && $item->effective_holding_library ) {
+            my $effective_holding_library           = $item->effective_holding_library;
+            my $effective_holding_library_opac_info = $effective_holding_library->opac_info( { lang => $lang } );
+
+            $item_info->{holding_library_info} = $effective_holding_library_opac_info
+                if ($effective_holding_library_opac_info);
+
+            $item_info->{holding_branch} = $effective_holding_library;
+        }
+
+        my $itemtype = Koha::ItemTypes->find( $item->effective_itemtype );
         $item_info->{'imageurl'} = getitemtypeimagelocation(
             'opac',
             $itemtypes->{ $itemtype->itemtype }->{'imageurl'}
@@ -748,8 +769,36 @@ if ( not $viewallitems and $items->count > $max_items_to_display ) {
         $item_info->{checkout} = $item->checkout;
         if ( $item_info->{checkout} && $item_info->{checkout} > 0 ) { $item_checkouts = 1; }
 
+        if ( C4::Context->preference('UseDisplayModule') ) {
+            my $display_items = Koha::Display::Items->search(
+                { itemnumber => $item->itemnumber },
+                {
+                    order_by => { '-desc' => 'date_added' },
+                }
+            );
+            my @display_items;
+            my @displays;
+
+            while ( my $display_item = $display_items->next ) {
+                my $display = $display_item->display;
+
+                push @display_items, $display_item
+                    if $display_item->active and $display_item->active;
+
+                push @displays, $display
+                    if $display_item->active and $display_item->active;
+
+                $item_info->{display_itemnotes} .= $display->public_note
+                    if $display_item->active and $display_item->active;
+            }
+
+            $item_info->{display_items} = \@display_items if @display_items;
+            $item_info->{displays}      = \@displays      if @displays;
+        }
+
         foreach my $field (
-            qw(ccode materials enumchron copynumber itemnotes location_description uri barcode itemcallnumber))
+            qw(ccode materials enumchron copynumber itemnotes location_description uri barcode itemcallnumber displays display_items display_itemnotes)
+            )
         {
             $itemfields{$field} = 1 if $item_info->{$field};
         }
@@ -770,9 +819,6 @@ if ( not $viewallitems and $items->count > $max_items_to_display ) {
         if ( C4::Context->preference('UseCourseReserves') ) {
             $item_info->{course_reserves} = GetItemCourseReservesInfo( itemnumber => $item->itemnumber );
         }
-
-        $item_info->{holding_branch} = $item->holding_branch;
-        $item_info->{home_branch}    = $item->home_branch;
 
         my $itembranch = $item->$separatebranch;
         if ( $currentbranch
@@ -821,17 +867,20 @@ if ( C4::Context->preference('ArticleRequests') ) {
 }
 
 $template->param(
-    MARCNOTES               => $marcnotesarray,
-    itemdata_ccode          => $itemfields{ccode},
-    itemdata_materials      => $itemfields{materials},
-    itemdata_enumchron      => $itemfields{enumchron},
-    itemdata_uri            => $itemfields{uri},
-    itemdata_copynumber     => $itemfields{copynumber},
-    itemdata_itemnotes      => $itemfields{itemnotes},
-    itemdata_location       => $itemfields{location_description},
-    itemdata_barcode        => $itemfields{barcode},
-    itemdata_itemcallnumber => $itemfields{itemcallnumber},
-    OpacStarRatings         => C4::Context->preference("OpacStarRatings"),
+    MARCNOTES                  => $marcnotesarray,
+    itemdata_ccode             => $itemfields{ccode},
+    itemdata_materials         => $itemfields{materials},
+    itemdata_enumchron         => $itemfields{enumchron},
+    itemdata_uri               => $itemfields{uri},
+    itemdata_copynumber        => $itemfields{copynumber},
+    itemdata_itemnotes         => $itemfields{itemnotes},
+    itemdata_location          => $itemfields{location_description},
+    itemdata_barcode           => $itemfields{barcode},
+    itemdata_itemcallnumber    => $itemfields{itemcallnumber},
+    itemdata_displays          => $itemfields{displays},
+    itemdata_display_items     => $itemfields{display_items},
+    itemdata_display_itemnotes => $itemfields{display_itemnotes},
+    OpacStarRatings            => C4::Context->preference("OpacStarRatings"),
 );
 
 if ( C4::Context->preference("AlternateHoldingsField") && $items->count == 0 ) {
