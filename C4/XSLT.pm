@@ -434,16 +434,19 @@ sub buildKohaItemsNamespace {
         } else {
             $status = "available";
         }
-        my $homebranch    = C4::Koha::xml_escape( $branches{ $item->homebranch } );
-        my $holdingbranch = C4::Koha::xml_escape( $branches{ $item->holdingbranch } );
+        my $homebranch    = C4::Koha::xml_escape( $branches{ $item->effective_homebranch } );
+        my $holdingbranch = C4::Koha::xml_escape( $branches{ $item->effective_holdingbranch } );
         my $resultbranch = C4::Context->preference('OPACResultsLibrary') eq 'homebranch' ? $homebranch : $holdingbranch;
         my $location     = C4::Koha::xml_escape(
-              $item->location && exists $shelflocations->{ $item->location }
-            ? $shelflocations->{ $item->location }
-            : $item->location
+              $item->effective_location && exists $shelflocations->{ $item->effective_location }
+            ? $shelflocations->{ $item->effective_location }
+            : $item->effective_location
         );
-        my $ccode = C4::Koha::xml_escape( $item->ccode
-                && exists $ccodes->{ $item->ccode } ? $ccodes->{ $item->ccode } : $item->ccode );
+        my $ccode = C4::Koha::xml_escape(
+              $item->effective_collection_code && exists $ccodes->{ $item->effective_collection_code }
+            ? $ccodes->{ $item->effective_collection_code }
+            : $item->effective_collection_code
+        );
         my $itemcallnumber = C4::Koha::xml_escape( $item->itemcallnumber );
         my $stocknumber    = C4::Koha::xml_escape( $item->stocknumber );
         $xml .=
