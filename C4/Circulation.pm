@@ -119,6 +119,7 @@ use Koha::Config::SysPrefs;
 use Koha::Charges::Fees;
 use Koha::Config::SysPref;
 use Koha::Checkouts::ReturnClaims;
+use Koha::DisplayItems;
 use Koha::SearchEngine::Indexer;
 use Koha::Exceptions::Checkout;
 use Koha::Plugins;
@@ -350,7 +351,7 @@ sub transferbook {
     my $itemnumber = $item->itemnumber;
 
     # get branches of book...
-    my $hbr = $item->homebranch;
+    my $hbr = $item->effective_homebranch;
 
     # if using Branch Transfer Limits
     if ( C4::Context->preference("UseBranchTransferLimits") == 1 ) {
@@ -2402,6 +2403,31 @@ sub AddReturn {
     my $validate_float =
         Koha::Libraries->find( $item->homebranch )->validate_float_sibling( { branchcode => $branch } );
 
+    # act to remove item from display
+    if ( my $display_item = $item->active_display_item ) {
+        my $display             = $display_item->display;
+        my $return_over         = $display->display_return_over;
+        my $display_item_active = $display_item->active;
+        my $should_remove       = 0;
+
+        if ( $display_item_active && $return_over eq 'any' ) {
+            $should_remove = 1;
+        } elsif ( $display_item_active && $return_over eq 'any_except_homebranch' ) {
+            my $homebranch = $item->homebranch;
+
+            $should_remove = 1
+                if $branch ne $homebranch;
+        }
+
+        if ($should_remove) {
+            $display_item->delete;
+            $messages->{RemovedFromDisplay} = {
+                display_id   => $display->display_id,
+                display_name => $display->display_name,
+            };
+        }
+    }
+
     # get the proper branch to which to return the item
     my $returnbranch;
     if ( $hbr eq 'noreturn' ) {
@@ -2410,7 +2436,11 @@ sub AddReturn {
 
         # if library isn't in same the float group, transfer item to homebranch
         $hbr          = 'homebranch';
-        $returnbranch = $validate_float ? $branch : $item->$hbr;
+        $returnbranch = $validate_float ? $branch : $item->effective_homebranch;
+    } elsif ( $hbr eq 'homebranch' ) {
+        $returnbranch = $item->effective_homebranch;
+    } elsif ( $hbr eq 'holdingbranch' ) {
+        $returnbranch = $item->effective_holdingbranch;
     } else {
         $returnbranch = $item->$hbr;
     }
@@ -2424,7 +2454,7 @@ sub AddReturn {
         my $limit = Koha::Library::FloatLimits->find( { itemtype => $effective_itemtype, branchcode => $branch } );
         if ($limit) {
             my $transfer_library =
-                Koha::Library::FloatLimits->lowest_ratio_library( $item, $branch, $item->holdingbranch );
+                Koha::Library::FloatLimits->lowest_ratio_library( $item, $branch, $item->effective_holdingbranch );
             if ( $transfer_library && $transfer_library->branchcode ne $branch ) {
                 $returnbranch     = $transfer_library->branchcode;
                 $transfer_trigger = 'LibraryFloatLimit';
@@ -2547,7 +2577,7 @@ sub AddReturn {
 
     # the holdingbranch is updated if the document is returned to another location.
     # this is always done regardless of whether the item was on loan or not
-    if ( $item->holdingbranch ne $branch ) {
+    if ( $item->effective_holdingbranch ne $branch ) {
         $item->holdingbranch($branch)->store( { log_action => 0, skip_record_index => 1, skip_holds_queue => 1 } );
     }
 
@@ -4914,8 +4944,10 @@ sub IsItemIssued {
 
 sub GetPendingOnSiteCheckouts {
     my $dbh = C4::Context->dbh;
-    return $dbh->selectall_arrayref(
-        q|
+
+    my $use_display_module = C4::Context->preference('UseDisplayModule');
+
+    my $sql = q|
         SELECT
           items.barcode,
           items.biblionumber,
@@ -4931,14 +4963,64 @@ sub GetPendingOnSiteCheckouts {
           borrowers.firstname,
           borrowers.surname,
           borrowers.cardnumber,
-          borrowers.borrowernumber
+          borrowers.borrowernumber|;
+
+    if ($use_display_module) {
+        $sql .= q|,
+          COALESCE(active_display.display_location, items.location) AS effective_location,
+          active_display.display_name,
+          active_display.display_location AS raw_display_location|;
+    } else {
+        $sql .= q|,
+          items.location AS effective_location,
+          NULL AS display_name,
+          NULL AS raw_display_location|;
+    }
+
+    $sql .= q|
         FROM items
         LEFT JOIN issues ON items.itemnumber = issues.itemnumber
         LEFT JOIN biblio ON items.biblionumber = biblio.biblionumber
-        LEFT JOIN borrowers ON issues.borrowernumber = borrowers.borrowernumber
-        WHERE issues.onsite_checkout = 1
-    |, { Slice => {} }
-    );
+        LEFT JOIN borrowers ON issues.borrowernumber = borrowers.borrowernumber|;
+
+    if ($use_display_module) {
+        $sql .= q|
+        LEFT JOIN (
+          SELECT
+            di.itemnumber,
+            d.display_location,
+            d.display_name,
+            ROW_NUMBER() OVER (PARTITION BY di.itemnumber ORDER BY di.date_added DESC) as rn
+          FROM display_items di
+          JOIN displays d ON di.display_id = d.display_id
+          WHERE d.enabled = 1
+            AND (d.start_date IS NULL OR d.start_date <= CURDATE())
+            AND (d.end_date IS NULL OR d.end_date >= CURDATE())
+            AND (di.date_remove IS NULL OR di.date_remove >= CURDATE())
+        ) active_display ON items.itemnumber = active_display.itemnumber AND active_display.rn = 1|;
+    }
+
+    $sql .= q|
+        WHERE issues.onsite_checkout = 1|;
+
+    my $results = $dbh->selectall_arrayref( $sql, { Slice => {} } );
+
+    # Add effective location description for each item
+    foreach my $checkout (@$results) {
+        if ( $checkout->{display_name} && !$checkout->{raw_display_location} ) {
+
+            # Item is on display with no specific display location
+            $checkout->{effective_location_description} = "DISPLAY: " . $checkout->{display_name};
+        } else {
+
+            # Use AuthorisedValues to get effective location description
+            my $av = Koha::AuthorisedValues->get_description_by_koha_field(
+                { kohafield => 'items.location', authorised_value => $checkout->{effective_location} } );
+            $checkout->{effective_location_description} = $av->{lib} || '';
+        }
+    }
+
+    return $results;
 }
 
 =head2 GetTopIssues

@@ -30,6 +30,7 @@ use C4::Reserves;
 use C4::ClassSource qw( GetClassSort );
 use C4::Log         qw( logaction );
 
+use Koha::AuthorisedValues;
 use Koha::BackgroundJob::BatchUpdateBiblioHoldsQueue;
 use Koha::Biblio::ItemGroups;
 use Koha::Checkouts;
@@ -37,6 +38,7 @@ use Koha::CirculationRules;
 use Koha::Courses;
 use Koha::Course::Items;
 use Koha::CoverImages;
+use Koha::DisplayItems;
 use Koha::Exceptions;
 use Koha::Exceptions::Checkin;
 use Koha::Exceptions::Item::Bundle;
@@ -416,6 +418,14 @@ sub move_to_deleted {
     return Koha::Database->new->schema->resultset('Deleteditem')->create($item_infos);
 }
 
+=head3 effective_itype
+
+=cut
+
+sub effective_itype {
+    return shift->effective_itemtype(@_);
+}
+
 =head3 effective_itemtype
 
 Returns the itemtype for the item based on whether item level itemtypes are set or not.
@@ -424,6 +434,10 @@ Returns the itemtype for the item based on whether item level itemtypes are set 
 
 sub effective_itemtype {
     my ($self) = @_;
+
+    if ( my $display = $self->active_display ) {
+        return $display->display_itype || $self->_result()->effective_itemtype();
+    }
 
     return $self->_result()->effective_itemtype();
 }
@@ -789,6 +803,48 @@ sub check_booking {
         : $existing_bookings->count;
 
     return $bookings_count ? 0 : 1;
+}
+
+=head3 active_display_item
+
+    my $display_item = $item->active_display_item;
+
+Returns the Koha::DisplayItem object if this item is part of an active display, undef otherwise.
+An active display is one where enabled = 1 and the current date falls within the start_date and end_date range (if set).
+
+=cut
+
+sub active_display_item {
+    my ($self) = @_;
+
+    return unless C4::Context->preference('UseDisplayModule');
+
+    my $display_items = Koha::DisplayItems->search(
+        {
+            itemnumber        => $self->itemnumber,
+            'display.enabled' => 1,
+            '-and'            => [
+                '-or' => [
+                    'date_added' => { '<=', \'CURDATE()' },
+                    'date_added' => undef,
+                ],
+                '-or' => [
+                    'date_remove' => { '>=', \'CURDATE()' },
+                    'date_remove' => undef,
+                ],
+            ],
+        },
+        {
+            join     => 'display',
+            order_by => { -desc => 'date_added' },
+        }
+    );
+
+    if ( my $display_item = $display_items->next ) {
+        return $display_item;
+    }
+
+    return;
 }
 
 =head3 request_transfer
@@ -1433,6 +1489,7 @@ sub as_marc_field {
             $value = $self
                 ->$attribute # This call may fail if a kohafield is not a DB column but we don't want to add extra work for that there
                 if defined $self->$attribute and $self->$attribute ne '';
+            $value = $self->effective_kohafield_substitution($kohafield) || $value;
         } else {
             $value = $more_subfields->{$tagsubfield};
         }
@@ -2066,6 +2123,10 @@ sub to_api {
     $overrides->{effective_item_type_id}        = $self->effective_itemtype;
     $overrides->{effective_not_for_loan_status} = $self->effective_not_for_loan_status;
     $overrides->{effective_bookable}            = $self->effective_bookable;
+    $overrides->{effective_location}            = $self->effective_location;
+    $overrides->{effective_collection_code}     = $self->effective_collection_code;
+    $overrides->{effective_home_library_id}     = $self->effective_homebranch;
+    $overrides->{effective_holding_library_id}  = $self->effective_holdingbranch;
 
     return { %$response, %$overrides };
 }
@@ -2186,6 +2247,186 @@ sub effective_bookable {
     return $self->bookable           if defined $self->bookable;
     return $self->itemtype->bookable if $self->itemtype;
     return 0;
+}
+
+=head3 effective_location
+
+  my $location = $item->effective_location;
+
+Returns the effective location of the item. If the item is on an active display
+with a display_location, returns the display_location. Otherwise, returns
+the item's location.
+
+=cut
+
+sub effective_location {
+    my ($self) = @_;
+
+    if ( my $display = $self->active_display ) {
+        return $display->display_location || "Display: " . $display->display_name;
+    }
+
+    return $self->location;
+}
+
+=head3 effective_collection_code
+
+    my $ccode = $item->effective_collection_code;
+
+Returns the effective collection code for the item. If the item is part of an active display
+with a display_code set, returns that code. Otherwise returns the item's regular ccode.
+
+=cut
+
+sub effective_collection_code {
+    my ($self) = @_;
+
+    if ( my $display = $self->active_display ) {
+        return $display->display_code || $self->ccode;
+    }
+
+    return $self->ccode;
+}
+
+=head3 effective_home_library
+
+=cut
+
+sub effective_home_library {
+    my ($self) = @_;
+
+    return Koha::Libraries->find( $self->effective_homebranch );
+}
+
+=head3 effective_home_branch
+
+=cut
+
+sub effective_home_branch {
+    return shift->effective_home_library(@_);
+}
+
+=head3 effective_homebranch
+
+    my $homebranch = $item->effective_homebranch;
+
+Returns the effective home branch for the item. If the item is part of an active display
+with a display_home_branch set, returns that branch. Otherwise returns the item's regular homebranch.
+
+=cut
+
+sub effective_homebranch {
+    my ($self) = @_;
+
+    if ( my $display = $self->active_display ) {
+        return $display->display_home_branch || $self->homebranch;
+    }
+
+    return $self->homebranch;
+}
+
+=head3 effective_holding_library
+
+=cut
+
+sub effective_holding_library {
+    my ($self) = @_;
+
+    return Koha::Libraries->find( $self->effective_holdingbranch );
+}
+
+=head3 effective_holding_branch
+
+=cut
+
+sub effective_holding_branch {
+    return shift->effective_holding_library(@_);
+}
+
+=head3 effective_holdingbranch
+
+    my $holdingbranch = $item->effective_holdingbranch;
+
+Returns the effective holding branch for the item. If the item is part of an active display
+with a display_holding_branch set, returns that branch. Otherwise returns the item's regular holdingbranch.
+
+=cut
+
+sub effective_holdingbranch {
+    my ($self) = @_;
+
+    if ( my $display = $self->active_display ) {
+        return $display->display_holding_branch || $self->holdingbranch;
+    }
+
+    return $self->holdingbranch;
+}
+
+=head3 active_display
+
+    my $display = $item->active_display;
+
+Returns the active display for this item, if any. Returns undef if the item is not
+currently in an active display.
+
+An active display is one that:
+- Is enabled
+- Has a date_added on the display_item that is today or in the past (or no date_added)
+- Has a date_remove on the display_item that is today or in the future (or no date_remove)
+
+=cut
+
+sub active_display {
+    my ($self) = @_;
+
+    return unless C4::Context->preference('UseDisplayModule');
+
+    my $display_item = Koha::DisplayItems->search(
+        {
+            itemnumber        => $self->itemnumber,
+            'display.enabled' => 1,
+            '-and'            => [
+                '-or' => [
+                    'date_added' => { '<=', \'CURDATE()' },
+                    'date_added' => undef,
+                ],
+                '-or' => [
+                    'date_remove' => { '>=', \'CURDATE()' },
+                    'date_remove' => undef,
+                ],
+            ],
+        },
+        {
+            join     => 'display',
+            order_by => { -desc => 'date_added' },
+        }
+    )->next;
+
+    return unless $display_item;
+
+    if ( my $display = $display_item->display ) {
+        return $display;
+    }
+
+    return;
+}
+
+=head3 location_description
+
+    my $description = $item->location_description();
+
+Returns the human-readable description for the item's location from authorised values.
+
+=cut
+
+sub location_description {
+    my ($self) = @_;
+
+    return '' unless $self->location;
+
+    my $av = Koha::AuthorisedValues->get_description_by_koha_field(
+        { kohafield => 'items.location', authorised_value => $self->location } );
+    return $av->{lib} || $self->location;
 }
 
 =head3 orders
@@ -2498,6 +2739,37 @@ sub _after_item_action_hooks {
     );
 }
 
+=head3 effective_kohafield_substitution
+
+    my $effective_ccode = $self->effective_kohafield_substitution( 'items.ccode' );
+
+Returns the value of an effective field based on the regular kohafield, or undef
+if there is no effective matching kohafield
+
+=cut
+
+sub effective_kohafield_substitution {
+    my ( $self, $kohafield ) = @_;
+
+    return unless $kohafield;
+
+    if ( $kohafield eq 'items.itype' ) {
+        return $self->effective_itemtype;
+    } elsif ( $kohafield eq 'items.ccode' ) {
+        return $self->effective_collection_code;
+    } elsif ( $kohafield eq 'items.location' ) {
+        return $self->effective_location;
+    } elsif ( $kohafield eq 'items.homebranch' ) {
+        return $self->effective_homebranch;
+    } elsif ( $kohafield eq 'items.holdingbranch' ) {
+        return $self->effective_holdingbranch;
+    } elsif ( $kohafield eq 'items.notforloan' ) {
+        return $self->effective_not_for_loan_status;
+    }
+
+    return;
+}
+
 =head3 recall
 
     my $recall = $item->recall;
@@ -2798,10 +3070,8 @@ sub strings_map {
     # Handle not null and default values for integers and dates
     my $strings = {};
 
-    foreach my $col ( @{ $self->_columns } ) {
-
-        # By now, we are done with known columns, now check the framework for mappings
-        my $field = $self->_result->result_source->name . '.' . $col;
+    my $get_av_desc = sub {
+        my ( $col, $field ) = @_;
 
         # Check there's an entry in the MARC subfield structure for the field
         if (   exists $mss->{$field}
@@ -2816,12 +3086,28 @@ sub strings_map {
                 undef, $params->{public}
             );
             my $type = exists $code_to_type->{$code} ? $code_to_type->{$code} : 'av';
-            $strings->{$col} = {
+
+            return {
                 str  => $str,
                 type => $type,
                 ( $type eq 'av' ? ( category => $code ) : () ),
             };
         }
+
+        return;
+    };
+
+    my @cols = @{ $self->_columns };
+    push @cols, 'effective_collection_code';
+    push @cols, 'effective_holding_library_id';
+    push @cols, 'effective_home_library_id';
+    push @cols, 'effective_item_type_id';
+    push @cols, 'effective_location';
+
+    foreach my $col (@cols) {
+
+        # By now, we are done with known columns, now check the framework for mappings
+        my $field = $self->_result->result_source->name . '.' . $col;
 
         if ( $col eq 'booksellerid' ) {
             my $booksellerid = $self->booksellerid;
@@ -2833,7 +3119,93 @@ sub strings_map {
                     type => 'acquisition_source'
                 } if $bookseller;
             }
+
+            next;
         }
+
+        if ( $col eq 'effective_collection_code' ) {
+            my $ccode = $self->effective_collection_code;
+
+            if ($ccode) {
+                my $av = Koha::AuthorisedValues->get_description_by_koha_field(
+                    { kohafield => 'items.ccode', authorised_value => $ccode } );
+                my $description = $av->{lib} || $ccode;
+
+                $strings->{$col} = {
+                    category => 'CCODE',
+                    str      => $description,
+                    type     => 'av',
+                } if $description;
+            }
+
+            next;
+        }
+
+        if ( $col eq 'effective_holding_library_id' ) {
+            my $holding_library = $self->effective_holding_library;
+
+            if ($holding_library) {
+                my $description = $holding_library->branchname ? $holding_library->branchname : $holding_library;
+
+                $strings->{$col} = {
+                    str  => $description,
+                    type => 'library',
+                } if $description;
+            }
+
+            next;
+        }
+
+        if ( $col eq 'effective_home_library_id' ) {
+            my $home_library = $self->effective_home_library;
+
+            if ($home_library) {
+                my $description = $home_library->branchname ? $home_library->branchname : $home_library;
+
+                $strings->{$col} = {
+                    str  => $description,
+                    type => 'library',
+                } if $description;
+            }
+
+            next;
+        }
+
+        if ( $col eq 'effective_item_type_id' ) {
+            my $itemtype = Koha::ItemTypes->find( $self->effective_itemtype );
+
+            if ($itemtype) {
+                my $description = $itemtype->translated_description ? $itemtype->translated_description : $itemtype;
+
+                $strings->{$col} = {
+                    str  => $description,
+                    type => 'item_type',
+                } if $description;
+            }
+
+            next;
+        }
+
+        if ( $col eq 'effective_location' ) {
+            my $location = $self->effective_location;
+
+            if ($location) {
+                my $av = Koha::AuthorisedValues->get_description_by_koha_field(
+                    { kohafield => 'items.location', authorised_value => $location } );
+                my $description = $av->{lib} || $location;
+
+                $strings->{$col} = {
+                    category => 'LOC',
+                    str      => $description,
+                    type     => 'av',
+                } if $description;
+            }
+
+            next;
+        }
+
+        my $av_desc = $get_av_desc->( $col, $field );
+        $strings->{$col} = $av_desc if $av_desc;
     }
 
     return $strings;

@@ -2314,6 +2314,102 @@ sub libraries_where_can_see_patrons {
     );
 }
 
+=head3 libraries_where_can_add_displays
+
+    my $libraries = $patron->libraries_where_can_add_displays;
+
+Return the list of branchcodes(!) of libraries the patron is allowed to add
+displays for. The branchcodes are arbitrarily returned sorted.
+
+If the patron has the 'add_display_to_any_libraries' permission,
+an empty list is returned as a signal they have access to all libraries.
+
+=cut
+
+sub libraries_where_can_add_displays {
+    my ($self) = @_;
+
+    return $self->libraries_where_can_see_things(
+        {
+            permission    => 'displays',
+            subpermission => 'add_displays_to_any_libraries',
+            group_feature => 'ft_display_group',
+        }
+    );
+}
+
+=head3 libraries_where_can_view_displays
+
+    my $libraries = $patron->libraries_where_can_view_displays;
+
+Return the list of branchcodes(!) of libraries the patron is allowed to view
+displays for. The branchcodes are arbitrarily returned sorted.
+
+If the patron has the 'view_displays_from_any_libraries' permission, an empty
+list is returned as a signal they have access to all libraries.
+
+=cut
+
+sub libraries_where_can_view_displays {
+    my ($self) = @_;
+
+    return $self->libraries_where_can_see_things(
+        {
+            permission    => 'displays',
+            subpermission => 'view_displays_from_any_libraries',
+            group_feature => 'ft_display_group',
+        }
+    );
+}
+
+=head3 libraries_where_can_edit_displays
+
+    my $libraries = $patron->libraries_where_can_edit_displays;
+
+Return the list of branchcodes(!) of libraries the patron is allowed to edit
+displays for. The branchcodes are arbitrarily returned sorted.
+
+If the patron has the 'edit_displays_from_any_libraries' permission,
+an empty list is returned as a signal they have access to all libraries.
+
+=cut
+
+sub libraries_where_can_edit_displays {
+    my ($self) = @_;
+
+    return $self->libraries_where_can_see_things(
+        {
+            permission    => 'displays',
+            subpermission => 'edit_displays_from_any_libraries',
+            group_feature => 'ft_display_group',
+        }
+    );
+}
+
+=head3 libraries_where_can_delete_displays
+
+    my $libraries = $patron->libraries_where_can_delete_displays;
+
+Return the list of branchcodes(!) of libraries the patron is allowed to delete
+displays for. The branchcodes are arbitrarily returned sorted.
+
+If the patron has the 'delete_displays_from_any_libraries' permission,
+an empty list is returned as a signal they have access to all libraries.
+
+=cut
+
+sub libraries_where_can_delete_displays {
+    my ($self) = @_;
+
+    return $self->libraries_where_can_see_things(
+        {
+            permission    => 'displays',
+            subpermission => 'delete_displays_from_any_libraries',
+            group_feature => 'ft_display_group',
+        }
+    );
+}
+
 =head3 can_see_things_from
 
     my $can_see = $patron->can_see_things_from(
