@@ -525,6 +525,10 @@ modules:
             -
               columnname: status
             -
+              columnname: displays
+              cannot_be_toggled: 1
+              cannot_be_modified: 1
+            -
               columnname: lastseen
             -
               columnname: issues
@@ -1369,6 +1373,11 @@ modules:
             -
               columnname: copynumber
             -
+              columnname: active_display
+              cannot_be_toggled: 1
+              cannot_be_modified: 1
+              is_hidden: 1
+            -
               columnname: charge
             -
               columnname: fine
@@ -1860,6 +1869,11 @@ modules:
             -
               columnname: copynumber
             -
+              columnname: active_display
+              cannot_be_toggled: 1
+              cannot_be_modified: 1
+              is_hidden: 1
+            -
               columnname: charge
             -
               columnname: fine
@@ -2125,6 +2139,10 @@ modules:
               columnname: date
             -
               columnname: notes
+            -
+              columnname: displays
+              cannot_be_toggled: 1
+              cannot_be_modified: 1
 
     holds:
       holds-to-pull:
@@ -2157,6 +2175,10 @@ modules:
               columnname: locations
             -
               columnname: collection
+            -
+              columnname: displays
+              cannot_be_toggled: 1
+              cannot_be_modified: 1
             -
               columnname: hold_date
             -
@@ -2256,6 +2278,10 @@ modules:
               columnname: current_location
             -
               columnname: shelving_location
+            -
+              columnname: displays
+              cannot_be_toggled: 1
+              cannot_be_modified: 1
             -
               columnname: call_number
             -
@@ -2484,6 +2510,9 @@ modules:
               columnname: item_copy
             -
               columnname: item_status
+            -
+              columnname: item_displays
+              cannot_be_toggled: 1
             -
               columnname: item_notes
             -
