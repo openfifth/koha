@@ -1,0 +1,399 @@
+---
+/display/items:
+  get:
+    x-mojo-to: DisplayItems#list
+    operationId: listDisplayItems
+    tags:
+      - displayitems
+    summary: List display items
+    produces:
+      - application/json
+    parameters:
+      - name: display_item_id
+        in: query
+        description: Filter by display item ID
+        required: false
+        type: integer
+      - name: display_id
+        in: query
+        description: Filter by display ID
+        required: false
+        type: integer
+      - name: itemnumber
+        in: query
+        description: Filter by item number
+        required: false
+        type: integer
+      - name: biblionumber
+        in: query
+        description: Filter by bibliographic record number
+        required: false
+        type: integer
+      - name: date_added
+        in: query
+        description: Filter by date added
+        required: false
+        type: string
+        format: date
+      - name: date_remove
+        in: query
+        description: Filter by date to remove
+        required: false
+        type: string
+        format: date
+      - $ref: "../swagger.yaml#/parameters/match"
+      - $ref: "../swagger.yaml#/parameters/order_by"
+      - $ref: "../swagger.yaml#/parameters/page"
+      - $ref: "../swagger.yaml#/parameters/per_page"
+      - $ref: "../swagger.yaml#/parameters/q_param"
+      - $ref: "../swagger.yaml#/parameters/q_body"
+      - $ref: "../swagger.yaml#/parameters/request_id_header"
+    responses:
+      "200":
+        description: A list of display items
+        schema:
+          type: array
+          items:
+            $ref: "../swagger.yaml#/definitions/displayitem"
+      "400":
+        description: |
+          Bad request. Possible `error_code` attribute values:
+
+            * `invalid_query`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        displays: view_displays
+  post:
+    x-mojo-to: DisplayItems#add
+    operationId: addDisplayItem
+    tags:
+      - displayitems
+    summary: Add display item
+    parameters:
+      - name: body
+        in: body
+        description: A JSON object containing information about the new display item
+        required: true
+        schema:
+          $ref: "../swagger.yaml#/definitions/displayitem"
+    produces:
+      - application/json
+    responses:
+      "201":
+        description: Display item added
+        schema:
+          $ref: "../swagger.yaml#/definitions/displayitem"
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        displays: manage_display_items
+"/display/items/{display_id}/{item_id}":
+  get:
+    x-mojo-to: DisplayItems#get
+    operationId: getDisplayItem
+    tags:
+      - displayitems
+    summary: Get display item
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/display_id_pp"
+      - $ref: "../swagger.yaml#/parameters/item_id_pp"
+    produces:
+      - application/json
+    responses:
+      "200":
+        description: A display item
+        schema:
+          $ref: "../swagger.yaml#/definitions/displayitem"
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Display item not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        displays: view_displays
+  put:
+    x-mojo-to: DisplayItems#update
+    operationId: updateDisplayItem
+    tags:
+      - displayitems
+    summary: Update display item
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/display_id_pp"
+      - $ref: "../swagger.yaml#/parameters/item_id_pp"
+      - name: body
+        in: body
+        description: A display item object
+        required: true
+        schema:
+          $ref: "../swagger.yaml#/definitions/displayitem"
+    produces:
+      - application/json
+    responses:
+      "200":
+        description: A display item
+        schema:
+          $ref: "../swagger.yaml#/definitions/displayitem"
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Display item not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: Internal error
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        displays: manage_display_items
+  delete:
+    x-mojo-to: DisplayItems#delete
+    operationId: deleteDisplayItem
+    tags:
+      - displayitems
+    summary: Delete display item
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/display_id_pp"
+      - $ref: "../swagger.yaml#/parameters/item_id_pp"
+    produces:
+      - application/json
+    responses:
+      "204":
+        description: Display item deleted
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Display item not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: Internal error
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        displays: manage_display_items
+/display/items/batch:
+  post:
+    x-mojo-to: DisplayItems#batch_add
+    operationId: batchAddDisplayItems
+    tags:
+      - displayitems
+    summary: Add multiple items to a display
+    parameters:
+      - name: body
+        in: body
+        description: A JSON object containing display and item information
+        required: true
+        schema:
+          type: object
+          properties:
+            display_id:
+              description: ID of the display to add items to
+              type: integer
+            barcodes:
+              description: Array of item barcodes to add to the display
+              type: array
+              items:
+                type: integer
+              minItems: 1
+            date_added:
+              description: Optional date when items should be added to display
+              type: string
+              format: date
+            date_remove:
+              description: Optional date when items should be removed from display
+              type: string
+              format: date
+          required:
+            - display_id
+            - barcodes
+          additionalProperties: false
+    produces:
+      - application/json
+    responses:
+      "202":
+        description: Batch operation queued
+        schema:
+          type: object
+          properties:
+            job_id:
+              type: integer
+              description: ID of the background job processing this request
+            message:
+              type: string
+              description: Confirmation message
+          additionalProperties: false
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Display not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: Internal server error
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        displays: manage_display_items
+  delete:
+    x-mojo-to: DisplayItems#batch_delete
+    operationId: batchDeleteDisplayItems
+    tags:
+      - displayitems
+    summary: Remove multiple items from displays
+    parameters:
+      - name: body
+        in: body
+        description: A JSON object containing item information
+        required: true
+        schema:
+          type: object
+          properties:
+            barcodes:
+              description: Array of item barcodes to remove from displays
+              type: array
+              items:
+                type: integer
+              minItems: 1
+            display_id:
+              description: Optional display ID - if specified, only remove items from this display
+              type: integer
+          required:
+            - barcodes
+          additionalProperties: false
+    produces:
+      - application/json
+    responses:
+      "202":
+        description: Batch operation queued
+        schema:
+          type: object
+          properties:
+            job_id:
+              type: integer
+              description: ID of the background job processing this request
+            message:
+              type: string
+              description: Confirmation message
+          additionalProperties: false
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: Internal server error
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        displays: manage_display_items

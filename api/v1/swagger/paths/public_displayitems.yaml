@@ -1,0 +1,94 @@
+---
+"/public/display/items":
+  get:
+    x-mojo-to: DisplayItems#list_public
+    operationId: listDisplayItemsPublic
+    tags:
+      - displayitems
+    summary: List display items (public)
+    produces:
+      - application/json
+    parameters:
+      - name: display_id
+        in: query
+        description: Filter by display ID
+        required: false
+        type: integer
+      - name: itemnumber
+        in: query
+        description: Filter by item number
+        required: false
+        type: integer
+      - name: biblionumber
+        in: query
+        description: Filter by bibliographic record number
+        required: false
+        type: integer
+      - $ref: "../swagger.yaml#/parameters/match"
+      - $ref: "../swagger.yaml#/parameters/order_by"
+      - $ref: "../swagger.yaml#/parameters/page"
+      - $ref: "../swagger.yaml#/parameters/per_page"
+      - $ref: "../swagger.yaml#/parameters/q_param"
+      - $ref: "../swagger.yaml#/parameters/q_body"
+      - $ref: "../swagger.yaml#/parameters/request_id_header"
+    responses:
+      "200":
+        description: A list of display items
+        schema:
+          type: array
+          items:
+            $ref: "../swagger.yaml#/definitions/displayitem"
+      "400":
+        description: |
+          Bad request. Possible `error_code` attribute values:
+
+            * `invalid_query`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+"/public/display/items/{display_id}/{item_id}":
+  get:
+    x-mojo-to: DisplayItems#get_public
+    operationId: getDisplayItemPublic
+    tags:
+      - displayitems
+    summary: Get display item (public)
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/display_id_pp"
+      - $ref: "../swagger.yaml#/parameters/item_id_pp"
+    produces:
+      - application/json
+    responses:
+      "200":
+        description: A display item
+        schema:
+          $ref: "../swagger.yaml#/definitions/displayitem"
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Display item not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"

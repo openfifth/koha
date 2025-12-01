@@ -1,0 +1,116 @@
+---
+type: object
+properties:
+  display_id:
+    type: integer
+    description: internally assigned display identifier
+    readOnly: true
+  display_name:
+    description: display name
+    type:
+      - string
+  start_date:
+    description: display start date
+    type:
+      - string
+      - "null"
+    format: date
+  end_date:
+    description: display end date
+    type:
+      - string
+      - "null"
+    format: date
+  enabled:
+    description: determines whether the display is active
+    type: boolean
+  active:
+    type: boolean
+    description: Whether or not the display is enabled, and the display dates are in range
+  display_location:
+    description: shelving location for the display
+    type:
+      - string
+      - "null"
+  display_code:
+    description: collection code for the display
+    type:
+      - string
+      - "null"
+  display_branch:
+    description: branch code for the display
+    type:
+      - string
+      - "null"
+  display_home_branch:
+    description: home branch for items while on display
+    type:
+      - string
+      - "null"
+  display_holding_branch:
+    description: holding branch for items while on display
+    type:
+      - string
+      - "null"
+  display_itype:
+    description: item type for items while on display
+    type:
+      - string
+      - "null"
+  staff_note:
+    description: staff note for the display
+    type:
+      - string
+      - "null"
+  public_note:
+    description: public note for the display
+    type:
+      - string
+      - "null"
+  display_days:
+    description: default number of days items will remain on display
+    type:
+      - integer
+      - "null"
+  display_return_over:
+    description: should the item be removed from the display when it is returned
+    type: string
+    enum:
+      - "any"
+      - "any_except_homebranch"
+      - "no"
+    default: "no"
+  display_items:
+    type:
+      - array
+      - "null"
+    description: The object representing the display items
+  display_library:
+    type:
+      - object
+      - "null"
+    description: The object representing the display's library
+  home_library:
+    type:
+      - object
+      - "null"
+    description: The object representing the display's home library for items
+  holding_library:
+    type:
+      - object
+      - "null"
+    description: The object representing the display's holding library for items
+  item_type:
+    type:
+      - object
+      - "null"
+    description: The object representing the display item type
+  _strings:
+    type:
+      - object
+      - "null"
+additionalProperties: false
+required:
+  - display_name
+  - display_return_over
+  - enabled
