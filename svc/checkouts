@@ -66,6 +66,8 @@ binmode STDOUT, ":encoding(UTF-8)";
 print $input->header( -type => 'application/json', -charset => 'UTF-8' );
 
 my @parameters;
+my $use_display_module = C4::Context->preference('UseDisplayModule');
+
 my $sql = '
     SELECT
         issues.issue_id,
@@ -119,8 +121,21 @@ my $sql = '
         return_claims.id AS return_claim_id,
         return_claims.notes AS return_claim_notes,
         return_claims.created_on AS return_claim_created_on,
-        return_claims.updated_on AS return_claim_updated_on
+        return_claims.updated_on AS return_claim_updated_on';
 
+if ($use_display_module) {
+    $sql .= ',
+        COALESCE(active_display.display_location, items.location) AS effective_location,
+        active_display.display_name,
+        active_display.display_location AS raw_display_location';
+} else {
+    $sql .= ',
+        items.location AS effective_location,
+        NULL AS display_name,
+        NULL AS raw_display_location';
+}
+
+$sql .= '
     FROM issues
         LEFT JOIN items USING ( itemnumber )
         LEFT JOIN biblio USING ( biblionumber )
@@ -128,7 +143,26 @@ my $sql = '
         LEFT JOIN borrowers USING ( borrowernumber )
         LEFT JOIN branches ON ( issues.branchcode = branches.branchcode )
         LEFT JOIN branches branches2 ON ( items.homebranch = branches2.branchcode )
-        LEFT JOIN return_claims USING ( issue_id )
+        LEFT JOIN return_claims USING ( issue_id )';
+
+if ($use_display_module) {
+    $sql .= '
+        LEFT JOIN (
+          SELECT 
+            di.itemnumber,
+            d.display_location,
+            d.display_name,
+            ROW_NUMBER() OVER (PARTITION BY di.itemnumber ORDER BY di.date_added DESC) as rn
+          FROM display_items di
+          JOIN displays d ON di.display_id = d.display_id
+          WHERE d.enabled = 1
+            AND (d.start_date IS NULL OR d.start_date <= CURDATE())
+            AND (d.end_date IS NULL OR d.end_date >= CURDATE())
+            AND (di.date_remove IS NULL OR di.date_remove >= CURDATE())
+        ) active_display ON items.itemnumber = active_display.itemnumber AND active_display.rn = 1';
+}
+
+$sql .= '
     WHERE issues.borrowernumber
 ';
 
@@ -184,10 +218,15 @@ while ( my $c = $sth->fetchrow_hashref() ) {
     $type_for_stat = $item_level_itypes ? $itemtype : $recordtype;
 
     my $location;
-    if ( $c->{location} ) {
+    if ( $c->{display_name} && !$c->{raw_display_location} ) {
+        # Item is on display with no specific display location
+        $location = "DISPLAY: " . $c->{display_name};
+    } else {
+        # Use AuthorisedValues to get effective location description  
         my $av = Koha::AuthorisedValues->get_description_by_koha_field(
-            { kohafield => 'items.location', authorised_value => $c->{location} } );
-        $location = $av->{lib} ? $av->{lib} : '';
+            { kohafield => 'items.location', authorised_value => $c->{effective_location} }
+        );
+        $location = $av->{lib} || '';
     }
     my $collection;
     if ( $c->{collection} ) {
@@ -219,9 +258,9 @@ while ( my $c = $sth->fetchrow_hashref() ) {
 
     my $recalled = 0;
     if ( C4::Context->preference('UseRecalls') ) {
-        my $item   = Koha::Items->find( $c->{itemnumber} );
+        my $item = Koha::Items->find( $c->{itemnumber} );
         my $recall = undef;
-        $recall = $item->check_recalls if $item->can_be_waiting_recall;
+        $recall = $item->check_recalls if $item && $item->can_be_waiting_recall;
         if ( defined $recall ) {
             if ( $recall->item_level ) {
                 if ( $recall->item_id == $c->{itemnumber} ) {
