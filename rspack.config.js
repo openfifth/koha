@@ -115,6 +115,10 @@ module.exports = [
                 "./koha-tmpl/intranet-tmpl/prog/js/vue/csp-nonce.js",
                 "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/erm.ts",
             ],
+            display: [
+                "./koha-tmpl/intranet-tmpl/prog/js/vue/csp-nonce.js",
+                "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/display.ts",
+            ],
             preservation: [
                 "./koha-tmpl/intranet-tmpl/prog/js/vue/csp-nonce.js",
                 "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/preservation.ts",
