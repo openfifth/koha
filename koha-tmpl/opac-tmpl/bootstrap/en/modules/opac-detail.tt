@@ -1287,6 +1287,7 @@
                 <th id="item_url" data-colname="item_url" class="url">URL</th>
                 <th id="item_copy" data-colname="item_copy" class="copynumber">Copy number</th>
                 <th id="item_status" data-colname="item_status" class="status">Status</th>
+                <th id="item_displays" data-colname="item_displays" class="displays">Displays</th>
                 <th id="item_notes" data-colname="item_notes" class="notes">Notes</th>
                 <th id="item_datedue" data-colname="item_datedue" class="date_due">Date due</th>
                 <th id="item_barcode" data-colname="item_barcode" class="barcode">Barcode</th>
@@ -1333,8 +1334,8 @@
                     [% END %]
                     [% IF ( OpacLocationBranchToDisplay == 'holding' || OpacLocationBranchToDisplay == 'both' ) %]
                         [%# Show opac_info or branchurl from holding library %]
-                        [% SET holding_library_name = Branches.GetName( ITEM_RESULT.holdingbranch ) %]
-                        [% SET holding_library_url = Branches.GetURL( ITEM_RESULT.holdingbranch ) %]
+                        [% SET holding_library_name = ITEM_RESULT.holding_branch.branchname %]
+                        [% SET holding_library_url = Branches.GetURL( ITEM_RESULT.holding_branch.branchcode ) %]
                         <td class="location" property="seller" data-order="[% holding_library_name | html %]">
                             <link property="itemOffered" href="#record" />
                             <link property="businessFunction" href="http://purl.org/goodrelations/v1#LeaseOut" />
@@ -1359,8 +1360,8 @@
 
                     [% IF ( OpacLocationBranchToDisplay == 'home' || OpacLocationBranchToDisplay == 'both' ) %]
                         [%# Show opac_info or branchurl from home library %]
-                        [% SET home_library_name = Branches.GetName( ITEM_RESULT.homebranch ) %]
-                        [% SET home_library_url = Branches.GetURL( ITEM_RESULT.homebranch ) %]
+                        [% SET home_library_name = ITEM_RESULT.home_branch.branchname %]
+                        [% SET home_library_url = Branches.GetURL( ITEM_RESULT.home_branch.branchcode ) %]
                         <td class="location" property="seller" data-order="[% home_library_name | html %]">
                             <link property="itemOffered" href="#record" />
                             <link property="businessFunction" href="http://purl.org/goodrelations/v1#LeaseOut" />
@@ -1510,8 +1511,26 @@
 
                     <td class="status">[% INCLUDE 'item-status.inc' item = ITEM_RESULT.object include_schema_org = 1 %]</td>
 
-                    [% IF ( itemdata_itemnotes ) %]
-                        <td class="notes" property="description">[% ITEM_RESULT.itemnotes | $raw %]</td>
+                    [% IF ( itemdata_displays ) %]
+                        <td class="displays">
+                            <ul>
+                                [% FOREACH display IN ITEM_RESULT.displays %]
+                                    <li>[% display.display_name | html %]</li>
+                                [% END %]
+                            </ul>
+                        </td>
+                    [% ELSE %]
+                        [% hidden_columns_force.$table_id.push('item_displays') %]
+                        <td></td>
+                    [% END %]
+
+                    [% IF ( itemdata_itemnotes || itemdata_displaynotes ) %]
+                        <td class="notes" property="description">
+                            [% ITEM_RESULT.itemnotes | $raw %]
+                            [% IF ( ITEM_RESULT.displaynotes ) %]
+                                <p><span class="on_display public_note">[% ITEM_RESULT.displaynotes | $raw %]</span></p>
+                            [% END %]
+                        </td>
                     [% ELSE %]
                         [% hidden_columns_force.$table_id.push('item_notes') %]
                         <td></td>

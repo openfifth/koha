@@ -348,7 +348,13 @@ foreach my $biblioNumber (@biblionumbers) {
         { prefetch => [ 'issue', 'homebranch', 'holdingbranch' ] }
     )->filter_by_visible_in_opac( { patron => $patron } );
 
-    $biblioData->{items} = [ $items->as_list ];    # FIXME Potentially a lot in memory here!
+    foreach my $item ( $items->as_list ) {
+        $item->{'ccode'} = $item->effective_collection_code;
+        $item->holdingbranch( $item->effective_holdingbranch );
+        $item->homebranch( $item->effective_homebranch );
+
+        push @{ $biblioData->{items} }, $item;    # FIXME Potentially a lot in memory here!
+    }
 
     # Compute the priority rank.
     $biblioData->{object} = $biblio;
@@ -431,6 +437,16 @@ foreach my $biblioNum (@biblionumbers) {
         my $item_info = $item->unblessed;
         $item_info->{holding_branch} = $item->holding_branch;
         $item_info->{home_branch}    = $item->home_branch;
+
+        $item_info->{'ccode'} = $item->effective_collection_code
+            if ( C4::Context->preference('UseDisplayModule') && $item->effective_collection_code );
+
+        $item_info->{home_branch} = $item->effective_homebranch
+            if ( C4::Context->preference('UseDisplayModule') && $item->effective_homebranch );
+
+        $item_info->{holding_branch} = $item->effective_holdingbranch
+            if ( C4::Context->preference('UseDisplayModule') && $item->effective_holdingbranch );
+
         if ($itemLevelTypes) {
             my $itemtype = $item->itemtype;
             $item_info->{'imageurl'} = getitemtypeimagelocation(
