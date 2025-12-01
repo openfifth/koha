@@ -314,6 +314,7 @@ my $target_map = {
     './clubs'                                          => 'INTRANET_CGI_DIR',
     './course_reserves'                                => 'INTRANET_CGI_DIR',
     './cpanfile'                                       => 'PERL_MODULE_DIR',
+    './display'                                        => 'INTRANET_CGI_DIR',
     './docs/history.txt'                               => { target => 'DOC_DIR', trimdir => -1 },
     './docs/contributors.yaml'                         => { target => 'DOC_DIR', trimdir => -1 },
     './docs/teams.yaml'                                => { target => 'DOC_DIR', trimdir => -1 },
