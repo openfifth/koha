@@ -464,6 +464,9 @@
           enum:
             - +strings
             - _status
+            - active_display
+            - effective_home_library
+            - effective_holding_library
             - home_library
             - holding_library
             - biblio.title
