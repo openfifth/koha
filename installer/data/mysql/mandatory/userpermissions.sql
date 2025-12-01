@@ -171,5 +171,12 @@ INSERT INTO permissions (module_bit, code, description) VALUES
    (25, 'cashup', 'Perform cash register cashup action'),
    (25, 'takepayment', 'Access the point of sale page and take payments'),
    (26, 'manage_problem_reports', 'Manage OPAC problem reports'),
-   (27, 'manage_recalls', 'Manage recalls for patrons')
+   (27, 'manage_recalls', 'Manage recalls for patrons'),
+   (33, 'view_display', 'View displays'),
+   (33, 'add_display', 'Add displays'),
+   (33, 'edit_display', 'Edit displays'),
+   (33, 'delete_display', 'Delete displays'),
+   (33, 'add_items_to_display', 'Add items to displays'),
+   (33, 'add_items_to_display_from_any_libraries', 'Add items to displays from any libraries'),
+   (33, 'remove_items_from_display', 'Remove items from displays')
 ;
