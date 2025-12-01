@@ -273,8 +273,8 @@
                                 <td class="ar-collection">[% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.ccode', authorised_value => ar.item.ccode ) | html %]</td>
                                 <td class="ar-itemtype">[% ItemTypes.GetDescription( ar.item.effective_itemtype ) | html %]</td>
                                 <td class="ar-callnumber">
-                                    [% IF ar.item.location %]
-                                        <em>[% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.location', authorised_value => ar.item.location ) | html %]</em>
+                                    [% IF ar.item.effective_location %]
+                                        <em>[% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.location', authorised_value => ar.item.effective_location ) | html %]</em>
                                     [% END %]
 
                                     [% ar.item.itemcallnumber | html %]
@@ -380,8 +380,8 @@
                                 <td class="ar-collection">[% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.ccode', authorised_value => ar.item.ccode ) | html %]</td>
                                 <td class="ar-itemtype">[% ItemTypes.GetDescription( ar.item.effective_itemtype ) | html %]</td>
                                 <td class="ar-callnumber">
-                                    [% IF ar.item.location %]
-                                        <em>[% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.location', authorised_value => ar.item.location ) | html %]</em>
+                                    [% IF ar.item.effective_location %]
+                                        <em>[% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.location', authorised_value => ar.item.effective_location ) | html %]</em>
                                     [% END %]
 
                                     [% ar.item.itemcallnumber | html %]
@@ -484,8 +484,8 @@
                                 <td class="ar-collection">[% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.ccode', authorised_value => ar.item.ccode ) | html %]</td>
                                 <td class="ar-itemtype">[% ItemTypes.GetDescription( ar.item.effective_itemtype ) | html %]</td>
                                 <td class="ar-callnumber">
-                                    [% IF ar.item.location %]
-                                        <em>[% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.location', authorised_value => ar.item.location ) | html %]</em>
+                                    [% IF ar.item.effective_location %]
+                                        <em>[% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.location', authorised_value => ar.item.effective_location ) | html %]</em>
                                     [% END %]
 
                                     [% ar.item.itemcallnumber | html %]

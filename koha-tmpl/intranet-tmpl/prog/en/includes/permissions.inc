@@ -51,6 +51,9 @@
     [%- CASE 'coursereserves' -%]
         <span class="main_permission coursereserves_permission">Course reserves</span>
         <span class="permissioncode">([% name | html %])</span>
+    [%- CASE 'displays' -%]
+        <span class="main_permission displays_permission">Display module</span>
+        <span class="permissioncode">([% name | html %])</span>
     [%- CASE 'plugins' -%]
         <span class="main_permission plugins_permission">Koha plugins</span>
         <span class="permissioncode">([% name | html %])</span>
@@ -519,6 +522,27 @@
         <span class="permissioncode">([% name | html %])</span>
     [%- CASE 'manage_courses' -%]
         <span class="sub_permission manage_courses_subpermission"> Add, edit and delete courses </span>
+        <span class="permissioncode">([% name | html %])</span>
+    [%- CASE 'view_display' -%]
+        <span class="sub_permission view_display_subpermission"> View displays </span>
+        <span class="permissioncode">([% name | html %])</span>
+    [%- CASE 'add_display' -%]
+        <span class="sub_permission add_display_subpermission"> Add displays </span>
+        <span class="permissioncode">([% name | html %])</span>
+    [%- CASE 'edit_display' -%]
+        <span class="sub_permission edit_display_subpermission"> Edit displays </span>
+        <span class="permissioncode">([% name | html %])</span>
+    [%- CASE 'delete_display' -%]
+        <span class="sub_permission delete_display_subpermission"> Delete displays </span>
+        <span class="permissioncode">([% name | html %])</span>
+    [%- CASE 'add_items_to_display' -%]
+        <span class="sub_permission add_items_to_display_subpermission"> Add items to displays </span>
+        <span class="permissioncode">([% name | html %])</span>
+    [%- CASE 'add_items_to_display_from_any_libraries' -%]
+        <span class="sub_permission add_items_to_display_from_any_libraries_subpermission"> Add items to displays from any libraries </span>
+        <span class="permissioncode">([% name | html %])</span>
+    [%- CASE 'remove_items_from_display' -%]
+        <span class="sub_permission remove_items_from_display_subpermission"> Remove items from displays </span>
         <span class="permissioncode">([% name | html %])</span>
     [%- CASE 'configure' -%]
         <span class="sub_permission configure_subpermission"> Configure plugins </span>

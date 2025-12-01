@@ -243,7 +243,7 @@
                                         [% FOREACH ITEM_RESULT IN BIBLIO_RESULT.ITEM_RESULTS %]
                                             <p>
                                                 [% Branches.GetName(ITEM_RESULT.holdingbranch) | html %]
-                                                <span class="shelvingloc"> [% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.location', authorised_value => ITEM_RESULT.location ) | html %] </span>
+                                                <span class="shelvingloc"> [% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.location', authorised_value => ITEM_RESULT.effective_location ) | html %] </span>
                                                 [% IF ( ITEM_RESULT.itemcallnumber ) %]
                                                     ([% ITEM_RESULT.itemcallnumber | html %])
                                                 [% END %]
@@ -337,7 +337,7 @@
                                                         <span class="callnumber">[% ITEM_RESULT.itemcallnumber | html %]</span>
                                                     </strong>
                                                     [% Branches.GetName(ITEM_RESULT.holdingbranch) | html %]
-                                                    <span class="shelvingloc"> [% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.location', authorised_value => ITEM_RESULT.location ) | html %] </span>
+                                                    <span class="shelvingloc"> [% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.location', authorised_value => ITEM_RESULT.effective_location ) | html %] </span>
                                                 </span>
                                             </div>
                                         [% END %]

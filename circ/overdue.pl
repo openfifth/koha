@@ -28,6 +28,7 @@ use Koha::DateUtils qw( dt_from_string );
 use Koha::Patron::Attribute::Types;
 use DateTime;
 use DateTime::Format::MySQL;
+use Koha::Items;
 
 my $input               = CGI->new;
 my $showall             = $input->param('showall');
@@ -349,36 +350,40 @@ if ($noreport) {
         }
 
         push @overduedata, {
-            patron                  => Koha::Patrons->find( $data->{borrowernumber} ),
-            duedate                 => $data->{date_due},
-            borrowernumber          => $data->{borrowernumber},
-            cardnumber              => $data->{cardnumber},
-            borrowertitle           => $data->{borrowertitle},
-            surname                 => $data->{surname},
-            firstname               => $data->{firstname},
-            streetnumber            => $data->{streetnumber},
-            streettype              => $data->{streettype},
-            address                 => $data->{address},
-            address2                => $data->{address2},
-            city                    => $data->{city},
-            zipcode                 => $data->{zipcode},
-            country                 => $data->{country},
-            phone                   => $data->{phone},
-            email                   => $data->{email},
-            branchcode              => $data->{branchcode},
-            barcode                 => $data->{barcode},
-            datelastborrowed        => $data->{datelastborrowed},
-            itemnum                 => $data->{itemnumber},
-            issuedate               => $data->{issuedate},
-            biblionumber            => $data->{biblionumber},
-            title                   => $data->{title},
-            subtitle                => $data->{subtitle},
-            part_number             => $data->{part_number},
-            part_name               => $data->{part_name},
-            author                  => $data->{author},
-            homebranchcode          => $data->{homebranch},
-            holdingbranchcode       => $data->{holdingbranch},
-            location                => $data->{location},
+            patron                         => Koha::Patrons->find( $data->{borrowernumber} ),
+            duedate                        => $data->{date_due},
+            borrowernumber                 => $data->{borrowernumber},
+            cardnumber                     => $data->{cardnumber},
+            borrowertitle                  => $data->{borrowertitle},
+            surname                        => $data->{surname},
+            firstname                      => $data->{firstname},
+            streetnumber                   => $data->{streetnumber},
+            streettype                     => $data->{streettype},
+            address                        => $data->{address},
+            address2                       => $data->{address2},
+            city                           => $data->{city},
+            zipcode                        => $data->{zipcode},
+            country                        => $data->{country},
+            phone                          => $data->{phone},
+            email                          => $data->{email},
+            branchcode                     => $data->{branchcode},
+            barcode                        => $data->{barcode},
+            datelastborrowed               => $data->{datelastborrowed},
+            itemnum                        => $data->{itemnumber},
+            issuedate                      => $data->{issuedate},
+            biblionumber                   => $data->{biblionumber},
+            title                          => $data->{title},
+            subtitle                       => $data->{subtitle},
+            part_number                    => $data->{part_number},
+            part_name                      => $data->{part_name},
+            author                         => $data->{author},
+            homebranchcode                 => $data->{homebranch},
+            holdingbranchcode              => $data->{holdingbranch},
+            location                       => $data->{location},
+            effective_location             => do {
+                my $item = Koha::Items->find( $data->{itemnumber} );
+                $item ? $item->effective_location : '';
+            },
             itemcallnumber          => $data->{itemcallnumber},
             replacementprice        => $data->{replacementprice},
             itemnotes_nonpublic     => $data->{itemnotes_nonpublic},

@@ -165,6 +165,11 @@ if ( $op eq 'edititem' || $op eq 'dupeitem' ) {
     if ( !$item ) {
         $template->param( biblio => $biblio, item_doesnt_exist => 1 );
         output_and_exit( $input, $cookie, $template, 'unknown_item' );
+    } else {
+        my $ondisplay = $item->active_display ? 1 : undef;
+        my $nomod     = $ondisplay;
+
+        $template->param( ondisplay => $ondisplay, nomod => $nomod );
     }
 }
 
@@ -698,6 +703,16 @@ my @items;
 for my $item ( $biblio->items->as_list, $biblio->host_items->as_list ) {
     my $i = $item->columns_to_str;
     $i->{nomod} = 1 unless $patron->can_edit_items_from( $item->homebranch );
+
+    if ( C4::Context->preference('UseDisplayModule') ) {
+        if ( $item->active_display ) {
+            $i->{active_display_id}   = $item->active_display->display_id;
+            $i->{active_display_name} = $item->active_display->display_name;
+            $i->{ondisplay}           = 1;
+            $i->{nomod}               = 1;
+        }
+    }
+
     push @items, $i;
 }
 

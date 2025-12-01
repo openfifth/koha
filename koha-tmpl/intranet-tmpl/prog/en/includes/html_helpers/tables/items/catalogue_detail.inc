@@ -25,6 +25,7 @@
                 <th id="[% tab | html %]_itemcallnumber" data-colname="itemcallnumber">Call number</th>
                 <th id="[% tab | html %]_enumchron" data-colname="enumchron">Serial enumeration / chronology</th>
                 <th id="[% tab | html %]_status" data-colname="status">Status</th>
+                <th id="[% tab | html %]_displays" data-colname="displays">Displays</th>
                 <th id="[% tab | html %]_lastseen" data-colname="lastseen">Last seen</th>
                 <th id="[% tab | html %]_issues" data-colname="issues">Checkouts</th>
                 <th id="[% tab | html %]_renewals" data-colname="renewals">Renewals</th>
@@ -175,7 +176,6 @@
                 $("input[name='itemnumber'][type='checkbox']", tab).prop('checked', false);
                 itemSelectionBuildActionLinks(tab_id);
             });
-
         });
 
         let filters_shown = false;
@@ -256,7 +256,7 @@
         [%# In case or SeparateHoldings we may need to display the number of biblios in each tab %]
         [%# Do we need separate/new endpoints or do we hack the somewhere client-side? %]
         let item_table_url = "/api/v1/biblios/[% biblio.biblionumber | uri %]/items?";
-        let embed = ["+strings,_status,home_library,holding_library,checkout,checkout.patron,transfer,transfer+strings,first_hold,first_hold+strings,first_hold.patron,first_hold.desk"];
+        let embed = ["+strings,_status,effective_home_library,effective_holding_library,home_library,holding_library,checkout,checkout.patron,transfer,transfer+strings,first_hold,first_hold+strings,first_hold.patron,first_hold.desk"];
         [% IF Koha.Preference('LocalCoverImages') %]
             embed.push('cover_image_ids');
         [% END %]
@@ -332,6 +332,21 @@
                 return $("#" + tab_id + "_status select").val();
             };
 
+            [% IF Koha.Preference('UseDisplayModule') %]
+                const displaysFetch = $.ajax({
+                    url: '/api/v1/displays',
+                    async: false,
+                    method: 'GET',
+                    headers: { 'x-koha-embed': 'display_items' },
+                    error: error => {
+                        console.error(error);
+                    },
+                });
+                const displays = displaysFetch.responseJSON || [];
+            [% ELSE %]
+                const displays = [];
+            [% END %]
+
             var items_table = $("#" + tab_id + '_table').kohaTable({
                 ajax: { url: item_table_url },
                 order: [],
@@ -382,14 +397,30 @@
                 [% END %]
                 [% IF ( item_level_itypes ) %]
                 {
+                    [% IF Koha.Preference('UseDisplayModule') %]
+                    data: "me.effective_item_type_id", // FIXME Cannot filter by biblioitem.itemtype
+                    searchable: false,
+                    orderable: false,
+                    [% ELSE %]
                     data: "me.item_type_id", // FIXME Cannot filter by biblioitem.itemtype
                     datatype: "coded_value:item_type",
                     dataFilter: "item_types",
                     className: "itype",
                     searchable: true,
                     orderable: true,
+                    [% END %]
                     render: function (data, type, row, meta) {
                         let node = '';
+                        [% IF Koha.Preference('UseDisplayModule') %]
+                        let effective_item_type_description = row._strings.effective_item_type_id ? row._strings.effective_item_type_id.str : row.effective_item_type_id;
+                        [% UNLESS noItemTypeImages %]
+                            let image_location = item_type_image_locations[row.effective_item_type_id];
+                            node += image_location
+                                ? '<img class="itemtype-image" src="%s" alt="" /> '.format(escape_str(image_location), escape_str(effective_item_type_description), escape_str(effective_item_type_description))
+                                : '';
+                        [% END %]
+                        node += '<span class="itypedesc itypetext">%s</span>'.format(escape_str(effective_item_type_description));
+                        [% ELSE %]
                         let item_type_description = row._strings.item_type_id ? row._strings.item_type_id.str : row.item_type_id;
                         [% UNLESS noItemTypeImages %]
                             let image_location = item_type_image_locations[row.item_type_id];
@@ -398,60 +429,132 @@
                                 : '';
                         [% END %]
                         node += '<span class="itypedesc itypetext">%s</span>'.format(escape_str(item_type_description));
+                        [% END %]
+
                         return node;
                     }
                 },
                 [% END %]
                 {
+                    [% IF Koha.Preference('UseDisplayModule') %]
+                    data: "me.effective_holding_library_id",
+                    searchable: false,
+                    orderable: false,
+                    [% ELSE %]
                     data: "holding_library.name:me.holding_library_id",
                     datatype: "coded_value:library",
+                    searchable: true,
+                    orderable: true,
                     dataFilter: "libraries",
                     className: "location",
-                    searchable: true,
-                    orderable: true,
+                    [% END %]
                     render: function (data, type, row, meta) {
-                        return escape_str(row._strings.holding_library_id ? row._strings.holding_library_id.str : row.holding_library_id);
-                    }
-                },
-                {
-                    data: "home_library.name:me.home_library_id",
-                    datatype: "coded_value:library",
-                    dataFilter: "libraries",
-                    className: "homebranch",
-                    searchable: true,
-                    orderable: true,
-                    render: function (data, type, row, meta) {
-                        return escape_str(row._strings.home_library_id ? row._strings.home_library_id.str : row.home_library_id);
-                    }
-                },
-                {
-                    data: "me.location",
-                    datatype: "coded_value:location",
-                    searchable: true,
-                    orderable: true,
-                    render: function (data, type, row, meta) {
-                        let nodes = '<span class="shelvingloc">';
-                        [%# If permanent location is defined, show description or code and             %]
-                        [%# display current location in parentheses. If not, display current location. %]
-                        [%# Note that permanent location is a code, and location may be an authval.    %]
-                        let loc_str = row._strings.location ? row._strings.location.str : row.location;
-                        if ( row.permanent_location && row.permanent_location != row.location ) {
-                            let permanent_loc_str = av_loc.get(row.permanent_location);
-                            nodes += '%s (%s)'.format(escape_str(permanent_loc_str), escape_str(loc_str));
-                        } else {
-                            nodes += escape_str(loc_str);
-                        }
-                        nodes += '</span>';
+                        let nodes = "";
+                        let effective_holding_library_id_str = row._strings.effective_holding_library_id ? row._strings.effective_holding_library_id.str : row.effective_holding_library_id;
+                        let holding_library_id_str = row._strings.holding_library_id ? row._strings.holding_library_id.str : row.holding_library_id;
+
+                        [% IF Koha.Preference('UseDisplayModule') %]
+                            if (holding_library_id_str != effective_holding_library_id_str) {
+                                nodes += '<a href="javascript:void(0)" onClick="handlePermanantLocation(this)" data-header="' + _("Permanant holding branch") + '" data-body="' + holding_library_id_str + '">';
+                                nodes += '  <i class="fa fa-info-circle" aria-hidden="true"></i>';
+                                nodes += '</a> ';
+                            }
+                        [% END %]
+
+                        nodes += escape_str(effective_holding_library_id_str || '');
+
+                        nodes = '<span>' + nodes + '</span>';
                         return nodes;
                     }
                 },
                 {
-                    data: "me.collection_code",
-                    datatype: "coded_value:collection_code",
+                    [% IF Koha.Preference('UseDisplayModule') %]
+                    data: "me.effective_home_library_id",
+                    searchable: false,
+                    orderable: false,
+                    [% ELSE %]
+                    data: "home_library.name:me.home_library_id",
+                    datatype: "coded_value:library",
                     searchable: true,
                     orderable: true,
+                    dataFilter: "libraries",
+                    className: "location",
+                    [% END %]
                     render: function (data, type, row, meta) {
-                        return escape_str(row._strings.collection_code ? row._strings.collection_code.str : row.collection_code);
+                        let nodes = "";
+                        let effective_home_library_id_str = row._strings.effective_home_library_id ? row._strings.effective_home_library_id.str : row.effective_home_library_id;
+                        let home_library_id_str = row._strings.home_library_id ? row._strings.home_library_id.str : row.home_library_id;
+
+                        [% IF Koha.Preference('UseDisplayModule') %]
+                            if (home_library_id_str != effective_home_library_id_str) {
+                                nodes += '<a href="javascript:void(0)" onClick="handlePermanantLocation(this)" data-header="' + _("Permanant home branch") + '" data-body="' + home_library_id_str + '">';
+                                nodes += '  <i class="fa fa-info-circle" aria-hidden="true"></i>';
+                                nodes += '</a> ';
+                            }
+                        [% END %]
+
+                        nodes += escape_str(effective_home_library_id_str || '');
+
+                        nodes = '<span>' + nodes + '</span>';
+                        return nodes;
+                    }
+                },
+                {
+                    [% IF Koha.Preference('UseDisplayModule') %]
+                    data: "me.effective_location",
+                    searchable: false,
+                    orderable: false,
+                    [% ELSE %]
+                    data: "me.location",
+                    searchable: true,
+                    orderable: true,
+                    [% END %]
+                    render: function (data, type, row, meta) {
+                        let nodes = "";
+                        let effective_loc_str = row._strings.effective_location ? row._strings.effective_location.str : row.effective_location;
+                        let loc_str = row._strings.location ? row._strings.location.str : row.location;
+
+                        [% IF Koha.Preference('UseDisplayModule') %]
+                            if (loc_str != effective_loc_str) {
+                                nodes += '<a href="javascript:void(0)" onClick="handlePermanantLocation(this)" data-header="' + _("Permanant shelving location") + '" data-body="' + loc_str + '">';
+                                nodes += '  <i class="fa fa-info-circle" aria-hidden="true"></i>';
+                                nodes += '</a> ';
+                            }
+                        [% END %]
+
+                        nodes += escape_str(effective_loc_str || '');
+
+                        nodes = '<span>' + nodes + '</span>';
+                        return nodes;
+                    }
+                },
+                {
+                    [% IF Koha.Preference('UseDisplayModule') %]
+                    data: "me.effective_collection_code",
+                    searchable: false,
+                    orderable: false,
+                    [% ELSE %]
+                    data: "me.collection_code",
+                    searchable: true,
+                    orderable: true,
+                    [% END %]
+                    render: function (data, type, row, meta) {
+                        let nodes = "";
+                        let effective_ccode_str = row._strings.effective_collection_code ? row._strings.effective_collection_code.str : row.effective_collection_code;
+                        let ccode_str = row._strings.collection_code ? row._strings.collection_code.str : row.collection_code;
+
+                        [% IF Koha.Preference('UseDisplayModule') %]
+                            if (ccode_str != effective_ccode_str) {
+                                nodes += '<a href="javascript:void(0)" onClick="handlePermanantLocation(this)" data-header="' + _("Permanant collection") + '" data-body="' + ccode_str + '">';
+                                nodes += '  <i class="fa fa-info-circle" aria-hidden="true"></i>';
+                                nodes += '</a> ';
+                            }
+                        [% END %]
+
+                        nodes += escape_str(effective_ccode_str || '');
+
+                        nodes = '<span>' + nodes + '</span>';
+                        return nodes;
                     }
                 },
                 [% IF Koha.Preference('EnableItemGroups') %]
@@ -601,6 +704,7 @@
                                 }
                             }
                         [% END %]
+
                             if ( status == 'available' ) {
                                 nodes += ' <span>%s</span>'.format(_("Available"))
                             }
@@ -612,6 +716,28 @@
                                 nodes += '<span class="bundled">%s</span>'.format(_("In bundle: %s").format($biblio_to_html(row.bundle_host.biblio, { link: true })));
                             }
                         });
+                        return nodes;
+                    }
+                },
+                {
+                    data: "me.displays",
+                    searchable: false,
+                    orderable: false,
+                    render: function (data, type, row, meta) {
+                        let nodes = "";
+
+                        [% IF Koha.Preference('UseDisplayModule') && CAN_user_displays %]
+                            displays.forEach(display => {
+                                display.display_items.forEach(display_item => {
+                                    if (display_item.itemnumber === row.item_id)
+                                        nodes += '<li><span class="on_display"><a href="/cgi-bin/koha/display/displays/%s">%s</a></span></li>'.format(display.display_id, display.display_name);
+                                });
+                            });
+
+                            if (nodes != "")
+                                nodes = '<ul>' + nodes + '</ul>';
+                        [% END %]
+
                         return nodes;
                     }
                 },
@@ -744,19 +870,55 @@
                 {
                     data: "me.public_notes",
                     className: "itemnotes",
+                    [% IF Koha.Preference('UseDisplayModule') %]
+                    searchable: false,
+                    orderable: false,
+                    [% ELSE %]
                     searchable: true,
                     orderable: true,
+                    [% END %]
                     render: function (data, type, row, meta) {
-                        return row.public_notes ? escape_str(row.public_notes).replaceAll('\n', '<br />') : '';
+                        let nodes = "";
+
+                        nodes = row.public_notes ? escape_str(row.public_notes).replaceAll('\n', '<br />') : '';
+
+                        [% IF Koha.Preference('UseDisplayModule') %]
+                            displays.forEach(display => {
+                                display.display_items.forEach(display_item => {
+                                    if ((display_item.itemnumber === row.item_id) && (display.public_note))
+                                        nodes += '<p><span class="public_note on_display">%s</span></p>'.format(display.public_note);
+                                });
+                            });
+                        [% END %]
+
+                        return nodes;
                     }
                 },
                 {
                     data: "me.internal_notes",
                     className: "nonpublicnote",
+                    [% IF Koha.Preference('UseDisplayModule') %]
+                    searchable: false,
+                    orderable: false,
+                    [% ELSE %]
                     searchable: true,
                     orderable: true,
+                    [% END %]
                     render: function (data, type, row, meta) {
-                        return escape_str(row.internal_notes);
+                        let nodes = "";
+
+                        nodes = row.internal_notes ? escape_str(row.internal_notes) : '';
+
+                        [% IF Koha.Preference('UseDisplayModule') %]
+                            displays.forEach(display => {
+                                display.display_items.forEach(display_item => {
+                                    if ((display_item.itemnumber === row.item_id) && (display.staff_note))
+                                        nodes += '<p><span class="internal_note on_display">%s</span></p>'.format(display.staff_note);
+                                });
+                            });
+                        [% END %]
+
+                        return nodes;
                     }
                 },
                 [% IF Koha.Preference('EasyAnalyticalRecords') %]
@@ -920,6 +1082,18 @@
             });
             return items_table;
         }
+
+        const handlePermanantLocation = ((element) => {
+            const header = $(element).attr('data-header');
+            const body = $(element).attr('data-body');
+
+            $('#permanant_location_modal_label').text(header);
+            $('#permanant_location_modal_body').html('<ul><li>' + body + '</li></ul>');
+            $('#permanant_location_modal').modal('show');
+
+            return false;
+        });
+
         function safe_link(uri,link_text) {
             let node = document.createElement('a');
             let url_str = '#';
