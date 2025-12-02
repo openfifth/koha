@@ -19,8 +19,8 @@
 
 use Modern::Perl;
 
+use Test::More tests => 7;
 use Test::NoWarnings;
-use Test::More tests => 6;
 use Test::MockModule;
 use Test::Mojo;
 use Test::Warn;
@@ -628,6 +628,91 @@ subtest 'pickup_locations() tests' => sub {
     $t->get_ok( "//$userid:$password@/api/v1/items/" . $item->id . "/pickup_locations?" . "patron_id=" . $patron->id )
         ->status_is(404)
         ->json_is( '/error' => 'Item not found' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'effective display fields tests' => sub {
+
+    plan tests => 12;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'UseDisplayModule', 1 );
+
+    my $librarian = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { flags => 1 }
+        }
+    );
+    my $password = 'thePassword123';
+    $librarian->set_password( { password => $password, skip_validation => 1 } );
+    my $userid = $librarian->userid;
+
+    my $patron = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { flags => 0 }
+        }
+    );
+    $patron->set_password( { password => $password, skip_validation => 1 } );
+    my $unauth_userid = $patron->userid;
+
+    # Create an item with specific location, collection code, homebranch, and holdingbranch
+    my $item = $builder->build_sample_item(
+        {
+            location      => 'SHELF',
+            ccode         => 'COLL1',
+            homebranch    => $librarian->branchcode,
+            holdingbranch => $librarian->branchcode,
+        }
+    );
+
+    # Test without display - should return regular values
+    $t->get_ok( "//$userid:$password@/api/v1/items/" . $item->id )
+        ->status_is(200)
+        ->json_is( '/effective_location'           => 'SHELF' )
+        ->json_is( '/effective_collection_code'    => 'COLL1' )
+        ->json_is( '/effective_home_library_id'    => $librarian->branchcode )
+        ->json_is( '/effective_holding_library_id' => $librarian->branchcode );
+
+    # Create a display with different values
+    my $display_library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $display         = $builder->build_object(
+        {
+            class => 'Koha::Displays',
+            value => {
+                display_location       => 'DISPLAY',
+                display_code           => 'DISPLAYCOLL',
+                display_home_branch    => $display_library->branchcode,
+                display_holding_branch => $display_library->branchcode,
+                enabled                => 1,
+                start_date             => undef,
+                end_date               => undef,
+            }
+        }
+    );
+
+    # Add item to display
+    my $display_item = $builder->build_object(
+        {
+            class => 'Koha::DisplayItems',
+            value => {
+                display_id   => $display->display_id,
+                itemnumber   => $item->itemnumber,
+                biblionumber => $item->biblionumber,
+            }
+        }
+    );
+
+    # Test with display - should return display values
+    $t->get_ok( "//$userid:$password@/api/v1/items/" . $item->id )
+        ->status_is(200)
+        ->json_is( '/effective_location'           => 'DISPLAY' )
+        ->json_is( '/effective_collection_code'    => 'DISPLAYCOLL' )
+        ->json_is( '/effective_home_library_id'    => $display_library->branchcode )
+        ->json_is( '/effective_holding_library_id' => $display_library->branchcode );
 
     $schema->storage->txn_rollback;
 };
