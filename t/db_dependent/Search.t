@@ -136,6 +136,8 @@ $contextmodule->mock(
             return '1';
         } elsif ( $pref eq 'UseControlNumber' ) {
             return '0';
+        } elsif ( $pref eq 'UseDisplayModule' ) {
+            return '0';
         } elsif ( $pref eq 'UseICUStyleQuotes' ) {
             return '0';
         } elsif ( $pref eq 'viewISBD' ) {

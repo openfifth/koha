@@ -21,7 +21,7 @@ use Modern::Perl;
 use utf8;
 
 use Test::NoWarnings;
-use Test::More tests => 42;
+use Test::More tests => 46;
 use Test::Exception;
 use Test::MockModule;
 use Test::Warn;
@@ -34,6 +34,8 @@ use Koha::Cache::Memory::Lite;
 use Koha::Items;
 use Koha::Database;
 use Koha::DateUtils qw( dt_from_string );
+use Koha::Displays;
+use Koha::DisplayItems;
 use Koha::Old::Items;
 use Koha::Recalls;
 use Koha::AuthorisedValues;
@@ -691,19 +693,63 @@ subtest "as_marc_field() tests" => sub {
     my @schema_columns = $schema->resultset('Item')->result_source->columns;
     my @mapped_columns = grep { exists $mss->{ 'items.' . $_ } } @schema_columns;
 
-    plan tests => scalar @mapped_columns + 5;
+    #             number of columns        2 * 3 effective columns + 5 other tests
+    plan tests => scalar @mapped_columns + ( 6 + 5 );
 
     $schema->storage->txn_begin;
 
-    my $item = $builder->build_sample_item;
+    # we need displays to be enabled for effective branches etc
+    t::lib::Mocks::mock_preference( 'UseDisplayModule', 1 );
+
+    my $biblio1  = $builder->build_sample_biblio;
+    my $biblio2  = $builder->build_sample_biblio;
+    my $library1 = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $library2 = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $library3 = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $itype1   = $builder->build_object( { class => 'Koha::ItemTypes' } );
+
+    my $item_without_display = $builder->build_sample_item(
+        {
+            biblionumber => $biblio1->biblionumber,
+        }
+    );
+    my $item_with_display = $builder->build_sample_item(
+        {
+            biblionumber => $biblio2->biblionumber,
+        }
+    );
+
+    my $display = $builder->build_object(
+        {
+            class => 'Koha::Displays',
+            value => {
+                display_branch         => $library1->branchcode,
+                display_home_branch    => $library2->branchcode,
+                display_holding_branch => $library3->branchcode,
+                display_itype          => $itype1->itemtype,
+                enabled                => 1,
+            },
+        }
+    )->store->discard_changes;
+    my $display_item = $builder->build_object(
+        {
+            class => 'Koha::DisplayItems',
+            value => {
+                display_id   => $display->display_id,
+                itemnumber   => $item_with_display->itemnumber,
+                biblionumber => $biblio2->biblionumber,
+            },
+        }
+    )->store->discard_changes;
 
     # Make sure it has at least one undefined attribute
-    $item->set( { replacementprice => undef } )->store->discard_changes;
+    $item_without_display->set( { replacementprice => undef } )->store->discard_changes;
 
-    my $marc_field = $item->as_marc_field;
+    my $marc_field_without_display = $item_without_display->as_marc_field;
+    my $marc_field_with_display    = $item_with_display->as_marc_field;
 
     is(
-        $marc_field->tag,
+        $marc_field_without_display->tag,
         $itemtag,
         'Generated field set the right tag number'
     );
@@ -711,9 +757,49 @@ subtest "as_marc_field() tests" => sub {
     foreach my $column (@mapped_columns) {
         my $tagsubfield = $mss->{ 'items.' . $column }[0]->{tagsubfield};
         is(
-            $marc_field->subfield($tagsubfield),
-            $item->$column, "Value is mapped correctly for column $column"
+            $marc_field_without_display->subfield($tagsubfield),
+            $item_without_display->$column, "Regular item: value is mapped correctly for column $column"
         );
+    }
+
+    foreach my $column (@mapped_columns) {
+        my $tagsubfield = $mss->{ 'items.' . $column }[0]->{tagsubfield};
+
+        if ( $column eq 'homebranch' ) {
+            isnt(
+                $marc_field_with_display->subfield($tagsubfield),
+                $item_with_display->$column, "On-display item: value is correctly not mapped to column $column"
+            );
+            is(
+                $marc_field_with_display->subfield($tagsubfield),
+                $item_with_display->effective_homebranch,
+                "On-display item: value is mapped correctly to effective column for $column"
+            );
+        }
+
+        if ( $column eq 'holdingbranch' ) {
+            isnt(
+                $marc_field_with_display->subfield($tagsubfield),
+                $item_with_display->$column, "On-display item: value is correctly not mapped for column $column"
+            );
+            is(
+                $marc_field_with_display->subfield($tagsubfield),
+                $item_with_display->effective_holdingbranch,
+                "On-display item: value is mapped correctly to effective column for $column"
+            );
+        }
+
+        if ( $column eq 'itype' ) {
+            isnt(
+                $marc_field_with_display->subfield($tagsubfield),
+                $item_with_display->$column, "On-display item: value is correctly not mapped for column $column"
+            );
+            is(
+                $marc_field_with_display->subfield($tagsubfield),
+                $item_with_display->effective_itype,
+                "On-display item: value is mapped correctly to effective column for $column"
+            );
+        }
     }
 
     my $unmapped_subfield = Koha::MarcSubfieldStructure->new(
@@ -734,16 +820,16 @@ subtest "as_marc_field() tests" => sub {
 
     my @unlinked_subfields;
     push @unlinked_subfields, X => 'Something weird', Y => 'Something else';
-    $item->more_subfields_xml( C4::Items::_get_unlinked_subfields_xml( \@unlinked_subfields ) )->store;
+    $item_without_display->more_subfields_xml( C4::Items::_get_unlinked_subfields_xml( \@unlinked_subfields ) )->store;
 
     Koha::Caches->get_instance->clear_from_cache("MarcStructure-1-");
     Koha::MarcSubfieldStructures->search( { frameworkcode => '', tagfield => $itemtag } )
         ->update( { display_order => \['FLOOR( 1 + RAND( ) * 10 )'] } );
 
-    $marc_field = $item->as_marc_field;
+    $marc_field_without_display = $item_without_display->as_marc_field;
 
     my $tagslib   = C4::Biblio::GetMarcStructure( 1, '' );
-    my @subfields = $marc_field->subfields;
+    my @subfields = $marc_field_without_display->subfields;
     my $result    = all { defined $_->[1] } @subfields;
     ok( $result, 'There are no undef subfields' );
     my @ordered_subfields = sort {
@@ -752,10 +838,13 @@ subtest "as_marc_field() tests" => sub {
     is_deeply( \@subfields, \@ordered_subfields );
 
     is(
-        scalar $marc_field->subfield('X'), 'Something weird',
+        scalar $marc_field_without_display->subfield('X'), 'Something weird',
         'more_subfield_xml is considered when kohafield is NULL'
     );
-    is( scalar $marc_field->subfield('Y'), 'Something else', 'more_subfield_xml is considered when kohafield = ""' );
+    is(
+        scalar $marc_field_without_display->subfield('Y'), 'Something else',
+        'more_subfield_xml is considered when kohafield = ""'
+    );
 
     $schema->storage->txn_rollback;
     Koha::Caches->get_instance->clear_from_cache("MarcStructure-1-");
@@ -3950,6 +4039,73 @@ subtest 'effective_bookable() tests' => sub {
     }
     qr/item-level_itypes set but no itemtype set for item/,
         'Warning raised for missing itemtype when item-level_itypes is set';
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'effective_homebranch() test' => sub {
+    plan tests => 3;
+
+    $schema->storage->txn_begin;
+
+    my $item = $builder->build_sample_item();
+
+    is( $item->homebranch, $item->effective_homebranch, 'homebranch() and effective_homebranch() matches by default' );
+    is_deeply(
+        $item->home_branch, $item->effective_home_branch,
+        'home_branch() and effective_home_branch() matches by default'
+    );
+    is_deeply(
+        $item->home_library, $item->effective_home_library,
+        'home_library() and effective_home_library() matches by default'
+    );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'effective_holdingbranch() test' => sub {
+    plan tests => 3;
+
+    $schema->storage->txn_begin;
+
+    my $item = $builder->build_sample_item();
+
+    is(
+        $item->holdingbranch, $item->effective_holdingbranch,
+        'holdingbranch() and effective_holdingbranch() matches by default'
+    );
+    is_deeply(
+        $item->holding_branch, $item->effective_holding_branch,
+        'holding_branch() and effective_holding_branch() matches by default'
+    );
+    is_deeply(
+        $item->holding_library, $item->effective_holding_library,
+        'holding_library() and effective_holding_library() matches by default'
+    );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'effective_collection_code() test' => sub {
+    plan tests => 1;
+
+    $schema->storage->txn_begin;
+
+    my $item = $builder->build_sample_item();
+
+    is( $item->ccode, $item->effective_collection_code, 'ccode() and effective_collection_code() matches by default' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'effective_itemtype() test' => sub {
+    plan tests => 1;
+
+    $schema->storage->txn_begin;
+
+    my $item = $builder->build_sample_item();
+
+    is( $item->itype, $item->effective_itemtype, 'itype() and effective_itemtype() matches by default' );
 
     $schema->storage->txn_rollback;
 };
