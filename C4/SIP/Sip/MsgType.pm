@@ -1231,7 +1231,7 @@ sub handle_fee_paid {
 
     my $pay_result = $ils->pay_fee(
         $patron_id,   $patron_pwd,           $fee_amt, $fee_type, $pay_type, $fee_id, $trans_id, $currency,
-        $is_writeoff, $disallow_overpayment, $register_id
+        $is_writeoff, $disallow_overpayment, $register_id, $ils->institution
     );
     $status = $pay_result->{status};
     my $pay_response = $pay_result->{pay_response};
