@@ -1963,6 +1963,64 @@ cy.getSIP2Institution = () => {
     };
 };
 
+cy.getItem = () => {
+    return {
+        acquisition_date: "2014-09-04",
+        acquisition_source: null,
+        biblio_id: 58,
+        bookable: false,
+        call_number_sort: "_",
+        call_number_source: null,
+        callnumber: null,
+        checked_out_date: null,
+        checkouts_count: null,
+        coded_location_qualifier: null,
+        collection_code: "REF",
+        copy_number: null,
+        damaged_date: null,
+        damaged_status: 0,
+        effective_bookable: false,
+        effective_collection_code: "REF",
+        effective_holding_library_id: "CPL",
+        effective_home_library_id: "CPL",
+        effective_item_type_id: "BK",
+        effective_location: "GEN",
+        effective_not_for_loan_status: 0,
+        exclude_from_local_holds_priority: false,
+        extended_subfields: null,
+        external_id: "39999000002355",
+        holding_library_id: "CPL",
+        holds_count: null,
+        home_library_id: "CPL",
+        internal_notes: null,
+        inventory_number: null,
+        item_id: 125,
+        item_type_id: "BK",
+        last_checkout_date: null,
+        last_seen_date: "2014-09-04T00:00:00+00:00",
+        localuse: null,
+        location: "GEN",
+        lost_date: null,
+        lost_status: 0,
+        materials_notes: null,
+        new_status: null,
+        not_for_loan_status: 0,
+        permanent_location: "GEN",
+        public_notes: null,
+        purchase_price: null,
+        renewals_count: null,
+        replacement_price: null,
+        replacement_price_date: "2014-09-04",
+        restricted_status: null,
+        serial_issue_number: null,
+        shelving_control_number: null,
+        timestamp: "2020-01-29T13:06:19+00:00",
+        uri: null,
+        withdrawn: 0,
+        withdrawn_date: null,
+    };
+}
+
 cy.getItemTypes = () => {
     return [
         {
@@ -2142,6 +2200,82 @@ cy.getItemTypes = () => {
             summary: "",
         },
     ];
+};
+
+cy.getDisplay = () => {
+    return {
+        display_branch: "CPL",
+        display_code: "REF",
+        display_days: 4382,
+        display_holding_branch: "CPL",
+        display_id: 1,
+        display_items: [
+            {
+                biblionumber: 58,
+                date_added: null,
+                date_remove: "2036-12-31",
+                display_id: 1,
+                display_item_id: 1,
+                itemnumber: 125
+            }
+        ],
+        display_itype: "BK",
+        display_location: "GEN",
+        display_name: "Test display #1",
+        display_return_over: "yes - any library",
+        enabled: true,
+        end_date: "2036-12-31",
+        item_type: {
+            automatic_checkin: false,
+            bookable: false,
+            checkin_message: null,
+            checkin_message_type: "message",
+            checkprevcheckout: "inherit",
+            daily_rental_charge: null,
+            daily_rental_charge_calendar: true,
+            default_replacement_cost: null,
+            description: "Books",
+            hide_in_opac: false,
+            hourly_rental_charge: null,
+            hourly_rental_charge_calendar: true,
+            image_url: "bridge/book.png",
+            item_type_id: "BK",
+            not_for_loan_status: false,
+            parent_type: null,
+            process_fee: null,
+            rentalcharge: 0.0,
+            searchcategory: null,
+            sip_media_type: null,
+            summary: ""
+        },
+        library: {
+            address1: "Jefferson Summit",
+            address2: null,
+            address3: null,
+            city: null,
+            country: null,
+            email: null,
+            fax: null,
+            geolocation: null,
+            ill_email: null,
+            ip: null,
+            library_id: "CPL",
+            marc_org_code: null,
+            name: "Centerville",
+            notes: null,
+            phone: null,
+            pickup_location: true,
+            postal_code: null,
+            public: true,
+            reply_to_email: null,
+            return_path_email: null,
+            state: null,
+            url: null
+        },
+        public_note: "A public note",
+        staff_note: "A staff-only note",
+        start_date: "2025-01-01"
+    };
 };
 
 Cypress.Commands.add("set_syspref", (variable, value) => {
