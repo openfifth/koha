@@ -1131,8 +1131,8 @@ subtest 'start_cashup_parameter_validation' => sub {
         my $final_action_count = $register5->_result->search_related('cash_register_actions')->count;
         is( $final_action_count, $initial_action_count + 1, 'CASHUP_START action created in database' );
 
-        # Verify expected amount calculation
-        ok( $start->amount >= 0, 'Expected amount calculated correctly' );
+        # Verify expected amount calculation (can be positive or negative, but not zero)
+        ok( $start->amount != 0, 'Expected amount calculated correctly' );
 
         # Verify timestamp is set
         ok( defined $start->timestamp, 'Timestamp is set on CASHUP_START action' );
@@ -1194,12 +1194,13 @@ subtest 'add_cashup' => sub {
         'Koha::Exceptions::Account::AmountNotPositive',
             'Zero amount throws AmountNotPositive exception';
 
-        # Negative amount
-        throws_ok {
-            $register3->add_cashup( { manager_id => $manager->id, amount => '-5.00' } );
+        # Negative amount is now valid (for float deficits)
+        my $negative_cashup;
+        lives_ok {
+            $negative_cashup = $register3->add_cashup( { manager_id => $manager->id, amount => '-5.00' } );
         }
-        'Koha::Exceptions::Account::AmountNotPositive',
-            'Negative amount throws AmountNotPositive exception';
+        'Negative amount is accepted for float deficit scenarios';
+        is( $negative_cashup->amount + 0, -5, 'Negative amount stored correctly' );
 
         # Non-numeric amount
         throws_ok {
