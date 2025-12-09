@@ -109,7 +109,7 @@
                 <label for="B_streetnumber">
             [% END %]
             Street number: </label>
-            <input type="text" id="B_streetnumber" name="B_streetnumber" size="5" maxlength="10" value="[% patron.B_streetnumber | html %]" />
+            <input type="text" id="B_streetnumber" name="B_streetnumber" value="[% patron.B_streetnumber | html %]" />
             [% IF ( mandatoryB_streetnumber ) %]<span class="required">Required</span>[% END %]
         </li>
     [% END %]
