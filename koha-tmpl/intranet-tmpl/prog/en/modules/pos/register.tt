@@ -447,7 +447,11 @@
                             <li>
                                 <span class="label">
                                     [% IF cashup_in_progress %]
-                                        Expected cashup amount:
+                                        [% IF cashup_in_progress.amount < 0 %]
+                                            Expected amount to add:
+                                        [% ELSE %]
+                                            Expected cashup amount:
+                                        [% END %]
                                     [% ELSE %]
                                         Expected amount to remove:
                                     [% END %]
@@ -457,12 +461,16 @@
                             <li>
                                 <label class="required" for="amount">
                                     [% IF cashup_in_progress %]
-                                        Actual cashup amount counted:
+                                        [% IF cashup_in_progress.amount < 0 %]
+                                            Actual amount added to register:
+                                        [% ELSE %]
+                                            Actual cashup amount counted:
+                                        [% END %]
                                     [% ELSE %]
                                         Actual amount removed from register:
                                     [% END %]
                                 </label>
-                                <input type="text" inputmode="decimal" pattern="^\d+(\.\d{2})?$" id="amount" name="amount" required="required" />
+                                <input type="text" inputmode="decimal" pattern="^-?\d+(\.\d{2})?$" id="amount" name="amount" required="required" />
                                 <span class="required">Required</span>
                             </li>
                             <li id="reconciliation_display" style="display: none;">
@@ -549,25 +557,24 @@
                 <div class="modal-body">
                     <p><strong>Choose how to proceed with the cashup:</strong></p>
                     <p><strong>Start cashup</strong></p>
-                    <ul>
-                        <li>Remove cash from the register for counting</li>
-                        <li>The register can continue operating during counting</li>
-                        <li>Complete the cashup once counted</li>
+                    <ul id="start_cashup_instructions_individual">
+                        <!-- JavaScript will populate this based on positive/negative amount -->
                     </ul>
                     <p><strong>Quick cashup</strong></p>
-                    <ul>
-                        <li>Confirm you have removed [% accountlines.total( payment_type => [ 'CASH', 'SIP00' ]) * -1 | $Price %] cash from the register to bank immediately</li>
+                    <ul id="quick_cashup_instructions_individual">
+                        <!-- JavaScript will populate this based on positive/negative amount -->
                     </ul>
-                    <p>Remember to leave the float amount of <strong>[% register.starting_float | $Price %]</strong> in the register.</p>
+                    <p id="float_reminder_text_individual">
+                        <!-- JavaScript will populate this based on positive/negative amount -->
+                    </p>
                 </div>
                 <div class="modal-footer">
                     <input type="hidden" name="registerid" value="[% register.id | html %]" />
                     <input type="hidden" name="op" value="cud-cashup_start" />
                     <input type="hidden" name="amount" value="" />
+                    <input type="hidden" id="register_bankable_amount" value="[% accountlines.total( payment_type => [ 'CASH', 'SIP00' ]) * -1 | html %]" />
                     <button type="submit" class="btn btn-primary">Start cashup</button>
-                    <button type="button" class="btn btn-success" onclick="this.form.op.value='cud-cashup'; this.form.amount.value='[% accountlines.total( payment_type => [ 'CASH', 'SIP00' ]) * -1 | html %]'; this.form.submit();"
-                        >Quick cashup</button
-                    >
+                    <button type="button" class="btn btn-success" id="quick_cashup_btn_individual">Quick cashup</button>
                     <button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancel</button>
                 </div>
             </div>
@@ -766,6 +773,67 @@
             $("#reconciliation_display").hide();
             $("#reconciliation_note_field").hide();
             $("#reconciliation_note").val('');
+        });
+
+        // Handle triggerCashupModal for individual register page
+        $("#triggerCashupModal").on("shown.bs.modal", function(e){
+           var bankableAmount = parseFloat($("#register_bankable_amount").val());
+           var isNegative = bankableAmount < 0;
+           var formattedAmount = Math.abs(bankableAmount).format_price();
+           var floatAmount = parseFloat([% register.starting_float | html %]).format_price();
+
+           // Update Start cashup instructions
+           if (isNegative) {
+               $("#start_cashup_instructions_individual").html(
+                   '<li>' + _("Count cash in the register") + '</li>' +
+                   '<li>' + _("The register can continue operating during counting") + '</li>' +
+                   '<li>' + _("Complete the cashup by adding cash to restore the float") + '</li>'
+               );
+           } else {
+               $("#start_cashup_instructions_individual").html(
+                   '<li>' + _("Remove cash from the register for counting") + '</li>' +
+                   '<li>' + _("The register can continue operating during counting") + '</li>' +
+                   '<li>' + _("Complete the cashup once counted") + '</li>'
+               );
+           }
+
+           // Update Quick cashup instructions
+           if (isNegative) {
+               $("#quick_cashup_instructions_individual").html(
+                   '<li>' + _("Top up the register with %s to restore the float").format(formattedAmount) + '</li>'
+               );
+           } else {
+               $("#quick_cashup_instructions_individual").html(
+                   '<li>' + _("Confirm you have removed %s cash from the register to bank immediately").format(formattedAmount) + '</li>'
+               );
+           }
+
+           // Update float reminder
+           if (isNegative) {
+               $("#float_reminder_text_individual").html(
+                   _("This will bring the register back to the expected float of <strong>%s</strong>").format(floatAmount)
+               );
+           } else {
+               $("#float_reminder_text_individual").html(
+                   _("Remember to leave the float amount of <strong>%s</strong> in the register.").format(floatAmount)
+               );
+           }
+        });
+
+        // Handle Quick cashup button click for individual register
+        $("#quick_cashup_btn_individual").on("click", function(e){
+           e.preventDefault();
+           var form = $(this).closest('form');
+           var bankableAmount = $("#register_bankable_amount").val();
+
+           // Change operation to cud-cashup (quick cashup)
+           form.find('input[name="op"]').val('cud-cashup');
+
+           // Set the amount to the expected bankable amount
+           form.find('input[name="amount"]').val(bankableAmount);
+
+           // Submit the form
+           form.submit();
         });
     </script>
 [% END %]

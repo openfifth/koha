@@ -272,18 +272,16 @@
                 <div class="modal-body">
                     <p><strong>Choose how to proceed with the cashup:</strong></p>
                     <p><strong>Start cashup</strong></p>
-                    <ul>
-                        <li>Remove cash from the register for counting</li>
-                        <li>The register can continue operating during counting</li>
-                        <li>Complete the cashup once counted</li>
+                    <ul id="start_cashup_instructions">
+                        <!-- JavaScript will populate this based on positive/negative amount -->
                     </ul>
                     <p><strong>Quick cashup</strong></p>
-                    <ul>
-                        <li>Confirm you have removed <span id="expected_amount_display"></span> cash from the register to bank immediately</li>
+                    <ul id="quick_cashup_instructions">
+                        <!-- JavaScript will populate this based on positive/negative amount -->
                     </ul>
-                    <p
-                        >Remember to leave the float amount of <strong><span id="float_amount_display"></span></strong> in the register.</p
-                    >
+                    <p id="float_reminder_text">
+                        <!-- JavaScript will populate this based on positive/negative amount -->
+                    </p>
                 </div>
                 <div class="modal-footer">
                     <input type="hidden" name="registerid" id="register_id_field" value="" />
@@ -377,12 +375,12 @@
                     <fieldset class="rows">
                         <ol>
                             <li>
-                                <span class="label"> Expected cashup amount: </span>
+                                <span class="label" id="expected_amount_label">Expected cashup amount:</span>
                                 <span id="cashc" class="expected-amount"></span>
                             </li>
                             <li>
-                                <label class="required" for="amount"> Actual cashup amount counted: </label>
-                                <input type="text" inputmode="decimal" pattern="^\d+(\.\d{2})?$" id="amount" name="amount" required="required" />
+                                <label class="required" for="amount" id="actual_amount_label">Actual cashup amount counted:</label>
+                                <input type="text" inputmode="decimal" pattern="^-?\d+(\.\d{2})?$" id="amount" name="amount" required="required" />
                                 <span class="required">Required</span>
                             </li>
                             <li id="reconciliation_display" style="display: none;">
@@ -518,6 +516,20 @@
                $("#registerc").text(register);
                var expected = button.data('expected');
                $("#cashc").text(expected);
+
+               // Parse expected amount to check if negative
+               var expectedAmount = expected.replace(/[^0-9.-]/g, '');
+               var isNegative = parseFloat(expectedAmount) < 0;
+
+               // Update labels based on sign
+               if (isNegative) {
+                   $("#expected_amount_label").text(_("Expected amount to add:"));
+                   $("#actual_amount_label").text(_("Actual amount added to register:"));
+               } else {
+                   $("#expected_amount_label").text(_("Expected cashup amount:"));
+                   $("#actual_amount_label").text(_("Actual cashup amount counted:"));
+               }
+
                var rfloat = button.data('float');
                $('#floatc').text(rfloat);
                var rid = button.data('registerid');
@@ -534,14 +546,63 @@
                var register = button.data('register');
                $("#register_desc").text(register);
                var bankable = button.data('bankable');
-               $("#expected_amount_display").text(bankable);
                var rfloat = button.data('float');
-               $('#float_amount_display').text(rfloat);
                var rid = button.data('registerid');
                $('#register_id_field').val(rid);
 
-               // Store bankable amount for quick cashup
-               $('#triggerCashupModalRegister').data('bankable-amount', bankable.replace(/[^0-9.-]/g, ''));
+               // Guard against undefined/null bankable value
+               if (!bankable) {
+                   console.error("Bankable amount is undefined");
+                   return;
+               }
+
+               // Parse bankable amount (remove currency formatting, keep minus sign)
+               var bankableAmount = String(bankable).replace(/[^0-9.-]/g, '');
+               var numericAmount = parseFloat(bankableAmount);
+               var isNegative = numericAmount < 0;
+
+               // Format the absolute amount for display
+               var absAmountFormatted = Math.abs(numericAmount).format_price();
+
+               // Update Start cashup instructions
+               if (isNegative) {
+                   $("#start_cashup_instructions").html(
+                       '<li>' + _("Count cash in the register") + '</li>' +
+                       '<li>' + _("The register can continue operating during counting") + '</li>' +
+                       '<li>' + _("Complete the cashup by adding cash to restore the float") + '</li>'
+                   );
+               } else {
+                   $("#start_cashup_instructions").html(
+                       '<li>' + _("Remove cash from the register for counting") + '</li>' +
+                       '<li>' + _("The register can continue operating during counting") + '</li>' +
+                       '<li>' + _("Complete the cashup once counted") + '</li>'
+                   );
+               }
+
+               // Update Quick cashup instructions
+               if (isNegative) {
+                   $("#quick_cashup_instructions").html(
+                       '<li>' + _("Top up the register with %s to restore the float").format(absAmountFormatted) + '</li>'
+                   );
+               } else {
+                   $("#quick_cashup_instructions").html(
+                       '<li>' + _("Confirm you have removed %s cash from the register to bank immediately").format(absAmountFormatted) + '</li>'
+                   );
+               }
+
+               // Update float reminder
+               if (isNegative) {
+                   $("#float_reminder_text").html(
+                       _("This will bring the register back to the expected float of <strong>%s</strong>").format(rfloat)
+                   );
+               } else {
+                   $("#float_reminder_text").html(
+                       _("Remember to leave the float amount of <strong>%s</strong> in the register.").format(rfloat)
+                   );
+               }
+
+               // Store bankable amount for quick cashup (with sign)
+               $('#triggerCashupModalRegister').data('bankable-amount', bankableAmount);
             });
 
             // Handle Quick cashup button click

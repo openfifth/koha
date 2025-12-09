@@ -289,10 +289,10 @@ sub start_cashup {
         Koha::Exceptions::Object::DuplicateID->throw( error => "A cashup is already in progress for this register" );
     }
 
-    my $expected_amount = abs( $self->outstanding_accountlines->total( { payment_type => [ 'CASH', 'SIP00' ] } ) );
+    my $expected_amount = $self->outstanding_accountlines->total( { payment_type => [ 'CASH', 'SIP00' ] } ) * -1;
 
     # Prevent starting a cashup when there are no cash transactions
-    unless ( $expected_amount > 0 ) {
+    unless ( $expected_amount != 0 ) {
         Koha::Exceptions::Object::BadValue->throw(
             error => "Cannot start cashup with zero cash transactions",
             type  => 'amount',
@@ -345,10 +345,10 @@ sub add_cashup {
     }
     my $manager_id = $params->{manager_id};
 
-    # Validate amount should always be a positive value
+    # Validate amount is a non-zero number
     my $amount = $params->{amount};
-    unless ( looks_like_number($amount) && $amount > 0 ) {
-        Koha::Exceptions::Account::AmountNotPositive->throw( error => 'Cashup amount passed is not positive number' );
+    unless ( looks_like_number($amount) && $amount != 0 ) {
+        Koha::Exceptions::Account::AmountNotPositive->throw( error => 'Cashup amount must be a non-zero number' );
     }
 
     # Sanitize reconciliation note - treat empty/whitespace-only as undef
