@@ -156,11 +156,14 @@
                 <tbody>
                     [% SET bankable = 0, ctotal = 0, dtotal = 0, cctotal = 0, cdtotal = 0 %]
                     [% FOREACH register IN registers %]
+                        [% SET rbankable = ( register.outstanding_accountlines.total( payment_type => [ 'CASH', 'SIP00' ]) * -1 ) %]
                         <tr>
                             [% IF CAN_user_cash_management_cashup %]
                                 <td>
                                     [% IF register.cashup_in_progress %]
                                         <input type="checkbox" class="register_checkbox" value="[% register.id | html %]" disabled title="Cashup in progress" />
+                                    [% ELSIF rbankable == 0 %]
+                                        <input type="checkbox" class="register_checkbox" value="[% register.id | html %]" disabled title="No bankable transactions" />
                                     [% ELSE %]
                                         <input type="checkbox" class="register_checkbox" value="[% register.id | html %]" />
                                     [% END %]
@@ -178,7 +181,6 @@
                             </td>
                             <td>[% register.starting_float | $Price %]</td>
                             <td>
-                                [% SET rbankable = ( register.outstanding_accountlines.total( payment_type => [ 'CASH', 'SIP00' ]) * -1 ) %]
                                 [% SET bankable = bankable + rbankable %]
                                 [% rbankable | $Price %]
                             </td>
@@ -220,6 +222,7 @@
                                             data-bankable="[% rbankable | $Price %]"
                                             data-float="[% register.starting_float | $Price %]"
                                             data-registerid="[% register.id | html %]"
+                                            [% IF rbankable == 0 %]disabled title="No bankable transactions"[% END %]
                                             ><i class="fa-solid fa-money-bill-1"></i> Record cashup</button
                                         >
                                     [% END %]
