@@ -208,6 +208,7 @@
                                             data-bs-target="#confirmCashupModal"
                                             data-register="[% register.description | html %]"
                                             data-bankable="[% rbankable | $Price %]"
+                                            data-expected="[% register.cashup_in_progress.amount | $Price %]"
                                             data-float="[% register.starting_float | $Price %]"
                                             data-registerid="[% register.id | html %]"
                                             ><i class="fa-solid fa-check"></i> Complete cashup</button
@@ -515,8 +516,8 @@
                var button = $(e.relatedTarget);
                var register = button.data('register');
                $("#registerc").text(register);
-               var bankable = button.data('bankable');
-               $("#cashc").text(bankable);
+               var expected = button.data('expected');
+               $("#cashc").text(expected);
                var rfloat = button.data('float');
                $('#floatc').text(rfloat);
                var rid = button.data('registerid');
