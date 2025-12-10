@@ -98,9 +98,35 @@ $(document).ready(function () {
                 var tfoot = summary_modal.find("tfoot");
                 tfoot.empty();
 
+                // Determine if this is a negative cashup (float deficit scenario)
+                var isNegativeCashup = data.summary.total < 0;
+
+                // Add informational notice for negative cashups
+                if (isNegativeCashup) {
+                    var noticeText = __(
+                        "This cashup shows a negative amount because refunds exceeded collections during this session. " +
+                            "The register float was topped up to restore the expected balance."
+                    );
+                    tbody.prepend(
+                        "<tr class='reconciliation-info'><td colspan='2'>" +
+                            "<i class='fa-solid fa-info-circle'></i> " +
+                            "<strong>" +
+                            __("Float deficit:") +
+                            "</strong> " +
+                            noticeText +
+                            "</td></tr>"
+                    );
+                }
+
                 // 1. Total (sum of all transactions)
+                var totalLabel = isNegativeCashup
+                    ? __("Total float deficit")
+                    : __("Total");
+
                 tfoot.append(
-                    "<tr class='total-row'><td><strong>Total</strong></td><td><strong>" +
+                    "<tr class='total-row'><td><strong>" +
+                        totalLabel +
+                        "</strong></td><td><strong>" +
                         data.summary.total.format_price() +
                         "</strong></td></tr>"
                 );
@@ -122,8 +148,15 @@ $(document).ready(function () {
                     }
                 }
                 if (cashCollected !== null) {
+                    var cashLabel =
+                        cashCollected < 0
+                            ? __("Cash added to register")
+                            : __("Cash collected");
+
                     tfoot.append(
-                        "<tr><td><strong>Cash collected</strong></td><td><strong>" +
+                        "<tr><td><strong>" +
+                            cashLabel +
+                            "</strong></td><td><strong>" +
                             cashCollected.format_price() +
                             "</strong></td></tr>"
                     );
@@ -136,10 +169,22 @@ $(document).ready(function () {
                         type.payment_type !== "Cash" &&
                         type.payment_type !== "CASH"
                     ) {
+                        var paymentTypeLabel =
+                            type.total < 0
+                                ? __x("{payment_type} to add", {
+                                      payment_type: escape_str(
+                                          type.payment_type
+                                      ),
+                                  })
+                                : __x("{payment_type} collected", {
+                                      payment_type: escape_str(
+                                          type.payment_type
+                                      ),
+                                  });
+
                         tfoot.append(
                             "<tr><td><strong>" +
-                                escape_str(type.payment_type) +
-                                " collected" +
+                                paymentTypeLabel +
                                 "</strong></td><td><strong>" +
                                 type.total.format_price() +
                                 "</strong></td></tr>"
