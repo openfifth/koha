@@ -1183,7 +1183,7 @@ subtest 'add_cashup' => sub {
 
     # Test 3: Invalid amount parameter
     subtest 'invalid_amount' => sub {
-        plan tests => 4;
+        plan tests => 5;
 
         my $register3 = $builder->build_object( { class => 'Koha::Cash::Registers' } );
 
