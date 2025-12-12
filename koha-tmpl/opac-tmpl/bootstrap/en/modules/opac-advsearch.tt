@@ -628,7 +628,7 @@ $(document).ready(function() {
         $(newLine).find('label[for^="idx_"]').first().attr('for', 'idx_' + newIdx);
         $(newLine).find('input[id^="q_"]').first().attr('id', 'q_' + newIdx);
         $(newLine).find('label[for^="q_"]').first().attr('for', 'q_' + newIdx);
-        $(newLine).find('input#q_' + newIdx).attr('aria-label', _('Enter field ' + (newIdx + 1) + ' search terms'));
+        $(newLine).find('input#q_' + newIdx).attr('aria-label', _("Enter field " + (newIdx + 1) + " search terms"));
         newLine.find('input').val('');
 
         thisLine.after(newLine);
