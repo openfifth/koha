@@ -169,10 +169,24 @@ table {
             td {
                 padding: .5em;
             }
+
             tr.dtrg-group {
                 td {
                     background: #e0e0e0;
                 }
+            }
+        }
+
+        th.dt-type-numeric,
+        th.dt-type-date,
+        td.dt-type-numeric,
+        td.dt-type-date {
+            div.dt-column-header {
+                flex-direction: row;
+            }
+
+            div.dt-column-footer {
+                flex-direction: row;
             }
         }
     }
