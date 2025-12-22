@@ -808,7 +808,7 @@ subtest 'is_superlibrarian() tests' => sub {
 
 subtest 'permissions() tests' => sub {
 
-    plan tests => 8;
+    plan tests => 12;
 
     $schema->storage->txn_begin;
 
@@ -824,9 +824,10 @@ subtest 'permissions() tests' => sub {
 
     my $permissions = $patron->permissions;
 
-    is( ref($permissions),         'HASH', "permissions() returns a hashref" );
-    is( scalar keys %$permissions, 1,      "Patron has one module permission" );
-    is( $permissions->{catalogue}, 1,      "Patron has catalogue permission" );
+    is( ref($permissions), 'HASH', "permissions() returns a hashref" );
+    ok( scalar keys %$permissions > 0, "permissions() returns all flags, not just granted ones" );
+    is( $permissions->{catalogue},      1, "Patron has catalogue permission" );
+    is( $permissions->{superlibrarian}, 0, "Patron does not have superlibrarian (demonstrates all flags present)" );
 
     # Test patron with no permissions
     my $patron_no_perms = $builder->build_object(
@@ -836,7 +837,9 @@ subtest 'permissions() tests' => sub {
         }
     );
     my $no_perms = $patron_no_perms->permissions;
-    is( scalar keys %$no_perms, 0, "Patron with no flags has no permissions" );
+    ok( scalar keys %$no_perms > 0, "Patron with no flags still has hashref with all flags" );
+    is( $no_perms->{catalogue},      0, "Patron does not have catalogue permission" );
+    is( $no_perms->{superlibrarian}, 0, "Patron does not have superlibrarian permission" );
 
     # Test patron with multiple flags (catalogue=4 + circulate=2 = 6)
     my $patron_multi = $builder->build_object(
@@ -846,8 +849,9 @@ subtest 'permissions() tests' => sub {
         }
     );
     my $multi_perms = $patron_multi->permissions;
-    is( $multi_perms->{catalogue}, 1, "Multi-flag patron has catalogue permission" );
-    is( $multi_perms->{circulate}, 1, "Multi-flag patron has circulate permission" );
+    is( $multi_perms->{catalogue},      1, "Multi-flag patron has catalogue permission" );
+    is( $multi_perms->{circulate},      1, "Multi-flag patron has circulate permission" );
+    is( $multi_perms->{superlibrarian}, 0, "Multi-flag patron does not have superlibrarian" );
 
     # Test patron with granular subpermissions
     my $patron_subperm = $builder->build_object( { class => 'Koha::Patrons', value => { flags => 0 } } );

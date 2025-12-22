@@ -3780,26 +3780,30 @@ sub is_anonymous {
 
 my $flags = $patron->permissions
 
-Returns a structure such as:
+Returns a hashref of the patron's permissions. This method has the same
+return structure as C4::Auth::getuserflags for consistency.
+
+Example return structure:
 {
-  "permissions": 1,
+  "superlibrarian": 0,
+  "permissions": 0,
   "borrowers": 1,
   "circulate": {
     "manage_curbside_pickups": 1,
     "overdues_report": 1,
     "override_renewals": 1,
-    "manage_restrictions": 1,
-    "manage_checkout_notes": 1,
-    "manage_bookings": 1
   },
   "catalogue": 1,
-  "reserveforothers": {
-    "place_holds": 1,
-    "modify_holds_priority": 1
-  }
+  "reserveforothers": 0,
+  "tools": 0,
+  ...
 }
-where a 1 indicates full permissions and a hash indicates
-partial permissions with the given permissions as hash keys
+
+All permission flags are included in the returned hashref:
+- Flags set to 1 indicate the user has full permissions for that module
+- Flags set to 0 indicate the user does not have that permission
+- Flags set to a hashref indicate partial/granular permissions, where the
+  hash keys are the specific subpermissions granted
 
 =cut
 
@@ -3811,27 +3815,29 @@ sub permissions {
     my @userflags     = $schema->resultset('Userflag')->search( {}, { order_by => 'bit' } )->all;
     my %userflags_map = map { $_->bit => $_->flag } @userflags;
 
-    my $flags        = $self->flags // 0;
-    my $active_flags = {};
+    my $flags     = $self->flags // 0;
+    my $userflags = {};
 
-    # Check which flags are active based on bit values
+    # Initialize all flags to 0, then set granted ones to 1
+    # This matches the return structure of C4::Auth::getuserflags
     foreach my $bit ( keys %userflags_map ) {
+        my $flag = $userflags_map{$bit};
         if ( $flags & ( 1 << $bit ) ) {
-            my $flag = $userflags_map{$bit};
-            $active_flags->{$flag} = 1;
+            $userflags->{$flag} = 1;
+        } else {
+            $userflags->{$flag} = 0;
         }
     }
 
-    # Get granular subpermissions using existing helper
-    my $user_perms = get_user_subpermissions( $self->userid );
+    # Get granular subpermissions and merge with top-level permissions
+    my $user_subperms = get_user_subpermissions( $self->userid );
 
-    for my $module ( keys %$user_perms ) {
-        for my $code ( keys %{ $user_perms->{$module} } ) {
-            $active_flags->{$module}->{$code} = 1;
-        }
+    foreach my $module ( keys %$user_subperms ) {
+        next if $userflags->{$module} == 1;    # user already has permission for everything in this module
+        $userflags->{$module} = $user_subperms->{$module};
     }
 
-    return $active_flags;
+    return $userflags;
 }
 
 =head2 Internal methods
