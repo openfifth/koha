@@ -806,24 +806,58 @@ subtest 'is_superlibrarian() tests' => sub {
     $schema->storage->txn_rollback;
 };
 
-subtest 'is_superlibrarian() tests' => sub {
+subtest 'permissions() tests' => sub {
 
-    plan tests => 2;
+    plan tests => 8;
 
     $schema->storage->txn_begin;
 
+    my $dbh = C4::Context->dbh;
+
+    # Test patron with single flag permission (catalogue = bit 2, value 4)
     my $patron = $builder->build_object(
         {
             class => 'Koha::Patrons',
-
             value => { flags => 4 }
         }
     );
 
-    my %permissions = $patron->permissions;
+    my $permissions = $patron->permissions;
 
-    is( scalar keys %permissions, 1, "Patron has one module permission" );
-    is( $permissions{catalogue},  1, "Patron has catalogue permission" );
+    is( ref($permissions),         'HASH', "permissions() returns a hashref" );
+    is( scalar keys %$permissions, 1,      "Patron has one module permission" );
+    is( $permissions->{catalogue}, 1,      "Patron has catalogue permission" );
+
+    # Test patron with no permissions
+    my $patron_no_perms = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { flags => 0 }
+        }
+    );
+    my $no_perms = $patron_no_perms->permissions;
+    is( scalar keys %$no_perms, 0, "Patron with no flags has no permissions" );
+
+    # Test patron with multiple flags (catalogue=4 + circulate=2 = 6)
+    my $patron_multi = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { flags => 6 }
+        }
+    );
+    my $multi_perms = $patron_multi->permissions;
+    is( $multi_perms->{catalogue}, 1, "Multi-flag patron has catalogue permission" );
+    is( $multi_perms->{circulate}, 1, "Multi-flag patron has circulate permission" );
+
+    # Test patron with granular subpermissions
+    my $patron_subperm = $builder->build_object( { class => 'Koha::Patrons', value => { flags => 0 } } );
+    $dbh->do(
+        "INSERT INTO user_permissions (borrowernumber, module_bit, code) VALUES (?, ?, ?)",
+        undef, $patron_subperm->borrowernumber, 1, 'override_renewals'
+    );
+    my $subperms = $patron_subperm->get_from_storage->permissions;
+    is( ref( $subperms->{circulate} ),               'HASH', "Granular permissions stored as hashref" );
+    is( $subperms->{circulate}->{override_renewals}, 1,      "Subpermission correctly detected" );
 
     $schema->storage->txn_rollback;
 };
