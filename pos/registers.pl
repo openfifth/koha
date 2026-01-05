@@ -151,19 +151,31 @@ if ( $op eq 'cud-cashup_start' ) {
             next unless $register;
 
             eval {
-                # Quick cashup: calculate expected amount from outstanding accountlines
-                my $expected_amount =
-                    $register->outstanding_accountlines->total( { payment_type => [ 'CASH', 'SIP00' ] } ) * -1;
+                # Get the amount from the request parameter
+                # For quick cashup, this will be the expected amount set by JavaScript
+                # For two-stage cashup completion, this will be the user-entered actual amount
+                my $amount = $input->param('amount');
 
-                # Quick cashup assumes actual amount equals expected (no reconciliation needed)
-                $register->add_cashup(
-                    {
-                        manager_id => $logged_in_user->id,
-                        amount     => $expected_amount,
+                # If no amount provided, calculate expected amount (backwards compatibility)
+                unless ( defined $amount && $amount ne '' ) {
+                    $amount = $register->outstanding_accountlines->total( { payment_type => [ 'CASH', 'SIP00' ] } ) * -1;
+                }
 
-                        # No reconciliation_note = quick cashup assumes correct amounts
-                    }
+                # Get optional reconciliation note
+                my $reconciliation_note = $input->param('reconciliation_note');
+
+                # Complete the cashup
+                my %cashup_params = (
+                    manager_id => $logged_in_user->id,
+                    amount     => $amount,
                 );
+
+                # Add reconciliation note if provided
+                if ( defined $reconciliation_note && $reconciliation_note ne '' ) {
+                    $cashup_params{reconciliation_note} = $reconciliation_note;
+                }
+
+                $register->add_cashup( \%cashup_params );
                 $success_count++;
             };
             if ($@) {

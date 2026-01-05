@@ -518,7 +518,8 @@
                $("#cashc").text(expected);
 
                // Parse expected amount to check if negative
-               var expectedAmount = expected.replace(/[^0-9.-]/g, '');
+               // Convert to string first in case jQuery's .data() parsed it as a number
+               var expectedAmount = String(expected || '').replace(/[^0-9.-]/g, '');
                var isNegative = parseFloat(expectedAmount) < 0;
 
                // Update labels based on sign
@@ -527,7 +528,7 @@
                    $("#actual_amount_label").text(_("Actual amount added to register:"));
                } else {
                    $("#expected_amount_label").text(_("Expected cashup amount:"));
-                   $("#actual_amount_label").text(_("Actual cashup amount counted:"));
+                   $("#actual_amount_label").text(_("Actual amount counted:"));
                }
 
                var rfloat = button.data('float');
