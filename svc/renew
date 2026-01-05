@@ -50,8 +50,10 @@ my $branchcode     = $input->param('branchcode')
     || C4::Context->userenv->{'branch'};
 my $seen = $input->param('seen');
 my $date_due;
-if ( $input->param('date_due') ) {
-    $date_due = dt_from_string( scalar $input->param('date_due') );
+my $date_due_param = $input->param('date_due') // '';
+$date_due_param =~ s/^\s+|\s+$//g;  # Trim whitespace
+if ( $date_due_param && length($date_due_param) > 0 ) {
+    $date_due = dt_from_string( $date_due_param );
 }
 
 my $data;
