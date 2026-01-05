@@ -1191,14 +1191,23 @@ form when editing a request's item metadata using AutoILLBackendPriority mode, r
 sub _edititem_tmpl_override {
     my ( $params, $backend_tmpl ) = @_;
 
-    return ( $params, $backend_tmpl ) unless $params->{method} eq 'edititem'
-        && C4::Context->preference("AutoILLBackendPriority");
-
-    $backend_tmpl  = dirname(__FILE__) . '/Backend';
-    if (exists $params->{cwd}) {
-        $params->{cwd} = $backend_tmpl;
+    if ( $params->{method} eq 'edititem' && C4::Context->preference("AutoILLBackendPriority") ) {
+        $backend_tmpl = dirname(__FILE__) . '/Backend';
+        if ( exists $params->{cwd} ) {
+            $params->{cwd} = $backend_tmpl;
+        }
+    } elsif ( $params->{error}
+        && $params->{status} eq 'failed_captcha'
+        && C4::Context->preference("AutoILLBackendPriority") )
+    {
+        $backend_tmpl = dirname(__FILE__) . '/Backend';
+        if ( exists $params->{cwd} ) {
+            $params->{cwd} = $backend_tmpl;
+        }
+        $params->{stage} = 'form';
     }
-    return ($params, $backend_tmpl);
+
+    return ( $params, $backend_tmpl );
 }
 
 #### Abstract Imports
