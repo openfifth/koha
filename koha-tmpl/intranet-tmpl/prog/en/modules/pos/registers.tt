@@ -468,7 +468,7 @@
             // Real-time reconciliation calculation for cashup modal
             $("#amount").on("input", function() {
                 var actualAmount = parseFloat($(this).val()) || 0;
-                var expectedText = $("#expected_amount").text().replace(/[£$,]/g, '');
+                var expectedText = $("#cashc").text().replace(/[£$,]/g, '');
                 var expectedAmount = parseFloat(expectedText) || 0;
                 var difference = actualAmount - expectedAmount;
 
