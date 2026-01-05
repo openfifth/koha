@@ -480,11 +480,11 @@
 
                     if (difference > 0) {
                         reconciliationText = "Surplus: " + difference.format_price();
-                        reconciliationClass = "success";
+                        reconciliationClass = "error";
                         hasDiscrepancy = true;
                     } else if (difference < 0) {
                         reconciliationText = "Deficit: " + Math.abs(difference).format_price();
-                        reconciliationClass = "warning";
+                        reconciliationClass = "error";
                         hasDiscrepancy = true;
                     } else {
                         reconciliationText = "Balanced - no surplus or deficit";
@@ -493,7 +493,7 @@
                     }
 
                     $("#reconciliation_text").text(reconciliationText)
-                        .removeClass("success warning")
+                        .removeClass("success error")
                         .addClass(reconciliationClass);
                     $("#reconciliation_display").show();
 
