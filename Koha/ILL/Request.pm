@@ -1331,7 +1331,7 @@ sub add_or_update_attributes {
                 # Skip undefined or empty values
                 next unless defined $value && $value ne '';
 
-                my $attr = $self->extended_attributes->find( { type => $type } );
+                my $attr = $self->extended_attributes->find( { backend => $self->backend, type => $type } );
 
                 if ($attr) {
 
