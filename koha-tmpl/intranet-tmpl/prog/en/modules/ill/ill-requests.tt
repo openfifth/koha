@@ -526,10 +526,6 @@
 
                     <h1>Manage ILL request [% request.id_prefix _ request.illrequest_id | html %]</h1>
                     <div id="request-toolbar" class="btn-toolbar">
-                        <a title="Edit request" id="ill-toolbar-btn-edit-action" class="btn btn-default" href="/cgi-bin/koha/ill/ill-requests.pl?op=edit_action&amp;illrequest_id=[% request.illrequest_id | html %]">
-                            <i class="fa-solid fa-pencil" aria-hidden="true"></i>
-                            Edit request
-                        </a>
                         [% FOREACH action IN request.available_actions %]
                             [% needs_prefs = action.needs_prefs.size ? action.needs_prefs : [] %]
                             [% needs_perms = action.needs_perms.size ? action.needs_perms : [] %]
@@ -601,7 +597,7 @@
                                 <a
                                     title="[% action.ui_method_name | html %]"
                                     id="ill-toolbar-btn-[% action.id | lower | html %]"
-                                    class="btn btn-default"
+                                    [% IF action.id == 'REQ' %]class="btn btn-primary"[% ELSE %]class="btn btn-default"[% END %]
                                     href="/cgi-bin/koha/ill/ill-requests.pl?op=[% action.method | uri %]&amp;illrequest_id=[% request.illrequest_id | uri %]"
                                 >
                                     <span class="fa [% action.ui_method_icon | html %]"></span>
@@ -609,6 +605,10 @@
                                 </a>
                             [% END %]
                         [% END %]
+                        <a title="Edit request" id="ill-toolbar-btn-edit-action" class="btn btn-default" href="/cgi-bin/koha/ill/ill-requests.pl?op=edit_action&amp;illrequest_id=[% request.illrequest_id | html %]">
+                            <i class="fa-solid fa-pencil" aria-hidden="true"></i>
+                            Edit request
+                        </a>
                         [% IF request.borrowernumber %]
                             <div class="dropdown btn-group">
                                 <button class="btn btn-default dropdown-toggle" type="button" id="ill-notice-dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
