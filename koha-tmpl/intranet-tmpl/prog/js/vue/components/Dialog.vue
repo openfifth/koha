@@ -75,7 +75,7 @@
                     <button
                         v-if="accept_callback"
                         id="accept_modal"
-                        class="btn btn-default approve"
+                        class="btn btn-primary approve"
                         @click="submit"
                     >
                         <i class="fa fa-fw fa-check"></i>
