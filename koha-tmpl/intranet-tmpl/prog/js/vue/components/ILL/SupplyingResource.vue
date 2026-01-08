@@ -744,7 +744,8 @@ export default {
                     columnData: "messages",
                     hidden: iso18626_request => 1,
                     showElement: {
-                        componentPath: "./ILL/ISO18626MessageDisplay.vue",
+                        componentPath:
+                            "@koha-vue/components/ILL/ISO18626MessageDisplay.vue",
                         componentProps: {
                             iso18626_request: {
                                 type: "resource",

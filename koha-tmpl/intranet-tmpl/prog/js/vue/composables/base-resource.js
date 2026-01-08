@@ -727,8 +727,6 @@ export function useBaseResource(resourceConfig) {
         setError,
         setWarning,
         updateConfirmationDialogInputs,
-        format_date,
-        patron_to_html,
         build_url,
         route,
         router,
