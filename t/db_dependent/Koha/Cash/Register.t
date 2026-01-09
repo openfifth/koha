@@ -1183,16 +1183,17 @@ subtest 'add_cashup' => sub {
 
     # Test 3: Invalid amount parameter
     subtest 'invalid_amount' => sub {
-        plan tests => 5;
+        plan tests => 6;
 
         my $register3 = $builder->build_object( { class => 'Koha::Cash::Registers' } );
 
-        # Zero amount
-        throws_ok {
-            $register3->add_cashup( { manager_id => $manager->id, amount => '0.00' } );
+        # Zero amount is now valid (for non-cash transaction scenarios)
+        my $zero_cashup;
+        lives_ok {
+            $zero_cashup = $register3->add_cashup( { manager_id => $manager->id, amount => '0.00' } );
         }
-        'Koha::Exceptions::Account::AmountNotPositive',
-            'Zero amount throws AmountNotPositive exception';
+        'Zero amount is accepted for non-cash transaction scenarios';
+        is( $zero_cashup->amount + 0, 0, 'Zero amount stored correctly' );
 
         # Negative amount is now valid (for float deficits)
         my $negative_cashup;
