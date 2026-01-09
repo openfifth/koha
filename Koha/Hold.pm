@@ -1399,7 +1399,8 @@ sub _calculate_title_hold_fee {
     foreach my $item (@holdable_items) {
 
         # Check if item is holdable for this patron
-        next unless C4::Reserves::CanItemBeReserved( $self->patron, $item )->{status} eq 'OK';
+        # We ignore hold counts since we're calculating the fee for a hold that's already been placed
+        next unless C4::Reserves::CanItemBeReserved( $self->patron, $item, $self->branchcode, { ignore_hold_counts => 1 } )->{status} eq 'OK';
 
         my $fee = $item->holds_fee( $self->patron );
         push @fees, $fee;
