@@ -57,7 +57,7 @@
         [% END %]
 
         [% IF ( error_cashup_no_transactions ) %]
-            <div id="error_message" class="alert alert-info"> Cannot start cashup - there are no cash transactions in this register since the last cashup. </div>
+            <div id="error_message" class="alert alert-info"> Cannot start cashup - there are no transactions in this register since the last cashup. </div>
         [% END %]
 
         [% IF ( error_no_cashup_start ) %]
@@ -77,7 +77,7 @@
         [% END %]
 
         [% IF ( error_cashup_amount_invalid ) %]
-            <div id="error_message" class="alert alert-warning"> The cashup amount must be a positive number greater than zero. </div>
+            <div id="error_message" class="alert alert-warning"> The cashup amount must be a valid number. </div>
         [% END %]
 
         [% IF ( error_cashup_complete ) %]
