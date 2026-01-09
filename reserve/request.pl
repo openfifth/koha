@@ -740,19 +740,15 @@ if (   ( $findborrower && $borrowernumber_hold || $findclub && $club_hold )
 
         # Pass through any reserve charge
         if ($patron) {
-
-            # Calculate hold fee using first available item
-            my $reserve_charge = 0;
-            if (@items) {
-                foreach my $item_object (@items) {
-                    my $fee = $item_object->holds_fee($patron);
-                    if ( defined $fee && $fee > 0 ) {
-                        $reserve_charge = $fee;
-                        last;
-                    }
-                }
-            }
-            $biblioloopiter{reserve_charge} = $reserve_charge;
+            # Use pickup location for fee calculation if available, otherwise default to userenv branch
+            my $pickup_for_fee = $pickup || C4::Context->userenv->{branch};
+            my $hold = Koha::Hold->new({
+                borrowernumber => $patron->borrowernumber,
+                biblionumber   => $biblionumber,
+                branchcode     => $pickup_for_fee,
+                itemnumber     => undef,  # Title-level hold
+            });
+            $biblioloopiter{reserve_charge} = $hold->calculate_hold_fee();
         }
 
         $template->param( total_holds => $total_holds );
@@ -785,19 +781,16 @@ unless ($multi_hold) {
 
     # Pass through any reserve charge for single holds
     if ($borrowernumber_hold) {
-        my $patron         = Koha::Patrons->find($borrowernumber_hold);
-        my $reserve_charge = 0;
-        if ( $patron && $biblio ) {
-            my @items = $biblio->items->as_list;
-            foreach my $item (@items) {
-                my $fee = $item->holds_fee($patron);
-                if ( defined $fee && $fee > 0 ) {
-                    $reserve_charge = $fee;
-                    last;
-                }
-            }
-        }
-        $template->param( reserve_charge => $reserve_charge );
+        my $patron = Koha::Patrons->find($borrowernumber_hold);
+        # Use pickup location for fee calculation if available, otherwise default to userenv branch
+        my $pickup_for_fee = $pickup || C4::Context->userenv->{branch};
+        my $hold = Koha::Hold->new({
+            borrowernumber => $patron->borrowernumber,
+            biblionumber   => $biblionumbers[0],
+            branchcode     => $pickup_for_fee,
+            itemnumber     => undef,  # Title-level hold
+        });
+        $template->param( reserve_charge => $hold->calculate_hold_fee() );
     }
 }
 $template->param( biblionumbers => \@biblionumbers );
