@@ -109,12 +109,13 @@
         [% END %]
 
         [% SET total_bankable = accountlines.total( payment_type => [ 'CASH', 'SIP00' ]) * -1 %]
+        [% SET total_transactions = accountlines.total * -1 %]
         [% IF ( CAN_user_cash_management_cashup ) %]
             <div id="toolbar" class="btn-toolbar">
                 [% IF cashup_in_progress %]
                     <button id="pos_complete_cashup" type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#confirmCashupModal"> <i class="fa-solid fa-check"></i> Complete cashup </button>
                 [% ELSE %]
-                    <button type="button" class="btn btn-default" data-bs-toggle="modal" data-bs-target="#triggerCashupModal" [% IF total_bankable == 0 %]disabled title="No bankable transactions"[% END %]> <i class="fa fa-money-bill-alt"></i> Record cashup </button>
+                    <button type="button" class="btn btn-default" data-bs-toggle="modal" data-bs-target="#triggerCashupModal" [% IF total_transactions == 0 %]disabled title="No transactions"[% END %]> <i class="fa fa-money-bill-alt"></i> Record cashup </button>
                 [% END %]
             </div>
         [% END %]
