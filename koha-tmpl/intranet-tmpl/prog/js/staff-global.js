@@ -736,6 +736,9 @@ function patron_autocomplete(node, options) {
         if (options["additional-filters"]) {
             additional_filters = options["additional-filters"];
         }
+        if (options["on-remove-callback"]) {
+            on_remove_callback = options["on-remove-callback"];
+        }
     }
     return (node
         .autocomplete({
@@ -800,6 +803,9 @@ function patron_autocomplete(node, options) {
                     $(container).on("click", ".removePatron", function (e) {
                         e.preventDefault();
                         $(this).closest('div[id^="patron-detail-"]').remove();
+                        if (on_remove_callback) {
+                            return on_remove_callback(event, ui);
+                        }
                     });
                 } else if (ui.item.link) {
                     window.location.href = ui.item.link;
