@@ -1303,18 +1303,26 @@ subtest 'calculate_hold_fee() tests' => sub {
 
     $schema->storage->txn_begin;
 
+    # Create a library for pickup location
+    my $library = $builder->build_object(
+        {
+            class => 'Koha::Libraries',
+            value => { pickup_location => 1 }
+        }
+    );
+
     # Create patron category and patron
     my $cat     = $builder->build( { source => 'Category', value => { categorycode => 'XYZ1' } } );
     my $patron1 = $builder->build_object(
         {
             class => 'Koha::Patrons',
-            value => { categorycode => 'XYZ1' }
+            value => { categorycode => 'XYZ1', branchcode => $library->branchcode }
         }
     );
     my $patron2 = $builder->build_object(
         {
             class => 'Koha::Patrons',
-            value => { categorycode => 'XYZ1' }
+            value => { categorycode => 'XYZ1', branchcode => $library->branchcode }
         }
     );
 
@@ -1355,16 +1363,41 @@ subtest 'calculate_hold_fee() tests' => sub {
             branchcode   => undef,
             categorycode => undef,
             itemtype     => undef,
-            rules        => { reservesallowed => 10, holds_per_record => 10, holds_per_day => 10 }
+            rules        => {
+                reservesallowed => 10,
+                holds_per_record => 10,
+                holds_per_day => 10
+            }
+        }
+    );
+
+    # Set holdallowed and hold_fulfillment_policy (branch/itemtype level rules)
+    # These rules don't use categorycode parameter
+    Koha::CirculationRules->set_rule(
+        {
+            branchcode   => $library->branchcode,
+            itemtype     => undef,
+            rule_name    => 'holdallowed',
+            rule_value   => 'from_any_library'
+        }
+    );
+    Koha::CirculationRules->set_rule(
+        {
+            branchcode   => $library->branchcode,
+            itemtype     => undef,
+            rule_name    => 'hold_fulfillment_policy',
+            rule_value   => 'any'
         }
     );
 
     my $biblio = $builder->build_sample_biblio();
 
-    # Create multiple items with different itemtypes and fees
+    # Create multiple items with different itemtypes and fees at the pickup library
     my $item1 = $builder->build_sample_item(
         {
             biblionumber => $biblio->biblionumber,
+            homebranch   => $library->branchcode,
+            holdingbranch => $library->branchcode,
             itype        => $itemtype1->{itemtype},
             notforloan   => 0,
         }
@@ -1372,6 +1405,8 @@ subtest 'calculate_hold_fee() tests' => sub {
     my $item2 = $builder->build_sample_item(
         {
             biblionumber => $biblio->biblionumber,
+            homebranch   => $library->branchcode,
+            holdingbranch => $library->branchcode,
             itype        => $itemtype2->{itemtype},
             notforloan   => 0,
         }
@@ -1379,6 +1414,8 @@ subtest 'calculate_hold_fee() tests' => sub {
     my $item3 = $builder->build_sample_item(
         {
             biblionumber => $biblio->biblionumber,
+            homebranch   => $library->branchcode,
+            holdingbranch => $library->branchcode,
             itype        => $itemtype3->{itemtype},
             notforloan   => 0,
         }
@@ -1391,6 +1428,7 @@ subtest 'calculate_hold_fee() tests' => sub {
             value => {
                 borrowernumber => $patron1->borrowernumber,
                 biblionumber   => $biblio->biblionumber,
+                branchcode     => $library->branchcode,
                 itemnumber     => $item2->itemnumber,         # Use item2 with 3.00 fee
             }
         }
@@ -1406,6 +1444,7 @@ subtest 'calculate_hold_fee() tests' => sub {
             value => {
                 borrowernumber => $patron2->borrowernumber,
                 biblionumber   => $biblio->biblionumber,
+                branchcode     => $library->branchcode,
                 itemnumber     => undef,
             }
         }
@@ -1430,6 +1469,8 @@ subtest 'calculate_hold_fee() tests' => sub {
     my $item4 = $builder->build_sample_item(
         {
             biblionumber => $biblio->biblionumber,
+            homebranch   => $library->branchcode,
+            holdingbranch => $library->branchcode,
             itype        => $itemtype1->{itemtype},
             notforloan   => 0,
         }
@@ -1485,6 +1526,8 @@ subtest 'calculate_hold_fee() tests' => sub {
     my $item_free = $builder->build_sample_item(
         {
             biblionumber => $biblio->biblionumber,
+            homebranch   => $library->branchcode,
+            holdingbranch => $library->branchcode,
             itype        => $itemtype_free->{itemtype},
             notforloan   => 0,
         }

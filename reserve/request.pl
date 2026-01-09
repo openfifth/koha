@@ -714,9 +714,12 @@ if (   ( $findborrower && $borrowernumber_hold || $findclub && $club_hold )
 
         # Pass through any reserve charge
         if ($patron) {
+            # Use pickup location for fee calculation if available, otherwise default to userenv branch
+            my $pickup_for_fee = $pickup || C4::Context->userenv->{branch};
             my $hold = Koha::Hold->new({
                 borrowernumber => $patron->borrowernumber,
                 biblionumber   => $biblionumber,
+                branchcode     => $pickup_for_fee,
                 itemnumber     => undef,  # Title-level hold
             });
             $biblioloopiter{reserve_charge} = $hold->calculate_hold_fee();
@@ -753,9 +756,12 @@ unless ($multi_hold) {
     # Pass through any reserve charge for single holds
     if ($borrowernumber_hold) {
         my $patron = Koha::Patrons->find($borrowernumber_hold);
+        # Use pickup location for fee calculation if available, otherwise default to userenv branch
+        my $pickup_for_fee = $pickup || C4::Context->userenv->{branch};
         my $hold = Koha::Hold->new({
             borrowernumber => $patron->borrowernumber,
             biblionumber   => $biblionumbers[0],
+            branchcode     => $pickup_for_fee,
             itemnumber     => undef,  # Title-level hold
         });
         $template->param( reserve_charge => $hold->calculate_hold_fee() );
