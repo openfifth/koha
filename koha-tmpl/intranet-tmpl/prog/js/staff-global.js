@@ -718,6 +718,7 @@ function patron_autocomplete(node, options) {
     let url_params;
     let on_select_callback;
     let on_select_add_to;
+    let additional_filters;
 
     if (options) {
         if (options["link-to"]) {
@@ -732,11 +733,23 @@ function patron_autocomplete(node, options) {
         if (options["on-select-add-to"]) {
             on_select_add_to = options["on-select-add-to"];
         }
+        if (options["additional-filters"]) {
+            additional_filters = options["additional-filters"];
+        }
     }
     return (node
         .autocomplete({
             source: function (request, response) {
                 let q = buildPatronSearchQuery(request.term);
+
+                if (additional_filters) {
+                    q = [
+                        {
+                            ...additional_filters,
+                            ...(q && q.length > 0 ? { "-or": [...q] } : {}),
+                        },
+                    ];
+                }
 
                 let params = {
                     _page: 1,
