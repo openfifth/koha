@@ -23,6 +23,7 @@ use warnings;
 use CGI qw ( -utf8 );
 use C4::Context;
 use C4::Members::Messaging;
+use Koha::Patron::Categories;
 
 use constant MAX_DAYS_IN_ADVANCE => 30;
 
@@ -146,6 +147,11 @@ PREF: foreach my $option (@$messaging_options) {
         $option->{'digest'} = 1 if $pref->{'wants_digest'};
     }
     $template->param( messaging_preferences => $messaging_options );
+
+    # Check if any patron category has print notice charging enabled
+    # This determines whether to show the print column in messaging preferences
+    my $show_print_notices = Koha::Patron::Categories->any_have_print_notice_charge();
+    $template->param( show_print_notices => $show_print_notices );
 }
 
 =head2 restore_form_values
@@ -191,6 +197,11 @@ sub restore_form_values {
         }
     }
     $template->param( messaging_preferences => $messaging_options );
+
+    # Check if any patron category has print notice charging enabled
+    # This determines whether to show the print column in messaging preferences
+    my $show_print_notices = Koha::Patron::Categories->any_have_print_notice_charge();
+    $template->param( show_print_notices => $show_print_notices );
 }
 
 =head1 TODO
