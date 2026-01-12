@@ -175,6 +175,14 @@
             :resource="resource"
         ></FormRelationshipSelect>
     </template>
+    <template v-else-if="attr.type == 'patronAutoComplete'">
+        <PatronAutoComplete
+            :id="getElementId"
+            v-model="resource[attr.name]"
+            :placeholder="attr.placeholder || attr.label"
+            :patronAutoCompleteOptions="attr.patronAutoCompleteOptions"
+        />
+    </template>
     <template v-else-if="attr.type == 'additional_fields'">
         <AdditionalFieldsEntry
             :resource="resource"
@@ -204,6 +212,7 @@ import InputNumber from "./Elements/InputNumber.vue";
 import InputCheckbox from "./Elements/InputCheckbox.vue";
 import TextArea from "./Elements/TextArea.vue";
 import FormRelationshipSelect from "./FormRelationshipSelect.vue";
+import PatronAutoComplete from "./PatronAutoComplete.vue";
 import ToolTip from "./ToolTip.vue";
 import InputRadio from "./Elements/InputRadio.vue";
 import { useBaseElement } from "../composables/base-element.js";
@@ -310,6 +319,7 @@ export default {
     name: "FormElement",
     components: {
         FormRelationshipSelect,
+        PatronAutoComplete,
         ToolTip,
         AdditionalFieldsEntry,
         InputText,
