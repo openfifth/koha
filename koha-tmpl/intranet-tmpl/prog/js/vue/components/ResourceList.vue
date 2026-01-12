@@ -157,6 +157,28 @@ export default {
                     });
                     return acc;
                 }
+                if (attr.type === "patronAutoComplete") {
+                    acc.push({
+                        title: attr.label,
+                        data: attr.name,
+                        searchable: true,
+                        orderable: true,
+                        render: function (data, type, row, meta) {
+                            const patron = row[attr.patronEmbedName];
+                            if (patron) {
+                                return (
+                                    '<a href="/cgi-bin/koha/members/moremember.pl?borrowernumber=' +
+                                    patron.patron_id +
+                                    '">' +
+                                    $patron_to_html(patron) +
+                                    "</a>"
+                                );
+                            }
+                            return "";
+                        },
+                    });
+                    return acc;
+                }
                 if (attr.type === "vendor") {
                     acc.push({
                         title: attr.label,
