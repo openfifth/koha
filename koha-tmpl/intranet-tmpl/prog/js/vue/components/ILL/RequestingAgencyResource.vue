@@ -18,6 +18,9 @@ export default {
     },
 
     setup(props) {
+        const ILLStore = inject("ILLStore");
+        const { config } = ILLStore;
+
         const baseResource = useBaseResource({
             resourceName: "iso18626_requesting_agency",
             nameAttr: "name",
