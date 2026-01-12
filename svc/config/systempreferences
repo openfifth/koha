@@ -81,19 +81,29 @@ GET /svc/config/systempreferences/$preference
 
 =item url query
 
-preference=$pref_name
+pref=$pref_name
+
+or
+
+pref=$pref_name1&pref=$pref_name2
+
 
 =back
 
-Used to get a single system preference.
+Used to get a single system preference value or a list of system preference values
 
 =cut
 
 sub get_preference {
-    my $preference = scalar $query->param('pref');
+    my @prefs = $query->multi_param('pref');
 
-    my $value = C4::Context->preference($preference);
-    $response->param( value => $value );
+    if ( scalar @prefs > 1 ) {
+        my %results = map { $_ => C4::Context->preference($_) } @prefs;
+        $response->param( value => \%results );
+    } else {
+        my $value = C4::Context->preference( $prefs[0] );
+        $response->param( value => $value );
+    }
 
     C4::Service->return_success($response);
 }
