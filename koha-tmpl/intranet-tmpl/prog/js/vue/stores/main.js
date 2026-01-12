@@ -72,6 +72,9 @@ export const useMainStore = defineStore("main", () => {
             this.displayed_already =
                 displayed; /* Is displayed on the current view */
         },
+        updateConfirmationDialogInputs(inputs) {
+            this.confirmation.inputs = inputs;
+        },
         removeMessages() {
             if (this.displayed_already) {
                 this.error = null;
