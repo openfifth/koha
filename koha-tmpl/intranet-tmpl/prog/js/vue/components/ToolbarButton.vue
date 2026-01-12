@@ -1,6 +1,8 @@
 <template>
-    <ButtonSubmit v-if="form" v-bind="$props" />
-    <Link v-else v-bind="$props" />
+    <div class="toolbar-button-wrapper">
+        <ButtonSubmit v-if="form" v-bind="$props" />
+        <Link v-else v-bind="$props" />
+    </div>
 </template>
 
 <script>
@@ -42,3 +44,8 @@ export default {
     name: "Toolbar",
 };
 </script>
+<style scoped>
+.toolbar-button-wrapper {
+    margin-right: 5px;
+}
+</style>
