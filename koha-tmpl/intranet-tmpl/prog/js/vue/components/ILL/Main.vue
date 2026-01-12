@@ -26,6 +26,7 @@
 
 <script>
 import { inject, onBeforeMount, ref } from "vue";
+import { APIClient } from "../../fetch/api-client.js";
 import Breadcrumbs from "../Breadcrumbs.vue";
 import Help from "../Help.vue";
 import LeftMenu from "../LeftMenu.vue";
@@ -48,8 +49,26 @@ export default {
 
         onBeforeMount(() => {
             loading();
+            const client = APIClient.sysprefs;
+            client.sysprefs
+                .getAll(["ILLPartnerCode", "ILLModule"])
+                .then(pref_values => {
+                    config.value.settings.ILLPartnerCode =
+                        pref_values.value.ILLPartnerCode;
+                    config.value.settings.ILLModule =
+                        pref_values.value.ILLModule;
+                    if (config.value.settings.ILLModule != 1) {
+                        loaded();
+                        return setError(
+                            $__(
+                                "The ILL module is disabled, turn on <a href='/cgi-bin/koha/admin/preferences.pl?tab=&op=search&searchfield=ILLModule'>ILLModule</a> to use it"
+                            ),
+                            false
+                        );
+                    }
+                    loaded();
+                });
             initialized.value = true;
-            loaded();
         });
 
         return {
