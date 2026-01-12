@@ -11,6 +11,10 @@ export class SysprefAPIClient {
                 this.httpClient.get({
                     endpoint: "/?pref=" + variable,
                 }),
+            getAll: variables =>
+                this.httpClient.get({
+                    endpoint: "/?" + variables.map(p => `pref=${p}`).join("&"),
+                }),
             update: (variable, value) =>
                 this.httpClient.post({
                     endpoint: "",
