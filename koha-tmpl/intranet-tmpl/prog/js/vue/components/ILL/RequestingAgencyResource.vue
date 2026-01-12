@@ -51,6 +51,17 @@ export default {
             },
             resourceAttrs: [
                 {
+                    name: "ill_partner",
+                    type: "patronAutoComplete",
+                    label: __("ILL partner"),
+                    placeholder: __("Search for an ILL partner"),
+                    patronAutoCompleteOptions: {
+                        "additional-filters": {
+                            "me.category_id": config.settings.ILLPartnerCode,
+                        },
+                    },
+                },
+                {
                     name: "iso18626_requesting_agency_id",
                     label: $__("ID"),
                     type: "text",
