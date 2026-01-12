@@ -5,26 +5,30 @@
 <input type="hidden" name="borrowernumber" value="[% borrowernumber | html %]" />
   <table>
     <thead>
-    <tr><th></th>
-        <th>Days in advance</th>
-        [% IF Koha.Preference('SMSSendDriver') %]<th>SMS</th>[% END %]
-        [% IF Koha.Preference('TalkingTechItivaPhoneNotification') || Koha.Preference('PhoneNotification') %]<th>Phone</th>[% END %]
-        <th>Email</th>
-        [% SET has_print_transport = 0 %]
-        [% FOREACH pref IN messaging_preferences %]
-            [% IF pref.transport_print %][% SET has_print_transport = 1 %][% LAST %][% END %]
-        [% END %]
-        [% IF has_print_transport %]
-            <th>
-                Print
-                [% IF patron.category.print_notice_charge > 0 %]
-                    ([% patron.category.print_notice_charge | $Price %] charge)
-                [% END %]
-            </th>
-        [% END %]
-        <th>Digests only <i id="info_digests" data-bs-toggle="tooltip" title="You can ask for a digest to reduce the number of messages. Messages will be saved and sent as a single message." data-bs-placement="right" class="fa fa-info-circle"></i></th>
-        <!-- <th>RSS</th> -->
-    </tr>
+        <tr><th></th>
+            <th>Days in advance</th>
+            [% IF Koha.Preference('SMSSendDriver') %]<th>SMS</th>[% END %]
+            [% IF Koha.Preference('TalkingTechItivaPhoneNotification') || Koha.Preference('PhoneNotification') %]<th>Phone</th>[% END %]
+            <th>Email</th>
+            [%# Show print column only if any patron category has print_notice_charge > 0 %]
+            [%# Also check that print transport exists in messaging_preferences %]
+            [% SET has_print_transport = 0 %]
+            [% FOREACH pref IN messaging_preferences %]
+                [% IF pref.transport_print %][% SET has_print_transport = 1 %][% LAST %][% END %]
+            [% END %]
+            [% IF has_print_transport && show_print_notices %]
+                <th>
+                    Print
+                    [% IF patron.category.print_notice_charge > 0 %]
+                        ([% patron.category.print_notice_charge | $Price %] charge)
+                    [% END %]
+                </th>
+            [% END %]
+            <th>Digests only
+                <i id="info_digests" data-bs-toggle="tooltip" title="You can ask for a digest to reduce the number of messages. Messages will be saved and sent as a single message." data-bs-placement="right" class="fa fa-info-circle"></i
+            ></th>
+            <!-- <th>RSS</th> -->
+        </tr>
     </thead>
     <tbody>
     [% FOREACH messaging_preference IN messaging_preferences %]
@@ -202,7 +206,7 @@
       <td>-</td>
       [% END %]
 
-      [% IF has_print_transport %]
+      [% IF has_print_transport && show_print_notices %]
           [% IF ( messaging_preference.transport_print ) %]
               <td>
                   [% IF ( messaging_form_inactive ) %]
