@@ -11,11 +11,13 @@
             [% IF Koha.Preference('SMSSendDriver') %]<th>SMS</th>[% END %]
             [% IF Koha.Preference('TalkingTechItivaPhoneNotification') || Koha.Preference('PhoneNotification') %]<th>Phone</th>[% END %]
             <th>Email</th>
+            [%# Show print column only if any patron category has print_notice_charge > 0 %]
+            [%# Also check that print transport exists in messaging_preferences %]
             [% SET has_print_transport = 0 %]
             [% FOREACH pref IN messaging_preferences %]
                 [% IF pref.transport_print %][% SET has_print_transport = 1 %][% LAST %][% END %]
             [% END %]
-            [% IF has_print_transport %]
+            [% IF has_print_transport && show_print_notices %]
                 <th>
                     Print
                     [% IF patron.category.print_notice_charge > 0 %]
@@ -261,7 +263,7 @@
                     <td>-</td>
                 [% END %]
 
-                [% IF has_print_transport %]
+                [% IF has_print_transport && show_print_notices %]
                     [% IF ( messaging_preference.transport_print ) %]
                         <td>
                             [% IF ( messaging_form_inactive ) %]

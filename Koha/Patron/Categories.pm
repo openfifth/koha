@@ -33,6 +33,23 @@ Koha::Patron::Categories - Koha Patron Category Object set class
 
 =cut
 
+=head3 any_have_print_notice_charge
+
+    my $has_print_charges = Koha::Patron::Categories->any_have_print_notice_charge();
+
+Returns true if any patron category has print_notice_charge > 0, indicating
+that print notice charging is enabled for at least one category.
+
+This is used to determine whether to show print messaging preferences in the UI.
+
+=cut
+
+sub any_have_print_notice_charge {
+    my ($class) = @_;
+
+    return $class->search( { print_notice_charge => { '>' => 0 } } )->count > 0;
+}
+
 =head2 Internal methods
 
 =head3 _type
