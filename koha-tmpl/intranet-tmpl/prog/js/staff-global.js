@@ -713,6 +713,36 @@ function saveOrClearSimpleSearchParams() {
     localStorage.setItem("searchbox_value", searchbox_value);
 }
 
+function patron_autocomplete_render_selection(
+    item,
+    container,
+    input_name,
+    on_remove_callback
+) {
+    const patron_name = $patron_to_html(item);
+    const node = `
+      <div id='patron-detail-${item.patron_id}' class='patron-detail-autocomplete-selection'>
+        ${patron_name}
+        (<a href='#' class='removePatron'>
+          <i class='fa fa-trash-can' aria-hidden='true'></i> ${__("Remove")}
+        </a>)
+        <input type='hidden' name='${input_name}' value='${item.patron_id}' />
+      </div>
+    `;
+
+    $(container).append(node).parent().show(800);
+
+    $(container)
+        .off("click", ".removePatron")
+        .on("click", ".removePatron", function (e) {
+            e.preventDefault();
+            $(this).closest('div[id^="patron-detail-"]').remove();
+            if (on_remove_callback) {
+                on_remove_callback(e, { item: item });
+            }
+        });
+}
+
 function patron_autocomplete(node, options) {
     let link_to;
     let url_params;
@@ -785,28 +815,12 @@ function patron_autocomplete(node, options) {
             minLength: 3,
             select: function (event, ui) {
                 if (on_select_add_to) {
-                    let container = on_select_add_to.container;
-
-                    const patron_name = $patron_to_html(ui.item);
-                    const node = `
-                      <div id='patron-detail-${ui.item.patron_id}' class='patron-detail-autocomplete-selection'>
-                        ${patron_name}
-                        (<a href='#' class='removePatron'>
-                          <i class='fa fa-trash-can' aria-hidden='true'></i> ${__("Remove")}
-                        </a>)
-                        <input type='hidden' name='${on_select_add_to.input_name}' value='${ui.item.patron_id}' />
-                      </div>
-                    `;
-
-                    $(container).append(node).parent().show(800);
-
-                    $(container).on("click", ".removePatron", function (e) {
-                        e.preventDefault();
-                        $(this).closest('div[id^="patron-detail-"]').remove();
-                        if (on_remove_callback) {
-                            return on_remove_callback(event, ui);
-                        }
-                    });
+                    patron_autocomplete_render_selection(
+                        ui.item,
+                        on_select_add_to.container,
+                        on_select_add_to.input_name,
+                        options["on-remove-callback"]
+                    );
                 } else if (ui.item.link) {
                     window.location.href = ui.item.link;
                 }
