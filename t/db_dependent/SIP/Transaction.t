@@ -5,7 +5,7 @@
 
 use Modern::Perl;
 use Test::NoWarnings;
-use Test::More tests => 22;
+use Test::More tests => 24;
 use Test::Warn;
 
 use DateTime;
@@ -1641,6 +1641,96 @@ subtest 'Checkin message' => sub {
 
     $circ = $ils->checkout( $patron2->cardnumber, $item->barcode, undef, undef, $server->{account} );
     is( $circ->{screen_msg}, '', "Checked out item was checked out to the next patron" );
+};
+
+subtest 'TransferArrived should not trigger SIP alert' => sub {
+    plan tests => 4;
+
+    my $library1 = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $library2 = $builder->build_object( { class => 'Koha::Libraries' } );
+
+    my $item     = $builder->build_sample_item( { library => $library1->branchcode } );
+    my $sip_item = C4::SIP::ILS::Item->new( $item->barcode );
+
+    # Create a transfer from library1 to library2
+    my $transfer = Koha::Item::Transfer->new(
+        {
+            itemnumber => $item->itemnumber,
+            frombranch => $library1->branchcode,
+            tobranch   => $library2->branchcode,
+            datesent   => dt_from_string(),
+            reason     => 'Manual'
+        }
+    )->store;
+
+    t::lib::Mocks::mock_userenv( { branchcode => $library2->branchcode, flags => 1 } );
+    t::lib::Mocks::mock_preference( 'SIP2SortBinMapping', '' );
+
+    # Test: Checkin at correct destination with checked_in_ok=1 (should work perfectly)
+    my $ci_transaction = C4::SIP::ILS::Transaction::Checkin->new();
+    $ci_transaction->item($sip_item);
+
+    my $account_with_checked_in_ok = { checked_in_ok => 1, sort_bin_mapping => [] };
+    my $result = $ci_transaction->do_checkin( $library2->branchcode, undef, $account_with_checked_in_ok );
+
+    # Key test: TransferArrived message should be filtered out
+    ok( !$result->{messages}->{TransferArrived}, 'TransferArrived message filtered out by fix' );
+
+    # Verify no alert is triggered for successful transfer completion
+    is( $ci_transaction->alert_type, undef, 'No alert_type set for successful transfer completion' );
+    ok( !$ci_transaction->alert, 'Alert flag is false for successful transfer completion' );
+    is( $ci_transaction->ok, 1, 'Transaction marked as successful' );
+};
+
+subtest 'magnetic_media flag from item type' => sub {
+    plan tests => 4;
+
+    # Create an item type with magnetic = 1
+    my $itemtype_magnetic = $builder->build_object(
+        {
+            class => 'Koha::ItemTypes',
+            value => {
+                itemtype     => 'MAGNETIC',
+                description  => 'Magnetic Test Item Type',
+                sip_magnetic => 1,
+            }
+        }
+    );
+
+    # Create an item type with magnetic = 0
+    my $itemtype_non_magnetic = $builder->build_object(
+        {
+            class => 'Koha::ItemTypes',
+            value => {
+                itemtype     => 'NONMAG',
+                description  => 'Non-Magnetic Test Item Type',
+                sip_magnetic => 0,
+            }
+        }
+    );
+
+    # Create items with these types
+    my $item_magnetic = $builder->build_sample_item(
+        {
+            itype => $itemtype_magnetic->itemtype,
+        }
+    );
+
+    my $item_non_magnetic = $builder->build_sample_item(
+        {
+            itype => $itemtype_non_magnetic->itemtype,
+        }
+    );
+
+    # Test magnetic item
+    my $sip_item_magnetic = C4::SIP::ILS::Item->new( $item_magnetic->barcode );
+    ok( defined $sip_item_magnetic, 'SIP Item object created for magnetic item' );
+    is( $sip_item_magnetic->magnetic_media, 1, 'magnetic_media is 1 for magnetic item type' );
+
+    # Test non-magnetic item
+    my $sip_item_non_magnetic = C4::SIP::ILS::Item->new( $item_non_magnetic->barcode );
+    ok( defined $sip_item_non_magnetic, 'SIP Item object created for non-magnetic item' );
+    is( $sip_item_non_magnetic->magnetic_media, 0, 'magnetic_media is 0 for non-magnetic item type' );
 };
 
 $schema->storage->txn_rollback;
