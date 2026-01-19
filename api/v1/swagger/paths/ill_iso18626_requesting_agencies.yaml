@@ -7,6 +7,15 @@
       - iso18626_requesting_agencies
     summary: List ISO18626 ILL requesting agencies
     parameters:
+      - name: x-koha-embed
+        in: header
+        required: false
+        description: Embed list sent as a request header
+        type: array
+        items:
+          type: string
+          enum:
+            - ill_partner
       - $ref: "../swagger.yaml#/parameters/page"
       - $ref: "../swagger.yaml#/parameters/per_page"
       - $ref: "../swagger.yaml#/parameters/match"
@@ -121,6 +130,15 @@
       - iso18626_requesting_agencies
     summary: Retrieve a single ISO18626 ILL requesting agency
     parameters:
+      - name: x-koha-embed
+        in: header
+        required: false
+        description: Embed list sent as a request header
+        type: array
+        items:
+          type: string
+          enum:
+            - ill_partner
       - $ref: "../swagger.yaml#/parameters/iso18626_requesting_agency_id_pp"
     produces:
       - application/json
