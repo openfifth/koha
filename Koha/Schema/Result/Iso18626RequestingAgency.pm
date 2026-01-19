@@ -140,6 +140,18 @@ __PACKAGE__->belongs_to(
 # Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-01-12 15:10:21
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:D5Hii6mk3bn+dOfYWG+pnA
 
+__PACKAGE__->belongs_to(
+    "patron",
+    "Koha::Schema::Result::Borrower",
+    { borrowernumber => "borrowernumber" },
+    {
+        is_deferrable => 1,
+        join_type     => "LEFT",
+        on_delete     => "CASCADE",
+        on_update     => "CASCADE",
+    },
+);
+
 =head2 koha_object_class
 
 Missing POD for koha_object_class.
