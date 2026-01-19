@@ -1369,16 +1369,21 @@ sub test_checkin_v2 {
     my $card1       = $patron1->{cardnumber};
     my $sip_patron1 = C4::SIP::ILS::Patron->new($card1);
     $findpatron = $sip_patron1;
-    my $item_object = $builder->build_sample_item(
-        {
-            damaged       => 0,
-            withdrawn     => 0,
-            itemlost      => 0,
-            restricted    => 0,
-            homebranch    => $branchcode,
-            holdingbranch => $branchcode,
-        }
-    );
+
+    # Create itemtype with sip_magnetic = 0 to ensure alert flag tests work correctly
+    my $itemtype_obj = $builder->build_object({
+        class => 'Koha::ItemTypes',
+        value => { sip_magnetic => 0 },
+    });
+    my $item_object = $builder->build_sample_item({
+        damaged => 0,
+        withdrawn => 0,
+        itemlost => 0,
+        restricted => 0,
+        homebranch => $branchcode,
+        holdingbranch => $branchcode,
+        itype => $itemtype_obj->itemtype,
+    });
 
     my $mockILS = $mocks->{ils};
     my $server  = { ils => $mockILS, account => {} };
@@ -1663,16 +1668,21 @@ sub test_checkout_desensitize {
     my $sip_patron1     = C4::SIP::ILS::Patron->new($card1);
     my $patron_category = $sip_patron1->ptype();
     $findpatron = $sip_patron1;
-    my $item_object = $builder->build_sample_item(
-        {
-            damaged       => 0,
-            withdrawn     => 0,
-            itemlost      => 0,
-            restricted    => 0,
-            homebranch    => $branchcode,
-            holdingbranch => $branchcode,
-        }
-    );
+
+    # Create itemtype with sip_magnetic = 0 to ensure desensitize tests work correctly
+    my $itemtype_obj = $builder->build_object({
+        class => 'Koha::ItemTypes',
+        value => { sip_magnetic => 0 },
+    });
+    my $item_object = $builder->build_sample_item({
+        damaged => 0,
+        withdrawn => 0,
+        itemlost => 0,
+        restricted => 0,
+        homebranch => $branchcode,
+        holdingbranch => $branchcode,
+        itype => $itemtype_obj->itemtype,
+    });
     my $itemtype = $item_object->effective_itemtype;
 
     my $mockILS = $mocks->{ils};
@@ -1857,16 +1867,21 @@ sub test_renew_desensitize {
     my $sip_patron1     = C4::SIP::ILS::Patron->new($card1);
     my $patron_category = $sip_patron1->ptype();
     $findpatron = $sip_patron1;
-    my $item_object = $builder->build_sample_item(
-        {
-            damaged       => 0,
-            withdrawn     => 0,
-            itemlost      => 0,
-            restricted    => 0,
-            homebranch    => $branchcode,
-            holdingbranch => $branchcode,
-        }
-    );
+
+    # Create itemtype with sip_magnetic = 0 to ensure desensitize tests work correctly
+    my $itemtype_obj = $builder->build_object({
+        class => 'Koha::ItemTypes',
+        value => { sip_magnetic => 0 },
+    });
+    my $item_object = $builder->build_sample_item({
+        damaged => 0,
+        withdrawn => 0,
+        itemlost => 0,
+        restricted => 0,
+        homebranch => $branchcode,
+        holdingbranch => $branchcode,
+        itype => $itemtype_obj->itemtype,
+    });
     my $itemtype = $item_object->effective_itemtype;
 
     my $mockILS = $mocks->{ils};
