@@ -1,8 +1,24 @@
 <template>
     <li :class="{ 'breadcrumb-item': isBreadcrumb }">
         <span>
+            <a
+                v-if="item.is_external && item.path && !item.disabled"
+                :href="item.path"
+            >
+                <template v-if="item.icon">
+                    <i :class="`${item.icon}`"></i>&nbsp;
+                </template>
+                <span v-if="item.title">{{ $__(item.title) }}</span>
+                <template v-if="item.is_external">
+                    &nbsp;<i
+                        class="fa fa-external-link"
+                        aria-hidden="true"
+                        style="font-size: 0.8em; opacity: 0.7"
+                    ></i>
+                </template>
+            </a>
             <router-link
-                v-if="item.name && !item.disabled"
+                v-else-if="item.name && !item.disabled"
                 :to="{ name: item.name, params: item.is_base ? {} : params }"
             >
                 <template v-if="item.icon">
