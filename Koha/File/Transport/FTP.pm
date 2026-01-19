@@ -148,8 +148,8 @@ Returns an array of filenames found in the current directory of the server conne
 =cut
 
 sub list_files {
-    my ($self) = @_;
-    my $file_list = $self->{connection}->ls or return $self->_abort_operation();
+    my ($self, $path) = @_;
+    my $file_list = $self->{connection}->ls($path) or return $self->_abort_operation();
 
     $self->add_message(
         {

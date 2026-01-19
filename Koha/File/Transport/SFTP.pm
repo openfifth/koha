@@ -21,6 +21,7 @@ use Koha::Logger;
 
 use File::Spec;
 use IO::File;
+use JSON qw(encode_json decode_json);
 use Net::SFTP::Foreign;
 use Try::Tiny;
 
@@ -180,10 +181,10 @@ Returns an array of filenames found in the current directory of the server conne
 =cut
 
 sub list_files {
-    my ($self) = @_;
+    my ( $self, $path ) = @_;
     my $operation = "list";
 
-    my $file_list = $self->{connection}->ls or return $self->_abort_operation($operation);
+    my $file_list = $self->{connection}->ls($path) or return $self->_abort_operation($operation);
 
     $self->add_message(
         {
@@ -192,7 +193,7 @@ sub list_files {
             payload => {
                 status => $self->{connection}->status,
                 error  => $self->{connection}->error,
-                path   => $self->{connection}->cwd
+                path   => $path || $self->{connection}->cwd
             }
         }
     );
