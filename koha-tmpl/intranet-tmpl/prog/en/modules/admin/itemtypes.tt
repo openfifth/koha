@@ -343,11 +343,11 @@
                         </select>
                     </li>
                     <li>
-                        <label for="magnetic">SIP magnetic flag: </label>
+                        <label for="sip_magnetic">SIP magnetic flag: </label>
                         [% IF itemtype.sip_magnetic %]
-                            <input type="checkbox" id="magnetic" name="sip_magnetic" checked="checked" value="1" />
+                            <input type="checkbox" id="sip_magnetic" name="sip_magnetic" checked="checked" value="1" />
                         [% ELSE %]
-                            <input type="checkbox" id="magnetic" name="sip_magnetic" value="1" />
+                            <input type="checkbox" id="sip_magnetic" name="sip_magnetic" value="1" />
                         [% END %]
                         <span class="hint">If checked, items of this type are flagged as magnetic media for SIP responses.</span>
                     </li>
@@ -383,9 +383,6 @@
                                 [% END %]
                             </select>
                         </li>
-                    [% END %]
-                </ol>
-            </fieldset>
 
             <fieldset class="action">
                 <input type="submit" class="btn btn-primary" value="Save changes" />
