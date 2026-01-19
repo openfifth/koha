@@ -32,9 +32,9 @@ export default {
             const $searchInputRef = $(searchInputRef.value);
 
             const handleSelection = ui_item => {
-                emit("update:modelValue", ui_item.patron_id);
                 searchIsVisible.value = false;
                 $searchInputRef.val("").focus().hide();
+                emit("update:modelValue", ui_item.patron_id);
             };
 
             window.patron_autocomplete($searchInputRef, {
@@ -47,9 +47,9 @@ export default {
                     return false;
                 },
                 "on-remove-callback": (event, ui) => {
-                    emit("update:modelValue", "");
                     searchIsVisible.value = true;
                     $searchInputRef.show();
+                    emit("update:modelValue", "");
                     return false;
                 },
                 "additional-filters":
