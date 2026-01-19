@@ -250,9 +250,9 @@ export const useNavigationStore = defineStore("navigation", () => {
         }),
         navigationRoutes: computed(() => {
             let routes = _toRoute(store.routeState);
-            return Array.isArray(routes) ? routes : [routes];
+            let routeArray = Array.isArray(routes) ? routes : [routes];
 
-            // Function declarations
+            return routeArray.filter(route => !route.is_external);
 
             function _toRoute(parent) {
                 if (!isRoutable(parent)) return _getRoutableChildren(parent);
@@ -279,7 +279,11 @@ function addSlashIfNotPresent(path) {
 }
 
 function isRoutable(element) {
-    return element.path !== undefined || element.name !== undefined;
+    return (
+        element.path !== undefined ||
+        element.name !== undefined ||
+        element.is_external
+    );
 }
 
 function isParent(parent) {
