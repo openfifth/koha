@@ -40,6 +40,19 @@ sub to_api_mapping {
     };
 }
 
+=head3 ill_partner
+
+Return the ill_partner patron for this requesting agency
+
+=cut
+
+sub ill_partner {
+    my ($self) = @_;
+    my $patrons_rs = $self->_result->patron;
+    return unless $patrons_rs;
+    return Koha::Patron->_new_from_dbic($patrons_rs);
+}
+
 =head3 _type
 
 =cut
