@@ -29,6 +29,11 @@ properties:
   callback_endpoint:
     type: string
     description: Callback endpoint to send messages back to
+  ill_partner:
+    description: ILL partner patron object
+    type:
+    - object
+    - "null"
 required:
   - iso18626_requesting_agency_id
   - name
