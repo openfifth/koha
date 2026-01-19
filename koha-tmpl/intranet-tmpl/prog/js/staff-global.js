@@ -719,21 +719,15 @@ function patron_autocomplete_render_selection(
 
     $(container).append(node).parent().show(800);
 
-    $(container).on("click", ".removePatron", function (e) {
-        e.preventDefault();
-        $(this).closest('div[id^="patron-detail-"]').remove();
-        if (on_remove_callback) {
-            on_remove_callback(e, { item: item });
-        }
-    });
-
-    $(container).on("click", ".removePatron", function (e) {
-        e.preventDefault();
-        $(this).closest('div[id^="patron-detail-"]').remove();
-        if (on_remove_callback) {
-            return on_remove_callback(e, { item: item });
-        }
-    });
+    $(container)
+        .off("click", ".removePatron")
+        .on("click", ".removePatron", function (e) {
+            e.preventDefault();
+            $(this).closest('div[id^="patron-detail-"]').remove();
+            if (on_remove_callback) {
+                on_remove_callback(e, { item: item });
+            }
+        });
 }
 
 function patron_autocomplete(node, options) {
