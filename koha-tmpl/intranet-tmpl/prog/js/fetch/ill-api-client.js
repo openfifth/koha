@@ -51,6 +51,9 @@ export class ILLAPIClient {
             get: id =>
                 this.httpClient.get({
                     endpoint: "iso18626_requesting_agencies/" + id,
+                    headers: {
+                        "x-koha-embed": "ill_partner",
+                    },
                 }),
             getAll: (query, params) =>
                 this.httpClient.getAll({
