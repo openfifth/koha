@@ -227,10 +227,7 @@ export default {
                                     "</a>"
                                 );
                             }
-                            return accessNestedProperty(
-                                attr.relationshipDisplayAttr,
-                                row
-                            );
+                            return accessNestedProperty(attr.name, row);
                         },
                     });
                     return acc;

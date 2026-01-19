@@ -138,6 +138,22 @@
             ></component>
         </template>
     </template>
+    <template v-else-if="attribute.type == 'relationshipSelect'">
+        <label>{{ attribute.label }}:</label>
+        <LinkWrapper
+            :linkData="attribute.showElement?.link"
+            :resource="resource"
+        >
+            <span>
+                {{
+                    attribute?.format ||
+                    (attribute.value && attribute?.value.includes("."))
+                        ? formatValue(attribute, resource)
+                        : resource[attribute.name]
+                }}
+            </span>
+        </LinkWrapper>
+    </template>
     <template
         v-else-if="
             attr.type == 'additional_fields' &&
