@@ -124,6 +124,10 @@
             ></component>
         </template>
     </template>
+    <template v-else-if="attribute.type == 'patronAutoComplete'">
+        <label>{{ attribute.label }}:</label>
+        <span v-html="patronHTML(resource, attr)"></span>
+    </template>
     <template
         v-else-if="attribute.type == 'relationship' && attribute.componentPath"
     >
@@ -191,6 +195,23 @@ export default {
             }
             return props.attr;
         });
+
+        const patronHTML = (resource, attr) => {
+            if (resource[attr.patronEmbedName]) {
+                const patron = resource[attr.patronEmbedName];
+                if (patron) {
+                    return (
+                        '<a href="/cgi-bin/koha/members/moremember.pl?borrowernumber=' +
+                        patron.patron_id +
+                        '">' +
+                        $patron_to_html(patron) +
+                        "</a>"
+                    );
+                }
+            }
+            return "";
+        };
+
         const formatValue = (attr, resource) => {
             const valueKey = attr.hasOwnProperty("value")
                 ? attr.value
@@ -219,6 +240,7 @@ export default {
             attribute,
             formatValue,
             radioOptionText,
+            patronHTML,
         };
     },
     props: {
