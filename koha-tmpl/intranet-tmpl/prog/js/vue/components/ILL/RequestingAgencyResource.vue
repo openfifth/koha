@@ -51,6 +51,12 @@ export default {
             },
             resourceAttrs: [
                 {
+                    name: "iso18626_requesting_agency_id",
+                    label: $__("ID"),
+                    type: "text",
+                    hideIn: ["Form"],
+                },
+                {
                     name: "patron_id",
                     type: "patronAutoComplete",
                     label: __("ILL partner"),
@@ -60,13 +66,8 @@ export default {
                             "me.category_id": config.settings.ILLPartnerCode,
                         },
                     },
+                    patronEmbedName: "ill_partner",
                     required: true,
-                },
-                {
-                    name: "iso18626_requesting_agency_id",
-                    label: $__("ID"),
-                    type: "text",
-                    hideIn: ["Form"],
                 },
                 {
                     name: "name",
@@ -122,54 +123,9 @@ export default {
 
         const tableOptions = {
             url: () => tableUrl(),
-            //table_settings: supplying_ill_table_settings, #FIXME: This causes error from datatables.js -> out of this scope
-            // table_settings: {
-            //     columns: [
-            //         {
-            //             columnname: "iso18626_request_id",
-            //             cannot_be_modified: 0,
-            //             is_hidden: 0,
-            //             cannot_be_toggled: 0,
-            //         },
-            //         {
-            //             columnname: "supplyingAgencyId",
-            //             is_hidden: 0,
-            //             cannot_be_modified: 0,
-            //             cannot_be_toggled: 0,
-            //         },
-            //         {
-            //             is_hidden: 0,
-            //             cannot_be_toggled: 0,
-            //             cannot_be_modified: 0,
-            //             columnname: "requestingAgencyId",
-            //         },
-            //         {
-            //             is_hidden: 0,
-            //             cannot_be_toggled: 0,
-            //             cannot_be_modified: 0,
-            //             columnname: "status",
-            //         },
-            //         {
-            //             is_hidden: 0,
-            //             cannot_be_modified: 0,
-            //             cannot_be_toggled: 0,
-            //             columnname: "timestamp",
-            //         },
-            //         {
-            //             is_hidden: 0,
-            //             cannot_be_toggled: 0,
-            //             cannot_be_modified: 0,
-            //             columnname: "requestingAgencyRequestId",
-            //         },
-            //     ],
-            //     default_display_length: null,
-            //     table: "iso18626_requests",
-            //     module: "ill",
-            //     default_save_state: 1,
-            //     page: "ill",
-            //     default_sort_order: null,
-            //     default_save_state_search: 0,
-            // },
+            options: {
+                embed: "ill_partner",
+            },
             actions: {
                 0: ["show"],
                 1: ["show"],
@@ -187,6 +143,7 @@ export default {
                 iso18626_requesting_agency.iso18626_requesting_agency_id;
 
             delete iso18626_requesting_agency.iso18626_requesting_agency_id;
+            delete iso18626_requesting_agency.ill_partner;
 
             if (iso18626_requesting_agency_id) {
                 baseResource.apiClient
