@@ -92,9 +92,11 @@ import { VueDraggableNext } from "vue-draggable-next";
 export default {
     props: {
         availableWidgets: Array,
+        name: String,
     },
     setup(props) {
         const availableWidgets = props.availableWidgets;
+        const name = props.name;
         const selectedWidgetsLeft = ref([]);
         const selectedWidgetsRight = ref([]);
         const isDragging = ref(false);
@@ -216,7 +218,9 @@ export default {
         };
 
         onMounted(() => {
-            const storedWidgets = localStorage.getItem("dashboard-widgets");
+            const storedWidgets = localStorage.getItem(
+                name + "-dashboard-widgets"
+            );
             if (storedWidgets) {
                 const { left, right } = JSON.parse(storedWidgets);
                 left.forEach(widgetName => {
@@ -246,7 +250,7 @@ export default {
                 const leftWidgetNames = left.map(widget => widget.name);
                 const rightWidgetNames = right.map(widget => widget.name);
                 localStorage.setItem(
-                    "dashboard-widgets",
+                    name + "-dashboard-widgets",
                     JSON.stringify({
                         left: leftWidgetNames,
                         right: rightWidgetNames,
