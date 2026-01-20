@@ -1,5 +1,5 @@
 <template>
-    <ModuleDashboard :availableWidgets="availableWidgets" />
+    <ModuleDashboard name="ERM" :availableWidgets="availableWidgets" />
 </template>
 
 <script>
