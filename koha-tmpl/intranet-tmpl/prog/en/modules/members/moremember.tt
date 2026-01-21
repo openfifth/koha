@@ -10,6 +10,7 @@
 [% PROCESS 'member-display-address-style.inc' %]
 [% PROCESS 'member-display-alt-address-style.inc' %]
 [% PROCESS 'i18n.inc' %]
+[% PROCESS 'patron-search.inc' %]
 [% SET footerjs = 1 %]
 [% INCLUDE 'doc-head-open.inc' %]
 <title
@@ -284,6 +285,46 @@
                                         <li>[% patron.contactfirstname | html %] [% patron.contactname | html %][% IF patron.relationship %]([% patron.relationship | html %])[% END %]</li>
                                     [% END %]
                                 </ul>
+                            </li>
+                        [% END %]
+
+                        [% IF Koha.Preference('EnablePatronAccountLinking') %]
+                            <li id="patron-linked-accounts">
+                                <span class="label">Linked accounts:</span>
+                                [% IF linked_accounts.size > 0 %]
+                                    <ul>
+                                        [% IF linked_accounts_debt && linked_accounts_debt > 0 %]
+                                            <li class="linked-accounts-fines">
+                                                <span class="circ-hlt">Combined charges:</span>
+                                                Linked accounts collectively owe [% linked_accounts_debt | $Price %].
+                                            </li>
+                                        [% END %]
+                                        [% FOREACH linked IN linked_accounts %]
+                                            <li class="linked-account-item" data-borrowernumber="[% linked.borrowernumber | html %]">
+                                                [% IF logged_in_user.can_see_patron_infos( linked ) %]
+                                                    <a href="/cgi-bin/koha/members/moremember.pl?borrowernumber=[% linked.borrowernumber | uri %]">[% linked.firstname | html %] [% linked.surname | html %]</a>
+                                                [% ELSE %]
+                                                    [% linked.firstname | html %]
+                                                    [% linked.surname | html %]
+                                                [% END %]
+                                                ([% linked.cardnumber | html %]) [% IF linked.branchcode %]- [% Branches.GetName( linked.branchcode ) | html %][% END %]
+                                            </li>
+                                        [% END %]
+                                    </ul>
+                                    [% IF CAN_user_borrowers_edit_borrowers %]
+                                        <p style="margin-top: 5px;">
+                                            <a href="#patron_search_modal_linked" class="btn btn-default" data-bs-toggle="modal"><i class="fa fa-plus"></i> Add linked account</a>
+                                            <a href="#" id="leave-linked-accounts" class="btn btn-default" title="Remove this patron from their linked group"><i class="fa fa-trash-can"></i> Leave linked group</a>
+                                        </p>
+                                    [% END %]
+                                [% ELSE %]
+                                    <span class="none">None</span>
+                                    [% IF CAN_user_borrowers_edit_borrowers %]
+                                        <p style="margin-top: 5px;">
+                                            <a href="#patron_search_modal_linked" class="btn btn-default" data-bs-toggle="modal"><i class="fa fa-plus"></i> Add linked account</a>
+                                        </p>
+                                    [% END %]
+                                [% END %]
                             </li>
                         [% END %]
 
@@ -922,9 +963,81 @@
                 placeholder: _("Select or type a reason"),
                 context: "modal",
             });
+
+            [% IF Koha.Preference('EnablePatronAccountLinking') && CAN_user_borrowers_edit_borrowers %]
+            // Linked accounts management - leave entire linked group
+            $("#leave-linked-accounts").on("click", function(e) {
+                e.preventDefault();
+                var patron_borrowernumber = [% patron.borrowernumber | html %];
+
+                if (confirm(_("Are you sure you want to remove this patron from all linked accounts?"))) {
+                    // Get the link_id for the current patron
+                    $.ajax({
+                        url: "/api/v1/patrons/" + patron_borrowernumber + "/account_links",
+                        type: "GET",
+                        headers: { "Accept": "application/json" },
+                        success: function(links) {
+                            // Find the CURRENT patron's link record
+                            var link = links.find(function(l) { return l.patron_id == patron_borrowernumber; });
+                            if (link) {
+                                // Delete the current patron's link (removes them from the group)
+                                $.ajax({
+                                    url: "/api/v1/patrons/" + patron_borrowernumber + "/account_links/" + link.account_link_id,
+                                    type: "DELETE",
+                                    success: function() {
+                                        // Reload page to show updated state
+                                        location.reload();
+                                    },
+                                    error: function(xhr) {
+                                        alert(_("Error leaving linked group: ") + xhr.responseJSON.error);
+                                    }
+                                });
+                            }
+                        },
+                        error: function(xhr) {
+                            alert(_("Error fetching linked accounts: ") + xhr.responseJSON.error);
+                        }
+                    });
+                }
+            });
+            [% END %]
         });
+
+        [% IF Koha.Preference('EnablePatronAccountLinking') && CAN_user_borrowers_edit_borrowers %]
+        function link_patron(borrowernumber, borrower) {
+            var patron_borrowernumber = [% patron.borrowernumber | html %];
+
+            if (borrowernumber == patron_borrowernumber) {
+                alert(_("Cannot link a patron to themselves."));
+                return;
+            }
+
+            $.ajax({
+                url: "/api/v1/patrons/" + patron_borrowernumber + "/account_links",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ linked_patron_id: borrowernumber }),
+                success: function(response) {
+                    // Reload the page to show the new linked account
+                    location.reload();
+                },
+                error: function(xhr) {
+                    var error_msg = xhr.responseJSON ? xhr.responseJSON.error : _("Unknown error");
+                    alert(_("Error linking account: ") + error_msg);
+                }
+            });
+
+            $("#patron_search_modal_linked").modal("hide");
+        }
+        [% END %]
     </script>
     [% Asset.js("js/checkouts.js") | $raw %]
+
+    [% IF Koha.Preference('EnablePatronAccountLinking') && CAN_user_borrowers_edit_borrowers %]
+        [% SET columns = ['cardnumber', 'name', 'category', 'branch', 'action'] %]
+        [% PROCESS patron_search_modal columns => columns, modal_title => t("Link patron account"), patron_search_modal_id => 'patron_search_modal_linked', table_id => 'patron_search_modal_linked_table' %]
+        [% PROCESS patron_search_js columns => columns, actions => ["select"], preview_on_name_click => 1, table_id => 'patron_search_modal_linked_table', callback => 'link_patron' %]
+    [% END %]
 [% END %]
 
 [% INCLUDE 'intranet-bottom.inc' %]
