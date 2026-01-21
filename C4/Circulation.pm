@@ -975,6 +975,29 @@ sub CanBookBeIssued {
         }
     }
 
+    my $no_issues_charge_linked = $patron_borrowing_status->{NoIssuesChargeLinkedAccounts}->{limit};
+    if ( defined $no_issues_charge_linked ) {
+        if (   $patron_borrowing_status->{NoIssuesChargeLinkedAccounts}->{overlimit}
+            && !$inprocess
+            && !$allowfineoverride )
+        {
+            $issuingimpossible{DEBT_LINKED_ACCOUNTS} =
+                $patron_borrowing_status->{NoIssuesChargeLinkedAccounts}->{charge};
+        } elsif ( $patron_borrowing_status->{NoIssuesChargeLinkedAccounts}->{overlimit}
+            && !$inprocess
+            && $allowfineoverride )
+        {
+            $needsconfirmation{DEBT_LINKED_ACCOUNTS} =
+                $patron_borrowing_status->{NoIssuesChargeLinkedAccounts}->{charge};
+        } elsif ( $allfinesneedoverride
+            && $patron_borrowing_status->{NoIssuesChargeLinkedAccounts}->{charge} > 0
+            && !$inprocess )
+        {
+            $needsconfirmation{DEBT_LINKED_ACCOUNTS} =
+                $patron_borrowing_status->{NoIssuesChargeLinkedAccounts}->{charge};
+        }
+    }
+
     if ( C4::Context->preference("IssuingInProcess") ) {
         if ( $patron_borrowing_status->{noissuescharge}->{overlimit} && !$inprocess && !$allowfineoverride ) {
             $issuingimpossible{DEBT} = $patron_borrowing_status->{noissuescharge}->{charge};
@@ -1261,27 +1284,47 @@ sub CanBookBeIssued {
         if ($restype) {
             my $resbor = $res->{'borrowernumber'};
             if ( $resbor ne $patron->borrowernumber ) {
-                my $patron = Koha::Patrons->find($resbor);
+                my $hold_patron = Koha::Patrons->find($resbor);
                 if ( $restype eq "Waiting" ) {
 
-                    # The item is on reserve and waiting, but has been
-                    # reserved by some other patron.
-                    $needsconfirmation{RESERVE_WAITING}     = 1;
-                    $needsconfirmation{'resfirstname'}      = $patron->firstname;
-                    $needsconfirmation{'ressurname'}        = $patron->surname;
-                    $needsconfirmation{'rescardnumber'}     = $patron->cardnumber;
-                    $needsconfirmation{'resborrowernumber'} = $patron->borrowernumber;
-                    $needsconfirmation{'resbranchcode'}     = $res->{branchcode};
-                    $needsconfirmation{'reswaitingdate'}    = $res->{'waitingdate'};
-                    $needsconfirmation{'reserve_id'}        = $res->{reserve_id};
+                    # Check if hold is for a linked account
+                    my $is_linked_account = 0;
+                    if (   C4::Context->preference('EnablePatronAccountLinking')
+                        && C4::Context->preference('AllowLinkedAccountHoldPickup') )
+                    {
+                        my $linked_ids = $patron->all_linked_borrowernumbers;
+                        $is_linked_account = grep { $_ == $resbor } @$linked_ids;
+                    }
+
+                    if ($is_linked_account) {
+
+                        # Hold is for a linked account - allow pickup with redirect
+                        $alerts{LINKED_ACCOUNT_HOLD_PICKUP} = {
+                            reserve_id     => $res->{reserve_id},
+                            hold_patron_id => $resbor,
+                            hold_patron    => $hold_patron,
+                        };
+                    } else {
+
+                        # The item is on reserve and waiting, but has been
+                        # reserved by some other patron.
+                        $needsconfirmation{RESERVE_WAITING}     = 1;
+                        $needsconfirmation{'resfirstname'}      = $hold_patron->firstname;
+                        $needsconfirmation{'ressurname'}        = $hold_patron->surname;
+                        $needsconfirmation{'rescardnumber'}     = $hold_patron->cardnumber;
+                        $needsconfirmation{'resborrowernumber'} = $hold_patron->borrowernumber;
+                        $needsconfirmation{'resbranchcode'}     = $res->{branchcode};
+                        $needsconfirmation{'reswaitingdate'}    = $res->{'waitingdate'};
+                        $needsconfirmation{'reserve_id'}        = $res->{reserve_id};
+                    }
                 } elsif ( $restype eq "Reserved" ) {
 
                     # The item is on reserve for someone else.
                     $needsconfirmation{RESERVED}            = 1;
-                    $needsconfirmation{'resfirstname'}      = $patron->firstname;
-                    $needsconfirmation{'ressurname'}        = $patron->surname;
-                    $needsconfirmation{'rescardnumber'}     = $patron->cardnumber;
-                    $needsconfirmation{'resborrowernumber'} = $patron->borrowernumber;
+                    $needsconfirmation{'resfirstname'}      = $hold_patron->firstname;
+                    $needsconfirmation{'ressurname'}        = $hold_patron->surname;
+                    $needsconfirmation{'rescardnumber'}     = $hold_patron->cardnumber;
+                    $needsconfirmation{'resborrowernumber'} = $hold_patron->borrowernumber;
                     $needsconfirmation{'resbranchcode'}     = $res->{branchcode};
                     $needsconfirmation{'resreservedate'}    = $res->{reservedate};
                     $needsconfirmation{'reserve_id'}        = $res->{reserve_id};
@@ -1289,10 +1332,10 @@ sub CanBookBeIssued {
 
                     # The item is determined hold being transferred for someone else.
                     $needsconfirmation{TRANSFERRED}         = 1;
-                    $needsconfirmation{'resfirstname'}      = $patron->firstname;
-                    $needsconfirmation{'ressurname'}        = $patron->surname;
-                    $needsconfirmation{'rescardnumber'}     = $patron->cardnumber;
-                    $needsconfirmation{'resborrowernumber'} = $patron->borrowernumber;
+                    $needsconfirmation{'resfirstname'}      = $hold_patron->firstname;
+                    $needsconfirmation{'ressurname'}        = $hold_patron->surname;
+                    $needsconfirmation{'rescardnumber'}     = $hold_patron->cardnumber;
+                    $needsconfirmation{'resborrowernumber'} = $hold_patron->borrowernumber;
                     $needsconfirmation{'resbranchcode'}     = $res->{branchcode};
                     $needsconfirmation{'resreservedate'}    = $res->{reservedate};
                     $needsconfirmation{'reserve_id'}        = $res->{reserve_id};
@@ -1300,10 +1343,10 @@ sub CanBookBeIssued {
 
                     # The item is determined hold being processed for someone else.
                     $needsconfirmation{PROCESSING}          = 1;
-                    $needsconfirmation{'resfirstname'}      = $patron->firstname;
-                    $needsconfirmation{'ressurname'}        = $patron->surname;
-                    $needsconfirmation{'rescardnumber'}     = $patron->cardnumber;
-                    $needsconfirmation{'resborrowernumber'} = $patron->borrowernumber;
+                    $needsconfirmation{'resfirstname'}      = $hold_patron->firstname;
+                    $needsconfirmation{'ressurname'}        = $hold_patron->surname;
+                    $needsconfirmation{'rescardnumber'}     = $hold_patron->cardnumber;
+                    $needsconfirmation{'resborrowernumber'} = $hold_patron->borrowernumber;
                     $needsconfirmation{'resbranchcode'}     = $res->{branchcode};
                     $needsconfirmation{'resreservedate'}    = $res->{reservedate};
                     $needsconfirmation{'reserve_id'}        = $res->{reserve_id};
@@ -3507,7 +3550,7 @@ sub CanBookBeRenewed {
                         unless CanItemBeReserved(
                         $patron_with_reserve, $other_item, undef,
                         { ignore_hold_counts => 1 }
-                        )->{status} eq 'OK';
+                    )->{status} eq 'OK';
 
                     # NOTE: At checkin we call 'CheckReserves' which checks hold 'policy'
                     # CanItemBeReserved checks 'rules' and 'policies' which means
