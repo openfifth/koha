@@ -112,6 +112,16 @@
         <div class="alert alert-warning">Item is booked by this user</div>
     [% END %]
 
+    [% IF linked_account_checkout %]
+        <div class="alert alert-info">
+            <strong>Linked account checkout:</strong> This item was on hold for a linked account. Checkout has been issued to
+            <a href="/cgi-bin/koha/members/moremember.pl?borrowernumber=[% linked_account_checkout.hold_patron.borrowernumber | uri %]"
+                >[% linked_account_checkout.hold_patron.firstname | html %] [% linked_account_checkout.hold_patron.surname | html %]</a
+            >
+            ([% linked_account_checkout.hold_patron.cardnumber | html %]) instead of [% linked_account_checkout.original_patron.firstname | html %] [% linked_account_checkout.original_patron.surname | html %].
+        </div>
+    [% END %]
+
     [% IF ( nopermission ) %]
         <div class="alert alert-warning">Staff members are not allowed to discharge borrowers, nor borrowers to request a discharge.</div>
     [% END %]
@@ -156,6 +166,10 @@
 
                 [% IF ( DEBT_GUARANTORS ) %]
                     <li class="needsconfirm debt_guarantors">The patron's guarantors and their other guarantees collectively have a debt of [% DEBT_GUARANTORS | $Price %].</li>
+                [% END %]
+
+                [% IF ( DEBT_LINKED_ACCOUNTS ) %]
+                    <li class="needsconfirm debt_linked_accounts">The patron's linked accounts collectively have a debt of [% DEBT_LINKED_ACCOUNTS | $Price %].</li>
                 [% END %]
 
                 [% IF ( RENTALCHARGE && RENTALCHARGE > 0 ) %]
@@ -557,12 +571,18 @@
         <div id="circ_impossible" class="alert alert-warning audio-alert-warning focus" tabindex="-1">
             [% IF ( UNKNOWN_BARCODE ) %]
                 <h3>Barcode not found</h3>
+            [% ELSIF ( DEBT_GUARANTORS || DEBT_LINKED_ACCOUNTS ) %]
+                <h3>Cannot check out</h3>
             [% END %]
 
             <!-- RESULT OF ISSUING REQUEST -->
             <ul>
                 [% IF ( DEBT_GUARANTORS ) %]
                     <li>The patron's guarantors and their other guarantees collectively have a debt of [% DEBT_GUARANTORS | $Price %].</li>
+                [% END %]
+
+                [% IF ( DEBT_LINKED_ACCOUNTS ) %]
+                    <li>The patron's linked accounts collectively have a debt of [% DEBT_LINKED_ACCOUNTS | $Price %].</li>
                 [% END %]
 
                 [% IF ( STATS ) %]
