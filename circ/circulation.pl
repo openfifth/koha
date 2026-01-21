@@ -603,8 +603,19 @@ if ( @$barcodes && $op eq 'cud-checkout' ) {
                     }
                 }
                 $needsconfirmation->{'DEBT'} = $needsconfirmationDEBT if ($debt_confirmed);
+
+                # Handle linked account hold pickup - redirect checkout to hold patron's account
+                my $checkout_patron = $patron;
+                if ( $alerts->{LINKED_ACCOUNT_HOLD_PICKUP} ) {
+                    $checkout_patron = $alerts->{LINKED_ACCOUNT_HOLD_PICKUP}->{hold_patron};
+                    $template_params->{linked_account_checkout} = {
+                        original_patron => $patron,
+                        hold_patron     => $checkout_patron,
+                    };
+                }
+
                 my $issue = AddIssue(
-                    $patron, $barcode, $datedue,
+                    $checkout_patron, $barcode, $datedue,
                     $cancelreserve,
                     undef, undef,
                     {
