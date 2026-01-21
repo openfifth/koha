@@ -49,6 +49,7 @@ use Koha::Exceptions;
 use Koha::Exceptions::Password;
 use Koha::Exceptions::Authorization;
 use Koha::Exceptions::HoldGroup;
+use Koha::Exceptions::PatronAccountLink;
 use Koha::Holds;
 use Koha::HoldGroups;
 use Koha::ILL::Requests;
@@ -744,6 +745,77 @@ sub linked_accounts_debt {
     }
 
     return $total;
+}
+
+=head3 linked_account_links
+
+    my $links = $patron->linked_account_links;
+
+Returns all AccountLinks in this patron's link group as a Koha::Patron::AccountLinks
+resultset, or undef if patron is not linked.
+
+=cut
+
+sub linked_account_links {
+    my ($self) = @_;
+
+    my $link = $self->account_link;
+    return unless $link;
+
+    return Koha::Patron::AccountLinks->search( { link_group_id => $link->link_group_id } );
+}
+
+=head3 link_to_patron
+
+    my $link = $patron->link_to_patron( $other_patron );
+
+Links this patron to another patron's account. Handles group creation/joining.
+Returns the patron's AccountLink object.
+
+Throws:
+    Koha::Exceptions::PatronAccountLink::AlreadyLinked
+    Koha::Exceptions::PatronAccountLink::DifferentGroups
+
+=cut
+
+sub link_to_patron {
+    my ( $self, $other_patron ) = @_;
+
+    my $own_link   = $self->account_link;
+    my $other_link = $other_patron->account_link;
+
+    # Both already linked to same group
+    if ( $own_link && $other_link && $own_link->link_group_id == $other_link->link_group_id ) {
+        Koha::Exceptions::PatronAccountLink::AlreadyLinked->throw();
+    }
+
+    # Both belong to different groups
+    if ( $own_link && $other_link ) {
+        Koha::Exceptions::PatronAccountLink::DifferentGroups->throw();
+    }
+
+    # Determine group ID
+    my $link_group_id;
+    if ($own_link) {
+        $link_group_id = $own_link->link_group_id;
+    } elsif ($other_link) {
+        $link_group_id = $other_link->link_group_id;
+    } else {
+        $link_group_id = Koha::Patron::AccountLinks->get_next_group_id();
+    }
+
+    # Create missing links
+    unless ($own_link) {
+        Koha::Patron::AccountLink->new( { link_group_id => $link_group_id, borrowernumber => $self->borrowernumber } )
+            ->store;
+    }
+
+    unless ($other_link) {
+        Koha::Patron::AccountLink->new(
+            { link_group_id => $link_group_id, borrowernumber => $other_patron->borrowernumber } )->store;
+    }
+
+    return $self->account_link;
 }
 
 =head3 housebound_profile
