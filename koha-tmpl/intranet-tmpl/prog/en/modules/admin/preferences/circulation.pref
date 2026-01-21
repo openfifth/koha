@@ -429,6 +429,12 @@ Circulation:
               class: integer
             - '[% local_currency %] in fines.'
         -
+            - Prevent a patron from checking out if the combined fines across all linked accounts exceed
+            - pref: NoIssuesChargeLinkedAccounts
+              class: integer
+            - '[% local_currency %].'
+            - "<br><strong>NOTE:</strong> Requires <a href=\"/cgi-bin/koha/admin/preferences.pl?op=search&searchfield=EnablePatronAccountLinking\">EnablePatronAccountLinking</a> to be enabled."
+        -
             - pref: ReturnBeforeExpiry
               choices:
                   1: Require
@@ -863,6 +869,13 @@ Circulation:
                   1: Allow
                   0: "Don't allow"
             - staff to override hold policies when placing holds.
+        -
+            - pref: AllowLinkedAccountHoldPickup
+              choices:
+                  1: Allow
+                  0: "Don't allow"
+            - "patrons to pick up holds placed by any of their linked accounts. The checkout will be automatically issued to the account that placed the hold."
+            - "<br><strong>NOTE:</strong> Requires <a href=\"/cgi-bin/koha/admin/preferences.pl?op=search&searchfield=EnablePatronAccountLinking\">EnablePatronAccountLinking</a> to be enabled."
         -
             - pref: AllowHoldsOnDamagedItems
               choices:
