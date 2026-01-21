@@ -1,0 +1,19 @@
+---
+type: object
+properties:
+  account_link_id:
+    type: integer
+    description: Internal link identifier
+    readOnly: true
+  link_group_id:
+    type: integer
+    description: Group identifier linking accounts together
+  patron_id:
+    type: integer
+    description: Patron this link belongs to
+  created_on:
+    type: string
+    format: date-time
+    description: When the link was created
+    readOnly: true
+additionalProperties: false
