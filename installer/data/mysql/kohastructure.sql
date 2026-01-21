@@ -5361,6 +5361,25 @@ CREATE TABLE `overduerules_transport_types` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `patron_account_links`
+--
+
+DROP TABLE IF EXISTS `patron_account_links`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `patron_account_links` (
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'primary key',
+  `link_group_id` int(11) NOT NULL COMMENT 'groups linked accounts together',
+  `borrowernumber` int(11) NOT NULL COMMENT 'foreign key to borrowers table',
+  `created_on` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'when the link was created',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `borrowernumber` (`borrowernumber`),
+  KEY `link_group_id` (`link_group_id`),
+  CONSTRAINT `patron_account_links_ibfk_1` FOREIGN KEY (`borrowernumber`) REFERENCES `borrowers` (`borrowernumber`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `patron_consent`
 --
 
