@@ -65,6 +65,7 @@ use Koha::Patron::Images;
 use Koha::Patron::Messages;
 use Koha::Patron::Modifications;
 use Koha::Patron::MessagePreferences;
+use Koha::Patron::AccountLinks;
 use Koha::Patron::Relationships;
 use Koha::Patron::Restrictions;
 use Koha::Patrons;
@@ -679,6 +680,70 @@ sub relationships_debt {
     }
 
     return $non_issues_charges;
+}
+
+=head3 account_link
+
+Returns the Koha::Patron::AccountLink for this patron, or undef if not linked
+
+=cut
+
+sub account_link {
+    my ($self) = @_;
+    return Koha::Patron::AccountLinks->find( { borrowernumber => $self->borrowernumber } );
+}
+
+=head3 linked_accounts
+
+Returns Koha::Patrons of all linked accounts (excluding self)
+
+=cut
+
+sub linked_accounts {
+    my ($self) = @_;
+
+    my $link = $self->account_link;
+    return Koha::Patrons->new->empty unless $link;
+
+    return $link->linked_patrons;
+}
+
+=head3 all_linked_borrowernumbers
+
+Returns arrayref of all borrowernumbers in the link group (including self)
+
+=cut
+
+sub all_linked_borrowernumbers {
+    my ($self) = @_;
+
+    my $link = $self->account_link;
+    return [ $self->borrowernumber ] unless $link;
+
+    return $link->all_linked_borrowernumbers;
+}
+
+=head3 linked_accounts_debt
+
+Returns total non_issues_charges across all linked accounts
+
+=cut
+
+sub linked_accounts_debt {
+    my ($self) = @_;
+
+    my $total = 0;
+    my $link  = $self->account_link;
+    return $total unless $link;
+
+    my $linked = Koha::Patron::AccountLinks->search( { link_group_id => $link->link_group_id } );
+
+    while ( my $l = $linked->next ) {
+        my $patron = Koha::Patrons->find( $l->borrowernumber );
+        $total += $patron->account->non_issues_charges if $patron;
+    }
+
+    return $total;
 }
 
 =head3 housebound_profile
@@ -3604,7 +3669,8 @@ sub can_checkout {
     $status->{can_checkout} = 0
         if $patron_charge_limits->{noissuescharge}->{overlimit}
         || $patron_charge_limits->{NoIssuesChargeGuarantees}->{overlimit}
-        || $patron_charge_limits->{NoIssuesChargeGuarantorsWithGuarantees}->{overlimit};
+        || $patron_charge_limits->{NoIssuesChargeGuarantorsWithGuarantees}->{overlimit}
+        || $patron_charge_limits->{NoIssuesChargeLinkedAccounts}->{overlimit};
 
     return $status;
 }
@@ -3670,6 +3736,25 @@ sub is_patron_inside_charge_limits {
     $patron_charge_limits->{NoIssuesChargeGuarantorsWithGuarantees}->{overlimit} = 1
         if $no_issues_charge_guarantors_with_guarantees
         && $guarantors_non_issues_charges > $no_issues_charge_guarantors_with_guarantees;
+
+    my $no_issues_charge_linked   = C4::Context->preference('NoIssuesChargeLinkedAccounts');
+    my $linked_non_issues_charges = 0;
+
+    if (   C4::Context->preference('EnablePatronAccountLinking')
+        && defined $no_issues_charge_linked
+        && looks_like_number($no_issues_charge_linked) )
+    {
+        $linked_non_issues_charges = $patron->linked_accounts_debt();
+    }
+
+    $patron_charge_limits->{NoIssuesChargeLinkedAccounts} = {
+        limit     => $no_issues_charge_linked,
+        charge    => $linked_non_issues_charges,
+        overlimit => 0
+    };
+    $patron_charge_limits->{NoIssuesChargeLinkedAccounts}->{overlimit} = 1
+        if $no_issues_charge_linked
+        && $linked_non_issues_charges > $no_issues_charge_linked;
 
     return $patron_charge_limits;
 }
