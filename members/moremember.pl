@@ -114,6 +114,21 @@ $template->param(
     guarantor_relationships => $guarantor_relationships,
     guarantees              => \@guarantees,
 );
+
+# Get linked accounts if feature is enabled
+my @linked_accounts;
+my $linked_accounts_debt = 0;
+if ( C4::Context->preference('EnablePatronAccountLinking') ) {
+    @linked_accounts = $patron->linked_accounts->as_list;
+    if (@linked_accounts) {
+        $linked_accounts_debt = $patron->linked_accounts_debt;
+    }
+}
+$template->param(
+    linked_accounts      => \@linked_accounts,
+    linked_accounts_debt => $linked_accounts_debt,
+);
+
 if (    C4::Context->preference('ChildNeedsGuarantor')
     and ( $patron->is_child or $category->can_be_guarantee )
     and $patron->contactname eq ""
