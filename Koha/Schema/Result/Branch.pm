@@ -680,6 +680,36 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 displays_display_branches
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::Display>
+
+=cut
+
+__PACKAGE__->has_many(
+  "displays_display_branches",
+  "Koha::Schema::Result::Display",
+  { "foreign.display_branch" => "self.branchcode" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+=head2 displays_display_holding_branches
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::Display>
+
+=cut
+
+__PACKAGE__->has_many(
+  "displays_display_holding_branches",
+  "Koha::Schema::Result::Display",
+  { "foreign.display_holding_branch" => "self.branchcode" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 edifact_eans
 
 Type: has_many
@@ -1011,8 +1041,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-02-10 17:39:28
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:qVz4KJbAEtT4XDNdAxWc7w
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-02-12 15:44:57
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:kr3exHW4M4+yNwCvIgHCbg
 
 __PACKAGE__->has_many(
     "additional_field_values",
