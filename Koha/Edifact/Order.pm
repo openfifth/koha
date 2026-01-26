@@ -571,19 +571,19 @@ sub gir_segments {
         }
         if ( $item->{branchcode} ) {
             push @gir_elements,
-              { identity_number => 'LLO', data => $item->{branchcode} };
+              { identity_number => 'LLO', data => encode_text( $item->{branchcode} ) };
         }
         if ( $item->{itype} ) {
             push @gir_elements,
-              { identity_number => 'LST', data => $item->{itype} };
+              { identity_number => 'LST', data => encode_text( $item->{itype} ) };
         }
         if ( $item->{$lsq_field} ) {
             push @gir_elements,
-              { identity_number => 'LSQ', data => $item->{$lsq_field} };
+              { identity_number => 'LSQ', data => encode_text( $item->{$lsq_field} ) };
         }
         if ( $item->{itemcallnumber} ) {
             push @gir_elements,
-              { identity_number => 'LSM', data => $item->{itemcallnumber} };
+              { identity_number => 'LSM', data => encode_text( $item->{itemcallnumber} ) };
         }
 
         # itemcallnumber -> shelfmark
@@ -591,7 +591,7 @@ sub gir_segments {
             push @gir_elements,
               {
                 identity_number => 'LVT',
-                data            => $orderfields->{servicing_instruction}
+                data            => encode_text( $orderfields->{servicing_instruction} )
               };
         }
         my $e_cnt = 0;    # count number of elements so we dont exceed 5 per segment
