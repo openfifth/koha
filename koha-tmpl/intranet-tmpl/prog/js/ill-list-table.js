@@ -97,6 +97,7 @@ $(document).ready(function() {
         },
         "-or": function(){
             let patron = $("#illfilter_patron").val();
+            let managed_by = $("#illfilter_managed_by").val();
             let status = $("#illfilter_status").val();
             let status_alias = $("#illfilter_status_alias").val();
             let filters = [];
@@ -114,7 +115,12 @@ $(document).ready(function() {
                 );
                 subquery_and.push(patronquery);
             }
-
+            if (managed_by) {
+                let managed_byquery = buildPatronSearchQuery(managed_by, {
+                    table_prefix: "manager",
+                });
+                subquery_and.push(managed_byquery);
+            }
             if(status){
                 subquery_and.push( {"me.status":{"=": status }});
             }
@@ -204,6 +210,7 @@ $(document).ready(function() {
         illfilter_datemodified_end: '#illfilter_datemodified_end',
         illfilter_branchname: '#illfilter_branchname',
         illfilter_patron: '#illfilter_patron',
+        illfilter_managed_by: '#illfilter_managed_by',
     };
 
     let table_id = "#ill-requests";
@@ -226,7 +233,8 @@ $(document).ready(function() {
             'ill_batch',
             'library',
             'id_prefix',
-            'patron'
+            'patron',
+            'manager',
         ],
         "order": [[0, 'desc']],
         "stateSave": true, // remember state on page reload
@@ -326,6 +334,17 @@ $(document).ready(function() {
                 "data": "patron.firstname:patron.surname:patron.cardnumber",
                 "render": function(data, type, row, meta) {
                     return (row.patron) ? $patron_to_html( row.patron, { display_cardnumber: true, url: true } ) : ''; }                    },
+            {
+                data: "manager.firstname:manager.surname:manager.cardnumber",
+                render: function (data, type, row, meta) {
+                    return row.manager
+                        ? $patron_to_html(row.manager, {
+                                display_cardnumber: true,
+                                url: true,
+                            })
+                        : __("Nobody");
+                },
+            },
             {
                 "data": "biblio_id",
                 "orderable": true,
@@ -475,6 +494,7 @@ $(document).ready(function() {
             "illfilter_backend",
             "illfilter_branchname",
             "illfilter_patron",
+            "illfilter_managed_by",
             "illfilter_keyword",
         ];
         filters.forEach((filter) => {
@@ -612,7 +632,7 @@ $(document).ready(function() {
     populateBackendFilter();
 
     // Clear all filters
-    $('.clear_search').click(function() {
+    $("#illfilter_form .clear_search").click(function () {
         clearSearch();
     });
 

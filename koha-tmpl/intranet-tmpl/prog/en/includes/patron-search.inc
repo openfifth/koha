@@ -119,7 +119,7 @@
 [%# - Browse by last name %]
 [%# - The table %]
 [%# Get the following parameters: %]
-[%# - filter: can be 'suggestions_managers', 'orders_managers', 'funds_owners', 'funds_users' or 'erm_users' to filter patrons on their permissions %]
+[%# - filter: can be 'suggestions_managers', 'orders_managers', 'funds_owners', 'funds_users', 'erm_users' or 'ill_users' to filter patrons on their permissions %]
 [%# - table_id: the ID of the table %]
 [%# open_on_row_click: See patron_search_js %]
 [%# columns: See patron_search_js %]
@@ -137,6 +137,8 @@
         <div class="alert alert-info">Only staff with superlibrarian or acquisitions permissions (or budget_modify permission if granular permissions are enabled) are returned in the search results</div>
     [% ELSIF filter == 'erm_users' %]
         <div class="alert alert-info">Only staff with superlibrarian or ERM permissions are returned in the search results</div>
+    [% ELSIF filter == 'ill_users' %]
+        <div class="alert alert-info">Only staff with superlibrarian or ILL permissions are returned in the search results</div>
     [% END %]
 
     <div class="browse">
@@ -231,6 +233,7 @@
 [%# display_search_description: boolean, default off. Display the description of the search %]
 [%# adjust_history: boolean, default off. Change the current url when a first letter is selected %]
 [%# defer_loading: boolean, default on. If true, it will not load the table until a search is triggered %]
+[%# empty_table_settings: boolean, default off. If true, it will ensure no table_settings are utilized %]
 [% BLOCK patron_search_js %]
 
     [% IF redirect_if_one_result && !redirect_url %]
@@ -278,6 +281,8 @@
             map[e._id] = e;
             return map;
         }, {});
+
+        var empty_table_settings = '[% empty_table_settings | html %]'
 
         [% IF Koha.Preference('ExtendedPatronAttributes') %]
             [% SET extended_attribute_types = ExtendedAttributeTypes.codes( staff_searchable => 1, searched_by_default => 1 ) %]
@@ -334,6 +339,8 @@
             let patron_search_url = '/api/v1/acquisitions/funds/users';
         [% CASE 'erm_users' %]
             let patron_search_url = '/api/v1/erm/users';
+        [% CASE 'ill_users' %]
+            let patron_search_url = '/api/v1/ill/users';
         [% CASE %]
             let patron_search_url = '/api/v1/patrons';
         [% END %]
@@ -733,7 +740,7 @@
                     },
                 [% END %]
                 fixedHeader: false,
-            }, typeof table_settings !== 'undefined' ? table_settings : null, 1, additional_filters, undefined, external_filter_nodes);
+            }, typeof table_settings !== 'undefined' && !empty_table_settings ? table_settings : null, 1, additional_filters, undefined, external_filter_nodes);
 
             patron_search_form.on('submit', filter);
             patron_search_form.on('submit', update_search_type);
