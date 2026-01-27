@@ -712,27 +712,18 @@ export default {
                 : Infinity
         },
         setFilteredLetters() {
-            let library = this.newRule.library_id
-            const branchcodeMatches = letters.filter(
-                letter => letter.branchcode === library
-            )
-            const emptyBranchcodeMatches = letters.filter(
-                letter => letter.branchcode === ""
-            )
+            const library = this.newRule.library_id
+            const byCode = new Map()
 
-            const uniqueCodes = [
-                ...new Set(
-                    [...branchcodeMatches, ...emptyBranchcodeMatches].map(
-                        letter => letter.code
-                    )
-                ),
-            ]
+            for (const letter of this.letters) {
+                if (letter.branchcode === library) {
+                    byCode.set(letter.code, letter) // override
+                } else if (letter.branchcode === "" && !byCode.has(letter.code)) {
+                    byCode.set(letter.code, letter)
+                }
+            }
 
-            this.filteredLetters = letters.filter(
-                letter =>
-                    uniqueCodes.includes(letter.code) &&
-                    (letter.branchcode === library || letter.branchcode === "")
-            )
+            this.filteredLetters = [...byCode.values()]
         },
         incrementDelay() {
             // Check for minDelay and maxDelay
