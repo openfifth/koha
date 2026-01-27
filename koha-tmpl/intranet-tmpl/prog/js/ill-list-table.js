@@ -166,7 +166,7 @@ $(document).ready(function () {
             let status_sub_or = [];
             let subquery_and = [];
 
-            if (!patron && !status && !status_alias) return "";
+            if (!patron && !managed_by && !status && !status_alias) return "";
 
             if (patron) {
                 let patronquery = buildPatronSearchQuery(patron, {
