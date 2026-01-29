@@ -889,7 +889,7 @@ subtest "C4::Accounts::chargelostitem tests" => sub {
     };
 
     subtest "further processing fee application tests" => sub {
-        plan tests => 8;
+        plan tests => 10;
 
         my $branch_1 = $builder->build_object( { class => 'Koha::Libraries' } );
         my $branch_2 = $builder->build_object( { class => 'Koha::Libraries' } );
@@ -998,6 +998,34 @@ subtest "C4::Accounts::chargelostitem tests" => sub {
         );
         ok( $procfee, "Processing fee created" );
         is( $procfee->amount + 0, 4, "Processing fee chosen correctly" );
+
+        # Test missing rule defaults to 0 (no processing fee)
+        diag("Test missing circulation rule defaults to 0");
+        my $branch_no_rule = $builder->build_object( { class => 'Koha::Libraries' } );
+        $borrower = $builder->build_object(
+            { class => 'Koha::Patrons', value => { branchcode => $branch_no_rule->branchcode } } );
+        $item = $builder->build_sample_item( { homebranch => $branch_no_rule->branchcode } );
+
+        t::lib::Mocks::mock_preference( 'LostChargesControl', 'PatronLibrary' );
+        C4::Accounts::chargelostitem( $borrower->borrowernumber, $item->itemnumber, '1', "No rule test" );
+
+        $procfee = Koha::Account::Lines->find(
+            {
+                borrowernumber  => $borrower->borrowernumber,
+                itemnumber      => $item->itemnumber,
+                debit_type_code => 'PROCESSING'
+            }
+        );
+        ok( !$procfee, "No processing fee created when circulation rule is missing" );
+
+        my $lostfee = Koha::Account::Lines->find(
+            {
+                borrowernumber  => $borrower->borrowernumber,
+                itemnumber      => $item->itemnumber,
+                debit_type_code => 'LOST'
+            }
+        );
+        ok( $lostfee, "Lost fee still created even when processing fee rule is missing" );
 
     };
 
