@@ -193,6 +193,9 @@
     <span style="margin-left: 5px" class="error" v-if="fieldInputError">
         {{ attr.formErrorMessage }}
     </span>
+    <div v-if="attr.hint" class="hint">
+        {{ attr.hint }}
+    </div>
 </template>
 
 <script>
