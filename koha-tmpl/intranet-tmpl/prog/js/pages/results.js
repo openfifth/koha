@@ -1,4 +1,4 @@
-/* global KOHA biblionumber new_results_browser addMultiple vShelfAdd openWindow search_result SEARCH_RESULTS PREF_IntranetCoce PREF_CoceProviders CoceHost CoceProviders addRecord delSingleRecord PREF_BrowseResultSelection resetSearchContext addBibToContext delBibToContext getContextBiblioNumbers holdfor_cardnumber holdforclub strQuery PREF_StaffHighlightedWords PREF_NotHighlightedWords __ */
+/* global KOHA biblionumber new_results_browser addMultiple vShelfAdd openWindow search_result SEARCH_RESULTS PREF_IntranetCoce PREF_CoceProviders CoceHost CoceProviders addRecord delSingleRecord PREF_BrowseResultSelection resetSearchContext addBibToContext delBibToContext getContextBiblioNumbers holdfor_cardnumber holdforclub holdforsupplyill strQuery PREF_StaffHighlightedWords PREF_NotHighlightedWords __ */
 
 function verify_cover_images() {
     /* Loop over each container in the template which contains covers */
@@ -203,6 +203,7 @@ $(document).ready(function () {
         e.preventDefault();
         $("#holdFor").val("");
         $("#holdForClub").val("");
+        $("#holdForSupplyILL").val("");
         placeHold();
     });
 
@@ -214,6 +215,11 @@ $(document).ready(function () {
     $(".placeholdforclub").click(function (e) {
         e.preventDefault();
         holdForClub();
+    });
+
+    $(".placeholdforsupplyill").click(function (e) {
+        e.preventDefault();
+        holdForSupplyILL();
     });
 
     $("#forgetholdfor, #forgetholdforclub").click(function (e) {
@@ -416,6 +422,7 @@ function placeHold() {
 function forgetPatronAndClub() {
     Cookies.remove("holdfor", { path: "/", SameSite: "Lax" });
     Cookies.remove("holdforclub", { path: "/", SameSite: "Lax" });
+    Cookies.remove("holdforsupplyill", { path: "/", SameSite: "Lax" }); //TODO: Make a its own button (?)
     $(".holdforlink").remove();
     $("#placeholdc").html(
         '<a class="btn btn-default btn-xs placehold" href="#"><i class="fa-solid fa-bookmark"></i> ' +
@@ -493,6 +500,12 @@ function holdForPatron() {
 
 function holdForClub() {
     $("#holdForClub").val(holdforclub);
+    placeHold();
+}
+
+function holdForSupplyILL() {
+    $("#holdFor").val(holdfor_cardnumber);
+    $("#holdForSupplyILL").val(holdforsupplyill);
     placeHold();
 }
 

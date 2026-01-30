@@ -47,6 +47,16 @@ properties:
       - object
       - "null"
     description: Embeded object
+  hold_id:
+    type:
+      - integer
+      - "null"
+    description: Associated hold (reserves) internal identifier
+  hold:
+    type:
+      - object
+      - "null"
+    description: Embeded object
   messages:
     type:
       - array

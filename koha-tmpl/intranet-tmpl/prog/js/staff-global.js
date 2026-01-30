@@ -1094,6 +1094,27 @@ function holds_table_patron_page() {
 }
 
 /**
+ * Produces ISO 18626 request link, given an object
+ * @return {string} The HTML link
+ */
+function create_iso18626_request_link(id, status) {
+    var iso18626_request_text = __("Supply ILL #%s: %s").format(id, status);
+
+    var iso18626_request_link =
+        '<a href="/cgi-bin/koha/ill/iso18626_requests/' +
+        encodeURIComponent(id) +
+        '">' +
+        iso18626_request_text +
+        "</a>";
+
+    return (
+        '<br><span class="fw-bold fst-italic">(' +
+        iso18626_request_link +
+        ")</span>"
+    );
+}
+
+/**
  * Returns a roughly ideal position to scroll an element into view
  * @param {string} target - The HTML id of the element to scroll into view
  * @param {string} elemid - The HTML id of the element which might obscure

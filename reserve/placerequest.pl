@@ -49,11 +49,22 @@ my $item_group_id    = $input->param('item_group_id');
 my $expirationdate   = $input->param('expiration_date');
 my $itemtype         = $input->param('itemtype') || undef;
 my $non_priority     = $input->param('non_priority');
+my $supplyill        = $input->param('supplyill');
 my $op               = $input->param('op') || q{};
 my $multi_holds      = $input->param('multi_holds');
 my $hold_group_param = $input->param('hold_group') || undef;
 
 my $patron = Koha::Patrons->find($borrowernumber);
+
+my @allowed_iso18626_fields = qw(
+    iso18626_statusInfo_expectedDeliveryDate
+    iso18626_messageInfo_note
+);
+
+my %iso18626_payload = map {
+    my $val = $input->param($_);
+    defined $val ? ( $_ => $val ) : ()
+} @allowed_iso18626_fields;
 
 my $holds_to_place_count = $input->param('holds_to_place_count') || 1;
 
@@ -106,6 +117,8 @@ if ( $op eq 'cud-placerequest' && $patron ) {
                                 found            => undef,
                                 itemtype         => $itemtype,
                                 non_priority     => $non_priority,
+                                supplyill        => $supplyill,
+                                iso18626_payload => \%iso18626_payload,
                             }
                         );
 
@@ -135,6 +148,9 @@ if ( $op eq 'cud-placerequest' && $patron ) {
                         found            => undef,
                         itemtype         => $itemtype,
                         non_priority     => $non_priority,
+
+                        # supplyill        => $supplyill, FIXME: How does supplyill work with multi-hold?
+                        # iso18626_payload => \%iso18626_payload,
                     }
                 );
                 push @successful_hold_ids, $reserve_id;
@@ -159,6 +175,8 @@ if ( $op eq 'cud-placerequest' && $patron ) {
                             itemtype         => $itemtype,
                             non_priority     => $non_priority,
                             item_group_id    => $item_group_id,
+                            supplyill        => $supplyill,
+                            iso18626_payload => \%iso18626_payload,
                         }
                     );
                     push @successful_hold_ids, $reserve_id;

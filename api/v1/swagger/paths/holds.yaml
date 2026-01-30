@@ -110,6 +110,7 @@
             - patron
             - item_group
             - item_level_holds_count
+            - iso18626_request
         collectionFormat: csv
     produces:
       - application/json

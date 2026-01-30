@@ -165,7 +165,7 @@ Method that returns the related I<Koha::Hold>
 
 sub hold {
     my ($self) = @_;
-    my $hold_rs = $self->_result->reserve;
+    my $hold_rs = $self->_result->hold;
     return unless $hold_rs;
     return Koha::Hold->_new_from_dbic($hold_rs);
 }

@@ -259,7 +259,7 @@
 
     [% IF ( CAN_user_reserveforothers ) %]
         [% IF biblio.items.filter_by_for_hold.count %]
-            [% IF ( holdfor ) %]
+            [% IF ( holdfor || holdforsupplyill ) %]
                 <div class="btn-group">
                     <button class="btn btn-default dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="fa-solid fa-bookmark"></i>
@@ -267,11 +267,19 @@
                     </button>
                     <ul class="dropdown-menu">
                         <li><a class="dropdown-item" href="/cgi-bin/koha/reserve/request.pl?biblionumber=[% biblionumber | uri %]">Place hold</a></li>
-                        <li
-                            ><a class="dropdown-item" href="/cgi-bin/koha/reserve/request.pl?biblionumber=[% biblionumber | uri %]&amp;findborrower=[% holdfor_patron.cardnumber | uri %]"
-                                >Place hold for [% INCLUDE 'patron-title.inc' patron => holdfor_patron no_title => 1 no_html => 1 %]</a
-                            ></li
-                        >
+                        [% IF holdforsupplyill %]
+                            <li
+                                ><a class="dropdown-item" href="/cgi-bin/koha/reserve/request.pl?biblionumber=[% biblionumber | uri %]&amp;findborrower=[% holdfor_patron.cardnumber | uri %]&amp;supplyill=[% holdforsupplyill | uri %]"
+                                    >Place supply ILL ([% holdforsupplyill | html %]) hold for [% INCLUDE 'patron-title.inc' patron => holdfor_patron no_title => 1 no_cardnumber => 1 no_html => 1 %]</a
+                                ></li
+                            >
+                        [% ELSIF holdfor %]
+                            <li
+                                ><a class="dropdown-item" href="/cgi-bin/koha/reserve/request.pl?biblionumber=[% biblionumber | uri %]&amp;findborrower=[% holdfor_patron.cardnumber | uri %]"
+                                    >Place hold for [% INCLUDE 'patron-title.inc' patron => holdfor_patron no_title => 1 no_html => 1 %]</a
+                                ></li
+                            >
+                        [% END %]
                     </ul>
                 </div>
             [% ELSE %]

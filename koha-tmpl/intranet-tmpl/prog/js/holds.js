@@ -261,6 +261,13 @@ $(document).ready(function () {
                                         ")</span>";
                                 }
 
+                                if (oObj.iso18626_request) {
+                                    title += create_iso18626_request_link(
+                                        oObj.iso18626_request.id,
+                                        oObj.iso18626_request.status
+                                    );
+                                }
+
                                 return title;
                             },
                         },
@@ -1314,7 +1321,13 @@ async function load_patron_holds_table(biblio_id, split_data) {
             ajax: {
                 url: url,
             },
-            embed: ["patron", "item", "item_group", "item_level_holds_count"],
+            embed: [
+                "patron",
+                "item",
+                "item_group",
+                "item_level_holds_count",
+                "iso18626_request",
+            ],
             columnDefs: [
                 {
                     targets: [2, 3],
@@ -1632,9 +1645,16 @@ async function load_patron_holds_table(biblio_id, split_data) {
                             ? `<div>(<a href="/cgi-bin/koha/reserve/hold-group.pl?hold_group_id=${row.hold_group_id}" class="hold-group">${__("Hold group")} ${row.hold_group_id}</a>)</div>`
                             : "";
 
+                        const iso_message = create_iso18626_request_link(
+                            row.iso18626_request.iso18626_request_id,
+                            row.iso18626_request.status
+                        );
+
+                        const extras = group_hold_message + iso_message;
+
                         // Handle status cases
                         if (row.status) {
-                            return `<a href="/cgi-bin/koha/catalogue/moredetail.pl?biblionumber=${row.biblio_id}&itemnumber=${row.item_id}">${row.item.external_id}</a>${group_hold_message}`;
+                            return `<a href="/cgi-bin/koha/catalogue/moredetail.pl?biblionumber=${row.biblio_id}&itemnumber=${row.item_id}">${row.item.external_id}</a>${extras}`;
                         }
 
                         // Handle item level holds
@@ -1644,13 +1664,13 @@ async function load_patron_holds_table(biblio_id, split_data) {
                             const itemLink = `<a href="/cgi-bin/koha/catalogue/moredetail.pl?biblionumber=${row.biblio_id}&itemnumber=${row.item_id}">${barcode.escapeHtml ? barcode.escapeHtml() : barcode}</a>`;
 
                             if (row.item_level_holds_count >= 2) {
-                                return `${__("Only item")} ${itemLink}${group_hold_message}`;
+                                return `${__("Only item")} ${itemLink}${extras}`;
                             }
 
                             return `<select id="change_hold_type" class="change_hold_type ${table_class}" data-id="${row.hold_id}">
                                 <option value="" selected>${__("Only item")} ${barcode}</option>
                                 <option value="">${__("Next available")}</option>
-                            </select>${group_hold_message}`;
+                            </select>${extras}`;
                         }
 
                         // Handle item group
@@ -1658,8 +1678,7 @@ async function load_patron_holds_table(biblio_id, split_data) {
                             return (
                                 __(
                                     "Next available item from group <strong>%s</strong>"
-                                ).format(row.item_group.description) +
-                                group_hold_message
+                                ).format(row.item_group.description) + extras
                             );
                         }
 
@@ -1668,7 +1687,7 @@ async function load_patron_holds_table(biblio_id, split_data) {
                         if (row.non_priority) {
                             message += `<br/><i>${__("Non priority hold")}</i>`;
                         }
-                        return message + group_hold_message;
+                        return message + extras;
                     },
                 },
                 {

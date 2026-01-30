@@ -36,6 +36,7 @@ use Koha::Items;
 use Koha::Libraries;
 use Koha::Calendar;
 use Koha::Plugins;
+use Koha::ILL::ISO18626::Request;
 
 use Koha::BackgroundJob::BatchUpdateBiblioHoldsQueue;
 
@@ -431,6 +432,8 @@ sub set_waiting {
 
     $self->set($values)->store();
 
+    $self->progress_iso18626_request('hold_waiting');
+
     Koha::Plugins->call(
         'after_hold_action',
         {
@@ -690,6 +693,34 @@ sub patron {
     my ($self) = @_;
     my $rs = $self->_result->patron;
     return Koha::Patron->_new_from_dbic($rs);
+}
+
+=head3 iso18626_request
+
+Returns the related Koha::ILL::ISO18626::Request object for this hold
+
+=cut
+
+sub iso18626_request {
+    my ($self) = @_;
+    my $rs = $self->_result->iso18626_request;
+    return unless $rs;
+    return Koha::ILL::ISO18626::Request->_new_from_dbic($rs);
+}
+
+=head3 iso18626_attach_hold
+
+Adds relationship to related this hold
+
+=cut
+
+sub iso18626_attach_hold {
+    my ( $self, $iso18626_request_id ) = @_;
+
+    my $iso18626_request = Koha::ILL::ISO18626::Requests->find($iso18626_request_id);
+    return unless $iso18626_request;
+
+    $iso18626_request->hold_id( $self->id )->store;
 }
 
 =head3 item
@@ -1001,6 +1032,8 @@ sub cancel {
         }
     );
 
+    $self->progress_iso18626_request( 'hold_cancelled', undef );    #TODO: Add reasonUnfilled here
+
     $self->cleanup_hold_group() unless $params->{skip_hold_group_cleanup};
 
     if ($autofill_next) {
@@ -1143,6 +1176,7 @@ sub revert_found {
             C4::Reserves::FixPriority( { biblionumber => $self->biblionumber } );
 
             $self->remove_as_hold_group_target();
+            $self->progress_iso18626_request('hold_waiting_reverted');
 
             Koha::BackgroundJob::BatchUpdateBiblioHoldsQueue->new->enqueue( { biblio_ids => [ $self->biblionumber ] } )
                 if C4::Context->preference('RealTimeHoldsQueue');
@@ -1189,6 +1223,68 @@ sub change_type {
     }
 
     return $self;
+}
+
+=head3 progress_iso18626_request
+
+    $hold->progress_iso18626_request( $action, $iso18626_payload );
+
+Process and update the associated ISO18626 request based on a specific hold action.
+
+=over 4
+
+=item C<$action>
+
+Required string. The hold-related event trigger (e.g., 'hold_created' or 'hold_cancelled').
+
+=item C<$iso18626_payload>
+
+Required hashref. Contains data for the ISO18626 message, such as C<expectedDeliveryDate>, C<messageInfoNote>, or C<reasonUnfilled>.
+
+=back
+
+=cut
+
+sub progress_iso18626_request {
+    my ( $self, $action, $iso18626_payload ) = @_;
+
+    my $iso18626_request = $self->iso18626_request;
+
+    return unless $iso18626_request;
+
+    if ( $action eq 'hold_created' && $iso18626_request->status eq 'RequestReceived' ) {
+        $iso18626_request->progress_request(
+            'supplyingAgency',
+            {
+                'expectedDeliveryDate' => $iso18626_payload->{iso18626_statusInfo_expectedDeliveryDate},
+                'messageInfoNote'      => $iso18626_payload->{iso18626_messageInfo_note},
+                'status'               => 'ExpectToSupply'
+            }
+        );
+    }
+    if ( $action eq 'hold_waiting' ) {
+        $iso18626_request->progress_request(
+            'supplyingAgency',
+            { 'status' => 'WillSupply' }
+
+            #TODO: Add messageInfoNote input on the checkin modal to pass a message here.
+        );
+    }
+    if ( $action eq 'hold_waiting_reverted' && $iso18626_request->status eq 'WillSupply' ) {
+        $iso18626_request->progress_request(
+            'supplyingAgency',
+            { 'status' => 'ExpectToSupply' }
+        );
+    }
+    if ( $action eq 'hold_cancelled' ) {
+        $iso18626_request->progress_request(
+            'supplyingAgency',
+            {
+                'reasonUnfilled' => 'NotHeld',    #Grab this from $iso18626_payload
+                'status'         => 'Unfilled'
+            }
+        );
+    }
 }
 
 =head3 store

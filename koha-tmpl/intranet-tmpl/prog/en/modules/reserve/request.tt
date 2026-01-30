@@ -643,6 +643,9 @@
                     [% FOREACH biblionumber IN biblionumbers %]
                         <input type="hidden" name="biblionumber" value="[% biblionumber | html %]" />
                     [% END %]
+                    [% IF supplyill %]
+                        <input type="hidden" name="supplyill" value="[% supplyill | html %]" />
+                    [% END %]
                     <input type="hidden" name="holdable_bibs" id="holdable_bibs" value="[% biblio.biblionumber | html %]" />
                     <input type="hidden" name="title" value="[% biblio.title | html %]" />
                     <input type="hidden" name="rank-request" value="[% fixedRank | html %]" />
@@ -698,6 +701,21 @@
                         </li>
                     </ol>
                 </fieldset>
+                [% IF supplyill %]
+                    <fieldset class="rows">
+                        <legend>ISO18626 ILL request details</legend>
+                        <p>This hold will be linked to <a target="_blank" href="/cgi-bin/koha/ill/iso18626_requests/[% supplyill | url %]"> supply ILL [% supplyill | html %]</a>. </p
+                        ><p>This will update the ILL's status to "ExpectToSupply" and send an ISO18626 message to the requesting agency including the details below.</p>
+                        <li>
+                            <label for="iso18626_messageInfo_note">Message info note:</label>
+                            <textarea id="iso18626_messageInfo_note" name="iso18626_messageInfo_note" cols="30" rows="1"></textarea>
+                        </li>
+                        <li>
+                            <label for="iso18626_statusInfo_expectedDeliveryDate">Status info expected delivery date:</label>
+                            <input id="iso18626_statusInfo_expectedDeliveryDate" name="iso18626_statusInfo_expectedDeliveryDate" size="10" type="text" class="flatpickr" data-flatpickr-enable-time="true" />
+                        </li>
+                    </fieldset>
+                [% END %]
                 <fieldset class="rows any_specific">
                     <legend>
                         [% IF force_hold_level == 'item' || force_hold_level == 'item_group' %]
@@ -1540,7 +1558,7 @@
     [% INCLUDE 'calendar.inc' %]
     [% INCLUDE 'select2.inc' %]
 
-    [% SET url_biblio_params = "biblionumber=" _ biblionumbers.join("&amp;biblionumber=") %]
+    [% SET url_biblio_params = (supplyill ? "supplyill=" _ supplyill _ "&amp;" : "") _ "biblionumber=" _ biblionumbers.join("&amp;biblionumber=") %]
     [% IF multi_hold %]
         [% SET url_biblio_params = url_biblio_params _ "&amp;multi_hold=1" %]
     [% END %]
@@ -1726,6 +1744,7 @@
                 return false;
             });
 
+            //Write handling of supply ILL params here ? before submit?
             if (!multi_hold) {
                 $("#hold-request-form").on("submit", function (e) {
                     return check(e, $(this));
@@ -1841,6 +1860,22 @@
                     msg = _("- Please select a pickup location for this hold") + "\n";
                 }
             }
+            // var supplyillID = Cookies.get("holdforsupplyill") || null;
+            // if (supplyillID) {
+            //     const client = APIClient.ill;
+            //     client.supplying.patch({
+            //         expectedDeliveryDate: null,
+            //         messageInfoNote: "my message",
+            //         status : "ExpectToSupply"
+            //     }, supplyillID).then(
+            //         success => {
+            //             //alert(_("Successfully saved configuration"));
+            //         },
+            //         error => {
+            //             console.warn("Something wrong happened: %s".format(error));
+            //         }
+            //     );
+            // }
 
             if (msg == "") {
                 $("#hold-request-form").preventDoubleFormSubmit();

@@ -143,18 +143,20 @@ This modules provides some functions to deal with reservations.
 
     AddReserve(
         {
-            branchcode       => $branchcode,
-            borrowernumber   => $borrowernumber,
-            biblionumber     => $biblionumber,
-            priority         => $priority,
-            reservation_date => $reservation_date,
-            expiration_date  => $expiration_date,
-            notes            => $notes,
-            title            => $title,
-            itemnumber       => $itemnumber,
-            found            => $found,
-            itemtype         => $itemtype,
-            item_group_id    => $item_group_id
+            branchcode          => $branchcode,
+            borrowernumber      => $borrowernumber,
+            biblionumber        => $biblionumber,
+            priority            => $priority,
+            reservation_date    => $reservation_date,
+            expiration_date     => $expiration_date,
+            notes               => $notes,
+            title               => $title,
+            itemnumber          => $itemnumber,
+            found               => $found,
+            itemtype            => $itemtype,
+            item_group_id       => $item_group_id,
+            supplyill           => $iso18626_request_id;
+            iso18626_payload    => $payload_hash;
         }
     );
 
@@ -193,6 +195,8 @@ sub AddReserve {
     my $item_group_id          = $params->{item_group_id};
     my $confirmations          = $params->{confirmations};
     my $forced                 = $params->{forced};
+    my $supplyill              = $params->{supplyill};
+    my $iso18626_payload       = $params->{iso18626_payload};
 
     $resdate ||= dt_from_string;
 
@@ -257,6 +261,9 @@ sub AddReserve {
             non_priority           => $non_priority ? 1 : 0,
         }
     )->store();
+
+    $hold->iso18626_attach_hold($supplyill);
+
     $hold->set_waiting() if $found && $found eq 'W';
 
     # record patron activity
@@ -361,6 +368,8 @@ sub AddReserve {
             );
         }
     }
+
+    $hold->progress_iso18626_request( 'hold_created', $iso18626_payload );
 
     Koha::Plugins->call( 'after_hold_create', $hold );
     Koha::Plugins->call(
