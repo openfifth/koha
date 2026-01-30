@@ -51,7 +51,31 @@ app.provide("navigationStore", navigationStore);
 app.provide("circRulesStore", circRulesStore);
 app.mount("#__app");
 
-router.beforeEach(to => {
-    navigationStore.$patch({ current: to.matched, params: to.params || {} });
-    removeMessages(); // This will actually flag the messages as displayed already
+router.beforeEach((to, from, next) => {
+    circRulesStore
+        .loadUserPermissions()
+        .then(() => {
+            if (
+                !circRulesStore.isUserPermitted(
+                    "CAN_user_parameters_manage_circ_rules"
+                )
+            ) {
+                navigationStore.$patch({
+                    navigationBlocked: true,
+                    currentPermission: null,
+                });
+                removeMessages(); // This will actually flag the messages as displayed already
+                window.location.href = "/cgi-bin/koha/mainpage.pl";
+                return;
+            }
+            navigationStore.$patch({
+                current: to.matched,
+                params: to.params || {},
+            });
+            removeMessages(); // This will actually flag the messages as displayed already
+            next();
+        })
+        .catch(() => {
+            window.location.href = "/cgi-bin/koha/mainpage.pl";
+        });
 });
