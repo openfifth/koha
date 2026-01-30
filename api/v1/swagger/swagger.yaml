@@ -18,6 +18,8 @@ definitions:
     $ref: ./definitions/authorised_value_category.yaml
   circulation_rules:
     $ref: ./definitions/circulation_rules.yaml
+  circulation_rules_config:
+    $ref: ./definitions/circulation_rules_config.yaml
   identity_provider:
     $ref: ./definitions/identity_provider.yaml
   identity_provider_domain:
@@ -351,6 +353,8 @@ paths:
     $ref: ./paths/circulation_rules.yaml#/~1circulation_rules
   /circulation_rules/kinds:
     $ref: ./paths/circulation_rules.yaml#/~1circulation_rules~1kinds
+  /circulation_rules/config:
+    $ref: ./paths/circulation_rules_config.yaml#/~1circulation_rules~1config
   /cities:
     $ref: ./paths/cities.yaml#/~1cities
   "/cities/{city_id}":
@@ -1322,6 +1326,9 @@ tags:
   - description: "Manage circulation rules\n"
     name: circulation_rules
     x-displayName: Circulation rules
+  - description: "Retrieve configuration relevant to circulation rules\n"
+    name: circulation_rules_config
+    x-displayName: Circulation rules config
   - description: "Manage cities\n"
     name: cities
     x-displayName: Cities

@@ -2,16 +2,19 @@ import { defineStore } from "pinia";
 import { $__ } from "../i18n";
 import { APIClient } from "../fetch/api-client.js";
 import { isEqual } from "lodash";
+import { permissionsActions } from "../composables/permissions";
+import { reactive, toRefs } from "vue";
 
-export const useCircRulesStore = defineStore("circRules", {
-    // NOTES ON RULE SETS TYPES
-    // exhaustive:  includes 'pure fallback' rules sets for contexts that no rules match.
-    //              Format: [{overdue_X_<rule_name>: {value: mixed: isFallback: bool}}]
-    // effective:   includes sets only for contexts for which one or more rule exists in the db. These sets will include fallbacks.
-    //              Format: [{overdue_X_<rule_name>: <value>}}
-    // raw:         includes only the exact sets as they are found in the db
-    //              Format: [{overdue_X_<rule_name>: <value>}}]
-    state: () => ({
+// NOTES ON RULE SETS TYPES
+// exhaustive:  includes 'pure fallback' rules sets for contexts that no rules match.
+//              Format: [{overdue_X_<rule_name>: {value: mixed: isFallback: bool}}]
+// effective:   includes sets only for contexts for which one or more rule exists in the db. These sets will include fallbacks.
+//              Format: [{overdue_X_<rule_name>: <value>}}
+// raw:         includes only the exact sets as they are found in the db
+//              Format: [{overdue_X_<rule_name>: <value>}}]
+
+export const useCircRulesStore = defineStore("circRules", () => {
+    const store = reactive({
         // context
         currentLibraryId: "*",
         currentPatronCategoryId: null,
@@ -21,6 +24,7 @@ export const useCircRulesStore = defineStore("circRules", {
         itemTypes: [],
         libraries: [],
         patronCategories: [],
+        userPermissions: null,
         letters: [],
         ruleSuffixes: ["delay", "notice", "mtt", "restrict", "has_rules"],
         transportTypes: [
@@ -36,13 +40,20 @@ export const useCircRulesStore = defineStore("circRules", {
         allExhaustiveEffectiveRuleSets: [], // main data set for display all applied rules for current library
         currentAndDefaultRawRuleSets: [], // data set to identify effective rules from (combines allDefaultLibraryRawRuleSets and allCurrentLibraryRawRuleSets)
         storeInitialized: false,
-    }),
-    actions: {
+    });
+
+    const actions = {
         // controllers
         async init() {
             await this.getItemTypes();
             await this.getLibraries();
             await this.getPatronCategories();
+        },
+        async loadUserPermissions() {
+            if (this.userPermissions !== null) {
+                return;
+            }
+            await this.getConfigurationOptions();
         },
         // utilities
         formatTriggerSpecificRuleSetForDisplay(
@@ -403,6 +414,11 @@ export const useCircRulesStore = defineStore("circRules", {
                 throw e;
             }
         },
+        async getConfigurationOptions() {
+            const client = APIClient.circRule;
+            const { permissions } = await client.config.getAll();
+            this.userPermissions = permissions;
+        },
         async getItemTypes() {
             const client = APIClient.item;
             let itemTypes = [];
@@ -485,5 +501,11 @@ export const useCircRulesStore = defineStore("circRules", {
                 //TODO: handle e
             }
         },
-    },
+        ...permissionsActions(store),
+    };
+
+    return {
+        ...toRefs(store),
+        ...actions,
+    };
 });
