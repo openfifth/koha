@@ -5,6 +5,15 @@ export class CircRuleAPIClient {
         });
     }
 
+    get config() {
+        return {
+            getAll: () =>
+                this.httpClient.get({
+                    endpoint: "/config",
+                }),
+        };
+    }
+
     get circ_rules() {
         return {
             getAll: (query, params, headers) =>

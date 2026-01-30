@@ -288,7 +288,6 @@ import { storeToRefs } from "pinia";
 export default {
     setup() {
         const circRulesStore = inject("circRulesStore");
-        circRulesStore.init();
         const {
             updateTriggerCount,
             setAllRawRuleSets,

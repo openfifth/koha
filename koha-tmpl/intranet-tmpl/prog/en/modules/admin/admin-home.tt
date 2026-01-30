@@ -96,7 +96,7 @@
                         <dt><a href="/cgi-bin/koha/admin/smart-rules.pl">Circulation and fine rules</a></dt>
                         <dd>Define circulation and fine rules for combinations of libraries, patron categories, and item types</dd>
                     [% END %]
-                    [% IF ( CAN_user_tools_edit_notice_status_triggers ) %]
+                    [% IF ( CAN_user_parameters_manage_circ_rules ) %]
                         <dt><a href="/cgi-bin/koha/admin/circulation_triggers">Circulation triggers</a></dt>
                         <dd>Define triggers for circulation notices</dd>
                     [% END %]
