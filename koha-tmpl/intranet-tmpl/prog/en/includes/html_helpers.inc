@@ -728,3 +728,18 @@
         </div>
     </div>
 [% END %]
+
+[%- BLOCK search_context_dialog -%]
+    [% IF context == 'supplyill' %]
+        <div class="alert alert-info">
+            <h4>You are searching to place a hold for <a target="_blank" href="/cgi-bin/koha/ill/iso18626_requests/[% context_data | url %]">supply ILL [% context_data | html %]</a></h4>
+        </div>
+    [% END %]
+[%- END -%]
+
+[%- BLOCK search_context_form_input -%]
+    [% IF context %]
+        [% SET search_context_string = context_data ? (context _ ":" _ context_data) : context %]
+        <input type="hidden" name="context" value="[% search_context_string | url %]" />
+    [% END %]
+[%- END -%]

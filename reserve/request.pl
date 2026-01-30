@@ -82,6 +82,7 @@ my $findclub = $input->param('findclub');
 $findclub = '' unless defined $findclub && !$findborrower;
 my $borrowernumber_hold = $input->param('borrowernumber') || '';
 my $club_hold           = $input->param('club')           || '';
+my $supplyill           = $input->param('supplyill')      || '';
 my $messageborrower;
 my $messageclub;
 my $warnings;
@@ -233,6 +234,10 @@ my $multi_hold = @biblionumbers > 1;
 $template->param(
     multi_hold => $multi_hold,
 );
+
+if ($supplyill) {
+    $template->param( supplyill => $supplyill );
+}
 
 # If we have the borrowernumber because we've performed an action, then we
 # don't want to try to place another reserve.

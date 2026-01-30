@@ -43,6 +43,8 @@
 [% WRAPPER 'main-container.inc' %]
     <form action="search.pl" method="get">
         <div id="advanced-search">
+            [% PROCESS search_context_form_input %]
+            [% PROCESS search_context_dialog %]
             [% IF edit_filter %]
                 <div id="toolbar" class="btn-toolbar">
                     <legend>Editing filter: [% edit_filter.name | html %]</legend>

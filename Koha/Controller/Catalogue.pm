@@ -3,6 +3,7 @@ package Koha::Controller::Catalogue;
 use Modern::Perl;
 
 use C4::Auth qw( get_template_and_user );
+use Koha::ILL::ISO18626::Requests;
 use Koha::Patrons;
 
 sub init {
@@ -52,6 +53,15 @@ sub _prep_searchto_template_params {
             searchtoorder_basketno => $basketno,
             searchtoorder_vendorid => $vendorid
         );
+    }
+
+    if ( $query->cookie("holdforsupplyill") ) {
+        my $holdfor_supply_ill = Koha::ILL::ISO18626::Requests->find( $query->cookie("holdforsupplyill") );
+        if ($holdfor_supply_ill) {
+            $template->param(
+                holdforsupplyill => $query->cookie("holdforsupplyill"),
+            );
+        }
     }
 
     return 1;

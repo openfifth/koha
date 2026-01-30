@@ -279,6 +279,15 @@
                     [%- IF hold.hold_group_id -%]
                         <div>(part of a <a href="/cgi-bin/koha/reserve/hold-group.pl?hold_group_id=[% hold.hold_group_id | uri %]" class="hold-group">hold group</a>)</div>
                     [%- END -%]
+                    [%- IF hold.object.iso18626_request -%]
+                        <div
+                            ><span class="fw-bold fst-italic"
+                                >(<a href="/cgi-bin/koha/ill/iso18626_requests/[% hold.object.iso18626_request.iso18626_request_id | uri %]"
+                                    >Supply ILL #[% hold.object.iso18626_request.iso18626_request_id | html %]: [% hold.object.iso18626_request.status | html %]</a
+                                >)</span
+                            ></div
+                        >
+                    [%- END -%]
                 </td>
                 [%- IF ( CAN_user_reserveforothers_modify_holds_priority ) -%]
                     [%- UNLESS hold.found -%]

@@ -45,28 +45,29 @@ export default {
             },
             {
                 id: "ExpectToSupply",
-                confirm_message: $__(
-                    "Supplying library expects to fill the request, based on e.g. information in the local OPAC. The message may include the ExpectedDeliveryDate"
-                ),
-                button_label: $__("Expect to supply"),
-                icon: "fa-calendar-days",
+                dont_show: iso18626_request => true, //This is handled by creating a new hold
+                // confirm_message: $__(
+                //     "Supplying library expects to fill the request, based on e.g. information in the local OPAC. The message may include the ExpectedDeliveryDate"
+                // ),
+                // button_label: $__("Expect to supply"),
+                // icon: "fa-calendar-days",
                 next_actions: [
                     "Loaned",
                     "WillSupply",
                     "RetryPossible",
                     "Unfilled",
                 ],
-                action_inputs: [
-                    {
-                        name: "expectedDeliveryDate",
-                        type: "date",
-                        label: $__("Expected delivery date"),
-                        toolTip: $__(
-                            "Date and time the supplying library expects to deliver the item."
-                        ),
-                    },
-                ],
-                index: 0,
+                // action_inputs: [
+                //     {
+                //         name: "expectedDeliveryDate",
+                //         type: "date",
+                //         label: $__("Expected delivery date"),
+                //         toolTip: $__(
+                //             "Date and time the supplying library expects to deliver the item."
+                //         ),
+                //     },
+                // ],
+                // index: 0,
             },
             {
                 id: "WillSupply",
@@ -638,6 +639,40 @@ export default {
                 });
             }
 
+            if (resource.status == "RequestReceived") {
+                show_buttons.push({
+                    cssClass: "btn btn-primary",
+                    title: "Search to hold",
+                    icon: "fa-calendar-days",
+                    onClick: () => {
+                        // !Copy pasted from member-menu.js
+                        var date = new Date();
+                        date.setTime(date.getTime() + 10 * 60 * 1000);
+                        Cookies.set(
+                            "holdfor",
+                            resource.requesting_agency.patron_id,
+                            {
+                                path: "/",
+                                expires: date,
+                                sameSite: "Lax",
+                            }
+                        );
+                        Cookies.set(
+                            "holdforsupplyill",
+                            resource.iso18626_request_id,
+                            {
+                                path: "/",
+                                expires: date,
+                                sameSite: "Lax",
+                            }
+                        );
+                        location.href =
+                            "/cgi-bin/koha/catalogue/search.pl?context=supplyill:" +
+                            resource.iso18626_request_id;
+                    },
+                });
+            }
+
             return {
                 show: show_buttons,
             };
@@ -739,6 +774,13 @@ export default {
                     name: "requestingAgencyRequestId",
                     label: $__("Requesting Agency Request ID"),
                     type: "text",
+                    hideIn: ["List", "Form"],
+                    group: $__("Request details"),
+                },
+                {
+                    name: "hold_id",
+                    label: $__("Hold on biblio"),
+                    type: "boolean",
                     hideIn: ["List", "Form"],
                     group: $__("Request details"),
                 },

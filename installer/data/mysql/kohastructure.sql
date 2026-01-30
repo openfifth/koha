@@ -3792,9 +3792,12 @@ CREATE TABLE `iso18626_requests` (
   `status` enum('RequestReceived','ExpectToSupply','WillSupply','Loaned', 'Overdue', 'Recalled', 'RetryPossible', 'Unfilled', 'HoldReturn', 'ReleaseHoldReturn', 'CopyCompleted', 'LoanCompleted', 'CompletedWithoutReturn', 'Cancelled') DEFAULT 'RequestReceived' COMMENT 'Current ISO18626 status of request',
   `service_type` enum('Copy','Loan','CopyOrLoan') NOT NULL COMMENT 'ISO18626 service type',
   `pending_requesting_agency_action` enum('Cancel','Renew') DEFAULT NULL COMMENT 'ISO18626 Requesting Agency action that requires a manual response (yes or no)',
+  `hold_id` int(11) DEFAULT NULL COMMENT 'ID of the hold related to this ISO18626 request',
   /* TODO: Track last_status_change_timestamp, this is needed for ISO18626 message statusInfo.lastChange data */
   PRIMARY KEY (`iso18626_request_id`),
+  UNIQUE KEY `uniq_reserve_id` (`hold_id`),
   KEY `iso18626_rafk` (`iso18626_requesting_agency_id`),
+  CONSTRAINT `uniq_reserve_id` FOREIGN KEY (`hold_id`) REFERENCES `reserves` (`reserve_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `iso18626_rafk` FOREIGN KEY (`iso18626_requesting_agency_id`) REFERENCES `iso18626_requesting_agencies` (`iso18626_requesting_agency_id`) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -3830,7 +3833,7 @@ CREATE TABLE `iso18626_requesting_agencies` (
   `name` varchar(80) DEFAULT NULL COMMENT 'Requesting agency name',
   `borrowernumber` int(11) NOT NULL COMMENT 'foreign key, linking this to the borrowers table (ILL partner patron)',
   `type` enum('DNUCNI','ICOLC','ISIL') NOT NULL COMMENT 'ISO18626 agency type',
-  `account_id` varchar(80) NOT NULL COMMENT 'Authentication: Requesting agency account ID', /* TODO:  MAKE THIS UNIQUE */
+  `account_id` varchar(80) NOT NULL COMMENT 'Authentication: Requesting agency account ID', /* TODO:  MAKE THIS UNIQUE */ 
   `securityCode` varchar(80) NOT NULL COMMENT 'Authentication: Requesting agency security code',
   `callback_endpoint` mediumtext NOT NULL COMMENT 'Callback endpoint to send messages back to',
   PRIMARY KEY (`iso18626_requesting_agency_id`),

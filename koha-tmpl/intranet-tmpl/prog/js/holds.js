@@ -261,6 +261,29 @@ $(document).ready(function () {
                                         ")</span>";
                                 }
 
+                                if (oObj.iso18626_request) {
+                                    var iso18626_request_text = __(
+                                        "Supply ILL #%s: %s"
+                                    ).format(
+                                        oObj.iso18626_request.id,
+                                        oObj.iso18626_request.status
+                                    );
+
+                                    var iso18626_request_link =
+                                        '<a href="/cgi-bin/koha/ill/iso18626_requests/' +
+                                        encodeURIComponent(
+                                            oObj.iso18626_request.id
+                                        ) +
+                                        '">' +
+                                        iso18626_request_text +
+                                        "</a>";
+
+                                    title +=
+                                        '<br><span class="fw-bold fst-italic">(' +
+                                        iso18626_request_link +
+                                        ")</span>";
+                                }
+
                                 return title;
                             },
                         },

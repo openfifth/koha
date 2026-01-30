@@ -217,6 +217,14 @@ if ( $cgi->cookie("holdforclub") ) {
     }
 }
 
+if ( my $searchcontext = $cgi->param('context') ) {
+    my ( $context, $data ) = split( /:/, $searchcontext, 2 );
+    $template->param(
+        context      => $context,
+        context_data => $data,
+    );
+}
+
 # get biblionumbers stored in the cart
 my @cart_list;
 
