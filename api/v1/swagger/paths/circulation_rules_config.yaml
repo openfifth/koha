@@ -1,0 +1,39 @@
+---
+/circulation_rules/config:
+  get:
+    x-mojo-to: CirculationRules#config
+    operationId: getCirculationRulesConfig
+    description: This resource returns a list of options needed for the Circulation Triggers Vue app
+    summary: get the CirculationRules config
+    tags:
+      - circulation_rules_config
+    produces:
+      - application/json
+    responses:
+      200:
+        description: The Circulation Rules config
+        schema:
+          $ref: "../swagger.yaml#/definitions/circulation_rules_config"
+      400:
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      403:
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      500:
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      503:
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        - acquisition: '*'
+        - erm: 1
