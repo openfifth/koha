@@ -32,6 +32,7 @@ use Koha::DateTime::Format::RFC3339;
 use Koha::DateTime::Format::SQL;
 use Koha::Exceptions::Object;
 use Koha::Object::Message;
+use Koha::Events;
 
 =head1 NAME
 
@@ -171,7 +172,12 @@ sub store {
     }
 
     try {
-        return $self->_result()->update_or_insert() ? $self : undef;
+        my $store_action = $self->_result()->in_storage ? 'update' : 'create';
+        if ( $self->_result()->update_or_insert() ) {
+            Koha::Events::emit( ref($self), $store_action, $self );
+            return $self;
+        }
+        return undef;
     } catch {
 
         # Catch problems and raise relevant exceptions
