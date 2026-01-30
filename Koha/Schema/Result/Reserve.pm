@@ -455,6 +455,21 @@ __PACKAGE__->might_have(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 iso18626_request
+
+Type: might_have
+
+Related object: L<Koha::Schema::Result::Iso18626Request>
+
+=cut
+
+__PACKAGE__->might_have(
+  "iso18626_request",
+  "Koha::Schema::Result::Iso18626Request",
+  { "foreign.hold_id" => "self.reserve_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 item_group
 
 Type: belongs_to
@@ -516,8 +531,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-11-03 19:54:07
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:B8/T/fmEf+RMPQsqOG+MiQ
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-02-23 17:05:32
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:WQrlG+Rl+BYHA7poiEiwmA
 
 __PACKAGE__->belongs_to(
   "item",

@@ -100,6 +100,14 @@ ISO18626 service type
 
 ISO18626 Requesting Agency action that requires a manual response (yes or no)
 
+=head2 hold_id
+
+  data_type: 'integer'
+  is_foreign_key: 1
+  is_nullable: 1
+
+ID of the hold related to this ISO18626 request
+
 =cut
 
 __PACKAGE__->add_columns(
@@ -171,6 +179,8 @@ __PACKAGE__->add_columns(
     extra => { list => ["Cancel", "Renew"] },
     is_nullable => 1,
   },
+  "hold_id",
+  { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
 );
 
 =head1 PRIMARY KEY
@@ -185,7 +195,41 @@ __PACKAGE__->add_columns(
 
 __PACKAGE__->set_primary_key("iso18626_request_id");
 
+=head1 UNIQUE CONSTRAINTS
+
+=head2 C<uniq_reserve_id>
+
+=over 4
+
+=item * L</hold_id>
+
+=back
+
+=cut
+
+__PACKAGE__->add_unique_constraint("uniq_reserve_id", ["hold_id"]);
+
 =head1 RELATIONS
+
+=head2 hold
+
+Type: belongs_to
+
+Related object: L<Koha::Schema::Result::Reserve>
+
+=cut
+
+__PACKAGE__->belongs_to(
+  "hold",
+  "Koha::Schema::Result::Reserve",
+  { reserve_id => "hold_id" },
+  {
+    is_deferrable => 1,
+    join_type     => "LEFT",
+    on_delete     => "SET NULL",
+    on_update     => "CASCADE",
+  },
+);
 
 =head2 iso18626_messages
 
@@ -219,39 +263,9 @@ __PACKAGE__->belongs_to(
   { is_deferrable => 1, on_delete => "RESTRICT", on_update => "CASCADE" },
 );
 
-=head2 old_reserve
 
-Type: might_have
-
-Related object: L<Koha::Schema::Result::OldReserve>
-
-=cut
-
-__PACKAGE__->might_have(
-  "old_reserve",
-  "Koha::Schema::Result::OldReserve",
-  { "foreign.iso18626_request_id" => "self.iso18626_request_id" },
-  { cascade_copy => 0, cascade_delete => 0 },
-);
-
-=head2 reserve
-
-Type: might_have
-
-Related object: L<Koha::Schema::Result::Reserve>
-
-=cut
-
-__PACKAGE__->might_have(
-  "reserve",
-  "Koha::Schema::Result::Reserve",
-  { "foreign.iso18626_request_id" => "self.iso18626_request_id" },
-  { cascade_copy => 0, cascade_delete => 0 },
-);
-
-
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-03-04 14:57:44
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:T0PCb3b3SH9O7/f3TYDnTw
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-02-24 13:34:37
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:7KqpCOYXvp6skCK/lTer0g
 
 =head2 koha_object_class
 

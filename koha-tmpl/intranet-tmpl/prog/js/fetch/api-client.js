@@ -191,6 +191,7 @@ export const APIClient = {
     circulation: createClientProxy(() => import("./circulation-api-client.js")),
     club: createClientProxy(() => import("./club-api-client.js")),
     cover_image: createClientProxy(() => import("./cover-image-api-client.js")),
+    ill: createClientProxy(() => import("./ill-api-client.js")),
     localization: createClientProxy(
         () => import("./localization-api-client.js")
     ),

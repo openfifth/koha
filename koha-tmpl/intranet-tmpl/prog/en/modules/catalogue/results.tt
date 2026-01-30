@@ -68,6 +68,7 @@
 [% END #/ WRAPPER sub-header.inc %]
 
 [% WRAPPER 'main-container.inc' aside='facets' %]
+    [% PROCESS search_context_dialog %]
     <h1>Search results</h1>
 
     [% IF ( total ) %]
@@ -158,12 +159,19 @@
                     [% END # /IF virtualshelves %]
 
                     [% IF ( CAN_user_reserveforothers_place_holds && DisplayMultiPlaceHold ) %]
-                        [% IF ( holdfor or holdforclub ) %]
+                        [% IF ( holdfor or holdforclub or holdforsupplyill ) %]
                             <div id="placeholdc" class="btn-group">
                                 <button class="btn btn-default btn-xs placehold"><i class="fa-solid fa-bookmark"></i> Place hold</button>
                                 <button class="btn btn-default btn-xs dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"> </button>
                                 <ul class="dropdown-menu">
                                     <li><a href="#" class="placehold dropdown-item">Place hold</a></li>
+                                    [% IF holdforsupplyill %]
+                                        <li
+                                            ><a href="#" class="placeholdforsupplyill dropdown-item"
+                                                >Place supply ILL ([% holdforsupplyill | html %]) hold for [% INCLUDE 'patron-title.inc' patron => holdfor_patron no_title => 1 no_cardnumber => 1 no_html => 1 %]</a
+                                            ></li
+                                        >
+                                    [% END %]
                                     [% IF holdfor %]
                                         <li><a href="#" class="placeholdfor dropdown-item">Place hold for [% INCLUDE 'patron-title.inc' patron => holdfor_patron no_title => 1 no_cardnumber => 1 no_html => 1 %]</a></li>
                                         <li><hr class="dropdown-divider" /></li>
@@ -955,6 +963,7 @@
         <!-- Value will be set here by placeHold() -->
         <input type="hidden" name="findborrower" id="holdFor" value="" />
         <input type="hidden" name="club" id="holdForClub" value="" />
+        <input type="hidden" name="supplyill" id="holdForSupplyILL" value="" />
     </form>
 
     <form id="list_form" method="get" action="/cgi-bin/koha/reserve/request.pl">
@@ -984,6 +993,7 @@
         var biblionumber = "[% biblionumber | html %]";
         var holdfor_cardnumber = "[% holdfor_patron.cardnumber | html %]";
         var holdforclub = "[% holdforclub | html %]";
+        var holdforsupplyill = "[% holdforsupplyill | html %]";
         var userbranch = "[% userbranch | html %]";
         [% IF Koha.Preference('FilterSearchResultsByLoggedInBranch') %]
             $(document).ready( function() {

@@ -24,6 +24,7 @@
           enum:
             - messages
             - requesting_agency
+            - hold
         collectionFormat: csv
     produces:
       - application/json
@@ -83,6 +84,7 @@
           enum:
             - messages
             - requesting_agency
+            - hold
         collectionFormat: csv
     produces:
       - application/json

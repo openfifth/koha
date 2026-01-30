@@ -124,6 +124,11 @@ properties:
       - boolean
       - "null"
     description: Cancellation requests count for the hold (x-koha-embed)
+  iso18626_request:
+    type:
+      - object
+      - "null"
+    description: (x-koha-embed)
   biblio:
     type:
       - object
