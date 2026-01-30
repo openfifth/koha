@@ -316,4 +316,25 @@ sub _all_kinds {
     return \@all_valid_kinds;
 }
 
+=head3 config
+
+Return the configuration options needed for the Circulations Triggers Vue app
+
+=cut
+
+sub config {
+    my $c = shift->openapi->valid_input or return;
+
+    my $patron      = $c->stash('koha.user');
+    my $userflags   = C4::Auth::haspermission( $patron->userid );
+    my $permissions = Koha::Auth::Permissions->get_authz_from_flags( { flags => $userflags } );
+
+    return $c->render(
+        status  => 200,
+        openapi => {
+            permissions => $permissions,
+        },
+    );
+}
+
 1;
