@@ -1,14 +1,28 @@
 <template>
-    <BaseResource :routeAction="routeAction" :instancedResource="this" />
+    <div>
+        <div
+            v-if="routeAction === 'list' && showAutocreateWarning"
+            class="alert alert-info"
+        >
+            <i class="fa fa-info-circle"></i>
+            {{
+                $__(
+                    "When autocreate is enabled, field mappings for 'branchcode' and 'categorycode' are required. These can use either IdP attributes or default values."
+                )
+            }}
+        </div>
+        <BaseResource :routeAction="routeAction" :instancedResource="this" />
+    </div>
 </template>
 
 <script>
-import { inject } from "vue";
+import { inject, computed, onMounted, ref } from "vue";
 import BaseResource from "./../BaseResource.vue";
 import { useBaseResource } from "../../composables/base-resource.js";
 import { storeToRefs } from "pinia";
 import { APIClient } from "../../fetch/api-client.js";
 import { $__ } from "@koha-vue/i18n";
+import { useShibbolethStore } from "../../stores/shibboleth.js";
 
 export default {
     name: "ShibbolethMappingResource",
@@ -136,10 +150,26 @@ export default {
             }
         };
 
+        const shibbolethStore = useShibbolethStore();
+        const config = ref(null);
+
+        const showAutocreateWarning = computed(() => {
+            return config.value?.autocreate === true;
+        });
+
+        onMounted(async () => {
+            try {
+                config.value = await APIClient.shibboleth.config.get();
+            } catch (error) {
+                console.error("Failed to fetch shibboleth config:", error);
+            }
+        });
+
         return {
             ...baseResource,
             tableOptions,
             onFormSave,
+            showAutocreateWarning,
         };
     },
 };
