@@ -173,7 +173,7 @@ sub get_template_and_user {
     my $cookie_mgr = Koha::CookieManager->new;
 
     # Get shibboleth login attribute
-    my $shib       = C4::Context->config('useshibboleth') && shib_ok();
+    my $shib       = C4::Context->preference('ShibbolethAuthentication') && shib_ok();
     my $shib_login = $shib ? get_login_shib() : undef;
 
     C4::Context->interface( $in->{type} );
@@ -416,6 +416,7 @@ sub get_template_and_user {
             $template->param(
                 shibbolethAuthentication => $shib,
                 shibbolethLoginUrl       => login_shib_url( $in->{'query'} ),
+                shibbolethOnly           => get_force_sso_setting( $in->{'type'} ),
             );
 
             # If shibboleth is enabled and we have a shibboleth login attribute,
@@ -811,7 +812,7 @@ sub checkauth {
     my $query = shift;
 
     # Get shibboleth login attribute
-    my $shib       = C4::Context->config('useshibboleth') && shib_ok();
+    my $shib       = C4::Context->preference('ShibbolethAuthentication') && shib_ok();
     my $shib_login = $shib ? get_login_shib() : undef;
 
     # $authnotrequired will be set for scripts which will run without authentication
@@ -1451,6 +1452,7 @@ sub checkauth {
         script_name                           => get_script_name(),
         casAuthentication                     => C4::Context->preference("casAuthentication"),
         shibbolethAuthentication              => $shib,
+        shibbolethOnly                        => get_force_sso_setting($type),
         suggestion                            => C4::Context->preference("suggestion"),
         virtualshelves                        => C4::Context->preference("virtualshelves"),
         LibraryName                           => "" . C4::Context->preference("LibraryName"),
@@ -1548,6 +1550,7 @@ sub checkauth {
         $template->param(
             shibbolethAuthentication => $shib,
             shibbolethLoginUrl       => login_shib_url($query),
+            shibbolethOnly           => get_force_sso_setting($type),
         );
     }
 
@@ -1995,7 +1998,7 @@ sub checkpw {
     $type = 'opac' unless $type;
 
     # Get shibboleth login attribute
-    my $shib       = C4::Context->config('useshibboleth') && shib_ok();
+    my $shib       = C4::Context->preference('ShibbolethAuthentication') && shib_ok();
     my $shib_login = $shib ? get_login_shib() : undef;
 
     my $anonymous_patron = C4::Context->preference('AnonymousPatron');

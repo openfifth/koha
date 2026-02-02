@@ -135,8 +135,8 @@
                             </a>
                             <a tabindex="0" role="menuitem" class="logout js-hide" href="/cgi-bin/koha/opac-main.pl?logout.x=1"><i class="fa fa-fw fa-sign-out" aria-hidden="true"></i> Log out</a>
                         [% ELSE %]
-                            [% IF Koha.Preference('casAuthentication') %]
-                                [%# CAS authentication is too complicated for modal window %]
+                            [% IF Koha.Preference('casAuthentication') || shibbolethOnly %]
+                                [%# CAS authentication and Shibboleth force SSO are too complicated for modal window %]
                                 <a class="nav-link login-link" href="/cgi-bin/koha/opac-user.pl" aria-label="Log in to your account"
                                     ><i class="fa fa-user fa-icon-black fa-fw" aria-hidden="true"></i> <span class="userlabel">Log in to your account</span></a
                                 >

@@ -97,7 +97,7 @@
                                     <!-- This is what is displayed if shibboleth login has failed to match a koha user -->
                                     <div class="alert alert-info">
                                         <p aria-live="assertive" role="alert" class="shib_invalid">Sorry, your Shibboleth identity does not match a valid library identity.</p>
-                                        [% UNLESS ( Koha.Preference('OPACShibOnly') ) %]
+                                        [% UNLESS ( shibbolethOnly ) %]
                                             [% IF ( casAuthentication ) %]
                                                 [% IF ( invalidCasLogin ) %]
                                                     <!-- This is what is displayed if cas login has failed -->
@@ -114,7 +114,7 @@
                                     <h2 class="shib_title">Shibboleth login</h2>
                                     <p><a class="shib_url" href="[% shibbolethLoginUrl | $raw %]">Log in using a Shibboleth account.</a></p>
                                 [% END # /IF invalidShibLogin %]
-                                [% UNLESS ( Koha.Preference('OPACShibOnly') ) %]
+                                [% UNLESS ( shibbolethOnly ) %]
                                     [% IF ( casAuthentication ) %]
                                         <h2 class="cas_title">CAS login</h2>
                                         <p>If you do not have a Shibboleth account, but you do have a CAS account, you can use CAS.</p>
@@ -125,7 +125,7 @@
                                 [% END %]
                             [% END # /IF shibbolethAuthentication %]
 
-                            [% UNLESS ( Koha.Preference('OPACShibOnly') ) %]
+                            [% UNLESS ( shibbolethOnly ) %]
                                 [% IF ( casAuthentication ) %]
                                     [% IF ( shibbolethAuthentication ) %]
                                         [% IF ( casServerUrl ) %]
@@ -227,7 +227,7 @@
                                 [% ELSE %]
                                     <p>You must contact the library to reset your password</p>
                                 [% END %]
-                            [% ELSIF !Koha.Preference('OPACShibOnly') or SCO_login or SCI_login %]
+                            [% ELSIF !shibbolethOnly or SCO_login or SCI_login %]
                                 [% SET form_action = script_name %]
                                 [% IF SCO_login %]
                                     [% form_action = "/cgi-bin/koha/sco/sco-main.pl" %]
