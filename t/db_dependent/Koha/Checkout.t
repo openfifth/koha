@@ -21,6 +21,7 @@ use Modern::Perl;
 
 use Test::NoWarnings;
 use Test::More tests => 6;
+use t::lib::Mocks;
 use t::lib::TestBuilder;
 
 use Koha::Database;
