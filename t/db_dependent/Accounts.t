@@ -678,6 +678,139 @@ subtest "C4::Accounts::chargelostitem tests" => sub {
     my $lostfine;
     my $procfee;
 
+    subtest "Bug 35612: chargelostitem records branch context in accountlines.branchcode" => sub {
+        plan tests => 7;
+
+        t::lib::Mocks::mock_preference( 'LostChargesControl',  'ItemHomeLibrary' );
+        t::lib::Mocks::mock_preference( 'HomeOrHoldingBranch', 'homebranch' );
+
+        my $lib_home   = $builder->build( { source => 'Branch' } )->{branchcode};
+        my $lib_hold   = $builder->build( { source => 'Branch' } )->{branchcode};
+        my $lib_issue  = $builder->build( { source => 'Branch' } )->{branchcode};
+        my $lib_patron = $builder->build( { source => 'Branch' } )->{branchcode};
+
+        my $patron = $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $lib_patron } } );
+
+        my $item = $builder->build_sample_item();
+        $item->homebranch($lib_home)->holdingbranch($lib_hold)->store;
+
+        my $issue_id = $builder->build(
+            {
+                source => 'Issue',
+                value  => {
+                    borrowernumber => $patron->borrowernumber,
+                    itemnumber     => $item->itemnumber,
+                    branchcode     => $lib_issue,
+                }
+            }
+        )->{issue_id};
+
+        my $fake_user_branch = $builder->build( { source => 'Branch' } )->{branchcode};
+        my $module           = Test::MockModule->new('C4::Context');
+        $module->mock(
+            'userenv',
+            sub {
+                return {
+                    flags  => 1,
+                    number => $patron->borrowernumber,
+                    branch => $fake_user_branch,
+                };
+            }
+        );
+
+        t::lib::Mocks::mock_preference( 'item-level_itypes',         1 );
+        t::lib::Mocks::mock_preference( 'useDefaultReplacementCost', 0 );
+
+        t::lib::Mocks::mock_preference( 'LostChargesControl',  'PatronLibrary' );
+        t::lib::Mocks::mock_preference( 'HomeOrHoldingBranch', 'homebranch' );
+
+        C4::Accounts::chargelostitem(
+            $patron->borrowernumber,
+            $item->itemnumber,
+            6.12,
+            "Lost test",
+            { issue_id => $issue_id }
+        );
+
+        my $lost = Koha::Account::Lines->find(
+            {
+                borrowernumber => $patron->borrowernumber, itemnumber => $item->itemnumber, debit_type_code => 'LOST',
+                issue_id       => $issue_id
+            }
+        );
+        ok( $lost, "LOST line created" );
+        is( $lost->branchcode, $lib_patron, "LOST uses PatronLibrary context branchcode" );
+
+        $lost->delete;
+
+        t::lib::Mocks::mock_preference( 'LostChargesControl',  'ItemHomeLibrary' );
+        t::lib::Mocks::mock_preference( 'HomeOrHoldingBranch', 'holdingbranch' );
+
+        C4::Accounts::chargelostitem(
+            $patron->borrowernumber,
+            $item->itemnumber,
+            6.12,
+            "Lost test 2",
+            { issue_id => $issue_id }
+        );
+
+        $lost = Koha::Account::Lines->find(
+            {
+                borrowernumber => $patron->borrowernumber, itemnumber => $item->itemnumber, debit_type_code => 'LOST',
+                issue_id       => $issue_id
+            }
+        );
+        ok( $lost, "LOST line created (case 2)" );
+        is( $lost->branchcode, $lib_hold, "LOST uses item holdingbranch when HomeOrHoldingBranch=holdingbranch" );
+        $lost->delete;
+
+        C4::Accounts::chargelostitem(
+            $patron->borrowernumber,
+            $item->itemnumber,
+            6.12,
+            "Lost test 3",
+            { issue_id => $issue_id, library_id => $lib_issue }
+        );
+
+        $lost = Koha::Account::Lines->find(
+            {
+                borrowernumber => $patron->borrowernumber, itemnumber => $item->itemnumber, debit_type_code => 'LOST',
+                issue_id       => $issue_id
+            }
+        );
+
+        ok( $lost, "LOST line created (override)" );
+        is( $lost->branchcode, $lib_issue, "Explicit library_id is recorded as branchcode" );
+        $lost->delete;
+
+        C4::Accounts::chargelostitem(
+            $patron->borrowernumber,
+            $item->itemnumber,
+            6.12,
+            "Lost test dedupe",
+            { issue_id => $issue_id, library_id => $lib_issue }
+        );
+
+        C4::Accounts::chargelostitem(
+            $patron->borrowernumber,
+            $item->itemnumber,
+            6.12,
+            "Lost test dedupe",
+            { issue_id => $issue_id, library_id => $lib_issue }
+        );
+
+        is(
+            Koha::Account::Lines->search(
+                {
+                    borrowernumber  => $patron->borrowernumber, itemnumber => $item->itemnumber,
+                    debit_type_code => 'LOST',                  issue_id   => $issue_id
+                }
+            )->count,
+            1,
+            "Dedupes LOST charges for same itemnumber + issue_id (no item_id regression)"
+        );
+    };
+
     subtest "fee application tests" => sub {
         plan tests => 48;
 
@@ -1046,7 +1179,10 @@ subtest "C4::Accounts::chargelostitem tests" => sub {
         );
 
         t::lib::Mocks::mock_preference( 'ProcessingFeeNote', 'Test Note' );
-        C4::Accounts::chargelostitem( $cli_borrowernumber, $cli_itemnumber4, '1.99', "Perdedor" );
+        C4::Accounts::chargelostitem(
+            $cli_borrowernumber, $cli_itemnumber4, '1.99', "Perdedor",
+            { library_id => $branchcode, issue_id => $cli_issue_id_4X }
+        );
 
         # Lost Item Fee
         $lostfine = Koha::Account::Lines->find(
