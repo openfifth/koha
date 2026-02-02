@@ -497,7 +497,7 @@ subtest "GetIssuingCharges tests" => sub {
 
 my ( $reused_itemnumber_1, $reused_itemnumber_2 );
 subtest "CanBookBeRenewed tests" => sub {
-    plan tests => 114;
+    plan tests => 115;
 
     C4::Context->set_preference( 'ItemsDeniedRenewal', '' );
 
@@ -1715,6 +1715,76 @@ subtest "CanBookBeRenewed tests" => sub {
     );
     t::lib::Mocks::mock_preference( 'UnseenRenewals', 0 );
 
+    subtest 'Bug 35612: fee branch context' => sub {
+        plan tests => 8;
+
+        my $lib_home   = $builder->build_object( { class => 'Koha::Libraries' } );
+        my $lib_hold   = $builder->build_object( { class => 'Koha::Libraries' } );
+        my $lib_issue  = $builder->build_object( { class => 'Koha::Libraries' } );
+        my $lib_patron = $builder->build_object( { class => 'Koha::Libraries' } );
+
+        my $patron =
+            $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $lib_patron->branchcode } } );
+
+        my $assert_fee_branchcode = sub {
+            my ( $fee_type, $circ_control, $lost_control, $hoh, $expected, $label ) = @_;
+
+            t::lib::Mocks::mock_preference( 'CircControl',         $circ_control ) if defined $circ_control;
+            t::lib::Mocks::mock_preference( 'HomeOrHoldingBranch', $hoh // 'homebranch' );
+
+            my $item = $builder->build_sample_item();
+            $item->homebranch( $lib_home->branchcode )->holdingbranch( $lib_hold->branchcode )->store;
+
+            my $checkout = $builder->build_object(
+                {
+                    class => 'Koha::Checkouts',
+                    value => {
+                        itemnumber     => $item->itemnumber,
+                        borrowernumber => $patron->borrowernumber,
+                        branchcode     => $lib_issue->branchcode,
+                        date_due       => dt_from_string()->subtract( days => 1 ),
+                    }
+                }
+            );
+
+            C4::Overdues::UpdateFine(
+                {
+                    issue_id       => $checkout->issue_id,
+                    itemnumber     => $item->itemnumber,
+                    borrowernumber => $patron->borrowernumber,
+                    amount         => 1,
+                    due            => $checkout->date_due,
+                }
+            );
+
+            my $fine = Koha::Account::Lines->search(
+                { issue_id => $checkout->issue_id, debit_type_code => 'OVERDUE' },
+                { order_by => { -desc => 'accountlines_id' } }
+            )->next;
+
+            ok( $fine, "$label: fine created" );
+            is( $fine->branchcode, $expected, "$label: branchcode recorded correctly" );
+        };
+
+        $assert_fee_branchcode->(
+            'OVERDUE', 'PatronLibrary', undef, undef, $lib_patron->branchcode,
+            'OVERDUE CircControl=PatronLibrary'
+        );
+        $assert_fee_branchcode->(
+            'OVERDUE', 'PickupLibrary', undef, undef, $lib_issue->branchcode,
+            'OVERDUE CircControl=PickupLibrary'
+        );
+        $assert_fee_branchcode->(
+            'OVERDUE', 'ItemHomeLibrary', undef, 'homebranch', $lib_home->branchcode,
+            'OVERDUE ItemHomeLibrary + homebranch'
+        );
+        $assert_fee_branchcode->(
+            'OVERDUE', 'ItemHomeLibrary', undef, 'holdingbranch', $lib_hold->branchcode,
+            'OVERDUE ItemHomeLibrary + holdingbranch'
+        );
+
+    };
+
     # Test WhenLostForgiveFine and WhenLostChargeReplacementFee
     t::lib::Mocks::mock_preference( 'WhenLostForgiveFine',          '1' );
     t::lib::Mocks::mock_preference( 'WhenLostChargeReplacementFee', '1' );
@@ -2288,7 +2358,7 @@ subtest "AllowRenewalIfOtherItemsAvailable tests" => sub {
     );
 
     $item_2->notforloan(0)->store;
-    $item_3->delete();
+    $item_3->notforloan(1)->store;
 
     # Two items total, one item available, one issued, two holds on record
 
