@@ -6065,6 +6065,43 @@ CREATE TABLE `sessions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
+-- 
+-- Table structure for table `shibboleth_config`
+--
+
+DROP TABLE IF EXISTS `shibboleth_config`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `shibboleth_config` (
+  `shibboleth_config_id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'primary key',
+  `force_opac_sso` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Force Shibboleth SSO for OPAC',
+  `force_staff_sso` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Force Shibboleth SSO for staff interface',
+  `autocreate` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Automatically create new patrons',
+  `sync` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Sync patron attributes on login',
+  `welcome` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Send welcome email to new patrons',
+  PRIMARY KEY (`shibboleth_config_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+-- 
+-- Table structure for table `shibboleth_field_mappings`
+--
+
+DROP TABLE IF EXISTS `shibboleth_field_mappings`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `shibboleth_field_mappings` (
+  `mapping_id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'primary key',
+  `idp_field` varchar(255) DEFAULT NULL COMMENT 'Field name from the identity provider',
+  `koha_field` varchar(255) NOT NULL COMMENT 'Corresponding field in Koha borrowers table',
+  `is_matchpoint` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'If this field is used to match existing users',
+  `default_content` varchar(255) DEFAULT NULL COMMENT 'Default content for this field if not provided by the IdP',
+  PRIMARY KEY (`mapping_id`),
+  UNIQUE KEY `koha_field_idx` (`koha_field`),
+  KEY `idp_field_idx` (`idp_field`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
 --
 -- Table structure for table `sip_account_custom_item_fields`
 --
@@ -6082,7 +6119,6 @@ CREATE TABLE `sip_account_custom_item_fields` (
   KEY `sip_account_custom_item_fields_ibfk_1` (`sip_account_id`),
   CONSTRAINT `sip_account_custom_item_fields_ibfk_1` FOREIGN KEY (`sip_account_id`) REFERENCES `sip_accounts` (`sip_account_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
 
 --
 -- Table structure for table `sip_account_custom_patron_fields`
@@ -6288,7 +6324,6 @@ CREATE TABLE `sip_system_preference_overrides` (
   `value` varchar(80) NOT NULL COMMENT 'System preference value',
   PRIMARY KEY (`sip_system_preference_override_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
 
 --
 -- Table structure for table `sms_providers`
