@@ -1,0 +1,27 @@
+[% USE raw %]
+[% USE To %]
+[% SET footerjs = 1 %]
+[% INCLUDE 'doc-head-open.inc' %]
+<title> Shibboleth &rsaquo; Koha </title>
+[% INCLUDE 'doc-head-close.inc' %]
+</head>
+
+<body id="admin_shibboleth" class="admin">
+[% WRAPPER 'header.inc' %]
+    [% INCLUDE 'prefs-admin-search.inc' %]
+[% END %]
+
+<div id="shibboleth">
+    <!-- this is closed in intranet-bottom.inc -->
+
+    [% MACRO jsinclude BLOCK %]
+        [% INCLUDE 'calendar.inc' %]
+        [% INCLUDE 'datatables.inc' %]
+        <script>
+            const logged_in_user = [% To.json(logged_in_user.unblessed) | $raw %];
+            window.borrower_columns = [% To.json(borrower_columns) | $raw %];
+        </script>
+        [% Asset.js("js/vue/dist/shibboleth.js") | $raw %]
+    [% END %]
+    [% INCLUDE 'intranet-bottom.inc' %]
+</div>
