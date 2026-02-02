@@ -114,7 +114,7 @@ sub chargelostitem {
 
     my $existing_charges = $account->lines->search(
         {
-            item_id         => $itemnumber,
+            itemnumber      => $itemnumber,
             debit_type_code => 'LOST',
             issue_id        => $issue_id,
         }
