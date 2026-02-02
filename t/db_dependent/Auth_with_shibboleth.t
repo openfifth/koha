@@ -35,6 +35,9 @@ use t::lib::Dates;
 use C4::Auth_with_shibboleth qw( shib_ok login_shib_url get_login_shib checkpw_shib );
 use Koha::Database;
 use Koha::DateUtils qw( dt_from_string );
+use Koha::ShibbolethConfig;
+use Koha::ShibbolethConfigs;
+use Koha::ShibbolethFieldMapping;
 
 BEGIN {
     use_ok(
@@ -48,9 +51,7 @@ $schema->storage->txn_begin;
 my $builder = t::lib::TestBuilder->new;
 my $logger  = t::lib::Mocks::Logger->new();
 
-# Mock variables
 my $shibboleth;
-change_config( {} );
 my $interface = 'opac';
 
 # Mock few preferences
@@ -59,11 +60,12 @@ t::lib::Mocks::mock_preference( 'StaffClientBaseURL',   'teststaff.com' );
 t::lib::Mocks::mock_preference( 'EmailFieldPrimary',    '' );
 t::lib::Mocks::mock_preference( 'EmailFieldPrecedence', 'emailpro' );
 
-# Mock Context: config, tz and interface
+# Mock Context: tz and interface
 my $context = Test::MockModule->new('C4::Context');
-$context->mock( 'config',    sub { return $shibboleth; } );    # easier than caching by Mocks::mock_config
 $context->mock( 'timezone',  sub { return 'local'; } );
 $context->mock( 'interface', sub { return $interface; } );
+
+change_config( {} );
 
 # Mock Letters: GetPreparedLetter, EnqueueLetter and SendQueuedMessages
 # We want to test the params
@@ -97,20 +99,21 @@ $mocked_letters->mock(
 # Start testing ----------------------------------------------------------------
 
 subtest "shib_ok tests" => sub {
-    plan tests => 5;
+    plan tests => 6;
     my $result;
 
     # correct config, no debug
     is( shib_ok(), '1', "good config" );
 
-    # bad config, no debug
+    # bad config, no debug - clear matchpoint in DB
+    $schema->resultset('ShibbolethFieldMapping')->update( { is_matchpoint => 0 } );
     delete $shibboleth->{matchpoint};
-    warnings_are { $result = shib_ok() }
-    [ { carped => 'shibboleth matchpoint not defined' }, ],
-        "undefined matchpoint = fatal config, warning given";
+    $result = shib_ok();
+    $logger->warn_is( 'No matchpoint configured in Shibboleth field mappings', "matchpoint warning logged" )
+        ->warn_is( 'shibboleth config could not be loaded', "config could not be loaded warning" )->clear();
     is( $result, '0', "bad config" );
 
-    change_config( { matchpoint => 'email' } );
+    change_config( { matchpoint => 'email', mapping => { email => { content => 'default@example.com' } } } );
     warnings_are { $result = shib_ok() }
     [ { carped => 'shibboleth matchpoint not mapped' }, ],
         "unmapped matchpoint = fatal config, warning given";
@@ -279,6 +282,8 @@ subtest "checkpw_shib tests" => sub {
     );
 
     # sync user
+    my $config = Koha::ShibbolethConfigs->new->get_configuration;
+    $config->sync(1)->store;
     $shibboleth->{sync} = 1;
     $ENV{'city'} = 'AnotherCity';
     ( $retval, $retcard, $retuserid, $retpatron ) = checkpw_shib($shib_login);
@@ -335,7 +340,7 @@ subtest "checkpw_shib tests" => sub {
     $ENV{'emailpro'} = 'me@myemail.com';
     $ENV{branchcode} = $library->branchcode;      # needed since T::D::C does no longer hides the FK constraint
 
-    checkpw($shib_login);
+    ( $retval, $retcard, $retuserid, $retpatron ) = checkpw_shib($shib_login);
     ok(
         my $new_user_autocreated = Koha::Patrons->find( { userid => 'test43210' } ),
         "new user found"
@@ -424,6 +429,19 @@ $schema->storage->txn_rollback;
 sub change_config {
     my $params = shift;
 
+    $schema->resultset('ShibbolethConfig')->delete;
+    $schema->resultset('ShibbolethFieldMapping')->delete;
+
+    Koha::ShibbolethConfig->new(
+        {
+            force_opac_sso  => 0,
+            force_staff_sso => 0,
+            autocreate      => $params->{autocreate} // 0,
+            sync            => $params->{sync}       // 0,
+            welcome         => $params->{welcome}    // 0,
+        }
+    )->store;
+
     my %mapping = (
         'userid'       => { 'is' => 'uid' },
         'surname'      => { 'is' => 'sn' },
@@ -437,15 +455,29 @@ sub change_config {
     if ( exists $params->{mapping} ) {
         $mapping{$_} = $params->{mapping}->{$_} for keys %{ $params->{mapping} };
     }
-    $shibboleth = {
+
+    my $matchpoint = $params->{matchpoint} // 'userid';
+
+    foreach my $koha_field ( keys %mapping ) {
+        Koha::ShibbolethFieldMapping->new(
+            {
+                koha_field      => $koha_field,
+                idp_field       => $mapping{$koha_field}->{is},
+                is_matchpoint   => $koha_field eq $matchpoint ? 1 : 0,
+                default_content => $mapping{$koha_field}->{content},
+            }
+        )->store;
+    }
+
+    my $db_config = Koha::ShibbolethConfigs->new->get_configuration;
+    $shibboleth = $db_config ? $db_config->get_combined_config : {
         autocreate => $params->{autocreate} // 0,
         welcome    => $params->{welcome}    // 0,
         sync       => $params->{sync}       // 0,
-        matchpoint => $params->{matchpoint} // 'userid',
+        matchpoint => $matchpoint,
         mapping    => \%mapping,
     };
 
-    # Change environment too
     $ENV{'uid'}      = "test1234";
     $ENV{'sn'}       = undef;
     $ENV{'exp'}      = undef;
