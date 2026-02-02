@@ -57,7 +57,7 @@ use Koha::Patrons;
 use Koha::Patron::Consents;
 use List::MoreUtils qw( any );
 use Encode;
-use C4::Auth_with_shibboleth qw( shib_ok get_login_shib login_shib_url logout_shib checkpw_shib );
+use C4::Auth_with_shibboleth qw( shib_ok get_login_shib login_shib_url logout_shib checkpw_shib get_force_sso_setting );
 use Net::CIDR;
 use C4::Log qw( logaction );
 use Koha::CookieManager;
@@ -1151,15 +1151,9 @@ sub checkauth {
             }
 
             # If shib configured and shibOnly enabled, we should ignore anything other than a shibboleth type login.
-            if (
-                   $shib
+            if (   $shib
                 && !$shibSuccess
-                && (
-                    ( ( $type eq 'opac' ) && C4::Context->preference('OPACShibOnly') )
-                    || ( ( $type ne 'opac' )
-                        && C4::Context->preference('staffShibOnly') )
-                )
-                )
+                && get_force_sso_setting($type) )
             {
                 $return = 0;
             }
@@ -1545,9 +1539,7 @@ sub checkauth {
     if ($shib) {
 
         #If shibOnly is enabled just go ahead and redirect directly
-        if (   ( ( $type eq 'opac' ) && C4::Context->preference('OPACShibOnly') )
-            || ( ( $type ne 'opac' ) && C4::Context->preference('staffShibOnly') ) )
-        {
+        if ( get_force_sso_setting($type) ) {
             my $redirect_url = login_shib_url($query);
             print $query->redirect( -uri => "$redirect_url", -status => 303 );
             safe_exit;

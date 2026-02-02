@@ -18,11 +18,15 @@ package C4::Auth_with_shibboleth;
 # along with Koha; if not, see <https://www.gnu.org/licenses>.
 
 use Modern::Perl;
-use base 'Exporter';
+
+our ( @ISA, @EXPORT_OK );
 
 BEGIN {
-    our @EXPORT_OK = qw(shib_ok logout_shib login_shib_url checkpw_shib get_login_shib);
+    require Exporter;
+    @ISA       = qw(Exporter);
+    @EXPORT_OK = qw(shib_ok logout_shib login_shib_url checkpw_shib get_login_shib get_force_sso_setting);
 }
+
 
 use C4::Context;
 use Koha::AuthUtils qw( get_script_name );
@@ -34,6 +38,7 @@ use Carp            qw( carp );
 use List::MoreUtils qw( any );
 
 use Koha::Logger;
+use Koha::ShibbolethConfigs;
 
 # Check that shib config is not malformed
 
@@ -240,11 +245,31 @@ sub _get_return {
     return $uri_base_part . URI::Escape::uri_escape_utf8($uri_params_part);
 }
 
+sub get_force_sso_setting {
+    my ($interface) = @_;
+
+    my $db_config = Koha::ShibbolethConfigs->new->get_configuration;
+    return 0 unless $db_config;
+
+    if ( $interface eq 'opac' ) {
+        return $db_config->get_value('force_opac_sso') || 0;
+    } else {
+        return $db_config->get_value('force_staff_sso') || 0;
+    }
+}
+
 sub _get_shib_config {
-    my $config = C4::Context->config('shibboleth');
+    my $db_config = Koha::ShibbolethConfigs->new->get_configuration;
+
+    if ( !$db_config ) {
+        Koha::Logger->get->warn('shibboleth config not defined');
+        return 0;
+    }
+
+    my $config = $db_config->get_combined_config;
 
     if ( !$config ) {
-        Koha::Logger->get->warn('shibboleth config not defined');
+        Koha::Logger->get->warn('shibboleth config could not be loaded');
         return 0;
     }
 
@@ -404,6 +429,15 @@ Given a shib_login attribute, this routine checks for a matching local user and 
 A sugar function to that simply returns the current page URI with appropriate protocol attached
 
 This routine is NOT exported
+
+=head2 get_force_sso_setting
+
+  my $force_sso = get_force_sso_setting($interface);
+
+Returns the force SSO setting for the given interface (opac or intranet).
+Returns 0 if shibboleth is not configured or the setting is disabled.
+
+  $interface - 'opac' or 'intranet'
 
 =head2 _get_shib_config
 
