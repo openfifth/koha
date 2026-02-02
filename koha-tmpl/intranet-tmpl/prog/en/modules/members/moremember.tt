@@ -453,6 +453,7 @@
                                                 <a href="/cgi-bin/koha/members/setstatus.pl?borrowernumber=[% patron.borrowernumber | uri %]&amp;reregistration=y">Renew</a> or <a href="/cgi-bin/koha/members/memberentry.pl?op=edit_form&amp;borrowernumber=[% patron.borrowernumber | uri %]">Edit details</a>
                                             [% ELSE %]
                                                 [% patron.dateexpiry | $KohaDates %]
+
                                             [% END %]
                                         </li>
                                         <li id="patron-branchname">
@@ -574,6 +575,40 @@
                                     </ol>
                                 </div> [% # /div.rows %]
                             </div> [% # /div#patron-library-details %]
+
+                            [% IF consents.size %]
+                                <div id="patron-consents" class="patroninfo-section">
+                                    <div class="patroninfo-heading">
+                                        <h3>Consents</h3>
+                                    </div>
+                                    <div class="rows">
+                                        <ol>
+                                            [% FOREACH consent IN consents %]
+                                                <li>
+                                                    <span class="label">
+                                                        [% IF consent.type == 'GDPR_PROCESSING' %]
+                                                            Privacy policy consent:
+                                                        [% ELSIF consent.title.title.${lang} %]
+                                                            [% consent.title.title.${lang} | html %]:
+                                                        [% ELSIF consent.title.title.en %]
+                                                            [% consent.title.title.en | html %]:
+                                                        [% ELSE %]
+                                                            [% consent.type | html %]:
+                                                        [% END %]
+                                                    </span>
+                                                    [% IF consent.given_on %]
+                                                        <span class="text-success"> <i class="fa fa-check"></i> Given on [% consent.given_on | $KohaDates with_hours => 1 %] </span>
+                                                    [% ELSIF consent.refused_on %]
+                                                        <span class="text-danger"> <i class="fa fa-times"></i> Refused on [% consent.refused_on | $KohaDates with_hours => 1 %] </span>
+                                                    [% ELSE %]
+                                                        <span class="text-muted">Not specified</span>
+                                                    [% END %]
+                                                </li>
+                                            [% END %]
+                                        </ol>
+                                    </div>
+                                </div>
+                            [% END %]
 
                             <div id="patron-alternate-address" class="patroninfo-section">
                                 [% IF ( patron.B_phone || patron.B_email || patron.contactnote || patron.B_address || patron.B_address2 || patron.B_city || patron.B_zipcode || patron.B_country ) %]
