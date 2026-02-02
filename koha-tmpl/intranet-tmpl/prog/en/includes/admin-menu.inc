@@ -41,6 +41,12 @@
                 <li><a href="/cgi-bin/koha/admin/transport-cost-matrix.pl">Transport cost matrix</a></li>
                 <li><a href="/cgi-bin/koha/admin/float_limits.pl">Library float limits</a></li>
             [% END %]
+            [% IF ( CAN_user_sip2 ) %]
+                <li><a href="/cgi-bin/koha/sip2/sip2.pl">Self-service circulation (SIP2)</a></li>
+            [% END %]
+            [% IF ( CAN_user_parameters_manage_identity_providers ) %]
+                <li><a href="/cgi-bin/koha/shibboleth/shibboleth.pl">Shibboleth configuration</a></li>
+            [% END %]
             [% IF ( CAN_user_parameters_manage_item_circ_alerts ) %]
                 <li><a href="/cgi-bin/koha/admin/item_circulation_alerts.pl">Item circulation alerts</a></li>
             [% END %]

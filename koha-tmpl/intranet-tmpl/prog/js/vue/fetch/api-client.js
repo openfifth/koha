@@ -10,6 +10,7 @@ import ItemAPIClient from "@fetch/item-api-client";
 import RecordSourcesAPIClient from "@fetch/record-sources-api-client";
 import SysprefAPIClient from "@fetch/system-preferences-api-client";
 import SIP2APIClient from "@fetch/sip2-api-client";
+import ShibbolethAPIClient from "@fetch/shibboleth-api-client";
 import PreservationAPIClient from "@fetch/preservation-api-client";
 
 export const APIClient = {
@@ -22,6 +23,7 @@ export const APIClient = {
     item: new ItemAPIClient(HttpClient),
     sysprefs: new SysprefAPIClient(HttpClient),
     sip2: new SIP2APIClient(HttpClient),
+    shibboleth: new ShibbolethAPIClient(HttpClient),
     preservation: new PreservationAPIClient(HttpClient),
     record_sources: new RecordSourcesAPIClient(HttpClient),
 };
