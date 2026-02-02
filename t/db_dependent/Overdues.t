@@ -165,11 +165,84 @@ $schema->storage->txn_rollback;
 
 subtest 'UpdateFine tests' => sub {
 
-    plan tests => 75;
+    plan tests => 83;
 
     $schema->storage->txn_begin;
 
     t::lib::Mocks::mock_preference( 'MaxFine', '100' );
+
+    # Branch context tests for OVERDUE fines (Bug 35612)
+    my $lib_home   = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $lib_hold   = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $lib_issue  = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $lib_patron = $builder->build_object( { class => 'Koha::Libraries' } );
+
+    my $context_patron = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { branchcode => $lib_patron->branchcode }
+        }
+    );
+
+    # Helper to create a scenario checkout/item and assert the resulting fine's branchcode
+    my $assert_overdue_branchcode = sub {
+        my ( $circ_control, $hoh, $expected_branchcode, $label ) = @_;
+
+        t::lib::Mocks::mock_preference( 'CircControl',         $circ_control );
+        t::lib::Mocks::mock_preference( 'HomeOrHoldingBranch', $hoh ) if defined $hoh;
+
+        my $item = $builder->build_sample_item();
+        $item->homebranch( $lib_home->branchcode )->holdingbranch( $lib_hold->branchcode )->store;
+
+        my $checkout = $builder->build_object(
+            {
+                class => 'Koha::Checkouts',
+                value => {
+                    itemnumber     => $item->itemnumber,
+                    borrowernumber => $context_patron->borrowernumber,
+                    branchcode     => $lib_issue->branchcode,
+                }
+            }
+        );
+
+        UpdateFine(
+            {
+                issue_id       => $checkout->issue_id,
+                itemnumber     => $item->itemnumber,
+                borrowernumber => $context_patron->borrowernumber,
+                amount         => '1',
+                due            => $checkout->date_due,
+            }
+        );
+
+        my $fine = Koha::Account::Lines->search(
+            { issue_id => $checkout->issue_id, debit_type_code => 'OVERDUE' },
+            { order_by => { -desc => 'accountlines_id' } }
+        )->next;
+
+        ok( $fine, "$label: fine created" );
+        is( $fine->branchcode, $expected_branchcode, "$label: branchcode recorded correctly" );
+    };
+
+    $assert_overdue_branchcode->(
+        'PatronLibrary', undef, $lib_patron->branchcode,
+        'CircControl=PatronLibrary'
+    );
+
+    $assert_overdue_branchcode->(
+        'PickupLibrary', undef, $lib_issue->branchcode,
+        'CircControl=PickupLibrary'
+    );
+
+    $assert_overdue_branchcode->(
+        'ItemHomeLibrary', 'homebranch', $lib_home->branchcode,
+        'CircControl=ItemHomeLibrary + HomeOrHoldingBranch=homebranch'
+    );
+
+    $assert_overdue_branchcode->(
+        'ItemHomeLibrary', 'holdingbranch', $lib_hold->branchcode,
+        'CircControl=ItemHomeLibrary + HomeOrHoldingBranch=holdingbranch'
+    );
 
     my $patron    = $builder->build_object( { class => 'Koha::Patrons' } );
     my $item1     = $builder->build_sample_item();
