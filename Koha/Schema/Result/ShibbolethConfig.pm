@@ -104,6 +104,13 @@ __PACKAGE__->set_primary_key("shibboleth_config_id");
 # Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-10-31 15:43:50
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:AIDq10SUxo8NgJsBj8oldg
 
+__PACKAGE__->add_columns(
+    '+force_opac_sso'  => { is_boolean => 1 },
+    '+force_staff_sso' => { is_boolean => 1 },
+    '+autocreate'      => { is_boolean => 1 },
+    '+sync'            => { is_boolean => 1 },
+    '+welcome'         => { is_boolean => 1 },
+);
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration
 1;
