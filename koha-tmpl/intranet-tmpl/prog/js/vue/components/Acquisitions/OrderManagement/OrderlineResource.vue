@@ -618,10 +618,13 @@ export default {
                         resourceRelationships: {
                             resourceProperty: "fund_distributions",
                         },
-                        relationshipStrings: {
+                        relationshipI18n: {
                             nameLowerCase: $__("fund distribution"),
                             namePlural: $__("funds"),
                             nameUpperCase: $__("Fund distribution"),
+                            noneCreatedYetMessage: $__(
+                                "There are no funds created yet"
+                            ),
                         },
                         newRelationshipDefaultAttrs: {
                             type: "object",
