@@ -228,6 +228,7 @@ if ($form_submitted) {
 }
 
 my @biblionumbers = $input->multi_param('biblionumber');
+@biblionumbers = uniq(@biblionumbers);  # Deduplicate to prevent duplicate holds from retries/malformed URLs
 
 my $multi_hold = @biblionumbers > 1;
 $template->param(

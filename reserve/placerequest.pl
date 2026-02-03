@@ -24,6 +24,7 @@ use Modern::Perl;
 
 use CGI qw ( -utf8 );
 use URI;
+use List::MoreUtils qw( uniq );
 use C4::Reserves qw( CanItemBeReserved AddReserve CanBookBeReserved );
 use C4::Auth     qw( checkauth );
 
@@ -38,6 +39,10 @@ checkauth( $input, 0, { reserveforothers => 'place_holds' }, 'intranet' );
 my @reqbib           = $input->multi_param('reqbib');
 my @biblionumbers    = $input->multi_param('biblionumber');
 my @holdable_bibs    = $input->multi_param('holdable_bibs');
+
+# Deduplicate arrays to prevent duplicate holds from retries or malformed URLs
+@biblionumbers = uniq(@biblionumbers);
+@holdable_bibs = uniq(@holdable_bibs);
 my $borrowernumber   = $input->param('borrowernumber');
 my $notes            = $input->param('notes');
 my $branch           = $input->param('pickup');
