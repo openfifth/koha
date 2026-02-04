@@ -327,7 +327,7 @@ describe("Circulation Triggers - Filtering", () => {
         // Change to "explicitly set rules"
         cy.get("#filter-rules .vs__search").click();
         cy.get("#filter-rules .vs__dropdown-menu")
-            .contains("explictly set rules")
+            .contains("explicitly set rules")
             .click({ force: true });
 
         // Should show fewer rules (only explicitly set ones)
@@ -1206,7 +1206,7 @@ describe("Circulation Triggers - Complex Scenarios", () => {
         // Toggle filter
         cy.get("#filter-rules .vs__search").click();
         cy.get("#filter-rules .vs__dropdown-menu")
-            .contains("explictly set rules")
+            .contains("explicitly set rules")
             .click({ force: true });
 
         // Should handle all operations without errors
