@@ -1032,10 +1032,24 @@ export default {
             return handleAPIFormSubmission(orderline, orderline_id);
         };
 
+        const navigationOnFormSaveAdditionalOptions = resource => {
+            return [
+                {
+                    title: $__("Save as draft"),
+                    action: "submit",
+                    cssClass: "btn btn-default",
+                    callback: () => {
+                        resource.value.status = "draft";
+                    },
+                },
+            ];
+        };
+
         return {
             ...baseResource,
             tableOptions,
             onFormSave,
+            navigationOnFormSaveAdditionalOptions,
         };
     },
     components: { BaseResource },
