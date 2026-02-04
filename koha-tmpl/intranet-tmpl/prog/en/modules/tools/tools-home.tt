@@ -63,11 +63,6 @@
                     <dd>Define notices (print and email notification messages for overdues, etc.)</dd>
                 [% END %]
 
-                [% IF ( CAN_user_tools_edit_notice_status_triggers ) %]
-                    <dt><a href="/cgi-bin/koha/admin/circulation_triggers">Overdue notice/status triggers</a></dt>
-                    <dd>Set notice/status triggers for overdue items</dd>
-                [% END %]
-
                 [% IF ( CAN_user_tools_label_creator ) %]
                     <dt><a href="/cgi-bin/koha/patroncards/home.pl">Patron card creator</a></dt>
                     <dd>Create printable patron cards</dd>
