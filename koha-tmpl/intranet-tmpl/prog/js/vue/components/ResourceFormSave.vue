@@ -208,12 +208,23 @@ export default {
             });
         };
 
+        const handleStickyToolbarFormSubmission = formToSubmit => {
+            if (
+                props.instancedResource.stickyToolbar &&
+                props.instancedResource.stickyToolbar.includes("Form")
+            ) {
+                formToSubmit.value.requestSubmit();
+            }
+        };
         const saveOptionSelected = ref(
             props.instancedResource.navigationOnFormSave
         );
         const saveDropdownButtonActions = computed(() => {
-            const { components, navigationOnFormSave } =
-                props.instancedResource;
+            const {
+                components,
+                navigationOnFormSave,
+                navigationOnFormSaveAdditionalOptions,
+            } = props.instancedResource;
             const formToSubmit = resourceForm.value;
             const buttonOptions = {
                 list: {
@@ -222,14 +233,7 @@ export default {
                     cssClass: "btn btn-default",
                     callback: () => {
                         saveOptionSelected.value = components.list;
-                        if (
-                            props.instancedResource.stickyToolbar &&
-                            props.instancedResource.stickyToolbar.includes(
-                                "Form"
-                            )
-                        ) {
-                            formToSubmit.value.requestSubmit();
-                        }
+                        handleStickyToolbarFormSubmission(formToSubmit);
                     },
                 },
                 show: {
@@ -238,14 +242,7 @@ export default {
                     cssClass: "btn btn-default",
                     callback: () => {
                         saveOptionSelected.value = components.show;
-                        if (
-                            props.instancedResource.stickyToolbar &&
-                            props.instancedResource.stickyToolbar.includes(
-                                "Form"
-                            )
-                        ) {
-                            formToSubmit.value.requestSubmit();
-                        }
+                        handleStickyToolbarFormSubmission(formToSubmit);
                     },
                 },
                 edit: {
@@ -254,23 +251,31 @@ export default {
                     cssClass: "btn btn-default",
                     callback: () => {
                         saveOptionSelected.value = components.edit;
-                        if (
-                            props.instancedResource.stickyToolbar &&
-                            props.instancedResource.stickyToolbar.includes(
-                                "Form"
-                            )
-                        ) {
-                            formToSubmit.value.requestSubmit();
-                        }
+                        handleStickyToolbarFormSubmission(formToSubmit);
                     },
                 },
             };
-            return Object.keys(buttonOptions).reduce((acc, key) => {
-                if (!components[key]) return acc;
-                if (key === "show" && !navigationOnFormSave) return acc;
-                if (components[key] === navigationOnFormSave) return acc;
-                return [buttonOptions[key], ...acc];
-            }, []);
+            const additionalOptions = navigationOnFormSaveAdditionalOptions
+                ? navigationOnFormSaveAdditionalOptions(resourceToSave)
+                : [];
+            additionalOptions.forEach(button => {
+                if (button.hasOwnProperty("callback")) {
+                    const callbackMethod = button.callback;
+                    button.callback = () => {
+                        callbackMethod();
+                        handleStickyToolbarFormSubmission(formToSubmit);
+                    };
+                }
+            });
+            return Object.keys(buttonOptions).reduce(
+                (acc, key) => {
+                    if (!components[key]) return acc;
+                    if (key === "show" && !navigationOnFormSave) return acc;
+                    if (components[key] === navigationOnFormSave) return acc;
+                    return [buttonOptions[key], ...acc];
+                },
+                [...additionalOptions]
+            );
         });
 
         return {
