@@ -41,6 +41,7 @@ use C4::Circulation qw( AddIssue AddReturn );
 
 use t::lib::TestBuilder;
 use t::lib::Mocks;
+use Test::MockModule;
 
 my $schema  = Koha::Database->new->schema;
 my $builder = t::lib::TestBuilder->new;
@@ -818,6 +819,7 @@ subtest 'permissions() tests' => sub {
     my $patron = $builder->build_object(
         {
             class => 'Koha::Patrons',
+
             value => { flags => 4 }
         }
     );
@@ -2420,10 +2422,24 @@ subtest 'alert_subscriptions tests' => sub {
 
     my $patron = $builder->build_object( { class => 'Koha::Patrons' } );
 
-    my $subscription1 = $builder->build_object( { class => 'Koha::Subscriptions' } );
+    my $subscription1 = $builder->build_object(
+        {
+            class => 'Koha::Subscriptions',
+            value => {
+                librarian => $patron->borrowernumber,
+            }
+        }
+    );
     $subscription1->add_subscriber($patron);
 
-    my $subscription2 = $builder->build_object( { class => 'Koha::Subscriptions' } );
+    my $subscription2 = $builder->build_object(
+        {
+            class => 'Koha::Subscriptions',
+            value => {
+                librarian => $patron->borrowernumber,
+            }
+        }
+    );
     $subscription2->add_subscriber($patron);
 
     my @subscriptions = $patron->alert_subscriptions->as_list;
@@ -2459,6 +2475,26 @@ subtest 'update_lastseen tests' => sub {
     plan tests => 26;
     $schema->storage->txn_begin;
 
+    my $mock_cache = Test::MockModule->new('Koha::Cache');
+    my %fake_cache;
+
+    $mock_cache->mock(
+        'set_in_cache',
+        sub {
+            my ( $self, $key, $value ) = @_;
+            $fake_cache{$key} = $value;
+            return;
+        }
+    );
+
+    $mock_cache->mock(
+        'get_from_cache',
+        sub {
+            my ( $self, $key ) = @_;
+            return $fake_cache{$key};
+        }
+    );
+
     my $cache = Koha::Caches->get_instance();
 
     t::lib::Mocks::mock_preference(
@@ -2466,13 +2502,13 @@ subtest 'update_lastseen tests' => sub {
         'creation,login,connection,check_in,check_out,renewal,hold,article'
     );
 
-    my $patron = $builder->build_object( { class => 'Koha::Patrons' } );
-    my $userid = $patron->userid;
-    $patron->lastseen(undef);
+    my $patron      = $builder->build_object( { class => 'Koha::Patrons' } );
     my $patron_info = $patron->unblessed;
     delete $patron_info->{borrowernumber};
     $patron->delete();
     $patron = Koha::Patron->new($patron_info)->store();
+    $patron->update_lastseen( { activity => 'creation' } );
+    $patron->discard_changes();
 
     my $now   = dt_from_string();
     my $today = $now->ymd();
@@ -2482,21 +2518,31 @@ subtest 'update_lastseen tests' => sub {
         'Patron should have last seen when newly created if requested'
     );
 
-    my $cache_key   = "track_activity_" . $patron->borrowernumber;
-    my $cache_value = $cache->get_from_cache($cache_key);
-    is( $cache_value, $today, "Cache was updated as expected" );
+    my $cache_key = "track_activity_" . $patron->borrowernumber;
+    is( $cache->get_from_cache($cache_key), $today, "Cache was updated as expected" );
 
     $patron->delete();
 
     t::lib::Mocks::mock_preference(
         'TrackLastPatronActivityTriggers',
-        'login,connection,check_in,check_out,renewal,hold,article'
+        ''
+    );
+    my $patron_no_trigger = $builder->build_object( { class => 'Koha::Patrons' } );
+
+    $patron_no_trigger->lastseen(undef)->store();
+
+    $patron_no_trigger->update_lastseen( { activity => 'login' } );
+    $patron_no_trigger->discard_changes();
+
+    is(
+        $patron_no_trigger->lastseen, undef,
+        'Patron should have not last seen when newly created if trigger not set'
     );
 
-    $patron    = Koha::Patron->new($patron_info)->store();
-    $cache_key = "track_activity_" . $patron->borrowernumber;
-
-    is( $patron->lastseen, undef, 'Patron should have not last seen when newly created if trigger not set' );
+    t::lib::Mocks::mock_preference(
+        'TrackLastPatronActivityTriggers',
+        'login,connection,check_in,check_out,renewal,hold,article'
+    );
 
     $now = dt_from_string();
     Time::Fake->offset( $now->epoch );
@@ -2591,12 +2637,12 @@ subtest 'update_lastseen tests' => sub {
         'login,connection,check_in,check_out,renewal,hold,article'
     );
 
-    $cache->clear_from_cache($cache_key);
+    %fake_cache = ();
     $patron->update_lastseen('login');
     $patron->_result()->discard_changes();
     isnt( $patron->lastseen, $last_seen, 'Patron last seen should be changed after a login if we cleared the cache' );
 
-    $cache->clear_from_cache($cache_key);
+    %fake_cache = ();
     $patron->update_lastseen('connection');
     $patron->_result()->discard_changes();
     isnt(
@@ -2604,7 +2650,7 @@ subtest 'update_lastseen tests' => sub {
         'Patron last seen should be changed after a connection if we cleared the cache'
     );
 
-    $cache->clear_from_cache($cache_key);
+    %fake_cache = ();
     $patron->update_lastseen('check_out');
     $patron->_result()->discard_changes();
     isnt(
@@ -2612,7 +2658,7 @@ subtest 'update_lastseen tests' => sub {
         'Patron last seen should be changed after a check_out if we cleared the cache'
     );
 
-    $cache->clear_from_cache($cache_key);
+    %fake_cache = ();
     $patron->update_lastseen('check_in');
     $patron->_result()->discard_changes();
     isnt(
@@ -2620,13 +2666,15 @@ subtest 'update_lastseen tests' => sub {
         'Patron last seen should be changed after a check_in if we cleared the cache'
     );
 
-    $cache->clear_from_cache($cache_key);
+    %fake_cache = ();
     $patron->update_lastseen('hold');
     $patron->_result()->discard_changes();
     isnt(
         $patron->lastseen, $last_seen,
         'Patron last seen should be changed after a hold if we cleared the cache'
     );
+
+    %fake_cache = ();
     $patron->update_lastseen('article');
     $patron->_result()->discard_changes();
     isnt(
@@ -2634,7 +2682,7 @@ subtest 'update_lastseen tests' => sub {
         'Patron last seen should be changed after a article if we cleared the cache'
     );
 
-    $cache->clear_from_cache($cache_key);
+    %fake_cache = ();
     $patron->update_lastseen('renewal');
     $patron->_result()->discard_changes();
     isnt( $patron->lastseen, $last_seen, 'Patron last seen should be changed after a renewal if we cleared the cache' );
@@ -2642,7 +2690,7 @@ subtest 'update_lastseen tests' => sub {
     # Check that the preference takes effect
     t::lib::Mocks::mock_preference( 'TrackLastPatronActivityTriggers', '' );
     $patron->lastseen(undef)->store;
-    $cache->clear_from_cache($cache_key);
+    %fake_cache = ();
     $patron->update_lastseen('login');
     $patron->_result()->discard_changes();
     is(
