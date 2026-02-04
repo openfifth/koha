@@ -33,10 +33,12 @@ properties:
   created_date:
     type: string
     format: date-time
+    readOnly: true
     description: Date the orderline was created
   modified_date:
     type: string
     format: date-time
+    readOnly: true
     description: Date the orderline was last updated
   ordered_date:
     type:

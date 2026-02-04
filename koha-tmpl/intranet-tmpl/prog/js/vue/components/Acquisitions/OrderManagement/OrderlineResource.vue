@@ -820,6 +820,7 @@ export default {
                     group: $__("General information"),
                     label: $__("Status"),
                     format: status => orderlineStatuses.value[status],
+                    defaultValue: "new",
                     hideIn: ["List", "Form"],
                 },
                 {
@@ -863,20 +864,20 @@ export default {
 
         const handleAPIFormSubmission = (orderline, orderline_id) => {
             if (orderline_id) {
-                const acq_client = APIClient.acquisition;
-                acq_client.orderlines.update(orderline, orderline_id).then(
-                    success => {
-                        baseResource.setMessage($__("Orderline updated"));
-                        baseResource.router.push({ name: "OrderlineList" });
-                    },
-                    error => {}
-                );
+                return baseResource.apiClient
+                    .update(orderline, orderline_id)
+                    .then(
+                        orderline => {
+                            baseResource.setMessage($__("Orderline updated"));
+                            return orderline;
+                        },
+                        error => {}
+                    );
             } else {
-                const acq_client = APIClient.acquisition;
-                acq_client.orderlines.create(orderline).then(
-                    success => {
+                return baseResource.apiClient.create(orderline).then(
+                    orderline => {
                         baseResource.setMessage($__("Orderline created"));
-                        baseResource.router.push({ name: "OrderlineList" });
+                        return orderline;
                     },
                     error => {
                         if (error.message === "bib_match") {
@@ -1020,13 +1021,15 @@ export default {
             delete orderline.calculated_item_costs;
             delete orderline.discount;
             delete orderline.totalDistributedAmount;
+            delete orderline.modified_date;
+            delete orderline.created_date;
 
             if (orderline.quantity_ordered === null) {
                 // Throw error if create_items === "ordering" and none created
                 orderline.quantity_ordered = 1;
             }
 
-            handleAPIFormSubmission(orderline, orderline_id);
+            return handleAPIFormSubmission(orderline, orderline_id);
         };
 
         return {
