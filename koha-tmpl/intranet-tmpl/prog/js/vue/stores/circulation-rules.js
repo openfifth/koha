@@ -362,11 +362,8 @@ export const useCircRulesStore = defineStore("circRules", () => {
         },
         async setAllRawRuleSets() {
             const client = APIClient.circRule;
-            try {
-                await this.getAllRawRuleSets();
-            } catch (e) {
-                //TODO: handle e
-            }
+            await this.getAllRawRuleSets();
+
             this.currentAndDefaultRawRuleSets = [
                 ...this.allCurrentLibraryRawRuleSets,
                 ...this.allDefaultLibraryRawRuleSets,
@@ -399,20 +396,14 @@ export const useCircRulesStore = defineStore("circRules", () => {
         },
         async getAllRawRuleSets() {
             const client = APIClient.circRule;
-            try {
-                this.allDefaultLibraryRawRuleSets =
-                    await client.circ_rules.getAll(
-                        {},
-                        { library_id: "*", effective: false }
-                    );
-                this.allCurrentLibraryRawRuleSets =
-                    await client.circ_rules.getAll(
-                        {},
-                        { library_id: this.currentLibraryId, effective: false }
-                    );
-            } catch (e) {
-                throw e;
-            }
+            this.allDefaultLibraryRawRuleSets = await client.circ_rules.getAll(
+                {},
+                { library_id: "*", effective: false }
+            );
+            this.allCurrentLibraryRawRuleSets = await client.circ_rules.getAll(
+                {},
+                { library_id: this.currentLibraryId, effective: false }
+            );
         },
         async getConfigurationOptions() {
             const client = APIClient.circRule;
@@ -421,12 +412,8 @@ export const useCircRulesStore = defineStore("circRules", () => {
         },
         async getItemTypes() {
             const client = APIClient.item;
-            let itemTypes = [];
-            try {
-                itemTypes = await client.item_types.getAll();
-            } catch (e) {
-                // TODO: handle e
-            }
+            let itemTypes = await client.item_types.getAll();
+
             itemTypes.unshift({
                 item_type_id: "*",
                 description: $__("Default rule for all item types"),
@@ -436,11 +423,8 @@ export const useCircRulesStore = defineStore("circRules", () => {
         async getLibraries() {
             const client = APIClient.library;
             let libraries = [];
-            try {
-                libraries = await client.libraries.getAll();
-            } catch (e) {
-                // TODO: handle e
-            }
+            libraries = await client.libraries.getAll();
+
             libraries.unshift({
                 library_id: "*",
                 name: $__("Default rule for all libraries"),
@@ -449,12 +433,8 @@ export const useCircRulesStore = defineStore("circRules", () => {
         },
         async getPatronCategories() {
             const client = APIClient.patron;
-            let patronCategories = [];
-            try {
-                patronCategories = await client.categories.getAll();
-            } catch (e) {
-                // TODO: handle e
-            }
+            let patronCategories = await client.categories.getAll();
+
             patronCategories.unshift({
                 patron_category_id: "*",
                 name: $__("Default rule for all categories"),
@@ -466,20 +446,15 @@ export const useCircRulesStore = defineStore("circRules", () => {
                 context.library_id = "*";
             }
             const client = APIClient.circRule;
-            let result;
-            try {
-                result = await client.circ_rules.getAll(
-                    {},
-                    {
-                        library_id: context.library_id,
-                        patron_category_id: context.patron_category_id,
-                        item_type_id: context.item_type_id,
-                        effective,
-                    }
-                );
-            } catch (e) {
-                throw e;
-            }
+            const result = await client.circ_rules.getAll(
+                {},
+                {
+                    library_id: context.library_id,
+                    patron_category_id: context.patron_category_id,
+                    item_type_id: context.item_type_id,
+                    effective,
+                }
+            );
             return result[0] ?? null;
         },
         async updateCircRuleSets(existingRuleSet, triggerNumber) {
@@ -494,12 +469,8 @@ export const useCircRulesStore = defineStore("circRules", () => {
                 existingRuleSet[`overdue_${triggerNumber}_mtt`];
             circRuleSet[`overdue_${triggerNumber}_has_rules`] =
                 existingRuleSet[`overdue_${triggerNumber}_has_rules`];
-            try {
-                const client = APIClient.circRule;
-                await client.circ_rules.update(circRuleSet);
-            } catch (e) {
-                //TODO: handle e
-            }
+            const client = APIClient.circRule;
+            await client.circ_rules.update(circRuleSet);
         },
         ...permissionsActions(store),
     };
