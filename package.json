@@ -63,7 +63,6 @@
     "url": "git://git.koha-community.org/koha.git"
   },
   "resolutions": {
-    "minimatch": "^3.0.2",
     "lodash": "^4.17.12"
   },
   "author": "",
