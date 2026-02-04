@@ -26,7 +26,7 @@
             </div>
             <fieldset class="rows" v-if="contextInitialized">
                 <legend>{{ $__("Confirm trigger context") }}</legend>
-                <ol>
+                <ol id="confirm-context-list">
                     <li>
                         <label for="library_id" class="required"
                             >{{ $__("Library") }}:</label
@@ -103,7 +103,7 @@
                             name: 'CirculationTriggersSelectOrAdd',
                             query: context,
                         }"
-                        class="btn btn-default btn-xs"
+                        class="btn btn-default btn-xs float-end"
                         ><i class="fa-solid fa-pencil"></i>
                         {{ $__("Confirm context") }}</router-link
                     >
@@ -1000,5 +1000,41 @@ input[type="number"] {
 .modal-header {
     display: flex;
     justify-content: space-between;
+}
+
+.modal-body {
+    min-height: 280px;
+}
+
+#confirm-context-list {
+    display: flex;
+    gap: 20px;
+    height: fit-content;
+}
+
+#confirm-context-list li {
+    display: flex;
+    flex-direction: column;
+    width: 320px;
+}
+
+#confirm-context-list .v-select {
+    width: 100%;
+}
+
+#confirm-context-list label {
+    width: 100%;
+    text-align: left;
+    padding: 0 0 4px 10px;
+}
+
+#confirm-context-list span {
+    width: 100%;
+    align-content: right;
+    padding-top: 4px;
+}
+
+#confirm-context-list :deep(.v-select ul) {
+    max-height: 120px;
 }
 </style>
