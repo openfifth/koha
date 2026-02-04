@@ -54,7 +54,7 @@ sub _list {
         order            => 'aqorders',
         vendor           => 'aqbooksellers:vendor',
         title            => 'erm_titles',
-        agreement_period => 'erm_agreement_periods'
+        agreement_period => 'erm_agreement_periods',
         orderline => 'acq_orderlines'
     };
 
@@ -115,13 +115,13 @@ sub list_erm {
     };
 }
 
-=head3 list_acq_vendors
+=head3 list_acq
 
 List the vendors-related additional fields, can be filtered using the resource_type parameter.
 
 =cut
 
-sub list_acq_vendors {
+sub list_acq {
     my ($self)         = @_;
     my $c              = shift->openapi->valid_input or return;
     my @resource_types = qw(vendor);

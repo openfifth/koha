@@ -227,6 +227,8 @@ paths:
     $ref: ./paths/acquisitions_baskets.yaml#/~1acquisitions~1baskets~1managers
   /acquisitions/edifiles:
     $ref: ./paths/acquisitions_edifiles.yaml#/~1acquisitions~1edifiles
+  /acquisitions/extended_attribute_types:
+    $ref: ./paths/acquisitions_extended_attribute_types.yaml#/~1acquisitions~1extended_attribute_types
   /acquisitions/fiscal_periods:
     $ref: ./paths/acq_fiscal_periods.yaml#/~1acquisitions~1fiscal_periods
   "/acquisitions/fiscal_periods/{fiscal_period_id}":
@@ -267,8 +269,6 @@ paths:
     $ref: "./paths/acquisitions_orders.yaml#/~1acquisitions~1orders~1{order_id}"
   /acquisitions/vendors:
     $ref: ./paths/acquisitions_vendors.yaml#/~1acquisitions~1vendors
-  /acquisitions/vendors/extended_attribute_types:
-    $ref: ./paths/acquisitions_vendors_extended_attribute_types.yaml#/~1acquisitions~1vendors~1extended_attribute_types
   /acquisitions/vendors/config:
     $ref: ./paths/acquisitions_vendors_config.yaml#/~1acquisitions~1vendors~1config
   "/acquisitions/vendors/{vendor_id}":

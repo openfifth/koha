@@ -57,11 +57,6 @@ export class AcquisitionAPIClient {
                             ...(query && { q: JSON.stringify(query) }),
                         }),
                 }),
-            additional_fields: resource_type =>
-                this.httpClient.getAll({
-                    endpoint: "vendors/extended_attribute_types",
-                    params: { resource_type },
-                }),
         };
     }
 
@@ -82,15 +77,11 @@ export class AcquisitionAPIClient {
 
     get additional_fields() {
         return {
-            getAll: resource_type => {
-                if (resource_type == "vendor") {
-                    return this.vendors.additional_fields(resource_type);
-                }
-                // Use fetch/additional-fields-api-client.js instead
-                throw new Error(
-                    "resource_type %s does not have a dedicated endpoint to fetch additional fields."
-                );
-            },
+            getAll: resource_type =>
+                this.httpClient.getAll({
+                    endpoint: "extended_attribute_types",
+                    params: { resource_type },
+                }),
         };
     }
 

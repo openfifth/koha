@@ -1,7 +1,7 @@
 ---
-/acquisitions/vendors/extended_attribute_types:
+/acquisitions/extended_attribute_types:
   get:
-    x-mojo-to: ExtendedAttributeTypes#list_acq_vendors
+    x-mojo-to: ExtendedAttributeTypes#list_acq
     operationId: listAcquisitionVendorsAdditionalFields
     tags:
       - additional_fields
@@ -15,6 +15,7 @@
         type: string
         enum:
           - vendor
+          - orderline
       - $ref: "../swagger.yaml#/parameters/match"
       - $ref: "../swagger.yaml#/parameters/order_by"
       - $ref: "../swagger.yaml#/parameters/page"
