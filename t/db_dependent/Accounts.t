@@ -679,7 +679,7 @@ subtest "C4::Accounts::chargelostitem tests" => sub {
     my $procfee;
 
     subtest "Bug 35612: chargelostitem records branch context in accountlines.branchcode" => sub {
-        plan tests => 7;
+        plan tests => 8;
 
         t::lib::Mocks::mock_preference( 'LostChargesControl',  'ItemHomeLibrary' );
         t::lib::Mocks::mock_preference( 'HomeOrHoldingBranch', 'homebranch' );
@@ -808,6 +808,30 @@ subtest "C4::Accounts::chargelostitem tests" => sub {
             )->count,
             1,
             "Dedupes LOST charges for same itemnumber + issue_id (no item_id regression)"
+        );
+
+        # Test undefined LostChargesControl (should default to ItemHomeLibrary behavior)
+        Koha::Account::Lines->search(
+            { borrowernumber => $patron->borrowernumber, itemnumber => $item->itemnumber, debit_type_code => 'LOST' } )
+            ->delete;
+
+        t::lib::Mocks::mock_preference( 'LostChargesControl',  undef );
+        t::lib::Mocks::mock_preference( 'HomeOrHoldingBranch', 'homebranch' );
+
+        C4::Accounts::chargelostitem(
+            $patron->borrowernumber, $item->itemnumber, 6.12, "Lost test undefined pref",
+            { issue_id => $issue_id }
+        );
+
+        $lost = Koha::Account::Lines->find(
+            {
+                borrowernumber => $patron->borrowernumber, itemnumber => $item->itemnumber, debit_type_code => 'LOST',
+                issue_id       => $issue_id
+            }
+        );
+        is(
+            $lost->branchcode, $lib_home,
+            "LOST uses item homebranch when LostChargesControl is undefined (defaults to ItemHomeLibrary)"
         );
     };
 
