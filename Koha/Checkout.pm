@@ -24,7 +24,6 @@ use DateTime;
 use Try::Tiny qw( catch try );
 
 use C4::Circulation qw( AddRenewal CanBookBeRenewed LostItem MarkIssueReturned );
-use Koha::Checkout;
 use Koha::Booking;
 use Koha::Checkouts::Renewals;
 use Koha::Checkouts::ReturnClaims;
