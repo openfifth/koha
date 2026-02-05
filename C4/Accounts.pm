@@ -82,11 +82,11 @@ sub chargelostitem {
 
     my $lost_control_pref = C4::Context->preference('LostChargesControl');
     my $lost_control_branch;
-    if ( $lost_control_pref eq 'PatronLibrary' ) {
+    if ( defined $lost_control_pref && $lost_control_pref eq 'PatronLibrary' ) {
         $lost_control_branch = $patron->branchcode;
-    } elsif ( $lost_control_pref eq 'PickupLibrary' ) {
+    } elsif ( defined $lost_control_pref && $lost_control_pref eq 'PickupLibrary' ) {
         $lost_control_branch = C4::Context->userenv ? C4::Context->userenv->{'branch'} : undef;
-    } else {    # $lost_control_pref eq 'ItemHomeLibrary'
+    } else {    # $lost_control_pref eq 'ItemHomeLibrary' or undefined
         $lost_control_branch =
             ( C4::Context->preference('HomeOrHoldingBranch') eq 'homebranch' )
             ? $item->homebranch
