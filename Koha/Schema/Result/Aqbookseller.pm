@@ -210,14 +210,6 @@ the payment method for the vendor
 
 the language for the vendor
 
-=head2 lib_group_visibility
-
-  data_type: 'varchar'
-  is_nullable: 1
-  size: 255
-
-the language for the vendor
-
 =cut
 
 __PACKAGE__->add_columns(
@@ -598,8 +590,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-01-22 15:51:11
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:CbYWsA9Nt//ekI0vcBjGiQ
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-02-05 10:32:41
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:5ueA73YVdw1WfGZuNbIXng
 
 __PACKAGE__->add_columns(
     '+active'        => { is_boolean => 1 },

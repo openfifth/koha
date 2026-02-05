@@ -620,7 +620,7 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
-=head2 course_items
+=head2 course_items_holdingbranches
 
 Type: has_many
 
@@ -629,7 +629,7 @@ Related object: L<Koha::Schema::Result::CourseItem>
 =cut
 
 __PACKAGE__->has_many(
-  "course_items",
+  "course_items_holdingbranches",
   "Koha::Schema::Result::CourseItem",
   { "foreign.holdingbranch" => "self.branchcode" },
   { cascade_copy => 0, cascade_delete => 0 },
@@ -1116,8 +1116,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-08-18 10:28:31
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:Lvhn59IfA6ew3QvRihcczA
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-02-05 10:39:04
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:ZdbupapLNRrWiZ+YdB989A
 
 __PACKAGE__->has_many(
     "additional_field_values",
@@ -1160,4 +1160,5 @@ sub koha_objects_class {
     'Koha::Libraries';
 }
 
+# You can replace this text with custom code or comments, and it will be preserved on regeneration
 1;

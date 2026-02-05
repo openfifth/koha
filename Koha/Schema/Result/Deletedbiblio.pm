@@ -236,8 +236,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-10-01 14:27:12
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:aOuATjJCuH2q5r99XkjrGw
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-02-05 10:42:11
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:dCmKFVd9kYvLUTFpbIdQ0w
 
 __PACKAGE__->has_many(
     "biblioitem",
@@ -255,7 +255,7 @@ __PACKAGE__->has_one(
 
 __PACKAGE__->add_columns(
     "+opac_suppressed" => { is_boolean => 1 },
-    '+serial' => { is_boolean => 1 },
+    '+serial'          => { is_boolean => 1 },
 );
 
 =head2 koha_objects_class
@@ -278,4 +278,5 @@ sub koha_object_class {
     'Koha::Old::Biblio';
 }
 
+# You can replace this text with custom code or comments, and it will be preserved on regeneration
 1;

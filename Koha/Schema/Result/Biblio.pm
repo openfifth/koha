@@ -656,35 +656,35 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2024-12-18 12:10:28
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:QXaEHXqH2ApC+F22zo7gXA
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-02-05 10:35:17
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:zOWHF3z+1OOmBWAwuxLUIQ
 
 __PACKAGE__->has_many(
-  "biblioitem",
-  "Koha::Schema::Result::Biblioitem",
-  { "foreign.biblionumber" => "self.biblionumber" },
-  { cascade_copy => 0, cascade_delete => 0 },
+    "biblioitem",
+    "Koha::Schema::Result::Biblioitem",
+    { "foreign.biblionumber" => "self.biblionumber" },
+    { cascade_copy           => 0, cascade_delete => 0 },
 );
 
 __PACKAGE__->has_many(
-  "ill_requests",
-  "Koha::Schema::Result::Illrequest",
-  { "foreign.biblio_id" => "self.biblionumber" },
-  { cascade_copy => 0, cascade_delete => 0 },
+    "ill_requests",
+    "Koha::Schema::Result::Illrequest",
+    { "foreign.biblio_id" => "self.biblionumber" },
+    { cascade_copy        => 0, cascade_delete => 0 },
 );
 
 __PACKAGE__->has_one(
-  "metadata",
-  "Koha::Schema::Result::BiblioMetadata",
-  { "foreign.biblionumber" => "self.biblionumber" },
-  { cascade_copy => 0, cascade_delete => 0 },
+    "metadata",
+    "Koha::Schema::Result::BiblioMetadata",
+    { "foreign.biblionumber" => "self.biblionumber" },
+    { cascade_copy           => 0, cascade_delete => 0 },
 );
 
 __PACKAGE__->has_many(
-  "orders",
-  "Koha::Schema::Result::Aqorder",
-  { "foreign.biblionumber" => "self.biblionumber" },
-  { cascade_copy => 0, cascade_delete => 0 },
+    "orders",
+    "Koha::Schema::Result::Aqorder",
+    { "foreign.biblionumber" => "self.biblionumber" },
+    { cascade_copy           => 0, cascade_delete => 0 },
 );
 
 __PACKAGE__->add_columns(
@@ -692,4 +692,5 @@ __PACKAGE__->add_columns(
     "+serial"          => { is_boolean => 1 },
 );
 
+# You can replace this text with custom code or comments, and it will be preserved on regeneration
 1;

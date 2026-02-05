@@ -417,11 +417,11 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-08-18 10:28:31
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:KzhdHuZwtl8QIu31boXUBg
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-02-05 10:43:51
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:ZiBz5fzh9OTXY3/npsE8zA
 
 __PACKAGE__->add_columns(
-    '+status' => { is_boolean => 1 },
+    '+status'             => { is_boolean => 1 },
     '+over_spend_allowed' => { is_boolean => 1 },
 );
 
@@ -432,7 +432,6 @@ sub koha_object_class {
 sub koha_objects_class {
     'Koha::Acquisition::FundManagement::Funds';
 }
-
 
 =head2 managing_library
 
@@ -453,7 +452,6 @@ __PACKAGE__->belongs_to(
         on_update     => "CASCADE",
     },
 );
-
 
 =head2 parent_fund
 

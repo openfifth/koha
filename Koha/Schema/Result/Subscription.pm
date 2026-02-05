@@ -611,21 +611,21 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-05-09 08:07:54
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:TZz+AyW1pPFbUMdo2mneuw
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-02-05 10:45:30
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:dOIqOh2E50yb6VNWwRJv3Q
 
 __PACKAGE__->has_many(
-  "additional_field_values",
-  "Koha::Schema::Result::AdditionalFieldValue",
-  sub {
-    my ($args) = @_;
+    "additional_field_values",
+    "Koha::Schema::Result::AdditionalFieldValue",
+    sub {
+        my ($args) = @_;
 
-    return {
-        "$args->{foreign_alias}.record_id" => { -ident => "$args->{self_alias}.subscriptionid" },
-        "$args->{foreign_alias}.record_table" => __PACKAGE__->table,
-    };
-  },
-  { cascade_copy => 0, cascade_delete => 0 },
+        return {
+            "$args->{foreign_alias}.record_id"    => { -ident => "$args->{self_alias}.subscriptionid" },
+            "$args->{foreign_alias}.record_table" => __PACKAGE__->table,
+        };
+    },
+    { cascade_copy => 0, cascade_delete => 0 },
 );
 
 __PACKAGE__->add_columns(
@@ -636,4 +636,5 @@ __PACKAGE__->add_columns(
     '+preselect_issues_in_collections_table' => { is_boolean => 1 },
 );
 
+# You can replace this text with custom code or comments, and it will be preserved on regeneration
 1;

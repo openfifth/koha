@@ -911,7 +911,7 @@ __PACKAGE__->add_unique_constraint("userid", ["userid"]);
 
 =head1 RELATIONS
 
-=head2 accountlines_borrowernumbers
+=head2 accountlines
 
 Type: has_many
 
@@ -920,7 +920,7 @@ Related object: L<Koha::Schema::Result::Accountline>
 =cut
 
 __PACKAGE__->has_many(
-  "accountlines_borrowernumbers",
+  "accountlines",
   "Koha::Schema::Result::Accountline",
   { "foreign.borrowernumber" => "self.borrowernumber" },
   { cascade_copy => 0, cascade_delete => 0 },
@@ -1601,7 +1601,7 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
-=head2 issues_borrowernumbers
+=head2 issues
 
 Type: has_many
 
@@ -1610,7 +1610,7 @@ Related object: L<Koha::Schema::Result::Issue>
 =cut
 
 __PACKAGE__->has_many(
-  "issues_borrowernumbers",
+  "issues",
   "Koha::Schema::Result::Issue",
   { "foreign.borrowernumber" => "self.borrowernumber" },
   { cascade_copy => 0, cascade_delete => 0 },
@@ -1706,6 +1706,21 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 messages
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::Message>
+
+=cut
+
+__PACKAGE__->has_many(
+  "messages",
+  "Koha::Schema::Result::Message",
+  { "foreign.manager_id" => "self.borrowernumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 messages_borrowernumbers
 
 Type: has_many
@@ -1721,22 +1736,7 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
-=head2 messages_managers
-
-Type: has_many
-
-Related object: L<Koha::Schema::Result::Message>
-
-=cut
-
-__PACKAGE__->has_many(
-  "messages_managers",
-  "Koha::Schema::Result::Message",
-  { "foreign.manager_id" => "self.borrowernumber" },
-  { cascade_copy => 0, cascade_delete => 0 },
-);
-
-=head2 old_issues_borrowernumbers
+=head2 old_issues
 
 Type: has_many
 
@@ -1745,7 +1745,7 @@ Related object: L<Koha::Schema::Result::OldIssue>
 =cut
 
 __PACKAGE__->has_many(
-  "old_issues_borrowernumbers",
+  "old_issues",
   "Koha::Schema::Result::OldIssue",
   { "foreign.borrowernumber" => "self.borrowernumber" },
   { cascade_copy => 0, cascade_delete => 0 },
@@ -2116,6 +2116,21 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 ticket_updates
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::TicketUpdate>
+
+=cut
+
+__PACKAGE__->has_many(
+  "ticket_updates",
+  "Koha::Schema::Result::TicketUpdate",
+  { "foreign.user_id" => "self.borrowernumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 ticket_updates_assignees
 
 Type: has_many
@@ -2128,21 +2143,6 @@ __PACKAGE__->has_many(
   "ticket_updates_assignees",
   "Koha::Schema::Result::TicketUpdate",
   { "foreign.assignee_id" => "self.borrowernumber" },
-  { cascade_copy => 0, cascade_delete => 0 },
-);
-
-=head2 ticket_updates_users
-
-Type: has_many
-
-Related object: L<Koha::Schema::Result::TicketUpdate>
-
-=cut
-
-__PACKAGE__->has_many(
-  "ticket_updates_users",
-  "Koha::Schema::Result::TicketUpdate",
-  { "foreign.user_id" => "self.borrowernumber" },
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
@@ -2337,28 +2337,28 @@ Composing rels: L</user_permissions> -> permission
 __PACKAGE__->many_to_many("permissions", "user_permissions", "permission");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-11-14 12:42:57
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:8eJk0eVfO+7LhuA9F+KVbQ
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-02-05 11:20:27
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:V3vTxWXkFJHj8EzvGoq2fg
 
 __PACKAGE__->belongs_to(
-    "library",
-    "Koha::Schema::Result::Branch",
-    { branchcode    => "branchcode" },
-    { is_deferrable => 1, on_delete => "RESTRICT", on_update => "RESTRICT" },
+  "library",
+  "Koha::Schema::Result::Branch",
+  { branchcode => "branchcode" },
+  { is_deferrable => 1, on_delete => "RESTRICT", on_update => "RESTRICT" },
 );
 
 __PACKAGE__->has_many(
-    "restrictions",
-    "Koha::Schema::Result::BorrowerDebarment",
-    { "foreign.borrowernumber" => "self.borrowernumber" },
-    { cascade_copy             => 0, cascade_delete => 0 },
+  "restrictions",
+  "Koha::Schema::Result::BorrowerDebarment",
+  { "foreign.borrowernumber" => "self.borrowernumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
 );
 
 __PACKAGE__->has_many(
-    "extended_attributes",
-    "Koha::Schema::Result::BorrowerAttribute",
-    { "foreign.borrowernumber" => "self.borrowernumber" },
-    { cascade_copy             => 0, cascade_delete => 0 },
+  "extended_attributes",
+  "Koha::Schema::Result::BorrowerAttribute",
+  { "foreign.borrowernumber" => "self.borrowernumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
 );
 
 __PACKAGE__->add_columns(
@@ -2372,18 +2372,19 @@ __PACKAGE__->add_columns(
 );
 
 __PACKAGE__->has_many(
-    "ill_requests",
-    "Koha::Schema::Result::Illrequest",
-    { "foreign.borrowernumber" => "self.borrowernumber" },
-    { cascade_copy             => 0, cascade_delete => 0 },
+  "ill_requests",
+  "Koha::Schema::Result::Illrequest",
+  { "foreign.borrowernumber" => "self.borrowernumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
 );
 
 __PACKAGE__->belongs_to(
     "category",
     "Koha::Schema::Result::Category",
-    { "foreign.categorycode" => "self.categorycode" },
-    { is_deferrable          => 1, on_delete => "RESTRICT", on_update => "RESTRICT" },
+    { "foreign.categorycode"  => "self.categorycode" },
+    { is_deferrable => 1, on_delete => "RESTRICT", on_update => "RESTRICT" },
 );
+
 
 =head2 koha_objects_class
 
@@ -2405,5 +2406,4 @@ sub koha_object_class {
     'Koha::Patron';
 }
 
-# You can replace this text with custom code or comments, and it will be preserved on regeneration
 1;
