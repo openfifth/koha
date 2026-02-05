@@ -477,6 +477,7 @@ sub add_cashup {
                             credit_type_code => 'CASHUP_SURPLUS',
                             manager_id       => $manager_id,
                             interface        => 'intranet',
+                            branchcode       => $self->branch,
                             register_id      => $self->id,
                             note             => $reconciliation_note
                         }
@@ -501,6 +502,7 @@ sub add_cashup {
                             debit_type_code => 'CASHUP_DEFICIT',
                             manager_id      => $manager_id,
                             interface       => 'intranet',
+                            branchcode      => $self->branch,
                             register_id     => $self->id,
                             note            => $reconciliation_note
                         }
