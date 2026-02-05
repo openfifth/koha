@@ -365,10 +365,33 @@ sub claim_returned {
 =head2 branch_for_fee_context
 
 my $branchcode = Koha::Checkout->branch_for_fee_context(
-        fee_type => 'OVERDUE' | 'LOST' | 'PROCESSING',
-        );
+    fee_type => 'OVERDUE' | 'LOST' | 'PROCESSING',
+    patron   => $patron_obj,  # Koha::Patron object or hashref
+    item     => $item_obj,    # Koha::Item object or hashref
+    issue    => $issue_obj,   # Koha::Checkout object or hashref (optional)
+);
 
-Determines which branch’s rules should apply to a fee based on system preferences and available context. For LOST/PROCESSING it honors LostChargesControl; for OVERDUE it honors CircControl. It also respects HomeOrHoldingBranch when choosing the item’s branch. Returns a branchcode (string) or undef if it cannot be determined.
+Determines which branch's rules should apply to a fee based on system preferences
+and available context.
+
+For LOST/PROCESSING fees, honors LostChargesControl preference:
+- PatronLibrary: Uses patron's home branch
+- PickupLibrary: Uses checkout branch (falls back to patron, then item)
+- ItemHomeLibrary: Uses item's home or holding branch (per HomeOrHoldingBranch pref)
+
+For OVERDUE fees, honors CircControl preference (same values as above).
+
+B<Parameters:>
+- fee_type: 'OVERDUE', 'LOST', or 'PROCESSING' (defaults to 'OVERDUE')
+- patron: Koha::Patron object or hashref with branchcode
+- item: Koha::Item object or hashref with homebranch/holdingbranch
+- issue: Koha::Checkout object or hashref with branchcode (optional)
+
+B<Returns:> A branchcode (string) or C<undef> if no branch can be determined.
+
+B<Note:> Returning C<undef> is acceptable - calling code should handle this gracefully.
+When passed to Koha::Account->add_debit as library_id, undef indicates no specific
+branch context is available for the fee.
 
 =cut
 
@@ -405,6 +428,9 @@ sub branch_for_fee_context {
         : ( defined $control_pref && $control_pref eq 'PickupLibrary' )
         ? ( $issuing_branch // $patron_branch // $item_branch )
         : $item_branch;    # ItemLibrary (default)
+
+    # May return undef if no branch context is available - this is acceptable
+    # and handled gracefully by Koha::Account->add_debit
     return $resolved;
 }
 
