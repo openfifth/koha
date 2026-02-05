@@ -76,9 +76,9 @@ export default {
                 (orderline.calculated_amount_oc *
                     orderline.distribution_exchange_rate) /
                 orderline.quantity_ordered;
-            const selectedCurrency =
-                orderline.fund_distributions[0]?.currency ||
-                getActiveCurrency.currency;
+            const selectedCurrency = Array.isArray(orderline.fund_distributions)
+                ? orderline.fund_distributions[0]?.currency
+                : getActiveCurrency.currency;
             const isTaxIncluded = orderline.vendor?.list_includes_gst;
             const taxRate = orderline.vendor?.tax_rate || 0;
             const taxIncludedPrice = isTaxIncluded

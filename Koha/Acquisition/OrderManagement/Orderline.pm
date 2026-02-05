@@ -137,7 +137,7 @@ sub biblio {
         #ACQTODO: Suggestion modification?
     }
 
-    my $rs = $self->_result->biblionumber;
+    my $rs = $self->_result->biblio;
     return unless $rs;
     return Koha::Biblio->_new_from_dbic($rs);
 }
