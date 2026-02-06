@@ -117,7 +117,7 @@ sub biblio {
                 "biblioitems.publishercode"    => $biblio_data->{publisher}         || '',
                 "biblioitems.publicationyear"  => $biblio_data->{publication_year}  || '',
                 "biblio.copyrightdate"         => $biblio_data->{publication_year}  || '',
-                "biblioitems.itemtype"         => $biblio_data->{itemtype}          || '',
+                "biblioitems.itemtype"         => $biblio_data->{item_type}         || '',
                 "biblioitems.editionstatement" => $biblio_data->{edition_statement} || '',
             }
         );

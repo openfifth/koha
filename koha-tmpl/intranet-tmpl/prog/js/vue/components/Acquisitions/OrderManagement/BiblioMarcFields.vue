@@ -1,5 +1,5 @@
 <template>
-    <div v-if="createItems.value === 'ordering'">
+    <div v-if="initialized && createItems.value === 'ordering'">
         <h3 style="margin-top: 1em">{{ $__("Bibliographic information") }}</h3>
         <ol>
             <li v-for="(attr, index) in biblioFields" v-bind:key="index">
@@ -31,6 +31,7 @@ export default {
     },
     inheritAttrs: false,
     setup(props) {
+        const initialized = ref(false);
         const itemTypes = ref([]);
         const route = useRoute();
 
@@ -61,7 +62,7 @@ export default {
             ...(!props.biblionumber
                 ? [
                       {
-                          name: "itemtype",
+                          name: "item_type",
                           type: "select",
                           label: $__("Item type"),
                           selectLabel: "description",
@@ -73,25 +74,30 @@ export default {
         ];
 
         onBeforeMount(() => {
-            props.resource.biblio = {};
             APIClient.item.item_types
                 .getAll()
                 .then(itemtypes => {
                     itemTypes.value = itemtypes;
                 })
                 .then(() => {
+                    if (!props.resource.biblio) props.resource.biblio = {};
                     if (route.query.biblionumber) {
+                        props.resource.biblio = {};
                         APIClient.biblios.biblios
                             .get(route.query.biblionumber)
                             .then(biblio => {
                                 props.resource.biblio = biblio;
+                                initialized.value = true;
                             });
+                    } else {
+                        initialized.value = true;
                     }
                 });
         });
 
         return {
             biblioFields,
+            initialized,
         };
     },
 };
