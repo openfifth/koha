@@ -36,12 +36,25 @@
             :name="`${name}_users_ids`"
             :id="`${name}_users_ids`"
         />
-        <ol :id="`${name}_users_names`"></ol>
+        <ol :id="`${name}_users_names`">
+            <li
+                v-for="(user, index) in addedUsers"
+                v-bind:key="index"
+                :id="`${name}_user_${user.borrowernumber}`"
+            >
+                {{ user.name }}
+                <i
+                    class="fa fa-trash"
+                    style="cursor: pointer"
+                    @click="deleteUser(user.borrowernumber, name)"
+                ></i>
+            </li>
+        </ol>
     </template>
 </template>
 
 <script>
-import { computed, onBeforeMount, onMounted, ref, watch } from "vue";
+import { computed, onBeforeMount, onMounted, ref } from "vue";
 import { APIClient } from "../fetch/api-client.js";
 
 export default {
@@ -65,6 +78,7 @@ export default {
     },
     setup(props) {
         const loading = ref(false);
+        const addedUsers = ref([]);
 
         onBeforeMount(() => {
             if (props.modalType === "select") {
@@ -102,7 +116,7 @@ export default {
                 );
             }
             $("#vuePatronSearchData").data("action_type", props.modalType);
-            $("#vuePatronSearchData").data("field_name", props.name);
+            $("#vuePatronSearchData").data("callback", addUserCallback);
         };
         onMounted(() => {
             addPatronData();
@@ -125,12 +139,22 @@ export default {
                 modalEventListener
             );
         };
+        const addUserCallback = (borrowernumber, name) => {
+            if (
+                !addedUsers.value.find(
+                    user => user.borrowernumber === borrowernumber
+                )
+            ) {
+                addedUsers.value.push({ borrowernumber, name });
+                return 0;
+            }
+            return -1;
+        };
 
         const newUserAdded = () => {
-            const userIds = document.getElementById(
-                `${props.name}_users_ids`
-            ).value;
-            props.resource[props.name] = userIds.split(":");
+            props.resource[props.name] = addedUsers.value.map(
+                user => user.borrowernumber
+            );
         };
 
         const selectUser = () => {
@@ -166,6 +190,13 @@ export default {
             });
         };
 
+        const deleteUser = (borrowernumber, fieldName) => {
+            const userIndex = addedUsers.value.indexOf(
+                user => user.borrowernumber === borrowernumber
+            );
+            addedUsers.value.splice(userIndex, 1);
+        };
+
         return {
             loading,
             shouldRenderInput,
@@ -173,6 +204,8 @@ export default {
             addUser,
             newUserSelected,
             filters,
+            deleteUser,
+            addedUsers,
         };
     },
 };
