@@ -4,25 +4,9 @@
             {{ resource.patron_str }}
         </span>
         &nbsp;
-        <a
-            href="#patron_search_modal"
-            @click="selectPatron()"
-            class="btn btn-default"
-            data-bs-toggle="modal"
-            data-bs-target="#patron_search_modal"
+        <a @click="selectPatron()" class="btn btn-default"
             ><i class="fa fa-plus"></i> {{ $__("Select user") }}</a
         >
-        <input
-            type="hidden"
-            id="additional_patron_filters"
-            :data-additionalfilters="filters"
-        />
-        <input
-            v-if="shouldRenderInput"
-            type="hidden"
-            name="selected_patron_id"
-            id="selected_patron_id"
-        />
     </template>
     <template v-if="modalType === 'add'">
         <a @click="addPatron()" class="btn btn-default"
@@ -100,10 +84,6 @@ export default {
             return JSON.stringify(checkForRefs);
         });
 
-        const shouldRenderInput = computed(() => {
-            return !document.getElementById("selected_patron_id");
-        });
-
         const passSearchDataToModal = () => {
             if (props.filteredUrl) {
                 $("#vuePatronSearchData").data(
@@ -112,6 +92,10 @@ export default {
                 );
             }
             $("#vuePatronSearchData").data("action_type", props.modalType);
+            $("#vuePatronSearchData").data(
+                "additional_patron_filters",
+                filters
+            );
             $("#vuePatronSearchData").data(
                 "callback",
                 props.modalType === "select"
@@ -151,7 +135,6 @@ export default {
             }
             return -1;
         };
-
         const newPatronsAdded = () => {
             props.resource[props.name] = addedPatrons.value.map(
                 patron => patron.borrowernumber
@@ -159,6 +142,8 @@ export default {
         };
 
         const selectPatron = () => {
+            passSearchDataToModal();
+            $("#patron_search_modal").modal("show");
             const modalEventListener = () => {
                 $(document).off(
                     "hidden.bs.modal",
@@ -190,7 +175,6 @@ export default {
 
         return {
             loading,
-            shouldRenderInput,
             selectPatron,
             addPatron,
             newPatronSelected,
