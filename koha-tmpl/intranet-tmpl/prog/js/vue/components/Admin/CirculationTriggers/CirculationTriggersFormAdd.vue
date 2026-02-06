@@ -134,6 +134,7 @@
                     (ruleSetInitialized && editMode === 'edit') ||
                     editMode === 'add'
                 "
+                id="trigger-edit-form-general-section"
             >
                 <legend v-if="editMode === 'add'">
                     {{ $__("Add new trigger") }}
@@ -285,6 +286,7 @@
                     (ruleSetInitialized && editMode === 'edit') ||
                     editMode === 'add'
                 "
+                id="trigger-edit-form-notice-section"
             >
                 <legend v-if="ruleSetInfo.triggerCount < triggerNumber">
                     {{ $__("Notice for trigger") }}
@@ -341,16 +343,13 @@
                         v-if="
                             ruleSetToSubmit[
                                 `overdue_${triggerNumber}_notice`
-                            ] !== '' ||
-                            ((ruleSetToSubmit[
+                            ] !== '' &&
+                            ruleSetToSubmit[
                                 `overdue_${triggerNumber}_notice`
-                            ] === null ||
-                                ruleSetToSubmit[
-                                    `overdue_${triggerNumber}_notice`
-                                ] === undefined) &&
-                                fallbackRuleSet?.[
-                                    `overdue_${triggerNumber}_notice`
-                                ] !== '')
+                            ] !== null &&
+                            ruleSetToSubmit[
+                                `overdue_${triggerNumber}_notice`
+                            ] !== undefined
                         "
                     >
                         <label for="mtt">{{ $__("Transport type(s)") }}:</label>
@@ -385,6 +384,11 @@
                                                   `overdue_${triggerNumber}_mtt`
                                               ]
                                             : ''
+                                    "
+                                    :required="
+                                        !ruleSetToSubmit[
+                                            `overdue_${triggerNumber}_mtt`
+                                        ]?.length
                                     "
                                 />
                             </template>
@@ -861,6 +865,20 @@ export default {
             this.ruleSetToSubmit[`overdue_${this.triggerNumber}_delay`] = null;
             this.setAllowSubmission();
         },
+        async scrollToTriggerEditForm() {
+            let count = 0;
+            // ensures that the relevant section is loaded before we attempt to scroll it into view
+            while (
+                !document.getElementById("trigger-edit-form-general-section") &&
+                count < 8
+            ) {
+                await new Promise(resolve => setTimeout(resolve, 250));
+                count++;
+            }
+            document
+                .getElementById("trigger-edit-form-general-section")
+                .scrollIntoView({ behavior: "smooth" });
+        },
     },
     watch: {
         $route: {
@@ -868,12 +886,20 @@ export default {
             handler: function (newVal, oldVal) {
                 if (
                     oldVal &&
+                    !oldVal.fullPath.includes("add") &&
+                    !oldVal.fullPath.includes("edit") &&
                     oldVal.query.triggerNumber &&
                     newVal.query.triggerNumber !== oldVal.query.triggerNumber
                 ) {
                     this.$router.go(0);
                 }
             },
+        },
+        async editMode(newValue) {
+            if (newValue === "add" || newValue === "edit") {
+                await this.$nextTick();
+                await this.scrollToTriggerEditForm();
+            }
         },
     },
     components: { TriggersTable, ButtonSubmit, TriggerContext },
