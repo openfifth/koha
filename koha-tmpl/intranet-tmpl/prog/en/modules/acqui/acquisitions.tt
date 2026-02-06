@@ -32,35 +32,11 @@
     [% INCLUDE 'format_price.inc' %]
     <script>
         const logged_in_user = [% To.json(logged_in_user.unblessed) | $raw %];
-            const logged_in_branch = [% To.json(logged_in_branch) | $raw %];
-            const userflags = [% To.json(userflags) | $raw %];
-            // const library_groups = [% To.json(library_groups) | $raw %];
-            const currencyList = [% To.json(currencies) | $raw %];
-            const permitted_patrons = [% To.json(permitted_patrons) | $raw %];
-
-        function add_user(borrowernumber, borrowername, fieldName) {
-            var ids = $(`#${fieldName}_users_ids`).val();
-            if(ids.length > 0) {
-                ids = ids.split(':');
-            } else {
-                ids = new Array;
-            }
-            if (ids.indexOf(borrowernumber.toString()) < 0) {
-                ids.push(borrowernumber);
-                $(`#${fieldName}_users_ids`).val(ids.join(':'));
-                var li = '<li id="'+fieldName+'_user_'+borrowernumber+'">'+borrowername
-                    + ' <i class="fa fa-trash" style="cursor:pointer;" onclick="del_user('+borrowernumber+', '+'\''+fieldName+'\''+');"></i></li>';
-                $(`#${fieldName}_users_names`).append(li);
-                return 0;
-            }
-            return -1;
-        }
-        function del_user(borrowernumber, fieldName) {
-            $("#"+fieldName+"_user_"+borrowernumber).remove();
-            var ids = $(`#${fieldName}_users_ids`).val().split(':');
-            ids.splice(ids.indexOf(borrowernumber.toString()), 1);
-            $(`#${fieldName}_users_ids`).val(ids.join(':'));
-        }
+        const logged_in_branch = [% To.json(logged_in_branch) | $raw %];
+        const userflags = [% To.json(userflags) | $raw %];
+        // const library_groups = [% To.json(library_groups) | $raw %];
+        const currencyList = [% To.json(currencies) | $raw %];
+        const permitted_patrons = [% To.json(permitted_patrons) | $raw %];
     </script>
     [% Asset.js("js/vue/dist/acquisitions/acquisitions.js") | $raw %]
     [% INCLUDE 'select2.inc' %]
