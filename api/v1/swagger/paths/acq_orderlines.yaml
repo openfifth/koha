@@ -138,6 +138,10 @@
             - vendor
             - biblio
             - managing_library
+            - managed_by
+            - managed_by.patron
+            - patrons_to_notify
+            - patrons_to_notify.patron
         collectionFormat: csv
     produces:
       - application/json

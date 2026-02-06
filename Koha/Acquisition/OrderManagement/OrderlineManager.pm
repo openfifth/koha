@@ -20,6 +20,8 @@ package Koha::Acquisition::OrderManagement::OrderlineManager;
 use Modern::Perl;
 use base qw(Koha::Object);
 
+use Koha::Patron;
+
 use Mojo::JSON qw(decode_json);
 use JSON       qw ( encode_json );
 
@@ -30,6 +32,18 @@ Koha::Acquisition::OrderManagement::OrderlineManager Object class
 =head1 API
 
 =head2 Class methods
+
+=head3 patron
+
+Method to embed the patron to a given fund
+
+=cut
+
+sub patron {
+    my ($self) = @_;
+    my $patron = $self->_result->borrowernumber;
+    return Koha::Patron->_new_from_dbic($patron);
+}
 
 =head2 Internal methods
 

@@ -21,7 +21,9 @@ use Modern::Perl;
 use base qw(Koha::Object::Mixin::AdditionalFields Koha::Object);
 
 use Koha::Acquisition::OrderManagement::OrderlineUser;
+use Koha::Acquisition::OrderManagement::OrderlineUsers;
 use Koha::Acquisition::OrderManagement::OrderlineManager;
+use Koha::Acquisition::OrderManagement::OrderlineManagers;
 use Koha::Acquisition::OrderManagement::OrderlineFundDistributions;
 use Koha::Util::MARC;
 use Koha::Acquisition::Bookseller;
@@ -164,6 +166,28 @@ sub managing_library {
     my $managing_library_rs = $self->_result->managing_branch;
     return unless $managing_library_rs;
     return Koha::Library->_new_from_dbic($managing_library_rs);
+}
+
+=head3 managed_by
+
+=cut
+
+sub managed_by {
+    my ($self) = @_;
+    my $managers = $self->_result->acq_orderline_managers;
+    return unless $managers;
+    return Koha::Acquisition::OrderManagement::OrderlineManagers->_new_from_dbic($managers);
+}
+
+=head3 patrons_to_notify
+
+=cut
+
+sub patrons_to_notify {
+    my ($self) = @_;
+    my $users = $self->_result->acq_orderline_users;
+    return unless $users;
+    return Koha::Acquisition::OrderManagement::OrderlineUsers->_new_from_dbic($users);
 }
 
 =head2 Internal methods

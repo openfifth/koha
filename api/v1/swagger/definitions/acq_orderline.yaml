@@ -186,16 +186,6 @@ properties:
      - string
      - "null"
     description: Second statistical field for the orderline
-  patrons_to_notify:
-    type:
-      - array
-      - "null"
-    description: patrons who are to be notified about the order and any changes
-  managed_by:
-    type:
-      - array
-      - "null"
-    description: patrons who are able to manage the order
   estimated_delivery_date:
     type:
      - string
@@ -248,6 +238,18 @@ properties:
     type:
       - object
       - "null"
+  managed_by:
+    description: Managers for the orderline
+    type:
+      - array
+    items:
+      $ref: acq_orderline_manager.yaml
+  patrons_to_notify:
+    description: Users for the orderline who need notifying of any changes
+    type:
+      - array
+    items:
+      $ref: acq_orderline_user.yaml
 additionalProperties: false
 required:
   - orderline_id

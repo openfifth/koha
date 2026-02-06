@@ -31,6 +31,18 @@ Koha::Acquisition::OrderManagement::OrderlineUser Object class
 
 =head2 Class methods
 
+=head3 patron
+
+Method to embed the patron to a given fund
+
+=cut
+
+sub patron {
+    my ($self) = @_;
+    my $patron = $self->_result->borrowernumber;
+    return Koha::Patron->_new_from_dbic($patron);
+}
+
 =head2 Internal methods
 
 =head3 _type

@@ -1,0 +1,18 @@
+---
+type: object
+properties:
+  orderline_id:
+    type: number
+    description: Unique identifier for the orderline
+    readOnly: true
+  borrowernumber:
+    type:
+      - number
+      - "null"
+    description: Foreign key referencing the borrowers table
+  patron:
+    type: object
+    description: Patron linked by borrowernumber
+    items:
+      $ref: "patron.yaml"
+additionalProperties: false
