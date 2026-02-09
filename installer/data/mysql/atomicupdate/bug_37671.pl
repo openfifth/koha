@@ -9,8 +9,14 @@ return {
         my ( $dbh, $out ) = @$args{qw(dbh out)};
 
         # Add new PAYOUT letter template for POS
-        $dbh->do(
+        my ($template_exists) = $dbh->selectrow_array(
             q{
+            SELECT COUNT(*) FROM letters WHERE code='PAYOUT'
+        }
+        );
+        unless ($template_exists) {
+            $dbh->do(
+                q{
             INSERT INTO letter (module, code, branchcode, name, is_html, title, content, message_transport_type, lang, updated_on)
             VALUES (
                 'pos', 'PAYOUT', '', 'Point of sale payout receipt', 1, 'Payout receipt',
@@ -85,8 +91,12 @@ return {
                 'print', 'default', NOW()
             )
         }
-        );
+            );
 
-        say_success( $out, "Added new PAYOUT letter template for POS refunds" );
+            say_success( $out, "Added new PAYOUT letter template for POS refunds" );
+        } else {
+            say_info( $out, "PAYOUT letter template for POS refunds already exists" );
+
+        }
     },
 };
