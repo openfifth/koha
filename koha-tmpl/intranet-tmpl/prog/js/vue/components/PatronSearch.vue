@@ -1,15 +1,12 @@
 <template>
-    <span v-if="loading" class="user">
-        {{ $__("Loading...") }}
-    </span>
-    <span v-else class="user">
-        {{ resource.patron_str }}
-    </span>
-    &nbsp;
     <template v-if="modalType === 'select'">
+        <span class="user">
+            {{ resource.patron_str }}
+        </span>
+        &nbsp;
         <a
             href="#patron_search_modal"
-            @click="selectUser()"
+            @click="selectPatron()"
             class="btn btn-default"
             data-bs-toggle="modal"
             data-bs-target="#patron_search_modal"
@@ -28,25 +25,25 @@
         />
     </template>
     <template v-if="modalType === 'add'">
-        <a @click="addUser()" class="btn btn-default"
+        <a @click="addPatron()" class="btn btn-default"
             ><i class="fa fa-plus"></i> {{ $__("Add user") }}</a
         >
         <input
             type="hidden"
-            :name="`${name}_users_ids`"
-            :id="`${name}_users_ids`"
+            :name="`${name}_patron_ids`"
+            :id="`${name}_patron_ids`"
         />
-        <ol :id="`${name}_users_names`">
+        <ol :id="`${name}_patron_names`">
             <li
-                v-for="(user, index) in addedUsers"
+                v-for="(patron, index) in addedPatrons"
                 v-bind:key="index"
-                :id="`${name}_user_${user.borrowernumber}`"
+                :id="`${name}_patron_${patron.borrowernumber}`"
             >
-                {{ user.name }}
+                {{ patron.name }}
                 <i
                     class="fa fa-trash"
                     style="cursor: pointer"
-                    @click="deleteUser(user.borrowernumber, name)"
+                    @click="deletePatron(patron.borrowernumber)"
                 ></i>
             </li>
         </ol>
@@ -55,7 +52,6 @@
 
 <script>
 import { computed, onBeforeMount, onMounted, ref } from "vue";
-import { APIClient } from "../fetch/api-client.js";
 
 export default {
     inheritAttrs: false,
@@ -78,7 +74,7 @@ export default {
     },
     setup(props) {
         const loading = ref(false);
-        const addedUsers = ref([]);
+        const addedPatrons = ref([]);
 
         onBeforeMount(() => {
             if (props.modalType === "select") {
@@ -108,7 +104,7 @@ export default {
             return !document.getElementById("selected_patron_id");
         });
 
-        const addPatronData = () => {
+        const passSearchDataToModal = () => {
             if (props.filteredUrl) {
                 $("#vuePatronSearchData").data(
                     "patron_search_filter",
@@ -116,17 +112,22 @@ export default {
                 );
             }
             $("#vuePatronSearchData").data("action_type", props.modalType);
-            $("#vuePatronSearchData").data("callback", addUserCallback);
+            $("#vuePatronSearchData").data(
+                "callback",
+                props.modalType === "select"
+                    ? newPatronSelected
+                    : newPatronAdded
+            );
         };
         onMounted(() => {
-            addPatronData();
+            passSearchDataToModal();
         });
 
-        const addUser = () => {
-            addPatronData();
+        const addPatron = () => {
+            passSearchDataToModal();
             $("#patron_search_modal").modal("show");
             const modalEventListener = () => {
-                newUserAdded();
+                newPatronsAdded();
                 $(document).off(
                     "hidden.bs.modal",
                     "#patron_search_modal",
@@ -139,27 +140,26 @@ export default {
                 modalEventListener
             );
         };
-        const addUserCallback = (borrowernumber, name) => {
+        const newPatronAdded = (borrowernumber, name) => {
             if (
-                !addedUsers.value.find(
-                    user => user.borrowernumber === borrowernumber
+                !addedPatrons.value.find(
+                    patron => patron.borrowernumber === borrowernumber
                 )
             ) {
-                addedUsers.value.push({ borrowernumber, name });
+                addedPatrons.value.push({ borrowernumber, name });
                 return 0;
             }
             return -1;
         };
 
-        const newUserAdded = () => {
-            props.resource[props.name] = addedUsers.value.map(
-                user => user.borrowernumber
+        const newPatronsAdded = () => {
+            props.resource[props.name] = addedPatrons.value.map(
+                patron => patron.borrowernumber
             );
         };
 
-        const selectUser = () => {
+        const selectPatron = () => {
             const modalEventListener = () => {
-                newUserSelected();
                 $(document).off(
                     "hidden.bs.modal",
                     "#patron_search_modal",
@@ -172,40 +172,31 @@ export default {
                 modalEventListener
             );
         };
-        const newUserSelected = e => {
-            loading.value = true;
-            let selected_patron_id =
-                document.getElementById("selected_patron_id").value;
-            let patron;
-            const client = APIClient.patron;
-            client.patrons.get(selected_patron_id).then(p => {
-                patron = p;
-                props.resource.patron = patron;
-                props.resource.patron_str = $patron_to_html(patron);
-                props.resource[props.name] = patron.patron_id;
-                if (props.selectCallback) {
-                    props.selectCallback(patron);
-                }
-                loading.value = false;
-            });
+        const newPatronSelected = patron => {
+            props.resource.patron = patron;
+            props.resource.patron_str = $patron_to_html(patron);
+            props.resource[props.name] = patron.patron_id;
+            if (props.selectCallback) {
+                props.selectCallback(patron);
+            }
         };
 
-        const deleteUser = (borrowernumber, fieldName) => {
-            const userIndex = addedUsers.value.indexOf(
-                user => user.borrowernumber === borrowernumber
+        const deletePatron = borrowernumber => {
+            const patronIndex = addedPatrons.value.findIndex(
+                patron => patron.borrowernumber === borrowernumber
             );
-            addedUsers.value.splice(userIndex, 1);
+            addedPatrons.value.splice(patronIndex, 1);
         };
 
         return {
             loading,
             shouldRenderInput,
-            selectUser,
-            addUser,
-            newUserSelected,
+            selectPatron,
+            addPatron,
+            newPatronSelected,
             filters,
-            deleteUser,
-            addedUsers,
+            deletePatron,
+            addedPatrons,
         };
     },
 };
