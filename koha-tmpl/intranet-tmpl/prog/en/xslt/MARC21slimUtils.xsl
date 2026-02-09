@@ -731,11 +731,10 @@
         <xsl:param name="MARCOnlineResourceField" />
         <xsl:param name="Show856uAsImage" />
         <xsl:param name="screen" />
-        <ul class="resource_list">
         <xsl:for-each
             select="marc:datafield[@tag=$MARCOnlineResourceField and marc:subfield[@code='u']]">
             <xsl:variable name="SubqText"><xsl:value-of select="marc:subfield[@code='q']" /></xsl:variable>
-            <li><a>
+            <a>
                 <xsl:attribute name="href">
                     <xsl:call-template name="AddMissingProtocol">
                         <xsl:with-param name="resourceLocation" select="marc:subfield[@code='u']" />
@@ -770,10 +769,9 @@
                         </xsl:choose>
                     </xsl:when>
                 </xsl:choose>
-            </a></li>
-
+            </a>
+            <xsl:if test="position()!=last()"><span class="separator"><xsl:text> | </xsl:text></span></xsl:if>
         </xsl:for-each>
-        </ul>
     </xsl:template>
 
     <xsl:template name="AddMissingProtocol">
