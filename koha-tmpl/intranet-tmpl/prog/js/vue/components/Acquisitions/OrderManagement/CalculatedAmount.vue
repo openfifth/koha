@@ -97,18 +97,21 @@ export default {
 
             const itemPricePoints = {
                 totalTaxIncluded: formatValueWithCurrency(
-                    totalTaxIncluded,
+                    totalTaxIncluded || 0,
                     selectedCurrency
                 ),
                 totalTaxExcluded: formatValueWithCurrency(
-                    totalTaxExcluded,
+                    totalTaxExcluded || 0,
                     selectedCurrency
                 ),
                 totalAmount: formatValueWithCurrency(
-                    totalAmount,
+                    totalAmount || 0,
                     selectedCurrency
                 ),
-                itemPrice: formatValueWithCurrency(itemPrice, selectedCurrency),
+                itemPrice: formatValueWithCurrency(
+                    itemPrice || 0,
+                    selectedCurrency
+                ),
                 currency: selectedCurrency,
             };
             props.resource.replacement_price = itemPrice;
