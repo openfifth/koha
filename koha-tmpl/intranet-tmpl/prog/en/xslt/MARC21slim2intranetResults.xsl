@@ -980,13 +980,13 @@
     <!-- 856 -->
     <xsl:if test="marc:datafield[@tag=856]">
         <xsl:if test="normalize-space(marc:datafield[@tag=856]/marc:subfield[@code='u'])">
-        <span class="results_summary online_resources">
-            <span class="label">Online resources: </span>
+            <span class="results_summary online_resources">
+                <span class="label">Online resources: </span>
                 <xsl:call-template name="renderMARCOnlineResourceField">
                     <xsl:with-param name="MARCOnlineResourceField">856</xsl:with-param>
                     <xsl:with-param name="Show856uAsImage" select="$Show856uAsImage"></xsl:with-param>
                     <xsl:with-param name="screen" select="'results'"></xsl:with-param>
-                        </xsl:call-template>
+                </xsl:call-template>
             </span>
         </xsl:if>
     </xsl:if>
@@ -999,8 +999,8 @@
                 <xsl:call-template name="renderMARCOnlineResourceField">
                     <xsl:with-param name="MARCOnlineResourceField">857</xsl:with-param>
                     <xsl:with-param name="screen" select="'results'"></xsl:with-param>
-                            </xsl:call-template>
-        </span>
+                </xsl:call-template>
+            </span>
         </xsl:if>
     </xsl:if>
 
