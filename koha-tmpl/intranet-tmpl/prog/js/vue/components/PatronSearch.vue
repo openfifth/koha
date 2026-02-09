@@ -40,12 +40,18 @@ export default {
         required: Boolean,
         additionalFilters: Object,
         selectCallback: Function,
+        fieldName: {
+            type: String,
+            default: "patron",
+        },
     },
     setup(props) {
         const loading = ref(false);
 
         onBeforeMount(() => {
-            props.resource.patron_str = $patron_to_html(props.resource.patron);
+            props.resource.patron_str = $patron_to_html(
+                props.resource[props.fieldName]
+            );
         });
 
         const filters = computed(() => {
@@ -93,7 +99,7 @@ export default {
                 patron = p;
                 props.resource.patron = patron;
                 props.resource.patron_str = $patron_to_html(patron);
-                props.resource.user_id = patron.patron_id;
+                props.resource[props.name] = patron.patron_id;
                 if (props.selectCallback) {
                     props.selectCallback(patron);
                 }
