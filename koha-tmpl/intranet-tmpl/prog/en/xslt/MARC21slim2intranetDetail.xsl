@@ -1085,7 +1085,7 @@
                     <xsl:with-param name="MARCOnlineResourceField">857</xsl:with-param>
                     <xsl:with-param name="screen" select="'detail'"></xsl:with-param>
                 </xsl:call-template>
-        </span>
+            </span>
         </xsl:if>
     </xsl:if>
 
