@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 22;
+use Test::More tests => 24;
 
 use Test::Exception;
 use Test::MockModule;
