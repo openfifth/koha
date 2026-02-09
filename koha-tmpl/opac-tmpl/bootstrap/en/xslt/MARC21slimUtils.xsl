@@ -700,7 +700,6 @@
 
         <xsl:for-each select="marc:datafield[@tag=$MARCOnlineResourceField and marc:subfield[@code='u']]">
             <xsl:variable name="SubqText"><xsl:value-of select="marc:subfield[@code='q']" /></xsl:variable>
-            <li>
                 <a property="url">
                     <xsl:choose>
                         <xsl:when test="$OPACTrackClicks='track'">
@@ -741,7 +740,7 @@
                         </xsl:otherwise>
                     </xsl:choose>
                 </a>
-            </li>
+                <xsl:if test="position()!=last()"><span class="separator"><xsl:text> | </xsl:text></span></xsl:if>
         </xsl:for-each>
     </xsl:template>
 
