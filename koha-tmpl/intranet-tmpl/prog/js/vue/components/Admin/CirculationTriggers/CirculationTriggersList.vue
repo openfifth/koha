@@ -336,12 +336,6 @@ export default {
             displayAllApplicableRules: 1,
         };
     },
-    beforeRouteEnter(to, from, next) {
-        next(async vm => {
-            vm.filtersInitialized = true;
-            await vm.filterRuleSetsbySearchParam();
-        });
-    },
     methods: {
         async loadRuleSets() {
             this.ruleSetInitialized = false;
@@ -429,11 +423,16 @@ export default {
                 this.showModal = newVal.meta && newVal.meta.showModal;
             },
         },
-        "$route.query.refresh": {
-            async handler(newVal) {
-                if (newVal) {
+        "$route.query": {
+            async handler() {
+                if (
+                    this.$route.fullPath.includes("refresh") ||
+                    this.$route.path.endsWith("circulation_triggers")
+                ) {
+                    await this.$nextTick();
                     await this.filterRuleSetsbySearchParam();
                 }
+                this.filtersInitialized = true;
             },
             immediate: true,
         },
