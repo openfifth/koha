@@ -6,30 +6,39 @@
         {{ resource.patron_str }}
     </span>
     &nbsp;
-    <a
-        href="#patron_search_modal"
-        @click="selectUser()"
-        class="btn btn-default"
-        data-bs-toggle="modal"
-        ><i class="fa fa-plus"></i> {{ $__("Select user") }}</a
-    >
-    <input
-        type="hidden"
-        name="selected_patron_id"
-        id="additional_patron_filters"
-        :data-additionalfilters="filters"
-    />
-    <input
-        v-if="shouldRenderInput"
-        type="hidden"
-        name="selected_patron_id"
-        id="selected_patron_id"
-    />
-    <span
-        id="vuePatronSearchFilter"
-        style="display: none"
-        aria-hidden="true"
-    ></span>
+    <template v-if="modalType === 'select'">
+        <a
+            href="#patron_search_modal"
+            @click="selectUser()"
+            class="btn btn-default"
+            data-bs-toggle="modal"
+            ><i class="fa fa-plus"></i> {{ $__("Select user") }}</a
+        >
+        <input
+            type="hidden"
+            name="selected_patron_id"
+            id="additional_patron_filters"
+            :data-additionalfilters="filters"
+        />
+        <input
+            v-if="shouldRenderInput"
+            type="hidden"
+            name="selected_patron_id"
+            id="selected_patron_id"
+        />
+    </template>
+    <template v-if="modalType === 'add'">
+        <a
+            href="#patron_search_modal"
+            @click="addUser()"
+            class="btn btn-default"
+            data-bs-toggle="modal"
+            ><i class="fa fa-plus"></i> {{ $__("Add user") }}</a
+        >
+        <input type="hidden" name="users_ids" id="users_ids" />
+        <ol id="users_names"></ol>
+    </template>
+    <input id="vuePatronSearchData" type="hidden" />
 </template>
 
 <script>
@@ -50,22 +59,29 @@ export default {
             default: "patron",
         },
         filteredUrl: String,
+        modalType: {
+            type: String,
+            default: "select",
+        },
     },
     setup(props) {
         const loading = ref(false);
 
         onBeforeMount(() => {
-            props.resource.patron_str = $patron_to_html(
-                props.resource[props.fieldName]
-            );
+            if (props.modalType === "select") {
+                props.resource.patron_str = $patron_to_html(
+                    props.resource[props.fieldName]
+                );
+            }
         });
         onMounted(() => {
             if (props.filteredUrl) {
-                $("#vuePatronSearchFilter").data(
+                $("#vuePatronSearchData").data(
                     "patron_search_filter",
                     props.filteredUrl
                 );
             }
+            $("#vuePatronSearchData").data("action_type", props.modalType);
         });
 
         const filters = computed(() => {
@@ -88,6 +104,26 @@ export default {
             return !document.getElementById("selected_patron_id");
         });
 
+        const addUser = () => {
+            const modalEventListener = () => {
+                newUserAdded();
+                $(document).off(
+                    "hidden.bs.modal",
+                    "#patron_search_modal",
+                    modalEventListener
+                );
+            };
+            $(document).on(
+                "hidden.bs.modal",
+                "#patron_search_modal",
+                modalEventListener
+            );
+        };
+
+        const newUserAdded = () => {
+            const userIds = document.getElementById("users_ids").value;
+            props.resource[props.name] = userIds.split(":");
+        };
         const selectUser = () => {
             const modalEventListener = () => {
                 newUserSelected();
@@ -125,6 +161,7 @@ export default {
             loading,
             shouldRenderInput,
             selectUser,
+            addUser,
             newUserSelected,
             filters,
         };
