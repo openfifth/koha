@@ -49,7 +49,7 @@ if ( $op eq 'cud-add' ) {
     my $host               = $input->param('sftp_host')      || 'localhost';
     my $port               = $input->param('sftp_port')      || 22;
     my $transport          = $input->param('sftp_transport') || 'sftp';
-    my $passive            = ( scalar $input->param('sftp_passiv') ) ? 1 : 0;
+    my $passive            = ( scalar $input->param('sftp_passive') ) ? 1 : 0;
     my $auth_mode          = $input->param('sftp_auth_mode')          || 'password';
     my $user_name          = $input->param('sftp_user_name')          || undef;
     my $password           = $input->param('sftp_password')           || undef;
@@ -139,7 +139,7 @@ if ( $op eq 'cud-add' ) {
         my $host               = $input->param('sftp_host')      || 'localhost';
         my $port               = $input->param('sftp_port')      || 22;
         my $transport          = $input->param('sftp_transport') || 'sftp';
-        my $passive            = ( scalar $input->param('sftp_passiv') ) ? 1 : 0;
+        my $passive            = ( scalar $input->param('sftp_passive') ) ? 1 : 0;
         my $auth_mode          = $input->param('sftp_auth_mode')          || 'password';
         my $user_name          = $input->param('sftp_user_name')          || undef;
         my $password           = $input->param('sftp_password')           || undef;
