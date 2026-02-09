@@ -4,7 +4,7 @@
     x-mojo-to: Acquisitions::FundManagement::FundManagement#list_users
     operationId: listFMUsers
     description: This resource returns a list of patron allowed to be users of the fund management module
-    summary: List possibe users for fund management
+    summary: List possible users for fund management
     tags:
       - fm_users
     parameters:
