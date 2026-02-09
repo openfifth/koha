@@ -400,6 +400,12 @@ export const useCircRulesStore = defineStore("circRules", () => {
                 {},
                 { library_id: "*", effective: false }
             );
+            if (this.currentLibraryId === "*") {
+                this.allCurrentLibraryRawRuleSets =
+                    this.allDefaultLibraryRawRuleSets;
+                return;
+            }
+
             this.allCurrentLibraryRawRuleSets = await client.circ_rules.getAll(
                 {},
                 { library_id: this.currentLibraryId, effective: false }
