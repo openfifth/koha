@@ -340,7 +340,7 @@
                 const vueData = $("#vuePatronSearchData")
                 const actionType = vueData.data("action_type")
                 vueCallback = vueData.data("callback")
-                additionalPatronFilters = $("#additional_patron_filters").data("additionalfilters")
+                additionalPatronFilters = $("#vuePatronSearchData").data("additional_patron_filters")
                 if(!actionButtons.includes(actionType) ) actionButtons.push(actionType)
                 const vueFilteredEndpoint = vueData.data("patron_search_filter")
                 if(vueFilteredEndpoint) {
@@ -950,7 +950,7 @@
                     patron_search_form.find(".search_patron_filter_btn").prop({disabled: false});
                 });
                 if(additionalPatronFilters) {
-                    let url = patron_search_url + "?q=" + JSON.stringify(additionalPatronFilters)
+                    let url = patron_search_url + "?q=" + additionalPatronFilters
                     table_dt.ajax.url(url)
                 }
                 table_dt.draw();
