@@ -94,7 +94,7 @@ export default {
             $("#vuePatronSearchData").data("action_type", props.modalType);
             $("#vuePatronSearchData").data(
                 "additional_patron_filters",
-                filters
+                filters.value
             );
             $("#vuePatronSearchData").data(
                 "callback",
