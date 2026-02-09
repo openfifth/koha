@@ -927,6 +927,11 @@
                 table_dt.on('draw.dt', function () {
                     patron_search_form.find(".search_patron_filter_btn").prop({disabled: false});
                 });
+                let additionalPatronFilters = $("#additional_patron_filters").data("additionalfilters")
+                if(additionalPatronFilters) {
+                    let url = patron_search_url + "?q=" + JSON.stringify(additionalPatronFilters)
+                    table_dt.ajax.url(url)
+                }
                 table_dt.draw();
                 return false;
             }
