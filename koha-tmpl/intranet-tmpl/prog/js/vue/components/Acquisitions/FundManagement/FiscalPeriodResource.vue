@@ -10,6 +10,7 @@ import BaseResource from "../../BaseResource.vue";
 import { APIClient } from "../../../fetch/api-client.js";
 import { useBaseResource } from "../../../composables/base-resource";
 import { $__ } from "@koha-vue/i18n";
+import { inject } from "vue";
 
 export default {
     props: {
@@ -19,6 +20,9 @@ export default {
     },
     setup(props) {
         const patron_to_html = $patron_to_html;
+
+        const acquisitionsStore = inject("acquisitionsStore");
+        const { formatValueWithCurrency } = acquisitionsStore;
 
         const additionalToolbarButtons = (resource, componentData) => {
             const { instancedResource } = componentData;

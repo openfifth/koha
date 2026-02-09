@@ -82,7 +82,9 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
         getLibrariesFromGroups(libraryGroups) {
             return libraryGroups.reduce((acc, alg) => {
                 alg.libraries.forEach(lib => {
-                    acc.push(lib.branchname);
+                    if (!acc.includes(lib.branchname)) {
+                        acc.push(lib.branchname);
+                    }
                 });
                 return acc;
             }, []);

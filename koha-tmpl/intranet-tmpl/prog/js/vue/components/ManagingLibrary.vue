@@ -62,7 +62,7 @@ export default {
                 branch => branch.library_id === e
             );
             const acqLibraryGroups =
-                branchSelected?.acquisitions_library_groups;
+                branchSelected?.acquisitions_library_groups || [];
             groupAccess.value = acqLibraryGroups;
         };
 
