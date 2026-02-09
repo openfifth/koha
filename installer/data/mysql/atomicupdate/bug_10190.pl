@@ -268,9 +268,8 @@ return {
             foreach my $i ( 1 .. 3 ) {
                 my $most_frequent_delay = $most_frequent_delay{$branchcode}{$i};
                 say $out "Inserting "
-                    . ( $branchcode_value // '' )
-                    . ":undef:"
-                    . ( $itemtype // '' )
+                    . ( $branchcode_value // '' ) . ":all:"
+                    . ( $itemtype         // '' )
                     . " default most frequent delay for overdue_$i: "
                     . $most_frequent_delay;
                 $insert->execute(
@@ -284,7 +283,7 @@ return {
                 my $most_frequent_notice = $most_frequent_notice{$branchcode}{$i};
                 say $out "Inserting "
                     . ( $branchcode_value // '' )
-                    . ":undef:undef default most frequent notice for overdue_$i: "
+                    . ":all:all default most frequent notice for overdue_$i: "
                     . $most_frequent_notice;
                 $insert->execute(
                     $branchcode_value,
@@ -297,7 +296,7 @@ return {
                 my $most_frequent_mtt = $most_frequent_mtt{$branchcode}{$i};
                 say $out "Inserting "
                     . ( $branchcode_value // '' )
-                    . ":undef:undef default most frequent mtt for overdue_$i: "
+                    . ":all:all default most frequent mtt for overdue_$i: "
                     . $most_frequent_mtt;
                 $insert->execute(
                     $branchcode_value,
@@ -310,7 +309,7 @@ return {
                 my $most_frequent_restrict = $most_frequent_restrict{$branchcode}{$i};
                 say $out "Inserting "
                     . ( $branchcode_value // '' )
-                    . ":undef:undef default most frequent restrict for overdue_$i: "
+                    . ":all:all default most frequent restrict for overdue_$i: "
                     . $most_frequent_restrict;
                 $insert->execute(
                     $branchcode_value,
@@ -321,9 +320,7 @@ return {
                 );
 
                 # Insert the has_rules rule for group $i's default context
-                say $out "Inserting "
-                    . ( $branchcode_value // '' )
-                    . ":undef:undef default has_rules for overdue_$i: 1";
+                say $out "Inserting " . ( $branchcode_value // '' ) . ":all:all default has_rules for overdue_$i: 1";
                 $insert->execute(
                     $branchcode_value,
                     undef,
