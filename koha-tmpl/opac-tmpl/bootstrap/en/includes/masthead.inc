@@ -390,6 +390,9 @@
                     <li class="nav-item">
                         <a href="/cgi-bin/koha/opac-course-reserves.pl">Course reserves</a>
                     </li>
+                    <li class="nav-item">
+                        <a href="/cgi-bin/koha/opac-thesis-tables.pl">Research tables</a>
+                    </li>
                 [% END %]
                 [% IF Koha.Preference( 'OpacBrowser' ) == 1 %]
                     <li class="nav-item">
@@ -430,9 +433,6 @@
                     [% IF Koha.Preference( 'AnonSuggestions' ) == 1 || Koha.Preference( 'OPACViewOthersSuggestions' ) == 1 %]
                         <li class="nav-item">
                             <a href="/cgi-bin/koha/opac-suggestions.pl?suggested_by_anyone=1">Purchase suggestions</a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="/cgi-bin/koha/opac-thesis-tables.pl">Research tables</a>
                         </li>
                     [% END %]
                 [% END %]

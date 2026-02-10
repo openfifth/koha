@@ -39,7 +39,17 @@ my ( $template, $borrowernumber, $cookie ) = get_template_and_user(
     }
 );
 
-my $courses = SearchCourses( enabled => 'yes', thesis_table => 'yes' );
+my $courses = SearchCourses( enabled => 'yes', course_type => 'RESEARCH_TABLE' );
 
-$template->param( courses => $courses );
+# Get the display text for this course type from authorized values
+my $dbh = C4::Context->dbh;
+my $sth = $dbh->prepare(
+    "SELECT lib_opac FROM authorised_values WHERE category='CR_TYPE' AND authorised_value='RESEARCH_TABLE'");
+$sth->execute();
+my $display_name = $sth->fetchrow_array() || 'Research tables';
+
+$template->param(
+    courses             => $courses,
+    course_type_display => $display_name,
+);
 output_html_with_http_headers $cgi, $cookie, $template->output;
