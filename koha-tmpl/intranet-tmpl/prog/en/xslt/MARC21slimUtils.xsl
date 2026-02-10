@@ -733,6 +733,7 @@
     <xsl:template name="renderMARCOnlineResourceField">
         <xsl:param name="MARCOnlineResourceField" />
         <xsl:param name="Show856uAsImage" />
+        <xsl:param name="URLLinkText" />
         <xsl:param name="screen" />
         <ul class="resource_list">
         <xsl:for-each

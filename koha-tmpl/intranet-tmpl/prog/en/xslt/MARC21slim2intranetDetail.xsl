@@ -1070,6 +1070,7 @@
                 <xsl:call-template name="renderMARCOnlineResourceField">
                     <xsl:with-param name="MARCOnlineResourceField">856</xsl:with-param>
                     <xsl:with-param name="Show856uAsImage" select="$Show856uAsImage"></xsl:with-param>
+                    <xsl:with-param name="URLLinkText" select="$URLLinkText"></xsl:with-param>
                     <xsl:with-param name="screen" select="'detail'"></xsl:with-param>
                 </xsl:call-template>
             </span>
@@ -1083,6 +1084,7 @@
                 <span class="label">Online archive resources: </span>
                 <xsl:call-template name="renderMARCOnlineResourceField">
                     <xsl:with-param name="MARCOnlineResourceField">857</xsl:with-param>
+                    <xsl:with-param name="URLLinkText" select="$URLLinkText"></xsl:with-param>
                     <xsl:with-param name="screen" select="'detail'"></xsl:with-param>
                 </xsl:call-template>
             </span>
