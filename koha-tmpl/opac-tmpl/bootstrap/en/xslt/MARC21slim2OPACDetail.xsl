@@ -1075,6 +1075,7 @@
                         <xsl:with-param name="OPACTrackClicks" select="$OPACTrackClicks"></xsl:with-param>
                         <xsl:with-param name="OPACURLOpenInNewWindow" select="$OPACURLOpenInNewWindow"></xsl:with-param>
                         <xsl:with-param name="screen" select="'detail'"></xsl:with-param>
+                        <xsl:with-param name="biblionumber" select="$biblionumber"></xsl:with-param>
                                             </xsl:call-template>
                 </ul>
             </div>
@@ -1092,6 +1093,7 @@
                         <xsl:with-param name="OPACTrackClicks" select="$OPACTrackClicks"></xsl:with-param>
                         <xsl:with-param name="OPACURLOpenInNewWindow" select="$OPACURLOpenInNewWindow"></xsl:with-param>
                         <xsl:with-param name="screen" select="'detail'"></xsl:with-param>
+                        <xsl:with-param name="biblionumber" select="$biblionumber"></xsl:with-param>
                     </xsl:call-template>
                 </ul>
             </div>
