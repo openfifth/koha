@@ -33,7 +33,7 @@ use Date::Calc      qw( Date_to_Days );
 use C4::Output      qw( output_html_with_http_headers );
 use C4::Auth        qw( get_template_and_user );
 use C4::Reserves
-    qw( AlterPriority ToggleLowestPriority CanBookBeReserved GetMaxPatronHoldsForRecord CanItemBeReserved IsAvailableForItemLevelRequest GetReserveFee );
+    qw( AlterPriority ToggleLowestPriority CanBookBeReserved GetMaxPatronHoldsForRecord CanItemBeReserved IsAvailableForItemLevelRequest );
 use C4::Items       qw( get_hostitemnumbers_of );
 use C4::Koha        qw( getitemtypeimagelocation );
 use C4::Serials     qw( CountSubscriptionFromBiblionumber );
@@ -740,7 +740,19 @@ if (   ( $findborrower && $borrowernumber_hold || $findclub && $club_hold )
 
         # Pass through any reserve charge
         if ($patron) {
-            $biblioloopiter{reserve_charge} = GetReserveFee( $patron->borrowernumber, $biblionumber );
+
+            # Calculate hold fee using first available item
+            my $reserve_charge = 0;
+            if (@items) {
+                foreach my $item_object (@items) {
+                    my $fee = $item_object->holds_fee($patron);
+                    if ( defined $fee && $fee > 0 ) {
+                        $reserve_charge = $fee;
+                        last;
+                    }
+                }
+            }
+            $biblioloopiter{reserve_charge} = $reserve_charge;
         }
 
         $template->param( total_holds => $total_holds );
@@ -773,7 +785,19 @@ unless ($multi_hold) {
 
     # Pass through any reserve charge for single holds
     if ($borrowernumber_hold) {
-        $template->param( reserve_charge => GetReserveFee( $borrowernumber_hold, $biblionumbers[0] ) );
+        my $patron         = Koha::Patrons->find($borrowernumber_hold);
+        my $reserve_charge = 0;
+        if ( $patron && $biblio ) {
+            my @items = $biblio->items->as_list;
+            foreach my $item (@items) {
+                my $fee = $item->holds_fee($patron);
+                if ( defined $fee && $fee > 0 ) {
+                    $reserve_charge = $fee;
+                    last;
+                }
+            }
+        }
+        $template->param( reserve_charge => $reserve_charge );
     }
 }
 $template->param( biblionumbers => \@biblionumbers );
