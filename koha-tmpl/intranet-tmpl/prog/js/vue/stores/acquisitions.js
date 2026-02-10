@@ -79,7 +79,7 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
             const currencyToRate = getters.getSystemCurrencyRate(currencyTo);
             return (currencyToRate * 100) / (currencyFromRate * 100);
         },
-        getLibrariesFromGroups(libraryGroups) {
+        getBranchnamesFromGroups(libraryGroups) {
             return libraryGroups.reduce((acc, alg) => {
                 alg.libraries.forEach(lib => {
                     if (!acc.includes(lib.branchname)) {

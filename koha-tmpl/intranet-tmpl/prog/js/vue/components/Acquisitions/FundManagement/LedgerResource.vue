@@ -25,7 +25,7 @@ export default {
         const acquisitionsStore = inject("acquisitionsStore");
         const { currencies, user } = storeToRefs(acquisitionsStore);
 
-        const { formatValueWithCurrency, getLibrariesFromGroups } =
+        const { formatValueWithCurrency, getBranchnamesFromGroups } =
             acquisitionsStore;
 
         const additionalToolbarButtons = (resource, componentData) => {
@@ -434,7 +434,7 @@ export default {
                             const branchAttr = componentData.resourceAttrs.find(
                                 ra => ra.name === "managing_branch"
                             );
-                            const branchNames = getLibrariesFromGroups(
+                            const branchNames = getBranchnamesFromGroups(
                                 fiscalPeriod.managing_library
                                     ?.acquisitions_library_groups
                             );

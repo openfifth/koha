@@ -48,13 +48,13 @@ export default {
 
         const acquisitionsStore = inject("acquisitionsStore");
 
-        const { getLibrariesFromGroups } = acquisitionsStore;
+        const { getBranchnamesFromGroups } = acquisitionsStore;
 
         const groupAccess = ref(
             props.resource?.managing_library?.acquisitions_library_groups || []
         );
         const groupAccessList = computed(() => {
-            return getLibrariesFromGroups(groupAccess.value).join(", ");
+            return getBranchnamesFromGroups(groupAccess.value).join(", ");
         });
 
         const setGroupAccessValue = (e, options, resource) => {
@@ -63,6 +63,11 @@ export default {
             );
             const acqLibraryGroups =
                 branchSelected?.acquisitions_library_groups || [];
+            if (branchSelected && !acqLibraryGroups.length) {
+                acqLibraryGroups.push({
+                    libraries: [{ branchname: branchSelected.name }],
+                });
+            }
             groupAccess.value = acqLibraryGroups;
         };
 
