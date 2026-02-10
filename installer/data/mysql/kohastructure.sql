@@ -2327,6 +2327,7 @@ DROP TABLE IF EXISTS `courses`;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `courses` (
   `course_id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'unique id for the course',
+  `course_type` varchar(80) DEFAULT 'COURSE' COMMENT 'the authorised value for CR_TYPE - determines display context (course reserve, research table, on display, etc.)',
   `department` varchar(80) DEFAULT NULL COMMENT 'the authorised value for the DEPARTMENT',
   `course_number` varchar(255) DEFAULT NULL COMMENT 'the ''course number'' assigned to a course',
   `section` varchar(255) DEFAULT NULL COMMENT 'the ''section'' of a course',
