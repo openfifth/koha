@@ -38,6 +38,7 @@ BEGIN {
         DelCourseReserve
 
         SearchCourses
+        HasCoursesOfType
 
         GetItemCourseReservesInfo
     );
@@ -157,7 +158,7 @@ sub GetCourses {
     my @query_values;
 
     my $query = "
-        SELECT c.course_id, c.department, c.course_number, c.section, c.course_name, c.term, c.staff_note, c.public_note, c.students_count, c.enabled, c.timestamp
+        SELECT c.course_id, c.course_type, c.department, c.course_number, c.section, c.course_name, c.term, c.staff_note, c.public_note, c.students_count, c.enabled, c.timestamp
         FROM courses c
         LEFT JOIN course_reserves ON course_reserves.course_id = c.course_id
         LEFT JOIN course_items ON course_items.ci_id = course_reserves.ci_id
@@ -176,7 +177,7 @@ sub GetCourses {
     }
 
     $query .=
-        " GROUP BY c.course_id, c.department, c.course_number, c.section, c.course_name, c.term, c.staff_note, c.public_note, c.students_count, c.enabled, c.timestamp ";
+        " GROUP BY c.course_id, c.course_type, c.department, c.course_number, c.section, c.course_name, c.term, c.staff_note, c.public_note, c.students_count, c.enabled, c.timestamp ";
 
     my $dbh = C4::Context->dbh;
     my $sth = $dbh->prepare($query);
@@ -1017,7 +1018,11 @@ sub CountCourseReservesForItem {
 
 =head2 SearchCourses
 
-    my $courses = SearchCourses( term => $search_term, enabled => 'yes', thesis_table => 'no' );
+    my $courses = SearchCourses( term => $search_term, enabled => 'yes', course_type => 'COURSE' );
+    my $courses = SearchCourses( term => $search_term, enabled => 'yes', course_type => 'RESEARCH_TABLE' );
+
+    # For backward compatibility (deprecated):
+    my $courses = SearchCourses( term => $search_term, enabled => 'yes', thesis_table => 'yes' );
 
 =cut
 
@@ -1026,12 +1031,25 @@ sub SearchCourses {
 
     my $term = $params{'term'};
 
-    my $enabled      = $params{'enabled'}      || '%';
-    my $thesis_table = $params{'thesis_table'} || 'no';
+    my $enabled = $params{'enabled'} || '%';
+
+    # Handle course_type parameter (new) or thesis_table parameter (deprecated for backward compatibility)
+    my $course_type;
+    if ( exists $params{'course_type'} ) {
+        $course_type = $params{'course_type'};
+    } elsif ( exists $params{'thesis_table'} ) {
+
+        # Backward compatibility: translate thesis_table to course_type
+        $course_type = $params{'thesis_table'} eq 'yes' ? 'RESEARCH_TABLE' : 'COURSE';
+    } else {
+
+        # Default to showing regular courses
+        $course_type = '%';
+    }
 
     my @params;
     my $query = "
-        SELECT c.course_id, c.department, c.course_number, c.section, c.course_name, c.term, c.staff_note, c.public_note, c.students_count, c.enabled, c.timestamp
+        SELECT c.course_id, c.course_type, c.department, c.course_number, c.section, c.course_name, c.term, c.staff_note, c.public_note, c.students_count, c.enabled, c.timestamp
         FROM courses c
         LEFT JOIN course_instructors ci
             ON ( c.course_id = ci.course_id )
@@ -1056,34 +1074,24 @@ sub SearchCourses {
            )
            AND
            c.enabled LIKE ?
+           AND
+           c.course_type LIKE ?
     ";
-
-    if ( $thesis_table eq 'no' ) {
-        $query .= "
-        AND
-        c.department != 'TT'
-    ";
-    } else {
-        $query .= "
-        AND
-        c.department = 'TT'
-    ";
-    }
 
     $query .= "
-        GROUP BY c.course_id, c.department, c.course_number, c.section, c.course_name, c.term, c.staff_note, c.public_note, c.students_count, c.enabled, c.timestamp
+        GROUP BY c.course_id, c.course_type, c.department, c.course_number, c.section, c.course_name, c.term, c.staff_note, c.public_note, c.students_count, c.enabled, c.timestamp
     ";
 
     $term //= '';
     $term   = "%$term%";
     @params = ($term) x 10;
 
-    $query .= " ORDER BY department, course_number, section, term, course_name ";
+    $query .= " ORDER BY course_type, department, course_number, section, term, course_name ";
 
     my $dbh = C4::Context->dbh;
     my $sth = $dbh->prepare($query);
 
-    $sth->execute( @params, $enabled );
+    $sth->execute( @params, $enabled, $course_type );
 
     my $courses = $sth->fetchall_arrayref( {} );
 
@@ -1092,6 +1100,28 @@ sub SearchCourses {
     }
 
     return $courses;
+}
+
+=head2 HasCoursesOfType
+
+    my $has_research_tables = HasCoursesOfType( course_type => 'RESEARCH_TABLE', enabled => 'yes' );
+
+Returns true if any courses of the specified type exist.
+
+=cut
+
+sub HasCoursesOfType {
+    my (%params) = @_;
+
+    my $course_type = $params{'course_type'} || return 0;
+    my $enabled     = $params{'enabled'}     || '%';
+
+    my $dbh = C4::Context->dbh;
+    my $sth = $dbh->prepare("SELECT COUNT(*) FROM courses WHERE course_type LIKE ? AND enabled LIKE ?");
+    $sth->execute( $course_type, $enabled );
+
+    my ($count) = $sth->fetchrow_array();
+    return $count > 0;
 }
 
 =head2 whoami
