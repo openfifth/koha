@@ -31,6 +31,15 @@ __PACKAGE__->table("courses");
 
 unique id for the course
 
+=head2 course_type
+
+  data_type: 'varchar'
+  default_value: 'COURSE'
+  is_nullable: 1
+  size: 80
+
+the authorised value for CR_TYPE - determines display context (course reserve, research table, on display, etc.)
+
 =head2 department
 
   data_type: 'varchar'
@@ -114,6 +123,8 @@ determines whether the course is active
 __PACKAGE__->add_columns(
   "course_id",
   { data_type => "integer", is_auto_increment => 1, is_nullable => 0 },
+  "course_type",
+  { data_type => "varchar", default_value => "COURSE", is_nullable => 1, size => 80 },
   "department",
   { data_type => "varchar", is_nullable => 1, size => 80 },
   "course_number",
