@@ -47,8 +47,9 @@ if ($course_id) {
 }
 
 $template->param(
-    departments => GetAuthorisedValues('DEPARTMENT'),
-    terms       => GetAuthorisedValues('TERM'),
+    departments  => GetAuthorisedValues('DEPARTMENT'),
+    terms        => GetAuthorisedValues('TERM'),
+    course_types => GetAuthorisedValues('CR_TYPE'),
 );
 
 output_html_with_http_headers $cgi, $cookie, $template->output;
