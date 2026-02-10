@@ -41,6 +41,7 @@ if ( $op eq 'cud-del' ) {
     my %params;
 
     $params{'course_id'}      = $course_id;
+    $params{'course_type'}    = $cgi->param('course_type') || 'COURSE';
     $params{'department'}     = $cgi->param('department');
     $params{'course_number'}  = $cgi->param('course_number');
     $params{'section'}        = $cgi->param('section');

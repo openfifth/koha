@@ -94,6 +94,12 @@
         <div class="rows">
             <ol>
                 <li><span class="label">Course name: </span> [% course.course_name | html %]</li>
+                [% IF ( course.course_type ) %]
+                    <li>
+                        <span class="label">Type: </span>
+                        [% AuthorisedValues.GetByCode( 'CR_TYPE', course.course_type ) | html %]
+                    </li>
+                [% END %]
                 [% IF ( course.term ) %]
                     <li>
                         <span class="label">[% tp('Semester', 'Term') | html %]: </span>
