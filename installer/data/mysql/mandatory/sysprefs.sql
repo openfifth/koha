@@ -827,6 +827,7 @@ INSERT INTO systempreferences ( `variable`, `value`, `options`, `explanation`, `
 ('ThingISBN','0',NULL,'Use with FRBRizeEditions. If ON, Koha will use the ThingISBN web service in the Editions tab on the detail pages.','YesNo'),
 ('TimeFormat','24hr','12hr|24hr','Defines the global time format for visual output.','Choice'),
 ('timeout','1d',NULL,'Inactivity timeout for cookies authentication','Free'),
+('TitleHoldFeeStrategy','highest','highest|lowest|most_common','Strategy for calculating fees on title-level holds when items have different fees: highest = charge maximum fee, lowest = charge minimum fee, most_common = charge most frequently occurring fee','Choice'),
 ('todaysIssuesDefaultSortOrder','desc','asc|desc','Specify the sort order of Todays Issues on the circulation page','Choice'),
 ('TraceCompleteSubfields','0',NULL,'Force subject tracings to only match complete subfields.','YesNo'),
 ('TraceSubjectSubdivisions','0',NULL,'Create searches on all subdivisions for subject tracings.','YesNo'),
