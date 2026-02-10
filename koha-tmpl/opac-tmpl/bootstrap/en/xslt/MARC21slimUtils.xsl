@@ -700,6 +700,7 @@
         <xsl:param name="OPACTrackClicks" />
         <xsl:param name="OPACURLOpenInNewWindow" />
         <xsl:param name="screen" />
+        <xsl:param name="biblionumber" />
 
         <xsl:for-each select="marc:datafield[@tag=$MARCOnlineResourceField and marc:subfield[@code='u']]">
             <xsl:variable name="SubqText"><xsl:value-of select="marc:subfield[@code='q']" /></xsl:variable>
