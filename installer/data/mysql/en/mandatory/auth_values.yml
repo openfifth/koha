@@ -4854,3 +4854,18 @@ tables:
           authorised_value: "770"
           lib: "Writer of accompanying material"
           lib_opac: "Writer of accompanying material"
+
+        - category: "CR_TYPE"
+          authorised_value: "COURSE"
+          lib: "Course reserve"
+          lib_opac: "Course reserve"
+
+        - category: "CR_TYPE"
+          authorised_value: "RESEARCH_TABLE"
+          lib: "Research table"
+          lib_opac: "Research table"
+
+        - category: "CR_TYPE"
+          authorised_value: "ON_DISPLAY"
+          lib: "On display"
+          lib_opac: "On display"
