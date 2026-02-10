@@ -24,6 +24,7 @@ use CGI qw ( -utf8 );
 
 use C4::Auth   qw( get_template_and_user );
 use C4::Output qw( output_html_with_http_headers );
+use C4::Context;
 use C4::Koha;
 
 use C4::CourseReserves qw(GetCourse GetCourseReserves);
@@ -47,9 +48,17 @@ die("No table_id given") unless ($table_id);
 my $course          = GetCourse($table_id);
 my $course_reserves = GetCourseReserves( course_id => $table_id, include_items => 1, include_count => 1 );
 
+# Get the display text for this course type from authorized values
+my $dbh         = C4::Context->dbh;
+my $course_type = $course->{course_type} || 'RESEARCH_TABLE';
+my $sth = $dbh->prepare("SELECT lib_opac FROM authorised_values WHERE category='CR_TYPE' AND authorised_value=?");
+$sth->execute($course_type);
+my $display_name = $sth->fetchrow_array() || 'Research table';
+
 $template->param(
-    course          => $course,
-    course_reserves => $course_reserves,
+    course              => $course,
+    course_reserves     => $course_reserves,
+    course_type_display => $display_name,
 );
 
 output_html_with_http_headers $cgi, $cookie, $template->output;
