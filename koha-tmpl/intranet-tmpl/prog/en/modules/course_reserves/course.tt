@@ -70,6 +70,22 @@
                 <legend>[% IF course_id %]Edit course[% ELSE %]Create course[% END %]</legend>
                 <ol>
                     <li>
+                        <label class="required" for="course_type">Type:</label>
+                        <select id="course_type" name="course_type" required="required" class="required">
+                            <option value="">Select a type</option>
+
+                            [% FOREACH ct IN course_types %]
+                                [% IF ct.authorised_value == course_type %]
+                                    <option value="[% ct.authorised_value | html %]" selected="selected">[% ct.lib | html %]</option>
+                                [% ELSE %]
+                                    <option value="[% ct.authorised_value | html %]">[% ct.lib | html %]</option>
+                                [% END %]
+                            [% END %]
+                        </select>
+                        <span class="required">Required</span>
+                    </li>
+
+                    <li>
                         <label class="required" for="department">Department:</label>
                         <select id="department" name="department" required="required" class="required">
                             <option value="">Select a department</option>
