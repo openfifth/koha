@@ -730,6 +730,7 @@
     <xsl:template name="renderMARCOnlineResourceField">
         <xsl:param name="MARCOnlineResourceField" />
         <xsl:param name="Show856uAsImage" />
+        <xsl:param name="URLLinkText" />
         <xsl:param name="screen" />
         <xsl:for-each
             select="marc:datafield[@tag=$MARCOnlineResourceField and marc:subfield[@code='u']]">
