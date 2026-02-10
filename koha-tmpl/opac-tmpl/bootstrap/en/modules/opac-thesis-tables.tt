@@ -5,7 +5,7 @@
 [% USE TablesSettings %]
 
 [% INCLUDE 'doc-head-open.inc' %]
-<title>[% IF ( LibraryNameTitle ) %][% LibraryNameTitle | html %][% ELSE %]Koha online[% END %] catalog &rsaquo; Research tables</title>
+<title>[% IF ( LibraryNameTitle ) %][% LibraryNameTitle | html %][% ELSE %]Koha online[% END %] catalog &rsaquo; [% course_type_display | html %]</title>
 [% INCLUDE 'doc-head-close.inc' %]
 [% BLOCK cssinclude %]
     [% Asset.css("css/datatables.css") | $raw %]
@@ -22,7 +22,7 @@
                 <a href="/cgi-bin/koha/opac-main.pl">Home</a>
             </li>
             <li class="breadcrumb-item" aria-current="page">
-                <a href="#">Research tables</a>
+                <a href="#">[% course_type_display | html %]</a>
             </li>
         </ul>
     </nav>
@@ -31,7 +31,7 @@
         <div class="row">
             <div class="col order-first order-md-first order-lg-2">
                 <div id="courses" class="maincontent">
-                    <h1>Research tables</h1>
+                    <h1>[% course_type_display | html %]</h1>
 
                     <table id="thesis_tables_table" class="table table-bordered table-striped table-condensed">
                         <thead>
@@ -46,22 +46,30 @@
                         <tbody>
                             [% FOREACH c IN courses %]
                                 <tr>
-                                    <td><a href="opac-thesis-table-details.pl?table_id=[% c.course_id | uri %]">[% c.course_name | html %][%- IF c.section -%] - [% c.section | html %][%- END -%]</a></td>
+                                    <td><a href="opac-thesis-table-details.pl?table_id=[% c.course_id | uri %]">[% c.course_name | html %][%- IF c.section -%]- [% c.section | html %][%- END -%]</a></td>
                                     <td>[% c.course_number | html %]</td>
                                     <td>
-                                      [% FOREACH i IN c.instructors %]
-                                          <div class="instructor"><span class="inst_surname">[% i.surname | html %]</span>[% IF i.firstname %]<span class="instr_separator">, </span><span class="instr_firstname">[% i.firstname | html %]</span>[% END %]</div>
-                                      [% END %]
+                                        [% FOREACH i IN c.instructors %]
+                                            <div class="instructor"
+                                                ><span class="inst_surname">[% i.surname | html %]</span>[% IF i.firstname %]<span class="instr_separator">, </span><span class="instr_firstname">[% i.firstname | html %]</span>[% END %]</div
+                                            >
+                                        [% END %]
                                     </td>
                                     <td>[% c.public_note | $raw %]</td>
+                                </tr>
                             [% END %]
                         </tbody>
                     </table>
-                </div> <!-- / #courses -->
-            </div> <!-- / .col -->
-        </div> <!-- / .row -->
-    </div> <!-- / .container-fluid -->
-</div> <!-- / .main -->
+                </div>
+                <!-- / #courses -->
+            </div>
+            <!-- / .col -->
+        </div>
+        <!-- / .row -->
+    </div>
+    <!-- / .container-fluid -->
+</div>
+<!-- / .main -->
 [% INCLUDE 'opac-bottom.inc' %]
 [% BLOCK jsinclude %]
     [% INCLUDE 'datatables.inc' %]
