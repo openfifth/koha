@@ -115,7 +115,7 @@
                                 [% IF field == "email_match" %]
                                     <li>Emails do not match! <a href="#borrower_repeat_email">confirm email address</a></li>
                                 [% END %]
-                                [% IF field == "age_limitations_self_registration" %]
+                                [% IF field == "age_out_of_range" %]
                                     <li> Patron's age exceeds the maximum age allowed.</li>
                                 [% END %]
                             [% END %]
