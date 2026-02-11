@@ -928,7 +928,7 @@ OPAC:
             - "Patron's maximum age when registering: "
             - pref: PatronSelfRegistrationAgeRestriction
               class: integer
-            - "<br />Note: If empty, do not restrict patron's age during self registration"
+            - "<br />Note: If empty, honor the PatronAgeRestriction preference."
     Suggestions:
         -
             - pref: OpacSuggestionManagedBy
