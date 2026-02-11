@@ -392,10 +392,17 @@ if ( $op eq 'cud-save' || $op eq 'cud-insert' ) {
         my $patron = Koha::Patron->new( { dateofbirth => $dateofbirth } );
         my $age    = $patron->get_age;
         my ( $low, $high ) = ( $category->dateofbirthrequired, $category->upperagelimit );
+        my $age_restriction = C4::Context->preference("PatronAgeRestriction");
+
         if ( ( $high && ( $age > $high ) ) or ( $age < $low ) ) {
             push @errors, 'ERROR_age_limitations';
             $template->param( age_low  => $low );
             $template->param( age_high => $high );
+        }
+
+        if ( $age_restriction && $age > $age_restriction ) {
+            push @errors, 'ERROR_age_out_of_range';
+            $template->param( age_max => $age_restriction );
         }
     }
 
