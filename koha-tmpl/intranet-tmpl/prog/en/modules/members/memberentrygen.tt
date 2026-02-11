@@ -148,6 +148,9 @@
                                 [% IF ( ERROR_age_limitations ) %]
                                     <li id="ERROR_age_limitations">Patron's age is incorrect for their category. Ages allowed are [% age_low | html %]-[% age_high | html %].</li>
                                 [% END %]
+                                [% IF ( ERROR_age_out_of_range ) %]
+                                    <li id="ERROR_age_out_of_range">Patron's age exceeds the maximum age allowed. Maximum permitted age is [% age_max | html %]</li>
+                                [% END %]
                                 [% IF ( ERROR_branch ) %]
                                     <li id="ERROR_branch">Library is invalid.</li>
                                 [% END %]

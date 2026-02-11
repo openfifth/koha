@@ -558,12 +558,17 @@ sub CheckForInvalidFields {
         my $age              = $patron->get_age;
         my $borrowercategory = Koha::Patron::Categories->find( $borrower->{'categorycode'} );
         my ( $low, $high ) = ( $borrowercategory->dateofbirthrequired, $borrowercategory->upperagelimit );
-        my $upper_registration_age_restriction = C4::Context->preference("PatronSelfRegistrationAgeRestriction");
+        my $age_restriction =
+               C4::Context->preference("PatronSelfRegistrationAgeRestriction")
+            || C4::Context->preference("PatronAgeRestriction")
+            || undef;
+
         if ( ( $high && ( $age > $high ) ) or ( $age < $low ) ) {
             push @invalidFields, 'ERROR_age_limitations';
         }
-        if ( $upper_registration_age_restriction && $age > $upper_registration_age_restriction ) {
-            push @invalidFields, 'ERROR_age_limitations_self_registration';
+
+        if ( $age_restriction && $age > $age_restriction ) {
+            push @invalidFields, 'ERROR_age_out_of_range';
         }
     }
 
