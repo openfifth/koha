@@ -1181,6 +1181,7 @@
                         <xsl:with-param name="Show856uAsImage" select="$Show856uAsImage"></xsl:with-param>
                         <xsl:with-param name="OPACTrackClicks" select="$OPACTrackClicks"></xsl:with-param>
                         <xsl:with-param name="OPACURLOpenInNewWindow" select="$OPACURLOpenInNewWindow"></xsl:with-param>
+                        <xsl:with-param name="URLLinkText" select="$URLLinkText"></xsl:with-param>
                         <xsl:with-param name="screen" select="'detail'"></xsl:with-param>
                         <xsl:with-param name="biblionumber" select="$biblionumber"></xsl:with-param>
                     </xsl:call-template>
@@ -1199,6 +1200,7 @@
                     <xsl:with-param name="MARCOnlineResourceField">857</xsl:with-param>
                     <xsl:with-param name="OPACTrackClicks" select="$OPACTrackClicks"></xsl:with-param>
                     <xsl:with-param name="OPACURLOpenInNewWindow" select="$OPACURLOpenInNewWindow"></xsl:with-param>
+                    <xsl:with-param name="URLLinkText" select="$URLLinkText"></xsl:with-param>
                     <xsl:with-param name="screen" select="'detail'"></xsl:with-param>
                     <xsl:with-param name="biblionumber" select="$biblionumber"></xsl:with-param>
                     </xsl:call-template>
