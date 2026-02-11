@@ -219,16 +219,20 @@ if ( !$registers->count ) {
                             amount         => $amount
                         }
                     );
-                    my $payout = $refund->payout(
-                        {
-                            payout_type   => $refund_type,
-                            branch        => $library_id,
-                            staff_id      => $logged_in_user->id,
-                            cash_register => $cash_register->id,
-                            interface     => 'intranet',
-                            amount        => $amount
-                        }
-                    );
+                    # Only create a payout if refund_type is not 'AC' (Account Credit)
+                    # When 'AC' is selected, the refund stays as credit on the patron's account
+                    unless ( $refund_type eq 'AC' ) {
+                        my $payout = $refund->payout(
+                            {
+                                payout_type   => $refund_type,
+                                branch        => $library_id,
+                                staff_id      => $logged_in_user->id,
+                                cash_register => $cash_register->id,
+                                interface     => 'intranet',
+                                amount        => $amount
+                            }
+                        );
+                    }
 
                 }
             );
