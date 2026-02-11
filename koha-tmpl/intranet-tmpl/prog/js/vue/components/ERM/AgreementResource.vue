@@ -310,30 +310,10 @@ export default {
                     relationshipFields: [
                         {
                             name: "user_id",
-                            type: "component",
+                            type: "patronSearchModal",
                             label: $__("User"),
-                            componentPath:
-                                "@koha-vue/components/PatronSearch.vue",
                             required: true,
                             indexRequired: true,
-                            componentProps: {
-                                name: {
-                                    type: "string",
-                                    value: "user_id",
-                                },
-                                required: {
-                                    type: "boolean",
-                                    value: true,
-                                },
-                                resource: {
-                                    type: "resource",
-                                    value: null,
-                                },
-                                label: {
-                                    type: "string",
-                                    value: $__("User"),
-                                },
-                            },
                         },
                         {
                             name: "role",

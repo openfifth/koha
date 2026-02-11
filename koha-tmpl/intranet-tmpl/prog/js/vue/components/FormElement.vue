@@ -140,6 +140,14 @@
             v-model="resource[attr.name]"
         ></component>
     </template>
+    <template v-else-if="attr.type == 'patronSearchModal'">
+        <PatronSearch
+            :name="attr.name"
+            :required="attr.required"
+            :resource="resource"
+            v-bind="attr.patronSearchModalOptions"
+        />
+    </template>
     <template v-else-if="attr.type == 'component' && attr.componentPath">
         <component
             v-if="isVModelRequired(attr.componentPath)"
@@ -207,6 +215,7 @@ import InputRadio from "./Elements/InputRadio.vue";
 import { useBaseElement } from "../composables/base-element.js";
 import { computed, defineAsyncComponent, ref } from "vue";
 import { loadComponent } from "@koha-vue/loaders/componentResolver";
+import PatronSearch from "./PatronSearch.vue";
 
 export default {
     props: {
@@ -306,6 +315,7 @@ export default {
         InputCheckbox,
         TextArea,
         InputRadio,
+        PatronSearch,
     },
 };
 </script>

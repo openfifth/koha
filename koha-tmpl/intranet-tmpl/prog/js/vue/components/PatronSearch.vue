@@ -42,7 +42,6 @@ export default {
     props: {
         name: String,
         resource: Object,
-        label: String,
         required: Boolean,
         additionalFilters: Object,
         selectCallback: Function,
@@ -50,7 +49,7 @@ export default {
             type: String,
             default: "patron",
         },
-        filteredUrl: String,
+        patronSearchUrl: String,
         modalType: {
             type: String,
             default: "select",
@@ -85,10 +84,10 @@ export default {
         });
 
         const passSearchDataToModal = () => {
-            if (props.filteredUrl) {
+            if (props.patronSearchUrl) {
                 $("#vuePatronSearchData").data(
                     "patron_search_filter",
-                    props.filteredUrl
+                    props.patronSearchUrl
                 );
             }
             $("#vuePatronSearchData").data("action_type", props.modalType);
