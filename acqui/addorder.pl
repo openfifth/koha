@@ -118,7 +118,8 @@ if it is an order from an existing suggestion : the id of this suggestion.
 
 use Modern::Perl;
 use CGI  qw ( -utf8 );
-use JSON qw ( to_json encode_json );
+use JSON qw ( to_json encode_json decode_json );
+use Carp qw( carp );
 
 use C4::Acquisition qw( FillWithDefaultValues ModOrderUsers );
 use C4::Auth        qw( get_template_and_user );
@@ -266,6 +267,7 @@ if ( $op eq 'cud-order' ) {
         unitprice               => scalar $input->param('unitprice'),
         order_internalnote      => scalar $input->param('order_internalnote'),
         order_vendornote        => scalar $input->param('order_vendornote'),
+        servicing_instruction   => build_servicing_instruction_json($input),
         sort1                   => scalar $input->param('sort1'),
         sort2                   => scalar $input->param('sort2'),
         subscriptionid          => scalar $input->param('subscriptionid'),
@@ -509,4 +511,24 @@ if ( $op eq 'cud-order' ) {
     my $basketno = $input->param('basketno');
     print $input->redirect("/cgi-bin/koha/acqui/basket.pl?basketno=$basketno");
     exit;
+}
+
+# Helper function to build servicing instruction JSON from form parameters
+# Expects form parameters in the format:
+#   servicing_instruction_groups_json (JSON string)
+# Returns JSON string or undef
+sub build_servicing_instruction_json {
+    my ($input) = @_;
+
+    my $json_string = $input->param('servicing_instruction_groups_json');
+    return unless $json_string;
+
+    # Validate JSON
+    eval { decode_json($json_string); };
+    if ($@) {
+        carp "Invalid servicing instruction JSON: $@";
+        return;
+    }
+
+    return $json_string;
 }
