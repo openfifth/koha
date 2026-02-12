@@ -1,5 +1,6 @@
 (() => {
     const DEFAULT_TIMEOUT = 3000;
+    const pendingTimeouts = new WeakMap();
 
     const toggleButton = element => {
         const isDisabled = element.hasAttribute("disabled");
@@ -53,7 +54,11 @@
 
             requestAnimationFrame(() => {
                 toggleButton(submitter);
-                setTimeout(() => toggleButton(submitter), timeout);
+                const timeoutId = setTimeout(
+                    () => toggleButton(submitter),
+                    timeout
+                );
+                pendingTimeouts.set(submitter, timeoutId);
             });
         }
     });
@@ -64,6 +69,11 @@
             document
                 .querySelectorAll("[data-throttled-button][disabled]")
                 .forEach(button => {
+                    const timeoutId = pendingTimeouts.get(button);
+                    if (timeoutId) {
+                        clearTimeout(timeoutId);
+                        pendingTimeouts.delete(button);
+                    }
                     toggleButton(button);
                 });
         }
