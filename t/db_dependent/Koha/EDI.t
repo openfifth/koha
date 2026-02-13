@@ -1994,19 +1994,7 @@ subtest 'servicing_instructions_quote_processing' => sub {
         );
     }
 
-    # Add EDIFACT_SI authorized values for servicing instruction codes
-    for my $code ( [ 'BB', 'Barcode labelling' ], [ 'BI', 'Binding' ], [ 'BJ', 'Sleeving' ] ) {
-        $builder->build(
-            {
-                source => 'AuthorisedValue',
-                value  => {
-                    category         => 'EDIFACT_SI',
-                    authorised_value => $code->[0],
-                    lib              => $code->[1]
-                }
-            }
-        );
-    }
+    # EDIFACT_SI authorized values are expected to exist from database defaults
 
     my $filename = 'QUOTES_SERVICING.CEQ';
     ok( -e $dirname . $filename, 'File QUOTES_SERVICING.CEQ found' );
