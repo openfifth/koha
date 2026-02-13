@@ -438,15 +438,16 @@ sub add_cashup {
                     # Surplus: more cash found than expected (credits are negative amounts)
                     my $surplus = Koha::Account::Line->new(
                         {
-                            date             => $reconciliation_date,
-                            amount           => -abs($difference),      # Credits are negative
-                            credit_type_code => 'CASHUP_SURPLUS',
-                            manager_id       => $manager_id,
-                            interface        => 'intranet',
-                            branchcode       => $self->branch,
-                            register_id      => $self->id,
-                            payment_type     => 'CASH',
-                            note             => $reconciliation_note
+                            date              => $reconciliation_date,
+                            amount            => -abs($difference),      # Credits are negative
+                            amountoutstanding => 0,
+                            credit_type_code  => 'CASHUP_SURPLUS',
+                            manager_id        => $manager_id,
+                            interface         => 'intranet',
+                            branchcode        => $self->branch,
+                            register_id       => $self->id,
+                            payment_type      => 'CASH',
+                            note              => $reconciliation_note
                         }
                     )->store();
 
@@ -464,15 +465,16 @@ sub add_cashup {
                     # Deficit: less cash found than expected
                     my $deficit = Koha::Account::Line->new(
                         {
-                            date            => $reconciliation_date,
-                            amount          => abs($difference),
-                            debit_type_code => 'CASHUP_DEFICIT',
-                            manager_id      => $manager_id,
-                            interface       => 'intranet',
-                            branchcode      => $self->branch,
-                            register_id     => $self->id,
-                            payment_type    => 'CASH',
-                            note            => $reconciliation_note
+                            date              => $reconciliation_date,
+                            amount            => abs($difference),
+                            amountoutstanding => 0,
+                            debit_type_code   => 'CASHUP_DEFICIT',
+                            manager_id        => $manager_id,
+                            interface         => 'intranet',
+                            branchcode        => $self->branch,
+                            register_id       => $self->id,
+                            payment_type      => 'CASH',
+                            note              => $reconciliation_note
                         }
                     )->store();
                     my $account_offset = Koha::Account::Offset->new(

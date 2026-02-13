@@ -422,7 +422,7 @@ subtest 'cashup_reconciliation' => sub {
     };
 
     subtest 'surplus_cashup' => sub {
-        plan tests => 9;
+        plan tests => 10;
 
         $schema->storage->txn_begin;
 
@@ -473,6 +473,7 @@ subtest 'cashup_reconciliation' => sub {
         );
         is( $surplus_line->branchcode, $register2->branch, 'Surplus branchcode matches register branch' );
         is( $surplus_line->payment_type, 'CASH', 'Surplus payment_type is set to CASH' );
+        is( sprintf( '%.0f', $surplus_line->amountoutstanding ), '0', 'Surplus amountoutstanding is set to 0' );
 
         # Note should be undef for surplus without user note
         is( $surplus_line->note, undef, 'No note for surplus without user reconciliation note' );
@@ -521,7 +522,7 @@ subtest 'cashup_reconciliation' => sub {
     };
 
     subtest 'deficit_cashup' => sub {
-        plan tests => 9;
+        plan tests => 10;
 
         $schema->storage->txn_begin;
 
@@ -572,6 +573,7 @@ subtest 'cashup_reconciliation' => sub {
         );
         is( $deficit_line->branchcode, $register3->branch, 'Deficit branchcode matches register branch' );
         is( $deficit_line->payment_type, 'CASH', 'Deficit payment_type is set to CASH' );
+        is( sprintf( '%.0f', $deficit_line->amountoutstanding ), '0', 'Deficit amountoutstanding is set to 0' );
 
         # Note should be undef for deficit without user note
         is( $deficit_line->note, undef, 'No note for deficit without user reconciliation note' );
