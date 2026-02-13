@@ -479,6 +479,7 @@ sub add_cashup {
                             interface        => 'intranet',
                             branchcode       => $self->branch,
                             register_id      => $self->id,
+                            payment_type     => 'CASH',
                             note             => $reconciliation_note
                         }
                     )->store();
@@ -504,6 +505,7 @@ sub add_cashup {
                             interface       => 'intranet',
                             branchcode      => $self->branch,
                             register_id     => $self->id,
+                            payment_type    => 'CASH',
                             note            => $reconciliation_note
                         }
                     )->store();

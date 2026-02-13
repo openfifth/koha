@@ -174,6 +174,9 @@ subtest 'cashup' => sub {
 
     $schema->storage->txn_begin;
 
+    # Ensure reconciliation notes are not required for these tests
+    t::lib::Mocks::mock_preference( 'CashupReconciliationNoteRequired', 0 );
+
     my $register = $builder->build_object( { class => 'Koha::Cash::Registers' } );
     my $patron   = $builder->build_object( { class => 'Koha::Patrons' } );
 
@@ -343,6 +346,9 @@ subtest 'cashup_reconciliation' => sub {
 
     $schema->storage->txn_begin;
 
+    # Ensure reconciliation notes are not required for these tests
+    t::lib::Mocks::mock_preference( 'CashupReconciliationNoteRequired', 0 );
+
     my $register = $builder->build_object( { class => 'Koha::Cash::Registers' } );
     my $patron   = $builder->build_object( { class => 'Koha::Patrons' } );
 
@@ -417,7 +423,7 @@ subtest 'cashup_reconciliation' => sub {
     };
 
     subtest 'surplus_cashup' => sub {
-        plan tests => 8;
+        plan tests => 9;
 
         $schema->storage->txn_begin;
 
@@ -467,6 +473,7 @@ subtest 'cashup_reconciliation' => sub {
             'Surplus amount is correct (negative for credit)'
         );
         is( $surplus_line->branchcode, $register2->branch, 'Surplus branchcode matches register branch' );
+        is( $surplus_line->payment_type, 'CASH', 'Surplus payment_type is set to CASH' );
 
         # Note should be undef for surplus without user note
         is( $surplus_line->note, undef, 'No note for surplus without user reconciliation note' );
@@ -515,7 +522,7 @@ subtest 'cashup_reconciliation' => sub {
     };
 
     subtest 'deficit_cashup' => sub {
-        plan tests => 8;
+        plan tests => 9;
 
         $schema->storage->txn_begin;
 
@@ -565,6 +572,7 @@ subtest 'cashup_reconciliation' => sub {
             'Deficit amount is correct (positive for debit)'
         );
         is( $deficit_line->branchcode, $register3->branch, 'Deficit branchcode matches register branch' );
+        is( $deficit_line->payment_type, 'CASH', 'Deficit payment_type is set to CASH' );
 
         # Note should be undef for deficit without user note
         is( $deficit_line->note, undef, 'No note for deficit without user reconciliation note' );
