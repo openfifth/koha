@@ -11,7 +11,7 @@ return {
         # Add new PAYOUT letter template for POS
         my ($template_exists) = $dbh->selectrow_array(
             q{
-            SELECT COUNT(*) FROM letters WHERE code='PAYOUT'
+            SELECT COUNT(*) FROM letter WHERE code='PAYOUT'
         }
         );
         unless ($template_exists) {
