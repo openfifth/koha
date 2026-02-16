@@ -595,35 +595,46 @@ sub calculate_adjustment_amount {
 }
 
 sub find_received_order_for_invoice {
-    my ($original_ordernumber, $koha_invoice) = @_;
-    
-    return unless $original_ordernumber && $koha_invoice;
-    
-    my $original_order = $schema->resultset('Aqorder')->find($original_ordernumber);
-    return unless $original_order;
-    
-    # Find the parent_ordernumber from the original order to find all related orders
-    my $parent_ordernumber = $original_order->parent_ordernumber || $original_ordernumber;
-    
-    my $received_order = $schema->resultset('Aqorder')->search({
-        -and => [
-            { invoiceid => $koha_invoice->invoiceid },
-            { 
-                -or => [
-                    # Either the original order if it was fully received
-                    { ordernumber => $original_ordernumber },
-                    # Or find any split order from the same parent that was receipted on this invoice
-                    { 
-                        parent_ordernumber => $parent_ordernumber,
-                        ordernumber => { '!=' => $original_ordernumber },
-                        orderstatus => 'complete'
-                    }
-                ]
-            }
-        ]
-    })->first;
-    
-    return $received_order;
+    my ( $edi_ordernumber, $koha_invoice, $orders_processed ) = @_;
+
+    unless ( $edi_ordernumber && $koha_invoice ) {
+        return;
+    }
+
+    # Find all received orders for this invoice with parent_ordernumber = edi_ordernumber
+    my @received_orders = $schema->resultset('Aqorder')->search(
+        {
+            invoiceid          => $koha_invoice->invoiceid,
+            parent_ordernumber => $edi_ordernumber,
+            orderstatus        => 'complete'
+        },
+        { order_by => { -asc => 'ordernumber' } }
+    )->all;
+
+    # If there is only one, it must be this order
+    if ( @received_orders == 1 ) {
+        my $received_order = $received_orders[0];
+        $orders_processed->{ $received_order->ordernumber } = 1;
+        return $received_order;
+    }
+
+    # If there are multiple, then we are in a split order scenario
+    for my $actual_order (@received_orders) {
+        next if ( $actual_order->ordernumber == $actual_order->parent_ordernumber );
+        next if ( $orders_processed->{ $actual_order->ordernumber } );
+        $orders_processed->{ $actual_order->ordernumber } = 1;
+        return $actual_order;
+    }
+
+    # Fallback to first order if available
+    if (@received_orders) {
+        my $received_order = $received_orders[0];
+        $orders_processed->{ $received_order->ordernumber } = 1;
+        return $received_order;
+    }
+
+    # No matching order found for this EDI ordernumber
+    return;
 }
 
 sub adjust_orderline_for_service_charge {
