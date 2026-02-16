@@ -679,10 +679,15 @@ sub find_received_order_for_invoice {
         return $actual_order;
     }
 
-    # Fallback to skipped order
-    my $received_order = $received_orders[0];
-    $orders_processed->{ $received_order->ordernumber } = 1;
-    return $received_order;
+    # Fallback to first order if available
+    if (@received_orders) {
+        my $received_order = $received_orders[0];
+        $orders_processed->{ $received_order->ordernumber } = 1;
+        return $received_order;
+    }
+
+    # No matching order found for this EDI ordernumber
+    return;
 }
 
 sub adjust_orderline_for_service_charge {
