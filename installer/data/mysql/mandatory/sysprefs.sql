@@ -149,6 +149,8 @@ INSERT INTO systempreferences ( `variable`, `value`, `options`, `explanation`, `
 ('CardnumberLength', '', NULL, 'Set a length for card numbers with a maximum of 32 characters.', 'Free'),
 ('CardnumberLog','1',NULL,'If ON, log edit actions on patron cardnumbers','YesNo'),
 ('casAuthentication','0',NULL,'Enable or disable CAS authentication','YesNo'),
+('CashupReconciliationNoteAuthorisedValue','',NULL,'Authorized value category to use for cashup reconciliation notes (leave empty for free text)','Free'),
+('CashupReconciliationNoteRequired','0',NULL,'Require a reconciliation note when completing cashup with discrepancies between expected and actual amounts','YesNo'),
 ('casLogout','0',NULL,'Does a logout from Koha should also log the user out of CAS?','YesNo'),
 ('casServerUrl','https://localhost:8443/cas',NULL,'URL of the cas server','Free'),
 ('casServerVersion','2', '2|3','Version of the CAS server Koha will connect to.','Choice'),
