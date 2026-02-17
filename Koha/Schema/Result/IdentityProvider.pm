@@ -182,6 +182,20 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 1 },
 );
 
+__PACKAGE__->has_many(
+  "identity_provider_hostnames",
+  "Koha::Schema::Result::IdentityProviderHostname",
+  { "foreign.identity_provider_id" => "self.identity_provider_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+__PACKAGE__->has_many(
+  "hostnames",
+  "Koha::Schema::Result::IdentityProviderHostname",
+  { "foreign.identity_provider_id" => "self.identity_provider_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 __PACKAGE__->add_columns(
     '+force_sso_opac'  => { is_boolean => 1 },
     '+force_sso_staff' => { is_boolean => 1 },
