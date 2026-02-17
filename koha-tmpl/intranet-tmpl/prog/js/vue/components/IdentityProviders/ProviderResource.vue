@@ -1,11 +1,36 @@
 <template>
     <div v-if="!initialized">{{ $__("Loading") }}</div>
+    <template v-else-if="routeAction === 'show'">
+        <TabsWrapper
+            :tabList="[
+                { name: $__('Details') },
+                { name: $__('Field mappings') },
+                { name: $__('Domains') },
+            ]"
+        >
+            <template #tabContent="{ tabGroup }">
+                <BaseResource
+                    v-if="tabGroup.name === $__('Details')"
+                    routeAction="show"
+                    :instancedResource="this"
+                />
+                <MappingResource
+                    v-else-if="tabGroup.name === $__('Field mappings')"
+                    routeAction="list"
+                />
+                <DomainResource v-else routeAction="list" />
+            </template>
+        </TabsWrapper>
+    </template>
     <BaseResource v-else :routeAction="routeAction" :instancedResource="this" />
 </template>
 
 <script>
 import { ref, onMounted, reactive, watch } from "vue";
 import BaseResource from "./../BaseResource.vue";
+import TabsWrapper from "./../TabsWrapper.vue";
+import MappingResource from "./MappingResource.vue";
+import DomainResource from "./DomainResource.vue";
 import { useBaseResource } from "../../composables/base-resource.js";
 import { APIClient } from "../../fetch/api-client.js";
 import { $__ } from "@koha-vue/i18n";
@@ -147,7 +172,7 @@ const PROTOCOL_CONFIG_FIELDS = {
 
 export default {
     name: "ProviderResource",
-    components: { BaseResource },
+    components: { BaseResource, TabsWrapper, MappingResource, DomainResource },
     props: {
         routeAction: String,
     },
@@ -304,7 +329,7 @@ export default {
         const tableOptions = {
             url: baseResource.getResourceTableUrl(),
             actions: {
-                "-1": ["edit", "delete"],
+                "-1": ["delete"],
             },
         };
 

@@ -6,6 +6,7 @@
 
 <script>
 import { ref, onMounted, computed } from "vue";
+import { useRoute } from "vue-router";
 import BaseResource from "./../BaseResource.vue";
 import { useBaseResource } from "../../composables/base-resource.js";
 import { APIClient } from "../../fetch/api-client.js";
@@ -16,13 +17,12 @@ export default {
     components: { BaseResource },
     props: {
         routeAction: String,
-        providerId: {
-            type: [String, Number],
-            required: true,
-        },
     },
     emits: ["select-resource"],
     setup(props) {
+        const route = useRoute();
+        const providerId = computed(() => route.params.identity_provider_id);
+
         const getBorrowerColumns = () => window.borrower_columns || [];
         const borrowerColumnsArray = getBorrowerColumns();
 
@@ -82,33 +82,33 @@ export default {
             apiClient: {
                 getAll: params =>
                     APIClient.identity_providers.mappings.getAll(
-                        props.providerId,
+                        providerId.value,
                         params
                     ),
                 get: id =>
                     APIClient.identity_providers.mappings.get(
-                        props.providerId,
+                        providerId.value,
                         id
                     ),
                 create: mapping =>
                     APIClient.identity_providers.mappings.create(
-                        props.providerId,
+                        providerId.value,
                         mapping
                     ),
                 update: (m, id) =>
                     APIClient.identity_providers.mappings.update(
-                        props.providerId,
+                        providerId.value,
                         m,
                         id
                     ),
                 delete: id =>
                     APIClient.identity_providers.mappings.delete(
-                        props.providerId,
+                        providerId.value,
                         id
                     ),
                 count: q =>
                     APIClient.identity_providers.mappings.count(
-                        props.providerId,
+                        providerId.value,
                         q
                     ),
             },
@@ -125,7 +125,7 @@ export default {
                 newLabel: $__("New field mapping"),
             },
             table: {
-                resourceTableUrl: `/api/v1/auth/identity_providers/${props.providerId}/mappings`,
+                resourceTableUrl: `/api/v1/auth/identity_providers/${providerId.value}/mappings`,
                 options: {},
             },
             stickyToolbar: ["Form"],
@@ -135,6 +135,27 @@ export default {
             props,
             moduleStore: "IdentityProvidersStore",
         });
+
+        const goToResourceAdd = () =>
+            baseResource.router.push({
+                name: "MappingsFormAdd",
+                params: { identity_provider_id: providerId.value },
+            });
+
+        const goToResourceEdit = resource =>
+            baseResource.router.push({
+                name: "MappingsFormEdit",
+                params: {
+                    identity_provider_id: providerId.value,
+                    identity_provider_mapping_id: resource.mapping_id,
+                },
+            });
+
+        const goToResourceList = () =>
+            baseResource.router.push({
+                name: "ProviderShow",
+                params: { identity_provider_id: providerId.value },
+            });
 
         const onFormSave = async (e, mappingToSave) => {
             e.preventDefault();
@@ -148,20 +169,23 @@ export default {
             try {
                 if (mapping_id) {
                     await APIClient.identity_providers.mappings.update(
-                        props.providerId,
+                        providerId.value,
                         mapping,
                         mapping_id
                     );
                     baseResource.setMessage(__("Mapping updated"));
                 } else {
                     await APIClient.identity_providers.mappings.create(
-                        props.providerId,
+                        providerId.value,
                         mapping
                     );
                     baseResource.setMessage(__("Mapping created"));
                 }
 
-                baseResource.router.push({ name: "MappingsList" });
+                baseResource.router.push({
+                    name: "ProviderShow",
+                    params: { identity_provider_id: providerId.value },
+                });
             } catch (error) {
                 // Errors handled by base resource
             }
@@ -176,6 +200,9 @@ export default {
 
         return {
             ...baseResource,
+            goToResourceAdd,
+            goToResourceEdit,
+            goToResourceList,
             tableOptions,
             onFormSave,
         };

@@ -5,7 +5,8 @@
 </template>
 
 <script>
-import { ref } from "vue";
+import { ref, computed } from "vue";
+import { useRoute } from "vue-router";
 import BaseResource from "./../BaseResource.vue";
 import { useBaseResource } from "../../composables/base-resource.js";
 import { APIClient } from "../../fetch/api-client.js";
@@ -16,13 +17,12 @@ export default {
     components: { BaseResource },
     props: {
         routeAction: String,
-        providerId: {
-            type: [String, Number],
-            required: true,
-        },
     },
     emits: ["select-resource"],
     setup(props) {
+        const route = useRoute();
+        const providerId = computed(() => route.params.identity_provider_id);
+
         const getLibraries = () => window.libraries_map || [];
         const getCategories = () => window.categories_map || [];
 
@@ -116,28 +116,28 @@ export default {
             apiClient: {
                 getAll: params =>
                     APIClient.identity_providers.domains.getAll(
-                        props.providerId,
+                        providerId.value,
                         params
                     ),
                 get: id =>
                     APIClient.identity_providers.domains.get(
-                        props.providerId,
+                        providerId.value,
                         id
                     ),
                 create: domain =>
                     APIClient.identity_providers.domains.create(
-                        props.providerId,
+                        providerId.value,
                         domain
                     ),
                 update: (d, id) =>
                     APIClient.identity_providers.domains.update(
-                        props.providerId,
+                        providerId.value,
                         d,
                         id
                     ),
                 delete: id =>
                     APIClient.identity_providers.domains.delete(
-                        props.providerId,
+                        providerId.value,
                         id
                     ),
             },
@@ -154,7 +154,7 @@ export default {
                 newLabel: $__("New domain"),
             },
             table: {
-                resourceTableUrl: `/api/v1/auth/identity_providers/${props.providerId}/domains`,
+                resourceTableUrl: `/api/v1/auth/identity_providers/${providerId.value}/domains`,
                 options: {},
             },
             stickyToolbar: ["Form"],
@@ -164,6 +164,28 @@ export default {
             props,
             moduleStore: "IdentityProvidersStore",
         });
+
+        const goToResourceAdd = () =>
+            baseResource.router.push({
+                name: "DomainsFormAdd",
+                params: { identity_provider_id: providerId.value },
+            });
+
+        const goToResourceEdit = resource =>
+            baseResource.router.push({
+                name: "DomainsFormEdit",
+                params: {
+                    identity_provider_id: providerId.value,
+                    identity_provider_domain_id:
+                        resource.identity_provider_domain_id,
+                },
+            });
+
+        const goToResourceList = () =>
+            baseResource.router.push({
+                name: "ProviderShow",
+                params: { identity_provider_id: providerId.value },
+            });
 
         const onFormSave = (e, domainToSave) => {
             e.preventDefault();
@@ -177,6 +199,12 @@ export default {
                 return baseResource.apiClient.update(domain, domainId).then(
                     updatedDomain => {
                         baseResource.setMessage($__("Domain updated"));
+                        baseResource.router.push({
+                            name: "ProviderShow",
+                            params: {
+                                identity_provider_id: providerId.value,
+                            },
+                        });
                         return updatedDomain;
                     },
                     error => {}
@@ -185,6 +213,12 @@ export default {
                 return baseResource.apiClient.create(domain).then(
                     newDomain => {
                         baseResource.setMessage($__("Domain created"));
+                        baseResource.router.push({
+                            name: "ProviderShow",
+                            params: {
+                                identity_provider_id: providerId.value,
+                            },
+                        });
                         return newDomain;
                     },
                     error => {}
@@ -201,6 +235,9 @@ export default {
 
         return {
             ...baseResource,
+            goToResourceAdd,
+            goToResourceEdit,
+            goToResourceList,
             tableOptions,
             onFormSave,
         };
