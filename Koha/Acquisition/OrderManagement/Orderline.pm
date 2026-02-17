@@ -47,6 +47,8 @@ Koha::Acquisition::OrderManagement::Orderline Object class
 sub add_patron_relationships {
     my ( $self, $args ) = @_;
 
+    #ACQTODO: Need to delete existing relationships here on change?
+
     my $patrons_to_notify = $args->{patrons_to_notify};
     my $managed_by        = $args->{managed_by};
 
@@ -55,7 +57,7 @@ sub add_patron_relationships {
             Koha::Acquisition::OrderManagement::OrderlineUser->new(
                 {
                     orderline_id   => $self->orderline_id,
-                    borrowernumber => $patron
+                    borrowernumber => $patron->{borrowernumber}
                 }
             )->store;
         }
@@ -65,7 +67,7 @@ sub add_patron_relationships {
             Koha::Acquisition::OrderManagement::OrderlineManager->new(
                 {
                     orderline_id   => $self->orderline_id,
-                    borrowernumber => $patron
+                    borrowernumber => $patron->{borrowernumber}
                 }
             )->store;
         }

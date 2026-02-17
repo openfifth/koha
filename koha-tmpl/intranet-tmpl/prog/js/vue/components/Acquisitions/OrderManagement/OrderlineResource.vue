@@ -1029,6 +1029,15 @@ export default {
                 orderline.quantity_ordered = 1;
             }
 
+            orderline.managed_by = orderline.managed_by?.map(mp => {
+                return { borrowernumber: mp };
+            });
+            orderline.patrons_to_notify = orderline.patrons_to_notify?.map(
+                mp => {
+                    return { borrowernumber: mp };
+                }
+            );
+
             return handleAPIFormSubmission(orderline, orderline_id);
         };
 
