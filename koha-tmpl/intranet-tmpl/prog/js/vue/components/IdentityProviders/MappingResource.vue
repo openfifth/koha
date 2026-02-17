@@ -136,6 +136,15 @@ export default {
             moduleStore: "IdentityProvidersStore",
         });
 
+        const getResourceShowURL = id =>
+            baseResource.router.resolve({
+                name: "MappingShow",
+                params: {
+                    identity_provider_id: providerId.value,
+                    identity_provider_mapping_id: id,
+                },
+            }).href;
+
         const goToResourceAdd = () =>
             baseResource.router.push({
                 name: "MappingsFormAdd",
@@ -200,6 +209,7 @@ export default {
 
         return {
             ...baseResource,
+            getResourceShowURL,
             goToResourceAdd,
             goToResourceEdit,
             goToResourceList,

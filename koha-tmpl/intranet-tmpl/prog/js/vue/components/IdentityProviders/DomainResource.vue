@@ -140,6 +140,11 @@ export default {
                         providerId.value,
                         id
                     ),
+                count: (query = {}) =>
+                    APIClient.identity_providers.domains.count(
+                        providerId.value,
+                        query
+                    ),
             },
             i18n: {
                 deleteConfirmationMessage: $__(
@@ -164,6 +169,15 @@ export default {
             props,
             moduleStore: "IdentityProvidersStore",
         });
+
+        const getResourceShowURL = id =>
+            baseResource.router.resolve({
+                name: "DomainShow",
+                params: {
+                    identity_provider_id: providerId.value,
+                    identity_provider_domain_id: id,
+                },
+            }).href;
 
         const goToResourceAdd = () =>
             baseResource.router.push({
@@ -235,6 +249,7 @@ export default {
 
         return {
             ...baseResource,
+            getResourceShowURL,
             goToResourceAdd,
             goToResourceEdit,
             goToResourceList,

@@ -106,6 +106,16 @@ export class IdentityProvidersAPIClient {
                 this.httpClient.delete({
                     endpoint: `${providerId}/domains/${domainId}`,
                 }),
+            count: (providerId, query = {}) =>
+                this.httpClient.count({
+                    endpoint:
+                        `${providerId}/domains?` +
+                        new URLSearchParams({
+                            _page: 1,
+                            _per_page: 1,
+                            ...(query && { q: JSON.stringify(query) }),
+                        }),
+                }),
         };
     }
 }

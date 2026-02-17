@@ -1,6 +1,7 @@
 <template>
     <div v-if="!initialized">{{ $__("Loading") }}</div>
     <template v-else-if="routeAction === 'show'">
+        <h2 v-if="providerDescription">{{ providerDescription }}</h2>
         <TabsWrapper
             :tabList="[
                 { name: $__('Details') },
@@ -179,6 +180,7 @@ export default {
     emits: ["select-resource"],
     setup(props) {
         const initialized = ref(false);
+        const providerDescription = ref(null);
 
         // Tracks the currently selected/loaded protocol so config field groups
         // can be shown or hidden reactively via hideIn closures.
@@ -280,6 +282,7 @@ export default {
         // and show views can bind to them individually.
         const afterResourceFetch = (componentData, resource) => {
             selectedProtocol.value = resource.protocol || null;
+            providerDescription.value = resource.description || null;
             const config = resource.config || {};
             const fields = PROTOCOL_CONFIG_FIELDS[resource.protocol] || [];
             fields.forEach(field => {
@@ -399,6 +402,7 @@ export default {
         return {
             ...baseResource,
             initialized,
+            providerDescription,
             PROTOCOL_CONFIG_FIELDS,
             tableOptions,
             onFormSave,
