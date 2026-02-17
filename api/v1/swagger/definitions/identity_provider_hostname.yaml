@@ -1,0 +1,20 @@
+---
+type: object
+properties:
+  identity_provider_hostname_id:
+    type: integer
+    description: Internally assigned identifier for this hostname entry
+    readOnly: true
+  hostname:
+    description: Server hostname (matches SERVER_NAME) used for automatic provider selection
+    type: string
+  identity_provider_id:
+    description: Identity provider associated with this hostname, null if unassigned
+    type: integer
+    x-nullable: true
+  is_enabled:
+    description: Whether this hostname is active for the assigned provider
+    type: boolean
+additionalProperties: false
+required:
+  - hostname

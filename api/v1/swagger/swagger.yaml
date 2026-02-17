@@ -22,6 +22,8 @@ definitions:
     $ref: ./definitions/identity_provider_domain.yaml
   identity_provider_mapping:
     $ref: ./definitions/identity_provider_mapping.yaml
+  identity_provider_hostname:
+    $ref: ./definitions/identity_provider_hostname.yaml
   basket:
     $ref: ./definitions/basket.yaml
   booking:
@@ -275,6 +277,10 @@ paths:
     $ref: ./paths/auth.yaml#/~1auth~1identity_providers~1{identity_provider_id}~1mappings
   "/auth/identity_providers/{identity_provider_id}/mappings/{identity_provider_mapping_id}":
     $ref: "./paths/auth.yaml#/~1auth~1identity_providers~1{identity_provider_id}~1mappings~1{identity_provider_mapping_id}"
+  /auth/identity_provider_hostnames:
+    $ref: ./paths/auth.yaml#/~1auth~1identity_provider_hostnames
+  "/auth/identity_provider_hostnames/{identity_provider_hostname_id}":
+    $ref: "./paths/auth.yaml#/~1auth~1identity_provider_hostnames~1{identity_provider_hostname_id}"
   /authorised_value_categories:
     $ref: ./paths/authorised_value_categories.yaml#/~1authorised_value_categories
   "/authorised_value_categories/{authorised_value_category_name}/authorised_values":
@@ -721,6 +727,12 @@ parameters:
     description: Identity provider field mapping internal identifier
     in: path
     name: identity_provider_mapping_id
+    required: true
+    type: integer
+  identity_provider_hostname_id_pp:
+    description: Identity provider hostname internal identifier
+    in: path
+    name: identity_provider_hostname_id
     required: true
     type: integer
   biblio_id_pp:

@@ -10,11 +10,17 @@
             ]"
         >
             <template #tabContent="{ tabGroup }">
-                <BaseResource
-                    v-if="tabGroup.name === $__('Details')"
-                    routeAction="show"
-                    :instancedResource="this"
-                />
+                <template v-if="tabGroup.name === $__('Details')">
+                    <ProviderHostnames
+                        :provider-id="
+                            parseInt($route.params.identity_provider_id)
+                        "
+                    />
+                    <BaseResource
+                        routeAction="show"
+                        :instancedResource="this"
+                    />
+                </template>
                 <MappingResource
                     v-else-if="tabGroup.name === $__('Field mappings')"
                     routeAction="list"
@@ -32,6 +38,7 @@ import BaseResource from "./../BaseResource.vue";
 import TabsWrapper from "./../TabsWrapper.vue";
 import MappingResource from "./MappingResource.vue";
 import DomainResource from "./DomainResource.vue";
+import ProviderHostnames from "./ProviderHostnames.vue";
 import { useBaseResource } from "../../composables/base-resource.js";
 import { APIClient } from "../../fetch/api-client.js";
 import { $__ } from "@koha-vue/i18n";
@@ -173,7 +180,13 @@ const PROTOCOL_CONFIG_FIELDS = {
 
 export default {
     name: "ProviderResource",
-    components: { BaseResource, TabsWrapper, MappingResource, DomainResource },
+    components: {
+        BaseResource,
+        TabsWrapper,
+        MappingResource,
+        DomainResource,
+        ProviderHostnames,
+    },
     props: {
         routeAction: String,
     },
