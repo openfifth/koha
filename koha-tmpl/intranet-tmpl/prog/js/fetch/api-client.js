@@ -197,7 +197,9 @@ export const APIClient = {
     patron: createClientProxy(() => import("./patron-api-client.js")),
     patron_list: createClientProxy(() => import("./patron-list-api-client.js")),
     recall: createClientProxy(() => import("./recall-api-client.js")),
-    shibboleth: createClientProxy(() => import("./shibboleth-api-client.js")),
+    identity_providers: createClientProxy(
+        () => import("./identity-providers-api-client.js")
+    ),
     sysprefs: createClientProxy(
         () => import("./system-preferences-api-client.js")
     ),

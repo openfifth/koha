@@ -12,6 +12,8 @@ import {
     faSave,
     faCog,
     faExchangeAlt,
+    faIdCard,
+    faGlobe,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import vSelect from "vue-select";
@@ -24,15 +26,17 @@ library.add(
     faSpinner,
     faSave,
     faCog,
-    faExchangeAlt
+    faExchangeAlt,
+    faIdCard,
+    faGlobe
 );
 
-import App from "../components/Shibboleth/Main.vue";
+import App from "../components/IdentityProviders/Main.vue";
 
-import { routes as routesDef } from "../routes/shibboleth";
+import { routes as routesDef } from "../routes/identity-providers";
 
 import { useMainStore } from "../stores/main";
-import { useShibbolethStore } from "../stores/shibboleth";
+import { useIdentityProvidersStore } from "../stores/identity-providers";
 import { useNavigationStore } from "../stores/navigation";
 import i18n from "../i18n";
 
@@ -60,10 +64,10 @@ const rootComponent = app
 app.config.unwrapInjectedRef = true;
 app.provide("mainStore", mainStore);
 app.provide("navigationStore", navigationStore);
-const ShibbolethStore = useShibbolethStore(pinia);
-app.provide("ShibbolethStore", ShibbolethStore);
+const IdentityProvidersStore = useIdentityProvidersStore(pinia);
+app.provide("IdentityProvidersStore", IdentityProvidersStore);
 
-app.mount("#shibboleth");
+app.mount("#identity-providers");
 
 const { removeMessages } = mainStore;
 router.beforeEach((to, from) => {

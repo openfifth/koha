@@ -27,7 +27,6 @@ BEGIN {
     @EXPORT_OK = qw(shib_ok logout_shib login_shib_url checkpw_shib get_login_shib get_force_sso_setting);
 }
 
-
 use C4::Context;
 use Koha::AuthUtils qw( get_script_name );
 use Koha::Database;
@@ -38,7 +37,7 @@ use Carp            qw( carp );
 use List::MoreUtils qw( any );
 
 use Koha::Logger;
-use Koha::ShibbolethConfigs;
+use Koha::Auth::Identity::Providers;
 
 # Check that shib config is not malformed
 
@@ -248,46 +247,47 @@ sub _get_return {
 sub get_force_sso_setting {
     my ($interface) = @_;
 
-    my $db_config = Koha::ShibbolethConfigs->new->get_configuration;
-    return 0 unless $db_config;
+    my $provider = Koha::Auth::Identity::Providers->search( { protocol => 'SAML2', enabled => 1 } )->next;
+    return 0 unless $provider;
 
-    if ( $interface eq 'opac' ) {
-        return $db_config->get_value('force_opac_sso') || 0;
-    } else {
-        return $db_config->get_value('force_staff_sso') || 0;
-    }
+    return $interface eq 'opac' ? ( $provider->force_sso_opac || 0 ) : ( $provider->force_sso_staff || 0 );
 }
 
 sub _get_shib_config {
-    my $db_config = Koha::ShibbolethConfigs->new->get_configuration;
+    my $provider = Koha::Auth::Identity::Providers->search( { protocol => 'SAML2' } )->next;
 
-    if ( !$db_config ) {
+    if ( !$provider ) {
         Koha::Logger->get->warn('shibboleth config not defined');
         return 0;
     }
 
-    my $config = $db_config->get_combined_config;
+    my ( $mapping, $matchpoint ) = $provider->mappings->as_auth_mapping;
 
-    if ( !$config ) {
-        Koha::Logger->get->warn('shibboleth config could not be loaded');
+    unless ($matchpoint) {
+        carp 'shibboleth matchpoint not defined';
         return 0;
     }
 
-    if ( $config->{matchpoint}
-        && defined( $config->{mapping}->{ $config->{matchpoint} }->{is} ) )
-    {
-        my $logger = Koha::Logger->get;
-        $logger->debug( "koha borrower field to match: " . $config->{matchpoint} );
-        $logger->debug( "shibboleth attribute to match: " . $config->{mapping}->{ $config->{matchpoint} }->{is} );
-        return $config;
-    } else {
-        if ( !$config->{matchpoint} ) {
-            carp 'shibboleth matchpoint not defined';
-        } else {
-            carp 'shibboleth matchpoint not mapped';
-        }
+    unless ( defined $mapping->{$matchpoint}->{is} ) {
+        carp 'shibboleth matchpoint not mapped';
         return 0;
     }
+
+    my $saml2_config = $provider->get_config // {};
+
+    my $config = {
+        matchpoint => $matchpoint,
+        mapping    => $mapping,
+        autocreate => $saml2_config->{autocreate} || 0,
+        sync       => $saml2_config->{sync}       || 0,
+        welcome    => $saml2_config->{welcome}    || 0,
+    };
+
+    my $logger = Koha::Logger->get;
+    $logger->debug( "koha borrower field to match: " . $config->{matchpoint} );
+    $logger->debug( "shibboleth attribute to match: " . $mapping->{ $config->{matchpoint} }->{is} );
+
+    return $config;
 }
 
 1;

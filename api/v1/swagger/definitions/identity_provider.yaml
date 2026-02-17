@@ -17,28 +17,28 @@ properties:
     enum:
       - OAuth
       - OIDC
-      - CAS (not implemented)
-      - LDAP (not implemented)
-  mapping:
-    description: Attribute mapping
+      - CAS
+      - LDAP
+      - SAML2
+  config:
+    description: Protocol-specific configuration
     type:
       - object
       - "null"
-  matchpoint:
-    description: Patron attribute that will be used to match
-    type: string
-    enum:
-      - email
-      - userid
-      - cardnumber
-  config:
-    description: Configuration
-    type: object
   icon_url:
-    description: Icon url
+    description: Icon url for display on login buttons
     type:
-     - string
-     - "null"
+      - string
+      - "null"
+  force_sso_opac:
+    description: Force SSO redirect for OPAC users (SAML2/CAS)
+    type: boolean
+  force_sso_staff:
+    description: Force SSO redirect for staff interface users (SAML2/CAS)
+    type: boolean
+  enabled:
+    description: Whether this provider is active
+    type: boolean
   domains:
     description: Configured domains for the identity provider
     type:

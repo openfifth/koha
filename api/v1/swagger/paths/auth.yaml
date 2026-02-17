@@ -1104,6 +1104,183 @@
     x-koha-authorization:
       permissions:
         parameters: manage_identity_providers
+"/auth/identity_providers/{identity_provider_id}/mappings":
+  get:
+    x-mojo-to: Auth::Identity::Provider::Mappings#list
+    operationId: listIdentityProviderMappings
+    tags:
+      - identity_providers
+    summary: List field mappings for an identity provider
+    parameters:
+      - $ref: ../swagger.yaml#/parameters/identity_provider_id_pp
+      - $ref: ../swagger.yaml#/parameters/match
+      - $ref: ../swagger.yaml#/parameters/order_by
+      - $ref: ../swagger.yaml#/parameters/page
+      - $ref: ../swagger.yaml#/parameters/per_page
+      - $ref: ../swagger.yaml#/parameters/q_param
+      - $ref: ../swagger.yaml#/parameters/q_body
+      - $ref: ../swagger.yaml#/parameters/request_id_header
+    produces:
+      - application/json
+    responses:
+      "200":
+        description: List of field mappings
+        schema:
+          type: array
+          items:
+            $ref: ../swagger.yaml#/definitions/identity_provider_mapping
+      "400":
+        description: |
+          Bad request. Possible `error_code` attribute values:
+
+            * `invalid_query`
+        schema:
+          $ref: ../swagger.yaml#/definitions/error
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: ../swagger.yaml#/definitions/error
+      "404":
+        description: Identity provider not found
+        schema:
+          $ref: ../swagger.yaml#/definitions/error
+    x-koha-authorization:
+      permissions:
+        parameters: manage_identity_providers
+  post:
+    x-mojo-to: Auth::Identity::Provider::Mappings#add
+    operationId: addIdentityProviderMapping
+    tags:
+      - identity_providers
+    summary: Add a field mapping to an identity provider
+    parameters:
+      - $ref: ../swagger.yaml#/parameters/identity_provider_id_pp
+      - name: body
+        in: body
+        description: A field mapping object
+        required: true
+        schema:
+          $ref: ../swagger.yaml#/definitions/identity_provider_mapping
+    produces:
+      - application/json
+    responses:
+      "201":
+        description: The created field mapping
+        schema:
+          $ref: ../swagger.yaml#/definitions/identity_provider_mapping
+      "400":
+        description: Bad request
+        schema:
+          $ref: ../swagger.yaml#/definitions/error
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: ../swagger.yaml#/definitions/error
+      "404":
+        description: Identity provider not found
+        schema:
+          $ref: ../swagger.yaml#/definitions/error
+    x-koha-authorization:
+      permissions:
+        parameters: manage_identity_providers
+"/auth/identity_providers/{identity_provider_id}/mappings/{identity_provider_mapping_id}":
+  get:
+    x-mojo-to: Auth::Identity::Provider::Mappings#get
+    operationId: getIdentityProviderMapping
+    tags:
+      - identity_providers
+    summary: Get a field mapping
+    parameters:
+      - $ref: ../swagger.yaml#/parameters/identity_provider_id_pp
+      - $ref: ../swagger.yaml#/parameters/identity_provider_mapping_id_pp
+    produces:
+      - application/json
+    responses:
+      "200":
+        description: A field mapping
+        schema:
+          $ref: ../swagger.yaml#/definitions/identity_provider_mapping
+      "400":
+        description: Bad request
+        schema:
+          $ref: ../swagger.yaml#/definitions/error
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: ../swagger.yaml#/definitions/error
+      "404":
+        description: Mapping not found
+        schema:
+          $ref: ../swagger.yaml#/definitions/error
+    x-koha-authorization:
+      permissions:
+        parameters: manage_identity_providers
+  put:
+    x-mojo-to: Auth::Identity::Provider::Mappings#update
+    operationId: updateIdentityProviderMapping
+    tags:
+      - identity_providers
+    summary: Update a field mapping
+    parameters:
+      - $ref: ../swagger.yaml#/parameters/identity_provider_id_pp
+      - $ref: ../swagger.yaml#/parameters/identity_provider_mapping_id_pp
+      - name: body
+        in: body
+        description: Updated mapping object
+        required: true
+        schema:
+          $ref: ../swagger.yaml#/definitions/identity_provider_mapping
+    produces:
+      - application/json
+    responses:
+      "200":
+        description: Updated field mapping
+        schema:
+          $ref: ../swagger.yaml#/definitions/identity_provider_mapping
+      "400":
+        description: Bad request
+        schema:
+          $ref: ../swagger.yaml#/definitions/error
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: ../swagger.yaml#/definitions/error
+      "404":
+        description: Mapping not found
+        schema:
+          $ref: ../swagger.yaml#/definitions/error
+    x-koha-authorization:
+      permissions:
+        parameters: manage_identity_providers
+  delete:
+    x-mojo-to: Auth::Identity::Provider::Mappings#delete
+    operationId: delIdentityProviderMapping
+    tags:
+      - identity_providers
+    summary: Delete a field mapping
+    parameters:
+      - $ref: ../swagger.yaml#/parameters/identity_provider_id_pp
+      - $ref: ../swagger.yaml#/parameters/identity_provider_mapping_id_pp
+    produces:
+      - application/json
+    responses:
+      "204":
+        description: Field mapping deleted
+      "400":
+        description: Bad request
+        schema:
+          $ref: ../swagger.yaml#/definitions/error
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: ../swagger.yaml#/definitions/error
+      "404":
+        description: Mapping not found
+        schema:
+          $ref: ../swagger.yaml#/definitions/error
+    x-koha-authorization:
+      permissions:
+        parameters: manage_identity_providers
 "/auth/password/validation":
   post:
     x-mojo-to: Auth::Password#validate

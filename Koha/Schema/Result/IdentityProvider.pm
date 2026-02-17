@@ -50,7 +50,7 @@ Description for the provider
 =head2 protocol
 
   data_type: 'enum'
-  extra: {list => ["OAuth","OIDC","LDAP","CAS"]}
+  extra: {list => ["OAuth","OIDC","LDAP","CAS","SAML2"]}
   is_nullable: 0
 
 Protocol provider speaks
@@ -62,21 +62,6 @@ Protocol provider speaks
 
 Configuration of the provider in JSON format
 
-=head2 mapping
-
-  data_type: 'longtext'
-  is_nullable: 0
-
-Configuration to map provider data to Koha user
-
-=head2 matchpoint
-
-  data_type: 'enum'
-  extra: {list => ["email","userid","cardnumber"]}
-  is_nullable: 0
-
-The patron attribute to be used as matchpoint
-
 =head2 icon_url
 
   data_type: 'varchar'
@@ -84,6 +69,30 @@ The patron attribute to be used as matchpoint
   size: 255
 
 Provider icon URL
+
+=head2 force_sso_opac
+
+  data_type: 'tinyint'
+  default_value: 0
+  is_nullable: 0
+
+Force SSO redirect for OPAC users
+
+=head2 force_sso_staff
+
+  data_type: 'tinyint'
+  default_value: 0
+  is_nullable: 0
+
+Force SSO redirect for staff interface users
+
+=head2 enabled
+
+  data_type: 'tinyint'
+  default_value: 1
+  is_nullable: 0
+
+Whether this provider is active
 
 =cut
 
@@ -97,21 +106,19 @@ __PACKAGE__->add_columns(
   "protocol",
   {
     data_type => "enum",
-    extra => { list => ["OAuth", "OIDC", "LDAP", "CAS"] },
+    extra => { list => ["OAuth", "OIDC", "LDAP", "CAS", "SAML2"] },
     is_nullable => 0,
   },
   "config",
   { data_type => "longtext", is_nullable => 0 },
-  "mapping",
-  { data_type => "longtext", is_nullable => 0 },
-  "matchpoint",
-  {
-    data_type => "enum",
-    extra => { list => ["email", "userid", "cardnumber"] },
-    is_nullable => 0,
-  },
   "icon_url",
   { data_type => "varchar", is_nullable => 1, size => 255 },
+  "force_sso_opac",
+  { data_type => "tinyint", default_value => 0, is_nullable => 0 },
+  "force_sso_staff",
+  { data_type => "tinyint", default_value => 0, is_nullable => 0 },
+  "enabled",
+  { data_type => "tinyint", default_value => 1, is_nullable => 0 },
 );
 
 =head1 PRIMARY KEY
@@ -166,6 +173,19 @@ __PACKAGE__->has_many(
   "Koha::Schema::Result::IdentityProviderDomain",
   { "foreign.identity_provider_id" => "self.identity_provider_id" },
   { cascade_copy => 0, cascade_delete => 0 },
+);
+
+__PACKAGE__->has_many(
+  "identity_provider_mappings",
+  "Koha::Schema::Result::IdentityProviderMapping",
+  { "foreign.identity_provider_id" => "self.identity_provider_id" },
+  { cascade_copy => 0, cascade_delete => 1 },
+);
+
+__PACKAGE__->add_columns(
+    '+force_sso_opac'  => { is_boolean => 1 },
+    '+force_sso_staff' => { is_boolean => 1 },
+    '+enabled'         => { is_boolean => 1 },
 );
 
 =head2 koha_object_class

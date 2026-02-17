@@ -2144,27 +2144,6 @@ cy.getItemTypes = () => {
     ];
 };
 
-cy.getShibbolethConfig = () => {
-    return {
-        shibboleth_config_id: 1,
-        force_opac_sso: false,
-        force_staff_sso: false,
-        autocreate: false,
-        sync: false,
-        welcome: false,
-    };
-};
-
-cy.getShibbolethMapping = () => {
-    return {
-        mapping_id: 1,
-        koha_field: "userid",
-        idp_field: "uid",
-        default_content: null,
-        is_matchpoint: true,
-    };
-};
-
 Cypress.Commands.add("set_syspref", (variable, value) => {
     cy.window().then(win => {
         const client = win.APIClient.sysprefs;

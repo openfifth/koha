@@ -13,7 +13,7 @@
                     </main>
                 </div>
                 <div class="col-md-2 order-sm-2 order-md-1">
-                    <LeftMenu :title="$__('Shibboleth')"></LeftMenu>
+                    <LeftMenu :title="$__('Identity providers')"></LeftMenu>
                 </div>
             </div>
         </div>
@@ -23,7 +23,6 @@
 <script>
 import { inject, onBeforeMount, ref } from "vue";
 import Breadcrumbs from "../Breadcrumbs.vue";
-import { storeToRefs } from "pinia";
 import Help from "../Help.vue";
 import LeftMenu from "../LeftMenu.vue";
 import Dialog from "../Dialog.vue";
@@ -44,9 +43,7 @@ export default {
             }, 0);
         });
 
-        return {
-            initialized,
-        };
+        return { initialized };
     },
     components: {
         Breadcrumbs,

@@ -1,10 +1,10 @@
 <template>
     <div>
-        <h2>{{ $__("Shibboleth Configuration") }}</h2>
+        <h2>{{ $__("Identity providers") }}</h2>
         <p>
             {{
                 $__(
-                    "Configure Shibboleth authentication for your Koha installation"
+                    "Configure external identity providers for patron authentication"
                 )
             }}
         </p>
@@ -13,6 +13,6 @@
 
 <script>
 export default {
-    name: "ShibbolethHome",
+    name: "IdentityProvidersHome",
 };
 </script>

@@ -35,9 +35,9 @@ use t::lib::Dates;
 use C4::Auth_with_shibboleth qw( shib_ok login_shib_url get_login_shib checkpw_shib );
 use Koha::Database;
 use Koha::DateUtils qw( dt_from_string );
-use Koha::ShibbolethConfig;
-use Koha::ShibbolethConfigs;
-use Koha::ShibbolethFieldMapping;
+use Koha::Auth::Identity::Provider;
+use Koha::Auth::Identity::Provider::Mapping;
+use Koha::Auth::Identity::Providers;
 
 BEGIN {
     use_ok(
@@ -106,11 +106,12 @@ subtest "shib_ok tests" => sub {
     is( shib_ok(), '1', "good config" );
 
     # bad config, no debug - clear matchpoint in DB
-    $schema->resultset('ShibbolethFieldMapping')->update( { is_matchpoint => 0 } );
+    $schema->resultset('IdentityProviderMapping')->update( { is_matchpoint => 0 } );
     delete $shibboleth->{matchpoint};
-    $result = shib_ok();
-    $logger->warn_is( 'No matchpoint configured in Shibboleth field mappings', "matchpoint warning logged" )
-        ->warn_is( 'shibboleth config could not be loaded', "config could not be loaded warning" )->clear();
+    $logger->clear();
+    warnings_are { $result = shib_ok() }
+    [ { carped => 'shibboleth matchpoint not defined' } ],
+        "matchpoint warning given when no matchpoint set";
     is( $result, '0', "bad config" );
 
     change_config( { matchpoint => 'email', mapping => { email => { content => 'default@example.com' } } } );
@@ -282,8 +283,10 @@ subtest "checkpw_shib tests" => sub {
     );
 
     # sync user
-    my $config = Koha::ShibbolethConfigs->new->get_configuration;
-    $config->sync(1)->store;
+    my $saml2_provider = Koha::Auth::Identity::Providers->search( { protocol => 'SAML2' } )->next;
+    my $saml2_config   = $saml2_provider->get_config // {};
+    $saml2_config->{sync} = 1;
+    $saml2_provider->set_config($saml2_config)->store;
     $shibboleth->{sync} = 1;
     $ENV{'city'} = 'AnotherCity';
     ( $retval, $retcard, $retuserid, $retpatron ) = checkpw_shib($shib_login);
@@ -429,16 +432,23 @@ $schema->storage->txn_rollback;
 sub change_config {
     my $params = shift;
 
-    $schema->resultset('ShibbolethConfig')->delete;
-    $schema->resultset('ShibbolethFieldMapping')->delete;
+    # Remove any existing SAML2 providers
+    Koha::Auth::Identity::Providers->search( { protocol => 'SAML2' } )->delete;
 
-    Koha::ShibbolethConfig->new(
+    my $provider = Koha::Auth::Identity::Provider->new(
         {
-            force_opac_sso  => 0,
-            force_staff_sso => 0,
-            autocreate      => $params->{autocreate} // 0,
-            sync            => $params->{sync}       // 0,
-            welcome         => $params->{welcome}    // 0,
+            code        => 'shibboleth',
+            description => 'Shibboleth',
+            protocol    => 'SAML2',
+            enabled     => 1,
+        }
+    )->store;
+
+    $provider->set_config(
+        {
+            autocreate => $params->{autocreate} // 0,
+            sync       => $params->{sync}       // 0,
+            welcome    => $params->{welcome}    // 0,
         }
     )->store;
 
@@ -459,18 +469,18 @@ sub change_config {
     my $matchpoint = $params->{matchpoint} // 'userid';
 
     foreach my $koha_field ( keys %mapping ) {
-        Koha::ShibbolethFieldMapping->new(
+        Koha::Auth::Identity::Provider::Mapping->new(
             {
-                koha_field      => $koha_field,
-                idp_field       => $mapping{$koha_field}->{is},
-                is_matchpoint   => $koha_field eq $matchpoint ? 1 : 0,
-                default_content => $mapping{$koha_field}->{content},
+                identity_provider_id => $provider->identity_provider_id,
+                koha_field           => $koha_field,
+                provider_field       => $mapping{$koha_field}->{is},
+                is_matchpoint        => $koha_field eq $matchpoint ? 1 : 0,
+                default_content      => $mapping{$koha_field}->{content},
             }
         )->store;
     }
 
-    my $db_config = Koha::ShibbolethConfigs->new->get_configuration;
-    $shibboleth = $db_config ? $db_config->get_combined_config : {
+    $shibboleth = {
         autocreate => $params->{autocreate} // 0,
         welcome    => $params->{welcome}    // 0,
         sync       => $params->{sync}       // 0,

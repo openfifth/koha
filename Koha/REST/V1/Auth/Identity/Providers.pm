@@ -21,6 +21,7 @@ use Mojo::Base 'Mojolicious::Controller';
 
 use Koha::Auth::Identity::Provider::OAuth;
 use Koha::Auth::Identity::Provider::OIDC;
+use Koha::Auth::Identity::Provider::SAML2;
 use Koha::Auth::Identity::Providers;
 
 use Koha::Database;
@@ -94,12 +95,11 @@ sub add {
                 my $body = $c->req->json;
 
                 my $config   = delete $body->{config};
-                my $mapping  = delete $body->{mapping};
                 my $protocol = delete $body->{protocol};
 
                 my $class = Koha::Auth::Identity::Provider::protocol_to_class_mapping->{$protocol};
 
-                my $provider = $class->new_from_api($body)->set_config($config)->set_mapping($mapping)->store;
+                my $provider = $class->new_from_api($body)->set_config($config)->store;
 
                 $c->res->headers->location( $c->req->url->to_string . '/' . $provider->identity_provider_id );
                 return $c->render(
@@ -146,12 +146,11 @@ sub update {
 
                 my $body = $c->req->json;
 
-                my $config  = delete $body->{config};
-                my $mapping = delete $body->{mapping};
+                my $config = delete $body->{config};
 
                 $provider = $provider->set_from_api($body)->upgrade_class;
 
-                $provider->set_config($config)->set_mapping($mapping)->store;
+                $provider->set_config($config)->store;
 
                 $provider->discard_changes;
 

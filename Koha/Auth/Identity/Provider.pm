@@ -22,6 +22,7 @@ use Modern::Perl;
 use base qw(Koha::Object Koha::Object::JSONFields);
 
 use Koha::Auth::Identity::Provider::Domains;
+use Koha::Auth::Identity::Provider::Mappings;
 use Koha::Exceptions;
 
 =head1 NAME
@@ -44,6 +45,21 @@ sub domains {
     my ($self) = @_;
 
     return Koha::Auth::Identity::Provider::Domains->_new_from_dbic( scalar $self->_result->domains );
+}
+
+=head3 mappings
+
+    my $mappings = $provider->mappings;
+
+Returns the related I<Koha::Auth::Identity::Provider::Mappings> iterator.
+
+=cut
+
+sub mappings {
+    my ($self) = @_;
+
+    return Koha::Auth::Identity::Provider::Mappings->_new_from_dbic(
+        scalar $self->_result->identity_provider_mappings );
 }
 
 =head3 get_config
@@ -81,6 +97,15 @@ sub get_config {
         }
     );
 
+    # SAML2 (config holds protocol-specific settings like autocreate/sync/welcome)
+    $provider->set_config(
+        {
+            autocreate => 1,
+            sync       => 1,
+            welcome    => 0,
+        }
+    );
+
 This method stores the passed config in JSON format.
 
 =cut
@@ -97,34 +122,6 @@ sub set_config {
     }
 
     return $self->set_encoded_json_field( { data => $config, field => 'config' } );
-}
-
-=head3 get_mapping
-
-    my $mapping = $provider->get_mapping;
-
-Returns a I<hashref> containing the attribute mapping for the provider.
-
-=cut
-
-sub get_mapping {
-    my ($self) = @_;
-
-    return $self->decode_json_field( { field => 'mapping' } );
-}
-
-=head3 set_mapping
-
-    $provider->mapping( $mapping );
-
-This method stores the passed mappings in JSON format.
-
-=cut
-
-sub set_mapping {
-    my ( $self, $mapping ) = @_;
-
-    return $self->set_encoded_json_field( { data => $mapping, field => 'mapping' } );
 }
 
 =head3 upgrade_class
@@ -162,12 +159,10 @@ suitable for API output.
 sub to_api {
     my ( $self, $params ) = @_;
 
-    my $config  = $self->get_config;
-    my $mapping = $self->get_mapping;
+    my $config = $self->get_config;
 
     my $json = $self->SUPER::to_api($params);
-    $json->{config}  = $config;
-    $json->{mapping} = $mapping;
+    $json->{config} = $config;
 
     return $json;
 }
@@ -193,6 +188,7 @@ sub protocol_to_class_mapping {
     return {
         OAuth => 'Koha::Auth::Identity::Provider::OAuth',
         OIDC  => 'Koha::Auth::Identity::Provider::OIDC',
+        SAML2 => 'Koha::Auth::Identity::Provider::SAML2',
     };
 }
 
