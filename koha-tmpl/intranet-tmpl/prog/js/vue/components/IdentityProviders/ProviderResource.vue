@@ -4,7 +4,7 @@
 </template>
 
 <script>
-import { inject, ref, onMounted, computed } from "vue";
+import { ref, onMounted, reactive, watch } from "vue";
 import BaseResource from "./../BaseResource.vue";
 import { useBaseResource } from "../../composables/base-resource.js";
 import { APIClient } from "../../fetch/api-client.js";
@@ -155,7 +155,11 @@ export default {
     setup(props) {
         const initialized = ref(false);
 
-        const resourceAttrs = [
+        // Tracks the currently selected/loaded protocol so config field groups
+        // can be shown or hidden reactively via hideIn closures.
+        const selectedProtocol = ref(null);
+
+        const staticResourceAttrs = [
             {
                 name: "code",
                 required: true,
@@ -227,6 +231,40 @@ export default {
             },
         ];
 
+        // Build config attrs for ALL protocols. Each gets a hideIn closure that
+        // hides it when a different protocol is selected. When no protocol is
+        // selected yet (add mode), all groups remain visible so the user can
+        // see what fields are available after choosing a protocol.
+        const configResourceAttrs = Object.entries(
+            PROTOCOL_CONFIG_FIELDS
+        ).flatMap(([protocol, fields]) =>
+            fields.map(f => ({
+                ...f,
+                name: `_config_${f.name}`,
+                hideIn: () =>
+                    selectedProtocol.value &&
+                    selectedProtocol.value !== protocol
+                        ? ["Form", "Show", "List"]
+                        : ["List"],
+            }))
+        );
+
+        const resourceAttrs = [...staticResourceAttrs, ...configResourceAttrs];
+
+        // Unpack the JSON config blob into flat _config_* fields so the form
+        // and show views can bind to them individually.
+        const afterResourceFetch = (componentData, resource) => {
+            selectedProtocol.value = resource.protocol || null;
+            const config = resource.config || {};
+            const fields = PROTOCOL_CONFIG_FIELDS[resource.protocol] || [];
+            fields.forEach(field => {
+                resource[`_config_${field.name}`] =
+                    field.type === "boolean"
+                        ? (config[field.name] ?? false)
+                        : (config[field.name] ?? "");
+            });
+        };
+
         const baseResource = useBaseResource({
             resourceName: "provider",
             nameAttr: "code",
@@ -258,9 +296,30 @@ export default {
             embedded: props.embedded,
             formGroupsDisplayMode: "accordion",
             resourceAttrs,
+            afterResourceFetch,
             props,
             moduleStore: "IdentityProvidersStore",
         });
+
+        const tableOptions = {
+            url: baseResource.getResourceTableUrl(),
+            actions: {
+                "-1": ["edit", "delete"],
+            },
+        };
+
+        // In add mode the form uses reactive(newResource) as its data object.
+        // reactive() uses a WeakMap so calling it with the same plain object
+        // returns the same proxy. Watching here therefore sees the same
+        // mutations that ResourceFormSave makes when the user changes the
+        // protocol dropdown.
+        const formStateObj = reactive(baseResource.newResource.value);
+        watch(
+            () => formStateObj.protocol,
+            newProtocol => {
+                selectedProtocol.value = newProtocol || null;
+            }
+        );
 
         onMounted(() => {
             initialized.value = true;
@@ -270,6 +329,22 @@ export default {
             e.preventDefault();
             const provider = JSON.parse(JSON.stringify(providerToSave));
             const providerId = provider.identity_provider_id;
+            const protocol = provider.protocol;
+
+            // Collect the _config_* fields for the selected protocol into a
+            // config object, then strip all _config_* keys from the payload.
+            const configFieldDefs = PROTOCOL_CONFIG_FIELDS[protocol] || [];
+            const config = {};
+            configFieldDefs.forEach(field => {
+                const flatKey = `_config_${field.name}`;
+                if (flatKey in provider) {
+                    config[field.name] = provider[flatKey];
+                }
+            });
+            Object.keys(provider)
+                .filter(k => k.startsWith("_config_"))
+                .forEach(k => delete provider[k]);
+            provider.config = config;
 
             delete provider.identity_provider_id;
 
@@ -300,6 +375,7 @@ export default {
             ...baseResource,
             initialized,
             PROTOCOL_CONFIG_FIELDS,
+            tableOptions,
             onFormSave,
         };
     },

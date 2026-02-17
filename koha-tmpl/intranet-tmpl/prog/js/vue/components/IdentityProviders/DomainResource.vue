@@ -192,8 +192,16 @@ export default {
             }
         };
 
+        const tableOptions = {
+            url: baseResource.getResourceTableUrl(),
+            actions: {
+                "-1": ["edit", "delete"],
+            },
+        };
+
         return {
             ...baseResource,
+            tableOptions,
             onFormSave,
         };
     },
