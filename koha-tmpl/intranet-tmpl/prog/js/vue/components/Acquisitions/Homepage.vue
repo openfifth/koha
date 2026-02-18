@@ -11,6 +11,12 @@
             :title="$__('New order line')"
             :onClick="() => setCustomModal('addorderline')"
         />
+        <ToolbarButton
+            icon="plus"
+            :title="$__('Orderline search')"
+            to="cgi-bin/koha/acquisitions/order_management/orderlines/search"
+            callback="redirect"
+        />
     </Toolbar>
     <h1>{{ $__("Homepage") }}</h1>
     <h3>Vendor search here</h3>
