@@ -247,7 +247,7 @@ export default {
             });
 
             if (Object.keys(props.actions).length) {
-                dt.on("draw", () => {
+                const bindActionHandlers = () => {
                     const dataSet = dt.rows().data();
                     Object.entries(props.actions).forEach(
                         ([col_id, actions]) => {
@@ -271,7 +271,12 @@ export default {
                                 });
                         }
                     );
-                });
+                };
+                dt.on("draw", bindActionHandlers);
+                // For tables using static `data` prop, the initial draw fires
+                // during child mount (before this onMounted runs), so we must
+                // bind handlers immediately for the rows already in the DOM.
+                bindActionHandlers();
             }
         });
 
