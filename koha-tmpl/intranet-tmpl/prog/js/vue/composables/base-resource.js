@@ -404,9 +404,9 @@ export function useBaseResource(resourceConfig) {
      * field objects that belong to that group.
      *
      * It first filters the resource attributes to only include those that are not hidden
-     * in the given component. Then it groups the attributes by the group name
-     * (or "noGroupFound" if there is no group name). If the component is 'Show', it also
-     * checks if the resource object has data to display in each group. If not,
+     * in the given component and then sorts them based on the 'displaySortOrder' property of the attribute.
+     * Then it groups the attributes by the group name (or "noGroupFound" if there is no group name). If
+     * the component is 'Show', it also checks if the resource object has data to display in each group. If not,
      * the group is not included.
      *
      * @param {String} component - The component name (e.g. 'Form' or 'Show').
@@ -468,9 +468,33 @@ export function useBaseResource(resourceConfig) {
         }
         // FIXME - if no group is defined in accordion mode then the section doesn't have the dropdown applied
         return groupings.reduce((acc, group) => {
-            const groupFields = attributesToConsider.filter(
-                ra => ra.group === group
-            );
+            const groupFields = attributesToConsider
+                .filter(ra => ra.group === group)
+                .sort((a, b) => {
+                    if (
+                        a.hasOwnProperty("displaySortOrder") &&
+                        a.displaySortOrder[component]
+                    ) {
+                        if (
+                            b.hasOwnProperty("displaySortOrder") &&
+                            b.displaySortOrder[component]
+                        ) {
+                            return (
+                                a.displaySortOrder[component] -
+                                b.displaySortOrder[component]
+                            );
+                        } else {
+                            return -1;
+                        }
+                    }
+                    if (
+                        b.hasOwnProperty("displaySortOrder") &&
+                        b.displaySortOrder[component]
+                    ) {
+                        return 1;
+                    }
+                    return 0;
+                });
             const groupInfo = {
                 name: group === "noGroupFound" ? null : group,
                 fields: groupFields,
