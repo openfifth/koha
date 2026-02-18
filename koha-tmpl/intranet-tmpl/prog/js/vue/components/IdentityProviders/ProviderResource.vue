@@ -219,24 +219,6 @@ export default {
                     "When disabled, this provider will not be shown on login pages"
                 ),
             },
-            {
-                name: "force_sso_opac",
-                type: "boolean",
-                label: __("Force SSO (OPAC)"),
-                group: "SSO settings",
-                toolTip: __(
-                    "Automatically redirect OPAC users to this provider's login page"
-                ),
-            },
-            {
-                name: "force_sso_staff",
-                type: "boolean",
-                label: __("Force SSO (staff interface)"),
-                group: "SSO settings",
-                toolTip: __(
-                    "Automatically redirect staff interface users to this provider's login page"
-                ),
-            },
         ];
 
         // Build config attrs for ALL protocols. Each gets a hideIn closure that

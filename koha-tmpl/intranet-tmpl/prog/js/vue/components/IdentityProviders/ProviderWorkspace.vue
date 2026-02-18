@@ -83,20 +83,6 @@
                                 }}</span>
                             </span>
                         </li>
-                        <li>
-                            <label>{{ $__("Force SSO (OPAC)") }}</label>
-                            <span>{{
-                                provider.force_sso_opac ? $__("Yes") : $__("No")
-                            }}</span>
-                        </li>
-                        <li>
-                            <label>{{ $__("Force SSO (staff)") }}</label>
-                            <span>{{
-                                provider.force_sso_staff
-                                    ? $__("Yes")
-                                    : $__("No")
-                            }}</span>
-                        </li>
                     </ol>
                 </fieldset>
                 <div
@@ -211,44 +197,6 @@
                                     role="switch"
                                 />
                             </div>
-                        </li>
-                        <li>
-                            <label for="idp-force-sso-opac">{{
-                                $__("Force SSO (OPAC)")
-                            }}</label>
-                            <div class="form-check form-switch">
-                                <input
-                                    class="form-check-input"
-                                    type="checkbox"
-                                    id="idp-force-sso-opac"
-                                    v-model="providerEdit.force_sso_opac"
-                                    role="switch"
-                                />
-                            </div>
-                            <span class="text-muted">{{
-                                $__(
-                                    "Automatically redirect OPAC users to this provider"
-                                )
-                            }}</span>
-                        </li>
-                        <li>
-                            <label for="idp-force-sso-staff">{{
-                                $__("Force SSO (staff)")
-                            }}</label>
-                            <div class="form-check form-switch">
-                                <input
-                                    class="form-check-input"
-                                    type="checkbox"
-                                    id="idp-force-sso-staff"
-                                    v-model="providerEdit.force_sso_staff"
-                                    role="switch"
-                                />
-                            </div>
-                            <span class="text-muted">{{
-                                $__(
-                                    "Automatically redirect staff users to this provider"
-                                )
-                            }}</span>
                         </li>
                     </ol>
                 </fieldset>
@@ -376,7 +324,7 @@
                         class="list-group-item d-flex justify-content-between align-items-center"
                     >
                         <code>{{ row.hostname }}</code>
-                        <span class="d-flex gap-1">
+                        <span class="d-flex gap-1 flex-shrink-0">
                             <span
                                 v-if="row.is_enabled"
                                 class="badge bg-success"
@@ -385,6 +333,18 @@
                             <span v-else class="badge bg-warning text-dark">{{
                                 $__("Inactive")
                             }}</span>
+                            <span
+                                v-if="row.force_sso_opac"
+                                class="badge bg-primary"
+                                :title="$__('Force SSO: OPAC')"
+                                >{{ $__("SSO OPAC") }}</span
+                            >
+                            <span
+                                v-if="row.force_sso_staff"
+                                class="badge bg-primary"
+                                :title="$__('Force SSO: staff')"
+                                >{{ $__("SSO Staff") }}</span
+                            >
                             <span
                                 v-if="row.other_providers.length"
                                 class="badge bg-info text-dark"
@@ -532,6 +492,102 @@
                                                 }}
                                             </option>
                                         </select>
+                                    </li>
+                                    <li
+                                        v-if="hostnameMode !== 'not_applicable'"
+                                    >
+                                        <label for="hostname-force-sso-opac">{{
+                                            $__("Force SSO (OPAC)")
+                                        }}</label>
+                                        <div class="form-check form-switch">
+                                            <input
+                                                class="form-check-input"
+                                                type="checkbox"
+                                                id="hostname-force-sso-opac"
+                                                v-model="hostnameForceSsoOpac"
+                                                role="switch"
+                                            />
+                                        </div>
+                                        <span class="text-muted">{{
+                                            $__(
+                                                "Automatically redirect OPAC users on this hostname to this provider"
+                                            )
+                                        }}</span>
+                                    </li>
+                                    <li
+                                        v-if="
+                                            hostnameMode !== 'not_applicable' &&
+                                            hostnameForceSsoOpac &&
+                                            selectedHostname.conflict_sso_opac
+                                                .length
+                                        "
+                                    >
+                                        <label></label>
+                                        <div
+                                            class="alert alert-warning py-2 mb-0"
+                                        >
+                                            <i
+                                                class="fa fa-exclamation-triangle"
+                                            ></i>
+                                            {{
+                                                $__(
+                                                    "Force SSO (OPAC) is already enabled for this hostname by: %s"
+                                                ).replace(
+                                                    "%s",
+                                                    selectedHostname.conflict_sso_opac.join(
+                                                        ", "
+                                                    )
+                                                )
+                                            }}
+                                        </div>
+                                    </li>
+                                    <li
+                                        v-if="hostnameMode !== 'not_applicable'"
+                                    >
+                                        <label for="hostname-force-sso-staff">{{
+                                            $__("Force SSO (staff)")
+                                        }}</label>
+                                        <div class="form-check form-switch">
+                                            <input
+                                                class="form-check-input"
+                                                type="checkbox"
+                                                id="hostname-force-sso-staff"
+                                                v-model="hostnameForceSsoStaff"
+                                                role="switch"
+                                            />
+                                        </div>
+                                        <span class="text-muted">{{
+                                            $__(
+                                                "Automatically redirect staff users on this hostname to this provider"
+                                            )
+                                        }}</span>
+                                    </li>
+                                    <li
+                                        v-if="
+                                            hostnameMode !== 'not_applicable' &&
+                                            hostnameForceSsoStaff &&
+                                            selectedHostname.conflict_sso_staff
+                                                .length
+                                        "
+                                    >
+                                        <label></label>
+                                        <div
+                                            class="alert alert-warning py-2 mb-0"
+                                        >
+                                            <i
+                                                class="fa fa-exclamation-triangle"
+                                            ></i>
+                                            {{
+                                                $__(
+                                                    "Force SSO (staff) is already enabled for this hostname by: %s"
+                                                ).replace(
+                                                    "%s",
+                                                    selectedHostname.conflict_sso_staff.join(
+                                                        ", "
+                                                    )
+                                                )
+                                            }}
+                                        </div>
                                     </li>
                                 </ol>
                             </fieldset>
@@ -1433,6 +1489,9 @@ export default {
             try {
                 const data = { ...providerEdit.value };
                 delete data.identity_provider_id;
+                // force_sso is managed at the hostname level, not the provider level
+                delete data.force_sso_opac;
+                delete data.force_sso_staff;
 
                 const fields = PROTOCOL_CONFIG_FIELDS[data.protocol] || [];
                 const config = {};
@@ -1464,6 +1523,8 @@ export default {
         const allProviders = ref([]);
         const selectedHostname = ref(null);
         const hostnameMode = ref("not_applicable");
+        const hostnameForceSsoOpac = ref(false);
+        const hostnameForceSsoStaff = ref(false);
         const defaultHostnames = window.idp_default_hostnames || [];
 
         const hostnameRows = computed(() => {
@@ -1475,7 +1536,11 @@ export default {
                     hostname_id: null,
                     is_linked: false,
                     is_enabled: false,
+                    force_sso_opac: false,
+                    force_sso_staff: false,
                     other_providers: [],
+                    conflict_sso_opac: [],
+                    conflict_sso_staff: [],
                 };
             });
 
@@ -1486,21 +1551,35 @@ export default {
                         hostname_id: null,
                         is_linked: false,
                         is_enabled: false,
+                        force_sso_opac: false,
+                        force_sso_staff: false,
                         other_providers: [],
+                        conflict_sso_opac: [],
+                        conflict_sso_staff: [],
                     };
                 }
+                const p = allProviders.value.find(
+                    p => p.identity_provider_id === row.identity_provider_id
+                );
+                const pName = p
+                    ? p.description
+                    : `#${row.identity_provider_id}`;
+
                 if (row.identity_provider_id === props.providerId) {
                     byHostname[row.hostname].hostname_id =
                         row.identity_provider_hostname_id;
                     byHostname[row.hostname].is_linked = true;
                     byHostname[row.hostname].is_enabled = row.is_enabled;
+                    byHostname[row.hostname].force_sso_opac =
+                        row.force_sso_opac || false;
+                    byHostname[row.hostname].force_sso_staff =
+                        row.force_sso_staff || false;
                 } else {
-                    const p = allProviders.value.find(
-                        p => p.identity_provider_id === row.identity_provider_id
-                    );
-                    byHostname[row.hostname].other_providers.push(
-                        p ? p.description : `#${row.identity_provider_id}`
-                    );
+                    byHostname[row.hostname].other_providers.push(pName);
+                    if (row.force_sso_opac)
+                        byHostname[row.hostname].conflict_sso_opac.push(pName);
+                    if (row.force_sso_staff)
+                        byHostname[row.hostname].conflict_sso_staff.push(pName);
                 }
             });
 
@@ -1524,9 +1603,15 @@ export default {
 
         const selectHostname = row => {
             selectedHostname.value = row;
-            if (!row.is_linked) hostnameMode.value = "not_applicable";
-            else if (row.is_enabled) hostnameMode.value = "active";
-            else hostnameMode.value = "optional";
+            if (!row.is_linked) {
+                hostnameMode.value = "not_applicable";
+                hostnameForceSsoOpac.value = false;
+                hostnameForceSsoStaff.value = false;
+            } else {
+                hostnameMode.value = row.is_enabled ? "active" : "optional";
+                hostnameForceSsoOpac.value = row.force_sso_opac || false;
+                hostnameForceSsoStaff.value = row.force_sso_staff || false;
+            }
         };
 
         const saveHostnameMode = async () => {
@@ -1541,21 +1626,22 @@ export default {
                     }
                 } else {
                     const isEnabled = hostnameMode.value === "active";
+                    const payload = {
+                        hostname: row.hostname,
+                        identity_provider_id: props.providerId,
+                        is_enabled: isEnabled,
+                        force_sso_opac: hostnameForceSsoOpac.value,
+                        force_sso_staff: hostnameForceSsoStaff.value,
+                    };
                     if (row.is_linked) {
                         await APIClient.identity_providers.hostnames.update(
-                            {
-                                hostname: row.hostname,
-                                identity_provider_id: props.providerId,
-                                is_enabled: isEnabled,
-                            },
+                            payload,
                             row.hostname_id
                         );
                     } else {
-                        await APIClient.identity_providers.hostnames.create({
-                            hostname: row.hostname,
-                            identity_provider_id: props.providerId,
-                            is_enabled: isEnabled,
-                        });
+                        await APIClient.identity_providers.hostnames.create(
+                            payload
+                        );
                     }
                 }
                 setMessage($__("Hostname configuration saved"));
@@ -1938,6 +2024,8 @@ export default {
             hostnameRows,
             selectedHostname,
             hostnameMode,
+            hostnameForceSsoOpac,
+            hostnameForceSsoStaff,
             startEditSection2,
             doneEditSection2,
             selectHostname,

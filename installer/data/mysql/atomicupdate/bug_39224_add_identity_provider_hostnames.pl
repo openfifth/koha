@@ -20,6 +20,10 @@ return {
                         COMMENT 'Identity provider associated with this hostname',
                     `is_enabled` tinyint(1) NOT NULL DEFAULT 1
                         COMMENT 'Whether this hostname is active for this provider',
+                    `force_sso_opac` tinyint(1) NOT NULL DEFAULT 0
+                        COMMENT 'Force SSO redirect for OPAC users on this hostname',
+                    `force_sso_staff` tinyint(1) NOT NULL DEFAULT 0
+                        COMMENT 'Force SSO redirect for staff interface users on this hostname',
                     PRIMARY KEY (`identity_provider_hostname_id`),
                     UNIQUE KEY `hostname_provider` (`hostname`, `identity_provider_id`),
                     KEY `idp_hostname_provider_idx` (`identity_provider_id`),
@@ -31,6 +35,31 @@ return {
             }
             );
             say_success( $out, "Added new table 'identity_provider_hostnames'" );
+        }
+
+        # Add force_sso columns to existing installations that already have the table
+        unless ( column_exists( 'identity_provider_hostnames', 'force_sso_opac' ) ) {
+            $dbh->do(
+                q{
+                ALTER TABLE identity_provider_hostnames
+                    ADD COLUMN `force_sso_opac` tinyint(1) NOT NULL DEFAULT 0
+                    COMMENT 'Force SSO redirect for OPAC users on this hostname'
+                    AFTER `is_enabled`
+            }
+            );
+            say_success( $out, "Added column 'identity_provider_hostnames.force_sso_opac'" );
+        }
+
+        unless ( column_exists( 'identity_provider_hostnames', 'force_sso_staff' ) ) {
+            $dbh->do(
+                q{
+                ALTER TABLE identity_provider_hostnames
+                    ADD COLUMN `force_sso_staff` tinyint(1) NOT NULL DEFAULT 0
+                    COMMENT 'Force SSO redirect for staff interface users on this hostname'
+                    AFTER `force_sso_opac`
+            }
+            );
+            say_success( $out, "Added column 'identity_provider_hostnames.force_sso_staff'" );
         }
 
         return 1;

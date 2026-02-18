@@ -55,6 +55,22 @@ Identity provider associated with this hostname
 
 Whether this hostname is active for this provider
 
+=head2 force_sso_opac
+
+  data_type: 'tinyint'
+  default_value: 0
+  is_nullable: 0
+
+Force SSO redirect for OPAC users on this hostname
+
+=head2 force_sso_staff
+
+  data_type: 'tinyint'
+  default_value: 0
+  is_nullable: 0
+
+Force SSO redirect for staff interface users on this hostname
+
 =cut
 
 __PACKAGE__->add_columns(
@@ -66,6 +82,10 @@ __PACKAGE__->add_columns(
   { data_type => "integer", is_foreign_key => 1, is_nullable => 0 },
   "is_enabled",
   { data_type => "tinyint", default_value => 1, is_nullable => 0 },
+  "force_sso_opac",
+  { data_type => "tinyint", default_value => 0, is_nullable => 0 },
+  "force_sso_staff",
+  { data_type => "tinyint", default_value => 0, is_nullable => 0 },
 );
 
 =head1 PRIMARY KEY
@@ -118,7 +138,9 @@ __PACKAGE__->belongs_to(
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:placeholder
 
 __PACKAGE__->add_columns(
-    '+is_enabled' => { is_boolean => 1 },
+    '+is_enabled'      => { is_boolean => 1 },
+    '+force_sso_opac'  => { is_boolean => 1 },
+    '+force_sso_staff' => { is_boolean => 1 },
 );
 
 sub koha_object_class  { 'Koha::Auth::Identity::Provider::Hostname' }
