@@ -129,6 +129,9 @@ export default {
                         componentToDisplay === "Search"
                             ? $__("Order information")
                             : $__("General information"),
+                    displaySortOrder: {
+                        Search: 6,
+                    },
                     hideIn: ["Form"],
                 },
                 {
@@ -152,6 +155,9 @@ export default {
                             : $__(
                                   "Use continuous if you will receive multiple invoices, e.g. for serial subscriptions. If you use the option 'continuous' the option to create items when ordering is disabled. Items can be created on receiving or later in the catalog (without link to the order line)"
                               ),
+                    displaySortOrder: {
+                        Search: 11,
+                    },
                     hideIn: ["List"],
                 },
                 {
@@ -162,8 +168,11 @@ export default {
                             : $__("Order information"),
                     type: "checkbox",
                     label: $__("Renewal required"),
-                    value: false,
+                    defaultValue: false,
                     disabled: resource => !resource.is_continuous,
+                    displaySortOrder: {
+                        Search: 12,
+                    },
                     hideIn: ["List", "Show"],
                 },
                 {
@@ -171,6 +180,9 @@ export default {
                     group: $__("Order information"),
                     type: "date",
                     label: $__("Last review before"),
+                    displaySortOrder: {
+                        Search: 13,
+                    },
                     hideIn: ["List", "Show", "Form"],
                 },
                 {
@@ -202,6 +214,9 @@ export default {
                             label: $__("And"),
                         },
                     ],
+                    displaySortOrder: {
+                        Search: 14,
+                    },
                     hideIn: ["List", "Show"],
                 },
                 {
@@ -444,6 +459,9 @@ export default {
                                 : row.managing_branch;
                         },
                     },
+                    displaySortOrder: {
+                        Search: 4,
+                    },
                     hideIn: [],
                 },
                 {
@@ -529,6 +547,9 @@ export default {
                             fd.tax_rate = vendor.tax_rate;
                         });
                     },
+                    displaySortOrder: {
+                        Search: 1,
+                    },
                     hideIn: [],
                 },
                 {
@@ -587,7 +608,7 @@ export default {
                     group: $__("Accounting details"),
                     type: "checkbox",
                     label: $__("Uncertain price"),
-                    value: false,
+                    defaultValue: false,
                     hideIn: ["List", "Show", "Search"],
                 },
                 {
@@ -770,6 +791,9 @@ export default {
                             });
                         },
                     },
+                    displaySortOrder: {
+                        Search: 5,
+                    },
                     hideIn: ["List", "Show"],
                 },
                 {
@@ -828,6 +852,9 @@ export default {
                             : $__("Reporting information"),
                     type: "text",
                     label: $__("Statistic 1"),
+                    displaySortOrder: {
+                        Search: 7,
+                    },
                     hideIn: ["List", "Show"],
                 },
                 {
@@ -838,6 +865,9 @@ export default {
                             : $__("Reporting information"),
                     type: "text",
                     label: $__("Statistic 2"),
+                    displaySortOrder: {
+                        Search: 8,
+                    },
                     hideIn: ["List", "Show"],
                 },
                 {
@@ -848,7 +878,10 @@ export default {
                             : $__("Notes"),
                     type: "checkbox",
                     label: $__("Rush / urgent order"),
-                    value: false,
+                    defaultValue: false,
+                    displaySortOrder: {
+                        Search: 9,
+                    },
                     hideIn: ["List", "Show"],
                 },
                 {
@@ -860,6 +893,9 @@ export default {
                     type: componentToDisplay === "Search" ? "text" : "textarea",
                     textAreaRows: 5,
                     label: $__("Internal note"),
+                    displaySortOrder: {
+                        Search: 2,
+                    },
                     hideIn: [],
                 },
                 {
@@ -882,6 +918,9 @@ export default {
                     type: componentToDisplay === "Search" ? "text" : "textarea",
                     textAreaRows: 5,
                     label: $__("Vendor note"),
+                    displaySortOrder: {
+                        Search: 3,
+                    },
                     hideIn: [],
                 },
                 {
@@ -889,7 +928,7 @@ export default {
                     type: "date",
                     group: $__("Notes"),
                     label: $__("Estimated delivery date"),
-                    value: "",
+                    defaultValue: "",
                     hideIn: ["List", "Show", "Search"],
                 },
                 {
@@ -913,6 +952,9 @@ export default {
                             };
                         }
                     ),
+                    displaySortOrder: {
+                        Search: 3.1,
+                    },
                     hideIn: ["List", "Form"],
                 },
                 {
@@ -942,6 +984,9 @@ export default {
                             label: $__("And"),
                         },
                     ],
+                    displaySortOrder: {
+                        Search: 10,
+                    },
                     hideIn: ["List", "Form"],
                 },
                 {
