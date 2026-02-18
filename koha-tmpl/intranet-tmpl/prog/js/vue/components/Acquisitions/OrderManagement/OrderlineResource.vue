@@ -192,24 +192,23 @@ export default {
                     },
                     subFields: [
                         {
-                            name: "planned_cancellation_start",
+                            name: "planned_cancellation_date_start",
                             type: "date",
                             label: $__("Between"),
                         },
                         {
-                            name: "planned_cancellation_end",
+                            name: "planned_cancellation_date_end",
                             type: "date",
                             label: $__("And"),
                         },
                     ],
-                    value: "",
                     hideIn: ["List", "Show"],
                 },
                 {
                     name: "acquisition_method",
                     type: "select",
-                    group: component =>
-                        component === "Form"
+                    group:
+                        componentToDisplay === "Form"
                             ? $__("Acquisition method")
                             : $__("Order information"),
                     label: $__("Acquisition method"),
@@ -1137,6 +1136,7 @@ export default {
             delete orderline.totalDistributedAmount;
             delete orderline.modified_date;
             delete orderline.created_date;
+            delete orderline.last_review_before;
 
             if (orderline.quantity_ordered === null) {
                 // Throw error if create_items === "ordering" and none created
@@ -1157,6 +1157,27 @@ export default {
 
         const handleResourceSearch = (e, searchParams) => {
             e.preventDefault();
+
+            const formatDateWindows = (startKey, endKey) => {
+                if (searchParams[startKey] || searchParams[endKey]) {
+                    const searchKey = startKey.replace("_start", "");
+                    searchParams[searchKey] = {
+                        ...(searchParams[startKey] && {
+                            ">=": searchParams[startKey],
+                        }),
+                        ...(searchParams[endKey] && {
+                            "<=": searchParams[endKey],
+                        }),
+                    };
+                }
+                delete searchParams[startKey];
+                delete searchParams[endKey];
+            };
+            formatDateWindows("created_date_start", "created_date_end");
+            formatDateWindows(
+                "planned_cancellation_date_start",
+                "planned_cancellation_date_end"
+            );
         };
 
         const navigationOnFormSaveAdditionalOptions = resource => {
