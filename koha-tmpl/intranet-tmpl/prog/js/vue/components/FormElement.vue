@@ -123,6 +123,23 @@
             </template>
         </v-select>
     </template>
+    <template v-else-if="attr.type == 'indented_subfields'">
+        <fieldset>
+            <legend v-if="attr.legend">{{ attr.legend }}</legend>
+            <ol>
+                <li
+                    v-for="(subfield, subFieldIndex) in attr.subFields"
+                    v-bind:key="subFieldIndex"
+                >
+                    <FormElement
+                        :resource="resource"
+                        :attr="subfield"
+                        :index="subFieldIndex"
+                    />
+                </li>
+            </ol>
+        </fieldset>
+    </template>
     <template v-else-if="attr.type == 'vendor'">
         <component
             :is="requiredComponent"
