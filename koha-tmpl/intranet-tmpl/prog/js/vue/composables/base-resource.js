@@ -582,6 +582,9 @@ export function useBaseResource(resourceConfig) {
     const newResource = computed(() => {
         resourceConfig.resourceToBeGenerated =
             resourceConfig.resourceAttrs.reduce((acc, attr) => {
+                if (resourceConfig.props.routeAction === "search") {
+                    if (attr.hideIn.includes("Search")) return acc;
+                }
                 if (attr.hasOwnProperty("defaultValue")) {
                     acc[attr.name] = attr.defaultValue;
                     return acc;

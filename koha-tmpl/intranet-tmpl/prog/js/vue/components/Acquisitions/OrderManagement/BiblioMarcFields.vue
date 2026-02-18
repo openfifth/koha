@@ -1,6 +1,8 @@
 <template>
     <div v-if="initialized && createItems.value === 'ordering'">
-        <h3 style="margin-top: 1em">{{ $__("Bibliographic information") }}</h3>
+        <h3 v-if="!isSearch" style="margin-top: 1em">
+            {{ $__("Bibliographic information") }}
+        </h3>
         <ol>
             <li v-for="(attr, index) in biblioFields" v-bind:key="index">
                 <FormElement
@@ -28,6 +30,7 @@ export default {
         unimarc: { type: Boolean, default: false },
         biblionumber: { type: String, default: null },
         createItems: Object,
+        isSearch: { type: Boolean, default: false },
     },
     inheritAttrs: false,
     setup(props) {
@@ -44,22 +47,40 @@ export default {
                 name: "title",
                 type: "text",
                 label: $__("Title"),
-                required: resource => props.createItems.value === "ordering",
+                required: props.isSearch
+                    ? false
+                    : resource => props.createItems.value === "ordering",
             },
             { name: "author", type: "text", label: $__("Author") },
-            { name: "publisher", type: "text", label: $__("Publisher") },
-            { name: "edition_statement", type: "text", label: $__("Edition") },
-            {
-                name: "publication_year",
-                type: "text",
-                label: $__("Publication year"),
-            },
+            ...(!props.isSearch
+                ? [{ name: "publisher", type: "text", label: $__("Publisher") }]
+                : []),
+            ...(!props.isSearch
+                ? [
+                      {
+                          name: "edition_statement",
+                          type: "text",
+                          label: $__("Edition"),
+                      },
+                  ]
+                : []),
+            ...(!props.isSearch
+                ? [
+                      {
+                          name: "publication_year",
+                          type: "text",
+                          label: $__("Publication year"),
+                      },
+                  ]
+                : []),
             { name: "isbn", type: "text", label: $__("ISBN") },
             ...(props.unimarc
                 ? [{ name: "ean", type: "text", label: $__("EAN") }]
                 : []),
-            { name: "series_title", type: "text", label: $__("Series") },
-            ...(!props.biblionumber
+            ...(!props.isSearch
+                ? [{ name: "series_title", type: "text", label: $__("Series") }]
+                : []),
+            ...(!props.biblionumber && !props.isSearch
                 ? [
                       {
                           name: "item_type",

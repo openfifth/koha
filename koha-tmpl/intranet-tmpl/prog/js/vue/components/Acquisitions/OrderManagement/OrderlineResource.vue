@@ -58,6 +58,13 @@ export default {
             return sysprefs.value.acq_create_items;
         };
 
+        let componentToDisplay =
+            props.routeAction.charAt(0).toUpperCase() +
+            props.routeAction.slice(1);
+        if (["add", "edit"].includes(props.routeAction)) {
+            componentToDisplay = "Form";
+        }
+
         const baseResource = useBaseResource({
             resourceName: "orderline",
             nameAttr: "orderline_id",
@@ -82,15 +89,33 @@ export default {
                 editLabel: $__("Edit orderline #%s"),
                 emptyListMessage: $__("There are no orderlines defined"),
                 newLabel: $__("New orderline"),
+                searchLabel: $__("Search orderlines"),
             },
             formGroupsDisplayMode: "accordion",
             showGroupsDisplayMode: "splitScreen",
-            splitScreenGroupings: [
-                { pane: 1, groups: ["Order information"] },
-                { pane: 2, groups: ["General information"] },
-                { pane: "break", groups: ["Catalog details"] },
-                { pane: 3, groups: ["Accounting details"] },
-            ],
+            searchGroupsDisplayMode: "splitScreen",
+            splitScreenGroupings: {
+                show: [
+                    { pane: 1, groups: ["Order information"] },
+                    { pane: 2, groups: ["General information"] },
+                    { pane: "break", groups: ["Catalog details"] },
+                    { pane: 3, groups: ["Accounting details"] },
+                ],
+                search: [
+                    {
+                        pane: 1,
+                        groups: ["Order information", "Additional fields"],
+                    },
+                    {
+                        pane: 2,
+                        groups: [
+                            "Bibliographic information",
+                            "Purchase order information",
+                            "Payment information",
+                        ],
+                    },
+                ],
+            },
             extendedAttributesResourceType: "orderline",
             props,
             moduleStore: "acquisitionsStore",
@@ -98,38 +123,43 @@ export default {
                 //ACQTODO: orderline templates
                 {
                     name: "orderline_id",
-                    label: $__("ID"),
+                    label: $__("Orderline ID"),
                     type: "text",
-                    group: $__("General information"),
+                    group:
+                        componentToDisplay === "Search"
+                            ? $__("Order information")
+                            : $__("General information"),
                     hideIn: ["Form"],
                 },
                 {
                     name: "is_continuous",
-                    type: "checkbox",
-                    group: component =>
-                        component === "Form"
+                    type: componentToDisplay === "Show" ? "text" : "checkbox",
+                    group:
+                        componentToDisplay === "Form"
                             ? $__("Order type")
                             : $__("Order information"),
-                    label: component =>
-                        component === "Form"
+                    label: ["Form", "Search"].includes(componentToDisplay)
+                        ? $__("Continuous")
+                        : $__("Order type"),
+                    format: orderline =>
+                        orderline.is_continuous
                             ? $__("Continuous")
-                            : $__("Order type"),
-                    showElement: {
-                        type: "text",
-                        format: orderline =>
-                            orderline.is_continuous
-                                ? $__("Continuous")
-                                : $__("One-Time"),
-                    },
+                            : $__("One-Time"),
                     defaultValue: false,
-                    toolTip: $__(
-                        "Use continuous if you will receive multiple invoices, e.g. for serial subscriptions. If you use the option 'continuous' the option to create items when ordering is disabled. Items can be created on receiving or later in the catalog (without link to the order line)"
-                    ),
+                    toolTip:
+                        componentToDisplay == "Search"
+                            ? null
+                            : $__(
+                                  "Use continuous if you will receive multiple invoices, e.g. for serial subscriptions. If you use the option 'continuous' the option to create items when ordering is disabled. Items can be created on receiving or later in the catalog (without link to the order line)"
+                              ),
                     hideIn: ["List"],
                 },
                 {
                     name: "renewal_required",
-                    group: $__("Order type"),
+                    group:
+                        componentToDisplay !== "Search"
+                            ? $__("Order type")
+                            : $__("Order information"),
                     type: "checkbox",
                     label: $__("Renewal required"),
                     value: false,
@@ -137,19 +167,22 @@ export default {
                     hideIn: ["List", "Show"],
                 },
                 {
-                    name: "review_interval",
-                    group: $__("Order type"),
-                    type: "number",
-                    label: $__("Review interval"),
-                    placeholder: $__("Review interval (days)"),
-                    value: null,
-                    disabled: resource => !resource.is_continuous,
-                    hideIn: ["List", "Show"],
+                    name: "last_review_before",
+                    group: $__("Order information"),
+                    type: "date",
+                    label: $__("Last review before"),
+                    hideIn: ["List", "Show", "Form"],
                 },
                 {
                     name: "planned_cancellation_date",
-                    type: "date",
-                    group: $__("Order type"),
+                    type:
+                        componentToDisplay === "Search"
+                            ? "indented_subfields"
+                            : "date",
+                    group:
+                        componentToDisplay !== "Search"
+                            ? $__("Order type")
+                            : $__("Order information"),
                     label: $__("Planned cancellation"),
                     componentProps: {
                         disabled: {
@@ -157,6 +190,18 @@ export default {
                             qualifier: "!",
                         },
                     },
+                    subFields: [
+                        {
+                            name: "planned_cancellation_start",
+                            type: "date",
+                            label: $__("Between"),
+                        },
+                        {
+                            name: "planned_cancellation_end",
+                            type: "date",
+                            label: $__("And"),
+                        },
+                    ],
                     value: "",
                     hideIn: ["List", "Show"],
                 },
@@ -169,7 +214,7 @@ export default {
                             : $__("Order information"),
                     label: $__("Acquisition method"),
                     avCat: "av_acquisition_method",
-                    hideIn: ["List"],
+                    hideIn: ["List", "Search"],
                 },
                 {
                     name: "create_items",
@@ -185,13 +230,16 @@ export default {
                     onChange: resource => {
                         createItemsWhen.value = resource.create_items;
                     },
-                    hideIn: ["List", "Show"],
+                    hideIn: ["List", "Show", "Search"],
                 },
                 ...(!nonBibliographic.value
                     ? [
                           {
                               name: "biblio",
-                              group: $__("Catalog details"),
+                              group:
+                                  componentToDisplay === "Search"
+                                      ? $__("Bibliographic information")
+                                      : $__("Catalog details"),
                               type: "component",
                               componentPath:
                                   "@koha-vue/components/Acquisitions/OrderManagement/BiblioMarcFields.vue",
@@ -223,6 +271,12 @@ export default {
                                       type: "object",
                                       value: createItems,
                                   },
+                                  ...(componentToDisplay === "Search" && {
+                                      isSearch: {
+                                          type: "boolean",
+                                          value: true,
+                                      },
+                                  }),
                               },
                               tableColumnDefinition: {
                                   title: $__("Summary"),
@@ -352,12 +406,12 @@ export default {
                     //     value: "owner",
                     //     format: patron_to_html,
                     // },
-                    hideIn: ["List", "Show"],
+                    hideIn: ["List", "Show", "Search"],
                 },
                 {
                     name: "managing_branch",
-                    group: component =>
-                        component === "Form"
+                    group:
+                        componentToDisplay === "Form"
                             ? $__("Library management")
                             : $__("Order information"),
                     type: "relationshipSelect",
@@ -426,12 +480,12 @@ export default {
                     //     value: "owner",
                     //     format: patron_to_html,
                     // },
-                    hideIn: ["List", "Show"],
+                    hideIn: ["List", "Show", "Search"],
                 },
                 {
                     name: "vendor_id",
-                    group: component =>
-                        component === "Form"
+                    group:
+                        componentToDisplay === "Form"
                             ? $__("Vendor selection")
                             : $__("Order information"),
                     type: "relationshipSelect",
@@ -447,9 +501,12 @@ export default {
                     relationshipAPIClient: APIClient.acquisition.vendors,
                     relationshipOptionLabelAttr: "name",
                     relationshipRequiredKey: "id",
-                    toolTip: $__(
-                        "If you leave the vendor empty the orderline can only be saved as a draft"
-                    ),
+                    toolTip:
+                        componentToDisplay == "Search"
+                            ? null
+                            : $__(
+                                  "If you leave the vendor empty the orderline can only be saved as a draft"
+                              ),
                     tableColumnDefinition: {
                         title: $__("Vendor"),
                         data: "vendor.name",
@@ -488,7 +545,7 @@ export default {
                             resource.create_items === "ordering"
                         );
                     },
-                    hideIn: [],
+                    hideIn: ["Search"],
                 },
                 {
                     name: "vendor_price",
@@ -498,7 +555,7 @@ export default {
                     label: $__("Price"),
                     defaultValue: null,
                     size: 6,
-                    hideIn: [],
+                    hideIn: ["Search"],
                 },
                 {
                     name: "vendor_price_currency",
@@ -524,7 +581,7 @@ export default {
                         }
                     },
                     defaultValue: null,
-                    hideIn: ["List"],
+                    hideIn: ["List", "Search"],
                 },
                 {
                     name: "uncertain_price",
@@ -532,7 +589,7 @@ export default {
                     type: "checkbox",
                     label: $__("Uncertain price"),
                     value: false,
-                    hideIn: ["List", "Show"],
+                    hideIn: ["List", "Show", "Search"],
                 },
                 {
                     name: "discount",
@@ -555,7 +612,7 @@ export default {
                             value: "discount_amount_oc",
                         },
                     },
-                    hideIn: ["List", "Show"],
+                    hideIn: ["List", "Show", "Search"],
                 },
                 // {
                 //     name: "replacement_price",
@@ -589,7 +646,7 @@ export default {
                             value: null,
                         },
                     },
-                    hideIn: ["List", "Show"],
+                    hideIn: ["List", "Show", "Search"],
                 },
                 {
                     name: "calculated_amount_oc",
@@ -607,13 +664,26 @@ export default {
                             value: "original",
                         },
                     },
-                    hideIn: ["List", "Show"],
+                    hideIn: ["List", "Show", "Search"],
                 },
                 {
                     name: "fund_distributions",
-                    type: "relationshipWidget",
-                    group: $__("Fund / fund distributions"),
+                    type:
+                        componentToDisplay === "Search"
+                            ? "relationshipSelect"
+                            : "relationshipWidget",
+                    group:
+                        componentToDisplay === "Search"
+                            ? $__("Order information")
+                            : $__("Fund / fund distributions"),
                     apiClient: APIClient.acquisition.funds,
+                    relationshipAPIClient: APIClient.acquisition.funds,
+                    relationshipOptionLabelAttr: "name",
+                    relationshipRequiredKey: "fund_id",
+                    label:
+                        componentToDisplay === "Search"
+                            ? $__("Fund ordered")
+                            : null,
                     componentProps: {
                         resourceRelationships: {
                             resourceProperty: "fund_distributions",
@@ -720,7 +790,7 @@ export default {
                             fd.calculateDistributedAmount(fd);
                         });
                     },
-                    hideIn: ["List", "Show"],
+                    hideIn: ["List", "Show", "Search"],
                 },
                 {
                     name: "replacement_price",
@@ -735,7 +805,7 @@ export default {
                             getActiveCurrency.currency;
                         return formatValueWithCurrency(value, currency);
                     },
-                    hideIn: ["List", "Show"],
+                    hideIn: ["List", "Show", "Search"],
                 },
                 {
                     name: "calculated_item_costs",
@@ -749,25 +819,34 @@ export default {
                             value: null,
                         },
                     },
-                    hideIn: ["List", "Show"],
+                    hideIn: ["List", "Show", "Search"],
                 },
                 {
                     name: "statistic1",
-                    group: $__("Reporting information"),
+                    group:
+                        componentToDisplay == "Search"
+                            ? $__("Order information")
+                            : $__("Reporting information"),
                     type: "text",
                     label: $__("Statistic 1"),
                     hideIn: ["List", "Show"],
                 },
                 {
                     name: "statistic2",
-                    group: $__("Reporting information"),
+                    group:
+                        componentToDisplay == "Search"
+                            ? $__("Order information")
+                            : $__("Reporting information"),
                     type: "text",
                     label: $__("Statistic 2"),
                     hideIn: ["List", "Show"],
                 },
                 {
                     name: "urgent_order",
-                    group: $__("Notes"),
+                    group:
+                        componentToDisplay === "Search"
+                            ? $__("Order information")
+                            : $__("Notes"),
                     type: "checkbox",
                     label: $__("Rush / urgent order"),
                     value: false,
@@ -775,11 +854,11 @@ export default {
                 },
                 {
                     name: "internal_note",
-                    group: component =>
-                        component === "Form"
+                    group:
+                        componentToDisplay === "Form"
                             ? $__("Notes")
                             : $__("Order information"),
-                    type: "textarea",
+                    type: componentToDisplay === "Search" ? "text" : "textarea",
                     textAreaRows: 5,
                     label: $__("Internal note"),
                     hideIn: [],
@@ -793,15 +872,15 @@ export default {
                     toolTip: $__(
                         "The receiving note will be displayed when you receive the order line"
                     ),
-                    hideIn: ["List", "Show"],
+                    hideIn: ["List", "Show", "Search"],
                 },
                 {
                     name: "vendor_note",
-                    group: component =>
-                        component === "Form"
+                    group:
+                        componentToDisplay === "Form"
                             ? $__("Notes")
                             : $__("Order information"),
-                    type: "textarea",
+                    type: componentToDisplay === "Search" ? "text" : "textarea",
                     textAreaRows: 5,
                     label: $__("Vendor note"),
                     hideIn: [],
@@ -812,23 +891,58 @@ export default {
                     group: $__("Notes"),
                     label: $__("Estimated delivery date"),
                     value: "",
-                    hideIn: ["List", "Show"],
+                    hideIn: ["List", "Show", "Search"],
                 },
                 {
                     name: "status",
-                    type: "text",
-                    group: $__("General information"),
+                    type: componentToDisplay === "Search" ? "select" : "text",
+                    group:
+                        componentToDisplay == "Search"
+                            ? $__("Order information")
+                            : $__("General information"),
                     label: $__("Status"),
                     format: status => orderlineStatuses.value[status],
-                    defaultValue: "new",
+                    defaultValue:
+                        componentToDisplay === "Search" ? null : "new",
+                    selectLabel: "label",
+                    requiredKey: "status",
+                    options: Object.keys(orderlineStatuses.value).map(
+                        status => {
+                            return {
+                                label: orderlineStatuses.value[status],
+                                status,
+                            };
+                        }
+                    ),
                     hideIn: ["List", "Form"],
                 },
                 {
                     name: "created_date",
-                    type: "date",
-                    group: $__("General information"),
-                    label: $__("Created on"),
+                    type:
+                        componentToDisplay === "Search"
+                            ? "indented_subfields"
+                            : "date",
+                    group:
+                        componentToDisplay !== "Search"
+                            ? $__("General information")
+                            : $__("Order information"),
+                    label:
+                        componentToDisplay !== "Search"
+                            ? $__("Created on")
+                            : $__("Created date"),
                     format: format_date,
+                    subFields: [
+                        {
+                            name: "created_date_start",
+                            type: "date",
+                            label: $__("Between"),
+                        },
+                        {
+                            name: "created_date_end",
+                            type: "date",
+                            label: $__("And"),
+                        },
+                    ],
                     hideIn: ["List", "Form"],
                 },
                 {
@@ -837,7 +951,7 @@ export default {
                     group: $__("General information"),
                     label: $__("Last modified"),
                     format: format_date,
-                    hideIn: ["List", "Form"],
+                    hideIn: ["List", "Form", "Search"],
                 },
             ],
         });
@@ -1041,6 +1155,10 @@ export default {
             return handleAPIFormSubmission(orderline, orderline_id);
         };
 
+        const handleResourceSearch = (e, searchParams) => {
+            e.preventDefault();
+        };
+
         const navigationOnFormSaveAdditionalOptions = resource => {
             return [
                 {
@@ -1059,6 +1177,7 @@ export default {
             tableOptions,
             onFormSave,
             navigationOnFormSaveAdditionalOptions,
+            handleResourceSearch,
         };
     },
     components: { BaseResource },
