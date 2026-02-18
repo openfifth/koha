@@ -604,6 +604,12 @@ export function useBaseResource(resourceConfig) {
                     acc[attr.name] = [];
                     return acc;
                 }
+                if (attr.type === "indented_subfields") {
+                    attr.subFields.forEach(sf => {
+                        acc[sf.name] = null;
+                    });
+                    return acc;
+                }
                 acc[attr.name] = null;
                 return acc;
             }, {});
