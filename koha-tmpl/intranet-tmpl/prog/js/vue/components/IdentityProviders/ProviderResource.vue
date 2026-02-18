@@ -1,44 +1,16 @@
 <template>
     <div v-if="!initialized">{{ $__("Loading") }}</div>
-    <template v-else-if="routeAction === 'show'">
-        <h2 v-if="providerDescription">{{ providerDescription }}</h2>
-        <TabsWrapper
-            :tabList="[
-                { name: $__('Details') },
-                { name: $__('Field mappings') },
-                { name: $__('Domains') },
-            ]"
-        >
-            <template #tabContent="{ tabGroup }">
-                <template v-if="tabGroup.name === $__('Details')">
-                    <ProviderHostnames
-                        :provider-id="
-                            parseInt($route.params.identity_provider_id)
-                        "
-                    />
-                    <BaseResource
-                        routeAction="show"
-                        :instancedResource="this"
-                    />
-                </template>
-                <MappingResource
-                    v-else-if="tabGroup.name === $__('Field mappings')"
-                    routeAction="list"
-                />
-                <DomainResource v-else routeAction="list" />
-            </template>
-        </TabsWrapper>
-    </template>
+    <ProviderWorkspace
+        v-else-if="routeAction === 'show' || routeAction === 'edit'"
+        :provider-id="parseInt($route.params.identity_provider_id)"
+    />
     <BaseResource v-else :routeAction="routeAction" :instancedResource="this" />
 </template>
 
 <script>
 import { ref, onMounted, reactive, watch } from "vue";
 import BaseResource from "./../BaseResource.vue";
-import TabsWrapper from "./../TabsWrapper.vue";
-import MappingResource from "./MappingResource.vue";
-import DomainResource from "./DomainResource.vue";
-import ProviderHostnames from "./ProviderHostnames.vue";
+import ProviderWorkspace from "./ProviderWorkspace.vue";
 import { useBaseResource } from "../../composables/base-resource.js";
 import { APIClient } from "../../fetch/api-client.js";
 import { $__ } from "@koha-vue/i18n";
@@ -182,10 +154,7 @@ export default {
     name: "ProviderResource",
     components: {
         BaseResource,
-        TabsWrapper,
-        MappingResource,
-        DomainResource,
-        ProviderHostnames,
+        ProviderWorkspace,
     },
     props: {
         routeAction: String,
@@ -193,7 +162,6 @@ export default {
     emits: ["select-resource"],
     setup(props) {
         const initialized = ref(false);
-        const providerDescription = ref(null);
 
         // Tracks the currently selected/loaded protocol so config field groups
         // can be shown or hidden reactively via hideIn closures.
@@ -295,7 +263,6 @@ export default {
         // and show views can bind to them individually.
         const afterResourceFetch = (componentData, resource) => {
             selectedProtocol.value = resource.protocol || null;
-            providerDescription.value = resource.description || null;
             const config = resource.config || {};
             const fields = PROTOCOL_CONFIG_FIELDS[resource.protocol] || [];
             fields.forEach(field => {
@@ -415,7 +382,6 @@ export default {
         return {
             ...baseResource,
             initialized,
-            providerDescription,
             PROTOCOL_CONFIG_FIELDS,
             tableOptions,
             onFormSave,
