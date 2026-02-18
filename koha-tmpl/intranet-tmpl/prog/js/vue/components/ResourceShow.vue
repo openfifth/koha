@@ -54,7 +54,9 @@
         <SplitScreenWrapper
             v-else-if="displayMode == 'splitScreen'"
             :fieldList="fieldList"
-            :splitScreenGroupings="instancedResource.splitScreenGroupings"
+            :splitScreenGroupings="
+                instancedResource.getSplitScreenGroupings('show')
+            "
         >
             <template #splitPane="{ paneFieldList }">
                 <fieldset

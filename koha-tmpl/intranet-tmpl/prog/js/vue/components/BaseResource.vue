@@ -55,6 +55,12 @@
                 />
             </template>
         </ResourceFormSave>
+        <ResourceFormSearch
+            v-if="routeAction === 'search'"
+            :instancedResource="instancedResource"
+            :key="instancedResource.refreshTemplate"
+        >
+        </ResourceFormSearch>
     </div>
 </template>
 
@@ -64,6 +70,7 @@ import ResourceShow from "./ResourceShow.vue";
 import ResourceFormSave from "./ResourceFormSave.vue";
 import ResourceList from "./ResourceList.vue";
 import Toolbar from "./Toolbar.vue";
+import ResourceFormSearch from "./ResourceFormSearch.vue";
 
 export default {
     props: {
@@ -76,6 +83,7 @@ export default {
         ResourceFormSave,
         ResourceList,
         Toolbar,
+        ResourceFormSearch,
     },
     setup(props) {
         return {

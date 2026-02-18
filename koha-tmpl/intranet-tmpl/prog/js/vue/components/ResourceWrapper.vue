@@ -30,6 +30,8 @@ export default {
                 return { ...routeProps, routeAction: "edit" };
             } else if (routeName.includes("Add")) {
                 return { ...routeProps, routeAction: "add" };
+            } else if (routeName.includes("Search")) {
+                return { ...routeProps, routeAction: "search" };
             } else {
                 return { ...routeProps, routeAction: "list" };
             }

@@ -676,6 +676,23 @@ export function useBaseResource(resourceConfig) {
     };
 
     /**
+     * Identify the groupings for the fields in a split screen view
+     * If there is one common groupings for all components then it will default to that
+     * If a component is provided and a matching config is found then that will be returned instead
+     *
+     * @param {String} component - The component view the fields will be displayed in
+     * @return {Array} splitScreenGroupings - The array of groupings for that specific component
+     */
+    const getSplitScreenGroupings = component => {
+        const { splitScreenGroupings } = resourceConfig;
+
+        if (Array.isArray(splitScreenGroupings)) {
+            return splitScreenGroupings;
+        }
+        return splitScreenGroupings[component];
+    };
+
+    /**
      * Initializes the component by populating resource attributes
      * with their respective authorised values. This ensures that
      * any select or relationship attributes have the correct options
@@ -726,5 +743,6 @@ export function useBaseResource(resourceConfig) {
         route,
         router,
         i18n,
+        getSplitScreenGroupings,
     };
 }
