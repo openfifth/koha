@@ -3,18 +3,18 @@ type: object
 properties:
   identity_provider_hostname_id:
     type: integer
-    description: Internally assigned identifier for this hostname entry
+    description: Internally assigned identifier for this hostname-provider association
     readOnly: true
   hostname:
-    description: Server hostname (matches SERVER_NAME) used for automatic provider selection
+    description: Server hostname (matches SERVER_NAME) that surfaces this identity provider
     type: string
   identity_provider_id:
-    description: Identity provider associated with this hostname, null if unassigned
+    description: Identity provider associated with this hostname
     type: integer
-    x-nullable: true
   is_enabled:
-    description: Whether this hostname is active for the assigned provider
+    description: Whether this hostname is active for this provider
     type: boolean
 additionalProperties: false
 required:
   - hostname
+  - identity_provider_id

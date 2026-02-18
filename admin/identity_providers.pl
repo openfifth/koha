@@ -21,8 +21,9 @@ use Modern::Perl;
 
 use CGI qw ( -utf8 );
 
-use C4::Auth   qw( get_template_and_user );
-use C4::Output qw( output_html_with_http_headers );
+use C4::Auth    qw( get_template_and_user );
+use C4::Context qw();
+use C4::Output  qw( output_html_with_http_headers );
 
 use Koha::Libraries;
 use Koha::Patron::Categories;
@@ -55,10 +56,19 @@ my @libraries_map = map { { value => $_->branchcode, label => $_->branchname } }
 my @categories_map = map { { value => $_->categorycode, label => $_->description } }
     Koha::Patron::Categories->search( {}, { order_by => 'description' } )->as_list;
 
+my @idp_default_hostnames;
+for my $pref (qw( OPACBaseURL staffClientBaseURL )) {
+    my $url = C4::Context->preference($pref);
+    next unless $url;
+    my ($hostname) = $url =~ m|^https?://([^/:?#]+)|;
+    push @idp_default_hostnames, $hostname if $hostname;
+}
+
 $template->param(
-    borrower_columns => \@borrower_columns,
-    libraries_map    => \@libraries_map,
-    categories_map   => \@categories_map,
+    borrower_columns      => \@borrower_columns,
+    libraries_map         => \@libraries_map,
+    categories_map        => \@categories_map,
+    idp_default_hostnames => \@idp_default_hostnames,
 );
 
 output_html_with_http_headers $input, $cookie, $template->output;

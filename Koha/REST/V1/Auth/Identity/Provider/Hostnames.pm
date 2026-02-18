@@ -32,9 +32,9 @@ use Try::Tiny;
 Koha::REST::V1::Auth::Identity::Provider::Hostnames - Controller library for handling
 identity provider hostname routes.
 
-Hostnames are top-level entities in a global pool. Each hostname is unique in the
-system and may be assigned to at most one identity provider at a time via the
-nullable identity_provider_id FK. The unique constraint is on hostname alone.
+Each row is a many-to-many association between a hostname string and an identity
+provider. The same hostname may be linked to multiple providers simultaneously.
+The unique constraint is on (hostname, identity_provider_id).
 
 =head2 Operations
 

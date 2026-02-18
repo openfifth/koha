@@ -4,198 +4,42 @@
         <p class="text-muted">
             {{
                 $__(
-                    "When a user accesses Koha via one of these hostnames, they will be directed to the assigned identity provider. A hostname can be assigned to one provider at a time."
+                    "Koha will surface this provider on login pages served from the linked hostnames. A hostname may be linked to multiple providers."
                 )
             }}
         </p>
 
-        <form class="mb-3" @submit.prevent="addHostname">
-            <div class="input-group">
-                <input
-                    v-model="newHostnameValue"
-                    type="text"
-                    class="form-control"
-                    :placeholder="$__('e.g. opac.library.org')"
-                    :aria-label="$__('New hostname')"
-                />
-                <button
-                    type="submit"
-                    class="btn btn-primary"
-                    :disabled="!newHostnameValue.trim()"
-                >
-                    <i class="fa fa-plus"></i>
-                    {{ $__("Add hostname") }}
-                </button>
-            </div>
-        </form>
-
         <div v-if="loading" class="loading">{{ $__("Loading...") }}</div>
-
-        <table v-else-if="allHostnames.length" class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>{{ $__("Hostname") }}</th>
-                    <th>{{ $__("Status") }}</th>
-                    <th class="noExport">{{ $__("Actions") }}</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr
-                    v-for="h in sortedHostnames"
-                    :key="h.identity_provider_hostname_id"
-                    :class="rowClass(h)"
-                >
-                    <td>
-                        <span
-                            v-if="editingId !== h.identity_provider_hostname_id"
-                            >{{ h.hostname }}</span
-                        >
-                        <input
-                            v-else
-                            v-model="editHostnameValue"
-                            type="text"
-                            class="form-control form-control-sm"
-                            @keydown.enter.prevent="saveEdit(h)"
-                            @keydown.escape="cancelEdit"
-                        />
-                    </td>
-                    <td>
-                        <span
-                            v-if="isThisProvider(h) && h.is_enabled"
-                            class="badge bg-success"
-                        >
-                            {{ $__("Active") }}
-                        </span>
-                        <span
-                            v-else-if="isThisProvider(h) && !h.is_enabled"
-                            class="badge bg-warning text-dark"
-                        >
-                            {{ $__("Inactive") }}
-                        </span>
-                        <span
-                            v-else-if="!h.identity_provider_id"
-                            class="badge bg-secondary"
-                        >
-                            {{ $__("Available") }}
-                        </span>
-                        <span v-else class="badge bg-info text-dark">
-                            {{
-                                $__("Used by %s").replace(
-                                    "%s",
-                                    providerName(h.identity_provider_id)
-                                )
-                            }}
-                        </span>
-                    </td>
-                    <td class="noExport">
-                        <!-- Editing state -->
-                        <template
-                            v-if="editingId === h.identity_provider_hostname_id"
-                        >
-                            <button
-                                class="btn btn-xs btn-primary"
-                                @click="saveEdit(h)"
-                            >
-                                {{ $__("Save") }}
-                            </button>
-                            <button
-                                class="btn btn-xs btn-default"
-                                @click="cancelEdit"
-                            >
-                                {{ $__("Cancel") }}
-                            </button>
-                        </template>
-
-                        <!-- This provider's hostname -->
-                        <template v-else-if="isThisProvider(h)">
-                            <button
-                                class="btn btn-xs btn-default"
-                                @click="startEdit(h)"
-                            >
-                                <i class="fa fa-pencil"></i>
-                                {{ $__("Edit") }}
-                            </button>
-                            <button
-                                class="btn btn-xs btn-default"
-                                @click="toggleEnabled(h)"
-                            >
-                                <i
-                                    :class="
-                                        h.is_enabled
-                                            ? 'fa fa-toggle-on'
-                                            : 'fa fa-toggle-off'
-                                    "
-                                ></i>
-                                {{
-                                    h.is_enabled
-                                        ? $__("Disable")
-                                        : $__("Enable")
-                                }}
-                            </button>
-                            <button
-                                class="btn btn-xs btn-default"
-                                @click="unassign(h)"
-                            >
-                                {{ $__("Unassign") }}
-                            </button>
-                            <button
-                                class="btn btn-xs btn-danger"
-                                @click="deleteHostname(h)"
-                            >
-                                <i class="fa fa-trash"></i>
-                                {{ $__("Delete") }}
-                            </button>
-                        </template>
-
-                        <!-- Available (unassigned) hostname -->
-                        <template v-else-if="!h.identity_provider_id">
-                            <button
-                                class="btn btn-xs btn-default"
-                                @click="startEdit(h)"
-                            >
-                                <i class="fa fa-pencil"></i>
-                                {{ $__("Edit") }}
-                            </button>
-                            <button
-                                class="btn btn-xs btn-success"
-                                @click="assign(h)"
-                            >
-                                <i class="fa fa-link"></i>
-                                {{ $__("Assign to this provider") }}
-                            </button>
-                            <button
-                                class="btn btn-xs btn-danger"
-                                @click="deleteHostname(h)"
-                            >
-                                <i class="fa fa-trash"></i>
-                                {{ $__("Delete") }}
-                            </button>
-                        </template>
-
-                        <!-- Another provider owns this hostname -->
-                        <span v-else class="text-muted">—</span>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-
-        <div v-else-if="!loading" class="alert alert-info" role="alert">
-            {{
-                $__(
-                    "No hostnames are configured yet. Add one above to enable automatic provider selection based on the server hostname."
-                )
-            }}
-        </div>
+        <template v-else>
+            <button class="btn btn-default mb-2" @click="openAddModal">
+                <i class="fa fa-plus"></i>
+                {{ $__("Add hostname") }}
+            </button>
+            <KohaTable
+                :key="tableKey"
+                :data="virtualRows"
+                :columns="columns"
+                :actions="tableActions"
+                :options="tableOptions"
+                @link="onLink"
+                @edit="onEdit"
+                @enable="onEnable"
+                @disable="onDisable"
+                @remove="onRemove"
+            />
+        </template>
     </div>
 </template>
 
 <script>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, inject, onMounted } from "vue";
+import KohaTable from "../KohaTable.vue";
 import { APIClient } from "../../fetch/api-client.js";
 import { $__ } from "@koha-vue/i18n";
 
 export default {
     name: "ProviderHostnames",
+    components: { KohaTable },
     props: {
         providerId: {
             type: Number,
@@ -203,12 +47,15 @@ export default {
         },
     },
     setup(props) {
-        const allHostnames = ref([]);
+        const mainStore = inject("mainStore");
+        const { setConfirmationDialog, setMessage } = mainStore;
+
+        const allRows = ref([]);
         const providers = ref([]);
         const loading = ref(true);
-        const newHostnameValue = ref("");
-        const editingId = ref(null);
-        const editHostnameValue = ref("");
+        const tableKey = ref(0);
+
+        const defaultHostnames = window.idp_default_hostnames || [];
 
         const fetchData = async () => {
             loading.value = true;
@@ -217,8 +64,9 @@ export default {
                     APIClient.identity_providers.hostnames.getAll(),
                     APIClient.identity_providers.providers.getAll(),
                 ]);
-                allHostnames.value = hostnameList;
+                allRows.value = hostnameList;
                 providers.value = providerList;
+                tableKey.value++;
             } catch (e) {
                 // errors surfaced by httpClient
             } finally {
@@ -226,153 +74,277 @@ export default {
             }
         };
 
-        const isThisProvider = h => h.identity_provider_id === props.providerId;
-
-        const providerName = id => {
+        const providerDescription = id => {
             const p = providers.value.find(p => p.identity_provider_id === id);
             return p ? p.description : `#${id}`;
         };
 
-        // Sort: this provider's entries first (active, then inactive),
-        // then available (unassigned), then other providers' entries
-        const sortedHostnames = computed(() =>
-            [...allHostnames.value].sort((a, b) => {
-                const score = h => {
-                    if (isThisProvider(h)) return h.is_enabled ? 0 : 1;
-                    if (!h.identity_provider_id) return 2;
-                    return 3;
-                };
-                const d = score(a) - score(b);
-                return d !== 0 ? d : a.hostname.localeCompare(b.hostname);
-            })
-        );
+        // Build one virtual row per unique hostname string.
+        // Each virtual row holds this provider's association (if any) plus a
+        // list of other providers that also use the same hostname.
+        // Default hostnames (from OPACBaseURL / staffClientBaseURL) are always
+        // shown even when no database rows exist for them yet.
+        const virtualRows = computed(() => {
+            const byHostname = {};
 
-        const rowClass = h => {
-            if (isThisProvider(h))
-                return h.is_enabled ? "table-success" : "table-warning";
-            return "";
-        };
-
-        const addHostname = async () => {
-            const hostname = newHostnameValue.value.trim();
-            if (!hostname) return;
-            try {
-                await APIClient.identity_providers.hostnames.create({
+            defaultHostnames.forEach(hostname => {
+                byHostname[hostname] = {
                     hostname,
-                    identity_provider_id: props.providerId,
-                    is_enabled: true,
-                });
-                newHostnameValue.value = "";
-                await fetchData();
-            } catch (e) {}
+                    hostname_id: null,
+                    is_linked: false,
+                    is_enabled: false,
+                    other_providers: [],
+                };
+            });
+
+            allRows.value.forEach(row => {
+                if (!byHostname[row.hostname]) {
+                    byHostname[row.hostname] = {
+                        hostname: row.hostname,
+                        // This provider's association fields (null when not linked)
+                        hostname_id: null,
+                        is_linked: false,
+                        is_enabled: false,
+                        // Other providers that share this hostname
+                        other_providers: [],
+                    };
+                }
+                if (row.identity_provider_id === props.providerId) {
+                    byHostname[row.hostname].hostname_id =
+                        row.identity_provider_hostname_id;
+                    byHostname[row.hostname].is_linked = true;
+                    byHostname[row.hostname].is_enabled = row.is_enabled;
+                } else {
+                    byHostname[row.hostname].other_providers.push(
+                        providerDescription(row.identity_provider_id)
+                    );
+                }
+            });
+
+            return Object.values(byHostname).sort((a, b) => {
+                // Linked (active) first, then linked (inactive), then unlinked
+                if (a.is_linked !== b.is_linked) return a.is_linked ? -1 : 1;
+                if (a.is_linked && a.is_enabled !== b.is_enabled)
+                    return a.is_enabled ? -1 : 1;
+                return a.hostname.localeCompare(b.hostname);
+            });
+        });
+
+        const columns = [
+            {
+                title: $__("Hostname"),
+                data: "hostname",
+                searchable: true,
+                orderable: true,
+            },
+            {
+                title: $__("Status"),
+                data: "is_linked",
+                searchable: false,
+                orderable: false,
+                render: (data, type, row) => {
+                    if (!row.is_linked) return "—";
+                    return row.is_enabled
+                        ? `<span class="badge bg-success">${$__("Active")}</span>`
+                        : `<span class="badge bg-warning text-dark">${$__("Inactive")}</span>`;
+                },
+            },
+            {
+                title: $__("Also used by"),
+                data: "other_providers",
+                searchable: false,
+                orderable: false,
+                render: (data, type, row) => {
+                    if (!row.other_providers.length) return "";
+                    return row.other_providers
+                        .map(
+                            name =>
+                                `<span class="badge bg-info text-dark">${name}</span>`
+                        )
+                        .join(" ");
+                },
+            },
+        ];
+
+        const tableActions = {
+            "-1": [
+                {
+                    link: {
+                        text: $__("Link to this provider"),
+                        icon: "fa fa-link",
+                        should_display: row => !row.is_linked,
+                    },
+                },
+                {
+                    edit: {
+                        text: $__("Edit"),
+                        icon: "fa fa-pencil",
+                        should_display: row => row.is_linked,
+                    },
+                },
+                {
+                    enable: {
+                        text: $__("Enable"),
+                        icon: "fa fa-toggle-off",
+                        should_display: row => row.is_linked && !row.is_enabled,
+                    },
+                },
+                {
+                    disable: {
+                        text: $__("Disable"),
+                        icon: "fa fa-toggle-on",
+                        should_display: row => row.is_linked && row.is_enabled,
+                    },
+                },
+                {
+                    remove: {
+                        text: $__("Remove from this provider"),
+                        icon: "fa fa-unlink",
+                        should_display: row => row.is_linked,
+                    },
+                },
+            ],
         };
 
-        const startEdit = h => {
-            editingId.value = h.identity_provider_hostname_id;
-            editHostnameValue.value = h.hostname;
+        const tableOptions = {
+            paging: false,
+            searching: false,
+            info: false,
         };
 
-        const cancelEdit = () => {
-            editingId.value = null;
-            editHostnameValue.value = "";
-        };
-
-        const saveEdit = async h => {
-            const hostname = editHostnameValue.value.trim();
-            if (!hostname) return;
-            try {
-                await APIClient.identity_providers.hostnames.update(
-                    {
+        const openAddModal = () => {
+            setConfirmationDialog(
+                {
+                    title: $__("Add hostname"),
+                    accept_label: $__("Add"),
+                    cancel_label: $__("Cancel"),
+                    inputs: [
+                        {
+                            name: "hostname",
+                            type: "text",
+                            label: $__("Hostname"),
+                            required: true,
+                            value: "",
+                        },
+                    ],
+                },
+                async (confirmation, inputFields) => {
+                    const hostname = (inputFields.hostname || "").trim();
+                    if (!hostname) return;
+                    await APIClient.identity_providers.hostnames.create({
                         hostname,
-                        identity_provider_id: h.identity_provider_id,
-                        is_enabled: h.is_enabled,
-                    },
-                    h.identity_provider_hostname_id
-                );
-                editingId.value = null;
-                await fetchData();
-            } catch (e) {}
-        };
-
-        const toggleEnabled = async h => {
-            try {
-                await APIClient.identity_providers.hostnames.update(
-                    {
-                        hostname: h.hostname,
-                        identity_provider_id: h.identity_provider_id,
-                        is_enabled: !h.is_enabled,
-                    },
-                    h.identity_provider_hostname_id
-                );
-                await fetchData();
-            } catch (e) {}
-        };
-
-        const assign = async h => {
-            try {
-                await APIClient.identity_providers.hostnames.update(
-                    {
-                        hostname: h.hostname,
                         identity_provider_id: props.providerId,
                         is_enabled: true,
-                    },
-                    h.identity_provider_hostname_id
-                );
-                await fetchData();
-            } catch (e) {}
+                    });
+                    setMessage($__("Hostname added"));
+                    await fetchData();
+                }
+            );
         };
 
-        const unassign = async h => {
-            try {
-                await APIClient.identity_providers.hostnames.update(
-                    {
-                        hostname: h.hostname,
-                        identity_provider_id: null,
-                        is_enabled: false,
-                    },
-                    h.identity_provider_hostname_id
-                );
-                await fetchData();
-            } catch (e) {}
+        // Link an existing hostname (already used by another provider) to this one
+        const onLink = async row => {
+            await APIClient.identity_providers.hostnames.create({
+                hostname: row.hostname,
+                identity_provider_id: props.providerId,
+                is_enabled: true,
+            });
+            setMessage($__("Hostname linked to this provider"));
+            await fetchData();
         };
 
-        const deleteHostname = async h => {
-            if (
-                !confirm(
-                    $__(
-                        "Are you sure you want to delete this hostname? This will remove it from the system entirely."
-                    )
-                )
-            )
-                return;
-            try {
-                await APIClient.identity_providers.hostnames.delete(
-                    h.identity_provider_hostname_id
-                );
-                await fetchData();
-            } catch (e) {}
+        const onEdit = row => {
+            setConfirmationDialog(
+                {
+                    title: $__("Edit hostname"),
+                    accept_label: $__("Save"),
+                    cancel_label: $__("Cancel"),
+                    inputs: [
+                        {
+                            name: "hostname",
+                            type: "text",
+                            label: $__("Hostname"),
+                            required: true,
+                            value: row.hostname,
+                        },
+                    ],
+                },
+                async (confirmation, inputFields) => {
+                    const hostname = (inputFields.hostname || "").trim();
+                    if (!hostname) return;
+                    await APIClient.identity_providers.hostnames.update(
+                        {
+                            hostname,
+                            identity_provider_id: props.providerId,
+                            is_enabled: row.is_enabled,
+                        },
+                        row.hostname_id
+                    );
+                    setMessage($__("Hostname updated"));
+                    await fetchData();
+                }
+            );
+        };
+
+        const onEnable = async row => {
+            await APIClient.identity_providers.hostnames.update(
+                {
+                    hostname: row.hostname,
+                    identity_provider_id: props.providerId,
+                    is_enabled: true,
+                },
+                row.hostname_id
+            );
+            await fetchData();
+        };
+
+        const onDisable = async row => {
+            await APIClient.identity_providers.hostnames.update(
+                {
+                    hostname: row.hostname,
+                    identity_provider_id: props.providerId,
+                    is_enabled: false,
+                },
+                row.hostname_id
+            );
+            await fetchData();
+        };
+
+        const onRemove = row => {
+            setConfirmationDialog(
+                {
+                    title: $__("Remove hostname"),
+                    message: $__(
+                        "Remove '%s' from this provider? Other providers using this hostname will not be affected."
+                    ).replace("%s", row.hostname),
+                    accept_label: $__("Yes, remove"),
+                    cancel_label: $__("Cancel"),
+                },
+                async () => {
+                    await APIClient.identity_providers.hostnames.delete(
+                        row.hostname_id
+                    );
+                    setMessage($__("Hostname removed from this provider"));
+                    await fetchData();
+                }
+            );
         };
 
         onMounted(fetchData);
 
         return {
-            allHostnames,
             loading,
-            newHostnameValue,
-            editingId,
-            editHostnameValue,
-            sortedHostnames,
-            isThisProvider,
-            providerName,
-            rowClass,
-            addHostname,
-            startEdit,
-            cancelEdit,
-            saveEdit,
-            toggleEnabled,
-            assign,
-            unassign,
-            deleteHostname,
+            tableKey,
+            virtualRows,
+            columns,
+            tableActions,
+            tableOptions,
+            openAddModal,
+            onLink,
+            onEdit,
+            onEnable,
+            onDisable,
+            onRemove,
         };
     },
 };
