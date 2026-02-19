@@ -251,6 +251,63 @@ export default {
             }))
         );
 
+        const borrowerColumnsArray = (window.borrower_columns || []).map(
+            col => ({ value: col.value, label: col.label })
+        );
+
+        const mappingsAttr = {
+            name: "mappings",
+            type: "relationshipWidget",
+            label: __("Attribute Mappings"),
+            group: "Attribute Mappings",
+            hideIn: ["List"],
+            componentProps: {
+                resourceRelationships: { resourceProperty: "mappings" },
+                displayMode: { type: "string", value: "table" },
+                relationshipI18n: {
+                    noneCreatedYetMessage: __("No attribute mappings defined."),
+                    addNewMessage: __("Add mapping"),
+                    removeThisMessage: __("Remove"),
+                },
+                newRelationshipDefaultAttrs: {
+                    type: "object",
+                    value: {
+                        provider_field: "",
+                        koha_field: borrowerColumnsArray[0]?.value || "",
+                        default_content: "",
+                        is_matchpoint: false,
+                    },
+                },
+            },
+            relationshipFields: [
+                {
+                    name: "provider_field",
+                    type: "text",
+                    label: __("IdP field"),
+                    placeholder: __("e.g. given_name"),
+                },
+                {
+                    name: "koha_field",
+                    required: true,
+                    type: "select",
+                    label: __("Koha field"),
+                    options: borrowerColumnsArray,
+                    requiredKey: "value",
+                    selectLabel: "label",
+                },
+                {
+                    name: "is_matchpoint",
+                    type: "boolean",
+                    label: __("Matchpoint"),
+                },
+                {
+                    name: "default_content",
+                    type: "text",
+                    label: __("Default value"),
+                },
+            ],
+        };
+
         const hostnameAttr = {
             name: "hostnames",
             type: "splitListWidget",
@@ -358,6 +415,7 @@ export default {
             protocolPlaceholderAttr,
             ...configResourceAttrs,
             hostnameAttr,
+            mappingsAttr,
         ];
 
         // Unpack the JSON config blob into flat _config_* fields so the form
@@ -372,6 +430,7 @@ export default {
                         ? (config[field.name] ?? false)
                         : (config[field.name] ?? "");
             });
+            if (!resource.mappings) resource.mappings = [];
         };
 
         const baseResource = useBaseResource({
@@ -464,6 +523,13 @@ export default {
             );
             delete provider.hostnames;
 
+            // Mappings are managed separately via the mappings API.
+            // Only items with a koha_field are saved.
+            const mappingsFromForm = (provider.mappings || []).filter(
+                m => m.koha_field
+            );
+            delete provider.mappings;
+
             delete provider.identity_provider_id;
 
             try {
@@ -488,6 +554,19 @@ export default {
                             force_sso_opac: h.force_sso_opac ?? false,
                             force_sso_staff: h.force_sso_staff ?? false,
                         });
+                    }
+
+                    // Create each attribute mapping
+                    for (const m of mappingsFromForm) {
+                        await APIClient.identity_providers.mappings.create(
+                            newId,
+                            {
+                                provider_field: m.provider_field || null,
+                                koha_field: m.koha_field,
+                                default_content: m.default_content || null,
+                                is_matchpoint: m.is_matchpoint || false,
+                            }
+                        );
                     }
 
                     baseResource.setMessage($__("Identity provider created"));

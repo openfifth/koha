@@ -1,5 +1,9 @@
 <template>
-    <fieldset class="rows" :id="`${name + '_' + 'relationship'}`">
+    <fieldset
+        v-if="displayMode !== 'table'"
+        class="rows"
+        :id="`${name + '_' + 'relationship'}`"
+    >
         <legend v-if="title">{{ title }}</legend>
         <fieldset
             :id="`${name + '_' + counter}`"
@@ -39,6 +43,61 @@
             {{ relationshipI18n.noneCreatedYetMessage }}
         </span>
     </fieldset>
+    <div v-else>
+        <table class="table table-bordered table-sm">
+            <thead class="table-light">
+                <tr>
+                    <th v-for="field in relationshipFields" :key="field.name">
+                        {{ field.label }}
+                    </th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr
+                    v-for="(item, counter) in resourceRelationships"
+                    :key="counter"
+                >
+                    <td v-for="field in relationshipFields" :key="field.name">
+                        <FormElement
+                            :resource="item"
+                            :attr="field"
+                            :index="counter"
+                        />
+                    </td>
+                    <td class="text-center">
+                        <button
+                            type="button"
+                            class="btn btn-danger btn-sm"
+                            @click="deleteResourceRelationship(counter)"
+                        >
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                <tr
+                    v-if="
+                        !resourceRelationships ||
+                        resourceRelationships.length === 0
+                    "
+                >
+                    <td
+                        :colspan="relationshipFields.length + 1"
+                        class="text-muted text-center"
+                    >
+                        {{ relationshipI18n.noneCreatedYetMessage }}
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <button
+            type="button"
+            class="btn btn-default btn-sm mt-2"
+            @click="addResourceRelationship"
+        >
+            <i class="fa fa-plus"></i> {{ relationshipI18n.addNewMessage }}
+        </button>
+    </div>
 </template>
 
 <script>
@@ -56,11 +115,13 @@ export default {
         provide("resourceRelationships", props.resourceRelationships);
 
         const addResourceRelationship = () => {
+            if (!props.resourceRelationships) return;
             props.resourceRelationships.push({
                 ...props.newRelationshipDefaultAttrs,
             });
         };
         const deleteResourceRelationship = counter => {
+            if (!props.resourceRelationships) return;
             props.resourceRelationships.splice(counter, 1);
         };
         const getSelectOptions = filters => {
@@ -114,6 +175,10 @@ export default {
         filters: Object,
         fetchOptions: Boolean,
         name: String,
+        displayMode: {
+            type: String,
+            default: "stacked",
+        },
     },
     components: {
         FormElement,
