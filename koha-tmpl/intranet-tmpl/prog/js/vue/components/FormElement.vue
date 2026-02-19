@@ -172,6 +172,8 @@
             :is="requiredComponent"
             :title="attr.group ? null : attr.label"
             :name="attr.name"
+            :apiClient="attr.apiClient"
+            :transformItem="attr.transformItem"
             v-bind="getComponentProps()"
             v-on="getEventHandlers()"
         ></component>

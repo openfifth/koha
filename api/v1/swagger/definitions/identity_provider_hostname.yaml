@@ -9,8 +9,10 @@ properties:
     description: Server hostname (matches SERVER_NAME) that surfaces this identity provider
     type: string
   identity_provider_id:
-    description: Identity provider associated with this hostname
+    description: Identity provider associated with this hostname. Null for system-default
+      hostnames that have not yet been linked to any provider.
     type: integer
+    x-nullable: true
   is_enabled:
     description: Whether this hostname is active for this provider
     type: boolean
@@ -27,4 +29,3 @@ properties:
 additionalProperties: false
 required:
   - hostname
-  - identity_provider_id

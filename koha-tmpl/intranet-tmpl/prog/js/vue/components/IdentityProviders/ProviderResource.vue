@@ -256,6 +256,18 @@ export default {
             type: "splitListWidget",
             group: "Network & Entry Settings",
             hideIn: ["List"],
+            // The widget fetches all known hostnames (DB records + syspref
+            // defaults) on mount.  Each item is mapped to the form's data
+            // model: the API uses is_enabled but the form field is "mode".
+            apiClient: APIClient.identity_providers.hostnames,
+            transformItem: item => ({
+                hostname: item.hostname,
+                // All candidates start as "not linked" for the new provider;
+                // the user explicitly promotes them to optional/active.
+                mode: "not_applicable",
+                force_sso_opac: false,
+                force_sso_staff: false,
+            }),
             componentProps: {
                 resourceRelationships: {
                     resourceProperty: "hostnames",
@@ -417,38 +429,7 @@ export default {
             }
         );
 
-        onMounted(async () => {
-            // Pre-populate the hostname list for the Add form by combining
-            // the system's default hostnames (from OPACBaseURL /
-            // staffClientBaseURL) with all hostnames already in the database.
-            if (props.routeAction === "add") {
-                const seen = new Set();
-                const items = [];
-
-                const pushHostname = hostname => {
-                    if (!hostname || seen.has(hostname)) return;
-                    seen.add(hostname);
-                    items.push({
-                        hostname,
-                        mode: "not_applicable",
-                        force_sso_opac: false,
-                        force_sso_staff: false,
-                    });
-                };
-
-                (window.idp_default_hostnames || []).forEach(pushHostname);
-
-                try {
-                    const existing =
-                        await APIClient.identity_providers.hostnames.getAll();
-                    (existing || []).forEach(h => pushHostname(h.hostname));
-                } catch {
-                    // API unavailable; defaults still shown
-                }
-
-                items.forEach(item => formStateObj.hostnames.push(item));
-            }
-
+        onMounted(() => {
             initialized.value = true;
         });
 

@@ -127,7 +127,7 @@
 </template>
 
 <script>
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, provide } from "vue";
 import { $__ } from "@koha-vue/i18n";
 import FormElement from "@koha-vue/components/FormElement.vue";
 
@@ -153,15 +153,52 @@ export default {
         },
         name: String,
         title: String,
+        // Optional API client whose getAll(filters) populates the left list on
+        // mount.  Pass this instead of pre-populating resourceRelationships in
+        // the parent; the widget fetches and owns that initial load.
+        apiClient: {
+            type: Object,
+            default: null,
+        },
+        // Query params forwarded verbatim to apiClient.getAll().  Resolved by
+        // base-element.js getComponentProps() before reaching this component.
+        filters: {
+            type: Object,
+            default: null,
+        },
+        // Optional mapping function applied to each item returned by
+        // apiClient.getAll() before it is pushed into resourceRelationships.
+        // Use this to reshape API response objects into the form data model
+        // (e.g. converting is_enabled → mode).  Defaults to identity.
+        transformItem: {
+            type: Function,
+            default: null,
+        },
     },
     setup(props) {
+        // Expose the relationships array to any deeply-nested component that
+        // needs to read or mutate siblings (e.g. VendorContacts radio logic).
+        provide("resourceRelationships", props.resourceRelationships);
+
         const selectedIndex = ref(null);
 
         // Parallel array tracking which items have been modified in this session.
         // Kept in sync with resourceRelationships via addItem / removeItem.
         const dirtyFlags = ref([]);
 
-        onMounted(() => {
+        onMounted(async () => {
+            if (props.apiClient) {
+                // Fetch list items from the API, transform them to the form's
+                // data model, then push into the shared reactive array so the
+                // parent's bound state reflects them automatically.
+                const items = await props.apiClient.getAll(
+                    props.filters || undefined
+                );
+                const transform = props.transformItem || (item => item);
+                (items || [])
+                    .map(transform)
+                    .forEach(item => props.resourceRelationships.push(item));
+            }
             dirtyFlags.value = (props.resourceRelationships || []).map(
                 () => false
             );

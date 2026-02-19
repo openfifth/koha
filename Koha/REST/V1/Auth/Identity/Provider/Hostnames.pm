@@ -22,6 +22,7 @@ use Mojo::Base 'Mojolicious::Controller';
 use Koha::Auth::Identity::Provider::Hostname;
 use Koha::Auth::Identity::Provider::Hostnames;
 
+use C4::Context;
 use Koha::Database;
 
 use Scalar::Util qw(blessed);
@@ -49,9 +50,35 @@ sub list {
 
     return try {
         my $hostnames_rs = Koha::Auth::Identity::Provider::Hostnames->new;
+        my $db_results   = $c->objects->search($hostnames_rs);
+
+        # Build a set of hostnames already present in the DB so we can
+        # avoid duplicating them in the synthetic defaults below.
+        my %known = map { $_->{hostname} => 1 } @$db_results;
+
+        # Append a synthetic (not-yet-persisted) entry for each system
+        # default hostname derived from OPACBaseURL / staffClientBaseURL
+        # that is not already represented in the database.  These entries
+        # have null IDs so callers can distinguish them from real records.
+        my @synthetic;
+        for my $pref (qw( OPACBaseURL staffClientBaseURL )) {
+            my $url = C4::Context->preference($pref);
+            next unless $url;
+            my ($hostname) = $url =~ m{^https?://([^/:?\#]+)};
+            next unless $hostname && !$known{$hostname}++;
+            push @synthetic, {
+                identity_provider_hostname_id => undef,
+                hostname                      => $hostname,
+                identity_provider_id          => undef,
+                is_enabled                    => undef,
+                force_sso_opac                => undef,
+                force_sso_staff               => undef,
+            };
+        }
+
         return $c->render(
             status  => 200,
-            openapi => $c->objects->search($hostnames_rs)
+            openapi => [ @$db_results, @synthetic ],
         );
     } catch {
         $c->unhandled_exception($_);
