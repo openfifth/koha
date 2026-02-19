@@ -1,4 +1,5 @@
 [% USE raw %]
+[% USE To %]
 [% USE Asset %]
 [% USE Koha %]
 [% USE KohaDates %]
@@ -119,16 +120,39 @@
                         </div>
                     [% END %]
 
-                    [% IF ( borrower.warndeparture ) %]
+                    [% IF ( borrower.warndeparture) %]
                         <div class="alert alert-warning" id="warndeparture">
-                            <strong>Please note:</strong><span> Your library card will expire on <span id="warndeparture_date">[% borrower.warndeparture | $KohaDates %]</span>. Please contact the library for more information.</span>
+                            <strong>Please note:</strong
+                            ><span>
+                                Your library card will expire on <span id="warndeparture_date">[% borrower.warndeparture | $KohaDates %]</span>.
+                                [% IF ( !self_renewal_available) %]Please contact the library for more information.[% END %]</span
+                            >
                             [% IF ( borrower.returnbeforeexpiry ) %]<span id="warndeparture_returnbeforeexpiry"> Also note that you must return all checked out items before your library card expires.</span>[% END %]
                         </div>
                     [% END %]
-
                     [% IF ( borrower.warnexpired ) %]
                         <div class="alert alert-warning" id="warnexpired">
                             <strong>Please note: </strong><span>Your account has expired as of [% borrower.warnexpired | $KohaDates %]. Please contact the library if you wish to renew your account.</span>
+                        </div>
+                    [% END %]
+                    [% IF ( self_renewal_available && !self_renewal_alert ) %]
+                        <div class="alert alert-info" id="self_renewal_available">
+                            [% IF ( self_renewal_available ) %]
+                                <span> You are eligible for self-renewal. <a href="#patronSelfRenewal" data-bs-toggle="modal">Please click here to renew your account.</a></span>
+                            [% END %]
+                        </div>
+                    [% END %]
+                    [% IF ( self_renewal_success ) %]
+                        <div class="alert alert-success" id="self_renewal_success">
+                            <span>Your account has been successfully renewed until [% self_renewal_success | $KohaDates %].</span>
+                            [% IF ( self_renewal_confirmation_sent ) %]
+                                <span>You should receive a confirmation shortly.</span>
+                            [% END %]
+                        </div>
+                    [% END %]
+                    [% IF ( self_renewal_alert ) %]
+                        <div class="alert alert-warning" id="self_renewal_alert">
+                            <span>[% self_renewal_alert | html %]</span>
                         </div>
                     [% END %]
 
@@ -1003,6 +1027,17 @@
 </main>
 <!-- /#main -->
 
+[% IF ( self_renewal_available ) %]
+    <patron-self-renewal patron="[% borrowernumber | html %]"></patron-self-renewal>
+[% END %]
+
+[% SET islands = Asset.js("js/vue/dist/islands.esm.js").match('(src="([^"]+)")').1 %]
+<script src="[% islands | $raw %]" type="module">
+</script>
+<script type="module">
+    import { hydrate } from "[% islands | $raw %]";
+    hydrate();
+</script>
 [%# hold suspend modal form %]
 <div id="suspendHoldModal" class="modal" tabindex="-1" role="dialog" aria-labelledby="suspendModalLabel" aria-hidden="true" data-focus="false">
     <div class="modal-dialog">
