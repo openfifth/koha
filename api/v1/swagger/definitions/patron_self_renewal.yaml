@@ -1,0 +1,23 @@
+---
+type: "object"
+properties:
+  self_renewal_settings:
+    type:
+      - object
+      - "null"
+    description: The object representing the self-renewal settings for the patron's category
+  expiry_date:
+    type:
+      - string
+      - "null"
+    description: The new expiry date on successful self-renewal
+  confirmation_sent:
+    type:
+      - array
+      - "null"
+    description: The method(s) through which confirmation of renewal has been sent
+  patron:
+    type:
+      - object
+    description: The object representing the patron fields from the OPAC form
+additionalProperties: false
