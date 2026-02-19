@@ -504,6 +504,12 @@
                         [%- SET pref_NoIssuesChargeGuarantorsWithGuarantees_link = '<a href="/cgi-bin/koha/admin/preferences.pl?op=search&searchfield=NoIssuesChargeGuarantorsWithGuarantees&ok=Search">NoIssuesChargeGuarantorsWithGuarantees</a>' -%]
                         <div class="hint">If set, this will override the global value set in the [%- pref_NoIssuesChargeGuarantorsWithGuarantees_link | $raw | $KohaSpan -%] system preference.</div>
                     </li>
+                </ol>
+            </fieldset>
+
+            <fieldset class="rows">
+                <legend>Account expiry and self-renewal</legend>
+                <ol>
                     <li>
                         <label for="enforce_expiry_notice">Enforce patron account expiry notice:</label>
                         <select name="enforce_expiry_notice" id="enforce_expiry_notice">
@@ -516,6 +522,59 @@
                             [% END %]
                         </select>
                         <div class="hint">Make the account expiry notice mandatory for all patrons in this category and prevent patrons from opting out in the messaging preferences</div>
+                    </li>
+                    <li>
+                        <label for="self_renewal_enabled">Allow self-renewal:</label>
+                        <select name="self_renewal_enabled" id="self_renewal_enabled">
+                            [% IF category.self_renewal_enabled %]
+                                <option value="1" selected>Yes</option>
+                                <option value="0">No</option>
+                            [% ELSE %]
+                                <option value="1">Yes</option>
+                                <option value="0" selected>No</option>
+                            [% END %]
+                        </select>
+                        <div class="hint">Allow patrons to self renew via the OPAC</div>
+                    </li>
+                    <li>
+                        <label for="self_renewal_availability_start">Self-renewal availability period: </label>
+                        <input type="text" name="self_renewal_availability_start" id="self_renewal_availability_start" value="[% category.self_renewal_availability_start | html %]" size="3" maxlength="5" /> days
+                        [%- SET pre_notifyborrowerdeparture_link = '<a href="/cgi-bin/koha/admin/preferences.pl?op=search&searchfield=NotifyBorrowerDeparture&ok=Search">NotifyBorrowerDeparture</a>' -%]
+                        <div class="hint"
+                            >How long before expiry the self-renewal page will be made available to the patron. If set, this will override the global value set in the [%- pre_notifyborrowerdeparture_link | $raw | $KohaSpan -%] system
+                            preference.</div
+                        >
+                    </li>
+                    <li>
+                        <label for="self_renewal_fines_block">Self-renewal charge limit: </label>
+                        <input type="text" pattern="^\d+(\.\d{2})?$" name="self_renewal_fines_block" id="self_renewal_fines_block" value="[% category.self_renewal_fines_block | $Price on_editing => 1 %]" size="5" maxlength="8" />
+                        [%- SET pref_noissuescharge_link = '<a href="/cgi-bin/koha/admin/preferences.pl?op=search&searchfield=noissuescharge&ok=Search">noissuescharge</a>' -%]
+                        <div class="hint"
+                            >How much can be accrued in charges before self-renewal is blocked for the patron. If set, this will override charge levels set for this category. If these are not set then it overrides the global value set in
+                            the [%- pref_noissuescharge_link | $raw | $KohaSpan -%] system preference.</div
+                        >
+                    </li>
+                    <li>
+                        <label for="self_renewal_information_message">Self-renewal information message: </label>
+                        [% IF (category.self_renewal_information_message) %]
+                            <textarea type="text" name="self_renewal_information_message" id="self_renewal_information_message" cols="40" rows="2">[% category.self_renewal_information_message | html %]</textarea>
+                        [% ELSE %]
+                            <textarea type="text" name="self_renewal_information_message" id="self_renewal_information_message" cols="40" rows="4"></textarea>
+                        [% END %]
+                    </li>
+                    <li>
+                        <label for="self_renewal_failure_message">Self-renewal failure message: </label>
+                        [% IF (category.self_renewal_failure_message) %]
+                            <textarea type="text" name="self_renewal_failure_message" id="self_renewal_failure_message" cols="40" rows="2">[% category.self_renewal_failure_message | html %]</textarea>
+                        [% ELSE %]
+                            [% SET default_message = t("Your self-renewal can't be processed at this time. Please visit your local branch to complete your renewal.") %]
+                            <textarea type="text" name="self_renewal_failure_message" id="self_renewal_failure_message" cols="40" rows="4">[% default_message | html %]</textarea>
+                        [% END %]
+                    </li>
+                    <li>
+                        <label for="self_renewal_if_expired">Self-renewal availability post-expiry: </label>
+                        <input type="text" name="self_renewal_if_expired" id="self_renewal_if_expired" value="[% category.self_renewal_if_expired | html %]" size="3" maxlength="5" /> days
+                        <div class="hint">How long after a patron's account has expired before self-renewal will no longer be available.</div>
                     </li>
                 </ol>
             </fieldset>
