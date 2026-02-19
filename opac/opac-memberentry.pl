@@ -354,22 +354,8 @@ if ( $op eq 'cud-create' ) {
             $borrower_changes{borrowernumber}      = $borrowernumber;
             $borrower_changes{extended_attributes} = to_json($extended_attributes_changes);
 
-            Koha::Patron::Modifications->search( { borrowernumber => $borrowernumber } )->delete;
-
-            $borrower_changes{verification_token} = q{};    # prevent warn Missing value for PK column
-            my $m = Koha::Patron::Modification->new( \%borrower_changes )->store();
-
-            #Automatically approve patron profile changes if set in syspref
-
-            if ( C4::Context->preference('AutoApprovePatronProfileSettings') ) {
-
-                # Need to get the object from database, otherwise it is not complete enough to allow deletion
-                # when approval has been performed.
-                my $tmp_m = Koha::Patron::Modifications->find( { borrowernumber => $borrowernumber } );
-                $tmp_m->approve() if $tmp_m;
-            }
-
             my $patron = Koha::Patrons->find($borrowernumber);
+            $patron->request_modification( \%borrower_changes );
             $template->param( borrower => $patron->unblessed );
         } else {
             my $patron = Koha::Patrons->find($borrowernumber);
@@ -385,9 +371,12 @@ if ( $op eq 'cud-create' ) {
     my $patron   = Koha::Patrons->find($borrowernumber);
     my $borrower = $patron->unblessed;
 
+    my $self_renewal = $cgi->param('self_renewal') || 0;
+
     $template->param(
-        borrower => $borrower,
-        hidden   => GetHiddenFields( $mandatory, 'edit' ),
+        borrower     => $borrower,
+        hidden       => GetHiddenFields( $mandatory, 'edit' ),
+        self_renewal => $self_renewal
     );
 
     if ( C4::Context->preference('OPACpatronimages') ) {
