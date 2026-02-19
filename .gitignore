@@ -13,6 +13,7 @@ koha-tmpl/opac-tmpl/bootstrap/css/print.css
 koha-tmpl/opac-tmpl/bootstrap/css/print-rtl.css
 koha-tmpl/opac-tmpl/bootstrap/css/sco.css
 koha-tmpl/opac-tmpl/bootstrap/css/sco-rtl.css
+koha-tmpl/opac-tmpl/bootstrap/js/vue/dist/
 
 koha-tmpl/intranet-tmpl/prog/css/maps/
 koha-tmpl/intranet-tmpl/prog/css/bookings.css
