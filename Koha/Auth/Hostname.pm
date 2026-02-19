@@ -1,4 +1,4 @@
-package Koha::Auth::Identity::Provider::Hostname;
+package Koha::Auth::Hostname;
 
 # Copyright Koha Community 2026
 #
@@ -21,26 +21,33 @@ use Modern::Perl;
 
 use base qw(Koha::Object);
 
+use C4::Context;
+use Koha::Database;
+
 =head1 NAME
 
-Koha::Auth::Identity::Provider::Hostname - Koha Auth Provider Hostname Object class
+Koha::Auth::Hostname - Koha Auth Hostname Object class
 
 =head1 API
 
 =head2 Class methods
 
-=head3 to_api
+=head3 sync_from_sysprefs
 
-Overrides the default serialization to embed the hostname string from the
-related Hostname record alongside the hostname_id FK.
+Ensures that the hostnames derived from OPACBaseURL and staffClientBaseURL
+are present in the hostnames table. Called lazily before listing hostnames
+via the REST API.
 
 =cut
 
-sub to_api {
-    my ( $self, $params ) = @_;
-    my $data = $self->SUPER::to_api($params);
-    $data->{hostname} = $self->hostname->hostname;
-    return $data;
+sub sync_from_sysprefs {
+    my ($class) = @_;
+    my $schema = Koha::Database->new->schema;
+    for my $pref (qw( OPACBaseURL staffClientBaseURL )) {
+        my $url        = C4::Context->preference($pref)  or next;
+        my ($hostname) = $url =~ m{^https?://([^/:?#]+)} or next;
+        $schema->resultset('Hostname')->find_or_create( { hostname => $hostname } );
+    }
 }
 
 =head2 Internal methods
@@ -50,7 +57,7 @@ sub to_api {
 =cut
 
 sub _type {
-    return 'IdentityProviderHostname';
+    return 'Hostname';
 }
 
 1;

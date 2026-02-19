@@ -1588,3 +1588,86 @@
     x-koha-authorization:
       permissions:
         parameters: manage_identity_providers
+/auth/hostnames:
+  get:
+    x-mojo-to: Auth::Hostnames#list
+    operationId: listHostnames
+    tags:
+      - identity_providers
+    summary: List all known hostnames
+    parameters:
+      - $ref: ../swagger.yaml#/parameters/match
+      - $ref: ../swagger.yaml#/parameters/order_by
+      - $ref: ../swagger.yaml#/parameters/page
+      - $ref: ../swagger.yaml#/parameters/per_page
+      - $ref: ../swagger.yaml#/parameters/q_param
+      - $ref: ../swagger.yaml#/parameters/q_body
+      - $ref: ../swagger.yaml#/parameters/request_id_header
+    produces:
+      - application/json
+    responses:
+      "200":
+        description: A list of hostnames
+        schema:
+          type: array
+          items:
+            $ref: ../swagger.yaml#/definitions/hostname
+      "400":
+        description: |
+          Bad request. Possible `error_code` attribute values:
+
+            * `invalid_query`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: ../swagger.yaml#/definitions/error
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: ../swagger.yaml#/definitions/error
+    x-koha-authorization:
+      permissions:
+        parameters: manage_identity_providers
+"/auth/hostnames/{hostname_id}":
+  get:
+    x-mojo-to: Auth::Hostnames#get
+    operationId: getHostname
+    tags:
+      - identity_providers
+    summary: Get a hostname
+    parameters:
+      - $ref: ../swagger.yaml#/parameters/hostname_id_pp
+    produces:
+      - application/json
+    responses:
+      "200":
+        description: A hostname
+        schema:
+          $ref: ../swagger.yaml#/definitions/hostname
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Object not found
+        schema:
+          $ref: ../swagger.yaml#/definitions/error
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: ../swagger.yaml#/definitions/error
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: ../swagger.yaml#/definitions/error
+    x-koha-authorization:
+      permissions:
+        parameters: manage_identity_providers

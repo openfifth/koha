@@ -22,7 +22,6 @@
         window.borrower_columns = [% To.json(borrower_columns) | $raw %];
         window.libraries_map = [% To.json(libraries_map) | $raw %];
         window.categories_map = [% To.json(categories_map) | $raw %];
-        window.idp_default_hostnames = [% To.json(idp_default_hostnames) | $raw %];
     </script>
     [% Asset.js("js/vue/dist/admin/identity_providers_2.js") | $raw %]
 [% END %]

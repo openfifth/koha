@@ -256,11 +256,12 @@ export default {
             type: "splitListWidget",
             group: "Network & Entry Settings",
             hideIn: ["List"],
-            // The widget fetches all known hostnames (DB records + syspref
-            // defaults) on mount.  Each item is mapped to the form's data
-            // model: the API uses is_enabled but the form field is "mode".
-            apiClient: APIClient.identity_providers.hostnames,
+            // The widget fetches all known hostnames (syspref-synced canonical
+            // list) on mount.  Each item is mapped to the form's data model:
+            // the API uses is_enabled but the form field is "mode".
+            apiClient: APIClient.identity_providers.allHostnames,
             transformItem: item => ({
+                hostname_id: item.hostname_id,
                 hostname: item.hostname,
                 // All candidates start as "not linked" for the new provider;
                 // the user explicitly promotes them to optional/active.
@@ -478,10 +479,10 @@ export default {
                         await baseResource.apiClient.create(provider);
                     const newId = newProvider.identity_provider_id;
 
-                    // Create a hostname record for each linked hostname
+                    // Create a bridge record for each linked hostname
                     for (const h of hostnamesFromForm) {
                         await APIClient.identity_providers.hostnames.create({
-                            hostname: h.hostname,
+                            hostname_id: h.hostname_id,
                             identity_provider_id: newId,
                             is_enabled: h.mode === "active",
                             force_sso_opac: h.force_sso_opac ?? false,

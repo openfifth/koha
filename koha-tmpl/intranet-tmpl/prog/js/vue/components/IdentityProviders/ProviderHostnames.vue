@@ -50,21 +50,23 @@ export default {
         const mainStore = inject("mainStore");
         const { setConfirmationDialog, setMessage } = mainStore;
 
+        const allHostnames = ref([]);
         const allRows = ref([]);
         const providers = ref([]);
         const loading = ref(true);
         const tableKey = ref(0);
 
-        const defaultHostnames = window.idp_default_hostnames || [];
-
         const fetchData = async () => {
             loading.value = true;
             try {
-                const [hostnameList, providerList] = await Promise.all([
-                    APIClient.identity_providers.hostnames.getAll(),
-                    APIClient.identity_providers.providers.getAll(),
-                ]);
-                allRows.value = hostnameList;
+                const [hostnameList, idpHostnameList, providerList] =
+                    await Promise.all([
+                        APIClient.identity_providers.allHostnames.getAll(),
+                        APIClient.identity_providers.hostnames.getAll(),
+                        APIClient.identity_providers.providers.getAll(),
+                    ]);
+                allHostnames.value = hostnameList;
+                allRows.value = idpHostnameList;
                 providers.value = providerList;
                 tableKey.value++;
             } catch (e) {
@@ -82,15 +84,16 @@ export default {
         // Build one virtual row per unique hostname string.
         // Each virtual row holds this provider's association (if any) plus a
         // list of other providers that also use the same hostname.
-        // Default hostnames (from OPACBaseURL / staffClientBaseURL) are always
-        // shown even when no database rows exist for them yet.
+        // All known hostnames (from the canonical hostnames table, which is
+        // lazily synced from OPACBaseURL / staffClientBaseURL) are always shown.
         const virtualRows = computed(() => {
             const byHostname = {};
 
-            defaultHostnames.forEach(hostname => {
-                byHostname[hostname] = {
-                    hostname,
-                    hostname_id: null,
+            // Seed from the canonical hostnames list
+            allHostnames.value.forEach(h => {
+                byHostname[h.hostname] = {
+                    hostname: h.hostname,
+                    hostname_id: h.hostname_id,
                     is_linked: false,
                     is_enabled: false,
                     other_providers: [],
@@ -101,8 +104,9 @@ export default {
                 if (!byHostname[row.hostname]) {
                     byHostname[row.hostname] = {
                         hostname: row.hostname,
+                        hostname_id: row.hostname_id,
                         // This provider's association fields (null when not linked)
-                        hostname_id: null,
+                        bridge_id: null,
                         is_linked: false,
                         is_enabled: false,
                         // Other providers that share this hostname
@@ -110,7 +114,7 @@ export default {
                     };
                 }
                 if (row.identity_provider_id === props.providerId) {
-                    byHostname[row.hostname].hostname_id =
+                    byHostname[row.hostname].bridge_id =
                         row.identity_provider_hostname_id;
                     byHostname[row.hostname].is_linked = true;
                     byHostname[row.hostname].is_enabled = row.is_enabled;
@@ -231,6 +235,8 @@ export default {
                 async (confirmation, inputFields) => {
                     const hostname = (inputFields.hostname || "").trim();
                     if (!hostname) return;
+                    // Pass hostname string; backend will find_or_create the
+                    // canonical hostname record and resolve it to a hostname_id.
                     await APIClient.identity_providers.hostnames.create({
                         hostname,
                         identity_provider_id: props.providerId,
@@ -242,10 +248,10 @@ export default {
             );
         };
 
-        // Link an existing hostname (already used by another provider) to this one
+        // Link an existing hostname (already known to the system) to this provider
         const onLink = async row => {
             await APIClient.identity_providers.hostnames.create({
-                hostname: row.hostname,
+                hostname_id: row.hostname_id,
                 identity_provider_id: props.providerId,
                 is_enabled: true,
             });
@@ -261,24 +267,22 @@ export default {
                     cancel_label: $__("Cancel"),
                     inputs: [
                         {
-                            name: "hostname",
-                            type: "text",
-                            label: $__("Hostname"),
-                            required: true,
-                            value: row.hostname,
+                            name: "is_enabled",
+                            type: "checkbox",
+                            label: $__("Active"),
+                            required: false,
+                            value: row.is_enabled,
                         },
                     ],
                 },
                 async (confirmation, inputFields) => {
-                    const hostname = (inputFields.hostname || "").trim();
-                    if (!hostname) return;
                     await APIClient.identity_providers.hostnames.update(
                         {
-                            hostname,
+                            hostname_id: row.hostname_id,
                             identity_provider_id: props.providerId,
-                            is_enabled: row.is_enabled,
+                            is_enabled: !!inputFields.is_enabled,
                         },
-                        row.hostname_id
+                        row.bridge_id
                     );
                     setMessage($__("Hostname updated"));
                     await fetchData();
@@ -289,11 +293,11 @@ export default {
         const onEnable = async row => {
             await APIClient.identity_providers.hostnames.update(
                 {
-                    hostname: row.hostname,
+                    hostname_id: row.hostname_id,
                     identity_provider_id: props.providerId,
                     is_enabled: true,
                 },
-                row.hostname_id
+                row.bridge_id
             );
             await fetchData();
         };
@@ -301,11 +305,11 @@ export default {
         const onDisable = async row => {
             await APIClient.identity_providers.hostnames.update(
                 {
-                    hostname: row.hostname,
+                    hostname_id: row.hostname_id,
                     identity_provider_id: props.providerId,
                     is_enabled: false,
                 },
-                row.hostname_id
+                row.bridge_id
             );
             await fetchData();
         };
@@ -322,7 +326,7 @@ export default {
                 },
                 async () => {
                     await APIClient.identity_providers.hostnames.delete(
-                        row.hostname_id
+                        row.bridge_id
                     );
                     setMessage($__("Hostname removed from this provider"));
                     await fetchData();

@@ -6,6 +6,9 @@ export class IdentityProvidersAPIClient {
         this.hostnamesHttpClient = new HttpClient({
             baseURL: "/api/v1/auth/identity_provider_hostnames/",
         });
+        this.allHostnamesHttpClient = new HttpClient({
+            baseURL: "/api/v1/auth/hostnames/",
+        });
     }
 
     get providers() {
@@ -107,6 +110,20 @@ export class IdentityProvidersAPIClient {
                 }),
             delete: id =>
                 this.hostnamesHttpClient.delete({
+                    endpoint: id,
+                }),
+        };
+    }
+
+    get allHostnames() {
+        return {
+            getAll: params =>
+                this.allHostnamesHttpClient.getAll({
+                    endpoint: "",
+                    params,
+                }),
+            get: id =>
+                this.allHostnamesHttpClient.get({
                     endpoint: id,
                 }),
         };

@@ -31,13 +31,13 @@ __PACKAGE__->table("identity_provider_hostnames");
 
 unique key, used to identify the hostname entry
 
-=head2 hostname
+=head2 hostname_id
 
-  data_type: 'varchar'
+  data_type: 'integer'
+  is_foreign_key: 1
   is_nullable: 0
-  size: 255
 
-Server hostname (matches SERVER_NAME) used for automatic provider selection
+FK to hostnames table
 
 =head2 identity_provider_id
 
@@ -76,8 +76,8 @@ Force SSO redirect for staff interface users on this hostname
 __PACKAGE__->add_columns(
   "identity_provider_hostname_id",
   { data_type => "integer", is_auto_increment => 1, is_nullable => 0 },
-  "hostname",
-  { data_type => "varchar", is_nullable => 0, size => 255 },
+  "hostname_id",
+  { data_type => "integer", is_foreign_key => 1, is_nullable => 0 },
   "identity_provider_id",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 0 },
   "is_enabled",
@@ -102,11 +102,11 @@ __PACKAGE__->set_primary_key("identity_provider_hostname_id");
 
 =head1 UNIQUE CONSTRAINTS
 
-=head2 C<hostname_provider>
+=head2 C<hostname_id_provider>
 
 =over 4
 
-=item * L</hostname>
+=item * L</hostname_id>
 
 =item * L</identity_provider_id>
 
@@ -114,9 +114,24 @@ __PACKAGE__->set_primary_key("identity_provider_hostname_id");
 
 =cut
 
-__PACKAGE__->add_unique_constraint("hostname_provider", ["hostname", "identity_provider_id"]);
+__PACKAGE__->add_unique_constraint("hostname_id_provider", ["hostname_id", "identity_provider_id"]);
 
 =head1 RELATIONS
+
+=head2 hostname
+
+Type: belongs_to
+
+Related object: L<Koha::Schema::Result::Hostname>
+
+=cut
+
+__PACKAGE__->belongs_to(
+  "hostname",
+  "Koha::Schema::Result::Hostname",
+  { hostname_id => "hostname_id" },
+  { is_deferrable => 1, on_delete => "CASCADE", on_update => "RESTRICT" },
+);
 
 =head2 identity_provider
 
@@ -134,7 +149,7 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07049 @ 2026-02-17 00:00:00
+# Created by DBIx::Class::Schema::Loader v0.07049 @ 2026-02-19 00:00:00
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:placeholder
 
 __PACKAGE__->add_columns(

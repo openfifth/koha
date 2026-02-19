@@ -1,4 +1,4 @@
-package Koha::Auth::Identity::Provider::Hostname;
+package Koha::Auth::Hostnames;
 
 # Copyright Koha Community 2026
 #
@@ -19,29 +19,15 @@ package Koha::Auth::Identity::Provider::Hostname;
 
 use Modern::Perl;
 
-use base qw(Koha::Object);
+use base qw(Koha::Objects);
+
+use Koha::Auth::Hostname;
 
 =head1 NAME
 
-Koha::Auth::Identity::Provider::Hostname - Koha Auth Provider Hostname Object class
+Koha::Auth::Hostnames - Koha Auth Hostnames Object set class
 
 =head1 API
-
-=head2 Class methods
-
-=head3 to_api
-
-Overrides the default serialization to embed the hostname string from the
-related Hostname record alongside the hostname_id FK.
-
-=cut
-
-sub to_api {
-    my ( $self, $params ) = @_;
-    my $data = $self->SUPER::to_api($params);
-    $data->{hostname} = $self->hostname->hostname;
-    return $data;
-}
 
 =head2 Internal methods
 
@@ -50,7 +36,15 @@ sub to_api {
 =cut
 
 sub _type {
-    return 'IdentityProviderHostname';
+    return 'Hostname';
+}
+
+=head3 object_class
+
+=cut
+
+sub object_class {
+    return 'Koha::Auth::Hostname';
 }
 
 1;
