@@ -5,6 +5,7 @@ properties:
     type: integer
     description: Internally assigned identifier for this hostname-provider association
     readOnly: true
+    x-nullable: true
   hostname:
     description: Server hostname (matches SERVER_NAME) that surfaces this identity provider
     type: string
@@ -16,16 +17,19 @@ properties:
   is_enabled:
     description: Whether this hostname is active for this provider
     type: boolean
+    x-nullable: true
   force_sso_opac:
     description: >
       Force SSO redirect for OPAC users visiting this hostname. Only one
       identity provider should have this enabled per hostname.
     type: boolean
+    x-nullable: true
   force_sso_staff:
     description: >
       Force SSO redirect for staff interface users visiting this hostname.
       Only one identity provider should have this enabled per hostname.
     type: boolean
+    x-nullable: true
 additionalProperties: false
 required:
   - hostname
