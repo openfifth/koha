@@ -39,7 +39,7 @@ related Hostname record alongside the hostname_id FK.
 sub to_api {
     my ( $self, $params ) = @_;
     my $data = $self->SUPER::to_api($params);
-    $data->{hostname} = $self->hostname->hostname;
+    $data->{hostname} = $self->_result->hostname->hostname;
     return $data;
 }
 

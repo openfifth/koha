@@ -282,7 +282,6 @@ export default {
             selectItem,
             addItem,
             removeItem,
-            $__,
         };
     },
 };
