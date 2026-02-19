@@ -52,3 +52,49 @@
     x-koha-authorization:
       permissions:
         parameters: manage_patron_categories
+  post:
+    x-mojo-to: Patrons::Categories#add
+    operationId: addCategory
+    tags:
+      - categories
+    summary: Add category
+    parameters:
+      - name: body
+        in: body
+        description: A JSON object containing information about the category
+        required: true
+        schema:
+          $ref: "../swagger.yaml#/definitions/patron_category"
+    produces:
+      - application/json
+    responses:
+      "201":
+        description: Category added
+        schema:
+          $ref: "../swagger.yaml#/definitions/patron_category"
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        parameters: manage_patron_categories
