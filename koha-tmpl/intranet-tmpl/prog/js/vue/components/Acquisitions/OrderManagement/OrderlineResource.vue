@@ -539,14 +539,19 @@ export default {
                                 : "";
                         },
                     },
-                    onSelected: (e, options, resource) => {
-                        const vendor = options.find(option => option.id === e);
-                        // resource.tax_rate = vendor.tax_rate;
-                        resource.vendor = vendor;
-                        resource.fund_distributions.forEach(fd => {
-                            fd.tax_rate = vendor.tax_rate;
-                        });
-                    },
+                    onSelected:
+                        componentToDisplay === "Search"
+                            ? null
+                            : (e, options, resource) => {
+                                  const vendor = options.find(
+                                      option => option.id === e
+                                  );
+                                  // resource.tax_rate = vendor.tax_rate;
+                                  resource.vendor = vendor;
+                                  resource.fund_distributions.forEach(fd => {
+                                      fd.tax_rate = vendor.tax_rate;
+                                  });
+                              },
                     displaySortOrder: {
                         Search: 1,
                     },
@@ -1003,7 +1008,6 @@ export default {
         const tableOptions = {
             table_settings: null,
             add_filters: true,
-            add_filters: true,
             options: {
                 embed: "vendor,biblio,managing_library",
             },
@@ -1223,6 +1227,11 @@ export default {
                 "planned_cancellation_date_start",
                 "planned_cancellation_date_end"
             );
+
+            baseResource.router.push({
+                name: "OrderlineList",
+                query: searchParams,
+            });
         };
 
         const navigationOnFormSaveAdditionalOptions = resource => {
