@@ -87,6 +87,19 @@ export const componentRegistry: Map<string, WebComponentDynamicImport> =
                 },
             },
         ],
+        [
+            "patron-self-renewal",
+            {
+                importFn: async () => {
+                    const module = await import(
+                        /* webpackChunkName: "patron-self-renewal" */
+                        "../components/Islands/PatronSelfRenewal/PatronSelfRenewal.vue"
+                    );
+                    return module.default;
+                },
+                config: {},
+            },
+        ],
     ]);
 
 /**
