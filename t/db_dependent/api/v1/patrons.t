@@ -482,6 +482,7 @@ subtest 'add() tests' => sub {
         delete $newpatron->{restricted};
         delete $newpatron->{expired};
         delete $newpatron->{anonymized};
+        delete $newpatron->{self_renewal_available};
 
         my $password = 'thePassword123';
         $librarian->set_password( { password => $password, skip_validation => 1 } );
@@ -547,6 +548,7 @@ subtest 'add() tests' => sub {
         delete $newpatron->{restricted};
         delete $newpatron->{expired};
         delete $newpatron->{anonymized};
+        delete $newpatron->{self_renewal_available};
         $patron_to_delete->delete;
 
         # Set a date field
@@ -1037,6 +1039,7 @@ subtest 'update() tests' => sub {
         delete $newpatron->{restricted};
         delete $newpatron->{expired};
         delete $newpatron->{anonymized};
+        delete $newpatron->{self_renewal_available};
 
         $t->put_ok( "//$userid:$password@/api/v1/patrons/-1" => json => $newpatron )
             ->status_is(404)
@@ -1117,6 +1120,8 @@ subtest 'update() tests' => sub {
         $newpatron->{restricted} = $unauthorized_patron->to_api( { user => $authorized_patron } )->{restricted};
         $newpatron->{expired}    = $unauthorized_patron->to_api( { user => $authorized_patron } )->{expired};
         $newpatron->{anonymized} = $unauthorized_patron->to_api( { user => $authorized_patron } )->{anonymized};
+        $newpatron->{self_renewal_available} =
+            $unauthorized_patron->to_api( { user => $authorized_patron } )->{self_renewal_available};
 
         my $got                 = $result->tx->res->json;
         my $updated_on_got      = delete $got->{updated_on};
@@ -1152,6 +1157,7 @@ subtest 'update() tests' => sub {
         delete $newpatron->{restricted};
         delete $newpatron->{expired};
         delete $newpatron->{anonymized};
+        delete $newpatron->{self_renewal_available};
 
         # attempt to update
         $authorized_patron->flags( 2**4 )->store;    # borrowers flag = 4

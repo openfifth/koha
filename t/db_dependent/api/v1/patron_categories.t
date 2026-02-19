@@ -18,7 +18,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 2;
+use Test::More tests => 3;
 use Test::Mojo;
 
 use t::lib::TestBuilder;
@@ -110,4 +110,68 @@ subtest 'list() tests' => sub {
 
     $schema->storage->txn_rollback;
 
+};
+
+subtest 'add() tests' => sub {
+
+    plan tests => 9;
+
+    $schema->storage->txn_begin;
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+
+    my $librarian = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { flags => 2**3, categorycode => 'TEST', branchcode => $library->branchcode } # parameters flag = 3
+        }
+    );
+
+    my $password = 'thePassword123';
+    $librarian->set_password( { password => $password, skip_validation => 1 } );
+    my $userid = $librarian->userid;
+
+    my $patron = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { flags => 0 }
+        }
+    );
+
+    $patron->set_password( { password => $password, skip_validation => 1 } );
+    my $unauth_userid = $patron->userid;
+
+    my $category = {
+        patron_category_id => 'new',
+        name               => "A new category",
+    };
+
+    # Unauthorized attempt to write
+    $t->post_ok( "//$unauth_userid:$password@/api/v1/patron_categories" => json => $category )->status_is(403);
+
+    # Authorized attempt to write invalid data
+    my $category_with_invalid_field = {
+        blah => "Category Blah",
+        name => "Won't work"
+    };
+
+    $t->post_ok( "//$userid:$password@/api/v1/patron_categories" => json => $category_with_invalid_field )
+        ->status_is(400)->json_is(
+        "/errors" => [
+            {
+                message => "Properties not allowed: blah.",
+                path    => "/body"
+            }
+        ]
+        );
+
+    # Authorized attempt to write
+    my $patron_category_id =
+        $t->post_ok( "//$userid:$password@/api/v1/patron_categories" => json => $category )
+        ->status_is( 201, 'REST3.2.1' )->header_like(
+        Location => qr|^\/api\/v1\/patron_categories/\d*|,
+        'REST3.4.1'
+    )->json_is( '/name' => $category->{name} )->tx->res->json->{patron_category_id};
+
+    $schema->storage->txn_rollback;
 };
