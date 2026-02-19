@@ -19,7 +19,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 47;
+use Test::More tests => 50;
 use Test::NoWarnings;
 use Test::Exception;
 use Test::Warn;
@@ -722,7 +722,7 @@ subtest 'messaging_preferences() tests' => sub {
 
 subtest 'to_api() tests' => sub {
 
-    plan tests => 6;
+    plan tests => 7;
 
     $schema->storage->txn_begin;
 
@@ -759,6 +759,9 @@ subtest 'to_api() tests' => sub {
     my $patron_json = $patron->to_api( { embed => { algo => {} }, user => $consumer } );
     ok( exists $patron_json->{algo} );
     is( $patron_json->{algo}, 'algo' );
+
+    my $patron_eligible = $patron->to_api( { user => $consumer } );
+    ok( exists $patron_eligible->{self_renewal_available} );
 
     $schema->storage->txn_rollback;
 };
@@ -3797,5 +3800,144 @@ subtest 'fixup_cardnumber and autoMemberNumValue counter' => sub {
         'Syspref row stays absent when fallback path is taken'
     );
 
+    $schema->storage->txn_rollback;
+};
+
+subtest "is_eligible_for_self_renewal" => sub {
+    plan tests => 8;
+
+    $schema->storage->txn_begin;
+
+    my $category = $builder->build_object(
+        {
+            class => 'Koha::Patron::Categories',
+            value => {
+                self_renewal_enabled     => 0,  self_renewal_availability_start => 10, self_renewal_if_expired => 10,
+                self_renewal_fines_block => 10, noissuescharge                  => 10
+            }
+        }
+    );
+
+    my $patron = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { categorycode => $category->categorycode, dateexpiry => dt_from_string(), debarred => undef }
+        }
+    );
+
+    is( $patron->is_eligible_for_self_renewal, 0, "Category not enabled" );
+
+    $category->self_renewal_enabled(1)->store();
+    $patron->delete()->store()->discard_changes();
+    is( $patron->is_eligible_for_self_renewal, 1, "Category now enabled" );
+
+    $patron->debarred('2026-01-01')->store;
+    is( $patron->is_eligible_for_self_renewal, 0, "Patron debarred" );
+    $patron->debarred(undef)->store;
+    $patron->delete()->store()->discard_changes();
+
+    # Move expiry date outside the window
+    $patron->dateexpiry( dt_from_string()->add( days => 11 ) )->store;
+    is( $patron->is_eligible_for_self_renewal, 0, "Patron not yet within the expiry window" );
+
+    # Shift the expiry window to cover new expiry date
+    $category->self_renewal_availability_start(12)->store();
+    $patron->delete()->store()->discard_changes();
+    is( $patron->is_eligible_for_self_renewal, 1, "Patron is back within the expiry window" );
+
+    # Shift the date to now already be expired
+    $patron->dateexpiry( dt_from_string()->subtract( days => 11 ) )->store;
+    is( $patron->is_eligible_for_self_renewal, 0, "Patron can only self renew within 10 days of expiry" );
+
+    # Expand the expiry window
+    $category->self_renewal_if_expired(12)->store();
+    $patron->delete()->store()->discard_changes();
+    is( $patron->is_eligible_for_self_renewal, 1, "Patron is back within the expiry window" );
+
+    t::lib::Mocks::mock_preference( 'noissuescharge', 10 );
+
+    my $fee1 = $builder->build_object(
+        {
+            class => 'Koha::Account::Lines',
+            value => {
+                borrowernumber    => $patron->borrowernumber,
+                amountoutstanding => 11,
+                debit_type_code   => 'OVERDUE',
+            }
+        }
+    )->store;
+    is( $patron->is_eligible_for_self_renewal, 0, "Patron is outside the charge limits" );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest "request_modification" => sub {
+    plan tests => 5;
+
+    $schema->storage->txn_begin;
+
+    my $patron = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+        }
+    );
+
+    my $modification_data = { firstname => 'Newname', changed_fields => 'firstname' };
+    t::lib::Mocks::mock_preference( 'OPACPatronDetails',                1 );
+    t::lib::Mocks::mock_preference( 'AutoApprovePatronProfileSettings', 0 );
+
+    $patron->request_modification($modification_data);
+
+    my @modifications = Koha::Patron::Modifications->search( { borrowernumber => $patron->borrowernumber } )->as_list;
+    is( scalar(@modifications), 1, "New modification has replaced any existing mods" );
+
+    my $modification = $modifications[0];
+    is( $modification->changed_fields, 'firstname',                     'Fields correctly set' );
+    is( $modification->firstname,      $modification_data->{firstname}, 'Fields correctly set' );
+
+    t::lib::Mocks::mock_preference( 'AutoApprovePatronProfileSettings', 1 );
+    $patron->request_modification($modification_data);
+
+    @modifications = Koha::Patron::Modifications->search( { borrowernumber => $patron->borrowernumber } )->as_list;
+    is( scalar(@modifications),                0, "New modification has been approved and deleted" );
+    is( $patron->discard_changes()->firstname, $modification_data->{firstname}, 'Name updated' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest "create_expiry_notice_parameters" => sub {
+    plan tests => 1;
+
+    $schema->storage->txn_begin;
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+
+    my $patron = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { branchcode => $library->branchcode }
+        }
+    );
+
+    my $expected_return = {
+        'letter_params' => {
+            'borrowernumber' => $patron->borrowernumber,
+            'branchcode'     => $library->branchcode,
+            'tables'         => {
+                'borrowers' => $patron->borrowernumber,
+                'branches'  => $library->branchcode
+            },
+            'module'      => 'members',
+            'letter_code' => 'MEMBERSHIP_RENEWED',
+            'lang'        => $patron->lang
+        },
+        'message_name' => 'Patron_Expiry',
+        'forceprint'   => 0
+    };
+
+    my $letter_params = $patron->create_expiry_notice_parameters(
+        { letter_code => 'MEMBERSHIP_RENEWED', forceprint => 0, is_notice_mandatory => 0 } );
+
+    is_deeply( $letter_params, $expected_return, 'Letter params generated correctly' );
     $schema->storage->txn_rollback;
 };
