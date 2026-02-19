@@ -50,4 +50,26 @@ sub list {
     };
 }
 
+=head3 add
+
+Controller function that handles adding Koha::Patron::Category objects
+
+=cut
+
+sub add {
+    my $c = shift->openapi->valid_input or return;
+
+    return try {
+        my $category = Koha::Patron::Category->new_from_api( $c->req->json );
+        $category->store;
+        $c->res->headers->location( $c->req->url->to_string . '/' . $category->categorycode );
+        return $c->render(
+            status  => 201,
+            openapi => $c->objects->to_api($category),
+        );
+    } catch {
+        $c->unhandled_exception($_);
+    };
+}
+
 1;
