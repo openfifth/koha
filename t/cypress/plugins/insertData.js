@@ -388,6 +388,7 @@ const insertSampleCheckout = async ({ patron, baseUrl, authHeader }) => {
 const insertSamplePatron = async ({
     library,
     patron_category,
+    patronValues,
     baseUrl,
     authHeader,
 }) => {
@@ -427,6 +428,7 @@ const insertSamplePatron = async ({
             category_id: patron_category.patron_category_id,
             incorrect_address: null,
             patron_card_lost: null,
+            ...patronValues,
         },
     });
 
@@ -443,6 +445,7 @@ const insertSamplePatron = async ({
         lang,
         login_attempts,
         sms_provider_id,
+        self_renewal_available,
         ...patron
     } = generatedPatron;
     delete patron.library;
@@ -453,6 +456,16 @@ const insertSamplePatron = async ({
         baseUrl,
         authHeader,
     });
+
+    if (patronValues.hasOwnProperty("password")) {
+        const password = patronValues.password;
+        await apiPost({
+            endpoint: `/api/v1/patrons/${patron.patron_id}/password`,
+            body: { password, password_2: password },
+            baseUrl,
+            authHeader,
+        });
+    }
 
     return {
         patron,
@@ -563,6 +576,12 @@ const deleteSampleObjects = async allObjects => {
             table: "erm_eholdings_titles",
             whereColumn: "title_id",
         },
+        category: {
+            plural: "categories",
+            table: "categories",
+            whereColumn: "categorycode",
+            idField: "patron_category_id",
+        },
     };
     // Merge by type
     const mergedObjects = {};
@@ -594,6 +613,7 @@ const deleteSampleObjects = async allObjects => {
         "item_types",
         "erm_agreements",
         "erm_eholdings_titles",
+        "categories",
     ];
     const matchTypeToObjectMap = type => {
         const matchingKey = Object.keys(objectsMap).find(
@@ -889,6 +909,13 @@ const insertObject = async ({ type, object, baseUrl, authHeader }) => {
         return apiPost({
             endpoint: "/api/v1/erm/eholdings/local/titles",
             body: erm_eholdings_title,
+            baseUrl,
+            authHeader,
+        });
+    } else if (type === "category") {
+        return apiPost({
+            endpoint: "/api/v1/patron_categories",
+            body: object,
             baseUrl,
             authHeader,
         });
