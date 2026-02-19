@@ -1285,38 +1285,36 @@ sub CanBookBeIssued {
             my $resbor = $res->{'borrowernumber'};
             if ( $resbor ne $patron->borrowernumber ) {
                 my $hold_patron = Koha::Patrons->find($resbor);
-                if ( $restype eq "Waiting" ) {
 
-                    # Check if hold is for a linked account
-                    my $is_linked_account = 0;
-                    if (   C4::Context->preference('EnablePatronAccountLinking')
-                        && C4::Context->preference('AllowLinkedAccountHoldPickup') )
-                    {
-                        my $linked_ids = $patron->all_linked_borrowernumbers;
-                        $is_linked_account = grep { $_ == $resbor } @$linked_ids;
-                    }
+                # Check if hold is for a linked account
+                my $is_linked_account = 0;
+                if (   C4::Context->preference('EnablePatronAccountLinking')
+                    && C4::Context->preference('AllowLinkedAccountHoldPickup') )
+                {
+                    my $linked_ids = $patron->all_linked_borrowernumbers;
+                    $is_linked_account = grep { $_ == $resbor } @$linked_ids;
+                }
 
-                    if ($is_linked_account) {
+                if ($is_linked_account) {
 
-                        # Hold is for a linked account - allow pickup with redirect
-                        $alerts{LINKED_ACCOUNT_HOLD_PICKUP} = {
-                            reserve_id     => $res->{reserve_id},
-                            hold_patron_id => $resbor,
-                            hold_patron    => $hold_patron,
-                        };
-                    } else {
+                    # Hold is for a linked account - allow checkout with redirect
+                    $alerts{LINKED_ACCOUNT_HOLD_PICKUP} = {
+                        reserve_id     => $res->{reserve_id},
+                        hold_patron_id => $resbor,
+                        hold_patron    => $hold_patron,
+                    };
+                } elsif ( $restype eq "Waiting" ) {
 
-                        # The item is on reserve and waiting, but has been
-                        # reserved by some other patron.
-                        $needsconfirmation{RESERVE_WAITING}     = 1;
-                        $needsconfirmation{'resfirstname'}      = $hold_patron->firstname;
-                        $needsconfirmation{'ressurname'}        = $hold_patron->surname;
-                        $needsconfirmation{'rescardnumber'}     = $hold_patron->cardnumber;
-                        $needsconfirmation{'resborrowernumber'} = $hold_patron->borrowernumber;
-                        $needsconfirmation{'resbranchcode'}     = $res->{branchcode};
-                        $needsconfirmation{'reswaitingdate'}    = $res->{'waitingdate'};
-                        $needsconfirmation{'reserve_id'}        = $res->{reserve_id};
-                    }
+                    # The item is on reserve and waiting, but has been
+                    # reserved by some other patron.
+                    $needsconfirmation{RESERVE_WAITING}     = 1;
+                    $needsconfirmation{'resfirstname'}      = $hold_patron->firstname;
+                    $needsconfirmation{'ressurname'}        = $hold_patron->surname;
+                    $needsconfirmation{'rescardnumber'}     = $hold_patron->cardnumber;
+                    $needsconfirmation{'resborrowernumber'} = $hold_patron->borrowernumber;
+                    $needsconfirmation{'resbranchcode'}     = $res->{branchcode};
+                    $needsconfirmation{'reswaitingdate'}    = $res->{'waitingdate'};
+                    $needsconfirmation{'reserve_id'}        = $res->{reserve_id};
                 } elsif ( $restype eq "Reserved" ) {
 
                     # The item is on reserve for someone else.
@@ -3550,7 +3548,7 @@ sub CanBookBeRenewed {
                         unless CanItemBeReserved(
                         $patron_with_reserve, $other_item, undef,
                         { ignore_hold_counts => 1 }
-                    )->{status} eq 'OK';
+                        )->{status} eq 'OK';
 
                     # NOTE: At checkin we call 'CheckReserves' which checks hold 'policy'
                     # CanItemBeReserved checks 'rules' and 'policies' which means
