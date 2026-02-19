@@ -22,42 +22,42 @@ const PROTOCOL_CONFIG_FIELDS = {
             label: __("Client ID"),
             required: true,
             type: "text",
-            group: "OAuth credentials",
+            group: "OAuth settings",
         },
         {
             name: "secret",
             label: __("Client secret"),
             required: true,
             type: "text",
-            group: "OAuth credentials",
+            group: "OAuth settings",
         },
         {
             name: "authorize_url",
             label: __("Authorization URL"),
             required: true,
             type: "text",
-            group: "OAuth endpoints",
+            group: "OAuth settings",
         },
         {
             name: "token_url",
             label: __("Token URL"),
             required: true,
             type: "text",
-            group: "OAuth endpoints",
+            group: "OAuth settings",
         },
         {
             name: "userinfo_url",
             label: __("User info URL"),
             required: false,
             type: "text",
-            group: "OAuth endpoints",
+            group: "OAuth settings",
         },
         {
             name: "scope",
             label: __("Scope"),
             required: false,
             type: "text",
-            group: "OAuth endpoints",
+            group: "OAuth settings",
             toolTip: __("Space-separated list of scopes, e.g. 'email profile'"),
         },
     ],
@@ -67,21 +67,21 @@ const PROTOCOL_CONFIG_FIELDS = {
             label: __("Client ID"),
             required: true,
             type: "text",
-            group: "OIDC credentials",
+            group: "OIDC settings",
         },
         {
             name: "secret",
             label: __("Client secret"),
             required: true,
             type: "text",
-            group: "OIDC credentials",
+            group: "OIDC settings",
         },
         {
             name: "well_known_url",
             label: __("Well-known URL"),
             required: true,
             type: "text",
-            group: "OIDC endpoints",
+            group: "OIDC settings",
             toolTip: __(
                 "OpenID Connect discovery endpoint, e.g. https://login.example.com/.well-known/openid-configuration"
             ),
@@ -91,7 +91,7 @@ const PROTOCOL_CONFIG_FIELDS = {
             label: __("Scope"),
             required: false,
             type: "text",
-            group: "OIDC endpoints",
+            group: "OIDC settings",
             toolTip: __(
                 "Space-separated list of scopes, e.g. 'openid email profile'"
             ),
@@ -103,7 +103,7 @@ const PROTOCOL_CONFIG_FIELDS = {
             label: __("Auto-create patrons"),
             required: false,
             type: "boolean",
-            group: "User management",
+            group: "SAML2 settings",
             toolTip: __(
                 "Automatically create a patron record for new Shibboleth users"
             ),
@@ -113,7 +113,7 @@ const PROTOCOL_CONFIG_FIELDS = {
             label: __("Sync attributes on login"),
             required: false,
             type: "boolean",
-            group: "User management",
+            group: "SAML2 settings",
             toolTip: __("Update patron attributes from the IdP on each login"),
         },
         {
@@ -121,7 +121,7 @@ const PROTOCOL_CONFIG_FIELDS = {
             label: __("Send welcome email"),
             required: false,
             type: "boolean",
-            group: "User management",
+            group: "SAML2 settings",
             toolTip: __("Send a welcome email to newly auto-created patrons"),
         },
     ],
@@ -221,10 +221,22 @@ export default {
             },
         ];
 
+        const protocolPlaceholderAttr = {
+            name: "_protocol_placeholder",
+            type: "group_placeholder",
+            group: "Protocol settings",
+            description: __(
+                "Select a protocol above to expose protocol-specific settings"
+            ),
+            hideIn: () =>
+                selectedProtocol.value
+                    ? ["Form", "Show", "List"]
+                    : ["Show", "List"],
+        };
+
         // Build config attrs for ALL protocols. Each gets a hideIn closure that
-        // hides it when a different protocol is selected. When no protocol is
-        // selected yet (add mode), all groups remain visible so the user can
-        // see what fields are available after choosing a protocol.
+        // hides it when a different protocol is selected, or when no protocol
+        // has been selected yet (add mode).
         const configResourceAttrs = Object.entries(
             PROTOCOL_CONFIG_FIELDS
         ).flatMap(([protocol, fields]) =>
@@ -232,14 +244,18 @@ export default {
                 ...f,
                 name: `_config_${f.name}`,
                 hideIn: () =>
-                    selectedProtocol.value &&
+                    !selectedProtocol.value ||
                     selectedProtocol.value !== protocol
                         ? ["Form", "Show", "List"]
                         : ["List"],
             }))
         );
 
-        const resourceAttrs = [...staticResourceAttrs, ...configResourceAttrs];
+        const resourceAttrs = [
+            ...staticResourceAttrs,
+            protocolPlaceholderAttr,
+            ...configResourceAttrs,
+        ];
 
         // Unpack the JSON config blob into flat _config_* fields so the form
         // and show views can bind to them individually.
