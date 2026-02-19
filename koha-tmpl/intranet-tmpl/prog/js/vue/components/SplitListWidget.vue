@@ -29,27 +29,43 @@
                                 v-for="field in badgeFields"
                                 :key="field.name"
                             >
-                                <span
-                                    v-if="
-                                        item[field.name] && field.badgeTrueLabel
-                                    "
-                                    class="badge"
-                                    :class="
-                                        field.badgeTrueClass || 'bg-secondary'
-                                    "
-                                    >{{ field.badgeTrueLabel }}</span
-                                >
-                                <span
-                                    v-else-if="
-                                        !item[field.name] &&
-                                        field.badgeFalseLabel
-                                    "
-                                    class="badge"
-                                    :class="
-                                        field.badgeFalseClass || 'bg-secondary'
-                                    "
-                                    >{{ field.badgeFalseLabel }}</span
-                                >
+                                <template v-if="field.badgeValues">
+                                    <span
+                                        v-for="bv in field.badgeValues.filter(
+                                            bv => bv.value === item[field.name]
+                                        )"
+                                        :key="bv.value"
+                                        class="badge"
+                                        :class="bv.class || 'bg-secondary'"
+                                        >{{ bv.label }}</span
+                                    >
+                                </template>
+                                <template v-else>
+                                    <span
+                                        v-if="
+                                            item[field.name] &&
+                                            field.badgeTrueLabel
+                                        "
+                                        class="badge"
+                                        :class="
+                                            field.badgeTrueClass ||
+                                            'bg-secondary'
+                                        "
+                                        >{{ field.badgeTrueLabel }}</span
+                                    >
+                                    <span
+                                        v-else-if="
+                                            !item[field.name] &&
+                                            field.badgeFalseLabel
+                                        "
+                                        class="badge"
+                                        :class="
+                                            field.badgeFalseClass ||
+                                            'bg-secondary'
+                                        "
+                                        >{{ field.badgeFalseLabel }}</span
+                                    >
+                                </template>
                             </template>
                         </span>
                     </button>
@@ -168,8 +184,9 @@ export default {
         const badgeFields = computed(() =>
             props.relationshipFields.filter(
                 f =>
-                    f.type === "boolean" &&
-                    (f.badgeTrueLabel || f.badgeFalseLabel)
+                    (f.type === "boolean" &&
+                        (f.badgeTrueLabel || f.badgeFalseLabel)) ||
+                    f.badgeValues?.length > 0
             )
         );
 
