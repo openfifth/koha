@@ -484,6 +484,15 @@ export function useBaseResource(resourceConfig) {
                 fields: groupFields,
                 hasDataToDisplay: false,
             };
+            if (
+                groupFields.length > 0 &&
+                groupFields.every(f => f.type === "group_placeholder")
+            ) {
+                groupInfo.placeholder = {
+                    description: groupFields[0].description || null,
+                };
+                groupInfo.fields = [];
+            }
             if (groupFields.some(f => f.groupMeta?.requiresId)) {
                 groupInfo.requiresId = true;
             }

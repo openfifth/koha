@@ -331,8 +331,9 @@ export default {
                     config[field.name] = provider[flatKey];
                 }
             });
+            // Strip all _-prefixed keys (UI-only fields: _config_*, _protocol_*, etc.)
             Object.keys(provider)
-                .filter(k => k.startsWith("_config_"))
+                .filter(k => k.startsWith("_"))
                 .forEach(k => delete provider[k]);
             provider.config = config;
 
