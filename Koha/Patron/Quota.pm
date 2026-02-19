@@ -172,7 +172,8 @@ sub add_usage {
     # Set defaults
     $params->{patron_id}       = $self->patron_id;
     $params->{patron_quota_id} = $self->id;
-    $params->{issue_id}        = undef unless exists $params->{issue_id};
+    $params->{issue_id}        = undef   unless exists $params->{issue_id};
+    $params->{type}            = 'ISSUE' unless exists $params->{type};
 
     # Create usage record
     my $usage = Koha::Patron::Quota::Usage->new($params)->store;
