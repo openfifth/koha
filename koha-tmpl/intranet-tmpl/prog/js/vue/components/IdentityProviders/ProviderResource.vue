@@ -253,71 +253,11 @@ export default {
 
         const hostnameAttr = {
             name: "hostnames",
-            type: "relationshipWidget",
-            label: __("Hostnames"),
+            type: "component",
+            componentPath:
+                "@koha-vue/components/IdentityProviders/HostnameFormWidget.vue",
             group: "Network & Entry Settings",
             hideIn: ["List"],
-            showElement: {
-                type: "table",
-                columnData: "hostnames",
-                hidden: provider => !!provider.hostnames?.length,
-                columns: [
-                    { name: __("Hostname"), value: "hostname" },
-                    { name: __("Active"), value: "is_enabled" },
-                    { name: __("Force SSO (OPAC)"), value: "force_sso_opac" },
-                    { name: __("Force SSO (staff)"), value: "force_sso_staff" },
-                ],
-            },
-            componentProps: {
-                resourceRelationships: {
-                    resourceProperty: "hostnames",
-                },
-                relationshipI18n: {
-                    nameUpperCase: __("Hostname"),
-                    removeThisMessage: __("Remove this hostname"),
-                    addNewMessage: __("Add hostname"),
-                    noneCreatedYetMessage: __(
-                        "No hostnames configured. Add a hostname to surface this provider on its login page."
-                    ),
-                },
-                newRelationshipDefaultAttrs: {
-                    type: "object",
-                    value: {
-                        hostname: null,
-                        is_enabled: true,
-                        force_sso_opac: false,
-                        force_sso_staff: false,
-                    },
-                },
-            },
-            relationshipFields: [
-                {
-                    name: "hostname",
-                    required: true,
-                    indexRequired: true,
-                    type: "text",
-                    label: __("Hostname"),
-                    placeholder: "library.example.org",
-                },
-                {
-                    name: "is_enabled",
-                    type: "boolean",
-                    indexRequired: true,
-                    label: __("Active"),
-                },
-                {
-                    name: "force_sso_opac",
-                    type: "boolean",
-                    indexRequired: true,
-                    label: __("Force SSO (OPAC)"),
-                },
-                {
-                    name: "force_sso_staff",
-                    type: "boolean",
-                    indexRequired: true,
-                    label: __("Force SSO (staff)"),
-                },
-            ],
         };
 
         const resourceAttrs = [
