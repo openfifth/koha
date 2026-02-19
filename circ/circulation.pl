@@ -751,6 +751,18 @@ if ($patron) {
         }
     }
 
+    # Check the debt of this patron's linked accounts
+    my $no_issues_charge_linked = $patron_charge_limits->{NoIssuesChargeLinkedAccounts}->{limit};
+    if ( defined $no_issues_charge_linked ) {
+        if ( $patron_charge_limits->{NoIssuesChargeLinkedAccounts}->{overlimit} ) {
+            $template->param(
+                charges_linked_accounts       => 1,
+                chargesamount_linked_accounts => $patron_charge_limits->{NoIssuesChargeLinkedAccounts}->{charge},
+            );
+            $noissues = 1 unless C4::Context->preference("allowfineoverride");
+        }
+    }
+
     if ( $patron->has_overdues ) {
         $template->param( odues => 1 );
     }
