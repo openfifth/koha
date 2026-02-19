@@ -6,7 +6,7 @@
 [% SET return_claims = patron.return_claims %]
 [% SET logged_in_branchcode = Branches.GetLoggedInBranchcode() %]
 
-[% IF ( has_modifications || warndeparture || returnbeforeexpiry || expired || patron.gonenoaddress || patron.lost || userdebarred || odues || ( return_claims.count > ClaimReturnedWarningThreshold ) || age_out_of_range || age_limitations || limited_category || charges || charges_guarantors_guarantees || charges_guarantees || credits || patron.account_locked ) %]
+[% IF ( has_modifications || warndeparture || returnbeforeexpiry || expired || patron.gonenoaddress || patron.lost || userdebarred || odues || ( return_claims.count > ClaimReturnedWarningThreshold ) || age_out_of_range || age_limitations || limited_category || charges || charges_guarantors_guarantees || charges_guarantees || charges_linked_accounts || credits || patron.account_locked ) %]
     <h3>Attention</h3>
     <ul>
         [% IF ( has_modifications ) %]
@@ -173,6 +173,15 @@
         [% IF ( charges_guarantees ) %]
             <li class="charges_guarantees">
                 <span class="circ-hlt">Charges:</span> Patron's guarantees collectively owe [% chargesamount_guarantees | $Price %].
+                [% IF noissues %]
+                    <span class="circ-hlt">Checkouts are BLOCKED because fine balance is OVER THE LIMIT.</span>
+                [% END %]
+            </li>
+        [% END %]
+
+        [% IF ( charges_linked_accounts ) %]
+            <li class="charges_linked_accounts">
+                <span class="circ-hlt">Charges:</span> Patron's linked accounts collectively owe [% chargesamount_linked_accounts | $Price %].
                 [% IF noissues %]
                     <span class="circ-hlt">Checkouts are BLOCKED because fine balance is OVER THE LIMIT.</span>
                 [% END %]
