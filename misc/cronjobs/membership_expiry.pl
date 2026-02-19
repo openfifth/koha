@@ -285,32 +285,11 @@ while ( my $expiring_patron = $upcoming_mem_expires->next ) {
         $which_notice = $letter_expiry;
     }
 
-    my $from_address  = $expiring_patron->library->from_email_address;
-    my $letter_params = {
-        module         => 'members',
-        letter_code    => $which_notice,
-        branchcode     => $expiring_patron->branchcode,
-        lang           => $expiring_patron->lang,
-        borrowernumber => $expiring_patron->borrowernumber,
-        tables         => {
-            borrowers => $expiring_patron->borrowernumber,
-            branches  => $expiring_patron->branchcode,
-        },
-    };
-
-    my $sending_params = {
-        letter_params => $letter_params,
-        message_name  => 'Patron_Expiry',
-        forceprint    => $forceprint
-    };
-
     my $is_notice_mandatory = grep( $expiring_patron->categorycode, @mandatory_expiry_notice_categories );
-    if ($is_notice_mandatory) {
-        $sending_params->{expiry_notice_mandatory} = 1;
-        $sending_params->{primary_contact_method}  = $forceprint ? 'print' : $expiring_patron->primary_contact_method;
-    }
+    my $letter_params       = $expiring_patron->create_expiry_notice_parameters(
+        { letter_code => $which_notice, forceprint => $forceprint, is_notice_mandatory => $is_notice_mandatory } );
 
-    my $result = $expiring_patron->queue_notice($sending_params);
+    my $result = $expiring_patron->queue_notice($letter_params);
     $count_enqueued++ if $result->{sent};
 }
 
