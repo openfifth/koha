@@ -222,6 +222,50 @@ define maximum amount that the guarantees of a patron in this category can have 
 
 define maximum amount that the guarantors with guarantees of a patron in this category can have outstanding before checkouts are blocked
 
+=head2 self_renewal_enabled
+
+  data_type: 'tinyint'
+  default_value: 0
+  is_nullable: 0
+
+allow self renewal for this category
+
+=head2 self_renewal_availability_start
+
+  data_type: 'smallint'
+  is_nullable: 1
+
+how long before the patron expiry date self-renewal should be made available (overrides system default of NotifyBorrowerDeparture)
+
+=head2 self_renewal_fines_block
+
+  data_type: 'integer'
+  is_nullable: 1
+
+the amount owed in fines before self renewal is blocked (overrides system default of noissuescharge)
+
+=head2 self_renewal_if_expired
+
+  data_type: 'smallint'
+  default_value: 0
+  is_nullable: 1
+
+how long after expiry a patron can self renew their account
+
+=head2 self_renewal_failure_message
+
+  data_type: 'mediumtext'
+  is_nullable: 1
+
+the message to display if self renewal is not successful
+
+=head2 self_renewal_information_message
+
+  data_type: 'mediumtext'
+  is_nullable: 1
+
+the message to display before the self renewal process starts
+
 =cut
 
 __PACKAGE__->add_columns(
@@ -293,6 +337,18 @@ __PACKAGE__->add_columns(
   { data_type => "integer", is_nullable => 1 },
   "noissueschargeguarantorswithguarantees",
   { data_type => "integer", is_nullable => 1 },
+  "self_renewal_enabled",
+  { data_type => "tinyint", default_value => 0, is_nullable => 0 },
+  "self_renewal_availability_start",
+  { data_type => "smallint", is_nullable => 1 },
+  "self_renewal_fines_block",
+  { data_type => "integer", is_nullable => 1 },
+  "self_renewal_if_expired",
+  { data_type => "smallint", default_value => 0, is_nullable => 1 },
+  "self_renewal_failure_message",
+  { data_type => "mediumtext", is_nullable => 1 },
+  "self_renewal_information_message",
+  { data_type => "mediumtext", is_nullable => 1 },
 );
 
 =head1 PRIMARY KEY
@@ -400,8 +456,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2024-11-08 11:06:25
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:f8BSmD9RKHL/QAvHuuLIyw
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-02-19 11:48:23
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:v73KLGwTJPCn0pH+zpiaHg
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration
 
@@ -419,6 +475,7 @@ __PACKAGE__->add_columns(
     '+exclude_from_local_holds_priority'      => { is_boolean => 1 },
     '+require_strong_password'                => { is_boolean => 1 },
     '+force_password_reset_when_set_by_staff' => { is_boolean => 1 },
+    '+self_renewal_enabled'                   => { is_boolean => 1 },
 );
 
 1;
