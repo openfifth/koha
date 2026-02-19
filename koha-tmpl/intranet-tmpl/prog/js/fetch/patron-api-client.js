@@ -25,6 +25,23 @@ export class PatronAPIClient {
                 }),
         };
     }
+
+    get self_renewal() {
+        return {
+            start: (id, query, params, headers) =>
+                this.httpClient.getAll({
+                    endpoint: `public/patrons/${id}/self_renewal`,
+                    query,
+                    params,
+                    headers,
+                }),
+            submit: (id, renewal) =>
+                this.httpClient.post({
+                    endpoint: `public/patrons/${id}/self_renewal`,
+                    body: renewal,
+                }),
+        };
+    }
 }
 
 export default PatronAPIClient;

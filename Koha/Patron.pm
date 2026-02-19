@@ -3089,6 +3089,8 @@ sub to_api {
         ? Mojo::JSON->true
         : Mojo::JSON->false;
 
+    $json_patron->{self_renewal_available} = $self->is_eligible_for_self_renewal();
+
     return $json_patron;
 }
 
@@ -3660,6 +3662,114 @@ sub is_anonymous {
     my ($self) = @_;
     my $anonymous_patron = C4::Context->preference('AnonymousPatron');
     return ( $anonymous_patron && $self->borrowernumber eq $anonymous_patron ) ? 1 : 0;
+}
+
+=head3 is_eligible_for_self_renewal
+
+my $eligible_for_self_renewal = $patron->is_eligible_for_self_renewal();
+
+Returns a boolean value for whether self-renewal is available or not
+
+=cut
+
+sub is_eligible_for_self_renewal {
+    my ($self) = @_;
+
+    my $category = $self->category;
+    return 0 if !$category->self_renewal_enabled;
+
+    return 0 if $self->debarred;
+
+    my $expiry_window =
+        defined $category->self_renewal_availability_start
+        ? $category->self_renewal_availability_start
+        : C4::Context->preference('NotifyBorrowerDeparture');
+    my $post_expiry_window = $category->self_renewal_if_expired || 0;
+
+    my $expiry_date  = dt_from_string( $self->dateexpiry, undef, 'floating' );
+    my $window_start = dt_from_string( $self->dateexpiry, undef, 'floating' )->subtract( days => $expiry_window );
+    my $window_end   = dt_from_string( $self->dateexpiry, undef, 'floating' )->add( days => $post_expiry_window );
+    my $today        = dt_from_string( undef,             undef, 'floating' );
+
+    my $within_expiry_window =
+        $window_start < $today->truncate( to => 'day' ) && $today < $window_end->truncate( to => 'day' );
+    return 0 if !$within_expiry_window;
+
+    my $charges_status            = $self->is_patron_inside_charge_limits();
+    my $self_renewal_charge_limit = $category->self_renewal_fines_block;
+    foreach my $key ( keys %$charges_status ) {
+        my $within_renewal_limit =
+            ( $self_renewal_charge_limit && $self_renewal_charge_limit > $charges_status->{$key}->{charge} ) ? 1 : 0;
+        return 0 if $charges_status->{$key}->{overlimit} && !$within_renewal_limit;
+    }
+
+    return 1;
+}
+
+=head3 request_modification
+
+$patron->request_modification
+
+Used in the OPAC and in the patron self-renewal workflow to request a modification to a patron's account
+Automatically approves the request based on the AutoApprovePatronProfileSettings syspref
+
+=cut
+
+sub request_modification {
+    my ( $self, $modification ) = @_;
+
+    Koha::Patron::Modifications->search( { borrowernumber => $self->borrowernumber } )->delete;
+
+    $modification->{verification_token} = q{}                   if !$modification->{verification_token};
+    $modification->{borrowernumber}     = $self->borrowernumber if !$modification->{borrowernumber};
+
+    my $patron_modification = Koha::Patron::Modification->new($modification)->store()->discard_changes;
+
+    #Automatically approve patron profile changes if AutoApprovePatronProfileSettings is enabled
+    $patron_modification->approve() if C4::Context->preference('AutoApprovePatronProfileSettings');
+}
+
+=head3 create_expiry_notice_parameters
+
+my $letter_params = $expiring_patron->create_expiry_notice_parameters(
+    { letter_code => $which_notice, forceprint => $forceprint, is_notice_mandatory => $is_notice_mandatory } );
+
+Returns the parameters to send an expiry notice to a patron
+Used by both the membership_expiry.pl cron and the self-renewal workflow
+
+=cut
+
+sub create_expiry_notice_parameters {
+    my ( $self, $args ) = @_;
+
+    my $letter_code         = $args->{letter_code};
+    my $forceprint          = $args->{forceprint} || 0;
+    my $is_notice_mandatory = $args->{is_notice_mandatory};
+
+    my $letter_params = {
+        module         => 'members',
+        letter_code    => $letter_code,
+        branchcode     => $self->branchcode,
+        lang           => $self->lang,
+        borrowernumber => $self->borrowernumber,
+        tables         => {
+            borrowers => $self->borrowernumber,
+            branches  => $self->branchcode,
+        },
+    };
+
+    my $sending_params = {
+        letter_params => $letter_params,
+        message_name  => 'Patron_Expiry',
+        forceprint    => $forceprint
+    };
+
+    if ($is_notice_mandatory) {
+        $sending_params->{expiry_notice_mandatory} = 1;
+        $sending_params->{primary_contact_method}  = $forceprint ? 'print' : $self->primary_contact_method;
+    }
+
+    return $sending_params;
 }
 
 =head2 Internal methods
