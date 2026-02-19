@@ -272,7 +272,7 @@ export default {
                     type: "object",
                     value: {
                         hostname: "",
-                        is_enabled: true,
+                        mode: "not_applicable",
                         force_sso_opac: false,
                         force_sso_staff: false,
                     },
@@ -288,14 +288,32 @@ export default {
                     placeholder: "library.example.org",
                 },
                 {
-                    name: "is_enabled",
-                    type: "boolean",
+                    name: "mode",
+                    type: "select",
                     indexRequired: true,
-                    label: __("Active"),
-                    badgeTrueLabel: __("Active"),
-                    badgeTrueClass: "bg-success",
-                    badgeFalseLabel: __("Inactive"),
-                    badgeFalseClass: "bg-warning text-dark",
+                    label: __("Connection"),
+                    options: [
+                        { value: "not_applicable", label: __("Not linked") },
+                        {
+                            value: "optional",
+                            label: __("Linked (inactive)"),
+                        },
+                        { value: "active", label: __("Linked (active)") },
+                    ],
+                    requiredKey: "value",
+                    selectLabel: "label",
+                    badgeValues: [
+                        {
+                            value: "active",
+                            label: __("Active"),
+                            class: "bg-success",
+                        },
+                        {
+                            value: "optional",
+                            label: __("Linked"),
+                            class: "bg-secondary",
+                        },
+                    ],
                 },
                 {
                     name: "force_sso_opac",
@@ -399,7 +417,38 @@ export default {
             }
         );
 
-        onMounted(() => {
+        onMounted(async () => {
+            // Pre-populate the hostname list for the Add form by combining
+            // the system's default hostnames (from OPACBaseURL /
+            // staffClientBaseURL) with all hostnames already in the database.
+            if (props.routeAction === "add") {
+                const seen = new Set();
+                const items = [];
+
+                const pushHostname = hostname => {
+                    if (!hostname || seen.has(hostname)) return;
+                    seen.add(hostname);
+                    items.push({
+                        hostname,
+                        mode: "not_applicable",
+                        force_sso_opac: false,
+                        force_sso_staff: false,
+                    });
+                };
+
+                (window.idp_default_hostnames || []).forEach(pushHostname);
+
+                try {
+                    const existing =
+                        await APIClient.identity_providers.hostnames.getAll();
+                    (existing || []).forEach(h => pushHostname(h.hostname));
+                } catch {
+                    // API unavailable; defaults still shown
+                }
+
+                items.forEach(item => formStateObj.hostnames.push(item));
+            }
+
             initialized.value = true;
         });
 
@@ -425,8 +474,12 @@ export default {
                 .forEach(k => delete provider[k]);
             provider.config = config;
 
-            // Hostnames are managed separately via the hostnames API
-            const hostnamesFromForm = provider.hostnames || [];
+            // Hostnames are managed separately via the hostnames API.
+            // Only items the user has opted to link (mode !== "not_applicable")
+            // get saved; mode maps to is_enabled for the API.
+            const hostnamesFromForm = (provider.hostnames || []).filter(
+                h => h.hostname && h.mode && h.mode !== "not_applicable"
+            );
             delete provider.hostnames;
 
             delete provider.identity_provider_id;
@@ -444,19 +497,15 @@ export default {
                         await baseResource.apiClient.create(provider);
                     const newId = newProvider.identity_provider_id;
 
-                    // Create each hostname entered in the form
+                    // Create a hostname record for each linked hostname
                     for (const h of hostnamesFromForm) {
-                        if (h.hostname) {
-                            await APIClient.identity_providers.hostnames.create(
-                                {
-                                    hostname: h.hostname,
-                                    identity_provider_id: newId,
-                                    is_enabled: h.is_enabled ?? true,
-                                    force_sso_opac: h.force_sso_opac ?? false,
-                                    force_sso_staff: h.force_sso_staff ?? false,
-                                }
-                            );
-                        }
+                        await APIClient.identity_providers.hostnames.create({
+                            hostname: h.hostname,
+                            identity_provider_id: newId,
+                            is_enabled: h.mode === "active",
+                            force_sso_opac: h.force_sso_opac ?? false,
+                            force_sso_staff: h.force_sso_staff ?? false,
+                        });
                     }
 
                     baseResource.setMessage($__("Identity provider created"));
