@@ -80,6 +80,12 @@ elsif ( $op eq 'cud-add_validate' ) {
     my $noissuescharge                         = $input->param('noissuescharge') || undef;
     my $noissueschargeguarantees               = $input->param('noissueschargeguarantees') || undef;
     my $noissueschargeguarantorswithguarantees = $input->param('noissueschargeguarantorswithguarantees') || undef;
+    my $self_renewal_enabled                   = $input->param('self_renewal_enabled');
+    my $self_renewal_availability_start        = $input->param('self_renewal_availability_start');
+    my $self_renewal_fines_block               = $input->param('self_renewal_fines_block');
+    my $self_renewal_failure_message           = $input->param('self_renewal_failure_message');
+    my $self_renewal_information_message       = $input->param('self_renewal_information_message');
+    my $self_renewal_if_expired                = $input->param('self_renewal_if_expired');
 
     my @branches = grep { $_ ne q{} } $input->multi_param('branches');
     my $can_be_guarantee = $input->param('can_be_guarantee');
@@ -121,6 +127,12 @@ elsif ( $op eq 'cud-add_validate' ) {
         $category->noissueschargeguarantees($noissueschargeguarantees);
         $category->noissueschargeguarantorswithguarantees($noissueschargeguarantorswithguarantees);
         $category->force_password_reset_when_set_by_staff($force_password_reset_when_set_by_staff);
+        $category->self_renewal_enabled($self_renewal_enabled);
+        $category->self_renewal_availability_start($self_renewal_availability_start);
+        $category->self_renewal_fines_block($self_renewal_fines_block);
+        $category->self_renewal_failure_message($self_renewal_failure_message);
+        $category->self_renewal_information_message($self_renewal_information_message);
+        $category->self_renewal_if_expired($self_renewal_if_expired);
         eval {
             $category->store;
             $category->replace_library_limits( \@branches );
@@ -159,6 +171,12 @@ elsif ( $op eq 'cud-add_validate' ) {
                 noissueschargeguarantees               => $noissueschargeguarantees,
                 noissueschargeguarantorswithguarantees => $noissueschargeguarantorswithguarantees,
                 force_password_reset_when_set_by_staff => $force_password_reset_when_set_by_staff,
+                self_renewal_enabled                   => $self_renewal_enabled,
+                self_renewal_availability_start        => $self_renewal_availability_start,
+                self_renewal_fines_block               => $self_renewal_fines_block,
+                self_renewal_failure_message           => $self_renewal_failure_message,
+                self_renewal_information_message       => $self_renewal_information_message,
+                self_renewal_if_expired                => $self_renewal_if_expired,
             }
         );
         eval {
