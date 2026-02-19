@@ -121,6 +121,7 @@ sub submit {
                     $response->{confirmation_sent} = 1 if $result->{sent};
                 }
 
+                $c->res->headers->location( $c->req->url->to_string );
                 return $c->render(
                     status  => 201,
                     openapi => $response
