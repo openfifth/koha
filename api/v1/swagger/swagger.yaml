@@ -156,6 +156,8 @@ definitions:
     $ref: ./definitions/patron_balance.yaml
   patron_category:
     $ref: ./definitions/patron_category.yaml
+  patron_self_renewal:
+    $ref: ./definitions/patron_self_renewal.yaml
   patron_extended_attribute:
     $ref: ./definitions/patron_extended_attribute.yaml
   preservation_config:
@@ -600,6 +602,8 @@ paths:
     $ref: "./paths/public_patrons.yaml#/~1public~1patrons~1{patron_id}~1ill~1requests"
   "/public/patrons/{patron_id}/password":
     $ref: "./paths/public_patrons.yaml#/~1public~1patrons~1{patron_id}~1password"
+  "/public/patrons/{patron_id}/self_renewal":
+    $ref: "./paths/public_patrons.yaml#/~1public~1patrons~1{patron_id}~1self_renewal"
   "/public/tickets":
     $ref: "./paths/tickets.yaml#/~1public~1tickets"
   /quotes:
@@ -1258,6 +1262,9 @@ tags:
   - description: "Manage cash register cashups\n"
     name: cashups
     x-displayName: Cashups
+  - description: "Manage categories\n"
+    name: categories
+    x-displayName: Categories
   - description: "Manage checkouts\n"
     name: checkouts
     x-displayName: Checkouts

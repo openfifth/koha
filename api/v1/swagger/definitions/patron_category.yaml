@@ -134,6 +134,35 @@ properties:
     type:
       - boolean
     description: Set threshold of debt allowed before issues are blocked
+  self_renewal_enabled:
+    type:
+      - boolean
+    description: Determine whether self-renewal is allowed for this category
+  self_renewal_availability_start:
+    type:
+      - number
+      - "null"
+    description: How many days in advance of expiry self-renewal should become available
+  self_renewal_if_expired:
+    type:
+      - number
+      - "null"
+    description: How many days after expiry self-renewal should still be available
+  self_renewal_fines_block:
+    type:
+      - number
+      - "null"
+    description: How much can be accrued in fines before self-renewal is blocked
+  self_renewal_failure_message:
+    type:
+      - string
+      - "null"
+    description: The error message to display if self-renewal fails
+  self_renewal_information_message:
+    type:
+      - string
+      - "null"
+    description: The information to display to the user before starting the renewal process
 additionalProperties: false
 required:
   - patron_category_id

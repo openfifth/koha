@@ -408,6 +408,10 @@ properties:
       - "null"
     description: patron's primary contact method
     maxLength: 45
+  self_renewal_available:
+    type:
+      - boolean
+    description: set to 1 if the patron is eligible to self renew and is within the renewal criteria
   _strings:
     type:
       - object
