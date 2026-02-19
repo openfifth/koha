@@ -251,10 +251,80 @@ export default {
             }))
         );
 
+        const hostnameAttr = {
+            name: "hostnames",
+            type: "relationshipWidget",
+            label: __("Hostnames"),
+            group: "Network & Entry Settings",
+            hideIn: ["List"],
+            showElement: {
+                type: "table",
+                columnData: "hostnames",
+                hidden: provider => !!provider.hostnames?.length,
+                columns: [
+                    { name: __("Hostname"), value: "hostname" },
+                    { name: __("Active"), value: "is_enabled" },
+                    { name: __("Force SSO (OPAC)"), value: "force_sso_opac" },
+                    { name: __("Force SSO (staff)"), value: "force_sso_staff" },
+                ],
+            },
+            componentProps: {
+                resourceRelationships: {
+                    resourceProperty: "hostnames",
+                },
+                relationshipI18n: {
+                    nameUpperCase: __("Hostname"),
+                    removeThisMessage: __("Remove this hostname"),
+                    addNewMessage: __("Add hostname"),
+                    noneCreatedYetMessage: __(
+                        "No hostnames configured. Add a hostname to surface this provider on its login page."
+                    ),
+                },
+                newRelationshipDefaultAttrs: {
+                    type: "object",
+                    value: {
+                        hostname: null,
+                        is_enabled: true,
+                        force_sso_opac: false,
+                        force_sso_staff: false,
+                    },
+                },
+            },
+            relationshipFields: [
+                {
+                    name: "hostname",
+                    required: true,
+                    indexRequired: true,
+                    type: "text",
+                    label: __("Hostname"),
+                    placeholder: "library.example.org",
+                },
+                {
+                    name: "is_enabled",
+                    type: "boolean",
+                    indexRequired: true,
+                    label: __("Active"),
+                },
+                {
+                    name: "force_sso_opac",
+                    type: "boolean",
+                    indexRequired: true,
+                    label: __("Force SSO (OPAC)"),
+                },
+                {
+                    name: "force_sso_staff",
+                    type: "boolean",
+                    indexRequired: true,
+                    label: __("Force SSO (staff)"),
+                },
+            ],
+        };
+
         const resourceAttrs = [
             ...staticResourceAttrs,
             protocolPlaceholderAttr,
             ...configResourceAttrs,
+            hostnameAttr,
         ];
 
         // Unpack the JSON config blob into flat _config_* fields so the form
@@ -331,7 +401,7 @@ export default {
             initialized.value = true;
         });
 
-        const onFormSave = (e, providerToSave) => {
+        const onFormSave = async (e, providerToSave) => {
             e.preventDefault();
             const provider = JSON.parse(JSON.stringify(providerToSave));
             const providerId = provider.identity_provider_id;
@@ -353,28 +423,45 @@ export default {
                 .forEach(k => delete provider[k]);
             provider.config = config;
 
+            // Hostnames are managed separately via the hostnames API
+            const hostnamesFromForm = provider.hostnames || [];
+            delete provider.hostnames;
+
             delete provider.identity_provider_id;
 
-            if (providerId) {
-                return baseResource.apiClient.update(provider, providerId).then(
-                    updatedProvider => {
-                        baseResource.setMessage(
-                            $__("Identity provider updated")
-                        );
-                        return updatedProvider;
-                    },
-                    error => {}
-                );
-            } else {
-                return baseResource.apiClient.create(provider).then(
-                    newProvider => {
-                        baseResource.setMessage(
-                            $__("Identity provider created")
-                        );
-                        return newProvider;
-                    },
-                    error => {}
-                );
+            try {
+                if (providerId) {
+                    const updatedProvider = await baseResource.apiClient.update(
+                        provider,
+                        providerId
+                    );
+                    baseResource.setMessage($__("Identity provider updated"));
+                    return updatedProvider;
+                } else {
+                    const newProvider =
+                        await baseResource.apiClient.create(provider);
+                    const newId = newProvider.identity_provider_id;
+
+                    // Create each hostname entered in the form
+                    for (const h of hostnamesFromForm) {
+                        if (h.hostname) {
+                            await APIClient.identity_providers.hostnames.create(
+                                {
+                                    hostname: h.hostname,
+                                    identity_provider_id: newId,
+                                    is_enabled: h.is_enabled ?? true,
+                                    force_sso_opac: h.force_sso_opac ?? false,
+                                    force_sso_staff: h.force_sso_staff ?? false,
+                                }
+                            );
+                        }
+                    }
+
+                    baseResource.setMessage($__("Identity provider created"));
+                    return newProvider;
+                }
+            } catch (error) {
+                // errors surfaced by the httpClient
             }
         };
 
