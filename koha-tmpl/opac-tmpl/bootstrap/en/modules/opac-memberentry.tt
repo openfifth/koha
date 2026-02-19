@@ -92,6 +92,9 @@
                         [% IF nochanges %]
                             <div class="alert alert-error">No changes were made.</div>
                         [% END %]
+                        [% IF self_renewal %]
+                            <div class="alert alert-info">Please verify your details to proceed with your self-renewal.</div>
+                        [% END %]
                     [% END %]
 
                     [% IF empty_mandatory_fields %]
@@ -235,7 +238,11 @@
                         >
                     [% END %]
 
-                    <form method="post" action="/cgi-bin/koha/opac-memberentry.pl" id="memberentry-form" autocomplete="off">
+                    <form
+                        method="post"
+                        [% IF (self_renewal) %]action="/api/v1/public/patrons/[% logged_in_user.borrowernumber | uri %]/self_renewal" id="self-renewal-form"[% ELSE %]action="/cgi-bin/koha/opac-memberentry.pl" id="memberentry-form"[% END %]
+                        autocomplete="off"
+                    >
                         [% INCLUDE 'csrf-token.inc' %]
 
                         [% FOREACH field = ['streetnumber' 'streettype'  'cardnumber' 'branchcode' 'categorycode' 'title' 'surname' 'firstname' 'preferred_name' 'middle_name' 'dateofbirth' 'initials' 'pronouns' 'othernames' 'address' 'address2' 'city' 'state' 'zipcode' 'country' 'phone' 'phonepro' 'mobile' 'email' 'emailpro' 'fax' 'B_streettype' 'B_streetnumber' 'B_address' 'B_address2' 'B_city' 'B_state' 'B_zipcode' 'B_country' 'B_phone' 'B_email' 'contactnote' 'altcontactsurname' 'altcontactfirstname' 'altcontactaddress1' 'altcontactaddress2' 'altcontactaddress3' 'altcontactstate' 'altcontactzipcode' 'altcontactcountry' 'altcontactphone' 'password' 'lang' ] %]
@@ -1356,7 +1363,11 @@
                                     [% IF OPACPatronDetails %]
                                         <fieldset class="action">
                                             <input type="hidden" name="op" value="cud-update" />
-                                            <input type="submit" class="btn btn-primary" value="Submit update request" />
+                                            [% IF (self_renewal) %]
+                                                <input type="submit" class="btn btn-primary" value="Submit renewal request" />
+                                            [% ELSE %]
+                                                <input type="submit" class="btn btn-primary" value="Submit update request" />
+                                            [% END %]
                                         </fieldset>
                                     [% END %]
                                 [% ELSE %]
@@ -1385,16 +1396,23 @@
     [% INCLUDE 'calendar.inc' %]
     <script>
         $(document).ready(function() {
+                let formName
+                [% IF (self_renewal) %]
+                    formName = 'self-renewal-form'
+                [% ELSE %]
+                    formName = 'memberentry-form'
+                [% END %]
+
                 [% IF op == 'edit' && !OPACPatronDetails %]
-                    $("#memberentry-form :input").attr('readonly', true);
+                    $("#" + formName + " :input").attr('readonly', true);
                     $("#borrower_branchcode").attr('disabled',true);
                     $("#borrower_title").attr('disabled',true);
-                    $('#memberentry-form :radio').attr('disabled',true);
+                    $('#' + formName + ' :radio').attr('disabled',true);
                     $('span.required').remove();
                     $('label.required').removeClass('required');
                 [% END %]
 
-                $("#memberentry-form").validate({
+                $("#" + formName).validate({
                     rules: {
                         borrower_email: {
                             email: true
@@ -1424,8 +1442,40 @@
                             return false;
                         }
                         else {
-                            form.beenSubmitted = true;
-                            form.submit();
+                            if(formName === 'self-renewal-form') {
+                                const formValues = $(form).serializeArray()
+                                const renewalBody = formValues.reduce((body, curr, i) => {
+                                    if(curr.name.includes("borrower")) {
+                                        const fieldName = curr.name.replace("borrower_", "")
+                                        body[fieldName] = curr.value
+                                    }
+                                    if(curr.name === "patron_attribute_code") {
+                                        const matchingValue = formValues[i + 1].value
+                                        body.extended_attributes.push({code: curr.value, attribute: matchingValue})
+                                    }
+                                    return body
+                                }, {extended_attributes: []})
+                                const options = {
+                                    url: $(form).attr('action'),
+                                    method: $(form).attr('method').toUpperCase(),
+                                    contentType: 'application/json',
+                                    data: JSON.stringify({patron: renewalBody})
+                                };
+                                $.ajax(options)
+                                    .then(function(result) {
+                                        let newLocation = "/cgi-bin/koha/opac-user.pl?self_renewal_success=" + result.expiry_date
+                                        if(result.confirmation_sent) {
+                                            newLocation += "&confirmation_sent=1"
+                                        }
+                                        document.location = newLocation
+                                    })
+                                    .fail(function(err) {
+                                        document.location = "/cgi-bin/koha/opac-user.pl?self_renewal_success=0";
+                                    });
+                            } else {
+                                form.beenSubmitted = true;
+                                form.submit();
+                            }
                         }
                     }
                 });
