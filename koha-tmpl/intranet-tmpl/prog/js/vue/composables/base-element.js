@@ -16,6 +16,9 @@ export function useBaseElement(instancedElement) {
         if (attr.type === "relationshipWidget") {
             attr.componentPath = "@koha-vue/components/RelationshipWidget.vue";
         }
+        if (attr.type === "splitListWidget") {
+            attr.componentPath = "@koha-vue/components/SplitListWidget.vue";
+        }
         const importPath = show
             ? attr.showElement?.componentPath
                 ? attr.showElement.componentPath

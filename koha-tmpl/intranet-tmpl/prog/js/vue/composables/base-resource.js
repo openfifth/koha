@@ -414,8 +414,11 @@ export function useBaseResource(resourceConfig) {
     const getFieldGroupings = (component, resource) => {
         const attributesToConsider = resourceConfig.resourceAttrs.reduce(
             (acc, ra) => {
-                if (ra.type === "relationshipWidget") {
-                    ra.relationshipFields.forEach(relationshipField => {
+                if (
+                    ra.type === "relationshipWidget" ||
+                    ra.type === "splitListWidget"
+                ) {
+                    ra.relationshipFields?.forEach(relationshipField => {
                         relationshipField.relationshipName = ra.name;
                     });
                 }
@@ -516,7 +519,9 @@ export function useBaseResource(resourceConfig) {
                 groupFields.forEach(field => {
                     if (
                         resource[field.name] != null &&
-                        (field.type !== "relationshipWidget" ||
+                        (!["relationshipWidget", "splitListWidget"].includes(
+                            field.type
+                        ) ||
                             resource[field.name].length > 0)
                     ) {
                         groupInfo.hasDataToDisplay = true;
@@ -622,7 +627,10 @@ export function useBaseResource(resourceConfig) {
                     acc[attr.name] = false;
                     return acc;
                 }
-                if (attr.type === "relationshipWidget") {
+                if (
+                    attr.type === "relationshipWidget" ||
+                    attr.type === "splitListWidget"
+                ) {
                     acc[attr.name] = [];
                     return acc;
                 }

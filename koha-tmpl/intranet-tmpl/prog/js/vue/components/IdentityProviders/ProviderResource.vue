@@ -253,11 +253,73 @@ export default {
 
         const hostnameAttr = {
             name: "hostnames",
-            type: "component",
-            componentPath:
-                "@koha-vue/components/IdentityProviders/HostnameFormWidget.vue",
+            type: "splitListWidget",
             group: "Network & Entry Settings",
             hideIn: ["List"],
+            componentProps: {
+                resourceRelationships: {
+                    resourceProperty: "hostnames",
+                },
+                relationshipI18n: {
+                    nameUpperCase: __("Hostname"),
+                    removeThisMessage: __("Remove this hostname"),
+                    addNewMessage: __("Add hostname"),
+                    noneCreatedYetMessage: __(
+                        "No hostnames configured. Add a hostname to surface this provider on its login page."
+                    ),
+                },
+                newRelationshipDefaultAttrs: {
+                    type: "object",
+                    value: {
+                        hostname: "",
+                        is_enabled: true,
+                        force_sso_opac: false,
+                        force_sso_staff: false,
+                    },
+                },
+            },
+            relationshipFields: [
+                {
+                    name: "hostname",
+                    required: true,
+                    indexRequired: true,
+                    type: "text",
+                    label: __("Hostname"),
+                    placeholder: "library.example.org",
+                },
+                {
+                    name: "is_enabled",
+                    type: "boolean",
+                    indexRequired: true,
+                    label: __("Active"),
+                    badgeTrueLabel: __("Active"),
+                    badgeTrueClass: "bg-success",
+                    badgeFalseLabel: __("Inactive"),
+                    badgeFalseClass: "bg-warning text-dark",
+                },
+                {
+                    name: "force_sso_opac",
+                    type: "boolean",
+                    indexRequired: true,
+                    label: __("Force SSO (OPAC)"),
+                    toolTip: __(
+                        "Automatically redirect OPAC users on this hostname to this provider"
+                    ),
+                    badgeTrueLabel: __("SSO OPAC"),
+                    badgeTrueClass: "bg-primary",
+                },
+                {
+                    name: "force_sso_staff",
+                    type: "boolean",
+                    indexRequired: true,
+                    label: __("Force SSO (staff)"),
+                    toolTip: __(
+                        "Automatically redirect staff users on this hostname to this provider"
+                    ),
+                    badgeTrueLabel: __("SSO Staff"),
+                    badgeTrueClass: "bg-primary",
+                },
+            ],
         };
 
         const resourceAttrs = [

@@ -167,6 +167,15 @@
             v-on="getEventHandlers()"
         ></component>
     </template>
+    <template v-else-if="attr.type == 'splitListWidget' && attr.componentProps">
+        <component
+            :is="requiredComponent"
+            :title="attr.group ? null : attr.label"
+            :name="attr.name"
+            v-bind="getComponentProps()"
+            v-on="getEventHandlers()"
+        ></component>
+    </template>
     <template v-else-if="attr.type == 'relationshipSelect'">
         <FormRelationshipSelect
             v-bind="attr"
