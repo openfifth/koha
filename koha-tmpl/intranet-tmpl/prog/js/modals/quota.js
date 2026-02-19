@@ -120,11 +120,8 @@
             quotaModalSubmit.innerHTML =
                 '<i class="fa fa-check"></i> ' + __("Update");
             quotaDescriptionInput.value = button.dataset.description;
-            quotaStartDateInput._flatpickr.setDate(
-                button.dataset.start_date,
-                1
-            );
-            quotaEndDateInput._flatpickr.setDate(button.dataset.end_date, 1);
+            quotaStartDateInput._flatpickr.setDate(button.dataset.start_date);
+            quotaEndDateInput._flatpickr.setDate(button.dataset.end_date);
             quotaAllocationInput.value = button.dataset.allocation;
         } else {
             quotaIdInput.value = null;
