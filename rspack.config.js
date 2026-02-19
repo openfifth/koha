@@ -30,6 +30,8 @@ module.exports = [
             sip2: "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/sip2.ts",
             "admin/identity_providers":
                 "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/identity-providers.ts",
+            "admin/identity_providers_2":
+                "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/identity-providers-2.ts",
         },
         output: {
             filename: "[name].js",

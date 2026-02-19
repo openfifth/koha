@@ -22,6 +22,7 @@ use Modern::Perl;
 use base qw(Koha::Object Koha::Object::JSONFields);
 
 use Koha::Auth::Identity::Provider::Domains;
+use Koha::Auth::Identity::Provider::Hostnames;
 use Koha::Auth::Identity::Provider::Mappings;
 use Koha::Exceptions;
 
@@ -60,6 +61,20 @@ sub mappings {
 
     return Koha::Auth::Identity::Provider::Mappings->_new_from_dbic(
         scalar $self->_result->identity_provider_mappings );
+}
+
+=head3 hostnames
+
+    my $hostnames = $provider->hostnames;
+
+Returns the related I<Koha::Auth::Identity::Provider::Hostnames> iterator.
+
+=cut
+
+sub hostnames {
+    my ($self) = @_;
+
+    return Koha::Auth::Identity::Provider::Hostnames->_new_from_dbic( scalar $self->_result->hostnames );
 }
 
 =head3 get_config

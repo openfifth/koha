@@ -67,7 +67,11 @@
                     </ol>
                 </template>
             </AccordionWrapper>
-            <div v-else>
+            <div
+                v-else-if="
+                    instancedResource.formGroupsDisplayMode !== 'sections'
+                "
+            >
                 <fieldset
                     v-for="(
                         group, counter
@@ -89,6 +93,21 @@
                         </li>
                     </ol>
                 </fieldset>
+            </div>
+            <div v-else>
+                <FormSection
+                    v-for="(
+                        group, counter
+                    ) in instancedResource.getFieldGroupings('Form')"
+                    v-bind:key="counter"
+                    :group="group"
+                    :resource="resourceToSave"
+                    :instancedResource="instancedResource"
+                    @save="
+                        (groupName, updatedResource) =>
+                            handleSectionSave(groupName, updatedResource)
+                    "
+                />
             </div>
             <fieldset
                 class="action"
@@ -122,6 +141,7 @@ import ButtonSubmit from "./ButtonSubmit.vue";
 import DropdownButtons from "./DropdownButtons.vue";
 import TabsWrapper from "./TabsWrapper.vue";
 import AccordionWrapper from "./AccordionWrapper.vue";
+import FormSection from "./FormSection.vue"; // New Import
 import { $__ } from "@koha-vue/i18n";
 
 export default {
@@ -169,7 +189,7 @@ export default {
             }
         });
 
-        const saveAndNavigate = ($event, resourceToSave) => {
+        const saveAndNavigate = async ($event, partialResource = null) => {
             const {
                 components,
                 navigationOnFormSave,
@@ -177,6 +197,12 @@ export default {
                 router,
                 idAttr,
             } = props.instancedResource;
+
+            // Merge partialResource if provided (for section saves)
+            if (partialResource) {
+                Object.assign(resourceToSave.value, partialResource);
+            }
+
             // Default to show
             const navigationAction =
                 saveOptionSelected.value ||
@@ -185,18 +211,29 @@ export default {
             const idParamRequired =
                 navigationAction === components.show ||
                 navigationAction === components.edit;
-            onFormSave($event, resourceToSave).then(resource => {
-                if (resource) {
+
+            try {
+                const savedResource = await onFormSave(
+                    $event,
+                    resourceToSave.value
+                );
+                if (savedResource) {
                     router.push({
                         name: navigationAction,
                         ...(idParamRequired && {
                             params: {
-                                [idAttr]: resource[idAttr],
+                                [idAttr]: savedResource[idAttr],
                             },
                         }),
                     });
                 }
-            });
+            } catch (error) {
+                // onFormSave or router push might throw, handled by instancedResource usually
+            }
+        };
+
+        const handleSectionSave = (groupName, updatedResource) => {
+            Object.assign(resourceToSave.value, updatedResource);
         };
 
         const saveOptionSelected = ref(
@@ -270,6 +307,7 @@ export default {
             resourceToSave,
             resourceForm,
             saveAndNavigate,
+            handleSectionSave,
             editMode,
             saveDropdownButtonActions,
         };
@@ -282,6 +320,7 @@ export default {
         FormElement,
         TabsWrapper,
         AccordionWrapper,
+        FormSection, // New Component
         DropdownButtons,
     },
     name: "ResourceFormSave",

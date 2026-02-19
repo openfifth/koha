@@ -616,6 +616,8 @@
           type: string
           enum:
             - domains
+            - hostnames
+            - mappings
         collectionFormat: csv
     produces:
       - application/json
@@ -731,6 +733,8 @@
           type: string
           enum:
             - domains
+            - hostnames
+            - mappings
         collectionFormat: csv
     produces:
       - application/json

@@ -44,6 +44,16 @@ properties:
     type:
       - array
       - "null"
+  hostnames:
+    description: Configured hostnames for the identity provider
+    type:
+      - array
+      - "null"
+  mappings:
+    description: Configured mappings for the identity provider
+    type:
+      - array
+      - "null"
 additionalProperties: false
 required:
   - config

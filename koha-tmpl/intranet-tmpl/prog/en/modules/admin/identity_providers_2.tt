@@ -1,0 +1,29 @@
+[% USE raw %]
+[% USE To %]
+[% SET footerjs = 1 %]
+[% INCLUDE 'doc-head-open.inc' %]
+<title> [% t("Identity providers (New UI)") | html %] &rsaquo; [% t("Administration") | html %] &rsaquo; [% t("Koha") | html %] </title>
+[% INCLUDE 'doc-head-close.inc' %]
+</head>
+
+<body id="admin_identity_providers_2" class="admin">
+[% WRAPPER 'header.inc' %]
+    [% INCLUDE 'prefs-admin-search.inc' %]
+[% END %]
+
+<div id="identity-providers-2"></div>
+<!-- this is closed in intranet-bottom.inc -->
+
+[% MACRO jsinclude BLOCK %]
+    [% INCLUDE 'calendar.inc' %]
+    [% INCLUDE 'datatables.inc' %]
+    <script>
+        const logged_in_user = [% To.json(logged_in_user.unblessed) | $raw %];
+        window.borrower_columns = [% To.json(borrower_columns) | $raw %];
+        window.libraries_map = [% To.json(libraries_map) | $raw %];
+        window.categories_map = [% To.json(categories_map) | $raw %];
+        window.idp_default_hostnames = [% To.json(idp_default_hostnames) | $raw %];
+    </script>
+    [% Asset.js("js/vue/dist/admin/identity_providers_2.js") | $raw %]
+[% END %]
+[% INCLUDE 'intranet-bottom.inc' %]
