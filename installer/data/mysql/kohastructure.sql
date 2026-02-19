@@ -1827,6 +1827,12 @@ CREATE TABLE `categories` (
   `noissueschargeguarantees` int(11) DEFAULT NULL COMMENT 'define maximum amount that the guarantees of a patron in this category can have outstanding before checkouts are blocked',
   `noissueschargeguarantorswithguarantees` int(11) DEFAULT NULL COMMENT 'define maximum amount that the guarantors with guarantees of a patron in this category can have outstanding before checkouts are blocked',
   `enforce_expiry_notice` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'enforce the patron expiry notice for this category',
+  `self_renewal_enabled` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'allow self renewal for this category',
+  `self_renewal_availability_start` smallint(6) DEFAULT NULL COMMENT 'how long before the patron expiry date self-renewal should be made available (overrides system default of NotifyBorrowerDeparture)',
+  `self_renewal_fines_block` int(11) DEFAULT NULL COMMENT 'the amount owed in fines before self renewal is blocked (overrides system default of noissuescharge)',
+  `self_renewal_if_expired` smallint(6) DEFAULT 0 COMMENT 'how long after expiry a patron can self renew their account',
+  `self_renewal_failure_message` mediumtext DEFAULT NULL COMMENT 'the message to display if self renewal is not successful',
+  `self_renewal_information_message` mediumtext DEFAULT NULL COMMENT 'the message to display before the self renewal process starts',
   PRIMARY KEY (`categorycode`),
   UNIQUE KEY `categorycode` (`categorycode`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
