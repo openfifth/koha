@@ -222,6 +222,50 @@ define maximum amount that the guarantors with guarantees of a patron in this ca
 
 enforce the patron expiry notice for this category
 
+=head2 self_renewal_enabled
+
+  data_type: 'tinyint'
+  default_value: 0
+  is_nullable: 0
+
+allow self renewal for this category
+
+=head2 self_renewal_availability_start
+
+  data_type: 'smallint'
+  is_nullable: 1
+
+how long before the patron expiry date self-renewal should be made available (overrides system default of NotifyBorrowerDeparture)
+
+=head2 self_renewal_fines_block
+
+  data_type: 'integer'
+  is_nullable: 1
+
+the amount owed in fines before self renewal is blocked (overrides system default of noissuescharge)
+
+=head2 self_renewal_if_expired
+
+  data_type: 'smallint'
+  default_value: 0
+  is_nullable: 1
+
+how long after expiry a patron can self renew their account
+
+=head2 self_renewal_failure_message
+
+  data_type: 'mediumtext'
+  is_nullable: 1
+
+the message to display if self renewal is not successful
+
+=head2 self_renewal_information_message
+
+  data_type: 'mediumtext'
+  is_nullable: 1
+
+the message to display before the self renewal process starts
+
 =cut
 
 __PACKAGE__->add_columns(
@@ -293,6 +337,18 @@ __PACKAGE__->add_columns(
   { data_type => "integer", is_nullable => 1 },
   "enforce_expiry_notice",
   { data_type => "tinyint", default_value => 0, is_nullable => 0 },
+  "self_renewal_enabled",
+  { data_type => "tinyint", default_value => 0, is_nullable => 0 },
+  "self_renewal_availability_start",
+  { data_type => "smallint", is_nullable => 1 },
+  "self_renewal_fines_block",
+  { data_type => "integer", is_nullable => 1 },
+  "self_renewal_if_expired",
+  { data_type => "smallint", default_value => 0, is_nullable => 1 },
+  "self_renewal_failure_message",
+  { data_type => "mediumtext", is_nullable => 1 },
+  "self_renewal_information_message",
+  { data_type => "mediumtext", is_nullable => 1 },
 );
 
 =head1 PRIMARY KEY
@@ -437,6 +493,7 @@ __PACKAGE__->add_columns(
     '+require_strong_password'                => { is_boolean => 1 },
     '+reset_password'                         => { is_boolean => 1 },
     '+enforce_expiry_notice'                  => { is_boolean => 1 },
+    '+self_renewal_enabled'                   => { is_boolean => 1 },
 );
 
 1;
