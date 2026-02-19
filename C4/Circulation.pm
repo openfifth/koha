@@ -2032,6 +2032,7 @@ sub AddIssue {
                         {
                             patron_id => $patron->borrowernumber,
                             issue_id  => $issue->issue_id,
+                            type      => 'ISSUE',
                         }
                     );
                 }
@@ -3533,6 +3534,7 @@ sub AddRenewal {
                     {
                         patron_id => $patron->borrowernumber,
                         issue_id  => $issue->issue_id,
+                        type      => 'RENEW',
                     }
                 );
             }
