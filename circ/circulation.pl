@@ -517,6 +517,7 @@ if ( @$barcodes && $op eq 'cud-checkout' ) {
                     next
                         if $patron_match
                         && scalar(@conf_keys) > 0
+                        && $needsconfirmation_key ne 'QUOTA_SELECT'
                         && grep( { $needsconfirmation_key eq $_ } @conf_keys );
 
                     $template_params->{$needsconfirmation_key}    = $needsconfirmation->{$needsconfirmation_key};
@@ -524,7 +525,8 @@ if ( @$barcodes && $op eq 'cud-checkout' ) {
                     $template_params->{getBarcodeMessageIteminfo} = $item->barcode;
                     $template_params->{NEEDSCONFIRMATION}         = 1;
                     $confirm_required                             = 1;
-                    push( @{ $template_params->{sessionConfirmationKeys} }, $needsconfirmation_key );
+                    push( @{ $template_params->{sessionConfirmationKeys} }, $needsconfirmation_key )
+                        unless $needsconfirmation_key eq 'QUOTA_SELECT';
                 }
             }
             unless ($confirm_required) {
