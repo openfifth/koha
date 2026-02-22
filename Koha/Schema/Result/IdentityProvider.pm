@@ -178,9 +178,27 @@ __PACKAGE__->has_many(
 # Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-02-21 07:16:46
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:4T1F2ggwQdvVV7jskMZwig
 
+__PACKAGE__->add_columns(
+    '+enabled'         => { is_boolean => 1 },
+);
+
 __PACKAGE__->has_many(
   "domains",
   "Koha::Schema::Result::IdentityProviderDomain",
+  { "foreign.identity_provider_id" => "self.identity_provider_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+__PACKAGE__->has_many(
+  "hostnames",
+  "Koha::Schema::Result::IdentityProviderHostname",
+  { "foreign.identity_provider_id" => "self.identity_provider_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+__PACKAGE__->has_many(
+  "mappings",
+  "Koha::Schema::Result::IdentityProviderMapping",
   { "foreign.identity_provider_id" => "self.identity_provider_id" },
   { cascade_copy => 0, cascade_delete => 0 },
 );

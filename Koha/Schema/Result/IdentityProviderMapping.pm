@@ -126,4 +126,22 @@ __PACKAGE__->belongs_to(
 
 # Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-02-20 10:20:26
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:x2JmD4As/a96Ndoe5rzuKg
+
+=head2 koha_object_class
+
+Missing POD for koha_object_class.
+
+=cut
+
+
+sub koha_object_class  { 'Koha::Auth::Identity::Provider::Mapping' }
+
+=head2 koha_objects_class
+
+Missing POD for koha_objects_class.
+
+=cut
+
+sub koha_objects_class { 'Koha::Auth::Identity::Provider::Mappings' }
+
 1;

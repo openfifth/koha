@@ -95,4 +95,20 @@ __PACKAGE__->has_many(
 # Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-02-20 10:20:26
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:uvzH69NxZ1akNcfsvgRDIg
 
+=head2 koha_object_class
+
+Missing POD for koha_object_class.
+
+=cut
+
+sub koha_object_class  { 'Koha::Auth::Hostname' }
+
+=head2 koha_objects_class
+
+Missing POD for koha_objects_class.
+
+=cut
+
+sub koha_objects_class { 'Koha::Auth::Hostnames' }
+
 1;

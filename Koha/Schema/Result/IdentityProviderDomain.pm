@@ -234,7 +234,8 @@ __PACKAGE__->add_columns(
     '+auto_register_staff' => { is_boolean => 1 },
     '+update_on_auth'      => { is_boolean => 1 },
     '+allow_opac'          => { is_boolean => 1 },
-    '+allow_staff'         => { is_boolean => 1 }
+    '+allow_staff'         => { is_boolean => 1 },
+    '+send_welcome_email'  => { is_boolean => 1 },
 );
 
 =head2 koha_object_class
