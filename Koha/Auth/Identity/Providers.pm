@@ -19,8 +19,10 @@ package Koha::Auth::Identity::Providers;
 
 use Modern::Perl;
 
-use Koha::Database;
 use Koha::Auth::Identity::Provider;
+use Koha::Auth::Identity::Provider::Hostnames;
+use Koha::Auth::Identity::Provider::OAuth;
+use Koha::Auth::Identity::Provider::OIDC;
 
 use base qw(Koha::Objects);
 
@@ -29,6 +31,37 @@ use base qw(Koha::Objects);
 Koha::Auth::Identity::Providers - Koha Auth Provider Object class
 
 =head1 API
+
+=head2 Class methods
+
+=head3 find_forced_provider
+
+    my $provider = Koha::Auth::Identity::Providers->find_forced_provider($hostname);
+
+Returns the I<Koha::Auth::Identity::Provider> object if the given I<hostname> is configured to
+force SSO, or C<undef> if no forced provider is found.
+
+=cut
+
+sub find_forced_provider {
+    my ( $self, $hostname ) = @_;
+    return unless $hostname;
+
+    my $hostname_link = Koha::Auth::Identity::Provider::Hostnames->search(
+        {
+            'hostname.hostname'         => $hostname,
+            'identity_provider.enabled' => 1,
+            'me.is_enabled'             => 1,
+            'me.force_sso'              => 1,
+        },
+        { join => [ 'hostname', 'identity_provider' ] }
+    )->next;
+
+    return unless $hostname_link;
+
+    my $ip_result = $hostname_link->_result->identity_provider;
+    return $self->object_class($ip_result)->_new_from_dbic($ip_result);
+}
 
 =head2 Internal methods
 
@@ -42,12 +75,45 @@ sub _type {
     return 'IdentityProvider';
 }
 
+=head3 _polymorphic_field
+
+Return the field in the table that defines the polymorphic class to be built
+
+=cut
+
+sub _polymorphic_field {
+    return 'protocol';
+}
+
+=head3 _polymorphic_map
+
+Return the mapping from protocol value to implementing class name
+
+=cut
+
+sub _polymorphic_map {
+    return {
+        OAuth => 'Koha::Auth::Identity::Provider::OAuth',
+        OIDC  => 'Koha::Auth::Identity::Provider::OIDC',
+    };
+}
+
 =head3 object_class
+
+Return object class dynamically based on protocol
 
 =cut
 
 sub object_class {
-    return 'Koha::Auth::Identity::Provider';
+    my ( $self, $object ) = @_;
+
+    return 'Koha::Auth::Identity::Provider' unless $object;
+
+    my $field = $self->_polymorphic_field;
+    my $map   = $self->_polymorphic_map;
+
+    return $map->{ $object->$field } || 'Koha::Auth::Identity::Provider';
 }
 
 1;
+

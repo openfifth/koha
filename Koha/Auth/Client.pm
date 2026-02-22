@@ -59,11 +59,13 @@ sub get_user {
     my $data          = $params->{data};
     my $interface     = $params->{interface};
     my $config        = $params->{config};
+    my $hostname      = $params->{hostname};
 
     my $provider = Koha::Auth::Identity::Providers->search( { code => $provider_code } )->next;
 
     my ( $mapped_data, $patron ) =
-        $self->_get_data_and_patron( { provider => $provider, data => $data, config => $config } );
+        $self->_get_data_and_patron(
+        { provider => $provider, data => $data, config => $config, hostname => $hostname } );
 
     $mapped_data //= {};
 

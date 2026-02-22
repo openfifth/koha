@@ -18,10 +18,13 @@ package C4::Auth_with_shibboleth;
 # along with Koha; if not, see <https://www.gnu.org/licenses>.
 
 use Modern::Perl;
-use base 'Exporter';
+
+our ( @ISA, @EXPORT_OK );
 
 BEGIN {
-    our @EXPORT_OK = qw(shib_ok logout_shib login_shib_url checkpw_shib get_login_shib);
+    require Exporter;
+    @ISA       = qw(Exporter);
+    @EXPORT_OK = qw(shib_ok logout_shib login_shib_url checkpw_shib get_login_shib);
 }
 
 use C4::Context;
@@ -34,6 +37,7 @@ use Carp            qw( carp );
 use List::MoreUtils qw( any );
 
 use Koha::Logger;
+use Koha::Auth::Identity::Providers;
 
 # Check that shib config is not malformed
 
@@ -241,28 +245,50 @@ sub _get_return {
 }
 
 sub _get_shib_config {
-    my $config = C4::Context->config('shibboleth');
+    my $hostname = $ENV{SERVER_NAME};
+    my $provider = Koha::Auth::Identity::Providers->search(
+        {
+            'me.protocol'          => 'SAML2',
+            'me.enabled'           => 1,
+            'hostname.hostname'    => $hostname,
+            'hostnames.is_enabled' => 1,
+        },
+        { prefetch => [ 'mappings', { 'hostnames' => 'hostname' } ], rows => 1 }
+    )->next;
+    return 0 unless $provider;
 
-    if ( !$config ) {
-        Koha::Logger->get->warn('shibboleth config not defined');
+    my $mapping       = $provider->mappings->as_auth_mapping;
+    my $hostname_link = $provider->hostnames->search(
+        { 'hostname.hostname' => $hostname },
+        { join                => 'hostname' }
+    )->next;
+    my $matchpoint = $hostname_link ? $hostname_link->matchpoint : undef;
+
+    unless ($matchpoint) {
+        carp 'shibboleth matchpoint not defined';
         return 0;
     }
 
-    if ( $config->{matchpoint}
-        && defined( $config->{mapping}->{ $config->{matchpoint} }->{is} ) )
-    {
-        my $logger = Koha::Logger->get;
-        $logger->debug( "koha borrower field to match: " . $config->{matchpoint} );
-        $logger->debug( "shibboleth attribute to match: " . $config->{mapping}->{ $config->{matchpoint} }->{is} );
-        return $config;
-    } else {
-        if ( !$config->{matchpoint} ) {
-            carp 'shibboleth matchpoint not defined';
-        } else {
-            carp 'shibboleth matchpoint not mapped';
-        }
+    unless ( defined $mapping->{$matchpoint}->{is} ) {
+        carp 'shibboleth matchpoint not mapped';
         return 0;
     }
+
+    my $saml2_config = $provider->get_config // {};
+
+    my $config = {
+        matchpoint => $matchpoint,
+        mapping    => $mapping,
+        autocreate => $saml2_config->{autocreate} || 0,
+        sync       => $saml2_config->{sync}       || 0,
+        welcome    => $saml2_config->{welcome}    || 0,
+    };
+
+    my $logger = Koha::Logger->get;
+    $logger->debug( "koha borrower field to match: " . $config->{matchpoint} );
+    $logger->debug( "shibboleth attribute to match: " . $mapping->{ $config->{matchpoint} }->{is} );
+
+    return $config;
 }
 
 1;
@@ -404,6 +430,15 @@ Given a shib_login attribute, this routine checks for a matching local user and 
 A sugar function to that simply returns the current page URI with appropriate protocol attached
 
 This routine is NOT exported
+
+=head2 get_force_sso_setting
+
+  my $force_sso = get_force_sso_setting($interface);
+
+Returns the force SSO setting for the given interface (opac or intranet).
+Returns 0 if shibboleth is not configured or the setting is disabled.
+
+  $interface - 'opac' or 'intranet'
 
 =head2 _get_shib_config
 

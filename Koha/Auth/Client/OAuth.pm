@@ -54,22 +54,29 @@ sub _get_data_and_patron {
     my $provider = $params->{provider};
     my $data     = $params->{data};
     my $config   = $params->{config};
+    my $hostname = $params->{hostname};
 
     my $patron;
     my $mapped_data;
 
-    my $mapping    = decode_json( $provider->mapping );
-    my $matchpoint = $provider->matchpoint;
+    my $mapping       = $provider->mappings->as_auth_mapping;
+    my $hostname_link = $hostname
+        ? $provider->hostnames->search(
+        { 'hostname.hostname' => $hostname },
+        { join                => 'hostname' }
+        )->next
+        : undef;
+    my $matchpoint = $hostname_link ? $hostname_link->matchpoint : undef;
 
     if ( $data->{id_token} ) {
         my ( $header_part, $claims_part, $footer_part ) = split( /\./, $data->{id_token} );
 
         my $claim = decode_json( decode_base64url($claims_part) );
 
-        foreach my $key ( keys %$mapping ) {
-            my $pkey = $mapping->{$key};
-            $mapped_data->{$key} = $claim->{$pkey}
-                if defined $claim->{$pkey};
+        foreach my $koha_field ( keys %$mapping ) {
+            my $pkey = $mapping->{$koha_field}{is};
+            $mapped_data->{$koha_field} = $claim->{$pkey}
+                if defined $pkey && defined $claim->{$pkey};
         }
 
         $patron = $self->_find_patron_by_matchpoint( $matchpoint, $mapped_data->{$matchpoint} );
@@ -87,10 +94,10 @@ sub _get_data_and_patron {
             ? $tx->res->json
             : Mojo::Parameters->new( $tx->res->body )->to_hash;
 
-        foreach my $key ( keys %$mapping ) {
-            my $pkey  = $mapping->{$key};
+        foreach my $koha_field ( keys %$mapping ) {
+            my $pkey  = $mapping->{$koha_field}{is};
             my $value = $self->_traverse_hash( { base => $claim, keys => $pkey } );
-            $mapped_data->{$key} = $value
+            $mapped_data->{$koha_field} = $value
                 if defined $value;
         }
 

@@ -55,8 +55,21 @@ sub get_providers {
 
     # Handle database upgrade state where schema might be out of sync
     try {
-        my $providers =
-            Koha::Auth::Identity::Providers->search( { "domains.allow_$interface" => 1 }, { prefetch => 'domains' } );
+        my $hostname  = $ENV{SERVER_NAME};
+        my $providers = Koha::Auth::Identity::Providers->search(
+            {
+                "domains.allow_$interface" => 1,
+                "me.enabled"               => 1,
+                -or                        => [
+                    { 'hostname.hostname'                       => $hostname, 'hostnames.is_enabled' => 1 },
+                    { 'hostnames.identity_provider_hostname_id' => undef }
+                ]
+            },
+            {
+                join     => [ 'domains', { 'hostnames' => 'hostname' } ],
+                distinct => 1
+            }
+        );
         my $base_url = ( $interface eq 'staff' ) ? "/api/v1/oauth/login" : "/api/v1/public/oauth/login";
 
         while ( my $provider = $providers->next ) {

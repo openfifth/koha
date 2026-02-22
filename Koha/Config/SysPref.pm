@@ -46,7 +46,14 @@ sub store {
 
     C4::Log::logaction( 'SYSTEMPREFERENCE', $action, undef, $self->variable . ' | ' . $self->value );
 
-    return $self->SUPER::store($self);
+    my $result = $self->SUPER::store($self);
+
+    if ( $self->variable =~ /\A(?:opacbaseurl|staffclientbaseurl)\z/i ) {
+        require Koha::Auth::Hostname;
+        Koha::Auth::Hostname->sync_from_syspref( $self->variable, $self->value );
+    }
+
+    return $result;
 }
 
 =head3 delete

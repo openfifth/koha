@@ -131,7 +131,8 @@ sub login {
                         provider  => $provider,
                         data      => $response,
                         interface => $interface,
-                        config    => $c->oauth2->providers->{$provider}
+                        config    => $c->oauth2->providers->{$provider},
+                        hostname  => $c->req->url->base->host,
                     }
                 );
 
