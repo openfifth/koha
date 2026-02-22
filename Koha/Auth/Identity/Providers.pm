@@ -23,6 +23,7 @@ use Koha::Auth::Identity::Provider;
 use Koha::Auth::Identity::Provider::Hostnames;
 use Koha::Auth::Identity::Provider::OAuth;
 use Koha::Auth::Identity::Provider::OIDC;
+use Koha::Auth::Identity::Provider::SAML2;
 
 use base qw(Koha::Objects);
 
@@ -95,6 +96,7 @@ sub _polymorphic_map {
     return {
         OAuth => 'Koha::Auth::Identity::Provider::OAuth',
         OIDC  => 'Koha::Auth::Identity::Provider::OIDC',
+        SAML2 => 'Koha::Auth::Identity::Provider::SAML2',
     };
 }
 
