@@ -105,6 +105,14 @@ Allow user auto register (OPAC)
 
 Allow user auto register (Staff interface)
 
+=head2 send_welcome_email
+
+  data_type: 'tinyint'
+  default_value: 0
+  is_nullable: 0
+
+Send welcome email to patron on first login
+
 =cut
 
 __PACKAGE__->add_columns(
@@ -127,6 +135,8 @@ __PACKAGE__->add_columns(
   "auto_register_opac",
   { data_type => "tinyint", default_value => 0, is_nullable => 0 },
   "auto_register_staff",
+  { data_type => "tinyint", default_value => 0, is_nullable => 0 },
+  "send_welcome_email",
   { data_type => "tinyint", default_value => 0, is_nullable => 0 },
 );
 
@@ -216,8 +226,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2024-08-22 18:15:05
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:GpRUQgJ3WUt9nAAS0E9qWw
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-02-21 07:16:46
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:7M7qCu+9WGNjvvaqxyL6Aw
 
 __PACKAGE__->add_columns(
     '+auto_register_opac'  => { is_boolean => 1 },
