@@ -19,8 +19,6 @@ use Modern::Perl;
 
 use Mojo::Base 'Mojolicious::Controller';
 
-use Koha::Auth::Identity::Provider::OAuth;
-use Koha::Auth::Identity::Provider::OIDC;
 use Koha::Auth::Identity::Providers;
 
 use Koha::Database;
@@ -94,12 +92,13 @@ sub add {
                 my $body = $c->req->json;
 
                 my $config   = delete $body->{config};
-                my $mapping  = delete $body->{mapping};
                 my $protocol = delete $body->{protocol};
 
-                my $class = Koha::Auth::Identity::Provider::protocol_to_class_mapping->{$protocol};
+                my $class = Koha::Auth::Identity::Providers->new->_polymorphic_map->{$protocol};
 
-                my $provider = $class->new_from_api($body)->set_config($config)->set_mapping($mapping)->store;
+                Koha::Exception->throw("$protocol is not a valid protocol") unless $class;
+
+                my $provider = $class->new_from_api($body)->set_config($config)->store;
 
                 $c->res->headers->location( $c->req->url->to_string . '/' . $provider->identity_provider_id );
                 return $c->render(
@@ -146,12 +145,13 @@ sub update {
 
                 my $body = $c->req->json;
 
-                my $config  = delete $body->{config};
-                my $mapping = delete $body->{mapping};
+                my $config = delete $body->{config};
 
-                $provider = $provider->set_from_api($body)->upgrade_class;
+                $provider->set_from_api($body);
+                $provider = Koha::Auth::Identity::Providers->new->object_class( $provider->_result )
+                    ->_new_from_dbic( $provider->_result );
 
-                $provider->set_config($config)->set_mapping($mapping)->store;
+                $provider->set_config($config)->store;
 
                 $provider->discard_changes;
 
