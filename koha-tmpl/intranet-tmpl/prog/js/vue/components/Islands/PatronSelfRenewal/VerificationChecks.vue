@@ -1,6 +1,6 @@
 <template>
     <fieldset class="rows" v-if="!verificationFailure">
-        <span class="verification_question">{{ verificationCheck }}</span>
+        <span class="verification_question">{{ activeCheck }}</span>
         <div class="verification_actions">
             <button class="btn btn-success" @click="verificationPassed()">
                 {{ $__("Yes") }}
@@ -20,18 +20,30 @@ import { $__ } from "@koha-vue/i18n";
 export default {
     props: {
         renewalSettings: Object,
-        informationMessage: String,
+        confirmation: Boolean,
     },
     emits: ["verification-successful"],
     setup(props, { emit }) {
+        const checkCount = ref(
+            props.renewalSettings.self_renewal_information_messages.length
+        );
+        const completedCount = ref(0);
         const verificationFailure = ref(false);
-        const verificationCheck = ref(
-            props.informationMessage ||
-                props.renewalSettings.self_renewal_information_message
+
+        const activeCheck = ref(
+            props.renewalSettings.self_renewal_information_messages[0]
         );
 
         const verificationPassed = () => {
-            emit("verification-successful");
+            if (completedCount.value === checkCount.value - 1) {
+                emit("verification-successful");
+            } else {
+                completedCount.value++;
+                activeCheck.value =
+                    props.renewalSettings.self_renewal_information_messages[
+                        completedCount.value
+                    ];
+            }
         };
         const verificationFailed = () => {
             verificationFailure.value = true;
@@ -44,11 +56,13 @@ export default {
         });
 
         return {
-            verificationCheck,
+            checkCount,
+            activeCheck,
             verificationPassed,
             verificationFailed,
             verificationFailure,
             errorMessage,
+            completedCount,
         };
     },
 };

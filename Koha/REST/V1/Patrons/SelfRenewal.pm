@@ -49,10 +49,11 @@ sub start {
 
     return try {
         my $category              = $patron->category;
+        my @information_messages  = split( /\|/, $category->self_renewal_information_message );
         my $self_renewal_settings = {
-            self_renewal_failure_message     => $category->self_renewal_failure_message,
-            self_renewal_information_message => $category->self_renewal_information_message,
-            opac_patron_details              => C4::Context->preference('OPACPatronDetails')
+            self_renewal_failure_message      => $category->self_renewal_failure_message,
+            self_renewal_information_messages => \@information_messages,
+            opac_patron_details               => C4::Context->preference('OPACPatronDetails')
         };
 
         return $c->render(
