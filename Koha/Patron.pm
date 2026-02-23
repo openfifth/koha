@@ -817,6 +817,52 @@ sub link_to_patron {
     return $self->account_link;
 }
 
+=head3 historic_cardnumbers
+
+Returns a list of historic cardnumbers and their change date, or undef
+
+=cut
+
+sub historic_cardnumbers {
+    my ($self) = @_;
+
+    my $logentries = Koha::ActionLogs->search(
+        {
+            module => 'MEMBERS',
+            action => 'MODIFY_CARDNUMBER',
+            object => $self->borrowernumber,
+        },
+        { order_by => { -desc => 'timestamp' } }
+    )->unblessed or return;
+
+    my @cardnumbers;
+    for my $logentry ( @{$logentries} ) {
+        ## we can only work with new-style logs
+        next unless $logentry->{diff};
+
+        my $diff = decode_json( $logentry->{diff} );
+        next unless $diff;
+
+        my $old_cardnumber = $diff->{D}->{cardnumber}->{O} || undef;
+        my $new_cardnumber = $diff->{D}->{cardnumber}->{N} || undef;
+        my $timestamp      = $logentry->{timestamp}        || undef;
+        next
+            unless $old_cardnumber
+            and $new_cardnumber
+            and $timestamp;
+
+        my $object = {
+            old_cardnumber => $old_cardnumber,
+            new_cardnumber => $new_cardnumber,
+            timestamp      => $timestamp,
+        };
+
+        push @cardnumbers, $object;
+    }
+
+    return \@cardnumbers;
+}
+
 =head3 housebound_profile
 
 Returns the HouseboundProfile associated with this patron.
@@ -3242,6 +3288,7 @@ sub to_api {
         : Mojo::JSON->false;
 
     $json_patron->{self_renewal_available} = $self->is_eligible_for_self_renewal();
+    $json_patron->{historic_cardnumbers}   = $self->historic_cardnumbers();
 
     return $json_patron;
 }
