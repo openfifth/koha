@@ -29,6 +29,7 @@
     [% INCLUDE 'js-date-format.inc' %]
     <script nonce="[% Koha.CSPNonce | $raw %]">
         const supplying_ill_table_settings = [% TablesSettings.GetTableSettings( 'illrequests', 'ill-requests', 'ill-requests', 'json' ) | $raw %];
+        const userenv = [% To.json(userenv) | $raw %];
     </script>
     [% Asset.js("js/vue/dist/ill.js") | $raw %]
 [% END %]

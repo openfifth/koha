@@ -31,6 +31,7 @@ use Koha::AuthorisedValues;
 use Koha::DateUtils qw( dt_from_string output_pref );
 use Koha::Items;
 use Koha::ItemTypes;
+use Koha::ILL::ISO18626::Requests;
 
 my $input = CGI->new;
 
@@ -242,6 +243,8 @@ while ( my $c = $sth->fetchrow_hashref() ) {
         }
     }
 
+    my $iso18626_request = Koha::ILL::ISO18626::Requests->get_request_by_issue_id( $c->{issue_id} );
+
     my $checkout = {
         DT_RowId               => $c->{itemnumber} . '-' . $c->{borrowernumber},
         title                  => $c->{title},
@@ -308,8 +311,14 @@ while ( my $c = $sth->fetchrow_hashref() ) {
             firstname  => $c->{firstname},
             cardnumber => $c->{cardnumber},
         },
-        issued_today => !$c->{not_issued_today},
-        recalled     => $recalled,
+        issued_today     => !$c->{not_issued_today},
+        recalled         => $recalled,
+        iso18626_request => $iso18626_request
+        ? {
+            id     => $iso18626_request->iso18626_request_id,
+            status => $iso18626_request->status,
+            }
+        : undef,
     };
 
     if ( $c->{not_issued_today} ) {

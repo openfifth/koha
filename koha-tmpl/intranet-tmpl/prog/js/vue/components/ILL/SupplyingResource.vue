@@ -86,17 +86,18 @@ export default {
             },
             {
                 id: "Loaned",
-                confirm_message: $__(
-                    "The item is currently on loan to the requesting library for this request"
-                ),
-                button_label: $__("Mark as loaned"),
-                icon: "fa-box",
+                dont_show: iso18626_request => true, //This is handled by Koha check out
+                // confirm_message: $__(
+                //     "The item is currently on loan to the requesting library for this request"
+                // ),
+                // button_label: $__("Mark as loaned"),
+                // icon: "fa-box",
                 next_actions: [
                     "Overdue",
                     "LoanCompleted",
                     "CompletedWithoutReturn",
                 ], //[ 'Recalled', 'HoldReturn' ]
-                action_inputs: [],
+                // action_inputs: [],
             },
             {
                 id: "Overdue",
@@ -639,6 +640,32 @@ export default {
                 });
             }
 
+            if (resource?.hold?.item_id) {
+                show_buttons.push({
+                    cssClass: "btn btn-primary",
+                    title: "Mark as loaned (Checkout)",
+                    icon: "fa-box",
+                    onClick: () => {
+                        if (resource.hold.item_id) {
+                            getItem(resource.hold.item_id).then(
+                                result => {
+                                    const item_barcode = result.external_id;
+                                    performCheckout({
+                                        borrowernumber:
+                                            resource.requesting_agency
+                                                .patron_id,
+                                        branch: userenv?.branch,
+                                        barcode: item_barcode,
+                                        supplyill: resource.iso18626_request_id,
+                                    });
+                                },
+                                error => {}
+                            );
+                        }
+                    },
+                });
+            }
+
             if (resource.status == "RequestReceived") {
                 show_buttons.push({
                     cssClass: "btn btn-primary",
@@ -683,6 +710,32 @@ export default {
                 list: [],
                 show: [],
             };
+        };
+
+        const performCheckout = params => {
+            const url = "/cgi-bin/koha/circ/circulation.pl";
+            const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+            params.csrf_token = csrfMeta
+                ? csrfMeta.getAttribute("content")
+                : "";
+            params.op = "cud-checkout";
+
+            const form = document.createElement("form");
+            form.method = "POST";
+            form.action = url;
+
+            for (const key in params) {
+                if (params.hasOwnProperty(key)) {
+                    const hiddenField = document.createElement("input");
+                    hiddenField.type = "hidden";
+                    hiddenField.name = key;
+                    hiddenField.value = params[key];
+                    form.appendChild(hiddenField);
+                }
+            }
+
+            document.body.appendChild(form);
+            form.submit();
         };
 
         const baseResource = useBaseResource({
@@ -785,6 +838,13 @@ export default {
                     group: $__("Request details"),
                 },
                 {
+                    name: "issue_id",
+                    label: $__("Checkout"),
+                    type: "boolean",
+                    hideIn: ["List", "Form"],
+                    group: $__("Request details"),
+                },
+                {
                     group: $__("ISO18626 Messages"),
                     name: "messages",
                     label: "",
@@ -831,7 +891,18 @@ export default {
                         is_hidden: 0,
                         cannot_be_toggled: 0,
                         cannot_be_modified: 0,
-                        columnname: "requestingAgencyId",
+                        columnname: "requesting_agency",
+                        render: function (data, type, row, meta) {
+                            return (
+                                '<a target="_blank" href="/cgi-bin/koha/ill/ill-requests.pl?' +
+                                "op=illview&amp;illrequest_id=" +
+                                encodeURIComponent(data) +
+                                '">' +
+                                escape_str(row.id_prefix) +
+                                escape_str(data) +
+                                "</a>"
+                            );
+                        },
                     },
                     {
                         is_hidden: 0,
@@ -883,6 +954,16 @@ export default {
                     },
                 ],
             },
+        };
+
+        const getItem = async item_id => {
+            const client = APIClient.item;
+            return await client.items.get(item_id).then(
+                result => {
+                    return result;
+                },
+                error => {}
+            );
         };
 
         const afterResourceFetch = (componentData, resource, caller) => {

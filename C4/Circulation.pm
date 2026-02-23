@@ -105,6 +105,7 @@ use Koha::DateUtils qw( dt_from_string );
 use Koha::Calendar;
 use Koha::Checkouts;
 use Koha::ILL::Requests;
+use Koha::ILL::ISO18626::Requests;
 use Koha::Items;
 use Koha::Patrons;
 use Koha::Patron::Debarments qw( DelUniqueDebarment AddUniqueDebarment );
@@ -1405,6 +1406,25 @@ sub CanBookBeIssued {
         }
     }
 
+    if ( C4::Context->preference("ILLModule") ) {
+
+        my $is_ill_partner = ( $patron->categorycode eq C4::Context->preference("ILLPartnerCode") );
+        my $iso18626_hold  = Koha::Holds->find(
+            {
+                itemnumber     => $item_object->itemnumber,
+                borrowernumber => $patron->borrowernumber
+            }
+        );
+
+        if ($iso18626_hold) {
+            my $iso18626_request = $iso18626_hold->iso18626_request;
+            if ( $is_ill_partner && $iso18626_hold && $iso18626_request ) {
+                $needsconfirmation{SUPPLY_ILL}                   = 1;
+                $needsconfirmation{'iso18626_payload_supplyill'} = $iso18626_request->iso18626_request_id;
+            }
+        }
+    }
+
     return ( \%issuingimpossible, \%needsconfirmation, \%alerts, \%messages );
 }
 
@@ -1646,6 +1666,7 @@ sub AddIssue {
     my $switch_onsite_checkout = $params && $params->{switch_onsite_checkout};
     my $auto_renew             = $params && $params->{auto_renew};
     my $cancel_recall          = $params && $params->{cancel_recall};
+    my $iso18626_payload       = $params && $params->{iso18626_payload};
     my $recall_id              = $params && $params->{recall_id};
     my $confirmations          = $params->{confirmations};
     my $forced                 = $params->{forced};
@@ -2017,6 +2038,19 @@ sub AddIssue {
                 );
             }
 
+            my $iso18626_request =
+                Koha::ILL::ISO18626::Requests->find( $params->{iso18626_payload}->{iso18626_payload_supplyill} );
+            if ($iso18626_request) {
+                $iso18626_request->issue_id( $issue->issue_id )->store();
+                $iso18626_request->progress_request(
+                    'supplyingAgency',
+                    {
+                        'messageInfoNote' => $params->{iso18626_payload}->{iso18626_messageInfo_note},
+                        'status'          => 'Loaned'
+                    }
+                );
+            }
+
             Koha::Plugins->call(
                 'after_circ_action',
                 {
@@ -2311,6 +2345,7 @@ sub AddReturn {
     $return_date //= dt_from_string();
     my $messages;
     my $patron;
+    my $iso18626_request;
     my $doreturn      = 1;
     my $validTransfer = 1;
     my $stat_type     = 'return';
@@ -2332,6 +2367,7 @@ sub AddReturn {
             "Data inconsistency: barcode $barcode (itemnumber:$itemnumber) claims to be issued to non-existent borrowernumber '"
             . $issue->borrowernumber . "'\n"
             . Dumper( $issue->unblessed ) . "\n";
+        $iso18626_request = $issue->iso18626_request;
     } else {
         $messages->{'NotIssued'} = $barcode;
         $item->onloan(undef)->store( { skip_record_index => 1, skip_holds_queue => 1 } ) if defined $item->onloan;
@@ -2820,6 +2856,13 @@ sub AddReturn {
 
     if ( $doreturn and $issue ) {
         my $checkin = Koha::Old::Checkouts->find( $issue->id );
+
+        if ($iso18626_request) {
+            $iso18626_request->progress_request(
+                'supplyingAgency',
+                { 'status' => 'LoanCompleted' }
+            );
+        }
 
         Koha::Plugins->call(
             'after_circ_action',
