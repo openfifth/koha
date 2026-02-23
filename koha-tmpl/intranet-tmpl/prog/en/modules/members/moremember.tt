@@ -627,6 +627,25 @@
                 [%# /div#patron-consents %]
             [% END %]
 
+            [% IF historic_cardnumbers.size %]
+                <div id="historic-cardnumbers" class="patroninfo-section">
+                    <div class="patroninfo-heading">
+                        <h3>Historic cardnumbers</h3>
+                    </div>
+                    <div class="rows">
+                        <ol>
+                            [% FOREACH historic_cardnumber IN historic_cardnumbers %]
+                                <li>
+                                    <span class="label">[% historic_cardnumber.timestamp | $KohaDates with_hours => 1 %]:</span>
+                                    [% historic_cardnumber.previous_cardnumber | html %] &rarr; [% historic_cardnumber.new_cardnumber | html %]
+                                </li>
+                            [% END %]
+                        </ol>
+                    </div>
+                </div>
+                [%# /div#historic-cardnumbers %]
+            [% END %]
+
             <div id="patron-alternate-address" class="patroninfo-section">
                 [% IF ( patron.B_phone || patron.B_email || patron.contactnote || patron.B_address || patron.B_address2 || patron.B_city || patron.B_zipcode || patron.B_country ) %]
                     <div class="patroninfo-heading">

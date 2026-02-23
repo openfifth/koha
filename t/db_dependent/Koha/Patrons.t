@@ -2029,7 +2029,7 @@ $retrieved_patron_1->delete;
 is( Koha::Patrons->search->count, $nb_of_patrons - 1, 'Delete should have deleted the patron' );
 
 subtest 'BorrowersLog and CardnumberLog tests' => sub {
-    plan tests => 13;
+    plan tests => 16;
 
     t::lib::Mocks::mock_preference( 'BorrowersLog',  1 );
     t::lib::Mocks::mock_preference( 'CardnumberLog', 0 );
@@ -2079,6 +2079,21 @@ subtest 'BorrowersLog and CardnumberLog tests' => sub {
     is(
         scalar @logs, 1,
         'With CardnumberLog, one detailed MODIFY_CARDNUMBER action should be logged for the modification.'
+    );
+
+    ## test for historic_cardnumber accessor
+    my @historic_cardnumbers = @{ $patron->historic_cardnumbers };
+    is(
+        $historic_cardnumbers[0]->{previous_cardnumber}, 'TESTCARDNUMBER',
+        'previous_cardnumber in historic_cardnumbers[0] should be TESTCARDNUMBER'
+    );
+    is(
+        $historic_cardnumbers[0]->{new_cardnumber}, 'TESTCARDNUMBER_1',
+        'new_cardnumber in historic_cardnumbers[0] should be TESTCARDNUMBER_1'
+    );
+    is(
+        exists( $historic_cardnumbers[0]->{timestamp} ), 1,
+        'timestamp in historic_cardnumbers[0] should be set'
     );
 
     t::lib::Mocks::mock_preference( 'BorrowersLog', 0 );

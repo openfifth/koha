@@ -317,6 +317,12 @@ if ( C4::Context->preference('UseRecalls') ) {
     );
 }
 
+if ( C4::Context->preference('CardnumberLog') ) {
+    $template->param(
+        historic_cardnumbers => $patron->historic_cardnumbers,
+    );
+}
+
 # Fetch available consent types and patron's consents
 my $consent_types = Koha::Patron::Consents->available_types;
 if ( keys %$consent_types ) {

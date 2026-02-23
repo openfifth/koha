@@ -408,6 +408,13 @@ properties:
       - "null"
     description: patron's primary contact method
     maxLength: 45
+  historic_cardnumbers:
+    type:
+      - array
+      - "null"
+    description: patron's historic cardnumbers
+    items:
+      $ref: "historic_cardnumbers.yaml"
   _strings:
     type:
       - object
