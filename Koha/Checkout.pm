@@ -29,6 +29,7 @@ use Koha::Checkouts::Renewals;
 use Koha::Checkouts::ReturnClaims;
 use Koha::Database;
 use Koha::DateUtils qw( dt_from_string );
+use Koha::ILL::ISO18626::Request;
 use Koha::Items;
 use Koha::Libraries;
 
@@ -134,6 +135,19 @@ sub patron {
     my ($self) = @_;
     my $patron_rs = $self->_result->patron;
     return Koha::Patron->_new_from_dbic($patron_rs);
+}
+
+=head3 iso18626_request
+
+Returns the related Koha::ILL::ISO18626::Request object for this checkout
+
+=cut
+
+sub iso18626_request {
+    my ($self) = @_;
+    my $rs = $self->_result->iso18626_request;
+    return unless $rs;
+    return Koha::ILL::ISO18626::Request->_new_from_dbic($rs);
 }
 
 =head3 issuer

@@ -14,6 +14,13 @@ export class ItemAPIClient {
                     params,
                     headers,
                 }),
+            get: id =>
+                this.httpClient.get({
+                    endpoint: "items/" + id,
+                    headers: {
+                        "x-koha-embed": "+strings",
+                    },
+                }),
         };
     }
 

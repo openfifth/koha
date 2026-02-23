@@ -248,6 +248,13 @@ function LoadIssuesTable() {
                                 ".</span>";
                         }
 
+                        if (oObj.iso18626_request) {
+                            title += create_iso18626_request_link(
+                                oObj.iso18626_request.id,
+                                oObj.iso18626_request.status
+                            );
+                        }
+
                         title +=
                             " " +
                             "<a href='/cgi-bin/koha/catalogue/moredetail.pl?biblionumber=" +

@@ -39,6 +39,11 @@ properties:
   requestingAgencyRequestId:
     type: string
     description: Requesting agency request ID or number
+  issue_id:
+    type:
+      - integer
+      - "null"
+    description: Associated checkout internal identifier
   iso18626_requesting_agency_id:
     type: integer
     description: Associated ISO18626 requesting agency internal identifier

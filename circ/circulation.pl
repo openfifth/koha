@@ -191,6 +191,16 @@ my $recall_id      = $query->param('recall_id');
 my $debt_confirmed = $query->param('debt_confirmed') || 0;     # Don't show the debt error dialog twice
 my $charges        = $query->param('charges')        || q{};
 
+my @allowed_iso18626_fields = qw(
+    iso18626_payload_supplyill
+    iso18626_messageInfo_note
+);
+
+my %iso18626_payload = map {
+    my $val = $query->param($_);
+    defined $val ? ( $_ => $val ) : ()
+} @allowed_iso18626_fields;
+
 # Check if stickyduedate is turned off
 if (@$barcodes) {
 
@@ -597,6 +607,7 @@ if ( @$barcodes && $op eq 'cud-checkout' ) {
                         auto_renew             => $session->param('auto_renew'),
                         switch_onsite_checkout => $switch_onsite_checkout,
                         cancel_recall          => $cancel_recall,
+                        iso18626_payload       => \%iso18626_payload,
                         recall_id              => $recall_id,
                         confirmations          => [ grep { /^[A-Z_]+$/ } keys %{$needsconfirmation} ],
                         forced                 => [ keys %{$issuingimpossible} ]

@@ -108,6 +108,14 @@ ISO18626 Requesting Agency action that requires a manual response (yes or no)
 
 ID of the hold related to this ISO18626 request
 
+=head2 issue_id
+
+  data_type: 'integer'
+  is_foreign_key: 1
+  is_nullable: 1
+
+ID of the checkout related to this ISO18626 request
+
 =cut
 
 __PACKAGE__->add_columns(
@@ -181,6 +189,8 @@ __PACKAGE__->add_columns(
   },
   "hold_id",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
+  "issue_id",
+  { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
 );
 
 =head1 PRIMARY KEY
@@ -196,6 +206,18 @@ __PACKAGE__->add_columns(
 __PACKAGE__->set_primary_key("iso18626_request_id");
 
 =head1 UNIQUE CONSTRAINTS
+
+=head2 C<uniq_issue_id>
+
+=over 4
+
+=item * L</issue_id>
+
+=back
+
+=cut
+
+__PACKAGE__->add_unique_constraint("uniq_issue_id", ["issue_id"]);
 
 =head2 C<uniq_reserve_id>
 
@@ -263,9 +285,29 @@ __PACKAGE__->belongs_to(
   { is_deferrable => 1, on_delete => "RESTRICT", on_update => "CASCADE" },
 );
 
+=head2 issue
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-02-24 13:34:37
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:7KqpCOYXvp6skCK/lTer0g
+Type: belongs_to
+
+Related object: L<Koha::Schema::Result::Issue>
+
+=cut
+
+__PACKAGE__->belongs_to(
+  "issue",
+  "Koha::Schema::Result::Issue",
+  { issue_id => "issue_id" },
+  {
+    is_deferrable => 1,
+    join_type     => "LEFT",
+    on_delete     => "SET NULL",
+    on_update     => "CASCADE",
+  },
+);
+
+
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-02-24 13:40:32
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:IYorMR5/Rcx1W9dZv2WVSw
 
 =head2 koha_object_class
 

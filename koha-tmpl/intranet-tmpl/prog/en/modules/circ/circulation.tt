@@ -217,6 +217,10 @@
                     </li>
                 [% END %]
 
+                [% IF ( SUPPLY_ILL ) %]
+                    <li class="needsconfirm">You're checking out a supply ILL to an ILL partner. The corresponding supply ILL will be marked as 'Loaned'. Please enter the required information. </li>
+                [% END %]
+
                 [% IF TOO_MANY and TOO_MANY == 'TOO_MANY_CHECKOUTS' %]
                     <li class="needsconfirm too_many_checkouts">Too many checked out. [% current_loan_count | html %] checked out, only [% max_loans_allowed | html %] are allowed.</li>
                     <li class="needsconfirm too_many_checkouts2"> Maximum checkouts calculated from the circulation rule for [% INCLUDE circulation_rule_criteria rule=circulation_rule_TOO_MANY %] </li>
@@ -404,6 +408,12 @@
                         <input type="hidden" name="override_high_holds" value="[% override_high_holds | html %]" />
 
                         [% IF ( DEBT ) %]<input type="hidden" name="debt_confirmed" value="1" />[% END %]
+
+                        [% IF ( SUPPLY_ILL ) %]
+                            <label for="iso18626_messageInfo_note">Enter ISO18626 message here</label>
+                            <input type="text" name="iso18626_messageInfo_note" value="" />
+                            <input type="hidden" name="iso18626_payload_supplyill" value="[% iso18626_payload_supplyill | html %]" />
+                        [% END %]
 
                         [% IF ( INVALID_DATE ) %]
                             <p>
