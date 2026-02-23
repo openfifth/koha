@@ -33,4 +33,9 @@ my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
     }
 );
 
+my $userenv = C4::Context->userenv;
+$template->param(
+    userenv => $userenv,
+);
+
 output_html_with_http_headers $input, $cookie, $template->output;

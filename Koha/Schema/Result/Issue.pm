@@ -330,6 +330,21 @@ __PACKAGE__->belongs_to(
   { is_deferrable => 1, on_delete => "RESTRICT", on_update => "CASCADE" },
 );
 
+=head2 iso18626_request
+
+Type: might_have
+
+Related object: L<Koha::Schema::Result::Iso18626Request>
+
+=cut
+
+__PACKAGE__->might_have(
+  "iso18626_request",
+  "Koha::Schema::Result::Iso18626Request",
+  { "foreign.issue_id" => "self.issue_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 issuer
 
 Type: belongs_to
@@ -366,8 +381,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-09-05 20:52:03
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:CHRrFP4okgRBpRmN5DG5iw
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-02-24 13:37:30
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:A2+qWGBNGZgyi3aAVH5/wQ
 
 __PACKAGE__->add_columns(
     '+auto_renew'      => { is_boolean => 1 },

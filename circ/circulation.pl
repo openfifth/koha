@@ -186,10 +186,23 @@ if ( $restoreduedatespec && $restoreduedatespec eq "highholds_empty" ) {
 }
 my $issueconfirmed = $query->param('issueconfirmed');
 my $cancelreserve  = $query->param('cancelreserve');
+my $supplyill      = $query->param('supplyill');
 my $cancel_recall  = $query->param('cancel_recall');
 my $recall_id      = $query->param('recall_id');
 my $debt_confirmed = $query->param('debt_confirmed') || 0;     # Don't show the debt error dialog twice
 my $charges        = $query->param('charges')        || q{};
+
+my @allowed_iso18626_fields = qw(
+    iso18626_payload_supplyill
+    iso18626_messageInfo_note
+);
+
+my %iso18626_payload = map {
+    my $val = $query->param($_);
+    defined $val ? ( $_ => $val ) : ()
+} @allowed_iso18626_fields;
+
+$template->param( iso18626_payload_supplyill => $supplyill );
 
 # Check if stickyduedate is turned off
 if (@$barcodes) {
@@ -347,6 +360,7 @@ if ( @$barcodes && $op eq 'cud-checkout' ) {
                     onsite_checkout     => $onsite_checkout,
                     override_high_holds => $override_high_holds || $override_high_holds_tmp || 0,
                     issueconfirmed      => $issueconfirmed,
+                    supplyill           => $supplyill
                 }
             );
         } catch {
@@ -437,6 +451,12 @@ if ( @$barcodes && $op eq 'cud-checkout' ) {
         foreach my $code (@blocking_error_codes) {
             if ( $issuingimpossible->{$code} ) {
                 $template_params->{$code} = $issuingimpossible->{$code};
+
+use Data::Dumper; $Data::Dumper::Maxdepth = 2;
+warn Dumper('##### 1 #######################################################line: ' . __LINE__);
+warn Dumper( $code );
+warn Dumper( $issuingimpossible->{$code} );
+warn Dumper('##### end1 #######################################################');
 
                 $template_params->{IMPOSSIBLE} = 1;
                 $blocker = 1;
@@ -557,6 +577,7 @@ if ( @$barcodes && $op eq 'cud-checkout' ) {
                         auto_renew             => $session->param('auto_renew'),
                         switch_onsite_checkout => $switch_onsite_checkout,
                         cancel_recall          => $cancel_recall,
+                        iso18626_payload       => \%iso18626_payload,
                         recall_id              => $recall_id,
                         confirmations          => [ grep { /^[A-Z_]+$/ } keys %{$needsconfirmation} ],
                         forced                 => [ keys %{$issuingimpossible} ]
