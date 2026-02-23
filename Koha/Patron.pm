@@ -20,8 +20,9 @@ package Koha::Patron;
 
 use Modern::Perl;
 
-use List::MoreUtils qw( any none uniq );
-use JSON qw( to_json );
+use List::MoreUtils    qw( any none uniq notall zip6);
+use JSON               qw( from_json to_json );
+use Scalar::Util       qw(looks_like_number);
 use Unicode::Normalize qw( NFKD );
 use Try::Tiny;
 use DateTime ();
@@ -32,6 +33,7 @@ use C4::Letters qw( GetPreparedLetter EnqueueLetter SendQueuedMessages );
 use C4::Log qw( logaction );
 use C4::Scrubber;
 use Koha::Account;
+use Koha::ActionLogs;
 use Koha::ArticleRequests;
 use Koha::AuthUtils;
 use Koha::Caches;
@@ -655,6 +657,46 @@ sub relationships_debt {
     }
 
     return $non_issues_charges;
+}
+
+=head3 historic_cardnumbers
+
+Returns a list of historic cardnumbers and their change date, or undef
+
+=cut
+
+sub historic_cardnumbers {
+    my ($self) = @_;
+
+    my $logentries = Koha::ActionLogs->search(
+        {
+            module => 'MEMBERS',
+            action => 'MODIFY_CARDNUMBER',
+            object => $self->borrowernumber,
+        },
+        { order_by => { -desc => 'timestamp' } }
+    )->unblessed or return;
+
+    my @cardnumbers;
+    for my $logentry ( @{$logentries} ) {
+        my $info      = from_json( $logentry->{info} );
+        my $timestamp = $logentry->{timestamp};
+
+        next
+            unless $info->{before}
+            and $info->{after}
+            and $timestamp;
+
+        my $object = {
+            previous_cardnumber => $info->{before},
+            new_cardnumber      => $info->{after},
+            timestamp           => $timestamp,
+        };
+
+        push @cardnumbers, $object;
+    }
+
+    return \@cardnumbers;
 }
 
 =head3 housebound_profile
@@ -2542,6 +2584,8 @@ sub to_api {
                                     : Mojo::JSON->false;
 
     $json_patron->{self_renewal_available} = $self->is_eligible_for_self_renewal();
+
+    $json_patron->{historic_cardnumbers} = $self->historic_cardnumbers;
 
     return $json_patron;
 }

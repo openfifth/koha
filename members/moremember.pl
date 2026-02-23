@@ -320,4 +320,10 @@ if ( C4::Context->preference('UseRecalls') ) {
     );
 }
 
+if ( C4::Context->preference('CardnumberLog') ) {
+    $template->param(
+        historic_cardnumbers => $patron->historic_cardnumbers,
+    );
+}
+
 output_html_with_http_headers $input, $cookie, $template->output;

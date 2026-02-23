@@ -326,6 +326,25 @@
                                 </div> [% #/ div#houseboundroles %]
                             [% END %]
 
+                            [% IF historic_cardnumbers.size %]
+                                <div id="historic-cardnumbers" class="patroninfo-section">
+                                    <div class="patroninfo-heading">
+                                        <h3>Historic cardnumbers</h3>
+                                    </div>
+                                    <div class="rows">
+                                        <ol>
+                                            [% FOREACH historic_cardnumber IN historic_cardnumbers %]
+                                                <li>
+                                                    <span class="label">[% historic_cardnumber.timestamp | $KohaDates with_hours => 1 %]:</span>
+                                                    [% historic_cardnumber.previous_cardnumber | html %] &rarr; [% historic_cardnumber.new_cardnumber | html %]
+                                                </li>
+                                            [% END %]
+                                        </ol>
+                                    </div>
+                                </div>
+                                [%# /div#historic-cardnumbers %]
+                            [% END %]
+
                             [% IF Koha.Preference('ExtendedPatronAttributes') %]
                                 [% UNLESS ( no_patron_attribute_types ) %]
                                     <div id="patron-extended-attributes" class="patroninfo-section">

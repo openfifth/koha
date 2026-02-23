@@ -1,0 +1,18 @@
+---
+type: object
+properties:
+  previous_cardnumber:
+    description: The previous cardnumber of this patron
+    type: string
+  new_cardnumber:
+    description: The new cardnumber of this patron
+    type: string
+  timestamp:
+    description: The date and time of the cardnumber change
+    type:
+      - string
+additionalProperties: false
+required:
+  - previous_cardnumber
+  - new_cardnumber
+  - timestamp
