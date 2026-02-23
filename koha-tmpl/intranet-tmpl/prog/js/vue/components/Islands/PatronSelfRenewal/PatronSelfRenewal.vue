@@ -28,10 +28,14 @@
                     />
                     <VerificationChecks
                         v-if="activeStep === 'confirmation'"
-                        :informationMessage="
-                            $__('Are you sure you want to renew your account?')
-                        "
-                        :renewalSettings="renewalSettings"
+                        :renewalSettings="{
+                            ...renewalSettings,
+                            self_renewal_information_messages: [
+                                $__(
+                                    'Are you sure you want to renew your account?'
+                                ),
+                            ],
+                        }"
                         @verification-successful="submitRenewal"
                     />
                     <div v-if="activeStep === 'detailsCheck'">
@@ -96,7 +100,7 @@ export default {
                         ...response.self_renewal_settings,
                     };
                     activeStep.value = response.self_renewal_settings
-                        .self_renewal_information_message
+                        .self_renewal_information_messages?.length
                         ? "verification"
                         : response.self_renewal_settings.opac_patron_details ===
                             "1"
