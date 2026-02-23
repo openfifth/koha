@@ -124,9 +124,18 @@ sub _find_patron_by_matchpoint {
 
     return unless defined $value;
 
-    my $matchpoint_rs = Koha::Patrons->search( { $matchpoint => $value } );
+    my $patron_rs;
+    if ( $matchpoint =~ /^patron_attribute:(.+)$/ ) {
+        my $code = $1;
+        $patron_rs = Koha::Patrons->search(
+            { 'borrower_attributes.code' => $code, 'borrower_attributes.attribute' => $value },
+            { join                       => 'borrower_attributes' }
+        );
+    } else {
+        $patron_rs = Koha::Patrons->search( { $matchpoint => $value } );
+    }
 
-    return $matchpoint_rs->count ? $matchpoint_rs->next : undef;
+    return $patron_rs->count ? $patron_rs->next : undef;
 }
 
 1;

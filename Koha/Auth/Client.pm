@@ -23,6 +23,8 @@ use C4::Context;
 
 use Koha::Exceptions::Auth;
 use Koha::Auth::Identity::Providers;
+use Koha::Patron::Attribute;
+use Koha::Patron::Attributes;
 
 =head1 NAME
 
@@ -87,7 +89,25 @@ sub get_user {
     $patron      = $args->{'patron'};
     $domain      = $args->{'domain'};
 
-    $patron->set($mapped_data)->store if $patron && $domain->update_on_auth;
+    if ( $patron && $domain->update_on_auth ) {
+        my ( %patron_attrs, %borrower_data );
+        for my $key ( keys %$mapped_data ) {
+            if ( $key =~ /^patron_attribute:(.+)$/ ) {
+                $patron_attrs{$1} = $mapped_data->{$key};
+            } else {
+                $borrower_data{$key} = $mapped_data->{$key};
+            }
+        }
+        $patron->set( \%borrower_data )->store;
+        for my $code ( keys %patron_attrs ) {
+            my $existing =
+                Koha::Patron::Attributes->search( { borrowernumber => $patron->borrowernumber, code => $code } );
+            $existing->delete;
+            Koha::Patron::Attribute->new(
+                { borrowernumber => $patron->borrowernumber, code => $code, attribute => $patron_attrs{$code} } )
+                ->store;
+        }
+    }
 
     $mapped_data->{categorycode} = $domain->default_category_id;
     $mapped_data->{branchcode}   = $domain->default_library_id;

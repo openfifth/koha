@@ -38,6 +38,8 @@ use List::MoreUtils qw( any );
 
 use Koha::Logger;
 use Koha::Auth::Identity::Providers;
+use Koha::Patron::Attribute;
+use Koha::Patron::Attributes;
 
 # Check that shib config is not malformed
 
@@ -99,7 +101,16 @@ sub checkpw_shib {
     my $config = _get_shib_config();
 
     # Does the given shibboleth attribute value ($match) match a valid koha user ?
-    my $borrowers = Koha::Patrons->search( { $config->{matchpoint} => $match } );
+    my $borrowers;
+    if ( $config->{matchpoint} =~ /^patron_attribute:(.+)$/ ) {
+        my $code = $1;
+        $borrowers = Koha::Patrons->search(
+            { 'borrower_attributes.code' => $code, 'borrower_attributes.attribute' => $match },
+            { join                       => 'borrower_attributes' }
+        );
+    } else {
+        $borrowers = Koha::Patrons->search( { $config->{matchpoint} => $match } );
+    }
     if ( $borrowers->count > 1 ) {
 
         # If we have more than 1 borrower the matchpoint is not unique
@@ -129,17 +140,32 @@ sub checkpw_shib {
 sub _autocreate {
     my ( $config, $match ) = @_;
 
-    my %borrower = ( $config->{matchpoint} => $match );
+    my ( %borrower, %patron_attrs );
+
+    if ( $config->{matchpoint} =~ /^patron_attribute:(.+)$/ ) {
+        $patron_attrs{$1} = $match;
+    } else {
+        $borrower{ $config->{matchpoint} } = $match;
+    }
 
     while ( my ( $key, $entry ) = each %{ $config->{'mapping'} } ) {
-        if ( C4::Context->psgi_env ) {
-            $borrower{$key} = ( $entry->{'is'} && $ENV{ "HTTP_" . uc( $entry->{'is'} ) } ) || $entry->{'content'} || '';
+        my $value =
+            C4::Context->psgi_env
+            ? ( $entry->{'is'} && $ENV{ "HTTP_" . uc( $entry->{'is'} ) } ) || $entry->{'content'} || ''
+            : ( $entry->{'is'} && $ENV{ $entry->{'is'} } ) || $entry->{'content'} || '';
+        if ( $key =~ /^patron_attribute:(.+)$/ ) {
+            $patron_attrs{$1} = $value;
         } else {
-            $borrower{$key} = ( $entry->{'is'} && $ENV{ $entry->{'is'} } ) || $entry->{'content'} || '';
+            $borrower{$key} = $value;
         }
     }
 
     my $patron = Koha::Patron->new( \%borrower )->store;
+
+    for my $code ( keys %patron_attrs ) {
+        Koha::Patron::Attribute->new(
+            { borrowernumber => $patron->borrowernumber, code => $code, attribute => $patron_attrs{$code} } )->store;
+    }
     $patron->discard_changes;
 
     C4::Members::Messaging::SetMessagingPreferencesFromDefaults(
@@ -184,17 +210,27 @@ sub _autocreate {
 
 sub _sync {
     my ( $borrowernumber, $config, $match ) = @_;
-    my %borrower;
+    my ( %borrower, %patron_attrs );
     $borrower{'borrowernumber'} = $borrowernumber;
     while ( my ( $key, $entry ) = each %{ $config->{'mapping'} } ) {
-        if ( C4::Context->psgi_env ) {
-            $borrower{$key} = ( $entry->{'is'} && $ENV{ "HTTP_" . uc( $entry->{'is'} ) } ) || $entry->{'content'} || '';
+        my $value =
+            C4::Context->psgi_env
+            ? ( $entry->{'is'} && $ENV{ "HTTP_" . uc( $entry->{'is'} ) } ) || $entry->{'content'} || ''
+            : ( $entry->{'is'} && $ENV{ $entry->{'is'} } ) || $entry->{'content'} || '';
+        if ( $key =~ /^patron_attribute:(.+)$/ ) {
+            $patron_attrs{$1} = $value;
         } else {
-            $borrower{$key} = ( $entry->{'is'} && $ENV{ $entry->{'is'} } ) || $entry->{'content'} || '';
+            $borrower{$key} = $value;
         }
     }
     my $patron = Koha::Patrons->find($borrowernumber);
     $patron->set( \%borrower )->store;
+    for my $code ( keys %patron_attrs ) {
+        my $existing = Koha::Patron::Attributes->search( { borrowernumber => $borrowernumber, code => $code } );
+        $existing->delete;
+        Koha::Patron::Attribute->new(
+            { borrowernumber => $borrowernumber, code => $code, attribute => $patron_attrs{$code} } )->store;
+    }
 }
 
 sub _get_uri {
