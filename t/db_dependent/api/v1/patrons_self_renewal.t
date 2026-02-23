@@ -74,9 +74,9 @@ subtest 'start()' => sub {
         ->status_is( 200, 'REST3.2.2' )->json_is(
         {
             self_renewal_settings => {
-                self_renewal_failure_message     => $category->self_renewal_failure_message,
-                self_renewal_information_message => $category->self_renewal_information_message,
-                opac_patron_details              => 1
+                self_renewal_failure_message      => $category->self_renewal_failure_message,
+                self_renewal_information_messages => [ $category->self_renewal_information_message ],
+                opac_patron_details               => 1
             }
         }
         );
@@ -95,9 +95,9 @@ subtest 'start()' => sub {
         ->status_is( 200, 'REST3.2.2' )->json_is(
         {
             self_renewal_settings => {
-                self_renewal_failure_message     => $category->self_renewal_failure_message,
-                self_renewal_information_message => $category->self_renewal_information_message,
-                opac_patron_details              => 1
+                self_renewal_failure_message      => $category->self_renewal_failure_message,
+                self_renewal_information_messages => [ $category->self_renewal_information_message ],
+                opac_patron_details               => 1
             }
         }
         );
