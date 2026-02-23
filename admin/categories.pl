@@ -47,8 +47,10 @@ my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
 
 if ( $op eq 'add_form' ) {
 
+    my $category = Koha::Patron::Categories->find($categorycode);
     $template->param(
-        category => scalar Koha::Patron::Categories->find($categorycode),
+        category                          => scalar $category,
+        self_renewal_information_messages => parse_renewal_info_message( $category->self_renewal_information_message )
     );
 
     if ( C4::Context->preference('EnhancedMessagingPreferences') ) {
@@ -84,7 +86,7 @@ elsif ( $op eq 'cud-add_validate' ) {
     my $self_renewal_availability_start        = $input->param('self_renewal_availability_start');
     my $self_renewal_fines_block               = $input->param('self_renewal_fines_block');
     my $self_renewal_failure_message           = $input->param('self_renewal_failure_message');
-    my $self_renewal_information_message       = $input->param('self_renewal_information_message');
+    my @self_renewal_information_message       = $input->multi_param('self_renewal_information_message');
     my $self_renewal_if_expired                = $input->param('self_renewal_if_expired');
 
     my @branches = grep { $_ ne q{} } $input->multi_param('branches');
@@ -131,7 +133,7 @@ elsif ( $op eq 'cud-add_validate' ) {
         $category->self_renewal_availability_start($self_renewal_availability_start);
         $category->self_renewal_fines_block($self_renewal_fines_block);
         $category->self_renewal_failure_message($self_renewal_failure_message);
-        $category->self_renewal_information_message($self_renewal_information_message);
+        $category->self_renewal_information_message( parse_renewal_info_message( \@self_renewal_information_message ) );
         $category->self_renewal_if_expired($self_renewal_if_expired);
         eval {
             $category->store;
@@ -175,8 +177,8 @@ elsif ( $op eq 'cud-add_validate' ) {
                 self_renewal_availability_start        => $self_renewal_availability_start,
                 self_renewal_fines_block               => $self_renewal_fines_block,
                 self_renewal_failure_message           => $self_renewal_failure_message,
-                self_renewal_information_message       => $self_renewal_information_message,
-                self_renewal_if_expired                => $self_renewal_if_expired,
+                self_renewal_information_message => parse_renewal_info_message( \@self_renewal_information_message ),
+                self_renewal_if_expired          => $self_renewal_if_expired,
             }
         );
         eval {
@@ -255,3 +257,17 @@ $template->param(
 output_html_with_http_headers $input, $cookie, $template->output;
 
 exit 0;
+
+sub parse_renewal_info_message {
+    my ($message) = @_;
+
+    if ( ref($message) eq 'ARRAY' ) {
+        my $info_message = join( '|', @$message );
+        return $info_message;
+    } else {
+        my @info_messages = split( /\|/, $message );
+        return scalar(@info_messages) > 0 ? \@info_messages : [""];
+    }
+
+    return $message;
+}
