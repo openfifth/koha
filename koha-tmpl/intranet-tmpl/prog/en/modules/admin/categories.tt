@@ -556,14 +556,22 @@
                             the [%- pref_noissuescharge_link | $raw | $KohaSpan -%] system preference.</div
                         >
                     </li>
-                    <li>
-                        <label for="self_renewal_information_message">Self-renewal information message: </label>
-                        [% IF (category.self_renewal_information_message) %]
-                            <textarea type="text" name="self_renewal_information_message" id="self_renewal_information_message" cols="40" rows="2">[% category.self_renewal_information_message | html %]</textarea>
-                        [% ELSE %]
-                            <textarea type="text" name="self_renewal_information_message" id="self_renewal_information_message" cols="40" rows="4"></textarea>
-                        [% END %]
-                    </li>
+                    [% FOREACH info_message IN self_renewal_information_messages %]
+                        <li>
+                            <label for="self_renewal_information_message_[% loop.index | html %]">Self-renewal information message[% IF(loop.index > 0) %][% loop.index + 1 | html %][% END %]: </label>
+                            [% IF (info_message) %]
+                                <textarea type="text" name="self_renewal_information_message" id="self_renewal_information_message_[% loop.index | html %]" cols="40" rows="2">[% info_message | html %]</textarea>
+                            [% ELSE %]
+                                <textarea type="text" name="self_renewal_information_message" id="self_renewal_information_message_[% loop.index | html %]" cols="40" rows="4"></textarea>
+                            [% END %]
+                            <a href="#" class="clear_message"><i class="fa fa-fw fa-trash-can"></i> Clear</a>
+                            <a href="#" class="clone_message"><i class="fa fa-fw fa-plus"></i> New</a>
+                        </li>
+                    [% END %]
+                    <div class="hint"
+                        >Information to be displayed to the patron at the start of the renewal process. This will be displayed as a Yes/No question and you can add multiple questions - an answer of 'Yes' proceeds to the next question, 'No'
+                        exits the process and displays the Self-renewal failure message.</div
+                    >
                     <li>
                         <label for="self_renewal_failure_message">Self-renewal failure message: </label>
                         [% IF (category.self_renewal_failure_message) %]
@@ -924,6 +932,29 @@
     [% INCLUDE 'select2.inc' %]
     <script>
         var table_settings = [% TablesSettings.GetTableSettings( 'admin', 'categories', 'patron_categories', 'json' ) | $raw %];
+        $(document).ready(function () {
+            $("#category_form").on(
+                "click",
+                ".clone_message",
+                function (e) {
+                    e.preventDefault();
+                    var original = $(this).parent();
+                    var clone = $(this).parent().clone();
+                    $(clone).children("div.hint").remove()
+                    $(original).after(clone);
+                    return false;
+                }
+            );
+            $("#category_form").on(
+                "click",
+                ".clear_message",
+                function (e) {
+                    e.preventDefault();
+                    var original = $(this).parent();
+                    $("input", original).val("");
+                }
+            );
+        });
     </script>
     [% Asset.js("js/categories.js") | $raw %]
 [% END %]
