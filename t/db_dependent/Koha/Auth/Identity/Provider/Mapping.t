@@ -99,6 +99,8 @@ subtest 'Mappings::as_auth_mapping() tests' => sub {
                 koha_field           => 'userid',
                 provider_field       => 'uid',
                 default_content      => undef,
+                sync_on_creation     => 1,
+                sync_on_update       => 1,
             }
         }
     );
@@ -110,6 +112,8 @@ subtest 'Mappings::as_auth_mapping() tests' => sub {
                 koha_field           => 'categorycode',
                 provider_field       => undef,
                 default_content      => 'PT',
+                sync_on_creation     => 1,
+                sync_on_update       => 1,
             }
         }
     );
@@ -118,10 +122,20 @@ subtest 'Mappings::as_auth_mapping() tests' => sub {
     is_deeply(
         $mapping,
         {
-            userid       => { is => 'uid', content => undef },
-            categorycode => { is => undef, content => 'PT' },
+            userid => {
+                is               => 'uid',
+                content          => undef,
+                sync_on_creation => 1,
+                sync_on_update   => 1,
+            },
+            categorycode => {
+                is               => undef,
+                content          => 'PT',
+                sync_on_creation => 1,
+                sync_on_update   => 1,
+            },
         },
-        'Returns correct mapping hashref with is/content keys for each koha_field'
+        'Returns correct mapping hashref with is/content/sync keys for each koha_field'
     );
 
     # Matchpoint is stored on the hostname association, not the provider
