@@ -262,7 +262,7 @@ sub AddReserve {
         }
     )->store();
 
-    $hold->iso18626_attach_hold($supplyill);
+    $hold->iso18626_attach_hold_and_biblio($supplyill);
 
     $hold->set_waiting() if $found && $found eq 'W';
 

@@ -831,6 +831,22 @@ export default {
                     group: $__("Request details"),
                 },
                 {
+                    name: "biblio_id",
+                    label: $__("Bibliographic record"),
+                    type: "text",
+                    hideIn: ["List", "Form"],
+                    showElement: {
+                        value: "biblio_id",
+                        link: {
+                            href: "/cgi-bin/koha/catalogue/detail.pl",
+                            params: {
+                                biblionumber: "biblio_id",
+                            },
+                        },
+                    },
+                    group: $__("Request details"),
+                },
+                {
                     name: "hold_id",
                     label: $__("Hold on biblio"),
                     type: "boolean",
