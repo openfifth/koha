@@ -161,7 +161,7 @@ subtest 'get() tests' => sub {
 
 subtest 'add() tests' => sub {
 
-    plan tests => 12;
+    plan tests => 14;
 
     $schema->storage->txn_begin;
 
@@ -175,8 +175,10 @@ subtest 'add() tests' => sub {
     my $pid      = $provider->identity_provider_id;
 
     my $new_mapping = {
-        koha_field     => 'email',
-        provider_field => 'mail',
+        koha_field       => 'email',
+        provider_field   => 'mail',
+        sync_on_creation => 0,
+        sync_on_update   => 0,
     };
 
     # Unauthorized
@@ -196,6 +198,8 @@ subtest 'add() tests' => sub {
         ->status_is(201)
         ->json_is( '/koha_field',           'email' )
         ->json_is( '/identity_provider_id', $pid )
+        ->json_is( '/sync_on_creation',     0 )
+        ->json_is( '/sync_on_update',       0 )
         ->json_has('/mapping_id')
         ->header_like( 'Location', qr|/api/v1/auth/identity_providers/$pid/mappings/\d+| );
 
