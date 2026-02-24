@@ -156,6 +156,10 @@ Controller method for getting usage for a quota
 sub get_usage {
     my $c = shift->openapi->valid_input or return;
 
+    # Remove path params so they don't filter the usage resultset
+    # (usages can belong to guarantees, not just the quota owner)
+    $c->req->params->remove('patron_id');
+
     my $quota = Koha::Patron::Quotas->find( $c->param('quota_id') );
     return $c->render_resource_not_found("Quota") unless $quota;
 
