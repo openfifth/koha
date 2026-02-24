@@ -13,7 +13,7 @@ return {
                 q{
                 ALTER TABLE categories ADD COLUMN `self_renewal_enabled` tinyint(1) NOT NULL DEFAULT 0
                 COMMENT 'allow self renewal for this category'
-                AFTER `enforce_expiry_notice`
+                AFTER `noissueschargeguarantorswithguarantees`
                 }
             );
 

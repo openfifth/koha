@@ -40,6 +40,11 @@ properties:
       - number
       - "null"
     description: Enrollment fee for the patron
+  reserve_fee:
+    type:
+      - number
+      - "null"
+    description: Reserve fee for the patron
   overdue_notice_required:
     type:
       - boolean

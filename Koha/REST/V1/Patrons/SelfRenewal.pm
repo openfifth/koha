@@ -110,7 +110,7 @@ sub submit {
                 my $response        = { expiry_date => $new_expiry_date };
 
                 if ($new_expiry_date) {
-                    my $is_notice_mandatory = $patron->category->enforce_expiry_notice;
+                    my $is_notice_mandatory = 0;
                     my $letter_params       = $patron->create_expiry_notice_parameters(
                         {
                             letter_code => "MEMBERSHIP_RENEWED", is_notice_mandatory => $is_notice_mandatory,

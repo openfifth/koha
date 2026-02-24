@@ -3,6 +3,7 @@
 [% USE Koha %]
 [% USE Branches %]
 [% USE KohaDates %]
+[% USE KohaSpan %]
 [% USE Price %]
 [% USE TablesSettings %]
 [% PROCESS 'i18n.inc' %]

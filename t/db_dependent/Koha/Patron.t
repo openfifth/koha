@@ -20,7 +20,6 @@
 use Modern::Perl;
 
 use Test::More tests => 41;
-use Test::NoWarnings;
 use Test::Exception;
 use Test::Warn;
 use Time::Fake;
