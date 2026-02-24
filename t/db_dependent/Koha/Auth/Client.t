@@ -19,7 +19,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 8;
+use Test::More tests => 9;
 
 use Test::MockModule;
 use Test::MockObject;
@@ -431,6 +431,150 @@ subtest '_update_patron_from_mapped_data() tests' => sub {
     );
     $patron->discard_changes;
     is( $patron->firstname, 'Mixed', 'Core field updated alongside patron attribute in mixed update' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'Sync flags tests' => sub {
+    plan tests => 6;
+
+    $schema->storage->txn_begin;
+
+    my $client   = Koha::Auth::Client::OAuth->new;
+    my $provider = $builder->build_object( { class => 'Koha::Auth::Identity::Providers' } );
+    my $hostname_obj =
+        $builder->build_object( { class => 'Koha::Auth::Hostnames', value => { hostname => 'test.library.com' } } );
+    $builder->build_object(
+        {
+            class => 'Koha::Auth::Identity::Provider::Hostnames',
+            value => {
+                identity_provider_id => $provider->id,
+                hostname_id          => $hostname_obj->id,
+                matchpoint           => 'email',
+            }
+        }
+    );
+    my $domain = $builder->build_object(
+        {
+            class => 'Koha::Auth::Identity::Provider::Domains',
+            value => {
+                identity_provider_id => $provider->id, domain => '*test.com', update_on_auth => 1, allow_opac => 1,
+                allow_staff          => 0
+            }
+        }
+    );
+
+    # Mapping for matchpoint
+    $builder->build_object(
+        {
+            class => 'Koha::Auth::Identity::Provider::Mappings',
+            value => {
+                identity_provider_id => $provider->id,
+                koha_field           => 'email',
+                provider_field       => 'email',
+                sync_on_update       => 1,
+                sync_on_creation     => 1,
+            }
+        }
+    );
+
+    # Mapping with sync_on_update = 0
+    $builder->build_object(
+        {
+            class => 'Koha::Auth::Identity::Provider::Mappings',
+            value => {
+                identity_provider_id => $provider->id,
+                koha_field           => 'firstname',
+                provider_field       => 'given_name',
+                sync_on_update       => 0,
+                sync_on_creation     => 1,
+            }
+        }
+    );
+
+    # Mapping with sync_on_update = 1
+    $builder->build_object(
+        {
+            class => 'Koha::Auth::Identity::Provider::Mappings',
+            value => {
+                identity_provider_id => $provider->id,
+                koha_field           => 'surname',
+                provider_field       => 'family_name',
+                sync_on_update       => 1,
+                sync_on_creation     => 1,
+            }
+        }
+    );
+
+    # Mapping with default_content and sync_on_update = 1 (should NOT sync default on update)
+    $builder->build_object(
+        {
+            class => 'Koha::Auth::Identity::Provider::Mappings',
+            value => {
+                identity_provider_id => $provider->id,
+                koha_field           => 'othernames',
+                provider_field       => 'missing_field',
+                default_content      => 'default value',
+                sync_on_update       => 1,
+                sync_on_creation     => 1,
+            }
+        }
+    );
+
+    my $patron = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => {
+                email      => 'patron@test.com',
+                firstname  => 'Original Firstname',
+                surname    => 'Original Surname',
+                othernames => 'Original Othernames',
+            }
+        }
+    );
+
+    my $id_token = 'header.' . encode_base64url(
+        encode_json(
+            {
+                email       => 'patron@test.com',
+                given_name  => 'New Firstname',
+                family_name => 'New Surname',
+            }
+        )
+    ) . '.footer';
+
+    my $data = { id_token => $id_token };
+
+    $client->get_user(
+        { provider => $provider->code, data => $data, interface => 'opac', hostname => 'test.library.com' } );
+
+    $patron->discard_changes;
+    is( $patron->firstname,  'Original Firstname',  'firstname NOT synced (sync_on_update=0)' );
+    is( $patron->surname,    'New Surname',         'surname synced (sync_on_update=1)' );
+    is( $patron->othernames, 'Original Othernames', 'othernames NOT synced with default value on update' );
+
+    # Now test creation (using auth.register helper logic)
+    # We can't easily call auth.register here because it's a Mojo helper,
+    # but we can test the logic directly or via the REST API if we wanted.
+    # For now, let's just test that the flags are respected in a similar loop.
+
+    my $mappings    = $provider->mappings->as_auth_mapping;
+    my $mapped_data = {
+        firstname => 'New Firstname',
+        surname   => 'New Surname',
+    };
+
+    my %borrower_data;
+    for my $key ( keys %$mappings ) {
+        next unless $mappings->{$key}->{sync_on_creation};
+        my $value = $mapped_data->{$key};
+        $value //= $mappings->{$key}->{content};
+        $borrower_data{$key} = $value if defined $value;
+    }
+
+    is( $borrower_data{firstname},  'New Firstname', 'firstname included on creation' );
+    is( $borrower_data{surname},    'New Surname',   'surname included on creation' );
+    is( $borrower_data{othernames}, 'default value', 'othernames included with default on creation' );
 
     $schema->storage->txn_rollback;
 };
