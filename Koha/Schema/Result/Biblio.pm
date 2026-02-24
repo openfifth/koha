@@ -385,6 +385,21 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 iso18626_requests
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::Iso18626Request>
+
+=cut
+
+__PACKAGE__->has_many(
+  "iso18626_requests",
+  "Koha::Schema::Result::Iso18626Request",
+  { "foreign.biblio_id" => "self.biblionumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 item_groups
 
 Type: has_many
@@ -641,8 +656,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2024-12-18 12:10:28
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:QXaEHXqH2ApC+F22zo7gXA
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-02-24 16:20:04
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:vJ2DesuhA1j09zJFBJVvVw
 
 __PACKAGE__->has_many(
   "biblioitem",
