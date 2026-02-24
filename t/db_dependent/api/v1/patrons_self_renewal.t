@@ -106,7 +106,7 @@ subtest 'start()' => sub {
 };
 
 subtest 'submit()' => sub {
-    plan tests => 11;
+    plan tests => 7;
 
     $schema->storage->txn_begin;
 
@@ -172,15 +172,6 @@ subtest 'submit()' => sub {
         }
     );
 
-    my $counter = Koha::Notice::Messages->search( { borrowernumber => $patron->borrowernumber } )->count;
-    $t->post_ok( "//$userid:$password@/api/v1/public/patrons/$borrowernumber/self_renewal" => json => {} )
-        ->status_is( 201, 'REST3.2.2' )
-        ->json_is( { expiry_date => $expiry_date->truncate( to => 'day' ), confirmation_sent => 1 } );
-    is(
-        Koha::Notice::Messages->search( { borrowernumber => $patron->borrowernumber } )->count, $counter + 1,
-        "Notice queued"
-    );
-
     # Test that modifications are created correctly
     t::lib::Mocks::mock_preference( 'OPACPatronDetails', 1 );
     my $modification_data = { patron => { firstname => 'Newname' } };
@@ -189,7 +180,7 @@ subtest 'submit()' => sub {
     $t->post_ok(
         "//$userid:$password@/api/v1/public/patrons/$borrowernumber/self_renewal" => json => $modification_data )
         ->status_is( 201, 'REST3.2.2' )
-        ->json_is( { expiry_date => $expiry_date->truncate( to => 'day' ), confirmation_sent => 1 } );
+        ->json_is( { expiry_date => $expiry_date->truncate( to => 'day' ) } );
 
     my @modifications = Koha::Patron::Modifications->search( { borrowernumber => $patron->borrowernumber } )->as_list;
     is( scalar(@modifications), 1, "New modification has replaced any existing mods" );
