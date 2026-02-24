@@ -61,6 +61,26 @@ export default {
                     "Value to use when the provider does not supply this attribute"
                 ),
             },
+            {
+                name: "sync_on_creation",
+                type: "checkbox",
+                label: __("Sync on creation"),
+                group: "Mapping",
+                toolTip: __(
+                    "If checked, this field will be synced when the user is first created"
+                ),
+                default: true,
+            },
+            {
+                name: "sync_on_update",
+                type: "checkbox",
+                label: __("Sync on update"),
+                group: "Mapping",
+                toolTip: __(
+                    "If checked, this field will be synced on subsequent logins"
+                ),
+                default: true,
+            },
         ];
 
         const baseResource = useBaseResource({

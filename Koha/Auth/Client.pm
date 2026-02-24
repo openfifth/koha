@@ -90,8 +90,10 @@ sub get_user {
     $patron      = $args->{'patron'};
     $domain      = $args->{'domain'};
 
+    my $mapping = $provider->mappings->as_auth_mapping;
+
     if ( $patron && $domain->update_on_auth ) {
-        $self->_update_patron_from_mapped_data( { patron => $patron, mapped_data => $mapped_data } );
+        $self->_update_patron_from_mapped_data( { patron => $patron, mapped_data => $mapped_data, mapping => $mapping } );
     }
 
     $mapped_data->{categorycode} = $domain->default_category_id;
@@ -211,9 +213,11 @@ sub _get_data_and_patron {
 =head3 _update_patron_from_mapped_data
 
     $self->_update_patron_from_mapped_data( { patron => $patron, mapped_data => $mapped_data } );
+    $self->_update_patron_from_mapped_data( { patron => $patron, mapped_data => $mapped_data, mapping => $mapping } );
 
 Updates the patron from the mapped data, including core borrower fields
-and extended patron attributes.
+and extended patron attributes. If C<mapping> is provided, only fields
+with C<sync_on_update> set will be updated.
 
 =cut
 
@@ -221,9 +225,13 @@ sub _update_patron_from_mapped_data {
     my ( $self, $params ) = @_;
     my $patron      = $params->{patron};
     my $mapped_data = $params->{mapped_data};
+    my $mapping     = $params->{mapping};
 
     my ( %patron_attrs, %borrower_data );
     for my $key ( keys %$mapped_data ) {
+        if ( $mapping ) {
+            next unless $mapping->{$key} && $mapping->{$key}->{sync_on_update};
+        }
         if ( $key =~ /^patron_attribute:(.+)$/ ) {
             $patron_attrs{$1} = $mapped_data->{$key};
         } else {

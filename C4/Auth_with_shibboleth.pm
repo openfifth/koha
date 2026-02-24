@@ -218,10 +218,10 @@ sub _autocreate {
 
 sub _sync {
     my ( $borrowernumber, $config, $mapped_data ) = @_;
-    my $client = Koha::Auth::Client->new();
-
-    my $patron = Koha::Patrons->find($borrowernumber);
-    $client->_update_patron_from_mapped_data( { patron => $patron, mapped_data => $mapped_data } );
+    my $client  = Koha::Auth::Client->new();
+    my $mapping = $config->{provider}->mappings->as_auth_mapping;
+    my $patron  = Koha::Patrons->find($borrowernumber);
+    $client->_update_patron_from_mapped_data( { patron => $patron, mapped_data => $mapped_data, mapping => $mapping } );
 }
 
 sub _get_uri {

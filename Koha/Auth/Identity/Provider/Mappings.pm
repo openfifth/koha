@@ -46,8 +46,10 @@ sub as_auth_mapping {
 
     while ( my $m = $self->next ) {
         $mapping{ $m->koha_field } = {
-            is      => $m->provider_field,
-            content => $m->default_content,
+            is               => $m->provider_field,
+            content          => $m->default_content,
+            sync_on_creation => $m->sync_on_creation,
+            sync_on_update   => $m->sync_on_update,
         };
     }
 
