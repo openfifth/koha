@@ -3755,6 +3755,8 @@ CREATE TABLE `identity_provider_mappings` (
   `provider_field` varchar(255) DEFAULT NULL COMMENT 'Attribute name from the identity provider',
   `koha_field` varchar(255) NOT NULL COMMENT 'Corresponding field in Koha borrowers table',
   `default_content` varchar(255) DEFAULT NULL COMMENT 'Default value if provider does not supply this field',
+  `sync_on_creation` TINYINT(1) NOT NULL DEFAULT 1 COMMENT 'Whether to sync this field on user creation',
+  `sync_on_update` TINYINT(1) NOT NULL DEFAULT 1 COMMENT 'Whether to sync this field on user update',
   PRIMARY KEY (`mapping_id`),
   UNIQUE KEY `provider_koha_field` (`identity_provider_id`,`koha_field`),
   KEY `provider_field_idx` (`provider_field`),
