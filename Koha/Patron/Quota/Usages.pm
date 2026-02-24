@@ -32,4 +32,12 @@ sub object_class {
     return 'Koha::Patron::Quota::Usage';
 }
 
+=head3 koha_object_class
+
+=cut
+
+sub koha_object_class {
+    return 'Koha::Patron::Quota::Usage';
+}
+
 1;
