@@ -74,9 +74,13 @@ sub _get_data_and_patron {
         my $claim = decode_json( decode_base64url($claims_part) );
 
         foreach my $koha_field ( keys %$mapping ) {
-            my $pkey = $mapping->{$koha_field}{is};
-            $mapped_data->{$koha_field} = $claim->{$pkey}
-                if defined $pkey && defined $claim->{$pkey};
+            my $pkey  = $mapping->{$koha_field}{is};
+            my $value = defined $pkey ? $claim->{$pkey} : undef;
+
+            # Note: We don't apply default here yet, because we need to know if it's a create or update.
+            # But we should at least store what we got.
+            $mapped_data->{$koha_field} = $value
+                if defined $value;
         }
 
         $patron = $self->_find_patron_by_matchpoint( $matchpoint, $mapped_data->{$matchpoint} );
@@ -96,7 +100,7 @@ sub _get_data_and_patron {
 
         foreach my $koha_field ( keys %$mapping ) {
             my $pkey  = $mapping->{$koha_field}{is};
-            my $value = $self->_traverse_hash( { base => $claim, keys => $pkey } );
+            my $value = defined $pkey ? $self->_traverse_hash( { base => $claim, keys => $pkey } ) : undef;
             $mapped_data->{$koha_field} = $value
                 if defined $value;
         }

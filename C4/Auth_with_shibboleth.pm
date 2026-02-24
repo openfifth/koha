@@ -149,10 +149,11 @@ sub _autocreate {
     }
 
     while ( my ( $key, $entry ) = each %{ $config->{'mapping'} } ) {
+        next unless $entry->{'sync_on_creation'};
         my $value =
             C4::Context->psgi_env
-            ? ( $entry->{'is'} && $ENV{ "HTTP_" . uc( $entry->{'is'} ) } ) || $entry->{'content'} || ''
-            : ( $entry->{'is'} && $ENV{ $entry->{'is'} } ) || $entry->{'content'} || '';
+            ? ( $entry->{'is'} && $ENV{ "HTTP_" . uc( $entry->{'is'} ) } ) // $entry->{'content'} // ''
+            : ( $entry->{'is'} && $ENV{ $entry->{'is'} } ) // $entry->{'content'} // '';
         if ( $key =~ /^patron_attribute:(.+)$/ ) {
             $patron_attrs{$1} = $value;
         } else {
@@ -213,10 +214,13 @@ sub _sync {
     my ( %borrower, %patron_attrs );
     $borrower{'borrowernumber'} = $borrowernumber;
     while ( my ( $key, $entry ) = each %{ $config->{'mapping'} } ) {
+        next unless $entry->{'sync_on_update'};
         my $value =
             C4::Context->psgi_env
-            ? ( $entry->{'is'} && $ENV{ "HTTP_" . uc( $entry->{'is'} ) } ) || $entry->{'content'} || ''
-            : ( $entry->{'is'} && $ENV{ $entry->{'is'} } ) || $entry->{'content'} || '';
+            ? ( $entry->{'is'} && $ENV{ "HTTP_" . uc( $entry->{'is'} ) } )
+            : ( $entry->{'is'} && $ENV{ $entry->{'is'} } );
+        next unless defined $value;
+
         if ( $key =~ /^patron_attribute:(.+)$/ ) {
             $patron_attrs{$1} = $value;
         } else {

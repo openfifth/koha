@@ -89,16 +89,24 @@ sub get_user {
     $patron      = $args->{'patron'};
     $domain      = $args->{'domain'};
 
+    my $mapping = $provider->mappings->as_auth_mapping;
+
     if ( $patron && $domain->update_on_auth ) {
         my ( %patron_attrs, %borrower_data );
-        for my $key ( keys %$mapped_data ) {
+        for my $key ( keys %$mapping ) {
+            next unless $mapping->{$key}->{sync_on_update};
+            my $value = $mapped_data->{$key};
+
+            # We don't use default_content on update, only what we got from IdP
+            next unless defined $value;
+
             if ( $key =~ /^patron_attribute:(.+)$/ ) {
-                $patron_attrs{$1} = $mapped_data->{$key};
+                $patron_attrs{$1} = $value;
             } else {
-                $borrower_data{$key} = $mapped_data->{$key};
+                $borrower_data{$key} = $value;
             }
         }
-        $patron->set( \%borrower_data )->store;
+        $patron->set( \%borrower_data )->store if %borrower_data;
         for my $code ( keys %patron_attrs ) {
             my $existing =
                 Koha::Patron::Attributes->search( { borrowernumber => $patron->borrowernumber, code => $code } );
