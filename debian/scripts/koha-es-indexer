@@ -220,10 +220,6 @@ if [ $# -gt 0 ]; then
 
         if is_instance $name; then
 
-            adjust_paths_dev_install $name
-            worker_DAEMON="${KOHA_HOME}/${KOHA_BINDIR}/workers/es_indexer_daemon.pl"
-            export PERL5LIB
-
             batch_size=$(get_es_indexer_batch_size ${name})
 
             case $op in
