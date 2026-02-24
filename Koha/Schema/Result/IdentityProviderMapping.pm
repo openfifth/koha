@@ -63,6 +63,22 @@ Corresponding field in Koha borrowers table
 
 Default value if provider does not supply this field
 
+=head2 sync_on_creation
+
+  data_type: 'tinyint'
+  default_value: 1
+  is_nullable: 0
+
+Whether to sync this field on user creation
+
+=head2 sync_on_update
+
+  data_type: 'tinyint'
+  default_value: 1
+  is_nullable: 0
+
+Whether to sync this field on user update
+
 =cut
 
 __PACKAGE__->add_columns(
@@ -76,6 +92,10 @@ __PACKAGE__->add_columns(
   { data_type => "varchar", is_nullable => 0, size => 255 },
   "default_content",
   { data_type => "varchar", is_nullable => 1, size => 255 },
+  "sync_on_creation",
+  { data_type => "tinyint", default_value => 1, is_nullable => 0 },
+  "sync_on_update",
+  { data_type => "tinyint", default_value => 1, is_nullable => 0 },
 );
 
 =head1 PRIMARY KEY
@@ -124,8 +144,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-02-20 10:20:26
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:x2JmD4As/a96Ndoe5rzuKg
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-02-24 10:21:34
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:gXvQgh6gfmIpIz6omXkAsg
 
 =head2 koha_object_class
 
