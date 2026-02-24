@@ -116,6 +116,14 @@ ID of the hold related to this ISO18626 request
 
 ID of the checkout related to this ISO18626 request
 
+=head2 biblio_id
+
+  data_type: 'integer'
+  is_foreign_key: 1
+  is_nullable: 1
+
+ID of the biblio related to this ISO18626 request
+
 =cut
 
 __PACKAGE__->add_columns(
@@ -191,6 +199,8 @@ __PACKAGE__->add_columns(
   { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
   "issue_id",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
+  "biblio_id",
+  { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
 );
 
 =head1 PRIMARY KEY
@@ -232,6 +242,26 @@ __PACKAGE__->add_unique_constraint("uniq_issue_id", ["issue_id"]);
 __PACKAGE__->add_unique_constraint("uniq_reserve_id", ["hold_id"]);
 
 =head1 RELATIONS
+
+=head2 biblio
+
+Type: belongs_to
+
+Related object: L<Koha::Schema::Result::Biblio>
+
+=cut
+
+__PACKAGE__->belongs_to(
+  "biblio",
+  "Koha::Schema::Result::Biblio",
+  { biblionumber => "biblio_id" },
+  {
+    is_deferrable => 1,
+    join_type     => "LEFT",
+    on_delete     => "SET NULL",
+    on_update     => "CASCADE",
+  },
+);
 
 =head2 hold
 
@@ -306,8 +336,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-02-24 13:40:32
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:IYorMR5/Rcx1W9dZv2WVSw
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-02-24 16:20:04
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:UVWpopKYUM2me5GnUwLPxw
 
 =head2 koha_object_class
 

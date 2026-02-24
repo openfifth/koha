@@ -3822,12 +3822,15 @@ CREATE TABLE `iso18626_requests` (
   `pending_requesting_agency_action` enum('Cancel','Renew') DEFAULT NULL COMMENT 'ISO18626 Requesting Agency action that requires a manual response (yes or no)',
   `hold_id` int(11) DEFAULT NULL COMMENT 'ID of the hold related to this ISO18626 request',
   `issue_id` int(11) DEFAULT NULL COMMENT 'ID of the checkout related to this ISO18626 request',
+  `biblio_id` int(11) DEFAULT NULL COMMENT 'ID of the biblio related to this ISO18626 request',
   PRIMARY KEY (`iso18626_request_id`),
   UNIQUE KEY `uniq_reserve_id` (`hold_id`),
   UNIQUE KEY `uniq_issue_id` (`issue_id`),
+  KEY `iso18626_bibfk` (`biblio_id`),
   KEY `iso18626_rafk` (`iso18626_requesting_agency_id`),
   CONSTRAINT `uniq_reserve_id` FOREIGN KEY (`hold_id`) REFERENCES `reserves` (`reserve_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `uniq_issue_id` FOREIGN KEY (`issue_id`) REFERENCES `issues` (`issue_id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `iso18626_bibfk` FOREIGN KEY (`biblio_id`) REFERENCES `biblio` (`biblionumber`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `iso18626_rafk` FOREIGN KEY (`iso18626_requesting_agency_id`) REFERENCES `iso18626_requesting_agencies` (`iso18626_requesting_agency_id`) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;

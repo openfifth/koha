@@ -708,19 +708,20 @@ sub iso18626_request {
     return Koha::ILL::ISO18626::Request->_new_from_dbic($rs);
 }
 
-=head3 iso18626_attach_hold
+=head3 iso18626_attach_hold_and_biblio
 
-Adds relationship to related this hold
+Adds iso18626 request relationship to this hold and respective biblio
 
 =cut
 
-sub iso18626_attach_hold {
+sub iso18626_attach_hold_and_biblio {
     my ( $self, $iso18626_request_id ) = @_;
 
     my $iso18626_request = Koha::ILL::ISO18626::Requests->find($iso18626_request_id);
     return unless $iso18626_request;
 
     $iso18626_request->hold_id( $self->id )->store;
+    $iso18626_request->biblio_id( $self->biblionumber )->store;
 }
 
 =head3 item
