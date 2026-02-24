@@ -91,12 +91,20 @@ if other values or none are passed.
                 Koha::Exceptions::Auth::Unauthorized->throw( code => 401 );
             }
 
+            my $provider = $domain->identity_provider;
+            my $mapping  = $provider->mappings->as_auth_mapping;
+
             my ( %patron_attrs, %borrower_data );
-            for my $key ( keys %$data ) {
+            for my $key ( keys %$mapping ) {
+                next unless $mapping->{$key}->{sync_on_creation};
+                my $value = $data->{$key};
+                $value //= $mapping->{$key}->{content};
+                next unless defined $value;
+
                 if ( $key =~ /^patron_attribute:(.+)$/ ) {
-                    $patron_attrs{$1} = $data->{$key};
+                    $patron_attrs{$1} = $value;
                 } else {
-                    $borrower_data{$key} = $data->{$key};
+                    $borrower_data{$key} = $value;
                 }
             }
             my $patron = Koha::Patron->new( \%borrower_data )->store;

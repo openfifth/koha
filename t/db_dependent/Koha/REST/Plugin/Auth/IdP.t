@@ -111,6 +111,22 @@ subtest 'auth.register helper' => sub {
 
     my $provider = $builder->build_object( { class => 'Koha::Auth::Identity::Providers' } );
 
+    for my $field (qw( firstname surname userid branchcode categorycode )) {
+        $builder->build_object(
+            {
+                class => 'Koha::Auth::Identity::Provider::Mappings',
+                value => {
+                    identity_provider_id => $provider->id,
+                    koha_field           => $field,
+                    provider_field       => $field,
+                    default_content      => undef,
+                    sync_on_creation     => 1,
+                    sync_on_update       => 1,
+                }
+            }
+        );
+    }
+
     my $domain_1 = $builder->build_object(
         {
             class => 'Koha::Auth::Identity::Provider::Domains',
@@ -199,7 +215,24 @@ subtest 'auth.register welcome email' => sub {
     $mocked_letters->mock( 'SendQueuedMessages', sub { return 1 } );
 
     my $provider = $builder->build_object( { class => 'Koha::Auth::Identity::Providers' } );
-    my $domain   = $builder->build_object(
+
+    for my $field (qw( firstname surname userid email branchcode categorycode )) {
+        $builder->build_object(
+            {
+                class => 'Koha::Auth::Identity::Provider::Mappings',
+                value => {
+                    identity_provider_id => $provider->id,
+                    koha_field           => $field,
+                    provider_field       => $field,
+                    default_content      => undef,
+                    sync_on_creation     => 1,
+                    sync_on_update       => 1,
+                }
+            }
+        );
+    }
+
+    my $domain = $builder->build_object(
         {
             class => 'Koha::Auth::Identity::Provider::Domains',
             value => {

@@ -27,6 +27,24 @@ Koha::Auth::Identity::Provider::Domain - Koha Auth Provider Domain Object class
 
 =head1 API
 
+=head2 Class methods
+
+=head3 identity_provider
+
+    my $provider = $domain->identity_provider;
+
+Returns the related I<Koha::Auth::Identity::Provider> object.
+
+=cut
+
+sub identity_provider {
+    my ($self) = @_;
+
+    require Koha::Auth::Identity::Provider;
+    my $provider_rs = $self->_result->identity_provider;
+    return Koha::Auth::Identity::Provider->_new_from_dbic($provider_rs);
+}
+
 =head2 Internal methods
 
 =head3 _type
