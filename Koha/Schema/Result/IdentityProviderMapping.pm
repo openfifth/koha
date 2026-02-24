@@ -147,6 +147,11 @@ __PACKAGE__->belongs_to(
 # Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-03-27 13:06:43
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:ive23RE9M+0WTjXJPjm5Cw
 
+__PACKAGE__->add_columns(
+    '+sync_on_creation' => { is_boolean => 1 },
+    '+sync_on_update'   => { is_boolean => 1 },
+);
+
 =head2 koha_object_class
 
 Missing POD for koha_object_class.
