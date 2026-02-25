@@ -113,10 +113,6 @@ return {
                     $insert->execute( $branchcode, $categorycode, $itemtype, "overdue_${i}_restrict", $restrict );
                 }
 
-                # has_rules is a UI sentinel that marks an explicit ruleset for this context/trigger.
-                # It is not used by the backend (overdue_notices.pl).
-                $insert->execute( $branchcode, $categorycode, $itemtype, "overdue_${i}_has_rules", 1 );
-
                 $migrated++;
             }
         }
