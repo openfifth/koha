@@ -1298,7 +1298,7 @@ sub has_restricting_overdues {
     my $date = dt_from_string()->truncate( to => 'day' )->add( days => 1 );
 
     # Work from oldest overdue to newest
-    $overdues = $overdues->search( {}, { order_by => { '-desc' => 'me.date_due' } } );
+    $overdues = $overdues->search( {}, { order_by => { '-asc' => 'me.date_due' } } );
     my $now = dt_from_string();
 
     my ( $itemtype, $branchcode ) = ( "", "" );
