@@ -49,8 +49,12 @@ import { storeToRefs } from "pinia";
 export default {
     setup() {
         const circRulesStore = inject("circRulesStore");
-        const { handleContext, findEffectiveRule, deleteRuleSet } =
-            circRulesStore;
+        const {
+            handleContext,
+            findEffectiveRule,
+            deleteRuleSet,
+            hasExplicitRulesForTrigger,
+        } = circRulesStore;
         const { libraries, allCurrentLibraryRawRuleSets, ruleSuffixes } =
             storeToRefs(circRulesStore);
         return {
@@ -60,6 +64,7 @@ export default {
             allCurrentLibraryRawRuleSets,
             ruleSuffixes,
             deleteRuleSet,
+            hasExplicitRulesForTrigger,
         };
     },
     data() {
@@ -108,7 +113,10 @@ export default {
                 };
 
                 if (
-                    ruleSet[`overdue_${this.triggerNumber}_has_rules`] === null
+                    !this.hasExplicitRulesForTrigger(
+                        ruleSet,
+                        this.triggerNumber
+                    )
                 ) {
                     return;
                 }

@@ -599,8 +599,6 @@ export default {
                     );
             }
 
-            ruleSetToSubmit[`overdue_${this.triggerNumber}_has_rules`] = true;
-
             // in edit mode, check for changes from elsewhere to the rule set being edited
             if (this.editMode === "edit") {
                 const ruleSetInDb = await this.getSelectedRuleSet(this.context);
