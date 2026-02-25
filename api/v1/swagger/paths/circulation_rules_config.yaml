@@ -35,5 +35,4 @@
           $ref: "../swagger.yaml#/definitions/error"
     x-koha-authorization:
       permissions:
-        - acquisition: '*'
-        - erm: 1
+        - parameters: manage_circ_rules
