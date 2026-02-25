@@ -38,6 +38,7 @@ export const useCircRulesStore = defineStore("circRules", () => {
         allEffectiveRuleSets: [], // main data set for display explicitly set rules for current library
         allExhaustiveEffectiveRuleSets: [], // main data set for display all applied rules for current library
         currentAndDefaultRawRuleSets: [], // data set to identify effective rules from (combines allDefaultLibraryRawRuleSets and allCurrentLibraryRawRuleSets)
+        librariesWithRules: [],
         storeInitialized: false,
     });
 
@@ -410,6 +411,21 @@ export const useCircRulesStore = defineStore("circRules", () => {
                 rulesForDeletion[`overdue_${triggerNumber}_mtt`] = null;
             }
             this.updateCircRuleSets(rulesForDeletion, triggerNumber);
+        },
+        async getLibrariesWithRules() {
+            const client = APIClient.circRule;
+            const allRules = await client.circ_rules.getAll(
+                {},
+                { effective: false }
+            );
+            const libraryIds = new Set(
+                allRules
+                    .map(r => r.context?.library_id)
+                    .filter(id => id && id !== "*")
+            );
+            this.librariesWithRules = this.libraries.filter(
+                lib => lib.library_id !== "*" && libraryIds.has(lib.library_id)
+            );
         },
         async getAllRawRuleSets() {
             const client = APIClient.circRule;
