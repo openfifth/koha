@@ -20,7 +20,13 @@ use Modern::Perl;
 use Test::NoWarnings;
 use Test::More tests => 4;
 
+use C4::Context;
+
 use_ok('Koha::Auth::Permissions');
+
+# Remove the deprecated edit_notice_status_triggers permission (bug 10190).
+# It may still be present in DBs that pre-date the atomic update.
+C4::Context->dbh->do(q|DELETE FROM permissions WHERE code = 'edit_notice_status_triggers'|);
 
 subtest 'normal staff user test' => sub {
 
