@@ -724,7 +724,7 @@ sub GetBranchcodesWithOverdueRules {
             distinct => 1,
         }
     )->get_column('branchcode');
-    if ( !$branchcodes[0] ) {
+    if ( @branchcodes && !defined $branchcodes[0] ) {
         @branchcodes = Koha::Libraries->search( {}, { order_by => 'branchname' } )->get_column('branchcode');
     }
 
