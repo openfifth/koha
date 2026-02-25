@@ -36,7 +36,6 @@ This script needs a biblionumber as parameter
 use Modern::Perl;
 
 use HTML::Entities;
-use C4::Auth qw( get_template_and_user );
 use C4::Context;
 use C4::Output  qw( output_html_with_http_headers );
 use CGI         qw ( -utf8 );
@@ -45,6 +44,7 @@ use C4::Serials qw( CountSubscriptionFromBiblionumber GetSubscription GetSubscri
 use C4::Search  qw( z3950_search_args enabled_staff_search_views );
 
 use Koha::Biblios;
+use Koha::Controller::Catalogue;
 use Koha::Patrons;
 use Koha::RecordProcessor;
 use Koha::Virtualshelves;
@@ -56,7 +56,7 @@ my $biblionumber = $query->param('biblionumber');
 $biblionumber = HTML::Entities::encode($biblionumber);
 
 # open template
-my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
+my ( $template, $loggedinuser, $cookie ) = Koha::Controller::Catalogue->init(
     {
         template_name => "catalogue/ISBDdetail.tt",
         query         => $query,
@@ -97,22 +97,6 @@ my $res       = GetISBDView(
         'framework' => $framework,
     }
 );
-
-if ( $query->cookie("holdfor") ) {
-    my $holdfor_patron = Koha::Patrons->find( $query->cookie("holdfor") );
-    $template->param(
-        holdfor        => $query->cookie("holdfor"),
-        holdfor_patron => $holdfor_patron,
-    );
-}
-
-if ( $query->cookie("searchToOrder") ) {
-    my ( $basketno, $vendorid ) = split( /\//, $query->cookie("searchToOrder") );
-    $template->param(
-        searchtoorder_basketno => $basketno,
-        searchtoorder_vendorid => $vendorid
-    );
-}
 
 # count of item linked with biblio
 my $itemcount = $biblio->items->count;

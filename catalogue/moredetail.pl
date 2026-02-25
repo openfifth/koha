@@ -25,19 +25,19 @@ use HTML::Entities;
 use C4::Biblio      qw( GetBiblioData GetFrameworkCode );
 use C4::Acquisition qw( GetOrderFromItemnumber GetBasket GetInvoice );
 use C4::Output      qw( output_and_exit output_html_with_http_headers );
-use C4::Auth        qw( get_template_and_user );
 use C4::Serials     qw( CountSubscriptionFromBiblionumber );
 use C4::Search      qw( enabled_staff_search_views z3950_search_args );
 
 use Koha::Acquisition::Booksellers;
 use Koha::AuthorisedValues;
 use Koha::Biblios;
+use Koha::Controller::Catalogue;
 use Koha::Items;
 use Koha::Patrons;
 
 my $query = CGI->new;
 
-my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
+my ( $template, $loggedinuser, $cookie ) = Koha::Controller::Catalogue->init(
     {
         template_name => 'catalogue/moredetail.tt',
         query         => $query,
@@ -48,22 +48,6 @@ my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
 
 $template->param(
     updated_exclude_from_local_holds_priority => scalar( $query->param('updated_exclude_from_local_holds_priority') ) );
-
-if ( $query->cookie("holdfor") ) {
-    my $holdfor_patron = Koha::Patrons->find( $query->cookie("holdfor") );
-    $template->param(
-        holdfor        => $query->cookie("holdfor"),
-        holdfor_patron => $holdfor_patron,
-    );
-}
-
-if ( $query->cookie("searchToOrder") ) {
-    my ( $basketno, $vendorid ) = split( /\//, $query->cookie("searchToOrder") );
-    $template->param(
-        searchtoorder_basketno => $basketno,
-        searchtoorder_vendorid => $vendorid
-    );
-}
 
 # get variables
 my $biblionumber;

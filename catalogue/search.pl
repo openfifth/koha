@@ -142,13 +142,13 @@ use Modern::Perl;
 use C4::Context;
 use C4::Output      qw( output_html_with_http_headers pagination_bar );
 use C4::Circulation qw( barcodedecode );
-use C4::Auth        qw( get_template_and_user );
 use C4::Search      qw( searchResults enabled_staff_search_views z3950_search_args new_record_from_zebra );
 use C4::Languages   qw( getlanguage getLanguages );
 use C4::Koha        qw( getitemtypeimagelocation GetAuthorisedValues );
 use URI::Escape;
 use POSIX qw(ceil floor);
 
+use Koha::Controller::Catalogue;
 use Koha::ItemTypes;
 use Koha::Library::Groups;
 use Koha::Patrons;
@@ -189,7 +189,7 @@ if (   !$cgi->param('edit_search')
 }
 
 # load the template
-my ( $template, $borrowernumber, $cookie ) = get_template_and_user(
+my ( $template, $borrowernumber, $cookie ) = Koha::Controller::Catalogue->init(
     {
         template_name => $template_name,
         query         => $cgi,
@@ -207,32 +207,14 @@ if ( C4::Context->preference("marcflavour") eq "UNIMARC" ) {
     $template->param( 'UNIMARC' => 1 );
 }
 
-if ( $cgi->cookie("holdfor") ) {
-    my $holdfor_patron = Koha::Patrons->find( $cgi->cookie("holdfor") );
-    if ($holdfor_patron) {    # may have been deleted in the meanwhile
-        $template->param(
-            holdfor        => $cgi->cookie("holdfor"),
-            holdfor_patron => $holdfor_patron,
-        );
-    }
-}
-
 if ( $cgi->cookie("holdforclub") ) {
     my $holdfor_club = Koha::Clubs->find( $cgi->cookie("holdforclub") );
-    if ($holdfor_club) {      # May have been deleted in the meanwhile
+    if ($holdfor_club) {    # May have been deleted in the meanwhile
         $template->param(
             holdforclub      => $cgi->cookie("holdforclub"),
             holdforclub_name => $holdfor_club->name,
         );
     }
-}
-
-if ( $cgi->cookie("searchToOrder") ) {
-    my ( $basketno, $vendorid ) = split( /\//, $cgi->cookie("searchToOrder") );
-    $template->param(
-        searchtoorder_basketno => $basketno,
-        searchtoorder_vendorid => $vendorid
-    );
 }
 
 # get biblionumbers stored in the cart
