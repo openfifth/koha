@@ -1,7 +1,7 @@
 #!/usr/bin/perl;
 
 use Modern::Perl;
-use Test::More tests => 19;
+use Test::More tests => 9;
 use Test::NoWarnings;
 use Test::Warn;
 
