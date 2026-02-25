@@ -32,7 +32,6 @@ export const useCircRulesStore = defineStore("circRules", () => {
             { code: "sms", name: "SMS" },
             { code: "print", name: "Print" },
         ],
-        regex: /overdue_(\d+)_has_rules/,
         // rule sets
         allDefaultLibraryRawRuleSets: [], // source of truth for default library
         allCurrentLibraryRawRuleSets: [], // source of truth for current library
@@ -97,10 +96,15 @@ export const useCircRulesStore = defineStore("circRules", () => {
             }
             return value.includes(type) ? $__("Yes") : $__("No");
         },
+        hasExplicitRulesForTrigger(ruleSet, triggerNumber) {
+            return ["delay", "notice", "mtt", "restrict"].some(
+                suffix => ruleSet[`overdue_${triggerNumber}_${suffix}`] != null
+            );
+        },
         hasConflict(oldRuleSet, newRuleSet, triggerNumber) {
             if (
                 !oldRuleSet ||
-                oldRuleSet[`overdue_${triggerNumber}_has_rules`] === null
+                !this.hasExplicitRulesForTrigger(oldRuleSet, triggerNumber)
             ) {
                 return false;
             }
@@ -125,8 +129,8 @@ export const useCircRulesStore = defineStore("circRules", () => {
         },
         isOnlyRuleSetForTrigger(triggerNumber) {
             return (
-                this.allCurrentLibraryRawRuleSets.filter(
-                    ruleSet => ruleSet[`overdue_${triggerNumber}_has_rules`]
+                this.allCurrentLibraryRawRuleSets.filter(ruleSet =>
+                    this.hasExplicitRulesForTrigger(ruleSet, triggerNumber)
                 ).length === 1
             );
         },
@@ -163,12 +167,20 @@ export const useCircRulesStore = defineStore("circRules", () => {
                     ruleSet?.context.item_type_id === context.item_type_id
             );
 
-            // if handling 'has_rules', stop here
+            // if handling 'has_rules', derive from actual rules rather than DB
             if (ruleSuffix === "has_rules") {
+                const hasExplicit = this.currentAndDefaultRawRuleSets.some(
+                    ruleSet =>
+                        ruleSet?.context.library_id === context.library_id &&
+                        ruleSet?.context.patron_category_id ===
+                            context.patron_category_id &&
+                        ruleSet?.context.item_type_id ===
+                            context.item_type_id &&
+                        this.hasExplicitRulesForTrigger(ruleSet, triggerNumber)
+                );
                 return {
-                    value: existingRule?.[`overdue_${triggerNumber}_has_rules`],
-                    isFallback:
-                        !existingRule?.[`overdue_${triggerNumber}_has_rules`],
+                    value: hasExplicit ? true : null,
+                    isFallback: !hasExplicit,
                 };
             }
 
@@ -178,8 +190,10 @@ export const useCircRulesStore = defineStore("circRules", () => {
                     value: existingRule[
                         `overdue_${triggerNumber}_${ruleSuffix}`
                     ],
-                    isFallback:
-                        !existingRule[`overdue_${triggerNumber}_has_rules`],
+                    isFallback: !this.hasExplicitRulesForTrigger(
+                        existingRule,
+                        triggerNumber
+                    ),
                 };
             }
 
@@ -289,7 +303,7 @@ export const useCircRulesStore = defineStore("circRules", () => {
                     i <= this.triggerCounts[this.currentLibraryId];
                     i++
                 ) {
-                    if (ruleSet[`overdue_${i}_has_rules`] === null) {
+                    if (!this.hasExplicitRulesForTrigger(ruleSet, i)) {
                         continue;
                     }
                     this.ruleSuffixes.forEach(ruleSuffix => {
@@ -326,18 +340,23 @@ export const useCircRulesStore = defineStore("circRules", () => {
             // - Rule sets exists that override default triggers. Therefore, their triggerCount is the same as default's.
             // - Rule sets exists for triggers for which there is no default.
             //     => such triggers are follow up addition to the existing default sequence.
-            //     => the triggerCount for this library will be higher than default's, and equal to the highest trigger number for this library for which has_rules is not null.
+            //     => the triggerCount for this library will be higher than default's, and equal to the highest trigger number for this library that has any explicit rules.
 
-            const ruleNames = Object.keys(this.allDefaultLibraryRawRuleSets[0]);
             // Set the triggerCount for the default library rule set
             if (this.currentLibraryId === "*") {
-                this.triggerCounts["*"] = ruleNames.filter(
-                    ruleSuffix =>
-                        this.regex.test(ruleSuffix) &&
-                        this.allDefaultLibraryRawRuleSets.some(
-                            ruleSet => ruleSet[ruleSuffix] !== null
-                        )
-                ).length;
+                const triggerNumRegex =
+                    /^overdue_(\d+)_(delay|notice|mtt|restrict)$/;
+                const triggerNums = new Set();
+                this.allDefaultLibraryRawRuleSets.forEach(ruleSet => {
+                    Object.keys(ruleSet).forEach(key => {
+                        const match = key.match(triggerNumRegex);
+                        if (match && ruleSet[key] !== null) {
+                            triggerNums.add(parseInt(match[1]));
+                        }
+                    });
+                });
+                this.triggerCounts["*"] =
+                    triggerNums.size > 0 ? Math.max(...triggerNums) : 0;
                 return;
             }
 
@@ -351,9 +370,8 @@ export const useCircRulesStore = defineStore("circRules", () => {
             // Set a library-specific trigger count: at least one rule set exists -> start from the first trigger for which there is no default rule set
             let i = this.triggerCounts["*"] + 1;
             while (
-                ruleNames.includes(`overdue_${i}_has_rules`) &&
-                this.allCurrentLibraryRawRuleSets.some(
-                    ruleSet => ruleSet[`overdue_${i}_has_rules`] !== null
+                this.allCurrentLibraryRawRuleSets.some(ruleSet =>
+                    this.hasExplicitRulesForTrigger(ruleSet, i)
                 )
             ) {
                 i++;
@@ -391,7 +409,6 @@ export const useCircRulesStore = defineStore("circRules", () => {
             if (ruleSet[`overdue_${triggerNumber}_mtt`] !== null) {
                 rulesForDeletion[`overdue_${triggerNumber}_mtt`] = null;
             }
-            rulesForDeletion[`overdue_${triggerNumber}_has_rules`] = null;
             this.updateCircRuleSets(rulesForDeletion, triggerNumber);
         },
         async getAllRawRuleSets() {
@@ -473,8 +490,6 @@ export const useCircRulesStore = defineStore("circRules", () => {
                 existingRuleSet[`overdue_${triggerNumber}_restrict`];
             circRuleSet[`overdue_${triggerNumber}_mtt`] =
                 existingRuleSet[`overdue_${triggerNumber}_mtt`];
-            circRuleSet[`overdue_${triggerNumber}_has_rules`] =
-                existingRuleSet[`overdue_${triggerNumber}_has_rules`];
             const client = APIClient.circRule;
             await client.circ_rules.update(circRuleSet);
         },
