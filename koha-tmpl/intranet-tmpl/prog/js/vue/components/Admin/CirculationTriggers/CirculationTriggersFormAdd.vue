@@ -688,7 +688,7 @@ export default {
             this.triggerNumber =
                 this.editMode === "edit"
                     ? triggerNumber
-                    : this.triggerCounts[library_id] + 1;
+                    : (this.triggerCounts[library_id] ?? 0) + 1;
         },
         setFallbackRuleSet() {
             this.fallbackRuleSet = {
