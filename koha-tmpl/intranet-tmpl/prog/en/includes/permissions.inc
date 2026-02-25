@@ -395,9 +395,6 @@
     [%- CASE 'edit_additional_contents' -%]
         <span class="sub_permission edit_additional_contents_subpermission"> Write additional contents for the OPAC and staff interfaces (news and HTML customizations) </span>
         <span class="permissioncode">([% name | html %])</span>
-    [%- CASE 'edit_notice_status_triggers' -%]
-        <span class="sub_permission edit_notice_status_triggers_subpermission"> Set notice/status triggers for overdue items </span>
-        <span class="permissioncode">([% name | html %])</span>
     [%- CASE 'edit_notices' -%]
         <span class="sub_permission edit_notices_subpermission"> Define notices </span>
         <span class="permissioncode">([% name | html %])</span>
