@@ -13,6 +13,12 @@ return {
             exit;
         }
 
+        # Remove the tools sub-permission for notice triggers; access is now
+        # controlled by parameters/manage_circ_rules instead.
+        # user_permissions rows are cleaned up automatically via ON DELETE CASCADE.
+        $dbh->do(q|DELETE FROM permissions WHERE code = 'edit_notice_status_triggers'|);
+        say_success( $out, "Removed deprecated permission 'edit_notice_status_triggers'" );
+
         # Populate empty overduerules table for missing categories
         $dbh->do(
             q|
