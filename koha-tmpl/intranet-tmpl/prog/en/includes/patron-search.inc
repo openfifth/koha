@@ -192,6 +192,8 @@
                             <th>Sort 1</th>
                         [% CASE 'sort2' %]
                             <th>Sort 2</th>
+                        [% CASE 'historic_cardnumbers' %]
+                            <th>Historic Cards</th>
                         [% CASE 'action' %]
                             <th class="no-export">&nbsp;</th>
                         [% END %]
@@ -221,7 +223,7 @@
 [%# - redirect_if_attribute_equal: Name of the attribute to use for the redirect. Query using this attribute, before the normal search %]
 [%# filter: Same as patron_search_table %]
 [%# open_on_row_click: boolean, default off. Will allow to select a patron by clicking on the whole tr element %]
-[%# columns: list of columns that will be displayed. Possible values are: 'checkbox', 'cardnumber', 'dateofbirth', 'address', 'name', 'name-address', 'branch', 'category', 'dateexpiry', 'borrowernotes, 'phone', 'checkouts', 'account_balance', 'sort1', 'sort2', 'action' %]
+[%# columns: list of columns that will be displayed. Possible values are: 'checkbox', 'cardnumber', 'historic_cardnumbers', 'dateofbirth', 'address', 'name', 'name-address', 'branch', 'category', 'dateexpiry', 'borrowernotes, 'phone', 'checkouts', 'account_balance', 'sort1', 'sort2', 'action' %]
 [%# preview_on_name_click: Open a modal window with patron's info when the name is clicked %]
 [%# actions: list of buttons to display in the action column. Possible values are: 'select', 'add', 'edit', 'checkout' %]
 [%# callback: name of the JS function that will be called when a patron is selected. Only work with action=select %]
@@ -738,6 +740,29 @@
                                         let bsort2 = av_bsort2_map[data.toString()];
                                         return escape_str(bsort2 ? bsort2.lib : data);
                                     }
+                                }
+
+
+                                [% CASE 'historic_cardnumbers' %]
+                                {
+                                    data: "historic_cardnumbers",
+                                    searchable: false,
+                                    orderable: true,
+                                    render: function( data, type, row, meta ) {
+                                        if (data.length > 0) {
+                                            let list = $('<ul>');
+                                            data.forEach((value, idx) => {
+                                                let item = $('<li>')
+                                                    .attr('data-idx', idx)
+                                                    .text(escape_str(value.previous_cardnumber + ' (' + _('until') + ' ' + $date(value.timestamp, { withtime: true }) + ')'));
+                                                list.append(item);
+                                            });
+                                            return list.prop('outerHTML');
+                                        } else {
+                                            return $('<em>').text(escape_str(_('No prior cards'))).prop('outerHTML');
+                                        }
+                                    }
+
                                 }
 
 

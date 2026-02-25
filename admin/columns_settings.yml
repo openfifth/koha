@@ -1295,6 +1295,9 @@ modules:
               columnname: sort2
               is_hidden: 1
             -
+              columnname: historic_cardnumbers
+              is_hidden: 1
+            -
               columnname: actions
               cannot_be_toggled: 1
               cannot_be_modified: 1
