@@ -13,6 +13,7 @@
     };
     var debug    = "[% debug | html %]";
     var dateformat_pref = "[% Koha.Preference('dateformat') | html %]";
+    var dateInputStyle = "[% Koha.Preference('DateInputStyle') | html %]";
     var sentmsg = 0;
     if (debug > 1) {alert("dateformat: " + dateformat_pref + "\ndebug is on (level " + debug + ")");}
     var calendarFirstDayOfWeek = '[% Koha.Preference('CalendarFirstDayOfWeek') | html %]';
@@ -136,11 +137,194 @@
         }
     }
 
+    function apply_split_date_widget(input, fpOptions) {
+        let parts_order, sep;
+        switch (dateformat_pref) {
+            case "us":
+                parts_order = ["month", "day", "year"];
+                sep = "/";
+                break;
+            case "iso":
+            case "sql":
+                parts_order = ["year", "month", "day"];
+                sep = "-";
+                break;
+            case "dmydot":
+                parts_order = ["day", "month", "year"];
+                sep = ".";
+                break;
+            default:
+                parts_order = ["day", "month", "year"];
+                sep = "/"; // metric
+        }
+        let labels = { day: _("Day"), month: _("Month"), year: _("Year") };
+        let placeholders = { day: "DD", month: "MM", year: "YYYY" };
+        let autocompletes = { day: "bday-day", month: "bday-month", year: "bday-year" };
+        let inputId = input.id || "fp_split_" + Math.random().toString(36).substr(2, 8);
+
+        let options = Object.assign({}, fpOptions, {
+            clickOpens: false,
+            onReady: function (selectedDates, dateStr, instance) {
+                // Handle pastdate / futuredate CSS classes (normally in default onReady)
+                if ($(instance.input).hasClass("pastdate")) {
+                    instance.set("maxDate", new Date().fp_incr(-1));
+                }
+                if ($(instance.input).hasClass("futuredate")) {
+                    instance.set("minDate", new Date().fp_incr(1));
+                }
+
+                // Hide the altInput; our split inputs replace it visually
+                $(instance.altInput).addClass("sr-only").attr("tabindex", "-1").attr("aria-hidden", "true");
+
+                let $wrapper = $('<div class="date-split-wrapper"></div>').attr("data-split-for", inputId);
+
+                for (let i = 0; i < parts_order.length; i++) {
+                    let part = parts_order[i];
+                    let partId = inputId + "_" + part;
+                    let $group = $('<span class="split-part-group"></span>');
+                    $group.append($("<label></label>").attr("for", partId).text(labels[part]));
+                    $group.append(
+                        $('<input type="text" inputmode="numeric" pattern="[0-9]*">')
+                            .attr("id", partId)
+                            .attr("maxlength", part === "year" ? 4 : 2)
+                            .attr("placeholder", placeholders[part])
+                            .attr("autocomplete", autocompletes[part])
+                            .addClass("split-part split-" + part)
+                    );
+                    $wrapper.append($group);
+                    if (i < parts_order.length - 1) {
+                        $wrapper.append($('<span class="split-sep" aria-hidden="true"></span>').text(sep));
+                    }
+                }
+
+                let $calBtn = $('<a href="#" class="split-calendar-btn"></a>').attr("title", _("Open calendar")).attr("aria-label", _("Open calendar")).attr("aria-hidden", "true");
+                let $clearBtn = $('<a href="#" class="clear_date split-clear-btn fa fa-fw fa-times"></a>').attr("aria-label", _("Clear date")).attr("aria-hidden", "true");
+                $wrapper.append($calBtn).append($clearBtn);
+
+                $(instance.altInput).after($wrapper);
+
+                // Populate split inputs from the current ISO value (edit mode)
+                let val = $(input).val();
+                if (val && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
+                    let p = val.split("-");
+                    $wrapper.find(".split-year").val(p[0]);
+                    $wrapper.find(".split-month").val(p[1]);
+                    $wrapper.find(".split-day").val(p[2]);
+                }
+
+                let syncing = false;
+
+                // Split inputs → flatpickr ISO
+                $wrapper.on("input", ".split-part", function () {
+                    let d = $wrapper.find(".split-day").val().trim();
+                    let m = $wrapper.find(".split-month").val().trim();
+                    let y = $wrapper.find(".split-year").val().trim();
+                    syncing = true;
+                    if (d && m && y && y.length === 4) {
+                        instance.setDate(y + "-" + m.padStart(2, "0") + "-" + d.padStart(2, "0"), false);
+                    } else {
+                        instance.clear(false);
+                        $(input).val("");
+                    }
+                    $(input).trigger("change");
+                    syncing = false;
+                });
+
+                // Auto-advance from day/month after 2 digits (skip on delete/backspace)
+                $wrapper.on("input", ".split-day, .split-month", function (e) {
+                    let inputType = e.originalEvent && e.originalEvent.inputType;
+                    if ($(this).val().length >= 2 && inputType && !inputType.startsWith("delete")) {
+                        let $parts = $wrapper.find(".split-part");
+                        let idx = $parts.index(this);
+                        if (idx < $parts.length - 1) {
+                            $parts
+                                .eq(idx + 1)
+                                .focus()
+                                .select();
+                        }
+                    }
+                });
+
+                // Calendar date selected → populate split inputs
+                $(input).on("change", function () {
+                    if (syncing) return;
+                    let v = $(input).val();
+                    if (v && /^\d{4}-\d{2}-\d{2}$/.test(v)) {
+                        let p = v.split("-");
+                        $wrapper.find(".split-year").val(p[0]);
+                        $wrapper.find(".split-month").val(p[1]);
+                        $wrapper.find(".split-day").val(p[2]);
+                    } else {
+                        $wrapper.find(".split-year, .split-month, .split-day").val("");
+                    }
+                });
+
+                // Calendar button opens the flatpickr calendar
+                $calBtn.on("click", function (e) {
+                    e.preventDefault();
+                    instance.open();
+                });
+
+                // Clear button clears all split inputs and the flatpickr value
+                $clearBtn.on("click", function (e) {
+                    e.preventDefault();
+                    syncing = true;
+                    instance.clear();
+                    $(input).val("");
+                    $wrapper.find(".split-year, .split-month, .split-day").val("");
+                    syncing = false;
+                });
+            },
+        });
+
+        return $(input).flatpickr(options);
+    }
+
+    function validateSplitDateInputs() {
+        let valid = true;
+        $(".date-split-wrapper").each(function () {
+            let $wrapper = $(this);
+            let origId = $wrapper.data("split-for");
+            let $orig = origId ? $("#" + origId) : null;
+            let isRequired = $orig && $orig.is("[required]");
+            let d = $wrapper.find(".split-day").val().trim();
+            let m = $wrapper.find(".split-month").val().trim();
+            let y = $wrapper.find(".split-year").val().trim();
+            let anyFilled = d || m || y;
+            let allFilled = d && m && y && y.length === 4;
+
+            if (isRequired && !allFilled) {
+                alert(_("Please enter a complete date."));
+                $wrapper.find(".split-part").first().focus();
+                valid = false;
+                return false;
+            }
+            if (anyFilled && !allFilled) {
+                alert(_("Please complete all parts of the date field."));
+                $wrapper.find(".split-part").first().focus();
+                valid = false;
+                return false;
+            }
+            if (allFilled) {
+                let dt = new Date(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(d, 10));
+                if (dt.getFullYear() !== parseInt(y, 10) || dt.getMonth() !== parseInt(m, 10) - 1 || dt.getDate() !== parseInt(d, 10)) {
+                    alert(_("Please enter a valid date."));
+                    $wrapper.find(".split-part").first().focus();
+                    valid = false;
+                    return false;
+                }
+            }
+        });
+        return valid;
+    }
+
         $(document).ready(function(){
             $(".flatpickr").each(function(){
                 let options = {};
                 let refresh_max_date = 0;
                 let disable_buttons = [];
+                let is_time = $(this).data("flatpickr-enable-time") === true;
+                let is_period = $(this).data("flatpickr-period");
 
                 if( $(this).data("flatpickr-futureinclusive") === true
                  || $(this).data("flatpickr-futuredate") === true ) {
@@ -184,7 +368,12 @@
                     options['dateFormat'] = flatpickr_dateformat_string + " " + flatpickr_timeformat_string;
                 }
 
-                let fp = $(this).flatpickr(options);
+                let fp;
+                if (typeof dateInputStyle !== "undefined" && dateInputStyle === "split" && !is_time && !is_period) {
+                    fp = apply_split_date_widget(this, options);
+                } else {
+                    fp = $(this).flatpickr(options);
+                }
 
                 $(disable_buttons).each(function(index, value){
                     $(fp.calendarContainer).find(".shortcut-buttons-flatpickr-button[data-index='"+value+"']").prop("disabled", "disabled");

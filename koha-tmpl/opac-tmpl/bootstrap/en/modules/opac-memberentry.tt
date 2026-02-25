@@ -1150,6 +1150,9 @@
                     }
                 },
                 submitHandler: function(form) {
+                    if (typeof validateSplitDateInputs === "function" && !validateSplitDateInputs()) {
+                        return false;
+                    }
                     if (form.beenSubmitted) {
                         return false;
                     }

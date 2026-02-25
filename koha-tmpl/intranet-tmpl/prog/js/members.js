@@ -151,7 +151,11 @@ function write_age() {
     var hint = $("#dateofbirth_hint");
     hint.html(dateformat);
 
-    var age = CalculateAge(document.form.dateofbirth.value);
+    var dobVal =
+        document.form && document.form.dateofbirth
+            ? document.form.dateofbirth.value
+            : $("#dateofbirth").val();
+    var age = CalculateAge(dobVal);
 
     if (!age.year && !age.month) {
         return;
@@ -220,7 +224,7 @@ $(document).ready(function(){
         $("#" + addressfield + "country").val( matches[4] );
     });
 
-    dateformat = $("#dateofbirth").siblings(".hint").first().html();
+    dateformat = $("#dateofbirth_hint").html() || "";
 
     if( $('#dateofbirth').length ) {
         write_age();
@@ -262,6 +266,12 @@ $(document).ready(function(){
             }
         },
         submitHandler: function(form) {
+            if (
+                typeof validateSplitDateInputs === "function" &&
+                !validateSplitDateInputs()
+            ) {
+                return false;
+            }
             $("body, form input[type='submit'], form button[type='submit'], form a").addClass('waiting');
             if (form.beenSubmitted)
                 return false;
