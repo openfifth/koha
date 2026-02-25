@@ -364,7 +364,7 @@ GetOptions(
     'text:s'         => \$text_filename,    # this optional argument gets '' if not supplied.
     'itemscontent=s' => \$itemscontent,
     'itemtypes=s'    => \@myitemtypes,
-    'itemtypeouts=s' => \@myitemtypesout,
+    'itemtypesout=s' => \@myitemtypesout,
     'list-all'       => \$listall,
     't|triggered'    => \$triggered,
     'test'           => \$test_mode,
@@ -497,7 +497,7 @@ my @categories;
 if (@myborcat) {
     @categories = @myborcat;
 } elsif (@myborcatout) {
-    @categories = Koha::Patron::Categories->search( { catagorycode => { 'not_in' => \@myborcatout } } )
+    @categories = Koha::Patron::Categories->search( { categorycode => { 'not_in' => \@myborcatout } } )
         ->get_column('categorycode');
 } else {
     @categories = Koha::Patron::Categories->search()->get_column('categorycode');
