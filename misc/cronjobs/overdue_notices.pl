@@ -514,7 +514,6 @@ if (@myitemtypes) {
     @itemtypes = Koha::ItemTypes->search()->get_column('itemtype');
 }
 
-my %already_queued;
 my %seen = map { $_ => 1 } @branches;
 
 # Work through branches
@@ -732,9 +731,9 @@ END_SQL
                         $data->{'firstname'} || '',
                         $data->{borrowernumber}
                     );
-                    warn sprintf "Overdue matched trigger %s with delay of %s days and overdue due date of %s\n",
-                        $i,
-                        $triggered, $overdue_rules->{ "overdue_$i" . '_delay' }, $data->{date_due};
+                    warn sprintf "Overdue matched trigger %s for %s with delay of %s days and overdue due date of %s\n",
+                        $i, $borr,
+                        $overdue_rules->{ "overdue_$i" . '_delay' }, $data->{date_due};
                     warn sprintf "Using letter code '%s'\n",
                         $overdue_rules->{ "overdue_$i" . '_notice' };
                 }
@@ -1047,7 +1046,6 @@ sub _enact_trigger {
                 }
             }
 
-            $already_queued{"$borrowernumber$trigger"} = 1;
         }
     }
 
