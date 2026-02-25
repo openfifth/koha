@@ -19,7 +19,6 @@ use Modern::Perl;
 
 use CGI qw ( -utf8 );
 use HTML::Entities;
-use C4::Auth qw( get_template_and_user );
 use C4::Context;
 use C4::Koha qw(
     GetAuthorisedValues
@@ -47,6 +46,7 @@ use Koha::AuthorisedValues;
 use Koha::Biblios;
 use Koha::Biblio::ItemGroup::Items;
 use Koha::Biblio::ItemGroups;
+use Koha::Controller::Catalogue;
 use Koha::CoverImages;
 use Koha::DateUtils;
 use Koha::Database::DataInconsistency;
@@ -66,7 +66,7 @@ my $query = CGI->new();
 
 my $analyze = $query->param('analyze');
 
-my ( $template, $borrowernumber, $cookie, $flags ) = get_template_and_user(
+my ( $template, $borrowernumber, $cookie, $flags ) = Koha::Controller::Catalogue->init(
     {
         template_name => 'catalogue/detail.tt',
         query         => $query,
@@ -150,24 +150,6 @@ if ( $op eq 'set_item_group' ) {
         my $item_group_item = Koha::Biblio::ItemGroup::Items->find( { item_id => $item_id } );
         $item_group_item->delete() if $item_group_item;
     }
-}
-
-if ( $query->cookie("holdfor") ) {
-    my $holdfor_patron = Koha::Patrons->find( $query->cookie("holdfor") );
-    if ($holdfor_patron) {
-        $template->param(
-            holdfor        => $query->cookie("holdfor"),
-            holdfor_patron => $holdfor_patron,
-        );
-    }
-}
-
-if ( $query->cookie("searchToOrder") ) {
-    my ( $basketno, $vendorid ) = split( /\//, $query->cookie("searchToOrder") );
-    $template->param(
-        searchtoorder_basketno => $basketno,
-        searchtoorder_vendorid => $vendorid
-    );
 }
 
 my $fw           = GetFrameworkCode($biblionumber);

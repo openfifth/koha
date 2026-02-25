@@ -47,7 +47,6 @@ use Modern::Perl;
 use CGI qw ( -utf8 );
 use HTML::Entities;
 
-use C4::Auth qw( get_template_and_user );
 use C4::Context;
 use C4::Output qw( output_html_with_http_headers );
 use C4::Koha;
@@ -63,6 +62,7 @@ use C4::Search  qw( z3950_search_args enabled_staff_search_views );
 
 use Koha::Biblios;
 use Koha::BiblioFrameworks;
+use Koha::Controller::Catalogue;
 use Koha::Patrons;
 use Koha::DateUtils qw( output_pref );
 use Koha::Virtualshelves;
@@ -78,7 +78,7 @@ my $popup          = $query->param('popup');    # if set to 1, then don't insert
 my $subscriptionid = $query->param('subscriptionid');
 
 # open template
-my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
+my ( $template, $loggedinuser, $cookie ) = Koha::Controller::Catalogue->init(
     {
         template_name => "catalogue/MARCdetail.tt",
         query         => $query,
@@ -103,22 +103,6 @@ if ( !$record ) {
 
 my $tagslib = &GetMarcStructure( 1, $frameworkcode );
 my $biblio  = GetBiblioData($biblionumber);
-
-if ( $query->cookie("holdfor") ) {
-    my $holdfor_patron = Koha::Patrons->find( $query->cookie("holdfor") );
-    $template->param(
-        holdfor        => $query->cookie("holdfor"),
-        holdfor_patron => $holdfor_patron,
-    );
-}
-
-if ( $query->cookie("searchToOrder") ) {
-    my ( $basketno, $vendorid ) = split( /\//, $query->cookie("searchToOrder") );
-    $template->param(
-        searchtoorder_basketno => $basketno,
-        searchtoorder_vendorid => $vendorid
-    );
-}
 
 $template->param( ocoins => $biblio_object->get_coins );
 
