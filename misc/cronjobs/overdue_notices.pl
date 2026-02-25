@@ -756,6 +756,14 @@ END_SQL
                 $borrower_overdues->{'B_email'}        = $data->{'B_email'};
                 $borrower_overdues->{'smsalertnumber'} = $data->{'smsalertnumber'};
                 $borrower_overdues->{'phone'}          = $data->{'phone'};
+                $borrower_overdues->{'firstname'}      = $data->{'firstname'};
+                $borrower_overdues->{'surname'}        = $data->{'surname'};
+                $borrower_overdues->{'address'}        = $data->{'address'};
+                $borrower_overdues->{'address2'}       = $data->{'address2'};
+                $borrower_overdues->{'city'}           = $data->{'city'};
+                $borrower_overdues->{'zipcode'}        = $data->{'zipcode'};
+                $borrower_overdues->{'country'}        = $data->{'country'};
+                $borrower_overdues->{'cardnumber'}     = $data->{'cardnumber'};
             }
         }
         $sth->finish;
@@ -851,7 +859,8 @@ sub _enact_trigger {
     my $branchcode     = $borrower_overdues->{branchcode};
     my $patron         = Koha::Patrons->find($borrowernumber);
     my ( $library, $admin_email_address, $branch_email_address );
-    $library = Koha::Libraries->find($branchcode);
+    $library             = Koha::Libraries->find($branchcode);
+    $admin_email_address = $library->from_email_address;
 
     if ($patron_homelibrary) {
         $branchcode           = $patron->branchcode;
@@ -893,7 +902,7 @@ sub _enact_trigger {
                 my $itemcount = 0;
                 my $titles    = "";
                 my @items     = ();
-                for my $item_info ( @{ $borrower_overdues->{triggers}->{$trigger}->{$notice}->{$effective_mtt} } ) {
+                for my $item_info ( @{ $borrower_overdues->{triggers}->{$trigger}->{$notice}->{$mtt} } ) {
                     if (   ( scalar(@emails_to_use) == 0 || $nomail )
                         && $PrintNoticesMaxLines
                         && $j >= $PrintNoticesMaxLines )
