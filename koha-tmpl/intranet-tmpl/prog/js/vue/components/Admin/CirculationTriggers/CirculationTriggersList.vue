@@ -89,6 +89,50 @@
                 }}
             </p>
         </div>
+        <div
+            v-if="
+                ruleSetInitialized &&
+                currentLibraryId === '*' &&
+                triggerCounts['*'] === 0
+            "
+            class="alert alert-warning"
+        >
+            <p>
+                {{
+                    $__(
+                        "No default overdue triggers are defined. Default triggers apply to all libraries unless overridden."
+                    )
+                }}
+            </p>
+            <template v-if="librariesWithRules.length > 0">
+                <p>
+                    {{
+                        $__(
+                            "The following libraries have library-specific triggers defined:"
+                        )
+                    }}
+                </p>
+                <ul>
+                    <li v-for="lib in librariesWithRules" :key="lib.library_id">
+                        <a
+                            href="#"
+                            @click.prevent="
+                                currentLibraryId = lib.library_id;
+                                filterRuleSetsbySearchParam();
+                            "
+                            >{{ lib.name }}</a
+                        >
+                    </li>
+                </ul>
+            </template>
+            <p v-else>
+                {{
+                    $__(
+                        "No library-specific triggers are defined either. Select add new trigger above to get started."
+                    )
+                }}
+            </p>
+        </div>
         <div class="page-section" v-if="filtersInitialized">
             <legend>
                 Filter by
@@ -294,6 +338,7 @@ export default {
             setAllEffectiveRuleSets,
             setAllExhaustiveEffectiveRuleSets,
             isLastTrigger,
+            getLibrariesWithRules,
         } = circRulesStore;
         const {
             currentLibraryId,
@@ -305,6 +350,7 @@ export default {
             triggerCounts,
             allExhaustiveEffectiveRuleSets,
             allEffectiveRuleSets,
+            librariesWithRules,
             storeInitialized,
         } = storeToRefs(circRulesStore);
 
@@ -322,7 +368,9 @@ export default {
             setAllEffectiveRuleSets,
             setAllExhaustiveEffectiveRuleSets,
             allEffectiveRuleSets,
+            librariesWithRules,
             isLastTrigger,
+            getLibrariesWithRules,
             storeInitialized,
             from_branch,
         };
@@ -343,6 +391,12 @@ export default {
             this.updateTriggerCount();
             this.setAllEffectiveRuleSets();
             this.setAllExhaustiveEffectiveRuleSets();
+            if (
+                this.currentLibraryId === "*" &&
+                this.triggerCounts["*"] === 0
+            ) {
+                await this.getLibrariesWithRules();
+            }
             this.storeInitialized = true;
         },
         formatSelectedParams() {
