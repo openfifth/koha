@@ -11,14 +11,6 @@ I18N/L10N:
               iso: yyyy-mm-dd
         - .
     -
-        - Use
-        - pref: DateInputStyle
-          default: single
-          choices:
-              single: single input field with calendar picker
-              split: split inputs (day, month, year) with optional calendar button
-        - "style for date entry fields. The split option follows the dateformat preference for field order and is recommended for accessibility; it does not apply to time, datetime, or booking date range fields."
-    -
         - Format times in
         - pref: TimeFormat
           default: 24hr

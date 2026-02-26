@@ -372,7 +372,7 @@ legend:hover {
                                                         [% END %]
                                                         Date of birth:
                                                         </label>
-                                                        <input type="text" id="dateofbirth" name="dateofbirth" size="20" value="[% borrower_data.dateofbirth | html UNLESS opduplicate %]" class="flatpickr" data-flatpickr-pastinclusive="true" />
+                                                        <input type="text" id="dateofbirth" name="dateofbirth" size="20" value="[% borrower_data.dateofbirth | html UNLESS opduplicate %]" class="flatpickr" data-flatpickr-split="true" data-flatpickr-pastinclusive="true" />
                                                          [% IF ( mandatorydateofbirth ) %]
                                                             <span class="required">Required</span>
                                                         [% END %]
@@ -1159,9 +1159,9 @@ legend:hover {
                                                     Expiry date (leave blank for auto calc):
                                                 </label>
                                                 [% UNLESS ( opadd ) %]
-                                                    <input type="text" id="to" name="dateexpiry" maxlength="10"  size="10" value="[% borrower_data.dateexpiry | html UNLESS opduplicate %]" class="flatpickr" />
+                                                    <input type="text" id="to" name="dateexpiry" maxlength="10"  size="10" value="[% borrower_data.dateexpiry | html UNLESS opduplicate %]" class="flatpickr" data-flatpickr-split="true" />
                                                 [% ELSE %]
-                                                    <input type="text" id="to" name="dateexpiry" maxlength="10"  size="10" value="[% borrower_data.dateexpiry | html %]" class="flatpickr" />
+                                                    <input type="text" id="to" name="dateexpiry" maxlength="10"  size="10" value="[% borrower_data.dateexpiry | html %]" class="flatpickr" data-flatpickr-split="true" />
                                                 [% END %]
                                                 [% IF ( mandatorydateexpiry ) %]
                                                     <span class="required">Required</span>

@@ -21,7 +21,6 @@
             flatpickr_dateformat_string = "Y-m-d";
     }
     var sentmsg = 0;
-    var dateInputStyle = "[% Koha.Preference('DateInputStyle') | html %]";
     var bidi = [% IF(bidi) %] true[% ELSE %] false[% END %];
     var calendarFirstDayOfWeek = '[% Koha.Preference('CalendarFirstDayOfWeek') | html %]';
     var flatpickr_timeformat_string = [% IF Koha.Preference('TimeFormat') == '12hr' %]"G:i K"[% ELSE %]"H:i"[% END %];
@@ -202,7 +201,7 @@
         }
 
         let fp;
-        if ( dateInputStyle === 'split' && !is_time && !is_time_only && !is_period ) {
+        if ( $(input).data('flatpickr-split') && !is_time && !is_time_only && !is_period ) {
             fp = apply_split_date_widget(input, options);
         } else {
             fp = $(input).flatpickr(options);
