@@ -163,6 +163,24 @@ if ( $op eq "" ) {
             $cell = PrepareItemrecordDisplay( '', '', undef, '' );
             $template->param( 'NoACQframework' => 1 );
         }
+
+        my @bookseller_field = grep( $_->{kohafield} eq "items.booksellerid", @{ $cell->{iteminformation} } );
+        if ( scalar(@bookseller_field) ) {
+            my $vendors = Koha::Acquisition::Booksellers->search;
+            my @authorised_values;
+            my %authorised_lib;
+            while ( my $vendor = $vendors->next ) {
+                push @authorised_values, $vendor->id;
+                $authorised_lib{ $vendor->id } = $vendor->name;
+            }
+            $bookseller_field[0]->{marc_value} = {
+                type    => 'select',
+                values  => \@authorised_values,
+                labels  => \%authorised_lib,
+                default => $booksellerid,
+            };
+        }
+
         my @itemloop;
         push @itemloop, $cell;
 
