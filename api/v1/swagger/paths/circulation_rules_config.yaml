@@ -35,4 +35,4 @@
           $ref: "../swagger.yaml#/definitions/error"
     x-koha-authorization:
       permissions:
-        - parameters: manage_circ_rules
+        - circulate: circulate_remaining_permissions
