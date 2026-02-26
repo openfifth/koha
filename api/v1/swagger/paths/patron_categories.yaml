@@ -51,4 +51,4 @@
           $ref: "../swagger.yaml#/definitions/error"
     x-koha-authorization:
       permissions:
-        parameters: manage_patron_categories
+        parameters: catalogue
