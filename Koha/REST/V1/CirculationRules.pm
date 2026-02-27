@@ -19,6 +19,7 @@ use Modern::Perl;
 
 use Mojo::Base 'Mojolicious::Controller';
 
+use C4::Auth qw( haspermission );
 use Koha::CirculationRules;
 
 =head1 API
@@ -240,6 +241,19 @@ sub set_rules {
             ) unless $library;
         }
 
+        my $logged_in_user = $c->stash('koha.user');
+        unless ( haspermission( $logged_in_user->userid, { parameters => 'manage_circ_rules_from_any_libraries' } ) ) {
+            if ( !defined $branchcode || $branchcode ne $logged_in_user->branchcode ) {
+                return $c->render(
+                    status  => 403,
+                    openapi => {
+                        error =>
+                            'manage_circ_rules_from_any_libraries permission is required to manage circulation rules for libraries other than your own'
+                    }
+                );
+            }
+        }
+
         if ( $patron_category eq '*' ) {
             $patron_category = undef;
         } else {
@@ -326,7 +340,7 @@ sub config {
     my $c = shift->openapi->valid_input or return;
 
     my $patron      = $c->stash('koha.user');
-    my $userflags   = C4::Auth::haspermission( $patron->userid );
+    my $userflags   = haspermission( $patron->userid );
     my $permissions = Koha::Auth::Permissions->get_authz_from_flags( { flags => $userflags } );
 
     return $c->render(
