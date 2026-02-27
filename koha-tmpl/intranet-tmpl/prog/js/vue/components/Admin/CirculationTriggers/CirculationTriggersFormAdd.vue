@@ -126,7 +126,7 @@
                 <p>{{ $__("Loading context...") }}</p>
             </div>
             <fieldset class="rows" v-if="alertMessage">
-                <div class="alert alert-info">{{ alertMessage }}</div>
+                <div class="alert alert-warning">{{ alertMessage }}</div>
             </fieldset>
             <fieldset
                 class="rows"
@@ -601,7 +601,10 @@ export default {
 
             // in edit mode, check for changes from elsewhere to the rule set being edited
             if (this.editMode === "edit") {
-                const ruleSetInDb = await this.getSelectedRuleSet(this.context);
+                const ruleSetInDb = await this.getSelectedRuleSet(
+                    this.context,
+                    true
+                );
                 if (
                     this.hasConflict(
                         ruleSetInDb,
@@ -756,7 +759,7 @@ export default {
                 : Infinity;
         },
         setFilteredLetters() {
-            const library = this.currentRuleSet.library_id;
+            const library = this.context.library_id;
             const byCode = new Map();
 
             for (const letter of this.letters) {

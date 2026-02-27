@@ -33,7 +33,7 @@
                     }}
                 </p>
             </div>
-            <div class="alert alert-info" v-if="alertMessage">
+            <div class="alert alert-warning" v-if="alertMessage">
                 {{ alertMessage }}
             </div>
         </fieldset>
