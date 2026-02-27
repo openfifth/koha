@@ -3,7 +3,7 @@ import { $__ } from "../i18n";
 import { APIClient } from "../fetch/api-client.js";
 import { isEqual } from "lodash";
 import { permissionsActions } from "../composables/permissions";
-import { reactive, toRefs } from "vue";
+import { reactive, toRefs, computed } from "vue";
 
 // NOTES ON RULE SETS TYPES
 // exhaustive:  includes 'pure fallback' rules sets for contexts that no rules match.
@@ -26,6 +26,7 @@ export const useCircRulesStore = defineStore("circRules", () => {
         libraries: [],
         patronCategories: [],
         userPermissions: null,
+        logged_in_library_id: null,
         letters: [],
         ruleSuffixes: ["delay", "notice", "mtt", "restrict", "has_rules"],
         transportTypes: [
@@ -43,13 +44,27 @@ export const useCircRulesStore = defineStore("circRules", () => {
         storeInitialized: false,
     });
 
+    const canManageAnyLibrary = computed(
+        () =>
+            !store.userPermissions ||
+            !!store.userPermissions
+                .CAN_user_parameters_manage_circ_rules_from_any_libraries
+    );
+
     const actions = {
         // controllers
-        async init(defaultLibraryId = "*") {
+        async init(defaultLibraryId = "*", loggedInLibraryId = null) {
+            store.logged_in_library_id = loggedInLibraryId;
+            await this.loadUserPermissions();
             await this.getItemTypes();
             await this.getLibraries();
             await this.getPatronCategories();
-            this.currentLibraryId = defaultLibraryId;
+            // If user can only manage their own library, override the default view
+            if (!canManageAnyLibrary.value && store.logged_in_library_id) {
+                this.currentLibraryId = store.logged_in_library_id;
+            } else {
+                this.currentLibraryId = defaultLibraryId;
+            }
             this.metaInitialized = true;
         },
         async loadUserPermissions() {
@@ -515,5 +530,6 @@ export const useCircRulesStore = defineStore("circRules", () => {
     return {
         ...toRefs(store),
         ...actions,
+        canManageAnyLibrary,
     };
 });
