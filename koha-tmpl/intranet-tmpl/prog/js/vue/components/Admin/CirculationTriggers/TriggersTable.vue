@@ -1,6 +1,6 @@
 <template>
     <slot></slot>
-    <table>
+    <table :class="{ centered: modal }">
         <thead>
             <th v-if="!modal" class="trigger_context">
                 {{ $__("Library") }}
@@ -353,5 +353,10 @@ th.trigger_context {
 
 .border_right {
     border-right: solid 4px black;
+}
+
+table.centered {
+    margin: auto;
+    width: fit-content;
 }
 </style>
