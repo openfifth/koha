@@ -259,7 +259,7 @@
         </fieldset>
 
         <fieldset class="rows" v-if="alertMessage">
-            <div class="alert alert-info">{{ alertMessage }}</div>
+            <div class="alert alert-warning">{{ alertMessage }}</div>
         </fieldset>
     </CirculationTriggersForm>
 </template>
