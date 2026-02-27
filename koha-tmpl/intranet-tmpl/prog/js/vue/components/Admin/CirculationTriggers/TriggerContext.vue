@@ -47,4 +47,9 @@ export default {
 };
 </script>
 
-<style></style>
+<style scoped>
+table {
+    margin: auto;
+    width: fit-content;
+}
+</style>
