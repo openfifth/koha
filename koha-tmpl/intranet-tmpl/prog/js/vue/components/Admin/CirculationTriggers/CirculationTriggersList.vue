@@ -352,6 +352,7 @@ export default {
             allEffectiveRuleSets,
             librariesWithRules,
             storeInitialized,
+            metaInitialized,
         } = storeToRefs(circRulesStore);
 
         return {
@@ -372,6 +373,7 @@ export default {
             isLastTrigger,
             getLibrariesWithRules,
             storeInitialized,
+            metaInitialized,
             from_branch,
         };
     },
@@ -483,6 +485,19 @@ export default {
                     this.$route.fullPath.includes("refresh") ||
                     this.$route.path.endsWith("circulation_triggers")
                 ) {
+                    if (!this.metaInitialized) {
+                        await new Promise(resolve => {
+                            const stop = this.$watch(
+                                "metaInitialized",
+                                val => {
+                                    if (val) {
+                                        stop();
+                                        resolve();
+                                    }
+                                }
+                            );
+                        });
+                    }
                     await this.$nextTick();
                     await this.filterRuleSetsbySearchParam();
                 }
