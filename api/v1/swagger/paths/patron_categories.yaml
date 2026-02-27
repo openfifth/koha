@@ -51,7 +51,7 @@
           $ref: "../swagger.yaml#/definitions/error"
     x-koha-authorization:
       permissions:
-        parameters: catalogue
+        catalogue: "1"
   post:
     x-mojo-to: Patrons::Categories#add
     operationId: addCategory
