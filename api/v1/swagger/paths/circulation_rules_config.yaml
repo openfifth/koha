@@ -36,3 +36,4 @@
     x-koha-authorization:
       permissions:
         - circulate: circulate_remaining_permissions
+        - parameters: manage_circ_rules
