@@ -36,8 +36,19 @@
                             v-model="context.library_id"
                             label="name"
                             :reduce="lib => lib.library_id"
-                            :options="libraries"
-                            :disabled="editMode !== 'confirmContext'"
+                            :options="
+                                canManageAnyLibrary
+                                    ? libraries
+                                    : libraries.filter(
+                                          lib =>
+                                              lib.library_id ===
+                                              logged_in_library_id
+                                      )
+                            "
+                            :disabled="
+                                editMode !== 'confirmContext' ||
+                                !canManageAnyLibrary
+                            "
                         >
                             <template #search="{ attributes, events }">
                                 <input
@@ -442,6 +453,8 @@ export default {
             patronCategories,
             triggerCounts,
             storeInitialized,
+            canManageAnyLibrary,
+            logged_in_library_id,
         } = storeToRefs(circRulesStore);
 
         return {
@@ -458,6 +471,8 @@ export default {
             updateCircRuleSets,
             hasConflict,
             storeInitialized,
+            canManageAnyLibrary,
+            logged_in_library_id,
         };
     },
     data() {
@@ -659,7 +674,11 @@ export default {
             this.ruleSetInitialized = true;
         },
         setContext(query) {
-            this.context.library_id = query.library_id ?? "*";
+            if (!this.canManageAnyLibrary && this.logged_in_library_id) {
+                this.context.library_id = this.logged_in_library_id;
+            } else {
+                this.context.library_id = query.library_id ?? "*";
+            }
             this.context.item_type_id = query.item_type_id ?? "*";
             this.context.patron_category_id = query.patron_category_id ?? "*";
         },

@@ -299,7 +299,7 @@ subtest 'list_rules() tests' => sub {
 };
 
 subtest 'set_rules() tests' => sub {
-    plan tests => 28;
+    plan tests => 34;
 
     $schema->storage->txn_begin;
 
@@ -318,6 +318,18 @@ subtest 'set_rules() tests' => sub {
     $librarian->set_password( { password => $password, skip_validation => 1 } );
     my $userid = $librarian->userid;
 
+    # Grant manage_circ_rules_from_any_libraries so the librarian can set rules for any library
+    $builder->build(
+        {
+            source => 'UserPermission',
+            value  => {
+                borrowernumber => $librarian->borrowernumber,
+                module_bit     => 3,
+                code           => 'manage_circ_rules_from_any_libraries',
+            }
+        }
+    );
+
     my $patron = $builder->build_object(
         {
             class => 'Koha::Patrons',
@@ -327,6 +339,28 @@ subtest 'set_rules() tests' => sub {
 
     $patron->set_password( { password => $password, skip_validation => 1 } );
     my $unauth_userid = $patron->userid;
+
+    # Restricted librarian: has manage_circ_rules but NOT manage_circ_rules_from_any_libraries
+    my $own_branch        = $builder->build( { source => 'Branch' } )->{'branchcode'};
+    my $other_branch      = $builder->build( { source => 'Branch' } )->{'branchcode'};
+    my $restricted_patron = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { flags => 0, branchcode => $own_branch }
+        }
+    );
+    $restricted_patron->set_password( { password => $password, skip_validation => 1 } );
+    my $restricted_userid = $restricted_patron->userid;
+    $builder->build(
+        {
+            source => 'UserPermission',
+            value  => {
+                borrowernumber => $restricted_patron->borrowernumber,
+                module_bit     => 3,
+                code           => 'manage_circ_rules',
+            }
+        }
+    );
 
     ## Authorized user tests
     note("Authorized user setting rules");
@@ -415,6 +449,29 @@ subtest 'set_rules() tests' => sub {
     my $rules = Koha::CirculationRules->search(
         { categorycode => undef, branchcode => undef, itemtype => undef, rule_name => 'finedays' } );
     is( $rules->count, 0, "Finedays rule deleted from database" );
+
+    # manage_circ_rules_from_any_libraries restriction tests
+    note("Testing manage_circ_rules_from_any_libraries restrictions");
+
+    my $restricted_rules = {
+        context => {
+            library_id         => '*',
+            patron_category_id => '*',
+            item_type_id       => '*',
+        },
+        fine => 3,
+    };
+
+    $t->put_ok( "//$restricted_userid:$password@/api/v1/circulation_rules" => json => $restricted_rules )
+        ->status_is( 403, "Restricted user cannot set rules for default (*) library" );
+
+    $restricted_rules->{context}->{library_id} = $other_branch;
+    $t->put_ok( "//$restricted_userid:$password@/api/v1/circulation_rules" => json => $restricted_rules )
+        ->status_is( 403, "Restricted user cannot set rules for another library" );
+
+    $restricted_rules->{context}->{library_id} = $own_branch;
+    $t->put_ok( "//$restricted_userid:$password@/api/v1/circulation_rules" => json => $restricted_rules )
+        ->status_is( 200, "Restricted user can set rules for their own library" );
 
     $schema->storage->txn_rollback;
 };
