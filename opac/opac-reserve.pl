@@ -197,7 +197,6 @@ if ( $op eq 'cud-place_reserve' ) {
     my @failed_holds;
     my @successful_hold_ids;
     my @successful_holds;
-    my $hold_group;
     while (@selectedItems) {
         my $biblioNum = shift(@selectedItems);
         my $itemNum   = shift(@selectedItems);
