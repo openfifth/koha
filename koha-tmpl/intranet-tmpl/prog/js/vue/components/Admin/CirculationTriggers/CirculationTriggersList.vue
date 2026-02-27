@@ -138,6 +138,13 @@
                 Filter by
                 <span style="color: blue; font-weight: bold">context</span>
             </legend>
+            <p v-if="!canManageAnyLibrary" class="alert alert-info">
+                {{
+                    $__(
+                        "You can only manage circulation rules for your own library."
+                    )
+                }}
+            </p>
             <table>
                 <thead>
                     <tr>
@@ -154,11 +161,20 @@
                                 v-model="currentLibraryId"
                                 label="name"
                                 :reduce="lib => lib.library_id"
-                                :options="libraries"
+                                :options="
+                                    canManageAnyLibrary
+                                        ? libraries
+                                        : libraries.filter(
+                                              lib =>
+                                                  lib.library_id ===
+                                                  logged_in_library_id
+                                          )
+                                "
                                 @update:modelValue="
                                     filterRuleSetsbySearchParam()
                                 "
                                 :clearable="false"
+                                :disabled="!canManageAnyLibrary"
                                 placeholder="Default rules for all libraries"
                             >
                                 <template #search="{ attributes, events }">
@@ -353,6 +369,8 @@ export default {
             librariesWithRules,
             storeInitialized,
             metaInitialized,
+            canManageAnyLibrary,
+            logged_in_library_id,
         } = storeToRefs(circRulesStore);
 
         return {
@@ -375,6 +393,8 @@ export default {
             storeInitialized,
             metaInitialized,
             from_branch,
+            canManageAnyLibrary,
+            logged_in_library_id,
         };
     },
     data() {
@@ -487,15 +507,12 @@ export default {
                 ) {
                     if (!this.metaInitialized) {
                         await new Promise(resolve => {
-                            const stop = this.$watch(
-                                "metaInitialized",
-                                val => {
-                                    if (val) {
-                                        stop();
-                                        resolve();
-                                    }
+                            const stop = this.$watch("metaInitialized", val => {
+                                if (val) {
+                                    stop();
+                                    resolve();
                                 }
-                            );
+                            });
                         });
                     }
                     await this.$nextTick();
