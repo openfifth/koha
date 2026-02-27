@@ -29,7 +29,7 @@ import { inject } from "vue";
 export default {
     setup() {
         const circRulesStore = inject("circRulesStore");
-        circRulesStore.init();
+        circRulesStore.init(default_view);
         letters.unshift({
             name: "No letter",
             code: "",
@@ -51,6 +51,10 @@ export default {
 </script>
 
 <style>
+.page-section.bg-info {
+    background-color: #DAECFB !important;
+}
+
 form .v-select {
     display: inline-block;
     background-color: white;
