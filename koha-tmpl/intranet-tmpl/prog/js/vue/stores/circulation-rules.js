@@ -20,6 +20,7 @@ export const useCircRulesStore = defineStore("circRules", () => {
         currentPatronCategoryId: null,
         currentItemTypeId: null,
         triggerCounts: { "*": 0 },
+        metaInitialized: false,
         // references
         itemTypes: [],
         libraries: [],
@@ -44,10 +45,12 @@ export const useCircRulesStore = defineStore("circRules", () => {
 
     const actions = {
         // controllers
-        async init() {
+        async init(defaultLibraryId = "*") {
             await this.getItemTypes();
             await this.getLibraries();
             await this.getPatronCategories();
+            this.currentLibraryId = defaultLibraryId;
+            this.metaInitialized = true;
         },
         async loadUserPermissions() {
             if (this.userPermissions !== null) {
@@ -390,27 +393,24 @@ export const useCircRulesStore = defineStore("circRules", () => {
         },
         // repositories
         async deleteRuleSet(ruleSet, triggerNumber) {
+            if (!this.hasExplicitRulesForTrigger(ruleSet, triggerNumber)) {
+                return;
+            }
+
             const ruleSetInDb = await this.getSelectedRuleSet(ruleSet.context);
 
             if (this.hasConflict(ruleSet, ruleSetInDb, triggerNumber)) {
                 throw "The rule set for the selected trigger context could not be reset as it was updated elsewhere. Please see the updated trigger above.";
             }
 
-            const rulesForDeletion = { context: ruleSet.context };
-
-            if (ruleSet[`overdue_${triggerNumber}_delay`] !== null) {
-                rulesForDeletion[`overdue_${triggerNumber}_delay`] = null;
-            }
-            if (ruleSet[`overdue_${triggerNumber}_notice`] !== null) {
-                rulesForDeletion[`overdue_${triggerNumber}_notice`] = null;
-            }
-            if (ruleSet[`overdue_${triggerNumber}_restrict`] !== null) {
-                rulesForDeletion[`overdue_${triggerNumber}_restrict`] = null;
-            }
-            if (ruleSet[`overdue_${triggerNumber}_mtt`] !== null) {
-                rulesForDeletion[`overdue_${triggerNumber}_mtt`] = null;
-            }
-            this.updateCircRuleSets(rulesForDeletion, triggerNumber);
+            const rulesForDeletion = {
+                context: ruleSet.context,
+                [`overdue_${triggerNumber}_delay`]: null,
+                [`overdue_${triggerNumber}_notice`]: null,
+                [`overdue_${triggerNumber}_restrict`]: null,
+                [`overdue_${triggerNumber}_mtt`]: null,
+            };
+            await this.updateCircRuleSets(rulesForDeletion, triggerNumber);
         },
         async getLibrariesWithRules() {
             const client = APIClient.circRule;
