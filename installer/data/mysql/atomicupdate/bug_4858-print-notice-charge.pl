@@ -13,7 +13,7 @@ return {
             q{ALTER TABLE categories
               ADD COLUMN print_notice_charge decimal(28,6) DEFAULT 0.00
               COMMENT 'charge for print notices (0.00 = disabled)'
-              AFTER reservefee}
+              AFTER overduenoticerequired}
         );
 
         # Add PRINT_NOTICE debit type
