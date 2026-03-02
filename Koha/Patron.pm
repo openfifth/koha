@@ -1810,17 +1810,20 @@ sub add_print_notice_charge_if_needed {
     return unless Scalar::Util::looks_like_number($charge_amount);
     return unless $charge_amount > 0;
 
-    my $userenv = C4::Context->userenv;
-    my $library_id = $params->{library_id} || ($userenv ? $userenv->{branch} : undef);
+    my $userenv    = C4::Context->userenv;
+    my $library_id = $params->{library_id} || ( $userenv ? $userenv->{branch} : undef );
 
     my $result;
     try {
-        $result = $self->account->add_debit({
-            amount      => $charge_amount,
-            type        => 'PRINT_NOTICE',
-            interface   => C4::Context->interface,
-            library_id  => $library_id,
-        });
+        $result = $self->account->add_debit(
+            {
+                amount     => $charge_amount,
+                type       => 'PRINT_NOTICE',
+                interface  => C4::Context->interface,
+                library_id => $library_id,
+                note       => $params->{notice_code},
+            }
+        );
     } catch {
         return;
     };
