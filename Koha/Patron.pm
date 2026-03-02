@@ -103,7 +103,7 @@ our $RESULTSET_PATRON_ID_MAPPING = {
     TagAll               => 'borrowernumber',
     Virtualshelfcontent  => 'borrowernumber',
     Virtualshelfshare    => 'borrowernumber',
-    Virtualshelve        => 'owner',
+    Virtualshelve        => 'owner_id',
 };
 
 =head1 NAME
