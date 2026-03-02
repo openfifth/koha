@@ -20,7 +20,7 @@ return {
         $dbh->do(
             q{
             INSERT IGNORE INTO account_debit_types (code, description, can_be_invoiced, can_be_sold, default_amount, is_system, restricts_checkouts)
-            VALUES ('PRINT_NOTICE', 'Print notice charge', 0, 0, 0.50, 1, 0)
+            VALUES ('PRINT_NOTICE', 'Print notice charge', 0, 0, NULL, 1, 0)
         }
         );
 
