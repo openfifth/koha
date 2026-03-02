@@ -74,7 +74,7 @@ Exception to be used when a share has expired.
 
 =head2 Koha::Exceptions::Virtualshelf::UseDbAdminAccount
 
-Exception to be used when the owner is not set.
+Exception to be used when the owner_id is not set.
 
 =cut
 
