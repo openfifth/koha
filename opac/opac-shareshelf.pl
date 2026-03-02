@@ -88,7 +88,7 @@ sub _init {
     my $shelfnumber = $param->{shelfnumber};
     $shelf              = Koha::Virtualshelves->find($shelfnumber) unless $param->{errcode};
     $param->{shelfname} = $shelf ? $shelf->shelfname : q||;
-    $param->{owner}     = $shelf ? $shelf->owner     : -1;
+    $param->{owner}     = $shelf ? $shelf->owner_id  : -1;
     $param->{public}    = $shelf ? $shelf->public    : 0;
 
     return $param;
@@ -154,7 +154,7 @@ sub handle_accept {
         $param->{errcode} = 2;
     } elsif ( $shelf->public ) {
         $param->{errcode} = 5;
-    } elsif ( $shelf->owner == $loggedinuser ) {
+    } elsif ( $shelf->owner_id == $loggedinuser ) {
         $param->{errcode} = 8;
     }
     return if $param->{errcode};
