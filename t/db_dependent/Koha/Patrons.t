@@ -590,21 +590,21 @@ subtest "delete" => sub {
     my $private_list = Koha::Virtualshelf->new(
         {
             shelfname => "private",
-            owner     => $patron->borrowernumber,
+            owner_id  => $patron->borrowernumber,
             public    => 0,
         }
     )->store;
     my $public_list = Koha::Virtualshelf->new(
         {
             shelfname => "public",
-            owner     => $patron->borrowernumber,
+            owner_id  => $patron->borrowernumber,
             public    => 1,
         }
     )->store;
     my $list_to_share = Koha::Virtualshelf->new(
         {
             shelfname => "shared",
-            owner     => $patron->borrowernumber,
+            owner_id  => $patron->borrowernumber,
             public    => 0,
         }
     )->store;
@@ -631,7 +631,7 @@ subtest "delete" => sub {
         q|Koha::Patron->delete should have cancelled patron's holds 2|
     );
 
-    my $transferred_lists = Koha::Virtualshelves->search( { owner => $staff_patron->borrowernumber } )->count;
+    my $transferred_lists = Koha::Virtualshelves->search( { owner_id => $staff_patron->borrowernumber } )->count;
     is(
         $transferred_lists, 2,
         'Public and shared lists should stay in database under a different owner with a unique name, while private lists delete, with ListOwnershipPatronDeletion set to Transfer'
@@ -645,7 +645,7 @@ subtest "delete" => sub {
         "But the other share is still there"
     );
     is(
-        Koha::Virtualshelves->search( { owner => $patron->borrowernumber } )->count, 0,
+        Koha::Virtualshelves->search( { owner_id => $patron->borrowernumber } )->count, 0,
         q|Koha::Patron->delete should have deleted patron's lists/removed their ownership|
     );
 
@@ -664,14 +664,14 @@ subtest "delete" => sub {
     my $designated_owner = $builder->build_object( { class => 'Koha::Patrons' } );
     t::lib::Mocks::mock_preference( 'ListOwnerDesignated', $designated_owner->id );
     $patron        = $builder->build_object( { class => 'Koha::Patrons' } );
-    $private_list  = Koha::Virtualshelf->new( { shelfname => "PR1", owner  => $patron->id } )->store;
-    $public_list   = Koha::Virtualshelf->new( { shelfname => "PU1", public => 1, owner => $patron->id } )->store;
-    $list_to_share = Koha::Virtualshelf->new( { shelfname => "SH1", owner  => $patron->id } )->store;
+    $private_list  = Koha::Virtualshelf->new( { shelfname => "PR1", owner_id => $patron->id } )->store;
+    $public_list   = Koha::Virtualshelf->new( { shelfname => "PU1", public   => 1, owner_id => $patron->id } )->store;
+    $list_to_share = Koha::Virtualshelf->new( { shelfname => "SH1", owner_id => $patron->id } )->store;
     $list_to_share->share("valid key")->accept( "valid key", $patron_for_sharing->id );
     $patron->delete;
-    is( Koha::Virtualshelves->find( $private_list->id ),      undef,                 'Private list gone' );
-    is( $public_list->discard_changes->get_column('owner'),   $designated_owner->id, 'Public list transferred' );
-    is( $list_to_share->discard_changes->get_column('owner'), $designated_owner->id, 'Shared list transferred' );
+    is( Koha::Virtualshelves->find( $private_list->id ),         undef,                 'Private list gone' );
+    is( $public_list->discard_changes->get_column('owner_id'),   $designated_owner->id, 'Public list transferred' );
+    is( $list_to_share->discard_changes->get_column('owner_id'), $designated_owner->id, 'Shared list transferred' );
 
     # Finally test deleting lists
     t::lib::Mocks::mock_preference( 'ListOwnershipUponPatronDeletion', 'delete' );
@@ -680,21 +680,21 @@ subtest "delete" => sub {
     my $private_list2 = Koha::Virtualshelf->new(
         {
             shelfname => "private",
-            owner     => $patron2->borrowernumber,
+            owner_id  => $patron2->borrowernumber,
             public    => 0,
         }
     )->store;
     my $public_list2 = Koha::Virtualshelf->new(
         {
             shelfname => "public",
-            owner     => $patron2->borrowernumber,
+            owner_id  => $patron2->borrowernumber,
             public    => 1,
         }
     )->store;
     my $list_to_share2 = Koha::Virtualshelf->new(
         {
             shelfname => "shared",
-            owner     => $patron2->borrowernumber,
+            owner_id  => $patron2->borrowernumber,
             public    => 0,
         }
     )->store;

@@ -46,21 +46,21 @@ subtest 'disown_or_delete() tests' => sub {
         my $public_list = $builder->build_object(
             {
                 class => "Koha::Virtualshelves",
-                value => { owner => $patron_1->id, public => 1 }
+                value => { owner_id => $patron_1->id, public => 1 }
             }
         );
 
         my $private_list = $builder->build_object(
             {
                 class => "Koha::Virtualshelves",
-                value => { owner => $patron_1->id, public => 0 }
+                value => { owner_id => $patron_1->id, public => 0 }
             }
         );
 
         my $private_list_shared = $builder->build_object(
             {
                 class => "Koha::Virtualshelves",
-                value => { owner => $patron_1->id, public => 0 }
+                value => { owner_id => $patron_1->id, public => 0 }
             }
         );
 
@@ -85,12 +85,12 @@ subtest 'disown_or_delete() tests' => sub {
 
         is( $rs->count, 2, 'The private/non-shared list was deleted' );
         my $first = $rs->next;
-        is( $first->id,    $public_list->id );
-        is( $first->owner, $patron_2->id );
+        is( $first->id,       $public_list->id );
+        is( $first->owner_id, $patron_2->id );
 
         my $second = $rs->next;
-        is( $second->id,    $private_list_shared->id );
-        is( $second->owner, $patron_2->id );
+        is( $second->id,       $private_list_shared->id );
+        is( $second->owner_id, $patron_2->id );
 
         $schema->storage->txn_rollback;
     };
@@ -108,21 +108,21 @@ subtest 'disown_or_delete() tests' => sub {
         my $public_list = $builder->build_object(
             {
                 class => "Koha::Virtualshelves",
-                value => { owner => $patron_1->id, public => 1 }
+                value => { owner_id => $patron_1->id, public => 1 }
             }
         );
 
         my $private_list = $builder->build_object(
             {
                 class => "Koha::Virtualshelves",
-                value => { owner => $patron_1->id, public => 0 }
+                value => { owner_id => $patron_1->id, public => 0 }
             }
         );
 
         my $private_list_shared = $builder->build_object(
             {
                 class => "Koha::Virtualshelves",
-                value => { owner => $patron_1->id, public => 0 }
+                value => { owner_id => $patron_1->id, public => 0 }
             }
         );
 
@@ -141,7 +141,7 @@ subtest 'disown_or_delete() tests' => sub {
         my $public_list_to_delete = $builder->build_object(
             {
                 class => "Koha::Virtualshelves",
-                value => { owner => $patron_1->id, public => 1 }
+                value => { owner_id => $patron_1->id, public => 1 }
             }
         );
 
@@ -162,12 +162,12 @@ subtest 'disown_or_delete() tests' => sub {
 
         is( $rs->count, 2, 'The private/non-shared list was deleted' );
         my $first = $rs->next;
-        is( $first->id,    $public_list->id );
-        is( $first->owner, $patron_3->id );
+        is( $first->id,       $public_list->id );
+        is( $first->owner_id, $patron_3->id );
 
         my $second = $rs->next;
-        is( $second->id,    $private_list_shared->id );
-        is( $second->owner, $patron_3->id );
+        is( $second->id,       $private_list_shared->id );
+        is( $second->owner_id, $patron_3->id );
 
         $schema->storage->txn_rollback;
     };
@@ -181,13 +181,13 @@ subtest 'disown_or_delete() tests' => sub {
         my $public_list = $builder->build_object(
             {
                 class => "Koha::Virtualshelves",
-                value => { owner => $patron_1->id, public => 1 }
+                value => { owner_id => $patron_1->id, public => 1 }
             }
         );
         my $private_list_shared = $builder->build_object(
             {
                 class => "Koha::Virtualshelves",
-                value => { owner => $patron_1->id, public => 0 }
+                value => { owner_id => $patron_1->id, public => 0 }
             }
         );
         $builder->build_object(
@@ -225,21 +225,21 @@ subtest 'disown_or_delete() tests' => sub {
         my $public_list = $builder->build_object(
             {
                 class => "Koha::Virtualshelves",
-                value => { owner => $patron_1->id, public => 1 }
+                value => { owner_id => $patron_1->id, public => 1 }
             }
         );
 
         my $private_list = $builder->build_object(
             {
                 class => "Koha::Virtualshelves",
-                value => { owner => $patron_1->id, public => 0 }
+                value => { owner_id => $patron_1->id, public => 0 }
             }
         );
 
         my $private_list_shared = $builder->build_object(
             {
                 class => "Koha::Virtualshelves",
-                value => { owner => $patron_1->id, public => 0 }
+                value => { owner_id => $patron_1->id, public => 0 }
             }
         );
 

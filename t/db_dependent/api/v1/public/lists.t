@@ -53,13 +53,17 @@ subtest 'list_public() tests' => sub {
     my $patron_2_userid = $patron_2->userid;
 
     my $list_1 =
-        $builder->build_object( { class => 'Koha::Virtualshelves', value => { owner => $patron_1->id, public => 1 } } );
+        $builder->build_object(
+        { class => 'Koha::Virtualshelves', value => { owner_id => $patron_1->id, public => 1 } } );
     my $list_2 =
-        $builder->build_object( { class => 'Koha::Virtualshelves', value => { owner => $patron_1->id, public => 0 } } );
+        $builder->build_object(
+        { class => 'Koha::Virtualshelves', value => { owner_id => $patron_1->id, public => 0 } } );
     my $list_3 =
-        $builder->build_object( { class => 'Koha::Virtualshelves', value => { owner => $patron_2->id, public => 1 } } );
+        $builder->build_object(
+        { class => 'Koha::Virtualshelves', value => { owner_id => $patron_2->id, public => 1 } } );
     my $list_4 =
-        $builder->build_object( { class => 'Koha::Virtualshelves', value => { owner => $patron_2->id, public => 0 } } );
+        $builder->build_object(
+        { class => 'Koha::Virtualshelves', value => { owner_id => $patron_2->id, public => 0 } } );
 
     my $q = encode_json(
         {

@@ -40,7 +40,7 @@ my $dbh = C4::Context->dbh;
 teardown();
 
 subtest 'CRUD' => sub {
-    plan tests => 15;
+    plan tests => 16;
     my $patron = $builder->build(
         {
             source => 'Borrower',
@@ -54,7 +54,7 @@ subtest 'CRUD' => sub {
     my $shelf = Koha::Virtualshelf->new(
         {
             shelfname => "my first shelf",
-            owner     => $patron->{borrowernumber},
+            owner_id  => $patron->{borrowernumber},
             public    => 0,
         }
     )->store;
@@ -75,6 +75,13 @@ subtest 'CRUD' => sub {
         'The creation time should have been set to today'
     );
 
+    # Test owner accessor is working as expected
+    my $owner = $shelf->owner;
+    is(
+        $owner->borrowernumber, $shelf->owner_id,
+        'The owner accessor\'s borrowenumber should match the shelf\'s owner_id'
+    );
+
     # Test if creation date will not be overwritten by store
     my $created = dt_from_string->subtract( hours => 1 );
     $shelf->created_on($created);
@@ -93,7 +100,7 @@ subtest 'CRUD' => sub {
         $shelf = Koha::Virtualshelf->new(
             {
                 shelfname => "my first shelf",
-                owner     => $patron->{borrowernumber},
+                owner_id  => $patron->{borrowernumber},
                 public    => 0,
             }
         )->store;
@@ -114,7 +121,7 @@ subtest 'CRUD' => sub {
     $shelf = Koha::Virtualshelf->new(
         {
             shelfname => "my first shelf",
-            owner     => $another_patron->{borrowernumber},
+            owner_id  => $another_patron->{borrowernumber},
             public    => 0,
         }
     )->store;
@@ -218,7 +225,7 @@ subtest 'Sharing' => sub {
     my $shelf_to_share = Koha::Virtualshelf->new(
         {
             shelfname => "my first shelf",
-            owner     => $patron_wants_to_share->{borrowernumber},
+            owner_id  => $patron_wants_to_share->{borrowernumber},
             public    => 0,
         }
     )->store;
@@ -226,7 +233,7 @@ subtest 'Sharing' => sub {
     my $shelf_not_to_share = Koha::Virtualshelf->new(
         {
             shelfname => "my second shelf",
-            owner     => $patron_wants_to_share->{borrowernumber},
+            owner_id  => $patron_wants_to_share->{borrowernumber},
             public    => 0,
         }
     )->store;
@@ -331,7 +338,7 @@ subtest 'Shelf content' => sub {
     my $shelf        = Koha::Virtualshelf->new(
         {
             shelfname    => "my first shelf",
-            owner        => $patron1->{borrowernumber},
+            owner_id     => $patron1->{borrowernumber},
             public       => 0,
             lastmodified => $dt_yesterday,
         }
@@ -473,7 +480,7 @@ subtest 'Shelf permissions' => sub {
     my $public_shelf = Koha::Virtualshelf->new(
         {
             shelfname                         => "my first shelf",
-            owner                             => $patron1->{borrowernumber},
+            owner_id                          => $patron1->{borrowernumber},
             public                            => 1,
             allow_change_from_owner           => 0,
             allow_change_from_others          => 0,
@@ -905,7 +912,7 @@ subtest 'Shelf permissions' => sub {
     my $private_shelf = Koha::Virtualshelf->new(
         {
             shelfname                         => "my first shelf",
-            owner                             => $patron1->{borrowernumber},
+            owner_id                          => $patron1->{borrowernumber},
             public                            => 0,
             allow_change_from_owner           => 0,
             allow_change_from_others          => 0,
@@ -1248,42 +1255,42 @@ subtest 'Get shelves' => sub {
     my $private_shelf1_1 = Koha::Virtualshelf->new(
         {
             shelfname => "private shelf 1 for patron 1",
-            owner     => $patron1->{borrowernumber},
+            owner_id  => $patron1->{borrowernumber},
             public    => 0,
         }
     )->store;
     my $private_shelf1_2 = Koha::Virtualshelf->new(
         {
             shelfname => "private shelf 2 for patron 1",
-            owner     => $patron1->{borrowernumber},
+            owner_id  => $patron1->{borrowernumber},
             public    => 0,
         }
     )->store;
     my $private_shelf2_1 = Koha::Virtualshelf->new(
         {
             shelfname => "private shelf 1 for patron 2",
-            owner     => $patron2->{borrowernumber},
+            owner_id  => $patron2->{borrowernumber},
             public    => 0,
         }
     )->store;
     my $public_shelf1_1 = Koha::Virtualshelf->new(
         {
             shelfname => "public shelf 1 for patron 1",
-            owner     => $patron1->{borrowernumber},
+            owner_id  => $patron1->{borrowernumber},
             public    => 1,
         }
     )->store;
     my $public_shelf1_2 = Koha::Virtualshelf->new(
         {
             shelfname => "public shelf 2 for patron 1",
-            owner     => $patron1->{borrowernumber},
+            owner_id  => $patron1->{borrowernumber},
             public    => 1,
         }
     )->store;
     my $shelf_to_share = Koha::Virtualshelf->new(
         {
             shelfname => "shared shelf",
-            owner     => $patron1->{borrowernumber},
+            owner_id  => $patron1->{borrowernumber},
             public    => 0,
         }
     )->store;
@@ -1360,21 +1367,21 @@ subtest 'Get shelves containing biblios' => sub {
     my $shelf1 = Koha::Virtualshelf->new(
         {
             shelfname => "my first shelf",
-            owner     => $patron1->{borrowernumber},
+            owner_id  => $patron1->{borrowernumber},
             public    => 0,
         }
     )->store;
     my $shelf2 = Koha::Virtualshelf->new(
         {
             shelfname => "my x second shelf",          # 'x' to make it sorted after 'third'
-            owner     => $patron2->{borrowernumber},
+            owner_id  => $patron2->{borrowernumber},
             public    => 0,
         }
     )->store;
     my $shelf3 = Koha::Virtualshelf->new(
         {
             shelfname => "my third shelf",
-            owner     => $patron1->{borrowernumber},
+            owner_id  => $patron1->{borrowernumber},
             public    => 1,
         }
     )->store;
@@ -1467,9 +1474,9 @@ subtest 'cannot_be_transferred' => sub {
     $removed_patron->delete;
 
     # Create three lists
-    my $private_list = Koha::Virtualshelf->new( { shelfname => "A", owner  => $listowner->id } )->store;
-    my $public_list  = Koha::Virtualshelf->new( { shelfname => "B", public => 1, owner => $listowner->id } )->store;
-    my $shared_list  = Koha::Virtualshelf->new( { shelfname => "C", owner  => $listowner->id } )->store;
+    my $private_list = Koha::Virtualshelf->new( { shelfname => "A", owner_id => $listowner->id } )->store;
+    my $public_list  = Koha::Virtualshelf->new( { shelfname => "B", public => 1, owner_id => $listowner->id } )->store;
+    my $shared_list  = Koha::Virtualshelf->new( { shelfname => "C", owner_id => $listowner->id } )->store;
     $shared_list->share("key")->accept( "key", $receiver->id );
 
     # Test on private list
@@ -1606,8 +1613,8 @@ subtest 'filter_by_readable() tests' => sub {
         {
             class => 'Koha::Virtualshelves',
             value => {
-                public => 0,
-                owner  => $patron_1->id,
+                public   => 0,
+                owner_id => $patron_1->id,
             }
         }
     );
@@ -1615,8 +1622,8 @@ subtest 'filter_by_readable() tests' => sub {
         {
             class => 'Koha::Virtualshelves',
             value => {
-                public => 1,
-                owner  => $patron_1->id,
+                public   => 1,
+                owner_id => $patron_1->id,
             }
         }
     );
@@ -1624,8 +1631,8 @@ subtest 'filter_by_readable() tests' => sub {
         {
             class => 'Koha::Virtualshelves',
             value => {
-                public => 0,
-                owner  => $patron_2->id,
+                public   => 0,
+                owner_id => $patron_2->id,
             }
         }
     );
@@ -1633,8 +1640,8 @@ subtest 'filter_by_readable() tests' => sub {
         {
             class => 'Koha::Virtualshelves',
             value => {
-                public => 1,
-                owner  => $patron_2->id,
+                public   => 1,
+                owner_id => $patron_2->id,
             }
         }
     );
@@ -1653,7 +1660,7 @@ subtest 'filter_by_readable() tests' => sub {
     is( $lists->count, 3, 'Three lists are returned' );
 
     while ( my $list = $lists->next ) {
-        ok( $list->owner == $patron_1->id || $list->public, 'Only public or self lists in the resultset' );
+        ok( $list->owner_id == $patron_1->id || $list->public, 'Only public or self lists in the resultset' );
     }
 
     $schema->storage->txn_rollback;

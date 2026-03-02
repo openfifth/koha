@@ -267,7 +267,7 @@ subtest 'XSS vulnerabilities in pagination' => sub {
                     public                   => 1,
                     allow_change_from_owner  => 1,
                     allow_change_from_others => 0,
-                    owner                    => $patron->borrowernumber
+                    owner_id                 => $patron->borrowernumber
                 }
             }
         );

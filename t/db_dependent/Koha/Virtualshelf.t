@@ -42,14 +42,14 @@ subtest 'transfer_ownership() tests' => sub {
     my $public_list = $builder->build_object(
         {
             class => "Koha::Virtualshelves",
-            value => { owner => $patron_1->id, public => 1 }
+            value => { owner_id => $patron_1->id, public => 1 }
         }
     );
 
     my $private_list = $builder->build_object(
         {
             class => "Koha::Virtualshelves",
-            value => { owner => $patron_1->id, public => 0 }
+            value => { owner_id => $patron_1->id, public => 0 }
         }
     );
 
@@ -82,7 +82,7 @@ subtest 'transfer_ownership() tests' => sub {
     $public_list->transfer_ownership( $patron_2->id );
     $public_list->discard_changes;
 
-    is( $public_list->owner, $patron_2->id, 'Owner changed correctly' );
+    is( $public_list->owner_id, $patron_2->id, 'Owner changed correctly' );
     my $public_list_shares = $public_list->get_shares;
     is( $public_list_shares->count,                1,             'Count is correct' );
     is( $public_list_shares->next->borrowernumber, $patron_2->id, "Public lists don't get the share removed" );
@@ -90,7 +90,7 @@ subtest 'transfer_ownership() tests' => sub {
     $private_list->transfer_ownership( $patron_2->id );
     $private_list->discard_changes;
 
-    is( $private_list->owner, $patron_2->id );
+    is( $private_list->owner_id, $patron_2->id );
     my $private_list_shares = $private_list->get_shares;
     is( $private_list_shares->count, 1, 'Count is correct' );
     is(

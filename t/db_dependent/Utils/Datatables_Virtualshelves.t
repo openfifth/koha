@@ -90,7 +90,7 @@ my $shelf1 = Koha::Virtualshelf->new(
         shelfname => 'my first private list (empty)',
         public    => 0,
         sortfield => 'author',
-        owner     => $john_doe{borrowernumber},
+        owner_id  => $john_doe{borrowernumber},
     }
 )->store;
 
@@ -99,7 +99,7 @@ my $shelf2 = Koha::Virtualshelf->new(
         shelfname => 'my second private list',
         public    => 0,
         sortfield => 'title',
-        owner     => $john_doe{borrowernumber},
+        owner_id  => $john_doe{borrowernumber},
     }
 )->store;
 my $biblionumber1 = _add_biblio('title 1');
@@ -118,7 +118,7 @@ my $shelf3 = Koha::Virtualshelf->new(
         shelfname => 'The first public list',
         public    => 1,
         sortfield => 'author',
-        owner     => $jane_doe{borrowernumber},
+        owner_id  => $jane_doe{borrowernumber},
     }
 )->store;
 my $biblionumber6 = _add_biblio('title 6');
@@ -133,7 +133,7 @@ my $shelf4 = Koha::Virtualshelf->new(
         shelfname => 'my second public list',
         public    => 1,
         sortfield => 'title',
-        owner     => $jane_doe{borrowernumber},
+        owner_id  => $jane_doe{borrowernumber},
     }
 )->store;
 my $biblionumber9  = _add_biblio('title 9');
@@ -150,7 +150,7 @@ my $shelf5 = Koha::Virtualshelf->new(
         shelfname => 'my third private list',
         public    => 0,
         sortfield => 'title',
-        owner     => $jane_doe{borrowernumber},
+        owner_id  => $jane_doe{borrowernumber},
     }
 )->store;
 my $biblionumber13 = _add_biblio('title 13');
@@ -171,7 +171,7 @@ for my $i ( 6 .. 15 ) {
         {
             shelfname => "another public list $i",
             public    => 1,
-            owner     => $john_smith{borrowernumber},
+            owner_id  => $john_smith{borrowernumber},
         }
     )->store;
 }
@@ -287,4 +287,3 @@ sub _add_biblio {
     my ( $biblionumber, $biblioitemnumber ) = AddBiblio( $biblio, '' );
     return $biblionumber;
 }
-
