@@ -39,7 +39,7 @@ unique identifier assigned by Koha
 
 name of the list
 
-=head2 owner
+=head2 owner_id
 
   data_type: 'integer'
   is_foreign_key: 1
@@ -120,7 +120,7 @@ __PACKAGE__->add_columns(
   { data_type => "integer", is_auto_increment => 1, is_nullable => 0 },
   "shelfname",
   { data_type => "varchar", is_nullable => 1, size => 255 },
-  "owner",
+  "owner_id",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
   "public",
   { data_type => "tinyint", default_value => 0, is_nullable => 0 },
@@ -179,7 +179,7 @@ Related object: L<Koha::Schema::Result::Borrower>
 __PACKAGE__->belongs_to(
   "owner",
   "Koha::Schema::Result::Borrower",
-  { borrowernumber => "owner" },
+  { borrowernumber => "owner_id" },
   {
     is_deferrable => 1,
     join_type     => "LEFT",
@@ -219,8 +219,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07049 @ 2022-08-17 19:59:33
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:EKq7nDW2AeZ2NQce2BPMWA
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-03-02 13:02:45
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:EDGKMMT7lAa8ReI9gNKJPg
 
 =head2 koha_object_class
 
