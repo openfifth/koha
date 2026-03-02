@@ -7047,7 +7047,7 @@ DROP TABLE IF EXISTS `virtualshelves`;
 CREATE TABLE `virtualshelves` (
   `shelfnumber` int(11) NOT NULL AUTO_INCREMENT COMMENT 'unique identifier assigned by Koha',
   `shelfname` varchar(255) DEFAULT NULL COMMENT 'name of the list',
-  `owner` int(11) DEFAULT NULL COMMENT 'foreign key linking to the borrowers table (using borrowernumber) for the creator of this list (changed from varchar(80) to int)',
+  `owner_id` int(11) DEFAULT NULL COMMENT 'foreign key linking to the borrowers table (using borrowernumber) for the creator of this list (changed from varchar(80) to int)',
   `public` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'If the list is public',
   `sortfield` varchar(16) DEFAULT 'title' COMMENT 'the field this list is sorted on',
   `lastmodified` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'date and time the list was last modified',
@@ -7057,8 +7057,8 @@ CREATE TABLE `virtualshelves` (
   `allow_change_from_staff` tinyint(1) DEFAULT 0 COMMENT 'can staff change contents?',
   `allow_change_from_permitted_staff` tinyint(1) DEFAULT 0 COMMENT 'can staff with edit_public_list_contents permission change contents?',
   PRIMARY KEY (`shelfnumber`),
-  KEY `virtualshelves_ibfk_1` (`owner`),
-  CONSTRAINT `virtualshelves_ibfk_1` FOREIGN KEY (`owner`) REFERENCES `borrowers` (`borrowernumber`) ON DELETE SET NULL ON UPDATE SET NULL
+  KEY `virtualshelves_ibfk_1` (`owner_id`),
+  CONSTRAINT `virtualshelves_ibfk_1` FOREIGN KEY (`owner_id`) REFERENCES `borrowers` (`borrowernumber`) ON DELETE SET NULL ON UPDATE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
