@@ -56,7 +56,7 @@ sub list_public {
         my $lists_set = Koha::Virtualshelves->new;
 
         if ($only_mine) {
-            $lists_set = $lists_set->search( { owner => $user->id } );
+            $lists_set = $lists_set->search( { owner_id => $user->id } );
         }
 
         if ( $only_public || !$user ) {

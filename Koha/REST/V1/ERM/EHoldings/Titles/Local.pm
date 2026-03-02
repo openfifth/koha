@@ -227,7 +227,7 @@ sub import_from_list {
     my $list   = Koha::Virtualshelves->find($list_id);
     my $patron = $c->stash('koha.user');
 
-    unless ( $list && $list->owner == $c->stash('koha.user')->borrowernumber ) {
+    unless ( $list && $list->owner_id == $c->stash('koha.user')->borrowernumber ) {
         return $c->render_resource_not_found("List");
     }
 
