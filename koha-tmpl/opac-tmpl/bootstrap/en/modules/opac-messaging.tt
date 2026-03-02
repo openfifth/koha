@@ -47,8 +47,7 @@
                         [% IF print_notice_charging && !patron_has_email %]
                             <div class="alert alert-warning">
                                 <h4><i class="fa fa-exclamation-triangle"></i> Print Notice Charges</h4>
-                                <p><strong>Important:</strong> Print notices incur a charge of
-                                   [% print_notice_charge_amount | $Price %] each to cover postage and processing costs.</p>
+                                <p><strong>Important:</strong> Print notices incur a charge of [% print_notice_charge_amount | $Price %] each to cover postage and processing costs.</p>
                                 <p>To avoid these charges, please:</p>
                                 <ul>
                                     <li>Provide an email address in your <a href="/cgi-bin/koha/opac-memberentry.pl">account details</a></li>
@@ -63,6 +62,10 @@
                             <input type="hidden" name="op" value="cud-modify" />
 
                             [% IF Koha.Preference( 'EnhancedMessagingPreferencesOPAC' ) %]
+                                [% SET has_print_transport = 0 %]
+                                [% FOREACH pref IN messaging_preferences %]
+                                    [% IF pref.transport_print %][% SET has_print_transport = 1 %][% LAST %][% END %]
+                                [% END %]
                                 <table class="table table-bordered table-condensed table-striped">
                                     <caption class="sr-only">Your messaging settings</caption>
                                     <thead>
@@ -73,6 +76,14 @@
                                             [% IF ( TalkingTechItivaPhone ) %]<th>Phone</th>[% END %]
                                             [% IF Koha.Preference('PhoneNotification') %]<th>Phone</th>[% END %]
                                             <th>Email</th>
+                                            [% IF has_print_transport %]
+                                                <th
+                                                    >Print
+                                                    [% IF print_notice_charging %]
+                                                        ([% print_notice_charge_amount | $Price %] charge)
+                                                    [% END %]
+                                                </th>
+                                            [% END %]
                                             <th
                                                 >Digests only
                                                 <i
@@ -256,6 +267,35 @@
                                                     <td>-</td>
                                                 [% END %]
 
+                                                [% IF has_print_transport %]
+                                                    [% IF ( messaging_preference.transport_print ) %]
+                                                        <td class="selectcol">
+                                                            [% IF ( messaging_preference.transports_print ) %]
+                                                                <input
+                                                                    type="checkbox"
+                                                                    aria-label="Unselect print messaging"
+                                                                    class="pmp_print"
+                                                                    id="print[% messaging_preference.message_attribute_id | html %]"
+                                                                    name="[% messaging_preference.message_attribute_id | html %]"
+                                                                    value="print"
+                                                                    checked="checked"
+                                                                />
+                                                            [% ELSE %]
+                                                                <input
+                                                                    type="checkbox"
+                                                                    aria-label="Select print messaging"
+                                                                    class="pmp_print"
+                                                                    id="print[% messaging_preference.message_attribute_id | html %]"
+                                                                    name="[% messaging_preference.message_attribute_id | html %]"
+                                                                    value="print"
+                                                                />
+                                                            [% END %]
+                                                        </td>
+                                                    [% ELSE %]
+                                                        <td>-</td>
+                                                    [% END %]
+                                                [% END %]
+
                                                 [% IF ( messaging_preference.has_digest ) %]
                                                     <td class="selectcol">
                                                         [% IF ( messaging_preference.digest ) %]
@@ -294,16 +334,14 @@
                             [% IF print_notice_charging %]
                                 <div class="alert alert-info">
                                     <h5><i class="fa fa-info-circle"></i> About Print Notice Charges</h5>
-                                    <p>Print notices incur a charge of
-                                       [% IF print_notice_charge_amount %][% print_notice_charge_amount | $Price %][% ELSE %]0.00[% END %]
-                                       each to cover postage and processing costs.</p>
+                                    <p>Print notices incur a charge of [% IF print_notice_charge_amount %][% print_notice_charge_amount | $Price %][% ELSE %]0.00[% END %] each to cover postage and processing costs.</p>
                                     <p><strong>To avoid these charges:</strong></p>
                                     <ul>
                                         [% IF !patron_has_email %]
                                             <li><strong>Add an email address</strong> to your <a href="/cgi-bin/koha/opac-memberentry.pl">account details</a></li>
                                         [% END %]
-                                        <li>Select "Email" instead of any print options for your notice preferences above</li>
-                                        <li>Ask library staff to disable print notices for your account</li>
+                                        <li>Select "Email" instead of "Print" for your notice preferences above</li>
+                                        <li>Uncheck any enabled print notice preferences above</li>
                                     </ul>
                                     [% IF patron_has_email %]
                                         <p class="text-success">✓ You have an email address on file. Make sure to select email delivery for notices to avoid print charges.</p>
@@ -427,6 +465,9 @@
             });
             $(".pmp_phone").click(function(){
                 toggle_digest(Number($(this).attr("id").replace("phone", "")));
+            });
+            $(".pmp_print").click(function(){
+                toggle_digest(Number($(this).attr("id").replace("print", "")));
             });
 
         });
