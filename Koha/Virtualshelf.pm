@@ -50,7 +50,7 @@ Missing POD for store.
 sub store {
     my ($self) = @_;
 
-    unless ( $self->owner ) {
+    unless ( $self->owner_id ) {
         Koha::Exceptions::Virtualshelf::UseDbAdminAccount->throw;
     }
 
@@ -109,15 +109,15 @@ sub is_shelfname_valid {
         ( $self->shelfnumber ? ( "me.shelfnumber" => { '!=', $self->shelfnumber } ) : () ),
     };
 
-    if ( $self->is_private and defined $self->owner ) {
+    if ( $self->is_private and defined $self->owner_id ) {
         $conditions->{-or} = {
-            "virtualshelfshares.borrowernumber" => $self->owner,
-            "me.owner"                          => $self->owner,
+            "virtualshelfshares.borrowernumber" => $self->owner_id,
+            "me.owner_id"                       => $self->owner_id,
         };
         $conditions->{public} = 0;
-    } elsif ( $self->is_private and not defined $self->owner ) {
-        $conditions->{owner}  = undef;
-        $conditions->{public} = 0;
+    } elsif ( $self->is_private and not defined $self->owner_id ) {
+        $conditions->{owner_id} = undef;
+        $conditions->{public}   = 0;
     } else {
         $conditions->{public} = 1;
     }
@@ -247,7 +247,7 @@ sub add_biblio {
     # Check permissions
     my $patron = Koha::Patrons->find($borrowernumber) or return 0;
     return 0
-        unless ( $self->owner == $borrowernumber && $self->allow_change_from_owner )
+        unless ( $self->owner_id == $borrowernumber && $self->allow_change_from_owner )
         || ( $self->allow_change_from_staff           && $patron->can_patron_change_staff_only_lists )
         || ( $self->allow_change_from_permitted_staff && $patron->can_patron_change_permitted_staff_lists )
         || $self->allow_change_from_others;
@@ -279,7 +279,7 @@ sub remove_biblios {
 
     my $number_removed = 0;
     my $patron         = Koha::Patrons->find($borrowernumber) or return 0;
-    if (   ( $self->owner == $borrowernumber && $self->allow_change_from_owner )
+    if (   ( $self->owner_id == $borrowernumber && $self->allow_change_from_owner )
         || ( $self->allow_change_from_staff           && $patron->can_patron_change_staff_only_lists )
         || ( $self->allow_change_from_permitted_staff && $patron->can_patron_change_permitted_staff_lists )
         || $self->allow_change_from_others )
@@ -303,7 +303,7 @@ sub can_be_viewed {
     my ( $self, $borrowernumber ) = @_;
     return 1 if $self->is_public;
     return 0 unless $borrowernumber;
-    return 1 if $self->owner == $borrowernumber;
+    return 1 if $self->owner_id == $borrowernumber;
     return $self->get_shares->search(
         {
             borrowernumber => $borrowernumber,
@@ -321,7 +321,7 @@ sub can_be_deleted {
     my ( $self, $borrowernumber ) = @_;
 
     return 0 unless $borrowernumber;
-    return 1 if $self->owner == $borrowernumber;
+    return 1 if $self->owner_id == $borrowernumber;
 
     my $patron = Koha::Patrons->find($borrowernumber) or return 0;
 
@@ -339,7 +339,7 @@ Missing POD for can_be_managed.
 sub can_be_managed {
     my ( $self, $borrowernumber ) = @_;
     return 1
-        if $borrowernumber and $self->owner == $borrowernumber;
+        if $borrowernumber and $self->owner_id == $borrowernumber;
 
     my $patron = Koha::Patrons->find($borrowernumber) or return 0;
     return 1
@@ -359,7 +359,7 @@ sub can_biblios_be_added {
     my $patron = Koha::Patrons->find($borrowernumber) or return 0;
     return 1
         if $borrowernumber
-        and ( ( $self->owner == $borrowernumber && $self->allow_change_from_owner )
+        and ( ( $self->owner_id == $borrowernumber && $self->allow_change_from_owner )
         or ( $self->allow_change_from_staff           && $patron->can_patron_change_staff_only_lists )
         or ( $self->allow_change_from_permitted_staff && $patron->can_patron_change_permitted_staff_lists )
         or $self->allow_change_from_others )
@@ -461,6 +461,22 @@ sub cannot_be_transferred {
     return 0;    # serving as green light
 }
 
+=head3 owner
+
+my $patron = Koha::Virtualshelf->owner;
+
+Return the Koha::Patron object representing the owner_id
+
+=cut
+
+sub owner {
+    my ($self) = @_;
+    my $patron_rs = $self->_result->owner_id;
+    return unless $patron_rs;
+
+    return Koha::Patrons->find($patron_rs);
+}
+
 =head3 transfer_ownership
 
     $list->transfer_ownership( $patron_id );
@@ -476,14 +492,14 @@ sub transfer_ownership {
         unless $patron_id;
 
     ## before we change the owner, collect some details
-    my $old_owner  = Koha::Patrons->find( $self->owner );
+    my $old_owner  = Koha::Patrons->find( $self->owner_id );
     my $new_owner  = Koha::Patrons->find($patron_id);
     my $userenv    = C4::Context->userenv;
     my $branchcode = $userenv->{branch};
 
     ## first we change the owner
     $self->remove_share($patron_id) if $self->is_private;
-    $self->set( { owner => $patron_id } )->store;
+    $self->set( { owner_id => $patron_id } )->store;
 
     ## now we message the new owner
     my $letter = C4::Letters::GetPreparedLetter(
@@ -524,7 +540,7 @@ sub to_api_mapping {
     return {
         created_on   => 'creation_date',
         lastmodified => 'updated_on_date',
-        owner        => 'owner_id',
+        owner_id     => 'owner_id',
         shelfname    => 'name',
         shelfnumber  => 'list_id',
         sortfield    => 'default_sort_field',
