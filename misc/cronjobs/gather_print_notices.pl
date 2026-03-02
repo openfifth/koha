@@ -202,10 +202,11 @@ sub print_notices {
             );
         }
 
-        if ( $send ) {
-            foreach my $message ( @$branch_messages ) {
+        if ($send) {
+            foreach my $message (@$branch_messages) {
+
                 # Apply print notice charges if enabled
-                if (!$skip_charges) {
+                if ( !$skip_charges ) {
                     apply_print_notice_charge($message);
                 }
 
@@ -363,50 +364,38 @@ sub apply_print_notice_charge {
     my ($message) = @_;
 
     # Check for valid message data
-    unless ($message && ref($message) eq 'HASH') {
+    unless ( $message && ref($message) eq 'HASH' && $message->{borrowernumber} ) {
         warn "Invalid message data passed to apply_print_notice_charge";
         return;
     }
 
-    # Validate borrowernumber is numeric to prevent injection
-    unless ($message->{borrowernumber} && $message->{borrowernumber} =~ /^\d+$/) {
-        warn "Invalid or missing borrowernumber in message for print notice charge";
-        return;
-    }
-
-    # Validate branchcode format if present
-    if (defined $message->{branchcode} && $message->{branchcode} !~ /^[A-Za-z0-9_-]*$/) {
-        warn "Invalid branchcode format in message: " . $message->{branchcode};
-        return;
-    }
-
-    # Validate letter_code format if present
-    if (defined $message->{letter_code} && $message->{letter_code} !~ /^[A-Za-z0-9_-]*$/) {
-        warn "Invalid letter_code format in message: " . $message->{letter_code};
-        return;
-    }
-
-    # Skip if patron not found (using validated borrowernumber)
-    my $patron = Koha::Patrons->find($message->{borrowernumber});
+    my $patron = Koha::Patrons->find( $message->{borrowernumber} );
     unless ($patron) {
         warn "Patron " . $message->{borrowernumber} . " not found for print notice charge";
         return;
     }
 
     eval {
-        my $result = $patron->add_print_notice_charge_if_needed({
-            notice_code => $message->{letter_code},
-            library_id  => $message->{branchcode},
-        });
+        my $result = $patron->add_print_notice_charge_if_needed(
+            {
+                notice_code => $message->{letter_code},
+                library_id  => $message->{branchcode},
+            }
+        );
 
         # Log successful charge application
         if ($result) {
-        cronlogaction({
-            action => 'Print notice charge',
-            info   => "Applied charge for patron " . $message->{borrowernumber} .
-                         " notice " . ($message->{letter_code} || 'unknown') .
-                         " (charge ID: " . $result->id . ")"
-        });
+            cronlogaction(
+                {
+                    action => 'Print notice charge',
+                    info   => "Applied charge for patron "
+                        . $message->{borrowernumber}
+                        . " notice "
+                        . ( $message->{letter_code} || 'unknown' )
+                        . " (charge ID: "
+                        . $result->id . ")"
+                }
+            );
         }
     };
 
