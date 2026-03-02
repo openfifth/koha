@@ -172,7 +172,7 @@ sub additional_report {
     return {
         lists => Koha::Virtualshelves->search(
             [
-                { public => 0, owner => $loggedinuser },
+                { public => 0, owner_id => $loggedinuser },
                 { public => 1 }
             ]
         ),
