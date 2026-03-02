@@ -507,11 +507,24 @@ export function useBaseResource(resourceConfig) {
             }
             if (component === "Show" && resource) {
                 groupFields.forEach(field => {
-                    if (
+                    const hasStandardData =
                         resource[field.name] != null &&
                         (field.type !== "relationshipWidget" ||
-                            resource[field.name].length > 0)
-                    ) {
+                            resource[field.name].length > 0);
+
+                    let hasFormattedData = false;
+                    if (field.format && typeof field.format === "function") {
+                        const formatted = field.format(
+                            resource[field.name],
+                            resource
+                        );
+                        hasFormattedData =
+                            formatted !== null &&
+                            formatted !== undefined &&
+                            formatted !== "";
+                    }
+
+                    if (hasStandardData || hasFormattedData) {
                         groupInfo.hasDataToDisplay = true;
                     }
                 });
