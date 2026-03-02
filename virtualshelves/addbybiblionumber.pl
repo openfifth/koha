@@ -100,7 +100,7 @@ if ( $op && $op !~ /^cud-/ ) {
                 shelfname => $newvirtualshelf,
                 public    => $public,
                 sortfield => $sortfield,
-                owner     => $loggedinuser,
+                owner_id  => $loggedinuser,
             }
         )->store;
     };
@@ -155,7 +155,7 @@ if ( $op && $op !~ /^cud-/ ) {
     my $private_shelves = Koha::Virtualshelves->search(
         {
             public                  => 0,
-            owner                   => $loggedinuser,
+            owner_id                => $loggedinuser,
             allow_change_from_owner => 1,
         },
         { order_by => 'shelfname' }
@@ -174,7 +174,7 @@ if ( $op && $op !~ /^cud-/ ) {
             -or    => [
                 -and => {
                     allow_change_from_owner => 1,
-                    owner                   => $loggedinuser,
+                    owner_id                => $loggedinuser,
                 },
                 allow_change_from_others => 1,
                 allow_change_from_staff  => 1,

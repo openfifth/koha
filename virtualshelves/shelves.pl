@@ -78,7 +78,7 @@ if ( $op eq 'add_form' ) {
 
     if ($shelf) {
         $public = $shelf->public;
-        my $patron = Koha::Patrons->find( $shelf->owner )->unblessed;
+        my $patron = Koha::Patrons->find( $shelf->owner_id )->unblessed;
         $template->param( owner => $patron, );
         unless ( $shelf->can_be_managed($loggedinuser) ) {
             push @messages, { type => 'alert', code => 'unauthorized_on_update' };
@@ -100,7 +100,7 @@ if ( $op eq 'add_form' ) {
                 allow_change_from_others          => $allow_changes_from == ANYONE,
                 allow_change_from_staff           => $allow_changes_from == STAFF,
                 allow_change_from_permitted_staff => $allow_changes_from == PERMITTED,
-                owner                             => scalar $query->param('owner'),
+                owner_id                          => scalar $query->param('owner'),
             }
         );
         $shelf->store;
