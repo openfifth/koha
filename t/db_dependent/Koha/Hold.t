@@ -2274,7 +2274,7 @@ subtest '_Findgroupreserve in the context of hold groups' => sub {
 };
 
 subtest 'calculate_hold_fee() tests' => sub {
-    plan tests => 12;
+    plan tests => 13;
 
     $schema->storage->txn_begin;
 
@@ -2422,17 +2422,31 @@ subtest 'calculate_hold_fee() tests' => sub {
     $fee = $title_hold->calculate_hold_fee();
     is( $fee, 3.00, 'Title-level hold: empty strategy preference defaults to highest fee (3.00)' );
 
-    # Test 8: No holdable items returns 0
-    # Make all items not holdable
+    # Test 8: No holdable items (positive notforloan, e.g. "Staff Only") returns 0
+    # Positive notforloan values block both loaning and holding
     $item1->notforloan(1)->store;
     $item2->notforloan(1)->store;
     $item3->notforloan(1)->store;
     $item4->notforloan(1)->store;
 
     $fee = $title_hold->calculate_hold_fee();
-    is( $fee, 0, 'Title-level hold: no holdable items returns 0 fee' );
+    is( $fee, 0, 'Title-level hold: all items have positive notforloan (not holdable) returns 0 fee' );
 
-    # Test 9: Mix of holdable and non-holdable items (highest)
+    # Test 9 (new): Items with negative notforloan (e.g. "Ordered") are holdable per
+    # Koha convention and should have their fee included in the calculation.
+    # notforloan < 0 means "not for loan but holdable" (see IsAvailableForItemLevelRequest).
+    $item2->notforloan(-1)->store;    # Fee: 3.00, on order but holdable
+    $item3->notforloan(-1)->store;    # Fee: 2.00, on order but holdable
+
+    t::lib::Mocks::mock_preference( 'TitleHoldFeeStrategy', 'highest' );
+    $fee = $title_hold->calculate_hold_fee();
+    is( $fee, 3.00, 'Title-level hold: items with negative notforloan (on order, holdable) included in fee calculation' );
+
+    # Restore for remaining tests
+    $item2->notforloan(1)->store;
+    $item3->notforloan(1)->store;
+
+    # Test 10: Mix of holdable and non-holdable items (highest)
     # Make some items holdable again
     $item2->notforloan(0)->store;    # Fee: 3.00
     $item3->notforloan(0)->store;    # Fee: 2.00
@@ -2441,12 +2455,12 @@ subtest 'calculate_hold_fee() tests' => sub {
     $fee = $title_hold->calculate_hold_fee();
     is( $fee, 3.00, 'Title-level hold: highest strategy with mixed holdable items returns 3.00' );
 
-    # Test 10: Mix of holdable and non-holdable items (lowest)
+    # Test 11: Mix of holdable and non-holdable items (lowest)
     t::lib::Mocks::mock_preference( 'TitleHoldFeeStrategy', 'lowest' );
     $fee = $title_hold->calculate_hold_fee();
     is( $fee, 2.00, 'Title-level hold: lowest strategy with mixed holdable items returns 2.00' );
 
-    # Test 11: Items with 0 fee
+    # Test 12 (was 11): Items with 0 fee
     my $itemtype_free = $builder->build( { source => 'Itemtype' } );
     Koha::CirculationRules->set_rules(
         {
@@ -2469,7 +2483,7 @@ subtest 'calculate_hold_fee() tests' => sub {
     $fee = $title_hold->calculate_hold_fee();
     is( $fee, 0, 'Title-level hold: lowest strategy with free item returns 0' );
 
-    # Test 12: All items have same fee
+    # Test 13 (was 12): All items have same fee
     # Set all holdable items to same fee
     Koha::CirculationRules->set_rules(
         {
