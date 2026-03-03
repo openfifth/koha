@@ -10,7 +10,7 @@
     </router-link>
     <a
         v-else-if="linkData && linkData.href"
-        :href="linkData.href"
+        :href="formattedHref"
         :class="{ disabled: linkData.disabled }"
     >
         <slot />
@@ -26,6 +26,7 @@ export default {
         resource: Object,
     },
     setup(props) {
+        const formattedHref = ref(props.linkData?.href);
         const formattedParams = ref({});
 
         if (props.linkData && props.linkData.params) {
@@ -36,16 +37,17 @@ export default {
         }
 
         if (props.linkData?.href && props.linkData.params) {
-            props.linkData.href += "?";
+            formattedHref.value += "?";
             Object.keys(props.linkData.params).forEach(key => {
-                props.linkData.href += `${key}=${formattedParams.value[key]}&`;
+                formattedHref.value += `${key}=${formattedParams.value[key]}&`;
             });
-            props.linkData.href = props.linkData.href.slice(0, -1);
+            formattedHref.value = formattedHref.value.slice(0, -1);
         }
         if (props.linkData?.href && props.linkData.slug) {
-            props.linkData.href += `/${props.resource[props.linkData.slug]}`;
+            formattedHref.value += `/${props.resource[props.linkData.slug]}`;
         }
         return {
+            formattedHref,
             formattedParams,
         };
     },
