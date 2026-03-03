@@ -156,6 +156,26 @@
                         </li>
                     [% END %]
                 [% END # /IF ( invoiceclosedate ) %]
+                [% IF !invoiceclosedate && CAN_user_acquisition_edit_invoices && !readonly %]
+                    <li>
+                        <span class="label">&nbsp;</span>
+                        <form method="post" action="/cgi-bin/koha/acqui/invoice.pl" style="display:inline">
+                            [% INCLUDE 'csrf-token.inc' %]
+                            <input type="hidden" name="op" value="cud-check-and-close" />
+                            <input type="hidden" name="invoiceid" value="[% invoiceid | html %]" />
+                            <button type="submit" class="btn btn-default btn-sm">
+                                <i class="fa fa-check-circle"></i>
+                                [% t("Check and close if all items received") | html %]
+                            </button>
+                        </form>
+                    </li>
+                    [% IF check_close_result == 'not_ready' %]
+                        <li>
+                            <span class="label">&nbsp;</span>
+                            <div class="dialog alert">[% t("Not all items on this invoice have been checked in yet. The invoice remains open.") | html %]</div>
+                        </li>
+                    [% END %]
+                [% END %]
             </ol>
 
             [% IF available_additional_fields.count %]

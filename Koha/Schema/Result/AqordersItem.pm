@@ -110,6 +110,7 @@ __PACKAGE__->belongs_to(
 # Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-03-03 08:17:54
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:5qahHUjyROwLiMKhacnyqw
 
+sub koha_object_class  { 'Koha::Acquisition::Order::Item' }
+sub koha_objects_class { 'Koha::Acquisition::Order::Items' }
 
-# You can replace this text with custom content, and it will be preserved on regeneration
 1;

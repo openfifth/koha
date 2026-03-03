@@ -121,8 +121,10 @@ sub _shared_preferences {
 
     my @preferences = qw/
         AcqCreateItem
-        AcqWarnOnDuplicateInvoice
         AcqViewBaskets
+        AcqWarnOnDuplicateInvoice
+        AutoCloseInvoiceAlertDays
+        AutoCloseInvoicesOnCheckin
         BasketConfirmations
         OrderPdfFormat
         casAuthentication
