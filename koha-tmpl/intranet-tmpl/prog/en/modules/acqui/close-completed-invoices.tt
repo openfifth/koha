@@ -1,0 +1,92 @@
+[% USE raw %]
+[% USE Asset %]
+[% USE Koha %]
+[% PROCESS 'i18n.inc' %]
+[% INCLUDE 'doc-head-open.inc' %]
+<title
+    >[% FILTER collapse %]
+        [% t("Close completed invoices") | html %]
+        &rsaquo; [% t("Acquisitions") | html %] &rsaquo; [% t("Koha") | html %]
+    [% END %]</title
+>
+[% INCLUDE 'doc-head-close.inc' %]
+</head>
+
+<body id="acq_close_completed_invoices" class="acq">
+[% WRAPPER 'header.inc' %]
+    [% INCLUDE 'acquisitions-search.inc' %]
+[% END %]
+
+[% WRAPPER 'sub-header.inc' %]
+    [% WRAPPER breadcrumbs %]
+        [% WRAPPER breadcrumb_item %]
+            <a href="/cgi-bin/koha/acqui/acqui-home.pl">[% t("Acquisitions") | html %]</a>
+        [% END %]
+        [% WRAPPER breadcrumb_item bc_active= 1 %]
+            <span>[% t("Close completed invoices") | html %]</span>
+        [% END %]
+    [% END #/ WRAPPER breadcrumbs %]
+[% END #/ WRAPPER sub-header.inc %]
+
+[% WRAPPER 'main-container.inc' aside='acquisitions-menu' %]
+    <h1>[% t("Close completed invoices") | html %]</h1>
+
+    <p>[% t("This tool checks all open invoices and closes any where every item has been physically received (checked in at circulation). Items on cancelled order lines are excluded from the check.") | html %]</p>
+
+    [% IF ran %]
+        [% SET closed_count = 0 %]
+        [% FOREACH r IN results %][% IF r.closed %][% SET closed_count = closed_count + 1 %][% END %][% END %]
+
+        [% IF closed_count %]
+            <div class="dialog message"> [% tn("[_1] invoice closed successfully.", "[_1] invoices closed successfully.", closed_count, closed_count) | html %] </div>
+        [% ELSE %]
+            <div class="dialog alert"> [% t("No invoices were closed. Either all open invoices still have outstanding items, or there are no open invoices with items.") | html %] </div>
+        [% END %]
+
+        [% IF results.size %]
+            <table class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>[% t("Invoice ID") | html %]</th>
+                        <th>[% t("Invoice number") | html %]</th>
+                        <th>[% t("Result") | html %]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    [% FOREACH r IN results %]
+                        <tr>
+                            <td>
+                                <a href="/cgi-bin/koha/acqui/invoice.pl?invoiceid=[% r.invoiceid | uri %]"> [% r.invoiceid | html %] </a>
+                            </td>
+                            <td>[% r.invoicenumber | html %]</td>
+                            <td>
+                                [% IF r.closed %]
+                                    <span class="text-success">[% t("Closed") | html %]</span>
+                                [% ELSE %]
+                                    <span class="text-muted">[% t("Still open (items outstanding)") | html %]</span>
+                                [% END %]
+                            </td>
+                        </tr>
+                    [% END %]
+                </tbody>
+            </table>
+        [% END %]
+
+        <p><a href="/cgi-bin/koha/acqui/close-completed-invoices.pl" class="btn btn-default">[% t("Run again") | html %]</a></p>
+    [% ELSE %]
+        <form method="post" action="/cgi-bin/koha/acqui/close-completed-invoices.pl">
+            [% INCLUDE 'csrf-token.inc' %]
+            <input type="hidden" name="op" value="cud-run" />
+            <fieldset class="action">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa fa-check-circle"></i>
+                    [% t("Close all completed invoices") | html %]
+                </button>
+                <a href="/cgi-bin/koha/acqui/acqui-home.pl" class="cancel">[% t("Cancel") | html %]</a>
+            </fieldset>
+        </form>
+    [% END %]
+[% END #/ WRAPPER main-container.inc %]
+
+[% Asset.js("js/acquisitions-menu.js") | $raw %]
+[% INCLUDE 'intranet-bottom.inc' %]

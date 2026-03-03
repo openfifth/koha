@@ -98,6 +98,7 @@ use Algorithm::CheckDigits  qw( CheckDigits );
 
 use Data::Dumper qw( Dumper );
 use Koha::Account;
+use Koha::Acquisition::Order::Items;
 use Koha::AuthorisedValues;
 use Koha::BackgroundJob::BatchUpdateBiblioHoldsQueue;
 use Koha::Biblioitems;
@@ -2806,6 +2807,11 @@ sub AddReturn {
 
     my $indexer = Koha::SearchEngine::Indexer->new( { index => $Koha::SearchEngine::BIBLIOS_INDEX } );
     $indexer->index_records( $item->biblionumber, "specialUpdate", "biblioserver" );
+
+    if ($doreturn) {
+        my $order_item = Koha::Acquisition::Order::Items->find( { itemnumber => $item->itemnumber } );
+        $order_item->record_physical_receipt if $order_item;
+    }
 
     if ( $doreturn and $issue ) {
         my $checkin = Koha::Old::Checkouts->find( $issue->id );
