@@ -840,6 +840,7 @@ CREATE TABLE `aqorders_items` (
   `ordernumber` int(11) NOT NULL COMMENT 'the order this item is attached to (aqorders.ordernumber)',
   `itemnumber` int(11) NOT NULL COMMENT 'the item number for this item (items.itemnumber)',
   `timestamp` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'the date and time this order item was last touched',
+  `received` datetime DEFAULT NULL COMMENT 'Datetime the item was first physically received via circulation check-in',
   PRIMARY KEY (`itemnumber`),
   KEY `ordernumber` (`ordernumber`),
   CONSTRAINT `aqorders_items_ibfk_1` FOREIGN KEY (`ordernumber`) REFERENCES `aqorders` (`ordernumber`) ON DELETE CASCADE ON UPDATE CASCADE
