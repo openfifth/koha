@@ -1389,7 +1389,7 @@ sub _calculate_title_hold_fee {
     my @holdable_items = $biblio->items->search(
         {
             -or => [
-                { 'me.notforloan' => 0 },
+                { 'me.notforloan' => { '<=', 0 } },
                 { 'me.notforloan' => undef }
             ]
         }
