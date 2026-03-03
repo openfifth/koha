@@ -24,6 +24,7 @@ use IO::File;
 use JSON qw( encode_json );
 use Net::SFTP::Foreign;
 use Try::Tiny;
+use JSON qw( decode_json encode_json );
 
 use base qw(Koha::File::Transport);
 
