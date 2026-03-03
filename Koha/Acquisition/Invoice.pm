@@ -17,7 +17,9 @@ package Koha::Acquisition::Invoice;
 
 use Modern::Perl;
 
-use Koha::Database;
+use Koha::Acquisition::Order::Items;
+use Koha::Acquisition::Orders;
+use Koha::DateUtils qw( dt_from_string );
 
 use base qw(Koha::Object Koha::Object::Mixin::AdditionalFields);
 
@@ -71,6 +73,52 @@ sub to_api_mapping {
         shipmentcost_budgetid => 'shipping_fund_id',
         message_id            => undef
     };
+}
+
+=head3 orders
+
+    my $orders = $invoice->orders;
+
+Returns a I<Koha::Acquisition::Orders> resultset for the orders associated
+to this invoice.
+
+=cut
+
+sub orders {
+    my ($self) = @_;
+    my $orders_rs = $self->_result->aqorders;
+    return Koha::Acquisition::Orders->_new_from_dbic($orders_rs);
+}
+
+=head3 check_and_close
+
+    my $closed = $invoice->check_and_close;
+
+Closes the invoice if all items on non-cancelled order lines have been
+physically received (aqorders_items.received IS NOT NULL).
+
+Returns 1 if the invoice was closed, 0 otherwise.
+Does nothing if the invoice is already closed or has no linked items.
+
+=cut
+
+sub check_and_close {
+    my ($self) = @_;
+
+    return 0 if $self->closedate;
+
+    my @active_order_numbers =
+        $self->orders->search( { orderstatus => { '!=' => 'cancelled' } } )->get_column('ordernumber');
+
+    return 0 unless @active_order_numbers;
+
+    my $order_items = Koha::Acquisition::Order::Items->search( { ordernumber => \@active_order_numbers } );
+
+    return 0 unless $order_items->count;
+    return 0 if $order_items->search( { received => undef } )->count;
+
+    $self->update( { closedate => dt_from_string()->ymd } );
+    return 1;
 }
 
 =head2 Internal methods

@@ -34,6 +34,7 @@ use Koha::BiblioFrameworks;
 use Koha::ProblemReports;
 use Koha::Quotes;
 use Koha::Suggestions;
+use Koha::Acquisition::Invoices;
 use Koha::BackgroundJobs;
 use Koha::CurbsidePickups;
 use Koha::Tickets;
@@ -161,5 +162,28 @@ $template->param(
     pending_article_requests       => $pending_article_requests,
     pending_problem_reports        => $pending_problem_reports,
 );
+
+if (   $flags
+    && $flags->{acquisition}
+    && C4::Context->preference('AutoCloseInvoiceAlertDays') )
+{
+    my $threshold = C4::Context->preference('AutoCloseInvoiceAlertDays');
+
+    my $overdue_invoice_count = Koha::Acquisition::Invoices->search(
+        {
+            'me.closedate'            => undef,
+            'aqorders.orderstatus'    => { '!=' => 'cancelled' },
+            'aqorders_items.received' => undef,
+            'me.shipmentdate'         => { '<' => \[ 'DATE_SUB(NOW(), INTERVAL ? DAY)', $threshold ] },
+        },
+        {
+            join     => { aqorders => 'aqorders_items' },
+            distinct => 1,
+        }
+    )->count;
+
+    $template->param( overdue_invoice_count => $overdue_invoice_count )
+        if $overdue_invoice_count;
+}
 
 output_html_with_http_headers $query, $cookie, $template->output;

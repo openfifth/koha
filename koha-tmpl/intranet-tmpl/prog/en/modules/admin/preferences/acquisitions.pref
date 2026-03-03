@@ -146,6 +146,19 @@ Acquisitions:
                 1: Enable
                 0:  Disable
             - automatic order line creation from MARC records.
+    Invoice automation:
+        -
+            - pref: AutoCloseInvoicesOnCheckin
+              default: no
+              choices:
+                1: Enable
+                0: Disable
+            - "automatically closing invoices when all their items have been physically checked in at circulation. Requires <strong>AcqCreateItem</strong> set to <em>At ordering</em> (items must exist in aqorders_items before physical receipt)."
+        -
+            - Show a staff client alert for open invoices with items not yet checked in for more than
+            - pref: AutoCloseInvoiceAlertDays
+              class: integer
+            - "days (set to 0 to disable)."
     Printing:
         -
             - Use the
