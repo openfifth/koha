@@ -54,6 +54,20 @@
                     href="/cgi-bin/koha/acqui/invoices.pl"
                     >{{ $__("Invoices") }}</a
                 >
+                <ul
+                    v-if="
+                        ordermanage ||
+                        isUserPermitted('CAN_user_acquisition_order_manage')
+                    "
+                >
+                    <li>
+                        <a
+                            :ref="el => templateRefs.push(el)"
+                            href="/cgi-bin/koha/acqui/close-completed-invoices.pl"
+                            >{{ $__("Close completed invoices") }}</a
+                        >
+                    </li>
+                </ul>
             </li>
             <li
                 v-if="

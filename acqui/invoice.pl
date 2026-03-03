@@ -243,6 +243,18 @@ if ( $op && $op eq 'cud-close' ) {
             }
         }
     }
+} elsif ( $op && $op eq 'cud-check-and-close' ) {
+
+    output_and_exit( $input, $cookie, $template, 'insufficient_permission' )
+        unless $logged_in_patron->has_permission( { acquisition => 'edit_invoices' } );
+
+    if ($invoiceid) {
+        my $invoice = Koha::Acquisition::Invoices->find($invoiceid);
+        if ($invoice) {
+            my $closed = $invoice->check_and_close;
+            $template->param( check_close_result => $closed ? 'closed' : 'not_ready' );
+        }
+    }
 }
 
 my $active_currency = Koha::Acquisition::Currencies->get_active,
