@@ -98,6 +98,7 @@ use Algorithm::CheckDigits  qw( CheckDigits );
 
 use Data::Dumper qw( Dumper );
 use Koha::Account;
+use Koha::Acquisition::OrderItems;
 use Koha::AuthorisedValues;
 use Koha::BackgroundJob::BatchUpdateBiblioHoldsQueue;
 use Koha::Biblioitems;
@@ -2784,6 +2785,9 @@ sub AddReturn {
     my $indexer = Koha::SearchEngine::Indexer->new( { index => $Koha::SearchEngine::BIBLIOS_INDEX } );
     $indexer->index_records( $item->biblionumber, "specialUpdate", "biblioserver" );
 
+    # Record physical receipt for acquisitions items on successful return
+    _record_physical_receipt( $item->itemnumber ) if $doreturn;
+
     if ( $doreturn and $issue ) {
         my $checkin = Koha::Old::Checkouts->find( $issue->id );
 
@@ -5059,6 +5063,36 @@ sub _CanBookBeAutoRenewed {
     }
 
     return "ok";
+}
+
+=head2 _record_physical_receipt
+
+    _record_physical_receipt($itemnumber);
+
+Called on circulation check-in. If the item is linked to an acquisitions order
+on an open invoice, stamps aqorders_items.received with the current datetime
+(first check-in only). Then attempts to auto-close the invoice if the
+AutoCloseInvoicesOnCheckin preference is enabled.
+
+=cut
+
+sub _record_physical_receipt {
+    my ($itemnumber) = @_;
+
+    my $order_item = Koha::Acquisition::OrderItems->find( { itemnumber => $itemnumber } );
+    return unless $order_item;
+
+    my $order = $order_item->order;
+    return unless $order && $order->orderstatus ne 'cancelled';
+
+    my $invoice = $order->invoice;
+    return unless $invoice;
+
+    # Stamp received if not already set (first check-in only)
+    $order_item->update( { received => \'NOW()' } ) unless $order_item->received;
+
+    # Attempt auto-close if preference is enabled
+    $invoice->check_and_close if C4::Context->preference('AutoCloseInvoicesOnCheckin');
 }
 
 1;

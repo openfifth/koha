@@ -1,0 +1,102 @@
+[% USE raw %]
+[% USE Koha %]
+[% PROCESS 'i18n.inc' %]
+[% INCLUDE 'doc-head-open.inc' %]
+<title
+    >[% FILTER collapse %]
+        [% t("Close completed invoices") | html %]
+        &rsaquo; [% t("Acquisitions") | html %] &rsaquo; [% t("Koha") | html %]
+    [% END %]</title
+>
+[% INCLUDE 'doc-head-close.inc' %]
+</head>
+
+<body id="acq_close_completed_invoices" class="acq">
+[% WRAPPER 'header.inc' %]
+    [% INCLUDE 'acquisitions-search.inc' %]
+[% END %]
+
+[% WRAPPER 'sub-header.inc' %]
+    [% WRAPPER breadcrumbs %]
+        [% WRAPPER breadcrumb_item %]
+            <a href="/cgi-bin/koha/acqui/acqui-home.pl">Acquisitions</a>
+        [% END %]
+        [% WRAPPER breadcrumb_item bc_active= 1 %]
+            <span>Close completed invoices</span>
+        [% END %]
+    [% END #/ WRAPPER breadcrumbs %]
+[% END #/ WRAPPER sub-header.inc %]
+
+<div class="main container-fluid">
+    <div class="row">
+        <div class="col-md-10 order-md-2 order-sm-2">
+            <main>
+                [% INCLUDE 'messages.inc' %]
+
+                <h1>Close completed invoices</h1>
+
+                <p> This tool checks all open invoices and closes any where every item has been physically received (checked in at circulation). Items on cancelled order lines are excluded from the check. </p>
+
+                [% IF ran %]
+                    [% SET closed_count = 0 %]
+                    [% FOREACH r IN results %][% IF r.closed %][% SET closed_count = closed_count + 1 %][% END %][% END %]
+
+                    [% IF closed_count %]
+                        <div class="dialog message"> [% closed_count | html %] invoice[% IF closed_count != 1 %]s[% END %] closed successfully. </div>
+                    [% ELSE %]
+                        <div class="dialog alert"> No invoices were closed. Either all open invoices still have outstanding items, or there are no open invoices with items. </div>
+                    [% END %]
+
+                    [% IF results.size %]
+                        <table class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Invoice ID</th>
+                                    <th>Invoice number</th>
+                                    <th>Result</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                [% FOREACH r IN results %]
+                                    <tr>
+                                        <td>
+                                            <a href="/cgi-bin/koha/acqui/invoice.pl?invoiceid=[% r.invoiceid | uri %]"> [% r.invoiceid | html %] </a>
+                                        </td>
+                                        <td>[% r.invoicenumber | html %]</td>
+                                        <td>
+                                            [% IF r.closed %]
+                                                <span class="text-success">Closed</span>
+                                            [% ELSE %]
+                                                <span class="text-muted">Still open (items outstanding)</span>
+                                            [% END %]
+                                        </td>
+                                    </tr>
+                                [% END %]
+                            </tbody>
+                        </table>
+                    [% END %]
+
+                    <p><a href="/cgi-bin/koha/acqui/close-completed-invoices.pl" class="btn btn-default">Run again</a></p>
+                [% ELSE %]
+                    <form method="post" action="/cgi-bin/koha/acqui/close-completed-invoices.pl">
+                        [% INCLUDE 'csrf-token.inc' %]
+                        <input type="hidden" name="op" value="cud-run" />
+                        <fieldset class="action">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fa fa-check-circle"></i>
+                                Close all completed invoices
+                            </button>
+                            <a href="/cgi-bin/koha/acqui/acqui-home.pl" class="cancel">Cancel</a>
+                        </fieldset>
+                    </form>
+                [% END %]
+            </main>
+        </div>
+
+        <div class="col-md-2 order-md-2 order-sm-1">
+            <aside> [% INCLUDE 'acquisitions-menu.inc' %] </aside>
+        </div>
+    </div>
+</div>
+
+[% INCLUDE 'intranet-bottom.inc' %]
