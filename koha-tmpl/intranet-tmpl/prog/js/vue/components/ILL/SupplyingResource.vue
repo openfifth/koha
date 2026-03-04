@@ -71,18 +71,19 @@ export default {
             },
             {
                 id: "WillSupply",
-                confirm_message: $__(
-                    "Supplying library has located the item but has not sent it yet."
-                ),
-                button_label: $__("Will supply"),
-                icon: "fa-calendar-days",
+                dont_show: iso18626_request => true, //This is handled by Koha check out
+                // confirm_message: $__(
+                //     "Supplying library has located the item but has not sent it yet."
+                // ),
+                // button_label: $__("Will supply"),
+                // icon: "fa-calendar-days",
                 next_actions: [
                     "Loaned",
                     "RetryPossible",
                     "CopyCompleted",
                     "Unfilled",
                 ],
-                action_inputs: [],
+                // action_inputs: [],
             },
             {
                 id: "Loaned",
@@ -461,14 +462,8 @@ export default {
             },
             {
                 id: "LoanCompleted",
-                confirm_message: $__(
-                    "The supplying library has received the borrowed item from the requesting agency (this status is used for requests when the item supplied shall be returned by the requesting library, i.e. a loan)"
-                ),
-                button_label: $__("Loan completed"),
-                icon: "fa-check",
-                btn_class: "btn btn-primary",
+                dont_show: iso18626_request => true, //This is handled by Koha check in
                 next_actions: [],
-                action_inputs: [],
             },
             {
                 id: "CompletedWithoutReturn",
@@ -643,13 +638,14 @@ export default {
             if (resource?.hold?.item_id) {
                 show_buttons.push({
                     cssClass: "btn btn-primary",
-                    title: "Mark as loaned (Checkout)",
+                    title: $__("Mark as loaned (Check out)"),
                     icon: "fa-box",
                     onClick: () => {
                         if (resource.hold.item_id) {
                             getItem(resource.hold.item_id).then(
                                 result => {
                                     const item_barcode = result.external_id;
+                                    //FIXME: Handle possibility of item_barcode not existing!!
                                     performCheckout({
                                         borrowernumber:
                                             resource.requesting_agency
@@ -669,8 +665,10 @@ export default {
             if (resource.status == "RequestReceived") {
                 show_buttons.push({
                     cssClass: "btn btn-primary",
-                    title: "Search to hold",
-                    icon: "fa-calendar-days",
+                    title: resource.biblio_id
+                        ? $__("Place hold")
+                        : $__("Search to place hold"),
+                    icon: resource.biblio_id ? "fa-calendar-days" : "fa-search",
                     onClick: () => {
                         // !Copy pasted from member-menu.js
                         var date = new Date();
@@ -693,9 +691,125 @@ export default {
                                 sameSite: "Lax",
                             }
                         );
-                        location.href =
-                            "/cgi-bin/koha/catalogue/search.pl?context=supplyill:" +
-                            resource.iso18626_request_id;
+
+                        if (resource.biblio_id) {
+                            getPatron(
+                                resource.requesting_agency.patron_id
+                            ).then(
+                                result => {
+                                    const patron_cardnumber = result.cardnumber;
+                                    location.href =
+                                        "/cgi-bin/koha/reserve/request.pl?" +
+                                        "biblionumber=" +
+                                        resource.biblio_id +
+                                        "&findborrower=" +
+                                        patron_cardnumber +
+                                        "&supplyill=" +
+                                        resource.iso18626_request_id;
+                                },
+                                error => {}
+                            );
+
+                            // Option A: Direct to specific hold page
+                        } else {
+                            // Option B: Back to general search (original behavior)
+                            location.href =
+                                "/cgi-bin/koha/catalogue/search.pl?context=supplyill:" +
+                                resource.iso18626_request_id;
+                        }
+                    },
+                });
+            }
+
+            if (
+                resource.status == "ExpectToSupply" &&
+                resource.biblio_id &&
+                resource.hold_id &&
+                !resource.hold.item_id
+            ) {
+                show_buttons.push({
+                    cssClass: "btn btn-primary",
+                    title: $__("Assign item to hold"),
+                    icon: "fa-download",
+                    confirm_message: $__(
+                        "This hold is pending an item association. Check in an item from this list to continue:"
+                    ),
+                    onClick: () => {
+                        if (resource.biblio_id) {
+                            getBiblioItems(resource.biblio_id).then(
+                                result => {
+                                    let tableHtml = `
+                                    <p>${$__("An item must be associated with this hold. Check-in any of these to satisfy that:")}</p>
+                                    <table class="table table-bordered table-striped" style="width:100%; margin-top:10px;">
+                                        <thead>
+                                            <tr>
+                                                <th>${$__("Barcode")}</th>
+                                                <th>${$__("Home Library")}</th>
+                                                <th>${$__("Holding Library")}</th>
+                                                <th>${$__("Action")}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>`;
+
+                                    result.forEach(item => {
+                                        const barcode =
+                                            item.external_id ||
+                                            $__("No Barcode");
+                                        const home_library =
+                                            item.home_library_id?.name ||
+                                            item.home_library_id ||
+                                            $__("Unknown");
+                                        const holding_library =
+                                            item.holding_library_id?.name ||
+                                            item.holding_library_id ||
+                                            $__("Unknown");
+                                        const link = `/cgi-bin/koha/catalogue/detail.pl?biblionumber=${resource.biblio_id}`;
+                                        const checkinAction = renderCheckinForm(
+                                            item.external_id
+                                        );
+                                        tableHtml += `
+                                            <tr>
+                                                <td><a href="${link}" target="_blank"><strong>${barcode}</strong></a></td>
+                                                <td>${home_library}</td>
+                                                <td>${holding_library}</td>
+                                                <td>${checkinAction}</td>
+                                            </tr>`;
+                                    });
+
+                                    tableHtml += `</tbody></table>`;
+
+                                    setConfirmationDialog({
+                                        size: "modal-lg",
+                                        title: $__(
+                                            "Update this request's status to <strong>WillSupply</strong>?"
+                                        ),
+                                        message: tableHtml,
+                                        cancel_label: $__("Cancel"),
+                                    });
+                                },
+                                error => {}
+                            );
+                        }
+                    },
+                });
+            }
+
+            if (resource.status == "Loaned" && resource.issue_id) {
+                show_buttons.push({
+                    cssClass: "btn btn-primary",
+                    title: $__("Complete loan (Check in)"),
+                    icon: "fa-check",
+                    onClick: () => {
+                        if (!resource.issue_id) {
+                            return;
+                        }
+                        getCheckout(resource.issue_id).then(
+                            result => {
+                                const item_barcode = result.item.external_id;
+                                performCheckin(item_barcode);
+                            },
+                            error => {}
+                        );
                     },
                 });
             }
@@ -738,6 +852,62 @@ export default {
             form.submit();
         };
 
+        const getCheckinParams = barcode => {
+            const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+            return {
+                url: "/cgi-bin/koha/circ/returns.pl",
+                params: {
+                    barcode: barcode,
+                    op: "cud-checkin",
+                    csrf_token: csrfMeta
+                        ? csrfMeta.getAttribute("content")
+                        : "",
+                },
+            };
+        };
+
+        const performCheckin = barcode => {
+            if (!barcode) return;
+            const { url, params } = getCheckinParams(barcode);
+
+            const form = document.createElement("form");
+            form.method = "POST";
+            form.action = url;
+
+            Object.keys(params).forEach(key => {
+                const input = document.createElement("input");
+                input.type = "hidden";
+                input.name = key;
+                input.value = params[key];
+                form.appendChild(input);
+            });
+
+            document.body.appendChild(form);
+            form.submit();
+        };
+
+        const renderCheckinForm = barcode => {
+            if (!barcode) return `<em>${$__("No barcode")}</em>`;
+            const { url, params } = getCheckinParams(barcode);
+
+            // Build the hidden inputs dynamically from the same params object
+            const inputs = Object.entries(params)
+                .map(
+                    ([name, value]) =>
+                        `<input type="hidden" name="${name}" value="${value}" />`
+                )
+                .join("");
+
+            return `
+                <form method="POST" action="${url}" style="display:inline;">
+                    ${inputs}
+                    <button type="submit" class="btn btn-default btn-sm">
+                        <i class="fa fa-download"></i> ${$__("Check-in")}
+                    </button>
+                </form>
+            `;
+        };
+
         const baseResource = useBaseResource({
             resourceName: "iso18626_request",
             nameAttr: "iso18626_request_id",
@@ -763,21 +933,29 @@ export default {
                 resourceTableUrl:
                     APIClient.ill.httpClient._baseURL + "iso18626_requests",
             },
+            showGroupsDisplayMode: "splitScreen",
+            splitScreenGroupings: [
+                { name: "Request details", pane: 1 },
+                { name: "ISO18626 Messages", pane: 1 },
+                { name: "Circulation information", pane: 2 },
+                { name: "Specified by the requesting agency", pane: 2 },
+            ],
             resourceAttrs: [
                 {
                     name: "iso18626_request_id",
-                    label: $__("ID"),
-                    type: "text",
-                    hideIn: ["Form"],
-                    group: $__("Request details"),
-                },
-                {
-                    name: "supplyingAgencyId",
                     label: $__("Supplying Agency ID"),
                     type: "text",
                     hideIn: ["Form"],
                     group: $__("Request details"),
                 },
+                //TODO: DELETE this, consider internal iso18626_request_id as the supplyingagencyID
+                // {
+                //     name: "supplyingAgencyId",
+                //     label: $__("Supplying Agency ID"),
+                //     type: "text",
+                //     hideIn: ["Form"],
+                //     group: $__("Request details"),
+                // },
                 {
                     name: "iso18626_requesting_agency_id",
                     label: $__("Requesting Agency"),
@@ -807,7 +985,7 @@ export default {
                     label: $__("Service type"),
                     type: "text",
                     hideIn: ["Form"],
-                    group: $__("Request details"),
+                    group: $__("Specified by the requesting agency"),
                 },
                 {
                     name: "pending_requesting_agency_action",
@@ -848,17 +1026,27 @@ export default {
                 },
                 {
                     name: "hold_id",
-                    label: $__("Hold on biblio"),
-                    type: "boolean",
+                    label: $__("Active hold on biblio"),
+                    type: "text",
+                    format: value => (value ? $__("Yes") : $__("No")),
                     hideIn: ["List", "Form"],
-                    group: $__("Request details"),
+                    group: $__("Circulation information"),
+                },
+                {
+                    name: "hold",
+                    label: $__("Active hold on item"),
+                    type: "text",
+                    hideIn: ["List", "Form"],
+                    format: value => (value ? $__("Yes") : $__("No")),
+                    group: $__("Circulation information"),
                 },
                 {
                     name: "issue_id",
-                    label: $__("Checkout"),
-                    type: "boolean",
+                    label: $__("Active checkout"),
+                    type: "text",
                     hideIn: ["List", "Form"],
-                    group: $__("Request details"),
+                    format: value => (value ? $__("Yes") : $__("No")),
+                    group: $__("Circulation information"),
                 },
                 {
                     group: $__("ISO18626 Messages"),
@@ -975,6 +1163,36 @@ export default {
         const getItem = async item_id => {
             const client = APIClient.item;
             return await client.items.get(item_id).then(
+                result => {
+                    return result;
+                },
+                error => {}
+            );
+        };
+
+        const getPatron = async patron_id => {
+            const client = APIClient.patron;
+            return await client.patrons.get(patron_id).then(
+                result => {
+                    return result;
+                },
+                error => {}
+            );
+        };
+
+        const getBiblioItems = async biblio_id => {
+            const client = APIClient.biblio;
+            return await client.items.get(biblio_id).then(
+                result => {
+                    return result;
+                },
+                error => {}
+            );
+        };
+
+        const getCheckout = async checkout_id => {
+            const client = APIClient.checkout;
+            return await client.checkouts.get(checkout_id).then(
                 result => {
                     return result;
                 },

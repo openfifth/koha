@@ -337,14 +337,18 @@ sub progress_request {
                 }
                 )
             : (),
-            deliveryInfo => {
-                dateSent       => '2023-03-15 14:30:00',    # Fill this when checking out the item
-                itemId         => 'edition_string',
-                itemFormat     => ['PaperCopy'],
-                serviceType    => 'Copy',
-                deliveryMethod => 'Email',
-                paymentMethod  => 'BankTransfer'
-            },
+            ( $resulting_status eq 'Loaned' && $check_out_item )
+            ? (
+                deliveryInfo => {
+                    dateSent    => $check_out->issuedate,
+                    itemId      => $check_out_item->barcode,
+                    itemFormat  => ['PaperCopy'],             # Must come from payload (only needed if specified by RA?)
+                    serviceType => 'Loan',                    # Must come from payload
+                    deliveryMethod => 'Email',                # Must come from payload (only needed if specified by RA?)
+                    paymentMethod  => 'BankTransfer'          # Must come from payload (only needed if specified by RA?)
+                }
+                )
+            : (),
             shippingInfo => {
                 courierName         => 'DHL',
                 trackingId          => [ '123', 'abc' ],
