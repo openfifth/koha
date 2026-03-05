@@ -1,6 +1,9 @@
 export class CirculationAPIClient {
     constructor(HttpClient) {
         this.httpClient = new HttpClient({
+            baseURL: "/api/v1/",
+        });
+        this.svcHttpClient = new HttpClient({
             baseURL: "/cgi-bin/koha/svc/",
         });
     }
@@ -8,7 +11,7 @@ export class CirculationAPIClient {
     get checkins() {
         return {
             create: checkin =>
-                this.httpClient.post({
+                this.svcHttpClient.post({
                     endpoint: "checkin",
                     body: "itemnumber=%s&borrowernumber=%s&branchcode=%s&exempt_fine=%s&op=%s".format(
                         checkin.item_id,
@@ -28,7 +31,7 @@ export class CirculationAPIClient {
     get checkouts() {
         return {
             renew: checkout =>
-                this.httpClient.post({
+                this.svcHttpClient.post({
                     endpoint: "renew",
                     body:
                         "itemnumber=%s&borrowernumber=%s&branchcode=%s&override_limit=%s&override_debt=%s".format(
@@ -51,7 +54,7 @@ export class CirculationAPIClient {
                 }),
             mark_as_seen: checkout_id =>
                 this.httpClient.post({
-                    endpoint: "checkout_notes",
+                    endpoint: "/cgi-bin/koha/svc/checkout_notes",
                     body: "issue_id=%s&op=%s".format(checkout_id, "cud-seen"),
                     headers: {
                         "Content-Type":
@@ -60,7 +63,7 @@ export class CirculationAPIClient {
                 }),
             mark_as_not_seen: checkout_id =>
                 this.httpClient.post({
-                    endpoint: "checkout_notes",
+                    endpoint: "/cgi-bin/koha/svc/checkout_notes",
                     body: "issue_id=%s&op=%s".format(
                         checkout_id,
                         "cud-notseen"
@@ -69,6 +72,22 @@ export class CirculationAPIClient {
                         "Content-Type":
                             "application/x-www-form-urlencoded;charset=utf-8",
                     },
+                }),
+            getAll: (query, params) =>
+                this.httpClient.getAll({
+                    endpoint: "checkouts",
+                    query,
+                    params,
+                }),
+            count: (query = {}) =>
+                this.httpClient.count({
+                    endpoint:
+                        "checkouts?" +
+                        new URLSearchParams({
+                            _page: 1,
+                            _per_page: 1,
+                            ...(query && { q: JSON.stringify(query) }),
+                        }),
                 }),
         };
     }
