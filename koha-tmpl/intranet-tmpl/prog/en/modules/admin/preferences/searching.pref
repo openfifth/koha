@@ -96,6 +96,13 @@ Searching:
             - "the cross_fields option for Elasticsearch searches, supported in Elasticsearch 6.X and above."
             - "See documentation at https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-multi-match-query.html#type-cross-fields"
         -
+            - pref: ElasticsearchBoostFieldMatch
+              default: 0
+              choices:
+                  1: Add
+                  0: "Don't add"
+            - "a \"match\" query to Elasticsearch searches, will follow indexes chosen in advanced search, or use title-cover for generic keyword or title index search."
+        -
             - pref: SavedSearchFilters
               default: 0
               choices:
