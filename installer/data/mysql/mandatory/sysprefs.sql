@@ -234,6 +234,8 @@ INSERT INTO systempreferences ( `variable`, `value`, `options`, `explanation`, `
 ('EdiBlockDuplicateInvoice', '0', NULL, 'Block processing of EDIFACT invoices when a duplicate invoice number is detected for the same supplier. When enabled, duplicate invoices will be rejected and logged as errors.', 'YesNo'),
 ('EdiBlockDuplicateInvoiceEmailAddresses', '', NULL, 'Comma-separated list of email addresses to notify when duplicate EDIFACT invoices are detected (e.g., "purchasing@library.org,edi_support@library.org"). Requires EdiBlockDuplicateInvoiceEmailNotice to be enabled.', 'Textarea'),
 ('EdiBlockDuplicateInvoiceEmailNotice', '0', NULL, 'Send email notification when duplicate EDIFACT invoices are detected. Requires EdiBlockDuplicateInvoice to be enabled.', 'YesNo'),
+('EdiDuplicateOrderEmailAddresses', '', NULL, 'Comma-separated list of email addresses to notify when duplicate EDIFACT purchase order numbers are detected (e.g., "purchasing@library.org,edi_support@library.org"). Requires EdiDuplicateOrderEmailNotice to be enabled.', 'Textarea'),
+('EdiDuplicateOrderEmailNotice', '0', NULL, 'Send email notification when a duplicate EDIFACT purchase order number is detected for the same supplier.', 'YesNo'),
 ('ElasticsearchBoostFieldMatch', '0', NULL, 'Add a "match" query to es when searching, will follow indexes chosen in advanced search, or use title-cover for generic keyword or title index search', 'YesNo'),
 ('ElasticsearchCrossFields', '1', NULL, 'Enable "cross_fields" option for searches using Elastic search.', 'YesNo'),
 ('ElasticsearchIndexStatus_authorities', '0', 'Authorities index status', NULL, NULL),
