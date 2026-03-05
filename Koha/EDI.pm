@@ -320,8 +320,9 @@ sub process_invoice {
             if ( !$vendor_acct ) {
                 $invoice_message->add_to_edifact_errors(
                     {
-                        section => "NAD+SU+" . $msg->supplier_ean,
-                        details => "Skipped invoice $invoicenumber with unmatched vendor san: $vendor_ean"
+                        invoicenumber => $invoicenumber,
+                        section       => "NAD+SU+" . $msg->supplier_ean,
+                        details       => "Skipped invoice $invoicenumber with unmatched vendor san: $vendor_ean"
                     }
                 );
                 $logger->error( "Cannot find vendor with ean $vendor_ean for invoice $invoicenumber in "
@@ -392,8 +393,9 @@ sub process_invoice {
                 if ( !$ordernumber ) {
                     $invoice_message->add_to_edifact_errors(
                         {
-                            section => join( "\n", map { $_->as_string } @{ $line->{segs} } ),
-                            details => "Skipped invoice line " . $line->line_item_number . ", missing ordernumber"
+                            invoicenumber => $invoicenumber,
+                            section       => join( "\n", map { $_->as_string } @{ $line->{segs} } ),
+                            details       => "Skipped invoice line " . $line->line_item_number . ", missing ordernumber"
                         }
                     );
                     $logger->error("Skipping invoice line, no associated ordernumber");
@@ -405,8 +407,9 @@ sub process_invoice {
                 if ( !$order ) {
                     $invoice_message->add_to_edifact_errors(
                         {
-                            section => join( "\n", map { $_->as_string } @{ $line->{segs} } ),
-                            details => "Skipped invoice line "
+                            invoicenumber => $invoicenumber,
+                            section       => join( "\n", map { $_->as_string } @{ $line->{segs} } ),
+                            details       => "Skipped invoice line "
                                 . $line->line_item_number
                                 . ", cannot find order with ordernumber "
                                 . $ordernumber
@@ -420,8 +423,9 @@ sub process_invoice {
                 if ( !$bib ) {
                     $invoice_message->add_to_edifact_errors(
                         {
-                            section => join( "\n", map { $_->as_string } @{ $line->{segs} } ),
-                            details => "Skipped invoice line "
+                            invoicenumber => $invoicenumber,
+                            section       => join( "\n", map { $_->as_string } @{ $line->{segs} } ),
+                            details       => "Skipped invoice line "
                                 . $line->line_item_number
                                 . ", cannot find biblio for ordernumber "
                                 . $ordernumber
@@ -439,8 +443,9 @@ sub process_invoice {
                 if ( $order->orderstatus eq 'complete' ) {
                     $invoice_message->add_to_edifact_errors(
                         {
-                            section => join( "\n", map { $_->as_string } @{ $line->{segs} } ),
-                            details => "Warning: invoice line "
+                            invoicenumber => $invoicenumber,
+                            section       => join( "\n", map { $_->as_string } @{ $line->{segs} } ),
+                            details       => "Warning: invoice line "
                                 . $line->line_item_number
                                 . " references ordernumber "
                                 . $ordernumber
@@ -508,7 +513,8 @@ sub process_invoice {
                     transfer_items( $schema, $line, $order, $received_order, $quantity );
                     receipt_items(
                         $schema, $line,
-                        $received_order->ordernumber, $quantity, $invoice_message
+                        $received_order->ordernumber, $quantity, $invoice_message,
+                        $invoicenumber
                     );
                 } else {    # simple receipt all copies on order
                     $order->quantityreceived($quantity);
@@ -522,7 +528,7 @@ sub process_invoice {
                         $quantity * $price_excl_tax * ( $tax_rate ? $tax_rate->{rate} : 0 ) );
                     $order->orderstatus('complete');
                     $order->update;
-                    receipt_items( $schema, $line, $ordernumber, $quantity, $invoice_message );
+                    receipt_items( $schema, $line, $ordernumber, $quantity, $invoice_message, $invoicenumber );
                 }
             }
         }
@@ -563,8 +569,8 @@ sub _get_invoiced_price {
 }
 
 sub receipt_items {
-    my ( $schema, $inv_line, $ordernumber, $quantity, $invoice_message ) = @_;
-    my $logger = Koha::Logger->get( { interface => 'edi' } );
+    my ( $schema, $inv_line, $ordernumber, $quantity, $invoice_message, $invoicenumber ) = @_;
+    my $logger   = Koha::Logger->get( { interface => 'edi' } );
 
     # itemnumber is not a foreign key ??? makes this a bit cumbersome
     my @item_links = $schema->resultset('AqordersItem')->search(
@@ -579,12 +585,13 @@ sub receipt_items {
             my $i = $ilink->itemnumber;
             $invoice_message->add_to_edifact_errors(
                 {
-                    section => join( "\n", map { $_->as_string } @{ $inv_line->{segs} } ),
-                    details => "Skipped invoice line "
+                    invoicenumber => $invoicenumber,
+                    section       => join( "\n", map { $_->as_string } @{ $inv_line->{segs} } ),
+                    details       => "Skipped invoice line "
                         . $inv_line->line_item_number
                         . ", Koha item with itemnumber "
                         . $i
-                        . "is missing"
+                        . " is missing"
                 }
             );
             $logger->warn("Cannot find aqorder item for $i: Order: $ordernumber");
@@ -627,10 +634,11 @@ sub receipt_items {
                 if ( $rs->count > 0 ) {
                     $invoice_message->add_to_edifact_errors(
                         {
-                            section => join( "\n", map { $_->as_string } @{ $inv_line->{segs} } ),
-                            details => "Failed to assign barcode "
+                            invoicenumber => $invoicenumber,
+                            section       => join( "\n", map { $_->as_string } @{ $inv_line->{segs} } ),
+                            details       => "Failed to assign barcode "
                                 . $barcode
-                                . "for invoice line "
+                                . " for invoice line "
                                 . $inv_line->line_item_number
                                 . ", duplicate found"
                         }
@@ -660,8 +668,9 @@ sub receipt_items {
             my $available_branches = join( ', ', sort keys %branch_map ) || 'none';
             $invoice_message->add_to_edifact_errors(
                 {
-                    section => join( "\n", map { $_->as_string } @{ $inv_line->{segs} } ),
-                    details => "No matching item found for invoice line "
+                    invoicenumber => $invoicenumber,
+                    section       => join( "\n", map { $_->as_string } @{ $inv_line->{segs} } ),
+                    details       => "No matching item found for invoice line "
                         . $inv_line->line_item_number . ":"
                         . $gir_occurrence
                         . " at branch $branch"
