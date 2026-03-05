@@ -137,6 +137,10 @@ module.exports = [
                 "./koha-tmpl/intranet-tmpl/prog/js/vue/csp-nonce.js",
                 "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/ill.ts",
             ],
+            "circulation/overdues": [
+                "./koha-tmpl/intranet-tmpl/prog/js/vue/csp-nonce.js",
+                "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/circulation/overdues.ts",
+            ]
         },
         output: {
             filename: "[name].js",
