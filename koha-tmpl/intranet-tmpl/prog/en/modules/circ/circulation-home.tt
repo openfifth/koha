@@ -173,12 +173,14 @@
 
                     <ul class="buttons-list">
                         <li>
-                            <a class="circ-button overdues-report" href="/cgi-bin/koha/circ/overdue.pl" title="Warning: This report is very resource intensive on systems with large numbers of overdue items."
+                            <a class="circ-button overdues-report" href="/cgi-bin/koha/circulation/overdues" title="Warning: This report is very resource intensive on systems with large numbers of overdue items."
                                 ><i class="fa-solid fa-clock"></i> Overdues</a
                             >
                         </li>
                         <li>
-                            <a class="circ-button overdues-fines" href="/cgi-bin/koha/circ/branchoverdues.pl" title="Limited to your library.  See report help for other details."><i class="fa-solid fa-clock"></i> Overdues with fines</a>
+                            <a class="circ-button overdues-fines" href="/cgi-bin/koha/circulation/overdues/branch" title="Limited to your library.  See report help for other details."
+                                ><i class="fa-solid fa-clock"></i> Overdues with fines</a
+                            >
                         </li>
                     </ul>
                 </div>
