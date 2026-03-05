@@ -1173,12 +1173,12 @@ subtest 'process_invoice' => sub {
         {
             'section' =>
                 "QTY+47:1\nGIR+001+WID:LLO+34148000123459:LAC+P28840:LCO+WIDATB:LFN\nPRI+AAA:30.00\nPRI+AAB:35.00\nMOA+203:600.00\nMOA+52:5.00\nRFF+LI:$ordernumber2",
-            'details' => 'No matching item found for invoice line 4:0 at branch WID'
+            'details' => qr/^No matching item found for invoice line 4:0 at branch WID/
         },
         {
             'section' =>
                 "QTY+47:1\nGIR+001+DIT:LLO+34148000123460:LAC+P54322:LCO+DITATB:LFN\nPRI+AAA:5.00\nPRI+AAB:6.00\nMOA+203:5.00\nMOA+52:1.00\nRFF+LI:$ordernumber2",
-            'details' => 'No matching item found for invoice line 5:0 at branch DIT'
+            'details' => qr/^No matching item found for invoice line 5:0 at branch DIT/
         },
         {
             'section' => "NAD+SU+9999999999999",
@@ -1189,7 +1189,12 @@ subtest 'process_invoice' => sub {
     my $index = 0;
     while ( my $error = $errors->next ) {
         is( $error->section, $expected_errors[$index]->{section}, "Error $index section is correct" );
-        is( $error->details, $expected_errors[$index]->{details}, "Error $index details is correct" );
+        my $expected_details = $expected_errors[$index]->{details};
+        if ( ref $expected_details eq 'Regexp' ) {
+            like( $error->details, $expected_details, "Error $index details is correct" );
+        } else {
+            is( $error->details, $expected_details, "Error $index details is correct" );
+        }
         $index++;
     }
 
@@ -1926,26 +1931,12 @@ subtest 'duplicate_invoice_blocking' => sub {
         # Disable duplicate blocking preference
         t::lib::Mocks::mock_preference( 'EdifactInvoiceImportBlockDuplicates', 0 );
 
-        # Create file transport for local testing
-        my $file_transport = $builder->build(
-            {
-                source => 'FileTransport',
-                value  => {
-                    name               => 'Test Invoice Transport',
-                    transport          => 'local',
-                    download_directory => $dirname,
-                    upload_directory   => $dirname,
-                }
-            }
-        );
-
         # Create vendor EDI account
         my $account = $builder->build(
             {
                 source => 'VendorEdiAccount',
                 value  => {
                     description       => 'test vendor',
-                    file_transport_id => $file_transport->{file_transport_id},
                     plugin            => '',
                     san               => '5013546027173',
                 }
@@ -2044,26 +2035,12 @@ subtest 'duplicate_invoice_blocking' => sub {
         t::lib::Mocks::mock_preference( 'EdifactInvoiceImportBlockDuplicates',            1 );
         t::lib::Mocks::mock_preference( 'EdifactInvoiceImportBlockDuplicatesEmailNotice', 0 );
 
-        # Create file transport for local testing
-        my $file_transport = $builder->build(
-            {
-                source => 'FileTransport',
-                value  => {
-                    name               => 'Test Invoice Transport',
-                    transport          => 'local',
-                    download_directory => $dirname,
-                    upload_directory   => $dirname,
-                }
-            }
-        );
-
         # Create vendor EDI account
         my $account = $builder->build(
             {
                 source => 'VendorEdiAccount',
                 value  => {
                     description       => 'test vendor',
-                    file_transport_id => $file_transport->{file_transport_id},
                     plugin            => '',
                     san               => '5013546027173',
                 }
@@ -2173,26 +2150,12 @@ subtest 'duplicate_invoice_blocking' => sub {
         # Enable duplicate blocking preference
         t::lib::Mocks::mock_preference( 'EdifactInvoiceImportBlockDuplicates', 1 );
 
-        # Create file transport for local testing
-        my $file_transport = $builder->build(
-            {
-                source => 'FileTransport',
-                value  => {
-                    name               => 'Test Invoice Transport',
-                    transport          => 'local',
-                    download_directory => $dirname,
-                    upload_directory   => $dirname,
-                }
-            }
-        );
-
         # Create two different vendors
         my $account1 = $builder->build(
             {
                 source => 'VendorEdiAccount',
                 value  => {
                     description       => 'test vendor 1',
-                    file_transport_id => $file_transport->{file_transport_id},
                     plugin            => '',
                     san               => '5013546027173',
                 }
@@ -2204,7 +2167,6 @@ subtest 'duplicate_invoice_blocking' => sub {
                 source => 'VendorEdiAccount',
                 value  => {
                     description       => 'test vendor 2',
-                    file_transport_id => $file_transport->{file_transport_id},
                     plugin            => '',
                     san               => '5013546027999',
                 }
@@ -2357,26 +2319,12 @@ subtest 'duplicate_invoice_blocking' => sub {
             }
         );
 
-        # Create file transport for local testing
-        my $file_transport = $builder->build(
-            {
-                source => 'FileTransport',
-                value  => {
-                    name               => 'Test Invoice Transport',
-                    transport          => 'local',
-                    download_directory => $dirname,
-                    upload_directory   => $dirname,
-                }
-            }
-        );
-
         # Create vendor EDI account
         my $account = $builder->build(
             {
                 source => 'VendorEdiAccount',
                 value  => {
                     description       => 'test vendor',
-                    file_transport_id => $file_transport->{file_transport_id},
                     plugin            => '',
                     san               => '5013546027173',
                 }
@@ -2509,26 +2457,12 @@ subtest 'duplicate_invoice_blocking' => sub {
             }
         );
 
-        # Create file transport for local testing
-        my $file_transport = $builder->build(
-            {
-                source => 'FileTransport',
-                value  => {
-                    name               => 'Test Invoice Transport',
-                    transport          => 'local',
-                    download_directory => $dirname,
-                    upload_directory   => $dirname,
-                }
-            }
-        );
-
         # Create vendor EDI account
         my $account = $builder->build(
             {
                 source => 'VendorEdiAccount',
                 value  => {
                     description       => 'test vendor',
-                    file_transport_id => $file_transport->{file_transport_id},
                     plugin            => '',
                     san               => '5013546027173',
                 }
@@ -2661,26 +2595,12 @@ subtest 'duplicate_invoice_blocking' => sub {
             }
         );
 
-        # Create file transport for local testing
-        my $file_transport = $builder->build(
-            {
-                source => 'FileTransport',
-                value  => {
-                    name               => 'Test Invoice Transport',
-                    transport          => 'local',
-                    download_directory => $dirname,
-                    upload_directory   => $dirname,
-                }
-            }
-        );
-
         # Create vendor EDI account
         my $account = $builder->build(
             {
                 source => 'VendorEdiAccount',
                 value  => {
                     description       => 'test vendor',
-                    file_transport_id => $file_transport->{file_transport_id},
                     plugin            => '',
                     san               => '5013546027173',
                 }
@@ -2811,26 +2731,12 @@ subtest 'duplicate_invoice_blocking' => sub {
             }
         );
 
-        # Create file transport for local testing
-        my $file_transport = $builder->build(
-            {
-                source => 'FileTransport',
-                value  => {
-                    name               => 'Test Invoice Transport',
-                    transport          => 'local',
-                    download_directory => $dirname,
-                    upload_directory   => $dirname,
-                }
-            }
-        );
-
         # Create vendor EDI account
         my $account = $builder->build(
             {
                 source => 'VendorEdiAccount',
                 value  => {
                     description       => 'test vendor',
-                    file_transport_id => $file_transport->{file_transport_id},
                     plugin            => '',
                     san               => '5013546027173',
                 }

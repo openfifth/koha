@@ -461,6 +461,7 @@ sub process_invoice {
                 if ( $tax_rate && $tax_rate->{rate} != 0 ) {
                     $tax_rate->{rate} /= 100;
                 }
+                $tax_rate //= { rate => 0 };
 
                 if ( $order->quantity > $quantity ) {
                     my $ordered = $order->quantity;
