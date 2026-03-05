@@ -104,6 +104,13 @@ Searching:
             - "adding a second 'match' field search to the ES query to boost relevancy. Keyword and title fields will be boosted with title-cover, other fields will boost directly."
             - "This will not boost CCL style searches, only standard or advanced searches."
         -
+            - pref: ElasticsearchBoostFieldMatch
+              default: 0
+              choices:
+                  1: Add
+                  0: "Don't add"
+            - "a \"match\" query to Elasticsearch searches, will follow indexes chosen in advanced search, or use title-cover for generic keyword or title index search."
+        -
             - pref: SavedSearchFilters
               default: 0
               choices:
