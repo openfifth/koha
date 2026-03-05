@@ -21,7 +21,7 @@ use Modern::Perl;
 use FindBin qw( $Bin );
 
 use Test::NoWarnings;
-use Test::More tests => 10;
+use Test::More tests => 9;
 use Test::MockModule;
 
 use t::lib::Mocks;
