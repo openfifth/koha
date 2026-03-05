@@ -2929,6 +2929,7 @@ DROP TABLE IF EXISTS `edifact_errors`;
 CREATE TABLE `edifact_errors` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `message_id` int(11) NOT NULL,
+  `invoicenumber` varchar(48) DEFAULT NULL,
   `date` date DEFAULT NULL,
   `section` mediumtext DEFAULT NULL,
   `details` mediumtext DEFAULT NULL,
