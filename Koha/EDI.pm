@@ -1556,7 +1556,8 @@ sub _send_duplicate_invoice_email_notice {
     my $logger = Koha::Logger->get( { interface => 'edi' } );
 
     # Check if email notifications enabled
-    return unless C4::Context->preference('EdiBlockDuplicateInvoiceEmailNotice');
+    my $email_pref = C4::Context->preference('EdiBlockDuplicateInvoiceEmailNotice');
+    return unless $email_pref;
 
     # Get vendor information
     my $vendor_id = $invoice_message->vendor_id;
@@ -1573,45 +1574,61 @@ sub _send_duplicate_invoice_email_notice {
         received_date         => dt_from_string()->ymd,
     };
 
+    # Use acquisitions from/reply addresses, consistent with other acquisitions notices
+    my $from_address = C4::Context->preference('AcquisitionsDefaultEmailAddress')
+        || C4::Context->preference('KohaAdminEmailAddress');
+    my $reply_address = C4::Context->preference('AcquisitionsDefaultReplyTo') || undef;
+
     # 1. Send notification to library staff
-    my $library_email_addresses = C4::Context->preference('EdiBlockDuplicateInvoiceEmailAddresses');
-    if ($library_email_addresses) {
-        my @library_addresses = split /\s*,\s*/, $library_email_addresses;
+    my @library_addresses;
+    if ( $email_pref eq 'AcquisitionsDefaultEmailAddress' ) {
+        my $addr = C4::Context->preference('AcquisitionsDefaultEmailAddress')
+            || C4::Context->preference('KohaAdminEmailAddress');
+        push @library_addresses, $addr if $addr;
+    } elsif ( $email_pref eq 'KohaAdminEmailAddress' ) {
+        my $addr = C4::Context->preference('ReplytoDefault')
+            || C4::Context->preference('KohaAdminEmailAddress');
+        push @library_addresses, $addr if $addr;
+    } elsif ( $email_pref eq 'EdiBlockDuplicateInvoiceEmailAddresses' ) {
+        my $addresses = C4::Context->preference('EdiBlockDuplicateInvoiceEmailAddresses');
+        push @library_addresses, split /\s*,\s*/, $addresses if $addresses;
+    }
 
-        foreach my $to_address (@library_addresses) {
-            $to_address =~ s/^\s+|\s+$//g;    # trim whitespace
-            next unless $to_address;
-            next unless Koha::Email->is_valid($to_address);
+    foreach my $to_address (@library_addresses) {
+        $to_address =~ s/^\s+|\s+$//g;    # trim whitespace
+        next unless $to_address;
+        next unless Koha::Email->is_valid($to_address);
 
-            my $letter = C4::Letters::GetPreparedLetter(
-                module                 => 'acquisition',
-                letter_code            => 'EDI_DUP_INV_LIBRARY',
-                message_transport_type => 'email',
-                tables                 => {
-                    aqbooksellers => $vendor_id,
-                },
-                substitute => $substitute,
+        my $letter = C4::Letters::GetPreparedLetter(
+            module                 => 'acquisition',
+            letter_code            => 'EDI_DUP_INV_LIBRARY',
+            message_transport_type => 'email',
+            tables                 => {
+                aqbooksellers => $vendor_id,
+            },
+            substitute => $substitute,
+        );
+
+        if ($letter) {
+            my $message_id = C4::Letters::EnqueueLetter(
+                {
+                    letter       => $letter,
+                    to_address   => $to_address,
+                    from_address => $from_address,
+                    ( $reply_address ? ( reply_address => $reply_address ) : () ),
+                    message_transport_type => 'email',
+                }
             );
 
-            if ($letter) {
-                my $message_id = C4::Letters::EnqueueLetter(
-                    {
-                        letter                 => $letter,
-                        to_address             => $to_address,
-                        message_transport_type => 'email',
-                    }
+            if ($message_id) {
+                $logger->info(
+                    "Library duplicate invoice notification queued (message_id: $message_id) for $to_address, invoice $invoicenumber. Message will be sent by message_queue cronjob."
                 );
-
-                if ($message_id) {
-                    $logger->info(
-                        "Library duplicate invoice notification queued (message_id: $message_id) for $to_address, invoice $invoicenumber. Message will be sent by message_queue cronjob."
-                    );
-                } else {
-                    $logger->warn("Failed to enqueue library notification to $to_address for invoice $invoicenumber");
-                }
             } else {
-                $logger->warn("Could not generate library notification letter for invoice $invoicenumber");
+                $logger->warn("Failed to enqueue library notification to $to_address for invoice $invoicenumber");
             }
+        } else {
+            $logger->warn("Could not generate library notification letter for invoice $invoicenumber");
         }
     }
 
@@ -1644,8 +1661,10 @@ sub _send_duplicate_invoice_email_notice {
                     if ($letter) {
                         my $message_id = C4::Letters::EnqueueLetter(
                             {
-                                letter                 => $letter,
-                                to_address             => $vendor_email,
+                                letter       => $letter,
+                                to_address   => $vendor_email,
+                                from_address => $from_address,
+                                ( $reply_address ? ( reply_address => $reply_address ) : () ),
                                 message_transport_type => 'email',
                             }
                         );
