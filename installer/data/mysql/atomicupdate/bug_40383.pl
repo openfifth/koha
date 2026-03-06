@@ -22,17 +22,28 @@ return {
         );
         say $out "Added system preference 'EdiBlockDuplicateInvoice'";
 
-        # Email notification toggle
+        # Email notification destination
         $dbh->do(
             q{
             INSERT IGNORE INTO systempreferences (variable, value, options, explanation, type)
             VALUES (
                 'EdiBlockDuplicateInvoiceEmailNotice',
                 '0',
-                NULL,
-                'Send email notifications when a duplicate EDIFACT invoice is blocked. Uses the EDI_DUP_INV_LIBRARY notice template to alert acquisitions staff, and the EDI_DUP_INV_VENDOR notice template to alert the vendor\'s EDI contacts. Requires EdiBlockDuplicateInvoice to be enabled.',
-                'YesNo'
+                '0|AcquisitionsDefaultEmailAddress|EdiBlockDuplicateInvoiceEmailAddresses|KohaAdminEmailAddress',
+                'Send duplicate EDIFACT invoice block notifications using the EDI_DUP_INV_LIBRARY notice template to the selected address. Vendor EDI contacts are always notified separately via EDI_DUP_INV_VENDOR. Requires EdiBlockDuplicateInvoice to be enabled.',
+                'Choice'
             )
+        }
+        );
+        $dbh->do(
+            q{
+            UPDATE systempreferences
+            SET type    = 'Choice',
+                options = '0|AcquisitionsDefaultEmailAddress|EdiBlockDuplicateInvoiceEmailAddresses|KohaAdminEmailAddress',
+                value   = CASE WHEN value = '1' THEN 'AcquisitionsDefaultEmailAddress' ELSE '0' END,
+                explanation = 'Send duplicate EDIFACT invoice block notifications using the EDI_DUP_INV_LIBRARY notice template to the selected address. Vendor EDI contacts are always notified separately via EDI_DUP_INV_VENDOR. Requires EdiBlockDuplicateInvoice to be enabled.'
+            WHERE variable = 'EdiBlockDuplicateInvoiceEmailNotice'
+              AND type = 'YesNo'
         }
         );
         say $out "Added system preference 'EdiBlockDuplicateInvoiceEmailNotice'";
@@ -45,7 +56,7 @@ return {
                 'EdiBlockDuplicateInvoiceEmailAddresses',
                 '',
                 NULL,
-                'Comma-separated list of acquisitions staff email addresses to notify using the EDI_DUP_INV_LIBRARY notice template when a duplicate EDIFACT invoice is blocked. Vendor contacts are notified separately via the EDI_DUP_INV_VENDOR notice using addresses configured in the vendor\'s EDI account. Requires EdiBlockDuplicateInvoiceEmailNotice to be enabled.',
+                'Comma-separated list of acquisitions staff email addresses to use when EdiBlockDuplicateInvoiceEmailNotice is set to specific email addresses.',
                 'Textarea'
             )
         }
