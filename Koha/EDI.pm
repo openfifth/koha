@@ -330,7 +330,7 @@ sub process_invoice {
             $invoice_message->edi_acct( $vendor_acct->id );
 
             # Check for duplicate invoices if preference enabled
-            if ( C4::Context->preference('EdiBlockDuplicateInvoice') ) {
+            if ( C4::Context->preference('EdifactInvoiceImportBlockDuplicates') ) {
                 my $duplicate_invoice = $schema->resultset('Aqinvoice')->search(
                     {
                         invoicenumber => $invoicenumber,
@@ -1555,7 +1555,7 @@ sub _send_duplicate_invoice_email_notice {
     my $logger = Koha::Logger->get( { interface => 'edi' } );
 
     # Check if email notifications enabled
-    my $email_pref = C4::Context->preference('EdiBlockDuplicateInvoiceEmailNotice');
+    my $email_pref = C4::Context->preference('EdifactInvoiceImportBlockDuplicatesEmailNotice');
     return unless $email_pref;
 
     # Get vendor information
@@ -1588,8 +1588,8 @@ sub _send_duplicate_invoice_email_notice {
         my $addr = C4::Context->preference('ReplytoDefault')
             || C4::Context->preference('KohaAdminEmailAddress');
         push @library_addresses, $addr if $addr;
-    } elsif ( $email_pref eq 'EdiBlockDuplicateInvoiceEmailAddresses' ) {
-        my $addresses = C4::Context->preference('EdiBlockDuplicateInvoiceEmailAddresses');
+    } elsif ( $email_pref eq 'EdifactInvoiceImportBlockDuplicatesEmailAddresses' ) {
+        my $addresses = C4::Context->preference('EdifactInvoiceImportBlockDuplicatesEmailAddresses');
         push @library_addresses, split /\s*,\s*/, $addresses if $addresses;
     }
 
@@ -1815,14 +1815,14 @@ Koha::EDI
     - EnqueueLetter: Adds the message to the message_queue table for delivery by the cronjob
 
     Queues two types of notifications using letter templates:
-    1. EDI_DUP_INV_LIBRARY - to library staff (addresses from EdiBlockDuplicateInvoiceEmailAddresses)
+    1. EDI_DUP_INV_LIBRARY - to library staff (addresses from EdifactInvoiceImportBlockDuplicatesEmailAddresses)
     2. EDI_DUP_INV_VENDOR - to vendor (address from vendor_edi_accounts.vendor_email)
 
     All messages are recorded in the message_queue table for auditing and can be reviewed
     in the Koha notices interface. Messages will be sent by the message_queue cronjob
     (misc/cronjobs/process_message_queue.pl).
 
-    Only runs if EdiBlockDuplicateInvoiceEmailNotice preference is enabled.
+    Only runs if EdifactInvoiceImportBlockDuplicatesEmailNotice preference is enabled.
 
     Parameters:
     - $invoice_message: The EdifactMessage object being processed
