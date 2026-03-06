@@ -3772,6 +3772,73 @@ sub create_expiry_notice_parameters {
     return $sending_params;
 }
 
+=head3 identify_updated_extended_attributes
+
+Compares an array of updated extended attributes with the stored values to identify changes
+
+=cut
+
+sub identify_updated_extended_attributes {
+    my ( $self, $entered_attributes ) = @_;
+
+    my @patron_attributes = grep { $_->type->opac_editable ? $_ : () }
+        Koha::Patron::Attributes->search( { borrowernumber => $self->borrowernumber } )->as_list;
+
+    my $patron_attribute_types;
+    foreach my $attr (@patron_attributes) {
+        $patron_attribute_types->{ $attr->code } += 1;
+    }
+
+    my $passed_attribute_types;
+    foreach my $attr ( @{$entered_attributes} ) {
+        $passed_attribute_types->{ $attr->{code} } += 1;
+    }
+
+    my @changed_attributes;
+
+    # Loop through the current patron attributes
+    foreach my $attribute_type ( keys %{$patron_attribute_types} ) {
+        if ( ( $patron_attribute_types->{$attribute_type} // q{} ) ne
+            ( $passed_attribute_types->{$attribute_type} // q{} ) )
+        {
+            # count differs, overwrite all attributes for given type
+            foreach my $attr ( @{$entered_attributes} ) {
+                push @changed_attributes, $attr
+                    if $attr->{code} eq $attribute_type;
+            }
+        } else {
+
+            # count matches, check values
+            my $changes = 0;
+            foreach my $attr ( grep { $_->code eq $attribute_type } @patron_attributes ) {
+                $changes = 1
+                    unless any { $_->{attribute} eq $attr->attribute } @{$entered_attributes};
+                last if $changes;
+            }
+
+            if ($changes) {
+                foreach my $attr ( @{$entered_attributes} ) {
+                    push @changed_attributes, $attr
+                        if $attr->{code} eq $attribute_type;
+                }
+            }
+        }
+    }
+
+    # Loop through passed attributes, looking for new ones
+    foreach my $attribute_type ( keys %{$passed_attribute_types} ) {
+        if ( !defined $patron_attribute_types->{$attribute_type} ) {
+
+            # YAY, new stuff
+            foreach my $attr ( grep { $_->{code} eq $attribute_type } @{$entered_attributes} ) {
+                push @changed_attributes, $attr;
+            }
+        }
+    }
+
+    return \@changed_attributes;
+}
+
 =head2 Internal methods
 
 =head3 _type

@@ -50,7 +50,9 @@ if ( $op eq 'add_form' ) {
     my $category = Koha::Patron::Categories->find($categorycode);
     $template->param(
         category                          => scalar $category,
-        self_renewal_information_messages => parse_renewal_info_message( $category->self_renewal_information_message )
+        self_renewal_information_messages => scalar $category
+        ? parse_renewal_info_message( $category->self_renewal_information_message )
+        : []
     );
 
     if ( C4::Context->preference('EnhancedMessagingPreferences') ) {

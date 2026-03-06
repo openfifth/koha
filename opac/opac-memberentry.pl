@@ -333,13 +333,14 @@ if ( $op eq 'cud-create' ) {
 
         $template->param( op => 'edit' );
     } else {
+        my $patron = Koha::Patrons->find($borrowernumber);
 
         # If preferred name is not included but firstname is then set preferred_name to firstname
         $borrower{preferred_name} = $borrower{firstname}
             if defined $borrower{firstname} && !defined $borrower{preferred_name};
         my %borrower_changes = DelUnchangedFields( $borrowernumber, %borrower );
         $borrower_changes{'changed_fields'} = join ',', keys %borrower_changes;
-        my $extended_attributes_changes = FilterUnchangedAttributes( $borrowernumber, $attributes );
+        my $extended_attributes_changes = $patron->identify_updated_extended_attributes($attributes);
 
         if ( $borrower_changes{'changed_fields'} || scalar @{$extended_attributes_changes} > 0 ) {
             ( $template, $borrowernumber, $cookie ) = get_template_and_user(
@@ -354,22 +355,7 @@ if ( $op eq 'cud-create' ) {
             $borrower_changes{borrowernumber}      = $borrowernumber;
             $borrower_changes{extended_attributes} = to_json($extended_attributes_changes);
 
-            Koha::Patron::Modifications->search( { borrowernumber => $borrowernumber } )->delete;
-
-            $borrower_changes{verification_token} = q{};    # prevent warn Missing value for PK column
-            my $m = Koha::Patron::Modification->new( \%borrower_changes )->store();
-
-            #Automatically approve patron profile changes if set in syspref
-
-            if ( C4::Context->preference('AutoApprovePatronProfileSettings') ) {
-
-                # Need to get the object from database, otherwise it is not complete enough to allow deletion
-                # when approval has been performed.
-                my $tmp_m = Koha::Patron::Modifications->find( { borrowernumber => $borrowernumber } );
-                $tmp_m->approve() if $tmp_m;
-            }
-
-            my $patron = Koha::Patrons->find($borrowernumber);
+            $patron->request_modification( \%borrower_changes );
             $template->param( borrower => $patron->unblessed );
         } else {
             my $patron = Koha::Patrons->find($borrowernumber);
@@ -633,6 +619,7 @@ sub DelEmptyFields {
     return %borrower;
 }
 
+<<<<<<< HEAD
 sub FilterUnchangedAttributes {
     my ( $borrowernumber, $entered_attributes ) = @_;
 
@@ -694,6 +681,8 @@ sub FilterUnchangedAttributes {
     return \@changed_attributes;
 }
 
+=======
+>>>>>>> 552dc5d9852 (Bug 26355: (follow-up) Fix handling of extended attributes)
 sub GeneratePatronAttributesForm {
     my ( $borrowernumber, $entered_attributes ) = @_;
 
