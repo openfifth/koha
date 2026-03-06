@@ -15,7 +15,7 @@ return {
                 'EdiBlockDuplicateInvoice',
                 '0',
                 NULL,
-                'Block processing of EDIFACT invoices when a duplicate invoice number is detected for the same supplier. When enabled, duplicate invoices will be rejected and logged as errors.',
+                'Block automatic processing of EDIFACT invoices when a duplicate invoice number is detected for the same supplier. Similar to AcqWarnOnDuplicateInvoice for manually created invoices, but applies to invoices received via EDI.',
                 'YesNo'
             )
         }
@@ -30,7 +30,7 @@ return {
                 'EdiBlockDuplicateInvoiceEmailNotice',
                 '0',
                 NULL,
-                'Send email notification when duplicate EDIFACT invoices are detected. Requires EdiBlockDuplicateInvoice to be enabled.',
+                'Send email notifications when a duplicate EDIFACT invoice is blocked. Uses the EDI_DUP_INV_LIBRARY notice template to alert acquisitions staff, and the EDI_DUP_INV_VENDOR notice template to alert the vendor\'s EDI contacts. Requires EdiBlockDuplicateInvoice to be enabled.',
                 'YesNo'
             )
         }
@@ -45,7 +45,7 @@ return {
                 'EdiBlockDuplicateInvoiceEmailAddresses',
                 '',
                 NULL,
-                'Comma-separated list of email addresses to notify when duplicate EDIFACT invoices are detected (e.g., "purchasing@library.org,edi_support@library.org"). Requires EdiBlockDuplicateInvoiceEmailNotice to be enabled.',
+                'Comma-separated list of acquisitions staff email addresses to notify using the EDI_DUP_INV_LIBRARY notice template when a duplicate EDIFACT invoice is blocked. Vendor contacts are notified separately via the EDI_DUP_INV_VENDOR notice using addresses configured in the vendor\'s EDI account. Requires EdiBlockDuplicateInvoiceEmailNotice to be enabled.',
                 'Textarea'
             )
         }
