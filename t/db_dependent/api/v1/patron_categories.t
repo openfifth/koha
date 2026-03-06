@@ -66,8 +66,11 @@ subtest 'list() tests' => sub {
 
     $t->get_ok("//$userid:$password@/api/v1/patron_categories")->status_is(200);
 
-    $t->get_ok("//$userid:$password@/api/v1/patron_categories?q={\"me.categorycode\":\"TEST\"}")->status_is(200)
-        ->json_has('/0/name')->json_is( '/0/name' => 'Test' )->json_hasnt('/1');
+    $t->get_ok("//$userid:$password@/api/v1/patron_categories?q={\"me.categorycode\":\"TEST\"}")
+        ->status_is(200)
+        ->json_has('/0/name')
+        ->json_is( '/0/name' => 'Test' )
+        ->json_hasnt('/1');
 
     # Off limits search
 
@@ -92,14 +95,18 @@ subtest 'list() tests' => sub {
     my $off_limits_userid = $off_limits_librarian->userid;
 
     $t->get_ok("//$off_limits_userid:$off_limits_password@/api/v1/patron_categories?q={\"me.categorycode\":\"TEST\"}")
-        ->status_is(200)->json_hasnt('/0');
+        ->status_is(200)
+        ->json_hasnt('/0');
 
     # Off limits librarian category has changed to one within limits
 
     $off_limits_librarian->branchcode( $library->branchcode )->store;
 
     $t->get_ok("//$off_limits_userid:$off_limits_password@/api/v1/patron_categories?q={\"me.categorycode\":\"TEST\"}")
-        ->status_is(200)->json_has('/0/name')->json_is( [ $category->to_api ] )->json_hasnt('/1');
+        ->status_is(200)
+        ->json_has('/0/name')
+        ->json_is( [ $category->to_api ] )
+        ->json_hasnt('/1');
 
     $schema->storage->txn_rollback;
 
@@ -149,7 +156,8 @@ subtest 'add() tests' => sub {
     };
 
     $t->post_ok( "//$userid:$password@/api/v1/patron_categories" => json => $category_with_invalid_field )
-        ->status_is(400)->json_is(
+        ->status_is(400)
+        ->json_is(
         "/errors" => [
             {
                 message => "Properties not allowed: blah.",
@@ -161,10 +169,11 @@ subtest 'add() tests' => sub {
     # Authorized attempt to write
     my $patron_category_id =
         $t->post_ok( "//$userid:$password@/api/v1/patron_categories" => json => $category )
-        ->status_is( 201, 'REST3.2.1' )->header_like(
+        ->status_is( 201, 'REST3.2.1' )
+        ->header_like(
         Location => qr|^\/api\/v1\/patron_categories/\d*|,
         'REST3.4.1'
-    )->json_is( '/name' => $category->{name} )->tx->res->json->{patron_category_id};
+        )->json_is( '/name' => $category->{name} )->tx->res->json->{patron_category_id};
 
     $schema->storage->txn_rollback;
 };

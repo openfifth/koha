@@ -125,13 +125,16 @@ subtest 'list() tests' => sub {
 
         $t->get_ok("//$userid:$password@/api/v1/patrons")->status_is( 200, 'list_borrowers makes /patrons accessible' );
 
-        $t->get_ok( "//$userid:$password@/api/v1/patrons?cardnumber=" . $librarian->cardnumber )->status_is(200)
+        $t->get_ok( "//$userid:$password@/api/v1/patrons?cardnumber=" . $librarian->cardnumber )
+            ->status_is(200)
             ->json_is( '/0/cardnumber' => $librarian->cardnumber );
 
         $t->get_ok( "//$userid:$password@/api/v1/patrons?q={\"cardnumber\":\"" . $librarian->cardnumber . "\"}" )
-            ->status_is(200)->json_is( '/0/cardnumber' => $librarian->cardnumber );
+            ->status_is(200)
+            ->json_is( '/0/cardnumber' => $librarian->cardnumber );
 
-        $t->get_ok( "//$userid:$password@/api/v1/patrons?address2=" . $librarian->address2 )->status_is(200)
+        $t->get_ok( "//$userid:$password@/api/v1/patrons?address2=" . $librarian->address2 )
+            ->status_is(200)
             ->json_is( '/0/address2' => $librarian->address2 );
 
         subtest 'restricted & expired' => sub {
@@ -145,13 +148,19 @@ subtest 'list() tests' => sub {
             $t->get_ok( "//$userid:$password@/api/v1/patrons?restricted="
                     . Mojo::JSON->true
                     . "&cardnumber="
-                    . $patron->cardnumber )->status_is(200)->json_has('/0/restricted')
-                ->json_is( '/0/restricted' => Mojo::JSON->true )->json_has('/0/expired')
-                ->json_is( '/0/expired'    => Mojo::JSON->false )->json_hasnt('/1');
+                    . $patron->cardnumber )
+                ->status_is(200)
+                ->json_has('/0/restricted')
+                ->json_is( '/0/restricted' => Mojo::JSON->true )
+                ->json_has('/0/expired')
+                ->json_is( '/0/expired' => Mojo::JSON->false )
+                ->json_hasnt('/1');
 
             $patron->dateexpiry( dt_from_string->subtract( days => 2 ) )->store;
-            $t->get_ok( "//$userid:$password@/api/v1/patrons/" . $patron->borrowernumber )->status_is(200)
-                ->json_has('/expired')->json_is( '/expired' => Mojo::JSON->true );
+            $t->get_ok( "//$userid:$password@/api/v1/patrons/" . $patron->borrowernumber )
+                ->status_is(200)
+                ->json_has('/expired')
+                ->json_is( '/expired' => Mojo::JSON->true );
 
             $t->get_ok( "//$userid:$password@/api/v1/patrons?"
                     . 'q={"extended_attributes.type":"CODE"}' => { 'x-koha-embed' => 'extended_attributes' } )
@@ -180,13 +189,15 @@ subtest 'list() tests' => sub {
             $t->get_ok( "//$userid:$password@/api/v1/patrons?date_of_birth="
                     . $date_of_birth
                     . "&cardnumber="
-                    . $patron->cardnumber )->status_is(200)
+                    . $patron->cardnumber )
+                ->status_is(200)
                 ->json_is( '/0/patron_id' => $patron->id, 'Filtering by date works' );
 
             $t->get_ok( "//$userid:$password@/api/v1/patrons?last_seen="
                     . $last_seen_rfc3339
                     . "&cardnumber="
-                    . $patron->cardnumber )->status_is(200)
+                    . $patron->cardnumber )
+                ->status_is(200)
                 ->json_is( '/0/patron_id' => $patron->id, 'Filtering by date-time works' );
 
             my $q = encode_json(
@@ -196,7 +207,8 @@ subtest 'list() tests' => sub {
                 }
             );
 
-            $t->get_ok("//$userid:$password@/api/v1/patrons?q=$q")->status_is(200)
+            $t->get_ok("//$userid:$password@/api/v1/patrons?q=$q")
+                ->status_is(200)
                 ->json_is( '/0/patron_id' => $patron->id, 'Filtering by date works' );
 
             $q = encode_json(
@@ -206,7 +218,8 @@ subtest 'list() tests' => sub {
                 }
             );
 
-            $t->get_ok("//$userid:$password@/api/v1/patrons?q=$q")->status_is(200)
+            $t->get_ok("//$userid:$password@/api/v1/patrons?q=$q")
+                ->status_is(200)
                 ->json_is( '/0/patron_id' => $patron->id, 'Filtering by date-time works' );
         };
 
@@ -250,16 +263,20 @@ subtest 'list() tests' => sub {
         my $userid = $librarian->userid;
 
         $t->get_ok( "//$userid:$password@/api/v1/patrons?_order_by=patron_id&q="
-                . encode_json( { library_id => [ $library_1->id, $library_2->id ] } ) )->status_is(200)
-            ->json_is( '/0/patron_id' => $patron_1->id )->json_is( '/1/patron_id' => $patron_2->id )
+                . encode_json( { library_id => [ $library_1->id, $library_2->id ] } ) )
+            ->status_is(200)
+            ->json_is( '/0/patron_id' => $patron_1->id )
+            ->json_is( '/1/patron_id' => $patron_2->id )
             ->json_is( '/2/patron_id' => $patron_3->id );
 
         @libraries_where_can_see_patrons = ( $library_2->id );
 
         my $res =
             $t->get_ok( "//$userid:$password@/api/v1/patrons?_order_by=patron_id&q="
-                . encode_json( { library_id => [ $library_1->id, $library_2->id ] } ) )->status_is(200)
-            ->json_is( '/0/patron_id' => $patron_3->id, 'Returns the only allowed patron' )->tx->res->json;
+                . encode_json( { library_id => [ $library_1->id, $library_2->id ] } ) )
+            ->status_is(200)
+            ->json_is( '/0/patron_id' => $patron_3->id, 'Returns the only allowed patron' )
+            ->tx->res->json;
 
         is( scalar @{$res}, 1, 'Only one patron returned' );
 
@@ -322,8 +339,10 @@ subtest 'get() tests' => sub {
 
         $t->get_ok( "//$userid:$password@/api/v1/patrons/" . $patron->id )
             ->status_is( 200, 'list_borrowers permission makes patron visible' )
-            ->json_is( '/patron_id' => $patron->id )->json_is( '/category_id' => $patron->categorycode )
-            ->json_is( '/surname'   => $patron->surname )->json_is( '/patron_card_lost' => Mojo::JSON->false );
+            ->json_is( '/patron_id'        => $patron->id )
+            ->json_is( '/category_id'      => $patron->categorycode )
+            ->json_is( '/surname'          => $patron->surname )
+            ->json_is( '/patron_card_lost' => Mojo::JSON->false );
 
         $schema->storage->txn_rollback;
     };
@@ -365,18 +384,22 @@ subtest 'get() tests' => sub {
         $librarian->set_password( { password => $password, skip_validation => 1 } );
         my $userid = $librarian->userid;
 
-        $t->get_ok( "//$userid:$password@/api/v1/patrons/" . $patron_1->id )->status_is(200)
+        $t->get_ok( "//$userid:$password@/api/v1/patrons/" . $patron_1->id )
+            ->status_is(200)
             ->json_is( '/patron_id' => $patron_1->id );
 
-        $t->get_ok( "//$userid:$password@/api/v1/patrons/" . $patron_2->id )->status_is(200)
+        $t->get_ok( "//$userid:$password@/api/v1/patrons/" . $patron_2->id )
+            ->status_is(200)
             ->json_is( '/patron_id' => $patron_2->id );
 
         @libraries_where_can_see_patrons = ( $library_1->id );
 
-        $t->get_ok( "//$userid:$password@/api/v1/patrons/" . $patron_1->id )->status_is(200)
+        $t->get_ok( "//$userid:$password@/api/v1/patrons/" . $patron_1->id )
+            ->status_is(200)
             ->json_is( '/patron_id' => $patron_1->id );
 
-        $t->get_ok( "//$userid:$password@/api/v1/patrons/" . $patron_2->id )->status_is(404)
+        $t->get_ok( "//$userid:$password@/api/v1/patrons/" . $patron_2->id )
+            ->status_is(404)
             ->json_is( '/error' => 'Patron not found' );
 
         $schema->storage->txn_rollback;
@@ -466,7 +489,8 @@ subtest 'add() tests' => sub {
         my $userid = $librarian->userid;
         t::lib::Mocks::mock_preference( 'PatronDuplicateMatchingAddFields', 'firstname|surname|dateofbirth' );
 
-        $t->post_ok( "//$userid:$password@/api/v1/patrons" => json => $newpatron )->status_is(409)
+        $t->post_ok( "//$userid:$password@/api/v1/patrons" => json => $newpatron )
+            ->status_is(409)
             ->json_is( '/error' => "A patron record matching these details already exists" );
 
         # Create a library just to make sure its ID doesn't exist on the DB
@@ -480,7 +504,8 @@ subtest 'add() tests' => sub {
 
         # Test duplicate userid constraint
         $t->post_ok( "//$userid:$password@/api/v1/patrons" => { 'x-confirm-not-duplicate' => 1 } => json => $newpatron )
-            ->status_is(400)->json_is( '/error' => "Problem with " . $newpatron->{userid} );
+            ->status_is(400)
+            ->json_is( '/error' => "Problem with " . $newpatron->{userid} );
 
         $newpatron->{library_id} = $patron->branchcode;
 
@@ -489,7 +514,8 @@ subtest 'add() tests' => sub {
         warning_like {
             $t->post_ok(
                 "//$userid:$password@/api/v1/patrons" => { 'x-confirm-not-duplicate' => 1 } => json => $newpatron )
-                ->status_is(409)->json_has( '/error', 'Fails when trying to POST duplicate cardnumber' )
+                ->status_is(409)
+                ->json_has( '/error', 'Fails when trying to POST duplicate cardnumber' )
                 ->json_like( '/conflict' => qr/(borrowers\.)?cardnumber/ );
         }
         qr/DBD::mysql::st execute failed: Duplicate entry '(.*?)' for key '(borrowers\.)?cardnumber'/;
@@ -504,7 +530,8 @@ subtest 'add() tests' => sub {
         $newpatron->{category_id} = $deleted_category_id;    # Test invalid patron category
 
         $t->post_ok( "//$userid:$password@/api/v1/patrons" => { 'x-confirm-not-duplicate' => 1 } => json => $newpatron )
-            ->status_is(400)->json_is( '/error' => "Given category_id does not exist" );
+            ->status_is(400)
+            ->json_is( '/error' => "Given category_id does not exist" );
         $newpatron->{category_id} = $patron->categorycode;
 
         $newpatron->{falseproperty} = "Non existent property";
@@ -535,11 +562,15 @@ subtest 'add() tests' => sub {
         $letter_enqueued = 0;
         $t->post_ok(
             "//$userid:$password@/api/v1/patrons" => { 'x-koha-override' => 'welcome_yes' } => json => $newpatron )
-            ->status_is( 201, 'Patron created successfully' )->header_like(
+            ->status_is( 201, 'Patron created successfully' )
+            ->header_like(
             Location => qr|^\/api\/v1\/patrons/\d*|,
             'REST3.4.1'
-        )->json_has( '/patron_id', 'got a patron_id' )->json_is( '/cardnumber' => $newpatron->{cardnumber} )
-            ->json_is( '/surname'       => $newpatron->{surname} )->json_is( '/firstname' => $newpatron->{firstname} )
+            )
+            ->json_has( '/patron_id', 'got a patron_id' )
+            ->json_is( '/cardnumber'    => $newpatron->{cardnumber} )
+            ->json_is( '/surname'       => $newpatron->{surname} )
+            ->json_is( '/firstname'     => $newpatron->{firstname} )
             ->json_is( '/date_of_birth' => $newpatron->{date_of_birth}, 'Date field set (Bug 28585)' )
             ->json_is( '/last_seen'     => $newpatron->{last_seen},     'Date-time field set (Bug 28585)' );
 
@@ -771,7 +802,8 @@ subtest 'add() tests' => sub {
                     "city"        => "Konstanz",
                     "library_id"  => "MPL"
                 }
-            )->status_is(400)
+                )
+                ->status_is(400)
                 ->json_is( '/error' => "Tried to add more than one non-repeatable attributes. type=$code value=$attr" );
 
             is( Koha::Patrons->search->count, $patrons_count, 'No patron added' );
@@ -786,7 +818,8 @@ subtest 'add() tests' => sub {
                     "city"        => "Konstanz",
                     "library_id"  => "MPL"
                 }
-            )->status_is(400)
+                )
+                ->status_is(400)
                 ->json_is(
                 '/error' => "Your action breaks a unique constraint on the attribute. type=$code value=$attr" );
 
@@ -947,7 +980,8 @@ subtest 'add() tests' => sub {
                     "city"        => "Bigtown",
                     "library_id"  => "MPL",
                 }
-            )->status_is( 201, 'Patron added with EnhancedMessagingPreferences disabled' )
+                )
+                ->status_is( 201, 'Patron added with EnhancedMessagingPreferences disabled' )
                 ->tx->res->json->{patron_id};
 
             # No messaging preferences should be set
@@ -1007,7 +1041,8 @@ subtest 'update() tests' => sub {
         delete $newpatron->{anonymized};
         delete $newpatron->{self_renewal_available};
 
-        $t->put_ok( "//$userid:$password@/api/v1/patrons/-1" => json => $newpatron )->status_is(404)
+        $t->put_ok( "//$userid:$password@/api/v1/patrons/-1" => json => $newpatron )
+            ->status_is(404)
             ->json_has( '/error', 'Fails when trying to PUT nonexistent patron' );
 
         # Create a library just to make sure its ID doesn't exist on the DB
@@ -1021,7 +1056,8 @@ subtest 'update() tests' => sub {
         $newpatron->{category_id} = $deleted_category_id;
 
         $t->put_ok( "//$userid:$password@/api/v1/patrons/" . $patron_2->borrowernumber => json => $newpatron )
-            ->status_is(400)->json_is( '/error' => "Given category_id does not exist" );
+            ->status_is(400)
+            ->json_is( '/error' => "Given category_id does not exist" );
 
         # Restore the valid category
         $newpatron->{category_id} = $patron_2->categorycode;
@@ -1038,7 +1074,8 @@ subtest 'update() tests' => sub {
 
         warning_like {
             $t->put_ok( "//$userid:$password@/api/v1/patrons/" . $patron_2->borrowernumber => json => $newpatron )
-                ->status_is(400)->json_is( '/error' => "Given library_id does not exist" );
+                ->status_is(400)
+                ->json_is( '/error' => "Given library_id does not exist" );
         }
         qr/DBD::mysql::st execute failed: Cannot add or update a child row: a foreign key constraint fails/;
 
@@ -1049,7 +1086,8 @@ subtest 'update() tests' => sub {
         $newpatron->{falseproperty} = "Non existent property";
 
         $t->put_ok( "//$userid:$password@/api/v1/patrons/" . $patron_2->borrowernumber => json => $newpatron )
-            ->status_is(400)->json_is( '/errors/0/message' => 'Properties not allowed: falseproperty.' );
+            ->status_is(400)
+            ->json_is( '/errors/0/message' => 'Properties not allowed: falseproperty.' );
 
         # Get rid of the invalid attribute
         delete $newpatron->{falseproperty};
@@ -1059,7 +1097,8 @@ subtest 'update() tests' => sub {
         $newpatron->{userid}     = $patron_1->userid;
 
         $t->put_ok( "//$userid:$password@/api/v1/patrons/" . $patron_2->borrowernumber => json => $newpatron )
-            ->status_is(400)->json_has( '/error', "Problem with userid " . $patron_1->userid );
+            ->status_is(400)
+            ->json_has( '/error', "Problem with userid " . $patron_1->userid );
 
         $newpatron->{cardnumber} = $patron_1->id . $patron_2->id;
         $newpatron->{userid}     = "user" . $patron_1->id . $patron_2->id;
@@ -1146,7 +1185,7 @@ subtest 'update() tests' => sub {
             ->status_is(
             403,
             "Non-superlibrarian user change of superlibrarian secondary_email to undefined forbidden"
-        )->json_is( { error => "Not enough privileges to change a superlibrarian's email" } );
+            )->json_is( { error => "Not enough privileges to change a superlibrarian's email" } );
 
         $newpatron->{secondary_email}  = $superlibrarian->emailpro;
         $newpatron->{altaddress_email} = 'nonsense@no.no';
@@ -1162,7 +1201,7 @@ subtest 'update() tests' => sub {
             ->status_is(
             403,
             "Non-superlibrarian user change of superlibrarian altaddress_email to undefined forbidden"
-        )->json_is( { error => "Not enough privileges to change a superlibrarian's email" } );
+            )->json_is( { error => "Not enough privileges to change a superlibrarian's email" } );
 
         # update patron without sending email
         delete $newpatron->{email};
@@ -1233,13 +1272,15 @@ subtest 'update() tests' => sub {
                     "city"        => "Konstanz",
                     "library_id"  => "MPL"
                 }
-            )->status_is(400)
+                )
+                ->status_is(400)
                 ->json_is(
                 '/error' => "Missing mandatory extended attribute (type=" . $attr_type_mandatory->code . ")" );
 
             $t->put_ok( "//$userid:$password@/api/v1/patrons/"
                     . $superlibrarian->borrowernumber => { 'x-koha-embed' => 'extended_attributes' } => json =>
-                    $newpatron )->status_is(400)
+                    $newpatron )
+                ->status_is(400)
                 ->json_is( '/error'      => 'Tried to use an invalid attribute type. type=' . $deleted_attr_code )
                 ->json_is( '/error_code' => 'invalid_attribute_type' );
 
@@ -1256,11 +1297,13 @@ subtest 'update() tests' => sub {
 
             $t->put_ok( "//$userid:$password@/api/v1/patrons/"
                     . $superlibrarian->borrowernumber => { 'x-koha-embed' => 'extended_attributes' } => json =>
-                    $newpatron )->status_is(400)
+                    $newpatron )
+                ->status_is(400)
                 ->json_is( '/error' => 'Your action breaks a unique constraint on the attribute. type='
                     . $attr_type_unique->code
                     . ' value='
-                    . $unique_attr->attribute )->json_is( '/error_code' => 'attribute_not_unique' );
+                    . $unique_attr->attribute )
+                ->json_is( '/error_code' => 'attribute_not_unique' );
 
             $newpatron->{extended_attributes} = [
                 { type => $attr_type_repeatable->code, value => 'a' },
@@ -1271,11 +1314,13 @@ subtest 'update() tests' => sub {
 
             $t->put_ok( "//$userid:$password@/api/v1/patrons/"
                     . $superlibrarian->borrowernumber => { 'x-koha-embed' => 'extended_attributes' } => json =>
-                    $newpatron )->status_is(400)
+                    $newpatron )
+                ->status_is(400)
                 ->json_is( '/error' => 'Your action breaks a unique constraint on the attribute. type='
                     . $attr_type_unique->code
                     . ' value='
-                    . $unique_attr->attribute )->json_is( '/error_code' => 'attribute_not_unique' );
+                    . $unique_attr->attribute )
+                ->json_is( '/error_code' => 'attribute_not_unique' );
 
             $newpatron->{extended_attributes} = [
                 { type => $attr_type_repeatable->code, value => 'a' },
@@ -1285,10 +1330,12 @@ subtest 'update() tests' => sub {
 
             $t->put_ok( "//$userid:$password@/api/v1/patrons/"
                     . $superlibrarian->borrowernumber => { 'x-koha-embed' => 'extended_attributes' } => json =>
-                    $newpatron )->status_is(400)
+                    $newpatron )
+                ->status_is(400)
                 ->json_is( '/error' => 'Tried to add more than one non-repeatable attributes. type='
                     . $attr_type_mandatory->code
-                    . ' value=pong' )->json_is( '/error_code' => 'non_repeatable_attribute' );
+                    . ' value=pong' )
+                ->json_is( '/error_code' => 'non_repeatable_attribute' );
 
             my $unique_value = $unique_attr->attribute;
             $unique_attr->delete;
@@ -1347,7 +1394,8 @@ subtest 'delete() tests' => sub {
 
         t::lib::Mocks::mock_preference( 'AnonymousPatron', $patron->borrowernumber );
         $t->delete_ok( "//$userid:$password@/api/v1/patrons/" . $patron->borrowernumber )
-            ->status_is( 409, 'Anonymous patron cannot be deleted' )->json_is(
+            ->status_is( 409, 'Anonymous patron cannot be deleted' )
+            ->json_is(
             {
                 error      => 'Anonymous patron cannot be deleted',
                 error_code => 'is_anonymous_patron'
@@ -1369,7 +1417,8 @@ subtest 'delete() tests' => sub {
         $guarantee->add_guarantor( { guarantor_id => $patron->id, relationship => 'parent' } );
 
         $t->delete_ok( "//$userid:$password@/api/v1/patrons/" . $patron->borrowernumber )
-            ->status_is( 409, 'Patron with checkouts cannot be deleted' )->json_is(
+            ->status_is( 409, 'Patron with checkouts cannot be deleted' )
+            ->json_is(
             {
                 error      => 'Pending checkouts prevent deletion',
                 error_code => 'has_checkouts'
@@ -1380,7 +1429,8 @@ subtest 'delete() tests' => sub {
         $checkout->delete;
 
         $t->delete_ok( "//$userid:$password@/api/v1/patrons/" . $patron->borrowernumber )
-            ->status_is( 409, 'Patron with debt cannot be deleted' )->json_is(
+            ->status_is( 409, 'Patron with debt cannot be deleted' )
+            ->json_is(
             {
                 error      => 'Pending debts prevent deletion',
                 error_code => 'has_debt'
@@ -1391,7 +1441,8 @@ subtest 'delete() tests' => sub {
         $patron->account->pay( { amount => 10, debits => [$debit] } );
 
         $t->delete_ok( "//$userid:$password@/api/v1/patrons/" . $patron->borrowernumber )
-            ->status_is( 409, 'Patron with guarantees cannot be deleted' )->json_is(
+            ->status_is( 409, 'Patron with guarantees cannot be deleted' )
+            ->json_is(
             {
                 error      => 'Patron is a guarantor and it prevents deletion',
                 error_code => 'has_guarantees'
@@ -1404,7 +1455,8 @@ subtest 'delete() tests' => sub {
         $patron->protected(1)->store();
 
         $t->delete_ok( "//$userid:$password@/api/v1/patrons/" . $patron->borrowernumber )
-            ->status_is( 409, 'Protected patron cannot be deleted' )->json_is(
+            ->status_is( 409, 'Protected patron cannot be deleted' )
+            ->json_is(
             {
                 error      => 'Protected patrons cannot be deleted',
                 error_code => 'is_protected'
@@ -1414,7 +1466,8 @@ subtest 'delete() tests' => sub {
         $patron->protected(0)->store();
 
         $t->delete_ok( "//$userid:$password@/api/v1/patrons/" . $patron->borrowernumber )
-            ->status_is( 204, 'REST3.2.4' )->content_is( '', 'REST3.3.4' );
+            ->status_is( 204, 'REST3.2.4' )
+            ->content_is( '', 'REST3.3.4' );
 
         my $deleted_patrons = Koha::Old::Patrons->search( { borrowernumber => $patron->borrowernumber } );
         is( $deleted_patrons->count, 1, 'The patron has been moved to the vault' );
@@ -1446,11 +1499,13 @@ subtest 'guarantors_can_see_charges() tests' => sub {
     )->status_is(401)->json_is( { error => "Authentication failure." } );
 
     $t->put_ok( "//$userid:$password@/api/v1/public/patrons/$other_patron_id/guarantors/can_see_charges" => json =>
-            { allowed => Mojo::JSON->true } )->status_is(403)
+            { allowed => Mojo::JSON->true } )
+        ->status_is(403)
         ->json_is( { error => "Unprivileged user cannot access another user's resources" } );
 
     $t->put_ok( "//$userid:$password@/api/v1/public/patrons/$patron_id/guarantors/can_see_charges" => json =>
-            { allowed => Mojo::JSON->true } )->status_is(403)
+            { allowed => Mojo::JSON->true } )
+        ->status_is(403)
         ->json_is( '/error', 'The current configuration doesn\'t allow the requested action.' );
 
     t::lib::Mocks::mock_preference( 'AllowPatronToSetFinesVisibilityForGuarantor', 1 );
@@ -1488,13 +1543,15 @@ subtest 'guarantors_can_see_checkouts() tests' => sub {
             { allowed => Mojo::JSON->true } )->status_is(401)->json_is( { error => "Authentication failure." } );
 
     $t->put_ok( "//$userid:$password@/api/v1/public/patrons/$other_patron_id/guarantors/can_see_checkouts" => json =>
-            { allowed => Mojo::JSON->true } )->status_is(403)
+            { allowed => Mojo::JSON->true } )
+        ->status_is(403)
         ->json_is( { error => "Unprivileged user cannot access another user's resources" } );
 
     t::lib::Mocks::mock_preference( 'AllowPatronToSetCheckoutsVisibilityForGuarantor', 0 );
 
     $t->put_ok( "//$userid:$password@/api/v1/public/patrons/$patron_id/guarantors/can_see_checkouts" => json =>
-            { allowed => Mojo::JSON->true } )->status_is(403)
+            { allowed => Mojo::JSON->true } )
+        ->status_is(403)
         ->json_is( '/error', 'The current configuration doesn\'t allow the requested action.' );
 
     t::lib::Mocks::mock_preference( 'AllowPatronToSetCheckoutsVisibilityForGuarantor', 1 );
@@ -1537,7 +1594,8 @@ sub unauthorized_access_tests {
         $unauthorized_patron->set_password( { password => $password, skip_validation => 1 } );
         my $unauth_userid = $unauthorized_patron->userid;
 
-        $t->$verb_ok( "//$unauth_userid:$password\@$endpoint" => json => $json )->status_is(403)
+        $t->$verb_ok( "//$unauth_userid:$password\@$endpoint" => json => $json )
+            ->status_is(403)
             ->json_has('/required_permissions');
     };
 }
