@@ -2068,9 +2068,9 @@ subtest 'BorrowersLog and CardnumberLog tests' => sub {
 
     my @logs = $schema->resultset('ActionLog')
         ->search( { module => 'MEMBERS', action => 'MODIFY', object => $patron->borrowernumber } );
-    my $log_info = from_json( $logs[0]->info );
-    is( $log_info->{cardnumber}->{after},  'TESTCARDNUMBER', 'Got correct new cardnumber' );
-    is( $log_info->{cardnumber}->{before}, $cardnumber,      'Got correct old cardnumber' );
+    my $log_diff = from_json( $logs[0]->diff );
+    is( $log_diff->{D}->{cardnumber}->{N}, 'TESTCARDNUMBER', 'Got correct new cardnumber in diff' );
+    is( $log_diff->{D}->{cardnumber}->{O}, $cardnumber,      'Got correct old cardnumber in diff' );
     is( scalar @logs, 1, 'With BorrowersLog, one detailed MODIFY action should be logged for the modification.' );
 
     t::lib::Mocks::mock_preference( 'TrackLastPatronActivityTriggers', 'connection' );
@@ -2122,9 +2122,15 @@ subtest 'BorrowersLog and CardnumberLog tests' => sub {
         scalar @logs, 2,
         'With CardnumberLogs, one more detailed MODIFY_CARDNUMBER action should be logged for the modification.'
     );
-    $log_info = from_json( $logs[1]->info );
-    is( $log_info->{after},  'TESTCARDNUMBER',   'Got correct new cardnumber' );
-    is( $log_info->{before}, 'TESTCARDNUMBER_1', 'Got correct old cardnumber' );
+    my $cn_log_diff = from_json( $logs[1]->diff );
+    is(
+        $cn_log_diff->{D}->{cardnumber}->{N}, 'TESTCARDNUMBER',
+        'Got correct new cardnumber in MODIFY_CARDNUMBER diff'
+    );
+    is(
+        $cn_log_diff->{D}->{cardnumber}->{O}, 'TESTCARDNUMBER_1',
+        'Got correct old cardnumber in MODIFY_CARDNUMBER diff'
+    );
 
     t::lib::Mocks::mock_preference( 'CardnumberLog', 0 );
     $patron->set( { cardnumber => 'TESTCARDNUMBER_1' } )->store;
