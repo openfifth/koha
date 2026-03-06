@@ -22,7 +22,7 @@ use Modern::Perl;
 
 use JSON               qw( encode_json decode_json to_json );
 use List::MoreUtils    qw( any none uniq notall zip6);
-use Scalar::Util       qw( looks_like_number );
+use Scalar::Util       qw( blessed looks_like_number );
 use Unicode::Normalize qw( NFKD );
 use Try::Tiny;
 use DateTime ();
@@ -359,8 +359,10 @@ sub store {
                 $self->discard_changes;
                 $self->update_lastseen('creation');
 
-                logaction( "MEMBERS", "CREATE", $self->borrowernumber, "" )
-                    if C4::Context->preference("BorrowersLog");
+                if ( C4::Context->preference("BorrowersLog") ) {
+                    my $patron_data = $self->_unblessed_for_log;
+                    logaction( "MEMBERS", "CREATE", $self->borrowernumber, $patron_data, undef, $patron_data );
+                }
             } else {    #ModMember
 
                 my $self_from_storage = $self->get_from_storage;
@@ -397,18 +399,18 @@ sub store {
 
                 # Actionlogs
                 if ( C4::Context->preference("BorrowersLog") || C4::Context->preference("CardnumberLog") ) {
-                    my $info;
                     my $from_storage = $self_from_storage->unblessed;
                     my $from_object  = $self->unblessed;
 
                     # Object's dateexpiry is a DateTime object which stringifies to iso8601 datetime,
-                    # but the column in only a date so we need to convert the datetime to just a date
+                    # but the column is only a date so we need to convert the datetime to just a date
                     # to know if it has actually changed.
                     $from_object->{dateexpiry} = dt_from_string( $from_object->{dateexpiry} )->ymd
                         if $from_object->{dateexpiry};
 
-                    my @skip_fields = (qw/lastseen updated_on/);
+                    my @skip_fields = (qw/lastseen updated_on password/);
                     my @keys        = C4::Context->preference("BorrowersLog") ? keys %{$from_storage} : ('cardnumber');
+                    my $changed;
                     for my $key (@keys) {
                         next if any { /$key/ } @skip_fields;
                         my $storage_value = $from_storage->{$key} // q{};
@@ -416,33 +418,37 @@ sub store {
                         if (   ( $storage_value || $object_value )
                             && ( $storage_value ne $object_value ) )
                         {
-                            $info->{$key} = {
-                                before => $from_storage->{$key},
-                                after  => $from_object->{$key}
-                            };
+                            $changed->{$key} = 1;
                         }
                     }
 
-                    if ( defined($info) ) {
-                        logaction(
-                            "MEMBERS",
-                            "MODIFY",
-                            $self->borrowernumber,
-                            to_json(
-                                $info,
-                                { utf8 => 1, pretty => 1, canonical => 1 }
-                            )
-                        ) if C4::Context->preference("BorrowersLog");
+                    if ( defined($changed) ) {
+                        my %log_from = map {
+                            my $v = $from_storage->{$_};
+                            $_ => ( blessed($v) ? "$v" : $v )
+                        } grep {
+                            my $k = $_;
+                            !any { /$k/ } @skip_fields
+                        } keys %{$from_storage};
+                        my %log_to = map {
+                            my $v = $from_object->{$_};
+                            $_ => ( blessed($v) ? "$v" : $v )
+                        } grep {
+                            my $k = $_;
+                            !any { /$k/ } @skip_fields
+                        } keys %{$from_object};
+
+                        logaction( "MEMBERS", "MODIFY", $self->borrowernumber, \%log_to, undef, \%log_from )
+                            if C4::Context->preference("BorrowersLog");
+
                         logaction(
                             "MEMBERS",
                             "MODIFY_CARDNUMBER",
                             $self->borrowernumber,
-                            to_json(
-                                $info->{cardnumber},
-                                { utf8 => 1, pretty => 1, canonical => 1 }
-                            )
-                        ) if defined $info->{cardnumber} && C4::Context->preference("CardnumberLog");
-
+                            { cardnumber => $from_object->{cardnumber} },
+                            undef,
+                            { cardnumber => $from_storage->{cardnumber} }
+                        ) if $changed->{cardnumber} && C4::Context->preference("CardnumberLog");
                     }
                 }
 
@@ -489,9 +495,12 @@ sub delete {
             # for patron selfreg
             $_->delete for Koha::Patron::Modifications->search( { borrowernumber => $self->borrowernumber } )->as_list;
 
+            my $patron_data = C4::Context->preference("BorrowersLog") ? $self->_unblessed_for_log : undef;
+
             $self->SUPER::delete;
 
-            logaction( "MEMBERS", "DELETE", $self->borrowernumber, "" ) if C4::Context->preference("BorrowersLog");
+            logaction( "MEMBERS", "DELETE", $self->borrowernumber, $patron_data, undef, $patron_data )
+                if C4::Context->preference("BorrowersLog");
         }
     );
     return $self;
@@ -3848,6 +3857,24 @@ sub permissions {
 
 sub _type {
     return 'Borrower';
+}
+
+=head3 _unblessed_for_log
+
+Returns a plain hashref of patron column values safe for JSON serialisation.
+Date/datetime columns inflated to DateTime objects are converted to their
+ISO string representation, and sensitive/noisy fields are excluded.
+
+=cut
+
+sub _unblessed_for_log {
+    my ($self) = @_;
+    my $data = $self->unblessed;
+    delete @{$data}{qw(password lastseen updated_on)};
+    for my $key ( keys %$data ) {
+        $data->{$key} = "$data->{$key}" if blessed( $data->{$key} );
+    }
+    return $data;
 }
 
 =head1 AUTHORS
