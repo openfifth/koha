@@ -64,14 +64,16 @@ subtest 'start()' => sub {
     my $borrowernumber = $patron->borrowernumber;
 
     $t->get_ok("//$userid:$password@/api/v1/public/patrons/$borrowernumber/self_renewal")
-        ->status_is( 403, 'REST3.2.2' )->json_is( { error => "You are not eligible for self-renewal" } );
+        ->status_is( 403, 'REST3.2.2' )
+        ->json_is( { error => "You are not eligible for self-renewal" } );
 
     $category->self_renewal_enabled(1)->store();
 
     t::lib::Mocks::mock_preference( 'OPACPatronDetails', 1 );
 
     $t->get_ok("//$userid:$password@/api/v1/public/patrons/$borrowernumber/self_renewal")
-        ->status_is( 200, 'REST3.2.2' )->json_is(
+        ->status_is( 200, 'REST3.2.2' )
+        ->json_is(
         {
             self_renewal_settings => {
                 self_renewal_failure_message      => $category->self_renewal_failure_message,
@@ -92,7 +94,8 @@ subtest 'start()' => sub {
         }
     );
     $t->get_ok("//$userid:$password@/api/v1/public/patrons/$borrowernumber/self_renewal")
-        ->status_is( 200, 'REST3.2.2' )->json_is(
+        ->status_is( 200, 'REST3.2.2' )
+        ->json_is(
         {
             self_renewal_settings => {
                 self_renewal_failure_message      => $category->self_renewal_failure_message,
@@ -139,7 +142,8 @@ subtest 'submit()' => sub {
     my $borrowernumber = $patron->borrowernumber;
 
     $t->post_ok( "//$userid:$password@/api/v1/public/patrons/$borrowernumber/self_renewal" => json => {} )
-        ->status_is( 403, 'REST3.2.2' )->json_is( { error => "You are not eligible for self-renewal" } );
+        ->status_is( 403, 'REST3.2.2' )
+        ->json_is( { error => "You are not eligible for self-renewal" } );
 
     t::lib::Mocks::mock_preference( 'OPACPatronDetails',                1 );
     t::lib::Mocks::mock_preference( 'AutoApprovePatronProfileSettings', 0 );
