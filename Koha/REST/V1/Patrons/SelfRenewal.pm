@@ -99,9 +99,12 @@ sub submit {
                             $changes_detected++;
                         }
                     }
-                    if ($changes_detected) {
+                    my $updated_extended_attributes =
+                        $patron->identify_updated_extended_attributes($extended_attributes);
+                    if ( $changes_detected || scalar(@$updated_extended_attributes) ) {
                         $changed_fields->{changed_fields}      = join ',', keys %$changed_fields;
-                        $changed_fields->{extended_attributes} = to_json($extended_attributes) if $extended_attributes;
+                        $changed_fields->{extended_attributes} = to_json($updated_extended_attributes)
+                            if scalar(@$updated_extended_attributes);
                         $patron->request_modification($changed_fields);
                     }
                 }
