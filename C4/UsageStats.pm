@@ -307,8 +307,8 @@ sub _shared_preferences {
         EdiBlockDuplicateInvoice
         EdiBlockDuplicateInvoiceEmailAddresses
         EdiBlockDuplicateInvoiceEmailNotice
-        EdiDuplicateOrderEmailAddresses
-        EdiDuplicateOrderEmailNotice
+        EdifactOrderSendBlockDuplicatesEmailAddresses
+        EdifactOrderSendBlockDuplicatesEmailNotice
         EmailFieldPrimary
         autoMemberNum
         BorrowerRenewalPeriodBase
