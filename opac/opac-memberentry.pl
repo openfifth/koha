@@ -333,13 +333,14 @@ if ( $op eq 'cud-create' ) {
 
         $template->param( op => 'edit' );
     } else {
+        my $patron = Koha::Patrons->find($borrowernumber);
 
         # If preferred name is not included but firstname is then set preferred_name to firstname
         $borrower{preferred_name} = $borrower{firstname}
             if defined $borrower{firstname} && !defined $borrower{preferred_name};
         my %borrower_changes = DelUnchangedFields( $borrowernumber, %borrower );
         $borrower_changes{'changed_fields'} = join ',', keys %borrower_changes;
-        my $extended_attributes_changes = FilterUnchangedAttributes( $borrowernumber, $attributes );
+        my $extended_attributes_changes = $patron->identify_updated_extended_attributes($attributes);
 
         if ( $borrower_changes{'changed_fields'} || scalar @{$extended_attributes_changes} > 0 ) {
             ( $template, $borrowernumber, $cookie ) = get_template_and_user(
@@ -354,7 +355,6 @@ if ( $op eq 'cud-create' ) {
             $borrower_changes{borrowernumber}      = $borrowernumber;
             $borrower_changes{extended_attributes} = to_json($extended_attributes_changes);
 
-            my $patron = Koha::Patrons->find($borrowernumber);
             $patron->request_modification( \%borrower_changes );
             $template->param( borrower => $patron->unblessed );
         } else {
@@ -620,67 +620,6 @@ sub DelEmptyFields {
     }
 
     return %borrower;
-}
-
-sub FilterUnchangedAttributes {
-    my ( $borrowernumber, $entered_attributes ) = @_;
-
-    my @patron_attributes = grep { $_->type->opac_editable ? $_ : () }
-        Koha::Patron::Attributes->search( { borrowernumber => $borrowernumber } )->as_list;
-
-    my $patron_attribute_types;
-    foreach my $attr (@patron_attributes) {
-        $patron_attribute_types->{ $attr->code } += 1;
-    }
-
-    my $passed_attribute_types;
-    foreach my $attr ( @{$entered_attributes} ) {
-        $passed_attribute_types->{ $attr->{code} } += 1;
-    }
-
-    my @changed_attributes;
-
-    # Loop through the current patron attributes
-    foreach my $attribute_type ( keys %{$patron_attribute_types} ) {
-        if ( ( $patron_attribute_types->{$attribute_type} // q{} ) ne
-            ( $passed_attribute_types->{$attribute_type} // q{} ) )
-        {
-            # count differs, overwrite all attributes for given type
-            foreach my $attr ( @{$entered_attributes} ) {
-                push @changed_attributes, $attr
-                    if $attr->{code} eq $attribute_type;
-            }
-        } else {
-
-            # count matches, check values
-            my $changes = 0;
-            foreach my $attr ( grep { $_->code eq $attribute_type } @patron_attributes ) {
-                $changes = 1
-                    unless any { $_->{value} eq $attr->attribute } @{$entered_attributes};
-                last if $changes;
-            }
-
-            if ($changes) {
-                foreach my $attr ( @{$entered_attributes} ) {
-                    push @changed_attributes, $attr
-                        if $attr->{code} eq $attribute_type;
-                }
-            }
-        }
-    }
-
-    # Loop through passed attributes, looking for new ones
-    foreach my $attribute_type ( keys %{$passed_attribute_types} ) {
-        if ( !defined $patron_attribute_types->{$attribute_type} ) {
-
-            # YAY, new stuff
-            foreach my $attr ( grep { $_->{code} eq $attribute_type } @{$entered_attributes} ) {
-                push @changed_attributes, $attr;
-            }
-        }
-    }
-
-    return \@changed_attributes;
 }
 
 sub GeneratePatronAttributesForm {
