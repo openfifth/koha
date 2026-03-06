@@ -12,7 +12,7 @@ return {
             q{
             INSERT IGNORE INTO systempreferences (variable, value, options, explanation, type)
             VALUES (
-                'EdiBlockDuplicateInvoice',
+                'EdifactInvoiceImportBlockDuplicates',
                 '0',
                 NULL,
                 'Block automatic processing of EDIFACT invoices when a duplicate invoice number is detected for the same supplier. Similar to AcqWarnOnDuplicateInvoice for manually created invoices, but applies to invoices received via EDI.',
@@ -20,17 +20,17 @@ return {
             )
         }
         );
-        say $out "Added system preference 'EdiBlockDuplicateInvoice'";
+        say $out "Added system preference 'EdifactInvoiceImportBlockDuplicates'";
 
         # Email notification destination
         $dbh->do(
             q{
             INSERT IGNORE INTO systempreferences (variable, value, options, explanation, type)
             VALUES (
-                'EdiBlockDuplicateInvoiceEmailNotice',
+                'EdifactInvoiceImportBlockDuplicatesEmailNotice',
                 '0',
-                '0|AcquisitionsDefaultEmailAddress|EdiBlockDuplicateInvoiceEmailAddresses|KohaAdminEmailAddress',
-                'Send duplicate EDIFACT invoice block notifications using the EDI_DUP_INV_LIBRARY notice template to the selected address. Vendor EDI contacts are always notified separately via EDI_DUP_INV_VENDOR. Requires EdiBlockDuplicateInvoice to be enabled.',
+                '0|AcquisitionsDefaultEmailAddress|EdifactInvoiceImportBlockDuplicatesEmailAddresses|KohaAdminEmailAddress',
+                'Send duplicate EDIFACT invoice block notifications using the EDI_DUP_INV_LIBRARY notice template to the selected address. Vendor EDI contacts are always notified separately via EDI_DUP_INV_VENDOR. Requires EdifactInvoiceImportBlockDuplicates to be enabled.',
                 'Choice'
             )
         }
@@ -39,29 +39,29 @@ return {
             q{
             UPDATE systempreferences
             SET type    = 'Choice',
-                options = '0|AcquisitionsDefaultEmailAddress|EdiBlockDuplicateInvoiceEmailAddresses|KohaAdminEmailAddress',
+                options = '0|AcquisitionsDefaultEmailAddress|EdifactInvoiceImportBlockDuplicatesEmailAddresses|KohaAdminEmailAddress',
                 value   = CASE WHEN value = '1' THEN 'AcquisitionsDefaultEmailAddress' ELSE '0' END,
-                explanation = 'Send duplicate EDIFACT invoice block notifications using the EDI_DUP_INV_LIBRARY notice template to the selected address. Vendor EDI contacts are always notified separately via EDI_DUP_INV_VENDOR. Requires EdiBlockDuplicateInvoice to be enabled.'
-            WHERE variable = 'EdiBlockDuplicateInvoiceEmailNotice'
+                explanation = 'Send duplicate EDIFACT invoice block notifications using the EDI_DUP_INV_LIBRARY notice template to the selected address. Vendor EDI contacts are always notified separately via EDI_DUP_INV_VENDOR. Requires EdifactInvoiceImportBlockDuplicates to be enabled.'
+            WHERE variable = 'EdifactInvoiceImportBlockDuplicatesEmailNotice'
               AND type = 'YesNo'
         }
         );
-        say $out "Added system preference 'EdiBlockDuplicateInvoiceEmailNotice'";
+        say $out "Added system preference 'EdifactInvoiceImportBlockDuplicatesEmailNotice'";
 
         # Email recipient list
         $dbh->do(
             q{
             INSERT IGNORE INTO systempreferences (variable, value, options, explanation, type)
             VALUES (
-                'EdiBlockDuplicateInvoiceEmailAddresses',
+                'EdifactInvoiceImportBlockDuplicatesEmailAddresses',
                 '',
                 NULL,
-                'Comma-separated list of acquisitions staff email addresses to use when EdiBlockDuplicateInvoiceEmailNotice is set to specific email addresses.',
+                'Comma-separated list of acquisitions staff email addresses to use when EdifactInvoiceImportBlockDuplicatesEmailNotice is set to specific email addresses.',
                 'Textarea'
             )
         }
         );
-        say $out "Added system preference 'EdiBlockDuplicateInvoiceEmailAddresses'";
+        say $out "Added system preference 'EdifactInvoiceImportBlockDuplicatesEmailAddresses'";
 
         # Add database index for performance
         my $index_exists = $dbh->selectrow_array(
