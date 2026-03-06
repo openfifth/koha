@@ -3941,3 +3941,128 @@ subtest "create_expiry_notice_parameters" => sub {
     is_deeply( $letter_params, $expected_return, 'Letter params generated correctly' );
     $schema->storage->txn_rollback;
 };
+
+subtest "identify_updated_extended_attributes" => sub {
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    my $patron = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+        }
+    );
+
+    my $unique_attribute_type = $builder->build_object(
+        {
+            class => 'Koha::Patron::Attribute::Types',
+            value => {
+                unique_id     => 1,
+                repeatable    => 0,
+                is_date       => 0,
+                opac_editable => 1
+            }
+        }
+    );
+    my $repeatable_attribute_type = $builder->build_object(
+        {
+            class => 'Koha::Patron::Attribute::Types',
+            value => {
+                unique_id     => 0,
+                repeatable    => 1,
+                is_date       => 0,
+                opac_editable => 1
+            }
+        }
+    );
+    my $normal_attribute_type = $builder->build_object(
+        {
+            class => 'Koha::Patron::Attribute::Types',
+            value => {
+                unique_id     => 0,
+                repeatable    => 0,
+                is_date       => 0,
+                opac_editable => 1
+            }
+        }
+    );
+
+    my $attributes = [
+        {
+            attribute => 'my unique attribute 1',
+            code      => $unique_attribute_type->code(),
+        },
+        {
+            attribute => 'my repeatable attribute 1',
+            code      => $repeatable_attribute_type->code(),
+        },
+        {
+            attribute => 'my normal attribute 1',
+            code      => $normal_attribute_type->code(),
+        }
+    ];
+    $patron->extended_attributes($attributes);
+
+    my $changed_attributes = [
+        {
+            attribute => 'this is new',
+            code      => $unique_attribute_type->code(),
+        },
+        {
+            attribute => 'my repeatable attribute 1',
+            code      => $repeatable_attribute_type->code(),
+        },
+        {
+            attribute => 'my normal attribute 1',
+            code      => $normal_attribute_type->code(),
+        }
+    ];
+
+    my $updated_attributes = $patron->identify_updated_extended_attributes($changed_attributes);
+    is( scalar(@$updated_attributes), 1, "Only the first one was changed" );
+
+    $attributes = [
+        {
+            attribute => 'my unique attribute 1',
+            code      => $unique_attribute_type->code(),
+        },
+        {
+            attribute => 'my repeatable attribute 1',
+            code      => $repeatable_attribute_type->code(),
+        },
+        {
+            attribute => 'my repeatable attribute 2',
+            code      => $repeatable_attribute_type->code(),
+        },
+        {
+            attribute => 'my normal attribute 1',
+            code      => $normal_attribute_type->code(),
+        }
+    ];
+
+    $patron->extended_attributes($attributes);
+
+    $changed_attributes = [
+        {
+            attribute => 'this is new',
+            code      => $unique_attribute_type->code(),
+        },
+        {
+            attribute => 'this repeatable one is also new',
+            code      => $repeatable_attribute_type->code(),
+        },
+        {
+            attribute => 'my repeatable attribute 2',
+            code      => $repeatable_attribute_type->code(),
+        },
+        {
+            attribute => 'my normal attribute 1',
+            code      => $normal_attribute_type->code(),
+        }
+    ];
+
+    $updated_attributes = $patron->identify_updated_extended_attributes($changed_attributes);
+    is( scalar(@$updated_attributes), 3, "Two have now been updated, one of which is repeatable and has two values" );
+
+    $schema->storage->txn_rollback;
+};
