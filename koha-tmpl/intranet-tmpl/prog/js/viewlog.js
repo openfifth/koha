@@ -706,6 +706,12 @@ $(document).ready(function () {
         $(".compare:checked").prop("checked", false).change();
     });
 
+    $("td.diff-col").each(function () {
+        var raw = $(this).text().trim();
+        if (raw) {
+            $(this).html(renderStructDiff(raw));
+        }
+    });
     patron_autocomplete($("#user"), {
         "on-select-callback": function (event, ui) {
             $("#user").val(ui.item.patron_id);
