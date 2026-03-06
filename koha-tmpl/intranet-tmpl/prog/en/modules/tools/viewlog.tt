@@ -61,6 +61,33 @@
             overflow: scroll;
             padding: 10px;
         }
+        /* Struct::Diff renderer */
+        table.struct-diff {
+            border-collapse: collapse;
+            font-size: 0.85em;
+            width: 100%;
+        }
+        table.struct-diff th,
+        table.struct-diff td {
+            border: 1px solid #ccc;
+            padding: 2px 6px;
+            vertical-align: top;
+        }
+        table.struct-diff th {
+            background-color: #f5f5f5;
+            white-space: nowrap;
+        }
+        table.struct-diff td.diff-key {
+            font-family: monospace;
+            white-space: nowrap;
+        }
+        table.struct-diff del,
+        table.struct-diff ins {
+            font-family: monospace;
+            text-decoration: none;
+            padding: 1px 3px;
+            display: inline-block;
+        }
     </style>
 [% END %]
 </head>
