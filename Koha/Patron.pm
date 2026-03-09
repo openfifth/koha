@@ -399,20 +399,12 @@ sub store {
 
                 # Actionlogs
                 if ( C4::Context->preference("BorrowersLog") || C4::Context->preference("CardnumberLog") ) {
-                    my $from_storage = $self_from_storage->unblessed;
-                    my $from_object  = $self->unblessed;
+                    my $from_storage = $self_from_storage->_unblessed_for_log;
+                    my $from_object  = $self->_unblessed_for_log;
 
-                    # Object's dateexpiry is a DateTime object which stringifies to iso8601 datetime,
-                    # but the column is only a date so we need to convert the datetime to just a date
-                    # to know if it has actually changed.
-                    $from_object->{dateexpiry} = dt_from_string( $from_object->{dateexpiry} )->ymd
-                        if $from_object->{dateexpiry};
-
-                    my @skip_fields = (qw/lastseen updated_on password/);
-                    my @keys        = C4::Context->preference("BorrowersLog") ? keys %{$from_storage} : ('cardnumber');
+                    my @keys = C4::Context->preference("BorrowersLog") ? keys %{$from_storage} : ('cardnumber');
                     my $changed;
                     for my $key (@keys) {
-                        next if any { /$key/ } @skip_fields;
                         my $storage_value = $from_storage->{$key} // q{};
                         my $object_value  = $from_object->{$key}  // q{};
                         if (   ( $storage_value || $object_value )
@@ -423,20 +415,8 @@ sub store {
                     }
 
                     if ( defined($changed) ) {
-                        my %log_from = map {
-                            my $v = $from_storage->{$_};
-                            $_ => ( blessed($v) ? "$v" : $v )
-                        } grep {
-                            my $k = $_;
-                            !any { /$k/ } @skip_fields
-                        } keys %{$from_storage};
-                        my %log_to = map {
-                            my $v = $from_object->{$_};
-                            $_ => ( blessed($v) ? "$v" : $v )
-                        } grep {
-                            my $k = $_;
-                            !any { /$k/ } @skip_fields
-                        } keys %{$from_object};
+                        my %log_from = map { $_ => $from_storage->{$_} } keys %{$changed};
+                        my %log_to   = map { $_ => $from_object->{$_} } keys %{$changed};
 
                         logaction( "MEMBERS", "MODIFY", $self->borrowernumber, \%log_to, undef, \%log_from )
                             if C4::Context->preference("BorrowersLog");
