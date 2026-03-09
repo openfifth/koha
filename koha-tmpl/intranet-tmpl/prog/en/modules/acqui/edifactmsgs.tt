@@ -48,18 +48,22 @@
     [% Asset.js("js/modals/edifact_interchange.js") | $raw %]
     [% Asset.js("js/modals/edifact_errors.js") | $raw %]
     <script nonce="[% Koha.CSPNonce | $raw %]">
+        var interface = "[% interface | html %]";
+        var theme = "[% theme | html %]";
+    </script>
+    <script nonce="[% Koha.CSPNonce | $raw %]">
         $(document).ready(function () {
             // Initialize enhanced EDIFACT display
             EdifactDisplay.init({
-                modalId: '#EDI_modal',
+                modalId: "#EDI_modal",
                 expandByDefault: true,
-                showElementDetails: false
+                showElementDetails: false,
             });
 
             // Get CSRF token once for reuse
-            var csrfToken = $('meta[name="csrf-token"]').attr("content") ? $('meta[name="csrf-token"]').attr("content").trim() : '';
+            var csrfToken = $('meta[name="csrf-token"]').attr("content") ? $('meta[name="csrf-token"]').attr("content").trim() : "";
 
-            var edi_msgs_table_url = '/api/v1/acquisitions/edifiles?';
+            var edi_msgs_table_url = "/api/v1/acquisitions/edifiles?";
             var edi_msgs_table = $("#edi_msgs").kohaTable(
                 {
                     ajax: {
@@ -94,7 +98,7 @@
                                     // JSON encode the errors instead of constructing HTML
                                     let errorsJson = JSON.stringify(row.errors);
                                     // Escape quotes for HTML attribute
-                                    errorsJson = errorsJson.replace(/"/g, '&quot;');
+                                    errorsJson = errorsJson.replace(/"/g, "&quot;");
                                     rendered = row.status + ' (<a href="#" data-bs-toggle="modal" data-bs-target="#EDI_errors_modal" data-bs-errors="' + errorsJson + '" data-bs-filename="' + row.filename + '">' + _("with errors") + "</a>)";
                                 } else {
                                     rendered = row.status;
@@ -158,10 +162,11 @@
 
                                 // Import button
                                 if (row.status == "new") {
-                                    result += '<a class="btn btn-default btn-xs import_msg" href="/cgi-bin/koha/acqui/edifactmsgs.pl?op=import&amp;message_id=' + encodeURIComponent(row.id) + '"><i class="fa fa-cog"></i> ' + _("Import") + "</a>";
+                                    result +=
+                                        '<a class="btn btn-default btn-xs import_msg" href="/cgi-bin/koha/acqui/edifactmsgs.pl?op=import&amp;message_id=' + encodeURIComponent(row.id) + '"><i class="fa fa-cog"></i> ' + _("Import") + "</a>";
                                 }
 
-                                result += '</div>';
+                                result += "</div>";
                                 return result;
                             },
                         },
