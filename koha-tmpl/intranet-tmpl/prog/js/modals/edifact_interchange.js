@@ -205,7 +205,7 @@ const EdifactDisplay = (() => {
                 const tag = segment.tag || "";
                 const content = (segment.raw || "").substring(tag.length);
                 lines.push(
-                    `<div class="segment-line${focusClass}"${messageAttr}><span class="segment-tag">${escapeHtml(tag)}</span>${escapeHtml(content)}</div>`
+                    `<div class="segment-line${focusClass}"${messageAttr}><span class="segment-tag">${tag.escapeHtml()}</span>${content.escapeHtml()}</div>`
                 );
             });
 
@@ -935,14 +935,14 @@ const EdifactDisplay = (() => {
             if (boldTag && content && content.length >= 3) {
                 const tag = content.substring(0, 3);
                 const rest = content.substring(3);
-                div.innerHTML = `<i class="fa fa-chevron-down me-1"></i> <span class="segment-tag">${escapeHtml(tag)}</span>${escapeHtml(rest)}`;
+                div.innerHTML = `<i class="fa fa-chevron-down me-1"></i> <span class="segment-tag">${tag.escapeHtml()}</span>${rest.escapeHtml()}`;
             } else {
-                div.innerHTML = `<i class="fa fa-chevron-down me-1"></i> ${escapeHtml(content)}`;
+                div.innerHTML = `<i class="fa fa-chevron-down me-1"></i> ${content.escapeHtml()}`;
             }
         } else if (boldTag && content && content.length >= 3) {
             const tag = content.substring(0, 3);
             const rest = content.substring(3);
-            div.innerHTML = `<span class="segment-tag">${escapeHtml(tag)}</span>${escapeHtml(rest)}`;
+            div.innerHTML = `<span class="segment-tag">${tag.escapeHtml()}</span>${rest.escapeHtml()}`;
         } else {
             div.textContent = content;
         }
@@ -1002,18 +1002,6 @@ const EdifactDisplay = (() => {
                 </div>
             `);
         });
-    };
-
-    const escapeHtml = str => {
-        if (!str) return "";
-        const escapeMap = {
-            "&": "&amp;",
-            "<": "&lt;",
-            ">": "&gt;",
-            '"': "&quot;",
-            "'": "&#039;",
-        };
-        return str.replace(/[&<>"']/g, match => escapeMap[match]);
     };
 
     return {

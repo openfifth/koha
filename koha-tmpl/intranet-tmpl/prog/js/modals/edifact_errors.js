@@ -57,7 +57,7 @@ const EdifactErrorsDisplay = (() => {
             } catch (e) {
                 console.error("Error parsing errors JSON:", e);
                 modalBody.html(
-                    `<div class="alert alert-danger">Error loading error details: ${escapeHtml(e.message)}</div>`
+                    `<div class="alert alert-danger">Error loading error details: ${e.message.escapeHtml()}</div>`
                 );
             }
         } else {
@@ -76,19 +76,19 @@ const EdifactErrorsDisplay = (() => {
             .map(
                 error => `
             <li class="list-group-item list-group-item-danger">
-                <strong>Error:</strong> ${escapeHtml(error.details || "Unknown error")}
+                <strong>Error:</strong> ${(error.details || "Unknown error").escapeHtml()}
                 ${
                     error.section
                         ? `
                     <br><small><strong>Section:</strong></small>
-                    <pre class="mt-1 mb-0" style="font-size: 0.85em; background-color: #f8f9fa; padding: 0.5rem; border-radius: 0.25rem;">${escapeHtml(error.section)}</pre>
+                    <pre class="mt-1 mb-0" style="font-size: 0.85em; background-color: #f8f9fa; padding: 0.5rem; border-radius: 0.25rem;">${error.section.escapeHtml()}</pre>
                 `
                         : ""
                 }
                 ${
                     error.date
                         ? `
-                    <br><small class="text-muted"><strong>Date:</strong> ${escapeHtml(error.date)}</small>
+                    <br><small class="text-muted"><strong>Date:</strong> ${error.date.escapeHtml()}</small>
                 `
                         : ""
                 }
@@ -111,18 +111,6 @@ const EdifactErrorsDisplay = (() => {
             </div>
         `);
         filenameSpan.text("");
-    };
-
-    const escapeHtml = str => {
-        if (!str) return "";
-        const escapeMap = {
-            "&": "&amp;",
-            "<": "&lt;",
-            ">": "&gt;",
-            '"': "&quot;",
-            "'": "&#039;",
-        };
-        return str.replace(/[&<>"']/g, match => escapeMap[match]);
     };
 
     return { init };
