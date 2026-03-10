@@ -23,8 +23,11 @@ use strict;
 use warnings;
 use Carp qw( croak );
 use HTML::Scrubber;
+use File::Basename qw( fileparse );
+use YAML::XS;
 
 use C4::Context;
+use Koha::Config;
 
 my %scrubbertypes = (
     default        => {},    # place holder, default settings are below as fallbacks in call to constructor
@@ -127,6 +130,49 @@ my %scrubbertypes = (
         ],
     }
 );
+
+override_default_settings(
+    {
+        settings => \%scrubbertypes,
+    }
+);
+
+=head1 NAME
+
+C4::Scrubber
+
+=head1 API
+
+=head2 Functions
+
+=cut
+
+=head3 override_default_settings
+
+
+=cut
+
+sub override_default_settings {
+    my ($args) = @_;
+    my $settings = $args->{settings};
+    if ($settings) {
+        my ( $koha_conf_filename, $config_dir ) = fileparse( Koha::Config->guess_koha_conf );
+        my $filename = sprintf( "%s/html_scrubber.yaml", $config_dir );
+        if ( $filename && -f $filename ) {
+            my $override_settings = YAML::XS::LoadFile($filename);
+            if ( $override_settings && ref $override_settings && ref $override_settings eq 'HASH' ) {
+                foreach my $type ( keys %$override_settings ) {
+                    $settings->{$type} = $override_settings->{$type};
+                }
+            }
+        }
+    }
+    return $settings;
+}
+
+=head3 new
+
+=cut
 
 sub new {
     shift;    # ignore our class we are wrapper
