@@ -50,7 +50,7 @@ Description for the provider
 =head2 protocol
 
   data_type: 'enum'
-  extra: {list => ["OAuth","OIDC","SAML2"]}
+  extra: {list => ["CAS","OAuth","OIDC","SAML2"]}
   is_nullable: 0
 
 Protocol provider speaks
@@ -90,7 +90,7 @@ __PACKAGE__->add_columns(
   "protocol",
   {
     data_type => "enum",
-    extra => { list => ["OAuth", "OIDC", "SAML2"] },
+    extra => { list => ["CAS", "OAuth", "OIDC", "SAML2"] },
     is_nullable => 0,
   },
   "config",
