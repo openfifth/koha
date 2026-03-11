@@ -29,254 +29,179 @@ use C4::Context;
 use Koha::AuthUtils qw( get_script_name );
 use Authen::CAS::Client;
 use CGI qw ( -utf8 );
-use YAML::XS;
 use URI::Escape;
 
+use Koha::Auth::Identity::Providers;
 use Koha::Logger;
-
-my $defaultcasserver;
-my $casservers;
-my $yamlauthfile = C4::Context->config('intranetdir') . "/C4/Auth_cas_servers.yaml";
-
-# If there's a configuration for multiple cas servers, then we get it
-if ( multipleAuth() ) {
-    ( $defaultcasserver, $casservers ) = YAML::XS::LoadFile($yamlauthfile);
-    $defaultcasserver = $defaultcasserver->{'default'};
-} else {
-
-    # Else, we fall back to casServerUrl syspref
-    $defaultcasserver = 'default';
-    $casservers       = { 'default' => C4::Context->preference('casServerUrl') };
-}
 
 =head1 Subroutines
 
 =cut
 
-# Is there a configuration file for multiple cas servers?
-
 =head2 multipleAuth
 
-Missing POD for multipleAuth.
+Returns true when more than one enabled CAS identity provider is configured.
 
 =cut
 
 sub multipleAuth {
-    return ( -e qq($yamlauthfile) );
+    return Koha::Auth::Identity::Providers->search( { protocol => 'CAS', enabled => 1 } )->count > 1;
 }
-
-# Returns configured CAS servers' list if multiple authentication is enabled
 
 =head2 getMultipleAuth
 
-Missing POD for getMultipleAuth.
+Returns a hashref of C<< { provider_code => server_url } >> for all enabled
+CAS identity providers.
 
 =cut
 
 sub getMultipleAuth {
-    return $casservers;
+    my %servers;
+    my $providers = Koha::Auth::Identity::Providers->search( { protocol => 'CAS', enabled => 1 } );
+    while ( my $p = $providers->next ) {
+        $servers{ $p->code } = $p->get_config->{server_url};
+    }
+    return \%servers;
 }
-
-# Logout from CAS
 
 =head2 logout_cas
 
-Missing POD for logout_cas.
+Redirect the browser to the CAS server logout URL.  C<$provider_code> is the
+identity provider code stored in the session; if omitted the first enabled
+CAS provider is used.
 
 =cut
 
 sub logout_cas {
-    my ( $query, $type ) = @_;
-    my ( $cas,   $uri )  = _get_cas_and_service( $query, undef, $type );
+    my ( $query, $type, $provider_code ) = @_;
+    my $provider = _get_cas_provider($provider_code);
+    return unless $provider;
+
+    my $config = $provider->get_config;
+    my $uri    = _url_with_get_params( $query, $type );
 
     # We don't want to keep triggering a logout, if we got here,
     # the borrower is already logged out of Koha
     $uri =~ s/\?logout\.x=1//;
 
+    my $cas        = Authen::CAS::Client->new( $config->{server_url} );
     my $logout_url = $cas->logout_url( url => $uri );
-    $logout_url =~ s/url=/service=/
-        if C4::Context->preference('casServerVersion') eq '3';
+    my $version    = $config->{version} || '2';
+    $logout_url =~ s/url=/service=/ if $version eq '3';
 
     print $query->redirect($logout_url);
 }
 
-# Login to CAS
-
 =head2 login_cas
 
-Missing POD for login_cas.
+Redirect the browser to the CAS login URL.
 
 =cut
 
 sub login_cas {
     my ( $query, $type ) = @_;
-    my ( $cas,   $uri )  = _get_cas_and_service( $query, undef, $type );
+    my $provider = _get_cas_provider( $query->param('cas_provider') );
+    return unless $provider;
+    my $uri = _url_with_get_params_for_provider( $query, $type, $provider );
+    my $cas = Authen::CAS::Client->new( $provider->get_config->{server_url} );
     print $query->redirect( $cas->login_url($uri) );
 }
 
-# Returns CAS login URL with callback to the requesting URL
-
 =head2 login_cas_url
 
-Missing POD for login_cas_url.
+Returns the CAS login URL for the provider identified by C<$key> (a provider
+code), or the first enabled CAS provider when C<$key> is not given.
+
+The provider code is encoded into the returned service URL so that it is
+available when CAS redirects back with a ticket.
 
 =cut
 
 sub login_cas_url {
     my ( $query, $key, $type ) = @_;
-    my ( $cas, $uri ) = _get_cas_and_service( $query, $key, $type );
+    my $provider = _get_cas_provider($key);
+    return undef unless $provider;
+    my $uri = _url_with_get_params_for_provider( $query, $type, $provider );
+    my $cas = Authen::CAS::Client->new( $provider->get_config->{server_url} );
     return $cas->login_url($uri);
 }
 
-# Checks for password correctness
-# In our case : is there a ticket, is it valid and does it match one of our users ?
-
 =head2 checkpw_cas
 
-Missing POD for checkpw_cas.
+Validates a CAS service ticket.  The identity provider is identified by the
+C<cas_provider> CGI parameter that CAS echoed back in the redirect URL.
+
+Returns C<(1, cardnumber, userid, ticket, patron)> on success or C<0> on
+failure.
 
 =cut
 
 sub checkpw_cas {
     my ( $ticket, $query, $type ) = @_;
-    my $retnumber;
-    my ( $cas, $uri ) = _get_cas_and_service( $query, undef, $type );
+    return 0 unless $ticket;
 
-    # If we got a ticket
-    if ($ticket) {
+    my $provider = _get_cas_provider( $query->param('cas_provider') );
+    return 0 unless $provider;
 
-        # We try to validate it
-        my $val = $cas->service_validate( $uri, $ticket );
+    my $config = $provider->get_config;
+    my $uri    = _url_with_get_params_for_provider( $query, $type, $provider );
+    my $cas    = Authen::CAS::Client->new( $config->{server_url} );
 
-        # If it's valid
-        if ( $val->is_success() ) {
+    my $val = $cas->service_validate( $uri, $ticket );
 
-            my $userid = $val->user();
-
-            # we should store the CAS ticekt too, we need this for single logout https://apereo.github.io/cas/4.2.x/protocol/CAS-Protocol-Specification.html#233-single-logout
-
-            # Does it match one of our users ?
-            my $dbh    = C4::Context->dbh;
-            my $patron = Koha::Patrons->find_by_identifier($userid);
-            if ($patron) {
-                return ( 1, $patron->cardnumber, $patron->userid, $ticket, $patron );
-            }
-
-            # If we reach this point, then the user is a valid CAS user, but not a Koha user
-            Koha::Logger->get->info("User $userid is not a valid Koha user");
-
-        } else {
-            my $logger = Koha::Logger->get;
-            $logger->debug("Problem when validating ticket : $ticket");
-            $logger->debug( "Authen::CAS::Client::Response::Error: " . $val->error() )     if $val->is_error();
-            $logger->debug( "Authen::CAS::Client::Response::Failure: " . $val->message() ) if $val->is_failure();
-            $logger->debug( Data::Dumper::Dumper($@) ) if $val->is_error() or $val->is_failure();
-            return 0;
+    if ( $val->is_success() ) {
+        my $userid = $val->user();
+        my $patron = Koha::Patrons->find_by_identifier($userid);
+        if ($patron) {
+            return ( 1, $patron->cardnumber, $patron->userid, $ticket, $patron );
         }
+        Koha::Logger->get->info( "CAS provider '" . $provider->code . "': user $userid is not a valid Koha user" );
+    } else {
+        my $logger = Koha::Logger->get;
+        $logger->debug( "CAS provider '" . $provider->code . "': problem validating ticket: $ticket" );
+        $logger->debug( "Authen::CAS::Client::Response::Error: " . $val->error() )     if $val->is_error();
+        $logger->debug( "Authen::CAS::Client::Response::Failure: " . $val->message() ) if $val->is_failure();
     }
+
     return 0;
 }
 
-# Proxy CAS auth
-
 =head2 check_api_auth_cas
 
-Missing POD for check_api_auth_cas.
+Proxy CAS ticket validation used by the API auth path.
 
 =cut
 
 sub check_api_auth_cas {
     my ( $PT, $query, $type ) = @_;
-    my $retnumber;
-    my ( $cas, $uri ) = _get_cas_and_service( $query, undef, $type );
+    return 0 unless $PT;
 
-    # If we have a Proxy Ticket
-    if ($PT) {
-        my $r = $cas->proxy_validate( $uri, $PT );
+    my $provider = _get_cas_provider( $query->param('cas_provider') );
+    return 0 unless $provider;
 
-        # If the PT is valid
-        if ( $r->is_success ) {
+    my $config = $provider->get_config;
+    my $uri    = _url_with_get_params_for_provider( $query, $type, $provider );
+    my $cas    = Authen::CAS::Client->new( $config->{server_url} );
 
-            # We've got a username !
-            my $userid = $r->user;
+    my $r = $cas->proxy_validate( $uri, $PT );
 
-            # we should store the CAS ticket too, we need this for single logout https://apereo.github.io/cas/4.2.x/protocol/CAS-Protocol-Specification.html#233-single-logout
-
-            # Does it match one of our users ?
-            my $dbh = C4::Context->dbh;
-            my $sth = $dbh->prepare("select cardnumber from borrowers where userid=?");
-            $sth->execute($userid);
-            if ( $sth->rows ) {
-                $retnumber = $sth->fetchrow;
-                return ( 1, $retnumber, $userid, $PT );
-            }
-            $sth = $dbh->prepare("select userid from borrowers where cardnumber=?");
-            return $r->user;
-            $sth->execute($userid);
-            if ( $sth->rows ) {
-                $retnumber = $sth->fetchrow;
-                return ( 1, $retnumber, $userid, $PT );
-            }
-
-            # If we reach this point, then the user is a valid CAS user, but not a Koha user
-            Koha::Logger->get->info("User $userid is not a valid Koha user");
-
-        } else {
-            Koha::Logger->get->debug("Proxy Ticket authentication failed");
-            return 0;
+    if ( $r->is_success ) {
+        my $userid = $r->user;
+        my $patron = Koha::Patrons->find_by_identifier($userid);
+        if ($patron) {
+            return ( 1, $patron->cardnumber, $userid, $PT );
         }
+        Koha::Logger->get->info("CAS proxy user $userid is not a valid Koha user");
+    } else {
+        Koha::Logger->get->debug("CAS proxy ticket authentication failed");
     }
+
     return 0;
-}
-
-# Get CAS handler and service URI
-sub _get_cas_and_service {
-    my $query = shift;
-    my $key   = shift;    # optional
-    my $type  = shift;
-
-    my $uri = _url_with_get_params( $query, $type );
-
-    my $casparam = $defaultcasserver;
-    $casparam = $query->param('cas') if defined $query->param('cas');
-    $casparam = $key                 if defined $key;
-    my $cas = Authen::CAS::Client->new( $casservers->{$casparam} );
-
-    return ( $cas, $uri );
-}
-
-# Get the current URL with parameters contained directly into URL (GET params)
-# This method replaces $query->url() which will give both GET and POST params
-sub _url_with_get_params {
-    my $query = shift;
-    my $type  = shift;
-
-    my $uri_base_part =
-        ( $type eq 'opac' )
-        ? C4::Context->preference('OPACBaseURL')
-        : C4::Context->preference('staffClientBaseURL');
-    $uri_base_part .= get_script_name();
-
-    my $uri_params_part = '';
-    foreach my $param ( $query->url_param() ) {
-
-        # url_param() always returns parameters that were deleted by delete()
-        # This additional check ensure that parameter was not deleted.
-        my $uriPiece = $query->param($param);
-        if ($uriPiece) {
-            $uri_params_part .= '&' if $uri_params_part;
-            $uri_params_part .= $param . '=';
-            $uri_params_part .= URI::Escape::uri_escape($uriPiece);
-        }
-    }
-    $uri_base_part .= '?' if $uri_params_part;
-
-    return $uri_base_part . $uri_params_part;
 }
 
 =head2 logout_if_required
 
-    If using CAS, this subroutine will trigger single-signout of the CAS server.
+If using CAS, this subroutine will trigger single-signout of the CAS server.
 
 =cut
 
@@ -320,23 +245,76 @@ sub delete_cas_session {
     }
 }
 
+# Returns an enabled CAS identity provider by code, or the first enabled one
+# when $code is not given.
+sub _get_cas_provider {
+    my ($code) = @_;
+    if ($code) {
+        return Koha::Auth::Identity::Providers->search( { code => $code, protocol => 'CAS', enabled => 1 } )->next;
+    }
+    return Koha::Auth::Identity::Providers->search(
+        { protocol => 'CAS', enabled => 1 },
+        { order_by => 'identity_provider_id' }
+    )->next;
+}
+
+# Build the service URL for $provider, appending cas_provider=<code> so that
+# CAS echoes it back in the redirect and we can identify the provider on return.
+sub _url_with_get_params_for_provider {
+    my ( $query, $type, $provider ) = @_;
+    my $uri = _url_with_get_params( $query, $type );
+    my $sep = ( $uri =~ /\?/ ) ? '&' : '?';
+    return $uri . $sep . 'cas_provider=' . URI::Escape::uri_escape( $provider->code );
+}
+
+# Get the current URL with parameters contained directly in the URL (GET params).
+# This method replaces $query->url() which gives both GET and POST params.
+sub _url_with_get_params {
+    my $query = shift;
+    my $type  = shift;
+
+    my $uri_base_part =
+        ( $type eq 'opac' )
+        ? C4::Context->preference('OPACBaseURL')
+        : C4::Context->preference('staffClientBaseURL');
+    $uri_base_part .= get_script_name();
+
+    my $uri_params_part = '';
+    foreach my $param ( $query->url_param() ) {
+
+        # url_param() always returns parameters that were deleted by delete()
+        # This additional check ensures that parameter was not deleted.
+        my $uriPiece = $query->param($param);
+        if ($uriPiece) {
+            $uri_params_part .= '&' if $uri_params_part;
+            $uri_params_part .= $param . '=';
+            $uri_params_part .= URI::Escape::uri_escape($uriPiece);
+        }
+    }
+    $uri_base_part .= '?' if $uri_params_part;
+
+    return $uri_base_part . $uri_params_part;
+}
+
 1;
 __END__
 
 =head1 NAME
 
-C4::Auth - Authenticates Koha users
+C4::Auth_with_cas - CAS authentication for Koha via Identity Providers
 
 =head1 SYNOPSIS
 
   use C4::Auth_with_cas;
 
-=cut
+=head1 DESCRIPTION
+
+CAS authentication is configured through the Identity Providers admin interface
+(Admin > Identity providers).  Create a provider with protocol C<CAS> and set
+C<server_url> (and optionally C<version>) in the configuration.
 
 =head1 SEE ALSO
 
-CGI(3)
-
-Authen::CAS::Client
+CGI(3), Authen::CAS::Client
 
 =cut
