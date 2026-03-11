@@ -578,6 +578,10 @@ __PACKAGE__->add_columns(
     "+show_outstanding_amount" => { is_boolean => 1 }
 );
 
+__PACKAGE__->add_columns(
+    "+patron_branchcode_in_ao" => { is_boolean => 1 }
+);
+
 =head2 koha_objects_class
 
   Koha Objects class
