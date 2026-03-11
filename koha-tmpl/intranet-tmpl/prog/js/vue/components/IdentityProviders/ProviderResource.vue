@@ -11,6 +11,31 @@ import { APIClient } from "../../fetch/api-client.js";
 import { $__ } from "@koha-vue/i18n";
 
 const PROTOCOL_CONFIG_FIELDS = {
+    CAS: [
+        {
+            name: "server_url",
+            label: __("CAS server URL"),
+            required: true,
+            type: "text",
+            group: "CAS settings",
+            toolTip: __(
+                "Base URL of the CAS server, e.g. https://cas.example.org/cas"
+            ),
+        },
+        {
+            name: "version",
+            label: __("CAS protocol version"),
+            required: false,
+            type: "select",
+            group: "CAS settings",
+            options: [
+                { value: "2", label: "CAS 2 or earlier" },
+                { value: "3", label: "CAS 3 or later" },
+            ],
+            requiredKey: "value",
+            selectLabel: "label",
+        },
+    ],
     OAuth: [
         {
             name: "key",
@@ -152,6 +177,7 @@ export default {
                 label: __("Protocol"),
                 group: "Basic configuration",
                 options: [
+                    { value: "CAS", label: "CAS" },
                     { value: "OAuth", label: "OAuth" },
                     { value: "OIDC", label: "OIDC" },
                     { value: "SAML2", label: "SAML2 / Shibboleth" },

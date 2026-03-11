@@ -15,6 +15,7 @@ properties:
     description: Authentication protocol
     type: string
     enum:
+      - CAS
       - OAuth
       - OIDC
       - SAML2
