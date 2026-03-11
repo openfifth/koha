@@ -21,6 +21,7 @@ use Modern::Perl;
 
 use Koha::Auth::Identity::Provider;
 use Koha::Auth::Identity::Provider::Hostnames;
+use Koha::Auth::Identity::Provider::CAS;
 use Koha::Auth::Identity::Provider::OAuth;
 use Koha::Auth::Identity::Provider::OIDC;
 use Koha::Auth::Identity::Provider::SAML2;
@@ -94,6 +95,7 @@ Return the mapping from protocol value to implementing class name
 
 sub _polymorphic_map {
     return {
+        CAS   => 'Koha::Auth::Identity::Provider::CAS',
         OAuth => 'Koha::Auth::Identity::Provider::OAuth',
         OIDC  => 'Koha::Auth::Identity::Provider::OIDC',
         SAML2 => 'Koha::Auth::Identity::Provider::SAML2',
