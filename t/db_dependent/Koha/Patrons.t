@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 49;
+use Test::More tests => 50;
 use Test::Warn;
 use Test::Exception;
 use Test::MockModule;
@@ -529,7 +529,8 @@ subtest 'renew_account' => sub {
         );
         my $number_of_logs =
             $schema->resultset('ActionLog')
-            ->search( { module => 'MEMBERS', action => 'RENEW', object => $retrieved_patron->borrowernumber } )->count;
+            ->search( { module => 'MEMBERS', action => 'RENEW', object => $retrieved_patron->borrowernumber } )
+            ->count;
         is( $number_of_logs, 1, 'With BorrowersLog, Koha::Patron->renew_account should have logged' );
 
         t::lib::Mocks::mock_preference( 'BorrowerRenewalPeriodBase', 'now' );
@@ -545,7 +546,8 @@ subtest 'renew_account' => sub {
         is( dt_from_string($retrieved_expiry_date), $a_year_later, "today + 12 months must be $a_year_later" );
         $number_of_logs =
             $schema->resultset('ActionLog')
-            ->search( { module => 'MEMBERS', action => 'RENEW', object => $retrieved_patron->borrowernumber } )->count;
+            ->search( { module => 'MEMBERS', action => 'RENEW', object => $retrieved_patron->borrowernumber } )
+            ->count;
         is( $number_of_logs, 1, 'Without BorrowersLog, Koha::Patron->renew_account should not have logged' );
 
         t::lib::Mocks::mock_preference( 'BorrowerRenewalPeriodBase', 'combination' );
@@ -681,7 +683,8 @@ subtest "delete" => sub {
 
     my $number_of_logs =
         $schema->resultset('ActionLog')
-        ->search( { module => 'MEMBERS', action => 'DELETE', object => $patron->borrowernumber } )->count;
+        ->search( { module => 'MEMBERS', action => 'DELETE', object => $patron->borrowernumber } )
+        ->count;
     is( $number_of_logs, 1, 'With BorrowersLog, Koha::Patron->delete should have logged' );
 
     # Test deletion with designated fallback owner
@@ -754,7 +757,8 @@ subtest 'add_enrolment_fee_if_needed' => sub {
     foreach ( keys %{$enrolmentfees} ) {
         ( Koha::Patron::Categories->find($_)
                 // $builder->build_object( { class => 'Koha::Patron::Categories', value => { categorycode => $_ } } ) )
-            ->enrolmentfee( $enrolmentfees->{$_} )->store;
+            ->enrolmentfee( $enrolmentfees->{$_} )
+            ->store;
     }
     my $enrolmentfee_K  = $enrolmentfees->{K};
     my $enrolmentfee_J  = $enrolmentfees->{J};
@@ -2522,7 +2526,8 @@ subtest '->set_password' => sub {
 
     my $number_of_logs =
         $schema->resultset('ActionLog')
-        ->search( { module => 'MEMBERS', action => 'CHANGE PASS', object => $patron->borrowernumber } )->count;
+        ->search( { module => 'MEMBERS', action => 'CHANGE PASS', object => $patron->borrowernumber } )
+        ->count;
     is( $number_of_logs, 0, 'Without BorrowersLog, Koha::Patron->set_password doesn\'t log password changes' );
 
     # Enable logging password changes
@@ -3052,8 +3057,8 @@ subtest "search_patrons_to_update_category tests" => sub {
                 class => 'Koha::Patrons',
                 value => {
                     categorycode => $category_code,
-                    dateofbirth  =>
-                        $current_dt->clone->subtract( years => $category->upperagelimit + 1 )->subtract( days => 1 )
+                    dateofbirth  => $current_dt->clone->subtract( years => $category->upperagelimit + 1 )
+                        ->subtract( days => 1 )
                         ->ymd,
                 }
             }
@@ -3503,7 +3508,8 @@ subtest 'filter_by_have_permission' => sub {
     is_deeply(
         [
             Koha::Patrons->search( { branchcode => $library->branchcode } )
-                ->filter_by_have_permission('suggestions.suggestions_manage')->get_column('borrowernumber')
+                ->filter_by_have_permission('suggestions.suggestions_manage')
+                ->get_column('borrowernumber')
         ],
         [ $patron_1->borrowernumber, $patron_2->borrowernumber ],
         'Superlibrarian and patron with suggestions.suggestions_manage'
@@ -3512,7 +3518,8 @@ subtest 'filter_by_have_permission' => sub {
     is_deeply(
         [
             Koha::Patrons->search( { branchcode => $library->branchcode } )
-                ->filter_by_have_permission('acquisition.order_manage')->get_column('borrowernumber')
+                ->filter_by_have_permission('acquisition.order_manage')
+                ->get_column('borrowernumber')
         ],
         [ $patron_1->borrowernumber, $patron_3->borrowernumber ],
         'Superlibrarian and patron with acquisition.order_manage'
@@ -3521,7 +3528,8 @@ subtest 'filter_by_have_permission' => sub {
     is_deeply(
         [
             Koha::Patrons->search( { branchcode => $library->branchcode } )
-                ->filter_by_have_permission('parameters.manage_cities')->get_column('borrowernumber')
+                ->filter_by_have_permission('parameters.manage_cities')
+                ->get_column('borrowernumber')
         ],
         [ $patron_1->borrowernumber ],
         'Only Superlibrarian is returned'
@@ -3529,7 +3537,8 @@ subtest 'filter_by_have_permission' => sub {
 
     is_deeply(
         [
-            Koha::Patrons->search( { branchcode => $library->branchcode } )->filter_by_have_permission('suggestions')
+            Koha::Patrons->search( { branchcode => $library->branchcode } )
+                ->filter_by_have_permission('suggestions')
                 ->get_column('borrowernumber')
         ],
         [ $patron_1->borrowernumber, $patron_2->borrowernumber ],
@@ -3747,6 +3756,79 @@ subtest 'check_for_existing_matches' => sub {
     $match_result = Koha::Patrons->check_for_existing_matches(
         { firstname => 'John', surname => 'Smith', dateofbirth => '1980-01-01', city => 'Sandwich, Kent' } );
     is( $match_result->{duplicate_found}, 0, 'No duplicate found' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'BorrowersLog with extended patron attributes' => sub {
+    plan tests => 12;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'BorrowersLog',             1 );
+    t::lib::Mocks::mock_preference( 'ExtendedPatronAttributes', 1 );
+
+    my $attr_type = $builder->build_object(
+        {
+            class => 'Koha::Patron::Attribute::Types',
+            value => { repeatable => 0, unique_id => 0 },
+        }
+    );
+
+    # --- CREATE with attributes: one unified log entry ---
+    # Must use Koha::Patron->new()->store() (not build_object) to exercise the
+    # full Koha::Patron::store() code path that sets _patron_log_id.
+    # Build fresh library/category since the outer transaction was rolled back.
+    my $test_library  = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $test_category = $builder->build_object( { class => 'Koha::Patron::Categories' } );
+    my $patron        = Koha::Patron->new(
+        {
+            cardnumber   => 'test_attrs_log_cn',
+            surname      => 'AttrLogTest',
+            branchcode   => $test_library->branchcode,
+            categorycode => $test_category->categorycode,
+        }
+    )->store;
+    $patron->extended_attributes( [ { code => $attr_type->code, attribute => 'created_value' } ] );
+
+    my @all_logs = Koha::ActionLogs->search( { module => 'MEMBERS', object => $patron->borrowernumber } )->as_list;
+    is( scalar @all_logs,     1,        'CREATE + attribute set produces one log entry (not CREATE + MODIFY)' );
+    is( $all_logs[0]->action, 'CREATE', 'The single entry is a CREATE action' );
+    my $create_diff = from_json( $all_logs[0]->diff );
+    my $attr_key    = 'attribute.' . $attr_type->code;
+    ok( exists $create_diff->{D}->{$attr_key}, 'CREATE diff includes the set attribute' );
+    is( $create_diff->{D}->{$attr_key}->{N}, 'created_value', 'CREATE diff has correct attribute value' );
+
+    # --- MODIFY fields + attributes: one unified log entry ---
+    $patron->extended_attributes( [ { code => $attr_type->code, attribute => 'original_value' } ] );
+    Koha::ActionLogs->search( { object => $patron->borrowernumber } )->delete;
+    $patron = $patron->get_from_storage;
+
+    my $new_surname = $patron->surname . '_changed';
+    $patron->set( { surname => $new_surname } )->store;
+    $patron->extended_attributes( [ { code => $attr_type->code, attribute => 'changed_value' } ] );
+
+    my @modify_logs =
+        Koha::ActionLogs->search( { module => 'MEMBERS', action => 'MODIFY', object => $patron->borrowernumber } )
+        ->as_list;
+    is( scalar @modify_logs, 1, 'Field change + attribute change produces one MODIFY log entry' );
+    my $modify_diff = from_json( $modify_logs[0]->diff );
+    ok( exists $modify_diff->{D}->{surname}, 'MODIFY diff includes the field change' );
+    is( $modify_diff->{D}->{surname}->{N}, $new_surname, 'MODIFY diff has correct new field value' );
+    ok( exists $modify_diff->{D}->{$attr_key}, 'MODIFY diff includes the attribute change' );
+    is( $modify_diff->{D}->{$attr_key}->{N}, 'changed_value', 'MODIFY diff has correct new attribute value' );
+
+    # --- DELETE: log includes attribute data ---
+    Koha::ActionLogs->search( { object => $patron->borrowernumber } )->delete;
+    my $borrowernumber = $patron->borrowernumber;
+    $patron->delete;
+
+    my @delete_logs =
+        Koha::ActionLogs->search( { module => 'MEMBERS', action => 'DELETE', object => $borrowernumber } )->as_list;
+    is( scalar @delete_logs, 1, 'DELETE produces one log entry' );
+    my $delete_diff = from_json( $delete_logs[0]->diff );
+    ok( exists $delete_diff->{D}->{$attr_key}, 'DELETE diff includes attribute data' );
+    is( $delete_diff->{D}->{$attr_key}->{R}, 'changed_value', 'DELETE diff has correct removed attribute value' );
 
     $schema->storage->txn_rollback;
 };
