@@ -23,6 +23,7 @@ use Modern::Perl;
 use JSON               qw( encode_json decode_json to_json );
 use List::MoreUtils    qw( any none uniq notall zip6);
 use Scalar::Util       qw( blessed looks_like_number );
+use Struct::Diff       qw( diff );
 use Unicode::Normalize qw( NFKD );
 use Try::Tiny;
 use DateTime ();
@@ -33,6 +34,7 @@ use C4::Letters qw( GetPreparedLetter EnqueueLetter SendQueuedMessages );
 use C4::Log     qw( logaction );
 use C4::Scrubber;
 use Koha::Account;
+use Koha::ActionLogs;
 use Koha::ArticleRequests;
 use Koha::AuthUtils;
 use Koha::Caches;
@@ -361,7 +363,9 @@ sub store {
 
                 if ( C4::Context->preference("BorrowersLog") ) {
                     my $patron_data = $self->_unblessed_for_log;
-                    logaction( "MEMBERS", "CREATE", $self->borrowernumber, $patron_data, undef, $patron_data );
+                    my $create_log =
+                        logaction( "MEMBERS", "CREATE", $self->borrowernumber, $patron_data, undef, $patron_data );
+                    $self->{_patron_log_id} = $create_log->action_id;
                 }
             } else {    #ModMember
 
@@ -418,8 +422,11 @@ sub store {
                         my %log_from = map { $_ => $from_storage->{$_} } keys %{$changed};
                         my %log_to   = map { $_ => $from_object->{$_} } keys %{$changed};
 
-                        logaction( "MEMBERS", "MODIFY", $self->borrowernumber, \%log_to, undef, \%log_from )
-                            if C4::Context->preference("BorrowersLog");
+                        if ( C4::Context->preference("BorrowersLog") ) {
+                            my $modify_log =
+                                logaction( "MEMBERS", "MODIFY", $self->borrowernumber, \%log_to, undef, \%log_from );
+                            $self->{_patron_log_id} = $modify_log->action_id;
+                        }
 
                         logaction(
                             "MEMBERS",
@@ -475,7 +482,19 @@ sub delete {
             # for patron selfreg
             $_->delete for Koha::Patron::Modifications->search( { borrowernumber => $self->borrowernumber } )->as_list;
 
-            my $patron_data = C4::Context->preference("BorrowersLog") ? $self->_unblessed_for_log : undef;
+            my $patron_data;
+            if ( C4::Context->preference("BorrowersLog") ) {
+                $patron_data = $self->_unblessed_for_log;
+                for my $attr ( $self->extended_attributes->as_list ) {
+                    my $key = "attribute." . $attr->code;
+                    if ( $attr->type->repeatable ) {
+                        $patron_data->{$key} //= [];
+                        push @{ $patron_data->{$key} }, $attr->attribute;
+                    } else {
+                        $patron_data->{$key} = $attr->attribute;
+                    }
+                }
+            }
 
             $self->SUPER::delete;
 
@@ -2865,7 +2884,13 @@ sub extended_attributes {
                 if ( %{$all_changes} ) {
                     my %log_from = map { $_ => $all_changes->{$_}->{before} } keys %{$all_changes};
                     my %log_to   = map { $_ => $all_changes->{$_}->{after} } keys %{$all_changes};
-                    logaction( "MEMBERS", "MODIFY", $self->borrowernumber, \%log_to, undef, \%log_from );
+                    if ( my $log_id = delete $self->{_patron_log_id} ) {
+                        $self->_merge_attribute_log( $log_id, \%log_to, \%log_from );
+                    } else {
+                        logaction( "MEMBERS", "MODIFY", $self->borrowernumber, \%log_to, undef, \%log_from );
+                    }
+                } else {
+                    delete $self->{_patron_log_id};
                 }
             }
         );
@@ -3834,6 +3859,40 @@ sub permissions {
 
 sub _type {
     return 'Borrower';
+}
+
+=head3 _merge_attribute_log
+
+Merges extended attribute changes into an existing action log entry (identified
+by action_id), combining field and attribute changes into a single log entry.
+Used to unify CREATE/MODIFY log entries with subsequent attribute changes.
+
+=cut
+
+sub _merge_attribute_log {
+    my ( $self, $log_id, $log_to, $log_from ) = @_;
+
+    my $log = Koha::ActionLogs->find($log_id);
+    return unless $log;
+
+    my $info = {};
+    eval { $info = decode_json( $log->info ) } if $log->info;
+    %{$info} = ( %{$info}, %{$log_to} );
+
+    my $existing_diff = {};
+    eval { $existing_diff = decode_json( $log->diff ) } if $log->diff;
+    my $attr_diff = diff( $log_from, $log_to, noU => 1 );
+    if ( $attr_diff->{D} ) {
+        $existing_diff->{D} //= {};
+        %{ $existing_diff->{D} } = ( %{ $existing_diff->{D} }, %{ $attr_diff->{D} } );
+    }
+
+    $log->set(
+        {
+            info => encode_json($info),
+            diff => encode_json($existing_diff),
+        }
+    )->store;
 }
 
 =head3 _unblessed_for_log
