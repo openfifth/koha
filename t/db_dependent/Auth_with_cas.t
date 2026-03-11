@@ -78,25 +78,22 @@ subtest 'logout_cas() tests' => sub {
 
     plan tests => 4;
 
-    my $cas_url = "https://mycasserver.url";
+    my $cas_url      = "https://mycasserver.url";
+    my $fixed_logout = "$cas_url/logout/?url=https://mykoha.url";
+
+    # Mock the CAS client to return a predictable logout URL
+    my $cas_client_mock = Test::MockObject->new();
+    $cas_client_mock->mock( 'logout_url', sub { $fixed_logout } );
+
+    my $authen_cas_mock = Test::MockModule->new('Authen::CAS::Client');
+    $authen_cas_mock->mock( 'new', sub { $cas_client_mock } );
+
+    # Mock a CAS identity provider so _get_cas_provider returns something useful
+    my $mock_provider = Test::MockObject->new();
+    $mock_provider->mock( 'code', sub { 'test_cas' } );
 
     my $auth_with_cas_mock = Test::MockModule->new('C4::Auth_with_cas');
-    $auth_with_cas_mock->mock(
-        '_get_cas_and_service',
-        sub {
-            my $cas = Test::MockObject->new();
-            $cas->mock(
-                'logout_url',
-                sub {
-                    return "$cas_url/logout/?url=https://mykoha.url";
-                }
-            );
-            return ( $cas, "$cas_url?logout.x=1" );
-        }
-    );
-
-    my $cas_version;
-    my $expected_logout_url;
+    $auth_with_cas_mock->mock( '_get_cas_provider', sub { $mock_provider } );
 
     # Yeah, this gets funky
     my $cgi_mock = Test::MockModule->new('CGI');
@@ -108,29 +105,27 @@ subtest 'logout_cas() tests' => sub {
         }
     );
 
-    # Test CAS 2.0 behavior
-    $cas_version         = 2;
-    $expected_logout_url = "$cas_url/logout/?url=https://mykoha.url";
+    # Test CAS 2.0 behavior (version stored in provider config)
+    $mock_provider->mock( 'get_config', sub { { server_url => $cas_url, version => '2' } } );
+    my $expected_logout_url = $fixed_logout;    # no substitution for v2
 
     my $redirect_output = '';
     close(STDOUT);
     open( STDOUT, ">", \$redirect_output ) or die "Error opening STDOUT";
 
-    t::lib::Mocks::mock_preference( 'casServerVersion', $cas_version );
-    C4::Auth_with_cas::logout_cas( CGI->new, 'anything' );
-    is( $redirect_output, $expected_logout_url, "The generated URL is correct (v$cas_version\.0)" );
+    C4::Auth_with_cas::logout_cas( CGI->new, 'anything', 'test_cas' );
+    is( $redirect_output, $expected_logout_url, "The generated URL is correct (v2.0)" );
     unlike( $redirect_output, qr/logout\.x\=1/, 'logout.x=1 gets removed' );
 
-    # Test CAS 3.0 behavior
+    # Test CAS 3.0 behavior (url= replaced with service=)
+    $mock_provider->mock( 'get_config', sub { { server_url => $cas_url, version => '3' } } );
+    $expected_logout_url = $fixed_logout =~ s/url=/service=/r;
+
     $redirect_output = '';
     close(STDOUT);
     open( STDOUT, ">", \$redirect_output ) or die "Error opening STDOUT";
 
-    $cas_version         = 3;
-    $expected_logout_url = "$cas_url/logout/?service=https://mykoha.url";
-
-    t::lib::Mocks::mock_preference( 'casServerVersion', $cas_version );
-    C4::Auth_with_cas::logout_cas( CGI->new, 'anything' );
-    is( $redirect_output, $expected_logout_url, "The generated URL is correct (v$cas_version\.0)" );
+    C4::Auth_with_cas::logout_cas( CGI->new, 'anything', 'test_cas' );
+    is( $redirect_output, $expected_logout_url, "The generated URL is correct (v3.0)" );
     unlike( $redirect_output, qr/logout\.x\=1/, 'logout.x=1 gets removed' );
 };
