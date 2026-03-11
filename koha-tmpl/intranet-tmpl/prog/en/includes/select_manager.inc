@@ -2,20 +2,8 @@
 [% IF add_modal %]
     [% SET columns = ['cardnumber','name','category','branch','action'] %]
     [% SET filter = filter %]
-    [% PROCESS patron_search_modal
-        columns => columns,
-        modal_title => t("Select manager"),
-        patron_search_modal_id => 'patron_search_modal_manager',
-        table_id => 'patron_search_modal_manager_table'
-    %]
-    [% PROCESS patron_search_js
-        columns => columns,
-        actions => ["select"],
-        preview_on_name_click => 1,
-        table_id => 'patron_search_modal_manager_table',
-        callback => 'select_manager'
-        empty_table_settings => 1
-    %]
+    [% PROCESS patron_search_modal columns => columns, modal_title => t("Select manager"), patron_search_modal_id => 'patron_search_modal_manager', table_id => 'patron_search_modal_manager_table' %]
+    [% PROCESS patron_search_js columns => columns, actions => ["select"], preview_on_name_click => 1, table_id => 'patron_search_modal_manager_table', callback => 'select_manager' empty_table_settings => 1 %]
 [% END %]
 <script>
     function select_manager(borrowernumber, borrower) {
