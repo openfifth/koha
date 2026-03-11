@@ -3742,7 +3742,7 @@ CREATE TABLE `identity_providers` (
   `identity_provider_id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'unique key, used to identify the provider',
   `code` varchar(20) NOT NULL COMMENT 'Provider code',
   `description` varchar(255) NOT NULL COMMENT 'Description for the provider',
-  `protocol` enum('OAuth','OIDC','SAML2') NOT NULL COMMENT 'Protocol provider speaks',
+  `protocol` enum('CAS','OAuth','OIDC','SAML2') NOT NULL COMMENT 'Protocol provider speaks',
   `config` longtext NOT NULL COMMENT 'Configuration of the provider in JSON format',
   `enabled` tinyint(1) NOT NULL DEFAULT 1 COMMENT 'Whether this provider is active',
   `icon_url` varchar(255) DEFAULT NULL COMMENT 'Provider icon URL',
