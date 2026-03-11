@@ -58,6 +58,7 @@ use Koha::Patron::Consents;
 use List::MoreUtils qw( any );
 use Encode;
 use C4::Auth_with_shibboleth qw( shib_ok get_login_shib login_shib_url logout_shib checkpw_shib );
+use Koha::Auth::Identity::Providers;
 use Net::CIDR;
 use C4::Log qw( logaction );
 use Koha::CookieManager;
@@ -68,20 +69,13 @@ use Koha::Session;
 
 # use utf8;
 
-use vars qw($ldap $cas $caslogout);
+use vars qw($ldap);
+
+use C4::Auth_with_cas
+    qw(check_api_auth_cas checkpw_cas login_cas logout_cas login_cas_url logout_if_required multipleAuth getMultipleAuth);
 
 BEGIN {
     C4::Context->set_remote_address;
-
-    $cas       = C4::Context->preference('casAuthentication');
-    $caslogout = C4::Context->preference('casLogout');
-
-    if ($cas) {
-        require C4::Auth_with_cas;    # no import
-        import C4::Auth_with_cas
-            qw(check_api_auth_cas checkpw_cas login_cas logout_cas login_cas_url logout_if_required multipleAuth getMultipleAuth);
-    }
-
 }
 
 =head1 NAME
@@ -966,7 +960,7 @@ sub checkauth {
             );
 
             if (   ( $query->param('koha_login_context') && ( $q_userid ne $userid ) )
-                || ( $cas && $query->param('ticket') && !C4::Context->userenv->{'id'} )
+                || ( $query->param('cas_provider') && $query->param('ticket') && !C4::Context->userenv->{'id'} )
                 || ( $shib && $shib_login && !$logout && !C4::Context->userenv->{'id'} ) )
             {
 
@@ -1023,7 +1017,8 @@ sub checkauth {
 
         # voluntary logout the user
         # check whether the user was using their shibboleth session or a local one
-        my $shibSuccess = C4::Context->userenv ? C4::Context->userenv->{'shibboleth'} : undef;
+        my $shibSuccess       = C4::Context->userenv ? C4::Context->userenv->{'shibboleth'} : undef;
+        my $cas_provider_code = $session             ? $session->param('cas_provider')      : undef;
         if ($session) {
             $session->delete();
             $session->flush;
@@ -1031,8 +1026,8 @@ sub checkauth {
         C4::Context::unset_userenv();
         $cookie = $cookie_mgr->clear_unless( $query->cookie, @$cookie );
 
-        if ( $cas and $caslogout ) {
-            logout_cas( $query, $type );
+        if ( C4::Context->preference('casLogout') && $cas_provider_code ) {
+            logout_cas( $query, $type, $cas_provider_code );
         }
 
         # If we are in a shibboleth session (shibboleth is enabled, a shibboleth match attribute is set and matches koha matchpoint)
@@ -1081,7 +1076,7 @@ sub checkauth {
             print STDERR "ERROR: Missing system preference AllowPKIAuth.\n";
             $pki_field = 'None';
         }
-        if (   ( $cas && $query->param('ticket') )
+        if (   ( $query->param('ticket') && $query->param('cas_provider') )
             || $q_userid
             || ( $shib && $shib_login )
             || $pki_field ne 'None'
@@ -1104,7 +1099,7 @@ sub checkauth {
 
             # If shib login and match were successful, skip further login methods
             unless ($shibSuccess) {
-                if ( $cas && $query->param('ticket') ) {
+                if ( $query->param('ticket') && $query->param('cas_provider') ) {
                     my $retuserid;
                     my $patron;
                     ( $return, $cardnumber, $retuserid, $patron, $cas_ticket ) =
@@ -1343,7 +1338,8 @@ sub checkauth {
                     $session->param( 'register_name', $register_name );
                     $session->param( 'sco_user',      $is_sco_user );
                 }
-                $session->param( 'cas_ticket', $cas_ticket ) if $cas_ticket;
+                $session->param( 'cas_ticket',   $cas_ticket )                   if $cas_ticket;
+                $session->param( 'cas_provider', $query->param('cas_provider') ) if $cas_ticket;
                 C4::Context->set_userenv_from_session($session);
             }
 
@@ -1477,10 +1473,10 @@ sub checkauth {
     my $template           = C4::Templates::gettemplate( $auth_template_name, $type, $query );
 
     $template->param(
-        login                                 => 1,
-        INPUTS                                => \@inputs,
-        script_name                           => get_script_name(),
-        casAuthentication                     => C4::Context->preference("casAuthentication"),
+        login             => 1,
+        INPUTS            => \@inputs,
+        script_name       => get_script_name(),
+        casAuthentication => Koha::Auth::Identity::Providers->search( { protocol => 'CAS', enabled => 1 } )->count,
         shibbolethAuthentication              => $shib,
         suggestion                            => C4::Context->preference("suggestion"),
         virtualshelves                        => C4::Context->preference("virtualshelves"),
@@ -1549,7 +1545,9 @@ sub checkauth {
 
     if ($forced_provider) {
         my $redirect_url;
-        if ( $forced_provider->protocol eq 'SAML2' ) {
+        if ( $forced_provider->protocol eq 'CAS' ) {
+            $redirect_url = login_cas_url( $query, $forced_provider->code, $type );
+        } elsif ( $forced_provider->protocol eq 'SAML2' ) {
             $redirect_url = login_shib_url($query);
         } elsif ( $forced_provider->protocol eq 'OIDC' || $forced_provider->protocol eq 'OAuth' ) {
             my $base = ( $type eq 'opac' ) ? "/api/v1/public/oauth/login" : "/api/v1/oauth/login";
@@ -1561,23 +1559,19 @@ sub checkauth {
         }
     }
 
-    if ($cas) {
-
-        # Is authentication against multiple CAS servers enabled?
-        require C4::Auth_with_cas;
-        if ( multipleAuth() && !$casparam ) {
+    if ( Koha::Auth::Identity::Providers->search( { protocol => 'CAS', enabled => 1 } )->count ) {
+        if ( multipleAuth() && !$query->param('cas_provider') ) {
             my $casservers = getMultipleAuth();
             my @tmplservers;
-            foreach my $key ( keys %$casservers ) {
-                push @tmplservers, { name => $key, value => login_cas_url( $query, $key, $type ) . "?cas=$key" };
+            foreach my $key ( sort keys %$casservers ) {
+                push @tmplservers, { name => $key, value => login_cas_url( $query, $key, $type ) };
             }
             $template->param( casServersLoop => \@tmplservers );
         } else {
             $template->param(
-                casServerUrl => login_cas_url( $query, undef, $type ),
+                casServerUrl => login_cas_url( $query, $query->param('cas_provider'), $type ),
             );
         }
-
         $template->param( invalidCasLogin => $info{'invalidCasLogin'} );
     }
 
@@ -1675,7 +1669,7 @@ sub check_api_auth {
     unless ( $query->param('login_userid') ) {
         $sessionID = $query->cookie("CGISESSID");
     }
-    if ( $sessionID && not( $cas && $query->param('PT') ) ) {
+    if ( $sessionID && not( $query->param('PT') ) ) {
 
         my $return;
         ( $return, $session, undef ) =
@@ -1701,7 +1695,7 @@ sub check_api_auth {
         my ( $return, $cardnumber, $cas_ticket );
 
         # Proxy CAS auth
-        if ( $cas && $query->param('PT') ) {
+        if ( $query->param('PT') ) {
             my $retuserid;
 
             # In case of a CAS authentication, we use the ticket instead of the password
@@ -2070,7 +2064,7 @@ sub checkpw {
         }
         $check_internal_as_fallback = 1 if $retval == 0;
 
-    } elsif ( $cas && $query && $query->param('ticket') ) {
+    } elsif ( $query && $query->param('ticket') && $query->param('cas_provider') ) {
 
         # In case of a CAS authentication, we use the ticket instead of the password
         my $ticket = $query->param('ticket');
