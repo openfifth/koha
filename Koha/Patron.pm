@@ -406,7 +406,8 @@ sub store {
                     my $from_storage = $self_from_storage->_unblessed_for_log;
                     my $from_object  = $self->_unblessed_for_log;
 
-                    my @keys = C4::Context->preference("BorrowersLog") ? keys %{$from_storage} : ('cardnumber');
+                    my %all_keys = map { $_ => 1 } ( keys %{$from_storage}, keys %{$from_object} );
+                    my @keys     = C4::Context->preference("BorrowersLog") ? keys %all_keys : ('cardnumber');
                     my $changed;
                     for my $key (@keys) {
                         my $storage_value = $from_storage->{$key} // q{};
