@@ -1,10 +1,111 @@
 <template>
     <div v-if="!initialized">{{ $__("Loading") }}</div>
     <BaseResource v-else :routeAction="routeAction" :instancedResource="this" />
+
+    <!-- SAML2 certificate generation modal -->
+    <div
+        v-if="certModalVisible"
+        class="modal fade show d-block"
+        tabindex="-1"
+        role="dialog"
+        aria-modal="true"
+        @click.self="certModalVisible = false"
+    >
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        {{ $__("Generate SP certificate") }}
+                    </h5>
+                    <button
+                        type="button"
+                        class="btn-close"
+                        @click="certModalVisible = false"
+                        :aria-label="$__('Close')"
+                    ></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label" for="cert-cn">{{
+                            $__("Common Name (CN)")
+                        }}</label>
+                        <input
+                            id="cert-cn"
+                            type="text"
+                            class="form-control"
+                            v-model="certOptions.common_name"
+                        />
+                        <div class="form-text">
+                            {{
+                                $__(
+                                    "Used as the certificate subject. Typically the hostname URL (e.g. https://library.example.com)."
+                                )
+                            }}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="cert-keysize">{{
+                            $__("Key size")
+                        }}</label>
+                        <select
+                            id="cert-keysize"
+                            class="form-select"
+                            v-model="certOptions.key_size"
+                        >
+                            <option :value="2048">2048 bits</option>
+                            <option :value="4096">4096 bits</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="cert-validity">{{
+                            $__("Validity (days)")
+                        }}</label>
+                        <input
+                            id="cert-validity"
+                            type="number"
+                            class="form-control"
+                            min="1"
+                            max="3650"
+                            v-model.number="certOptions.validity_days"
+                        />
+                    </div>
+                    <div
+                        v-if="certError"
+                        class="alert alert-danger"
+                        role="alert"
+                    >
+                        {{ certError }}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button
+                        type="button"
+                        class="btn btn-secondary"
+                        @click="certModalVisible = false"
+                        :disabled="certGenerating"
+                    >
+                        {{ $__("Cancel") }}
+                    </button>
+                    <button
+                        type="button"
+                        class="btn btn-primary"
+                        @click="generateCertificate"
+                        :disabled="certGenerating"
+                    >
+                        <span v-if="certGenerating">{{
+                            $__("Generating…")
+                        }}</span>
+                        <span v-else>{{ $__("Generate") }}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div v-if="certModalVisible" class="modal-backdrop fade show"></div>
 </template>
 
 <script>
-import { ref, onMounted, reactive, watch } from "vue";
+import { ref, onMounted, reactive, watch, computed } from "vue";
 import BaseResource from "./../BaseResource.vue";
 import { useBaseResource } from "../../composables/base-resource.js";
 import { APIClient } from "../../fetch/api-client.js";
@@ -94,11 +195,81 @@ const PROTOCOL_CONFIG_FIELDS = {
     ],
     SAML2: [
         {
-            name: "saml2_sp_note",
-            type: "group_placeholder",
+            name: "mode",
+            label: __("Mode"),
+            required: true,
+            type: "select",
             group: "SAML2 settings",
-            description: __(
-                "SAML2/Shibboleth connection is handled by the native service provider software (e.g. mod_shib) configured on this server. No Koha-side connection settings are required."
+            options: [
+                { value: "ipc", label: "IPC (OS-level mod_shib / libshibsp)" },
+                { value: "native", label: "Native (Koha built-in SAML2 SP)" },
+            ],
+            requiredKey: "value",
+            selectLabel: "label",
+            toolTip: __(
+                "IPC mode requires mod_shib installed on the server. Native mode uses Koha's built-in SAML2 service provider."
+            ),
+        },
+        {
+            name: "idp_metadata",
+            label: __("IdP Metadata XML"),
+            type: "textarea",
+            group: "SAML2 settings",
+            nativeOnly: true,
+            toolTip: __(
+                "Paste the Identity Provider's SAML2 metadata XML here. Required for native mode."
+            ),
+        },
+        {
+            name: "generate_sp_cert",
+            label: __("Generate certificate"),
+            buttonLabel: __("Generate certificate…"),
+            type: "action_button",
+            group: "SAML2 settings",
+            nativeOnly: true,
+            toolTip: __(
+                "Generate a self-signed X.509 certificate and private key for this SP"
+            ),
+            // onClick is set dynamically in setup() once certModalVisible is in scope
+        },
+        {
+            name: "sp_cert",
+            label: __("SP Certificate (PEM)"),
+            type: "pem_certificate",
+            group: "SAML2 settings",
+            nativeOnly: true,
+            toolTip: __(
+                "The Service Provider's X.509 certificate in PEM format. Required for native mode."
+            ),
+        },
+        {
+            name: "sp_key",
+            label: __("SP Private Key (PEM)"),
+            type: "pem_certificate",
+            group: "SAML2 settings",
+            nativeOnly: true,
+            toolTip: __(
+                "The Service Provider's private key in PEM format. Required for native mode."
+            ),
+        },
+        {
+            name: "sign_authn_requests",
+            label: __("Sign AuthnRequests"),
+            type: "boolean",
+            group: "SAML2 settings",
+            nativeOnly: true,
+            toolTip: __(
+                "Sign outgoing SAML2 AuthnRequests with the SP certificate. Recommended when using native mode."
+            ),
+        },
+        {
+            name: "debug",
+            label: __("Debug mode"),
+            type: "boolean",
+            group: "SAML2 settings",
+            nativeOnly: true,
+            toolTip: __(
+                "When enabled, the /cgi-bin/koha/saml2/attributes page shows received SAML attributes and matchpoint resolution to help configure attribute mappings. Disable in production."
             ),
         },
     ],
@@ -116,9 +287,23 @@ export default {
     setup(props) {
         const initialized = ref(false);
 
+        // Certificate generation modal state
+        const certModalVisible = ref(false);
+        const certGenerating = ref(false);
+        const certError = ref(null);
+        const certOptions = reactive({
+            common_name: "",
+            key_size: 2048,
+            validity_days: 365,
+        });
+
         // Tracks the currently selected/loaded protocol so config field groups
         // can be shown or hidden reactively via hideIn closures.
         const selectedProtocol = ref(null);
+
+        // Tracks the SAML2 mode (ipc/native) so mode-specific config fields
+        // can be shown or hidden reactively via hideIn closures.
+        const selectedSAML2Mode = ref(null);
 
         // Tracks the IDs of sub-resources that existed when the provider was
         // loaded, so we can delete any that the user removed during editing.
@@ -195,18 +380,54 @@ export default {
         // Build config attrs for ALL protocols. Each gets a hideIn closure that
         // hides it when a different protocol is selected, or when no protocol
         // has been selected yet (add mode).
+        // Fields marked nativeOnly:true are additionally hidden unless the
+        // SAML2 mode is set to "native" (tracked via selectedSAML2Mode).
         const configResourceAttrs = Object.entries(
             PROTOCOL_CONFIG_FIELDS
         ).flatMap(([protocol, fields]) =>
-            fields.map(f => ({
-                ...f,
-                name: `_config_${f.name}`,
-                hideIn: () =>
-                    !selectedProtocol.value ||
-                    selectedProtocol.value !== protocol
-                        ? ["Form", "Show", "List"]
-                        : ["List"],
-            }))
+            fields.map(f => {
+                const attr = {
+                    ...f,
+                    name: `_config_${f.name}`,
+                    hideIn: () => {
+                        // Protocol-level check: always hide when another protocol is selected
+                        if (
+                            !selectedProtocol.value ||
+                            selectedProtocol.value !== protocol
+                        ) {
+                            return ["Form", "Show", "List"];
+                        }
+                        // Mode-level check for nativeOnly fields (e.g. SAML2 SP crypto config)
+                        if (
+                            f.nativeOnly &&
+                            selectedSAML2Mode.value !== "native"
+                        ) {
+                            return ["Form", "Show", "List"];
+                        }
+                        // showOnly fields are hidden in the edit/add form
+                        if (f.showOnly) {
+                            return ["Form", "List"];
+                        }
+                        return ["List"];
+                    },
+                };
+                // Inject the onClick handler for the cert-generation button
+                if (f.name === "generate_sp_cert") {
+                    attr.onClick = resource => {
+                        certError.value = null;
+                        // Pre-populate CN with the first configured hostname
+                        const firstHostname =
+                            resource.hostnames?.[0]?.hostname || "";
+                        certOptions.common_name = firstHostname
+                            ? "https://" + firstHostname
+                            : "";
+                        certOptions.key_size = 2048;
+                        certOptions.validity_days = 365;
+                        certModalVisible.value = true;
+                    };
+                }
+                return attr;
+            })
         );
 
         const borrowerColumnsArray = (window.borrower_columns || []).map(
@@ -228,6 +449,25 @@ export default {
             label: cat.label,
         }));
 
+        // Dynamic columns for the hostnames display table.
+        // For SAML2 native mode a "SP Metadata URL" column is appended so
+        // administrators can easily copy the URL to share with their IdP.
+        const hostnameColumns = computed(() => {
+            const cols = [
+                { name: __("Hostname"), value: "hostname" },
+                { name: __("Force SSO"), value: "force_sso" },
+                { name: __("Matchpoint"), value: "matchpoint" },
+            ];
+            if (selectedSAML2Mode.value === "native") {
+                cols.push({
+                    name: __("SP Metadata URL"),
+                    value: "metadata_url",
+                    computeHref: row => row.metadata_url,
+                });
+            }
+            return cols;
+        });
+
         const hostnameAttr = {
             name: "hostnames",
             type: "relationshipWidget",
@@ -237,11 +477,7 @@ export default {
                 type: "table",
                 columnData: "hostnames",
                 hidden: provider => !!provider.hostnames?.length,
-                columns: [
-                    { name: __("Hostname"), value: "hostname" },
-                    { name: __("Exclusive provider"), value: "is_exclusive" },
-                    { name: __("Matchpoint"), value: "matchpoint" },
-                ],
+                columns: hostnameColumns,
             },
             componentProps: {
                 resourceRelationships: { resourceProperty: "hostnames" },
@@ -561,11 +797,20 @@ export default {
         // Unpack the JSON config blob into flat _config_* fields so the form
         // and show views can bind to them individually.
         const afterResourceFetch = (componentData, resource) => {
+            activeFormResource.value = resource;
             selectedProtocol.value = resource.protocol || null;
             const config = resource.config || {};
+            // Track SAML2 mode for reactive field visibility
+            if (resource.protocol === "SAML2") {
+                selectedSAML2Mode.value = config.mode || null;
+            } else {
+                selectedSAML2Mode.value = null;
+            }
             const fields = PROTOCOL_CONFIG_FIELDS[resource.protocol] || [];
             fields.forEach(field => {
                 if (field.type === "group_placeholder") return;
+                if (field.type === "action_button") return;
+                if (field.type === "static_text") return;
                 resource[`_config_${field.name}`] =
                     field.type === "boolean"
                         ? (config[field.name] ?? false)
@@ -574,6 +819,19 @@ export default {
             if (!resource.domains) resource.domains = [];
             if (!resource.mappings) resource.mappings = [];
             resource.hostnames = resource.hostnames || [];
+
+            // For SAML2 native mode, add computed metadata_url to each hostname
+            // so it can be displayed in the hostnames table.
+            if (resource.protocol === "SAML2" && config.mode === "native") {
+                resource.hostnames.forEach(h => {
+                    if (h.hostname) {
+                        h.metadata_url =
+                            "https://" +
+                            h.hostname +
+                            "/cgi-bin/koha/saml2/metadata";
+                    }
+                });
+            }
 
             // Store the IDs of existing sub-resources so we can delete any
             // that the user removes during an edit.
@@ -638,10 +896,33 @@ export default {
         // mutations that ResourceFormSave makes when the user changes the
         // protocol dropdown.
         const formStateObj = reactive(baseResource.newResource.value);
+
+        // Always points to the object currently bound to the form:
+        // - add mode:  newResource.value (the template object above)
+        // - edit mode: the fetched resource (updated in afterResourceFetch)
+        const activeFormResource = ref(baseResource.newResource.value);
         watch(
             () => formStateObj.protocol,
             newProtocol => {
                 selectedProtocol.value = newProtocol || null;
+                // Reset SAML2 mode tracking when protocol changes
+                if (!newProtocol || newProtocol !== "SAML2") {
+                    selectedSAML2Mode.value = null;
+                }
+            }
+        );
+        // Watch the SAML2 mode field so native-only fields appear/disappear reactively.
+        // The mode field is stored as _config_mode in the form state object.
+        // The value may be a plain string (on load) or a select option object {value, label}
+        // (when picked from the dropdown), so we normalise to a string.
+        watch(
+            () => formStateObj._config_mode,
+            newMode => {
+                const modeStr =
+                    newMode && typeof newMode === "object"
+                        ? newMode.value
+                        : newMode || null;
+                selectedSAML2Mode.value = modeStr;
             }
         );
 
@@ -656,6 +937,29 @@ export default {
             initialized.value = true;
         });
 
+        const generateCertificate = async () => {
+            certError.value = null;
+            certGenerating.value = true;
+            try {
+                const result =
+                    await APIClient.identity_providers.saml2.generateCertificate(
+                        {
+                            common_name: certOptions.common_name,
+                            key_size: certOptions.key_size,
+                            validity_days: certOptions.validity_days,
+                        }
+                    );
+                activeFormResource.value._config_sp_cert = result.certificate;
+                activeFormResource.value._config_sp_key = result.private_key;
+                certModalVisible.value = false;
+            } catch (err) {
+                certError.value =
+                    err?.message || $__("Certificate generation failed");
+            } finally {
+                certGenerating.value = false;
+            }
+        };
+
         const onFormSave = async (e, providerToSave) => {
             e.preventDefault();
             const provider = JSON.parse(JSON.stringify(providerToSave));
@@ -668,6 +972,8 @@ export default {
             const config = {};
             configFieldDefs.forEach(field => {
                 if (field.type === "group_placeholder") return;
+                if (field.type === "action_button") return;
+                if (field.type === "static_text") return;
                 const flatKey = `_config_${field.name}`;
                 if (flatKey in provider) {
                     config[field.name] = provider[flatKey];
@@ -903,6 +1209,11 @@ export default {
             PROTOCOL_CONFIG_FIELDS,
             tableOptions,
             onFormSave,
+            certModalVisible,
+            certGenerating,
+            certError,
+            certOptions,
+            generateCertificate,
         };
     },
 };

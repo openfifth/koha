@@ -28,11 +28,16 @@
             @update:modelValue="checkForInputError()"
         />
     </template>
-    <template v-else-if="attr.type == 'textarea'">
+    <template
+        v-else-if="attr.type == 'textarea' || attr.type == 'pem_certificate'"
+    >
         <TextArea
             :id="getElementId"
             v-model="resource[attr.name]"
-            :rows="attr.textAreaRows"
+            :rows="
+                attr.textAreaRows ||
+                (attr.type == 'pem_certificate' ? 6 : undefined)
+            "
             :cols="attr.textAreaCols"
             :placeholder="attr.placeholder || attr.label"
             :required="attr.required ? true : false"
@@ -198,6 +203,34 @@
     </template>
     <template v-else-if="attr.type == 'hidden'">
         <input type="hidden" />
+    </template>
+    <template v-else-if="attr.type == 'static_text'">
+        <span class="static-text-value">
+            <a
+                v-if="attr.href || attr.computeHref"
+                :href="
+                    attr.computeHref ? attr.computeHref(resource) : attr.href
+                "
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                {{
+                    attr.computeValue ? attr.computeValue(resource) : attr.value
+                }}
+            </a>
+            <span v-else>{{
+                attr.computeValue ? attr.computeValue(resource) : attr.value
+            }}</span>
+        </span>
+    </template>
+    <template v-else-if="attr.type == 'action_button'">
+        <button
+            type="button"
+            class="btn btn-default"
+            @click="attr.onClick && attr.onClick(resource)"
+        >
+            {{ attr.buttonLabel || attr.label }}
+        </button>
     </template>
     <template v-else>
         <span>{{

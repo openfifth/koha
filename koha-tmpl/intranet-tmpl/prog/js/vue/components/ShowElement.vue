@@ -76,7 +76,15 @@
                                     dataColumn.value.includes('.')
                                 "
                             >
+                                <a
+                                    v-if="dataColumn.computeHref"
+                                    :href="dataColumn.computeHref(row)"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    >{{ formatValue(dataColumn, row) }}</a
+                                >
                                 <LinkWrapper
+                                    v-else
                                     :linkData="dataColumn.link"
                                     :resource="row"
                                 >
@@ -97,7 +105,15 @@
                                 </LinkWrapper>
                             </template>
                             <template v-else>
+                                <a
+                                    v-if="dataColumn.computeHref"
+                                    :href="dataColumn.computeHref(row)"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    >{{ row[dataColumn.value] }}</a
+                                >
                                 <LinkWrapper
+                                    v-else
                                     :linkData="dataColumn.link"
                                     :resource="row"
                                 >
@@ -159,6 +175,55 @@
             </span>
         </LinkWrapper>
     </template>
+    <template v-else-if="attr.type == 'static_text'">
+        <label>{{ attr.label }}:</label>
+        <span class="static-text-value">
+            <!-- Multiple values: one link per item (e.g. per-hostname URLs) -->
+            <template v-if="attr.computeValues">
+                <span
+                    v-for="(item, i) in attr.computeValues(resource)"
+                    :key="i"
+                    class="d-block"
+                >
+                    <a
+                        :href="item.href"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        >{{ item.label }}</a
+                    >
+                </span>
+            </template>
+            <!-- Single value -->
+            <template v-else>
+                <a
+                    v-if="attr.href || attr.computeHref"
+                    :href="
+                        attr.computeHref
+                            ? attr.computeHref(resource)
+                            : attr.href
+                    "
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    {{
+                        attr.computeValue
+                            ? attr.computeValue(resource)
+                            : attr.value
+                    }}
+                </a>
+                <span v-else>{{
+                    attr.computeValue ? attr.computeValue(resource) : attr.value
+                }}</span>
+            </template>
+        </span>
+    </template>
+    <template v-else-if="attr.type == 'pem_certificate'">
+        <label>{{ attr.label }}:</label>
+        <pre v-if="resource[attr.name]" class="pem-block">{{
+            resource[attr.name]
+        }}</pre>
+        <span v-else>—</span>
+    </template>
     <template
         v-else-if="attr.type === 'relationshipWidget' && attr.componentProps"
     >
@@ -188,7 +253,7 @@
 import LinkWrapper from "./LinkWrapper.vue";
 import AdditionalFieldsDisplay from "./AdditionalFieldsDisplay.vue";
 import { useBaseElement } from "../composables/base-element.js";
-import { computed, defineAsyncComponent } from "vue";
+import { computed, defineAsyncComponent, unref } from "vue";
 
 import { loadComponent } from "@koha-vue/loaders/componentResolver";
 
@@ -241,7 +306,8 @@ export default {
         });
         const tableColumns = computed(() => {
             const tableData = props.resource[attribute.value.columnData];
-            const columns = attribute.value.columns;
+            // columns may be a plain array or a Vue ref (for dynamic column sets)
+            const columns = unref(attribute.value.columns);
             if (attribute.value.includeAdditionalFields && tableData?.length) {
                 const additionalFieldColumns = tableData.reduce((acc, curr) => {
                     if (curr._strings?.additional_field_values.length) {
@@ -282,3 +348,18 @@ export default {
     name: "ShowElement",
 };
 </script>
+
+<style scoped>
+.pem-block {
+    font-family: monospace;
+    font-size: 0.8em;
+    background: #f8f8f8;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 0.5em 0.75em;
+    max-height: 10em;
+    overflow-y: auto;
+    white-space: pre;
+    word-break: break-all;
+}
+</style>
