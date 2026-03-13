@@ -320,6 +320,8 @@ export default {
                     { name: __("IdP field"), value: "provider_field" },
                     { name: __("Koha field"), value: "koha_field" },
                     { name: __("Default value"), value: "default_content" },
+                    { name: __("Sync on creation"), value: "sync_on_creation" },
+                    { name: __("Sync on update"), value: "sync_on_update" },
                 ],
             },
             componentProps: {
@@ -336,6 +338,8 @@ export default {
                         provider_field: "",
                         koha_field: borrowerColumnsArray[0]?.value || "",
                         default_content: "",
+                        sync_on_creation: true,
+                        sync_on_update: true,
                     },
                 },
             },
@@ -363,6 +367,22 @@ export default {
                     indexRequired: true,
                     type: "text",
                     label: __("Default value"),
+                },
+                {
+                    name: "sync_on_creation",
+                    type: "boolean",
+                    indexRequired: true,
+                    label: __("Sync on creation"),
+                    badgeTrueLabel: __("Sync on creation"),
+                    badgeTrueClass: "bg-success",
+                },
+                {
+                    name: "sync_on_update",
+                    type: "boolean",
+                    indexRequired: true,
+                    label: __("Sync on update"),
+                    badgeTrueLabel: __("Sync on update"),
+                    badgeTrueClass: "bg-success",
                 },
             ],
         };
@@ -728,6 +748,8 @@ export default {
                             provider_field: m.provider_field || null,
                             koha_field: m.koha_field,
                             default_content: m.default_content || null,
+                            sync_on_creation: m.sync_on_creation ?? true,
+                            sync_on_update: m.sync_on_update ?? true,
                         };
                         if (m.mapping_id) {
                             await APIClient.identity_providers.mappings.update(
@@ -809,6 +831,8 @@ export default {
                                 provider_field: m.provider_field || null,
                                 koha_field: m.koha_field,
                                 default_content: m.default_content || null,
+                                sync_on_creation: m.sync_on_creation ?? true,
+                                sync_on_update: m.sync_on_update ?? true,
                             }
                         );
                     }
