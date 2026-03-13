@@ -805,6 +805,33 @@ sub _version_check {
     }
 }
 
+sub _is_native_saml2 {
+
+    # Check whether there is a native-mode SAML2 provider configured in the
+    # identity providers table for the current hostname.
+    # In Plack mode SERVER_NAME is the proxy target; HTTP_HOST has the real vhost.
+    my $hostname = $ENV{HTTP_HOST} // $ENV{SERVER_NAME} // '';
+    $hostname =~ s/:\d+$//;
+    my $provider = eval {
+        Koha::Auth::Identity::Providers->search(
+            {
+                'me.protocol'          => 'SAML2',
+                'me.enabled'           => 1,
+                'hostname.hostname'    => $hostname,
+                'hostnames.is_enabled' => 1,
+            },
+            { join => { hostnames => 'hostname' }, rows => 1 }
+        )->next;
+    };
+    if ( $provider && $provider->is_native ) {
+        return 1;
+    }
+
+    # Fall back to koha-conf.xml for backward compatibility
+    my $shib_config = C4::Context->config('shibboleth') // {};
+    return ( $shib_config->{mode} // 'ipc' ) eq 'native';
+}
+
 =head2 _timeout_syspref
 
   my $timeout = _timeout_syspref();
@@ -939,6 +966,14 @@ sub checkauth {
             : $return eq 'additional-auth-needed' ? 'additional-auth-needed'
             :                                       'failed';
 
+        # Native SAML2 session bridge: if in native SAML2 mode and no match
+        # attribute was obtained from mod_shib ENV headers, check whether the
+        # SAML2 middleware stored a pending matchpoint in the anonymous session.
+        if ( $shib && !$shib_login && _is_native_saml2() && $session && $return eq 'anon' ) {
+            my $pending = $session->param('saml2_pending_matchpoint');
+            $shib_login = $pending if $pending;
+        }
+
         # We are at the second screen if the waiting-for-2FA is set in session
         # and otp_token param has been passed
         if (   $require_2FA
@@ -1061,7 +1096,14 @@ sub checkauth {
 
         #we initiate a session prior to checking for a username to allow for anonymous sessions...
         if ( !$session or !$sessionID ) {    # if we cleared sessionID, we need a new session
+
+            # Preserve SAML2 debug attributes across the session boundary so the
+            # /saml2/attributes debug page remains usable after a failed login.
+            my $saml2_attrs = $session ? $session->param('saml2_all_attributes') : undef;
+
             $session = get_session() or die "Auth ERROR: Cannot get_session()";
+
+            $session->param( 'saml2_all_attributes', $saml2_attrs ) if $saml2_attrs;
         }
 
         # Save anonymous search history in new session so it can be retrieved
@@ -1101,8 +1143,19 @@ sub checkauth {
             if ( $shib && $shib_login ) {
                 my $retuserid;
 
-                # Do not pass password here, else shib will not be checked in checkpw.
-                ( $return, $cardnumber, $retuserid ) = checkpw( $q_userid, undef, $query );
+                if ( _is_native_saml2() ) {
+
+                    # For native SAML2 the matchpoint value came from the session bridge,
+                    # not from mod_shib ENV vars.  Calling checkpw() would re-read
+                    # get_login_shib() (which returns '' in native mode) and never reach
+                    # the shib branch, so we call checkpw_shib() directly instead.
+                    my $shib_patron;
+                    ( $return, $cardnumber, $retuserid, $shib_patron ) = checkpw_shib($shib_login);
+                } else {
+
+                    # Do not pass password here, else shib will not be checked in checkpw.
+                    ( $return, $cardnumber, $retuserid ) = checkpw( $q_userid, undef, $query );
+                }
                 $userid                   = $retuserid;
                 $shibSuccess              = $return;
                 $info{'invalidShibLogin'} = 1 unless ($return);
@@ -1328,21 +1381,22 @@ sub checkauth {
                         $is_sco_user = 1;
                     }
 
-                    $session->param( 'number',        $borrowernumber );
-                    $session->param( 'id',            $userid );
-                    $session->param( 'cardnumber',    $cardnumber );
-                    $session->param( 'firstname',     $firstname );
-                    $session->param( 'surname',       $surname );
-                    $session->param( 'branch',        $branchcode );
-                    $session->param( 'branchname',    $branchname );
-                    $session->param( 'desk_id',       $desk_id );
-                    $session->param( 'desk_name',     $desk_name );
-                    $session->param( 'flags',         $userflags );
-                    $session->param( 'emailaddress',  $emailaddress );
-                    $session->param( 'ip',            $session->remote_addr() );
-                    $session->param( 'lasttime',      time() );
-                    $session->param( 'interface',     $type );
-                    $session->param( 'shibboleth',    $shibSuccess );
+                    $session->param( 'number',       $borrowernumber );
+                    $session->param( 'id',           $userid );
+                    $session->param( 'cardnumber',   $cardnumber );
+                    $session->param( 'firstname',    $firstname );
+                    $session->param( 'surname',      $surname );
+                    $session->param( 'branch',       $branchcode );
+                    $session->param( 'branchname',   $branchname );
+                    $session->param( 'desk_id',      $desk_id );
+                    $session->param( 'desk_name',    $desk_name );
+                    $session->param( 'flags',        $userflags );
+                    $session->param( 'emailaddress', $emailaddress );
+                    $session->param( 'ip',           $session->remote_addr() );
+                    $session->param( 'lasttime',     time() );
+                    $session->param( 'interface',    $type );
+                    $session->param( 'shibboleth',   $shibSuccess );
+                    $session->clear('saml2_pending_matchpoint') if _is_native_saml2();
                     $session->param( 'register_id',   $register_id );
                     $session->param( 'register_name', $register_name );
                     $session->param( 'sco_user',      $is_sco_user );

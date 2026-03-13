@@ -21,6 +21,8 @@ use FindBin;
 use Plack::Builder;
 use Mojo::Server::PSGI;
 
+use C4::Context;
+
 sub psgi_app {
     my ($script) = @_;
 
@@ -58,6 +60,7 @@ builder {
     enable '+Koha::Middleware::SetEnv';
     enable '+Koha::Middleware::ContentSecurityPolicy';
     enable '+Koha::Middleware::RealIP';
+    enable '+Koha::Middleware::SAML2';
 
     sub {
         my $env = shift;

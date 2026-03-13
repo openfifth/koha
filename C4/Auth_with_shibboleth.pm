@@ -28,251 +28,182 @@ BEGIN {
 }
 
 use C4::Context;
-use Koha::AuthUtils qw( get_script_name );
-use Koha::Database;
-use Koha::Patrons;
-use C4::Letters qw( GetPreparedLetter EnqueueLetter SendQueuedMessages );
-use C4::Members::Messaging;
-use Carp            qw( carp );
-use List::MoreUtils qw( any );
-
-use Koha::Logger;
-use Koha::Auth::Client;
+use JSON qw( decode_json );
+use Koha::Auth::Client::SAML2;
 use Koha::Auth::Identity::Providers;
-use Koha::Patron::Attribute;
-use Koha::Patron::Attributes;
+use Koha::AuthUtils qw( get_script_name );
+use Koha::Logger;
+use Koha::Session;
 
-# Check that shib config is not malformed
+use Carp qw( carp );
+
+=head1 NAME
+
+C4::Auth_with_shibboleth
+
+=head1 SYNOPSIS
+
+  use C4::Auth_with_shibboleth;
+
+=head1 DESCRIPTION
+
+This module provides the Shibboleth/SAML2 authentication interface for Koha.
+It supports both IPC mode (OS-level mod_shib / libshibsp) and native mode
+(Koha built-in SAML2 SP via L<Koha::Middleware::SAML2>).
+
+The heavy lifting is delegated to L<Koha::Auth::Client::SAML2>.
+
+=head1 FUNCTIONS
+
+=head2 shib_ok
+
+Returns true if at least one enabled SAML2 identity provider is configured in
+the identity providers table for the current hostname.
+
+=cut
 
 sub shib_ok {
-    my $config = _get_shib_config();
-
-    if ($config) {
-        return 1;
-    }
-
-    return 0;
+    return _get_shib_config() ? 1 : 0;
 }
 
-# Logout from Shibboleth
+=head2 logout_shib
+
+Sends a logout redirect to the Shibboleth/SAML2 logout endpoint.
+
+  logout_shib($query);
+
+=cut
+
 sub logout_shib {
     my ($query) = @_;
-    my $uri     = _get_uri();
-    my $return  = _get_return($query);
-    print $query->redirect( $uri . "/Shibboleth.sso/Logout?return=$return" );
+    my $url = Koha::Auth::Client::SAML2->new->logout_url($query);
+    print $query->redirect($url);
 }
 
-# Returns Shibboleth login URL with callback to the requesting URL
+=head2 login_shib_url
+
+Given a query object, returns the Shibboleth login URL with a callback to the
+requesting page.
+
+  my $shibLoginURL = login_shib_url($query);
+
+=cut
+
 sub login_shib_url {
     my ($query) = @_;
-
-    my $target = _get_return($query);
-    my $uri    = _get_uri() . "/Shibboleth.sso/Login?target=" . $target;
-
-    return $uri;
+    return Koha::Auth::Client::SAML2->new->login_url($query);
 }
 
-# Returns shibboleth user login
+=head2 get_login_shib
+
+Returns the Shibboleth login attribute (matchpoint value) for the current
+request. For IPC mode the value comes from the HTTP environment variable set
+by mod_shib. For native mode it should be read from the CGI::Session by
+C4::Auth after the SAML2 ACS callback.
+
+  my $shib_login = get_login_shib();
+
+=cut
+
 sub get_login_shib {
 
-    # In case of a Shibboleth authentication, we expect a shibboleth user attribute
-    # to contain the login match point of the shibboleth-authenticated user. This match
-    # point is configured in koha-conf.xml
-
-    # Shibboleth attributes are mapped into http environmement variables, so we're getting
-    # the match point of the user this way
-
-    # Get shibboleth config
+    # Get shibboleth config to find the matchpoint attribute name
     my $config = _get_shib_config();
+    return '' unless $config;
 
     my $matchAttribute = $config->{mapping}->{ $config->{matchpoint} }->{is};
+    return '' unless $matchAttribute;
 
     if ( C4::Context->psgi_env ) {
-        return $ENV{ "HTTP_" . uc($matchAttribute) } || '';
+        return $ENV{ 'HTTP_' . uc($matchAttribute) } || '';
     } else {
         return $ENV{$matchAttribute} || '';
     }
 }
 
-# Checks for password correctness
-# In our case : does the given attribute match one of our users ?
+=head2 checkpw_shib
+
+Given a matchpoint attribute value (and optionally a hashref of all SAML
+attributes from the assertion), checks for a matching Koha patron.
+
+  my ( $retval, $retcard, $retuserid, $patron ) =
+      checkpw_shib( $match_value, \%saml_attributes );
+
+On success returns C<(1, $cardnumber, $userid, $patron)>.
+Returns C<0> on failure.
+
+When C<$saml_attributes> is not provided (e.g. when called from C<C4::Auth>
+in native SAML2 mode), this function attempts to load SAML attributes from the
+current CGI::Session (stored by L<Koha::Middleware::SAML2> during ACS
+processing).
+
+=cut
+
 sub checkpw_shib {
+    my ( $match, $saml_attributes ) = @_;
 
-    my ($match) = @_;
-    my $config = _get_shib_config();
-    my $client = Koha::Auth::Client->new();
-
-    # Try to find domain and override config
-    my $interface = C4::Context->interface eq 'intranet' ? 'staff' : 'opac';
-
-    # Map data from environment
-    my $mapped_data = $client->_get_mapped_data( { provider => $config->{provider}, raw_data => \%ENV } );
-
-    my $email = $mapped_data->{email};
-    if ($email) {
-        my $domain = eval {
-            $client->get_valid_domain_config(
-                { provider => $config->{provider}, email => $email, interface => $interface } );
-        };
-        if ($domain) {
-            $config->{autocreate} = $interface eq 'staff' ? $domain->auto_register_staff : $domain->auto_register_opac;
-            $config->{sync}       = $domain->update_on_auth;
-            $config->{welcome}    = $domain->send_welcome_email;
-            $config->{domain}     = $domain;
-        }
-    }
-
-    # Does the given shibboleth attribute value ($match) match a valid koha user ?
-    my $hostname_link = $config->{provider}->hostnames->search(
-        { 'hostname.hostname' => $ENV{HTTP_HOST} },
-        { join                => 'hostname' }
-    )->next;
-    my $matchpoint = $hostname_link ? $hostname_link->matchpoint : undef;
-    my $patron = eval { $client->_find_patron_by_matchpoint( $matchpoint, $match ) };
-    if ($@) {
-        if ( ref($@) eq 'Koha::Exceptions::Auth::DuplicateMatchpoint' ) {
-            Koha::Logger->get->warn(
-                "There are several users with $matchpoint of $match, matchpoints must be unique");
-            return 0;
-        }
-        die $@;
-    }
-
-    if ($patron) {
-        if ( $config->{'sync'} ) {
-            _sync( $patron->borrowernumber, $config, $mapped_data );
-        }
-        return ( 1, $patron->cardnumber, $patron->userid, $patron );
-    }
-
-    if ( $config->{'autocreate'} ) {
-        return _autocreate( $config, $mapped_data );
-    } else {
-
-        # If we reach this point, the user is not a valid koha user
-        Koha::Logger->get->info("No users with $config->{matchpoint} of $match found and autocreate is disabled");
-        return 0;
-    }
-}
-
-sub _autocreate {
-    my ( $config, $mapped_data ) = @_;
-    my $client = Koha::Auth::Client->new();
-
-    my %borrower;
-    for my $key ( keys %$mapped_data ) {
-        unless ( $key =~ /^patron_attribute:(.+)$/ ) {
-            $borrower{$key} = $mapped_data->{$key};
-        }
-    }
-
-    if ( my $domain = $config->{domain} ) {
-        $borrower{categorycode} //= $domain->default_category_id;
-        $borrower{branchcode}   //= $domain->default_library_id;
-    }
-
-    my $patron = Koha::Patron->new( \%borrower )->store;
-
-    $client->_update_patron_from_mapped_data( { patron => $patron, mapped_data => $mapped_data } );
-    $patron->discard_changes;
-
-    C4::Members::Messaging::SetMessagingPreferencesFromDefaults(
-        {
-            borrowernumber => $patron->borrowernumber,
-            categorycode   => $patron->categorycode
-        }
-    );
-
-    # Send welcome email if enabled
-    if ( $config->{welcome} ) {
-        my $emailaddr = $patron->notice_email_address;
-
-        # if we manage to find a valid email address, send notice
-        if ($emailaddr) {
-            my $letter = C4::Letters::GetPreparedLetter(
-                module      => 'members',
-                letter_code => 'WELCOME',
-                branchcode  => $patron->branchcode,
-
-                lang   => $patron->lang || 'default',
-                tables => {
-                    'branches'  => $patron->branchcode,
-                    'borrowers' => $patron->borrowernumber,
-                },
-                want_librarian => 1,
-            ) or return;
-
-            my $message_id = C4::Letters::EnqueueLetter(
-                {
-                    letter                 => $letter,
-                    borrowernumber         => $patron->id,
-                    to_address             => $emailaddr,
-                    message_transport_type => 'email'
+    # Try native SAML2 session first (attributes stored by Koha::Middleware::SAML2)
+    unless ( defined $saml_attributes ) {
+        my $session_id = _get_session_id_from_env();
+        if ($session_id) {
+            eval {
+                my $session = Koha::Session->get_session( { sessionID => $session_id } );
+                if ( $session && $session->id ) {
+                    my $json = $session->param('saml2_all_attributes');
+                    $saml_attributes = decode_json($json) if $json;
                 }
-            );
-            C4::Letters::SendQueuedMessages( { message_id => $message_id } ) if $message_id;
+            };
         }
     }
-    return ( 1, $patron->cardnumber, $patron->userid, $patron );
-}
 
-sub _sync {
-    my ( $borrowernumber, $config, $mapped_data ) = @_;
-    my $client  = Koha::Auth::Client->new();
-    my $mapping = $config->{provider}->mappings->as_auth_mapping;
-    my $patron  = Koha::Patrons->find($borrowernumber);
-    $client->_update_patron_from_mapped_data( { patron => $patron, mapped_data => $mapped_data, mapping => $mapping } );
-}
-
-sub _get_uri {
-
-    my $protocol  = "https://";
-    my $interface = C4::Context->interface;
-
-    my $uri =
-        $interface eq 'intranet'
-        ? C4::Context->preference('staffClientBaseURL')
-        : C4::Context->preference('OPACBaseURL');
-
-    $uri or Koha::Logger->get->warn("Syspref staffClientBaseURL or OPACBaseURL not set!");    # FIXME We should die here
-
-    $uri ||= "";
-
-    if ( $uri =~ /(.*):\/\/(.*)/ ) {
-        my $oldprotocol = $1;
-        if ( $oldprotocol ne 'https' ) {
-            Koha::Logger->get->warn('Shibboleth requires OPACBaseURL/staffClientBaseURL to use the https protocol!');
-        }
-        $uri = $2;
-    }
-    my $return = $protocol . $uri;
-    return $return;
-}
-
-sub _get_return {
-    my ($query) = @_;
-
-    my $uri_base_part = _get_uri() . ( get_script_name() // '' );
-
-    my $uri_params_part = '';
-    foreach my $param ( sort grep { defined } $query->url_param() ) {
-
-        # url_param() always returns parameters that were deleted by delete()
-        # This additional check ensure that parameter was not deleted.
-        my $uriPiece = $query->param($param);
-        if ($uriPiece) {
-            $uri_params_part .= '&' if $uri_params_part;
-            $uri_params_part .= $param . '=';
-            $uri_params_part .= $uriPiece;
+    # IPC mode fallback: build SAML attribute hash from HTTP environment variables
+    # using the provider mapping config. Also emits the expected debug log entries.
+    unless ( defined $saml_attributes ) {
+        my $config = _get_shib_config();
+        if ( $config && $config->{mapping} ) {
+            $saml_attributes = {};
+            while ( my ( $koha_field, $entry ) = each %{ $config->{mapping} } ) {
+                my $attr_name = $entry->{is};
+                next unless $attr_name;
+                my $value =
+                    C4::Context->psgi_env
+                    ? ( $ENV{ 'HTTP_' . uc($attr_name) } // $entry->{content} )
+                    : ( $ENV{$attr_name} // $entry->{content} );
+                $saml_attributes->{$attr_name} = $value if defined $value;
+            }
         }
     }
-    $uri_base_part .= '%3F' if $uri_params_part;
 
-    return $uri_base_part . URI::Escape::uri_escape_utf8($uri_params_part);
+    my $hostname = _request_hostname();
+    return Koha::Auth::Client::SAML2->new->checkpw( $match, $saml_attributes, $hostname );
+}
+
+sub _get_session_id_from_env {
+
+    # Try to extract CGISESSID from the HTTP_COOKIE env var
+    my $cookie_str = $ENV{HTTP_COOKIE} // '';
+    if ( $cookie_str =~ /(?:^|;\s*)CGISESSID=([^;]+)/ ) {
+        return $1;
+    }
+    return;
+}
+
+# -------------------------------------------------------------------------
+# Private helpers
+# -------------------------------------------------------------------------
+
+sub _request_hostname {
+
+    # In Plack/CGI-emulation mode SERVER_NAME is set to the proxy target
+    # (typically 'localhost'), while HTTP_HOST carries the actual vhost name
+    # from the preserved Host: header.  Prefer HTTP_HOST and strip any port.
+    my $hostname = $ENV{HTTP_HOST} // $ENV{SERVER_NAME} // '';
+    $hostname =~ s/:\d+$//;
+    return $hostname;
 }
 
 sub _get_shib_config {
-    my $hostname     = $ENV{HTTP_HOST};
+    my $hostname     = _request_hostname();
     my @h_candidates = Koha::Auth::Identity::Providers->hostname_candidates($hostname);
     my $provider     = Koha::Auth::Identity::Providers->search(
         {
@@ -314,177 +245,64 @@ sub _get_shib_config {
     };
 
     my $logger = Koha::Logger->get;
-    $logger->debug( "koha borrower field to match: " . $config->{matchpoint} );
-    $logger->debug( "shibboleth attribute to match: " . $mapping->{ $config->{matchpoint} }->{is} );
+    $logger->debug( 'koha borrower field to match: ' . $config->{matchpoint} );
+    $logger->debug( 'shibboleth attribute to match: ' . $mapping->{ $config->{matchpoint} }->{is} );
 
     return $config;
+}
+
+sub _get_uri {
+    my $protocol  = 'https://';
+    my $interface = C4::Context->interface;
+
+    my $uri =
+        $interface eq 'intranet'
+        ? C4::Context->preference('staffClientBaseURL')
+        : C4::Context->preference('OPACBaseURL');
+
+    $uri or Koha::Logger->get->warn('Syspref staffClientBaseURL or OPACBaseURL not set!');
+    $uri ||= '';
+
+    if ( $uri =~ m{(.*?)://(.*)$} ) {
+        my $oldprotocol = $1;
+        if ( $oldprotocol ne 'https' ) {
+            Koha::Logger->get->warn('Shibboleth requires OPACBaseURL/staffClientBaseURL to use the https protocol!');
+        }
+        $uri = $2;
+    }
+    return $protocol . $uri;
+}
+
+sub _get_return {
+    my ($query) = @_;
+
+    my $uri_base_part = _get_uri() . get_script_name();
+
+    my $uri_params_part = '';
+    foreach my $param ( sort $query->url_param() ) {
+        my $uriPiece = $query->param($param);
+        if ($uriPiece) {
+            $uri_params_part .= '&' if $uri_params_part;
+            $uri_params_part .= $param . '=';
+            $uri_params_part .= $uriPiece;
+        }
+    }
+    $uri_base_part .= '%3F' if $uri_params_part;
+
+    return $uri_base_part . URI::Escape::uri_escape_utf8($uri_params_part);
 }
 
 1;
 __END__
 
-=head1 NAME
-
-C4::Auth_with_shibboleth
-
-=head1 SYNOPSIS
-
-use C4::Auth_with_shibboleth;
-
-=head1 DESCRIPTION
-
-This module is specific to Shibboleth authentication in koha and relies heavily upon the native shibboleth service provider package in your operating system.
-
 =head1 CONFIGURATION
 
-To use this type of authentication these additional packages are required:
-
-=over
-
-=item *
-
-libapache2-mod-shib2
-
-=item *
-
-libshibsp5:amd64
-
-=item *
-
-shibboleth-sp2-schemas
-
-=back
-
-We let the native shibboleth service provider packages handle all the complexities of shibboleth negotiation for us, and configuring this is beyond the scope of this documentation.
-
-But to sum up, to get shibboleth working in koha, as a minimum you will need to:
-
-=over
-
-=item 1.
-
-Create some metadata for your koha instance (if you're in a single instance setup then the default metadata available at https://youraddress.com/Shibboleth.sso/Metadata should be adequate)
-
-=item 2.
-
-Swap metadata with your Identidy Provider (IdP)
-
-=item 3.
-
-Map their attributes to what you want to see in koha
-
-=item 4.
-
-Tell apache that we wish to allow koha to authenticate via shibboleth.
-
-This is as simple as adding the below to your virtualhost config (for CGI running):
-
- <Location />
-   AuthType shibboleth
-   Require shibboleth
- </Location>
-
-Or (for Plack running):
-
- <Location />
-   AuthType shibboleth
-   Require shibboleth
-   ShibUseEnvironment Off
-   ShibUseHeaders On
- </Location>
-
-IMPORTANT: Please note, if you are running in the plack configuration you should consult https://wiki.shibboleth.net/confluence/display/SHIB2/NativeSPSpoofChecking for security advice regarding header spoof checking settings. (See also bug 17776 on Bugzilla about enabling ShibUseHeaders.)
-
-=item 5.
-
-Configure koha to listen for shibboleth environment variables.
-
-This is as simple as enabling B<useshibboleth> in koha-conf.xml:
-
- <useshibboleth>1</useshibboleth>
-
-=item 6.
-
-Map shibboleth attributes to koha fields, and configure authentication match point in koha-conf.xml.
-
- <shibboleth>
-   <matchpoint>userid</matchpoint> <!-- koha borrower field to match upon -->
-   <mapping>
-     <userid is="eduPersonID"></userid> <!-- koha borrower field to shibboleth attribute mapping -->
-   </mapping>
- </shibboleth>
-
-Note: The minimum you need here is a <matchpoint> block, containing a valid column name from the koha borrowers table, and a <mapping> block containing a relation between the chosen matchpoint and the shibboleth attribute name.
-
-=back
-
-It should be as simple as that; you should now be able to login via shibboleth in the opac.
-
-If you need more help configuring your B<S>ervice B<P>rovider to authenticate against a chosen B<Id>entity B<P>rovider then it might be worth taking a look at the community wiki L<page|https://wiki.koha-community.org/wiki/Shibboleth_Configuration>
-
-=head1 FUNCTIONS
-
-=head2 shib_ok
-
-Missing POD for shib_ok.
-
-=head2 logout_shib
-
-Sends a logout signal to the native shibboleth service provider and then logs out of koha.  Depending upon the native service provider configuration and identity provider capabilities this may or may not perform a single sign out action.
-
-  logout_shib($query);
-
-=head2 login_shib_url
-
-Given a query, this will return a shibboleth login url with return code to page with given given query.
-
-  my $shibLoginURL = login_shib_url($query);
-
-=head2 get_login_shib
-
-Returns the shibboleth login attribute should it be found present in the http session
-
-  my $shib_login = get_login_shib();
-
-=head2 checkpw_shib
-
-Given a shib_login attribute, this routine checks for a matching local user and if found returns true, their cardnumber and their userid.  If a match is not found, then this returns false.
-
-  my ( $retval, $retcard, $retuserid ) = C4::Auth_with_shibboleth::checkpw_shib( $shib_login );
-
-=head2 _get_uri
-
-  _get_uri();
-
-A sugar function to that simply returns the current page URI with appropriate protocol attached
-
-This routine is NOT exported
-
-=head2 get_force_sso_setting
-
-  my $force_sso = get_force_sso_setting($interface);
-
-Returns the force SSO setting for the given interface (opac or intranet).
-Returns 0 if shibboleth is not configured or the setting is disabled.
-
-  $interface - 'opac' or 'intranet'
-
-=head2 _get_shib_config
-
-  my $config = _get_shib_config();
-
-A sugar function that checks for a valid shibboleth configuration, and if found returns a hashref of it's contents
-
-This routine is NOT exported
-
-=head2 _autocreate
-
-  my ( $retval, $retcard, $retuserid, $patron ) = _autocreate( $config, $match, $patron );
-
-Given a shibboleth attribute reference and a userid this internal routine will add the given user to Koha and return their user credentials.
-
-This routine is NOT exported
+Shibboleth/SAML2 providers are configured via the identity providers admin UI
+(C</cgi-bin/koha/admin/identity_providers.pl>). Both IPC mode (mod_shib) and
+native mode (Koha built-in SP) are supported.
 
 =head1 SEE ALSO
+
+L<Koha::Auth::Client::SAML2>, L<Koha::Auth::SAML2>, L<Koha::Middleware::SAML2>
 
 =cut
