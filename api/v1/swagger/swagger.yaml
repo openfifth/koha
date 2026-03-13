@@ -28,6 +28,33 @@ definitions:
     $ref: ./definitions/hostname.yaml
   identity_provider_hostname:
     $ref: ./definitions/identity_provider_hostname.yaml
+  saml2_certificate_request:
+    type: object
+    properties:
+      common_name:
+        type: string
+        description: The CN (Common Name) for the certificate subject
+      key_size:
+        type: integer
+        description: RSA key size in bits (2048 or 4096)
+        default: 2048
+      validity_days:
+        type: integer
+        description: Number of days the certificate will be valid
+        default: 365
+    required:
+      - common_name
+    additionalProperties: false
+  saml2_certificate:
+    type: object
+    properties:
+      certificate:
+        type: string
+        description: PEM-encoded X.509 certificate
+      private_key:
+        type: string
+        description: PEM-encoded RSA private key
+    additionalProperties: false
   basket:
     $ref: ./definitions/basket.yaml
   booking:
@@ -313,6 +340,8 @@ paths:
     $ref: "./paths/auth.yaml#/~1auth~1identity_providers~1{identity_provider_id}~1hostnames"
   "/auth/identity_providers/{identity_provider_id}/hostnames/{identity_provider_hostname_id}":
     $ref: "./paths/auth.yaml#/~1auth~1identity_providers~1{identity_provider_id}~1hostnames~1{identity_provider_hostname_id}"
+  /auth/identity_providers/saml2/certificate:
+    $ref: ./paths/auth.yaml#/~1auth~1identity_providers~1saml2~1certificate
   /authorised_value_categories:
     $ref: ./paths/authorised_value_categories.yaml#/~1authorised_value_categories
   "/authorised_value_categories/{authorised_value_category_name}/authorised_values":
