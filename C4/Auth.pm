@@ -1096,14 +1096,7 @@ sub checkauth {
 
         #we initiate a session prior to checking for a username to allow for anonymous sessions...
         if ( !$session or !$sessionID ) {    # if we cleared sessionID, we need a new session
-
-            # Preserve SAML2 debug attributes across the session boundary so the
-            # /saml2/attributes debug page remains usable after a failed login.
-            my $saml2_attrs = $session ? $session->param('saml2_all_attributes') : undef;
-
             $session = get_session() or die "Auth ERROR: Cannot get_session()";
-
-            $session->param( 'saml2_all_attributes', $saml2_attrs ) if $saml2_attrs;
         }
 
         # Save anonymous search history in new session so it can be retrieved

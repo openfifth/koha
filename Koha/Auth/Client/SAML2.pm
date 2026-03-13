@@ -267,7 +267,13 @@ sub checkpw {
         );
     }
 
-    $logger->info("No users with $matchpoint of $match_value found and autocreate is disabled");
+    $logger->warn("SAML2: No patron found with $matchpoint='$match_value' and autocreate is disabled");
+    if ( $saml2_config->{debug} && %$saml_attributes ) {
+        my $attr_dump =
+            join( ', ', map { "$_=" . ( $saml_attributes->{$_} // '(undef)' ) } sort keys %$saml_attributes );
+        $logger->warn("SAML2: Received attributes: $attr_dump");
+        $logger->warn("SAML2: Hint - visit /cgi-bin/koha/saml2/attributes to see the attribute debug page");
+    }
     return 0;
 }
 
