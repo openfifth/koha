@@ -115,6 +115,16 @@ export class IdentityProvidersAPIClient {
         };
     }
 
+    get saml2() {
+        return {
+            generateCertificate: options =>
+                this.httpClient.post({
+                    endpoint: "/saml2/certificate",
+                    body: options,
+                }),
+        };
+    }
+
     get allHostnames() {
         return {
             getAll: params =>

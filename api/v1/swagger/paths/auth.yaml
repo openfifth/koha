@@ -1684,3 +1684,40 @@
     x-koha-authorization:
       permissions:
         parameters: manage_identity_providers
+
+/auth/identity_providers/saml2/certificate:
+  post:
+    x-mojo-to: Auth::Identity::Providers::SAML2#generate_certificate
+    operationId: generateSAML2Certificate
+    tags:
+      - identity_providers
+    summary: Generate a self-signed SAML2 SP certificate and private key
+    parameters:
+      - name: body
+        in: body
+        description: Certificate generation options
+        required: true
+        schema:
+          $ref: ../swagger.yaml#/definitions/saml2_certificate_request
+    produces:
+      - application/json
+    responses:
+      "201":
+        description: Certificate and private key generated successfully
+        schema:
+          $ref: ../swagger.yaml#/definitions/saml2_certificate
+      "400":
+        description: Bad request
+        schema:
+          $ref: ../swagger.yaml#/definitions/error
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: ../swagger.yaml#/definitions/error
+      "500":
+        description: Internal server error
+        schema:
+          $ref: ../swagger.yaml#/definitions/error
+    x-koha-authorization:
+      permissions:
+        parameters: manage_identity_providers
