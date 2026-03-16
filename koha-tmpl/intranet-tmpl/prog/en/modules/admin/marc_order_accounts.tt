@@ -128,7 +128,12 @@
                                 [% END %]
                             [% END %]
                         </select>
-                        <div class="hint"> Select a file transport configuration for this EDI account. File transports can be managed in <a href="/cgi-bin/koha/admin/file_transports.pl">Administration &rsaquo; File transports</a>. </div>
+                        <div class="hint">
+                            Select a file transport configuration for this MARC order account.
+                            [% IF ( CAN_user_parameters_manage_file_transports ) %]
+                                File transports can be managed in <a href="/cgi-bin/koha/admin/file_transports.pl">Administration &rsaquo; File transports</a>.
+                            [% END %]
+                        </div>
                     </li>
                     <li>
                         <label for="download_directory">Download directory: </label>
