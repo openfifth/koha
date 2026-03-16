@@ -10,12 +10,9 @@ use CGI        qw ( -utf8 );
 use C4::Output qw( output_and_exit_if_error output_and_exit output_html_with_http_headers );
 use C4::Auth   qw( get_template_and_user get_all_subpermissions get_user_subpermissions );
 use C4::Context;
-use C4::Log qw( logaction );
 
 use Koha::Patron::Categories;
 use Koha::Patrons;
-
-use C4::Output qw( output_and_exit_if_error output_and_exit output_html_with_http_headers );
 
 my $input = CGI->new;
 
@@ -53,67 +50,31 @@ $member2{'borrowernumber'} = $member;
 my $op = $input->param('op') // q{};
 
 if ( $op eq 'cud-newflags' ) {
+    my @perms        = $input->multi_param('flag');
+    my %bare_modules = ();
+    my %sub_perms    = ();
 
-    my $dbh = C4::Context->dbh();
-
-    my @perms            = $input->multi_param('flag');
-    my %all_module_perms = ();
-    my %sub_perms        = ();
+    # Each flag param is either a bare module name (e.g. 'borrowers') or
+    # a colon-separated module:subperm pair (e.g. 'tools:edit_calendar').
     foreach my $perm (@perms) {
         if ( $perm !~ /:/ ) {
-            $all_module_perms{$perm} = 1;
+            $bare_modules{$perm} = 1;
         } else {
             my ( $module, $sub_perm ) = split /:/, $perm, 2;
             push @{ $sub_perms{$module} }, $sub_perm;
         }
     }
 
-    # construct flags
-    my $module_flags = 0;
-    my $sth          = $dbh->prepare("SELECT bit,flag FROM userflags ORDER BY bit");
-    $sth->execute();
-    while ( my ( $bit, $flag ) = $sth->fetchrow_array ) {
-        if ( exists $all_module_perms{$flag} ) {
-            $module_flags += 2**$bit;
-        }
-    }
-
-    my $permissions_before = $patron->permissions();
-
-    $sth = $dbh->prepare("UPDATE borrowers SET flags=? WHERE borrowernumber=?");
-    my $old_flags = $patron->flags // 0;
-    if ( ( $old_flags == 1 || $module_flags == 1 )
-        && $old_flags != $module_flags )
-    {
-        die "Non-superlibrarian is changing superlibrarian privileges"
-            if !C4::Context->IsSuperLibrarian
-            && C4::Context->preference('ProtectSuperlibrarianPrivileges')
-            ;    # Interface should not allow this, so we can just die here
-    }
-    $sth->execute( $module_flags, $member );
-
-    # deal with subpermissions
-    $sth = $dbh->prepare("DELETE FROM user_permissions WHERE borrowernumber = ?");
-    $sth->execute($member);
-    $sth = $dbh->prepare(
-        "INSERT INTO user_permissions (borrowernumber, module_bit, code)
-                        SELECT ?, bit, ?
-                        FROM userflags
-                        WHERE flag = ?"
-    );
+    # Build granted hashref: bare module flag wins over subpermissions
+    my %granted = %bare_modules;
     foreach my $module ( keys %sub_perms ) {
-        next if exists $all_module_perms{$module};
-        foreach my $sub_perm ( @{ $sub_perms{$module} } ) {
-            $sth->execute( $member, $sub_perm, $module );
-        }
+        next if $granted{$module};    # bare flag already set — skip subperms
+        $granted{$module} = { map { $_ => 1 } @{ $sub_perms{$module} } };
     }
 
-    my $permissions_after = $patron->get_from_storage->permissions();
-    logaction(
-        'MEMBERS', 'MODIFY', $member, { permissions => $permissions_after }, undef,
-        { permissions => $permissions_before }
-    );
+    $patron->set_permissions( \%granted );
     print $input->redirect("/cgi-bin/koha/members/moremember.pl?borrowernumber=$member");
+    exit;
 } else {
 
     my $accessflags;
