@@ -496,6 +496,16 @@ sub delete {
                         $patron_data->{$key} = $attr->attribute;
                     }
                 }
+
+                # Capture granted permissions before rows are deleted
+                my $perms = $self->permissions();
+                my %granted;
+                while ( my ( $flag, $val ) = each %$perms ) {
+                    next unless $val;                        # skip zero (not granted)
+                    next if ref $val eq 'HASH' && !%$val;    # skip empty subperm hash
+                    $granted{$flag} = $val;
+                }
+                $patron_data->{permissions} = \%granted if %granted;
             }
 
             $self->SUPER::delete;
