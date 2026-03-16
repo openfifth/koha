@@ -20,9 +20,8 @@ return {
                     ON DELETE SET NULL
                     ON UPDATE CASCADE;
             }
-            );
+            ) == 1 && say_success( $out, "Added column 'marc_order_accounts.file_transport_id'" );
         }
 
-        say $out "Added column 'marc_order_accounts.file_transport_id'";
     },
 };
