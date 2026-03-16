@@ -620,6 +620,11 @@ export default {
                     this.context,
                     true
                 );
+                // effective=true returns context as */*/* (fallback); override to match
+                // the queried context, consistent with setCurrentRuleSet
+                if (ruleSetInDb) {
+                    ruleSetInDb.context = { ...this.context };
+                }
                 if (
                     this.hasConflict(
                         ruleSetInDb,
