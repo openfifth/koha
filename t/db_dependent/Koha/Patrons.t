@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 50;
+use Test::More tests => 51;
 use Test::Warn;
 use Test::Exception;
 use Test::MockModule;
@@ -3829,6 +3829,102 @@ subtest 'BorrowersLog with extended patron attributes' => sub {
     my $delete_diff = from_json( $delete_logs[0]->diff );
     ok( exists $delete_diff->{D}->{$attr_key}, 'DELETE diff includes attribute data' );
     is( $delete_diff->{D}->{$attr_key}->{R}, 'changed_value', 'DELETE diff has correct removed attribute value' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'set_permissions' => sub {
+    plan tests => 12;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'BorrowersLog',                    1 );
+    t::lib::Mocks::mock_preference( 'ProtectSuperlibrarianPrivileges', 0 );
+
+    my $patron = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $dbh    = C4::Context->dbh;
+
+    # Start with no permissions
+    $patron->set_permissions( {} );
+
+    # --- Test 1: grant a top-level permission ---
+    $patron->set_permissions( { borrowers => 1 } );
+    my $perms = $patron->get_from_storage->permissions();
+    is( $perms->{borrowers}, 1, 'set_permissions: top-level borrowers permission granted' );
+    my ($borrowers_bit) =
+        $schema->resultset('Userflag')->search( { flag => 'borrowers' } )->get_column('bit')->first;
+    my ($flags) = $dbh->selectrow_array(
+        'SELECT flags FROM borrowers WHERE borrowernumber = ?',
+        undef, $patron->borrowernumber
+    );
+    ok( $flags & ( 2**$borrowers_bit ), 'set_permissions: borrowers bit set in flags bitmask' );
+
+    # --- Test 2: grant a subpermission ---
+    $patron->set_permissions( { tools => { edit_calendar => 1 } } );
+    $perms = $patron->get_from_storage->permissions();
+    is_deeply(
+        $perms->{tools},
+        { edit_calendar => 1 },
+        'set_permissions: subpermission tools:edit_calendar granted'
+    );
+    my ($count) = $dbh->selectrow_array(
+        'SELECT COUNT(*) FROM user_permissions WHERE borrowernumber = ?',
+        undef, $patron->borrowernumber
+    );
+    is( $count, 1, 'set_permissions: one user_permissions row for subpermission' );
+
+    # --- Test 3: revoke all ---
+    $patron->set_permissions( {} );
+    $perms = $patron->get_from_storage->permissions();
+    is( $perms->{borrowers}, 0, 'set_permissions: borrowers revoked after empty hashref' );
+    ($flags) = $dbh->selectrow_array(
+        'SELECT flags FROM borrowers WHERE borrowernumber = ?',
+        undef, $patron->borrowernumber
+    );
+    is( $flags, 0, 'set_permissions: flags column is 0 after revoking all' );
+    ($count) = $dbh->selectrow_array(
+        'SELECT COUNT(*) FROM user_permissions WHERE borrowernumber = ?',
+        undef, $patron->borrowernumber
+    );
+    is( $count, 0, 'set_permissions: no user_permissions rows after revoking all' );
+
+    # --- Test 4: no-op produces no log entry ---
+    Koha::ActionLogs->search( { object    => $patron->borrowernumber } )->delete;
+    $patron->set_permissions( { borrowers => 1 } );                                 # set to known state
+    Koha::ActionLogs->search( { object    => $patron->borrowernumber } )->delete;
+    $patron->set_permissions( { borrowers => 1 } );                                 # no-op
+    my $log_count =
+        Koha::ActionLogs->search( { module => 'MEMBERS', action => 'MODIFY', object => $patron->borrowernumber } )
+        ->count;
+    is( $log_count, 0, 'set_permissions: no-op produces no log entry' );
+
+    # --- Test 5: change produces log entry with correct diff ---
+    Koha::ActionLogs->search( { object => $patron->borrowernumber } )->delete;
+    $patron->set_permissions( {} );                                                 # revoke borrowers
+    my @logs =
+        Koha::ActionLogs->search( { module => 'MEMBERS', action => 'MODIFY', object => $patron->borrowernumber } )
+        ->as_list;
+    is( scalar @logs, 1, 'set_permissions: change produces one MODIFY log entry' );
+    my $log_diff = from_json( $logs[0]->diff );
+    ok( exists $log_diff->{D}{permissions}, 'set_permissions: diff contains permissions key' );
+
+    # --- Test 6: superlibrarian guard fires for real non-superlibrarian session ---
+    t::lib::Mocks::mock_preference( 'ProtectSuperlibrarianPrivileges', 1 );
+    my $non_super = $builder->build_object( { class => 'Koha::Patrons' } );
+
+    # Mock a non-superlibrarian session
+    t::lib::Mocks::mock_userenv( { patron => $non_super, flags => 0 } );
+    eval { $patron->set_permissions( { superlibrarian => 1 } ) };
+    my $err = $@;
+    ok(
+        $err && $err->isa('Koha::Exceptions::Authorization::Unauthorized'),
+        'set_permissions: non-superlibrarian cannot grant superlibrarian (guard fires)'
+    );
+
+    # --- Test 7: guard does not fire when session user IS a superlibrarian ---
+    t::lib::Mocks::mock_userenv( { patron => $non_super, flags => 1 } );    # flags=1 = superlibrarian
+    eval { $patron->set_permissions( { superlibrarian => 1 } ) };
+    is( $@, '', 'set_permissions: guard skipped when session user is a superlibrarian' );
 
     $schema->storage->txn_rollback;
 };
