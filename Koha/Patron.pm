@@ -47,6 +47,7 @@ use Koha::DateUtils qw( dt_from_string );
 use Koha::Encryption;
 use Koha::Exceptions;
 use Koha::Exceptions::Password;
+use Koha::Exceptions::Authorization;
 use Koha::Exceptions::HoldGroup;
 use Koha::Holds;
 use Koha::HoldGroups;
@@ -3882,6 +3883,105 @@ sub permissions {
     }
 
     return $userflags;
+}
+
+=head3 set_permissions
+
+    $patron->set_permissions(\%granted);
+
+Sets the patron's permissions. C<\%granted> is a hashref of granted permissions
+only, in the same format returned by C<permissions()> for non-zero entries:
+
+    {
+        borrowers => 1,                       # full module permission
+        tools     => { edit_calendar => 1 },  # granular subpermissions
+    }
+
+Unmentioned flags are revoked. An empty hashref revokes all permissions.
+Unknown flag names are silently ignored.
+
+If C<BorrowersLog> is enabled and permissions actually changed, a C<MEMBERS/MODIFY>
+action log entry is written with the before/after diff.
+
+Returns C<$self>.
+
+=cut
+
+sub set_permissions {
+    my ( $self, $granted ) = @_;
+
+    # Capture before state for diff (use get_from_storage to ensure we read
+    # current DB state, not a stale in-memory cache on the DBIC object)
+    my $before = $self->get_from_storage->permissions();
+
+    # Superlibrarian guard — only for real authenticated sessions
+    my $userenv = C4::Context->userenv;
+    if (   ref $userenv eq 'HASH'
+        && $userenv->{number}
+        && C4::Context->preference('ProtectSuperlibrarianPrivileges')
+        && !C4::Context->IsSuperLibrarian() )
+    {
+        my $before_super = $before->{superlibrarian}  ? 1 : 0;
+        my $after_super  = $granted->{superlibrarian} ? 1 : 0;
+        if ( $before_super != $after_super ) {
+            Koha::Exceptions::Authorization::Unauthorized->throw(
+                error => 'Non-superlibrarian cannot change superlibrarian privileges' );
+        }
+    }
+
+    # Compute bitmask and build flag->bit lookup in one pass
+    my $schema       = Koha::Database->schema;
+    my @userflags    = $schema->resultset('Userflag')->search( {}, { order_by => 'bit' } )->all;
+    my $module_flags = 0;
+    my %flag_bit;
+    for my $userflag (@userflags) {
+        $flag_bit{ $userflag->flag } = $userflag->bit;
+        my $val = $granted->{ $userflag->flag };
+        $module_flags += 2**( $userflag->bit )
+            if $val && !ref $val;
+    }
+
+    $schema->txn_do(
+        sub {
+            # Update the flags bitmask on the patron record.
+            # Use _result->update to bypass Koha::Patron::store() and avoid
+            # a spurious BorrowersLog MODIFY entry for the flags column.
+            $self->_result->update( { flags => $module_flags } );
+
+            # Remove all existing granular subpermissions
+            $self->_result->user_permissions->delete_all;
+
+            # Re-insert subpermissions for hashref-valued entries.
+            # Top-level flag entries (value 1) are already handled by the
+            # bitmask above and need no user_permissions rows.
+            my @subperm_rows;
+            for my $module ( keys %$granted ) {
+                next unless ref $granted->{$module} eq 'HASH';
+
+                my $bit = $flag_bit{$module};
+                next unless defined $bit;    # skip unknown modules
+
+                for my $subperm ( keys %{ $granted->{$module} } ) {
+                    push @subperm_rows, { module_bit => $bit, code => $subperm };
+                }
+            }
+            $self->_result->user_permissions->populate( \@subperm_rows )
+                if @subperm_rows;
+        }
+    );
+
+    if ( C4::Context->preference('BorrowersLog') ) {
+        my $after   = $self->get_from_storage->permissions();
+        my $changed = diff( $before, $after, noU => 1 );
+        if ( keys %$changed ) {
+            logaction(
+                'MEMBERS', 'MODIFY', $self->borrowernumber,
+                { permissions => $after }, undef, { permissions => $before }
+            );
+        }
+    }
+
+    return $self;
 }
 
 =head2 Internal methods
