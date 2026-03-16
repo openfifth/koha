@@ -3761,7 +3761,7 @@ subtest 'check_for_existing_matches' => sub {
 };
 
 subtest 'BorrowersLog with extended patron attributes' => sub {
-    plan tests => 12;
+    plan tests => 16;
 
     $schema->storage->txn_begin;
 
@@ -3819,7 +3819,8 @@ subtest 'BorrowersLog with extended patron attributes' => sub {
     is( $modify_diff->{D}->{$attr_key}->{N}, 'changed_value', 'MODIFY diff has correct new attribute value' );
 
     # --- DELETE: log includes attribute data ---
-    Koha::ActionLogs->search( { object => $patron->borrowernumber } )->delete;
+    $patron->set_permissions( { borrowers => 1 } );
+    Koha::ActionLogs->search( { object    => $patron->borrowernumber } )->delete;
     my $borrowernumber = $patron->borrowernumber;
     $patron->delete;
 
@@ -3829,6 +3830,29 @@ subtest 'BorrowersLog with extended patron attributes' => sub {
     my $delete_diff = from_json( $delete_logs[0]->diff );
     ok( exists $delete_diff->{D}->{$attr_key}, 'DELETE diff includes attribute data' );
     is( $delete_diff->{D}->{$attr_key}->{R}, 'changed_value', 'DELETE diff has correct removed attribute value' );
+    ok( exists $delete_diff->{D}->{permissions}, 'DELETE diff includes permissions key' );
+    is_deeply(
+        $delete_diff->{D}->{permissions}->{R},
+        { borrowers => 1 },
+        'DELETE diff shows correct removed permissions'
+    );
+
+    # --- DELETE: no permissions key when patron had no granted permissions ---
+    my $patron_no_perms = $builder->build_object( { class => 'Koha::Patrons' } );
+    $patron_no_perms->set_permissions( {} );    # ensure no permissions
+    Koha::ActionLogs->search( { object => $patron_no_perms->borrowernumber } )->delete;
+    my $borrowernumber_no_perms = $patron_no_perms->borrowernumber;
+    $patron_no_perms->delete;
+
+    my @no_perms_logs =
+        Koha::ActionLogs->search( { module => 'MEMBERS', action => 'DELETE', object => $borrowernumber_no_perms } )
+        ->as_list;
+    is( scalar @no_perms_logs, 1, 'DELETE with no permissions produces one log entry' );
+    my $no_perms_diff = from_json( $no_perms_logs[0]->diff );
+    ok(
+        !exists $no_perms_diff->{D}->{permissions},
+        'DELETE diff has no permissions key when patron had no granted permissions'
+    );
 
     $schema->storage->txn_rollback;
 };
