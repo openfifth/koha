@@ -23,7 +23,7 @@ marc_ordering_process.pl - cron script to retrieve MARC files and create order l
 
 =head1 SYNOPSIS
 
-./marc_ordering_process.pl [-c|--confirm] [-v|--verbose] [--dr|--delete-remote] [--rr|--rename-remote] ext]
+./marc_ordering_process.pl [-c|--confirm] [-v|--verbose] [--dr|--delete-remote] [--rr|--rename-remote ext]
 
 or, in crontab:
 # Once every day
@@ -31,8 +31,8 @@ or, in crontab:
 
 =head1 DESCRIPTION
 
-This script searches for new MARC files in an SFTP location
-If there are new files, it stages those files, adds bilbios/items and creates order lines
+This script searches for new MARC files in a configured location (local, FTP, or SFTP).
+If there are new files, it stages those files, adds bibliographic records/items and creates order lines.
 
 =head1 OPTIONS
 
@@ -54,7 +54,7 @@ Delete the file once it has been processed
 
 Delete the remote file once it has been downloaded
 
-=item B<-rr|--rename-remove ext>
+=item B<--rr|--rename-remote ext>
 
 Rename the remote file once it has been downloaded, adding the given file extension
 
