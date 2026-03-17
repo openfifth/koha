@@ -620,19 +620,25 @@ export function useBaseResource(resourceConfig) {
                     acc[attr.name] = attr.defaultValue;
                     return acc;
                 }
-                if (["text", "textarea", "select"].includes(attr.type)) {
-                    acc[attr.name] = "";
+                const defaultValueMatrix = {
+                    text: "",
+                    textarea: "",
+                    select:
+                        attr.allowMultipleChoices || attr.repeatable ? [] : "",
+                    boolean: false,
+                    checkbox: false,
+                    relationshipWidget: [],
+                };
+                if (attr.repeatable && attr.type !== "select") {
+                    acc[attr.name] = [
+                        {
+                            label: attr.label,
+                            [attr.name]: defaultValueMatrix[attr.type],
+                        },
+                    ];
                     return acc;
                 }
-                if (["boolean", "checkbox"].includes(attr.type)) {
-                    acc[attr.name] = false;
-                    return acc;
-                }
-                if (attr.type === "relationshipWidget") {
-                    acc[attr.name] = [];
-                    return acc;
-                }
-                acc[attr.name] = null;
+                acc[attr.name] = defaultValueMatrix[attr.type] || null;
                 return acc;
             }, {});
         if (resourceConfig.extendedAttributesResourceType) {

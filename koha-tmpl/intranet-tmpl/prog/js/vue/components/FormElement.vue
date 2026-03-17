@@ -6,7 +6,45 @@
         :style="{ ...attr.style }"
         >{{ attr.label }}:</label
     >
-    <template v-if="attr.type == 'number'">
+    <template v-if="attr.repeatable && attr.type !== 'select'">
+        <fieldset>
+            <ol class="repeatableFieldList">
+                <li
+                    v-for="(repeatedField, repeatableFieldIndex) in resource[
+                        attr.name
+                    ]"
+                    v-bind:key="`${repeatedField.value}${repeatableFieldIndex}`"
+                >
+                    <FormElement
+                        :resource="repeatedField"
+                        :attr="{
+                            ...attr,
+                            repeatable: false,
+                            label: null,
+                            clearable: false,
+                        }"
+                        :index="repeatableFieldIndex"
+                    />
+                    <ClearFieldControl
+                        v-if="attr.clearable && resource[attr.name].length > 1"
+                        :arrayToDeleteFrom="resource[attr.name]"
+                        :itemIndex="repeatableFieldIndex"
+                    />
+                    <RepeatableFieldControl
+                        v-if="
+                            repeatableFieldIndex ===
+                            resource[attr.name].length - 1
+                        "
+                        :fieldLabel="attr.label"
+                        :fieldValues="resource[attr.name]"
+                        :fieldName="attr.name"
+                        :currentValue="repeatedField"
+                    />
+                </li>
+            </ol>
+        </fieldset>
+    </template>
+    <template v-else-if="attr.type == 'number'">
         <InputNumber
             :id="getElementId"
             v-model="resource[attr.name]"
@@ -109,7 +147,7 @@
             :options="selectOptions"
             :required="!resource[attr.name] && attr.required"
             :disabled="disabled"
-            :multiple="attr.allowMultipleChoices"
+            :multiple="attr.allowMultipleChoices || attr.repeatable"
             @option:selected="attr.onSelected && attr.onSelected(resource)"
             @update:modelValue="attr.onUpdated && attr.onUpdated(resource)"
         >
@@ -150,13 +188,12 @@
         ></component>
     </template>
     <template v-else-if="attr.type == 'date'">
-        <component
-            :is="requiredComponent"
+        <FlatPickrWrapper
             :id="getElementId"
             v-bind="getComponentProps()"
             v-on="getEventHandlers()"
             v-model="resource[attr.name]"
-        ></component>
+        />
     </template>
     <template v-else-if="attr.type == 'component' && attr.componentPath">
         <component
@@ -218,6 +255,9 @@
             $__("Programming error: unknown type %s").format(attr.type)
         }}</span>
     </template>
+    <template v-if="attr.clearable && !attr.repeatable">
+        <ClearFieldControl :resource="resource" :propertyToClear="attr.name" />
+    </template>
     <ToolTip v-if="attr.toolTip" :toolTip="attr.toolTip"></ToolTip>
     <span v-if="attr.required" class="required">{{ $__("Required") }}</span>
     <span style="margin-left: 5px" class="error" v-if="fieldInputError">
@@ -238,6 +278,9 @@ import InputRadio from "./Elements/InputRadio.vue";
 import { useBaseElement } from "../composables/base-element.js";
 import { computed, defineAsyncComponent, ref } from "vue";
 import { loadComponent } from "@koha-vue/loaders/componentResolver";
+import ClearFieldControl from "./ClearFieldControl.vue";
+import RepeatableFieldControl from "./RepeatableFieldControl.vue";
+import FlatPickrWrapper from "./FlatPickrWrapper.vue";
 
 export default {
     props: {
@@ -249,6 +292,7 @@ export default {
     setup(props) {
         const baseElement = useBaseElement({ ...props });
         const selectRequiredKey = av => {
+            if (!props.attr.requiredKey) return av;
             if (props.attr.requiredKey == "package_id")
                 return parseInt(av[props.attr.requiredKey]);
             return av[props.attr.requiredKey];
@@ -347,6 +391,9 @@ export default {
         InputCheckbox,
         TextArea,
         InputRadio,
+        ClearFieldControl,
+        RepeatableFieldControl,
+        FlatPickrWrapper,
     },
 };
 </script>
@@ -370,5 +417,8 @@ input[type="number"] {
 :deep() {
     --vs-dropdown-max-height: v-bind(getVselectStyle.dropdownMaxHeight);
     --vs-dropdown-min-width: v-bind(getVselectStyle.dropdownMinWidth);
+}
+.repeatableFieldList {
+    padding: 0;
 }
 </style>

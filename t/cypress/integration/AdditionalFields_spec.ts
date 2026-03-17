@@ -839,7 +839,7 @@ describe("Additional Fields operations", () => {
             "#licenses_add form #additional_fields label[for='additional_field_3']"
         )
             .parent()
-            .children("input")
+            .find("input")
             .should("have.value", license.extended_attributes[3].value);
 
         cy.get("#additional_fields #additional_field_4 .vs__selected").contains(
@@ -866,16 +866,22 @@ describe("Additional Fields operations", () => {
         // "+New" text field works
         cy.get(
             "#licenses_add form #additional_fields label[for='additional_field_3']"
-        ).should("have.length", 1);
+        )
+            .parent()
+            .find("input")
+            .should("have.length", 1);
         cy.get(
             "#licenses_add form #additional_fields label[for='additional_field_3']"
         )
             .parent()
-            .children(".clone_attribute")
+            .find(".clone_attribute")
             .click();
         cy.get(
             "#licenses_add form #additional_fields label[for='additional_field_3']"
-        ).should("have.length", 2);
+        )
+            .parent()
+            .find("input")
+            .should("have.length", 2);
     });
 
     //
@@ -1240,7 +1246,7 @@ describe("Additional Fields operations", () => {
             "#agreements_add form #additional_fields label[for='additional_field_3']"
         )
             .parent()
-            .children("input")
+            .find("input")
             .should("have.value", agreement.extended_attributes[3].value);
 
         cy.get("#additional_fields #additional_field_4 .vs__selected").contains(
@@ -1267,16 +1273,22 @@ describe("Additional Fields operations", () => {
         // "+New" text field works
         cy.get(
             "#agreements_add form #additional_fields label[for='additional_field_3']"
-        ).should("have.length", 1);
+        )
+            .parent()
+            .find("input")
+            .should("have.length", 1);
         cy.get(
             "#agreements_add form #additional_fields label[for='additional_field_3']"
         )
             .parent()
-            .children(".clone_attribute")
+            .find(".clone_attribute")
             .click();
         cy.get(
             "#agreements_add form #additional_fields label[for='additional_field_3']"
-        ).should("have.length", 2);
+        )
+            .parent()
+            .find("input")
+            .should("have.length", 2);
     });
 
     //
@@ -1656,7 +1668,7 @@ describe("Additional Fields operations", () => {
             "#packages_add form #additional_fields label[for='additional_field_3']"
         )
             .parent()
-            .children("input")
+            .find("input")
             .should(
                 "have.value",
                 eholdings_package.extended_attributes[3].value
@@ -1686,15 +1698,121 @@ describe("Additional Fields operations", () => {
         // "+New" text field works
         cy.get(
             "#packages_add form #additional_fields label[for='additional_field_3']"
-        ).should("have.length", 1);
+        )
+            .parent()
+            .find("input")
+            .should("have.length", 1);
         cy.get(
             "#packages_add form #additional_fields label[for='additional_field_3']"
         )
             .parent()
-            .children(".clone_attribute")
+            .find(".clone_attribute")
             .click();
         cy.get(
             "#packages_add form #additional_fields label[for='additional_field_3']"
-        ).should("have.length", 2);
+        )
+            .parent()
+            .find("input")
+            .should("have.length", 2);
+    });
+
+    it("New button appears only on the final repeated field row", () => {
+        let license = cy.get_license();
+        let licenses = [license];
+        let vendors = cy.get_vendors_to_relate();
+        let license_additional_fields = get_licenses_additional_fields();
+        let av_cats = get_av_cats();
+
+        cy.intercept("GET", "/api/v1/erm/licenses*", {
+            statusCode: 200,
+            body: licenses,
+            headers: {
+                "X-Base-Total-Count": "1",
+                "X-Total-Count": "1",
+            },
+        }).as("get-licenses");
+        cy.intercept("GET", "/api/v1/erm/licenses/*", license).as(
+            "get-license"
+        );
+        cy.intercept("GET", "/api/v1/acquisitions/vendors*", {
+            statusCode: 200,
+            body: vendors,
+        });
+        cy.intercept("GET", "/api/v1/erm/extended_attribute_types*", {
+            body: license_additional_fields,
+            statusCode: 200,
+        });
+        cy.intercept(
+            {
+                pathname: "/api/v1/authorised_value_categories",
+                query: {
+                    q: '{"me.category_name":["CCODE", "COUNTRY"]}',
+                },
+            },
+            { body: av_cats, statusCode: 200 }
+        );
+
+        cy.visit("/cgi-bin/koha/erm/licenses");
+        cy.wait("@get-licenses");
+        cy.get("#licenses_list table tbody tr:first").contains("Edit").click();
+        cy.wait("@get-license");
+
+        // One row initially — New button is present exactly once
+        cy.get(
+            "#licenses_add form #additional_fields label[for='additional_field_3']"
+        )
+            .parent()
+            .find(".repeatableFieldList li")
+            .should("have.length", 1);
+        cy.get(
+            "#licenses_add form #additional_fields label[for='additional_field_3']"
+        )
+            .parent()
+            .find(".clone_attribute")
+            .should("have.length", 1);
+
+        // Add a second row
+        cy.get(
+            "#licenses_add form #additional_fields label[for='additional_field_3']"
+        )
+            .parent()
+            .find(".clone_attribute")
+            .click();
+
+        // Two rows now exist
+        cy.get(
+            "#licenses_add form #additional_fields label[for='additional_field_3']"
+        )
+            .parent()
+            .find(".repeatableFieldList li")
+            .should("have.length", 2);
+
+        // New button still appears exactly once
+        cy.get(
+            "#licenses_add form #additional_fields label[for='additional_field_3']"
+        )
+            .parent()
+            .find(".clone_attribute")
+            .should("have.length", 1);
+
+        // New button is absent on the first row
+        cy.get(
+            "#licenses_add form #additional_fields label[for='additional_field_3']"
+        )
+            .parent()
+            .find(".repeatableFieldList li")
+            .first()
+            .find(".clone_attribute")
+            .should("not.exist");
+
+        // New button is present on the last row
+        cy.get(
+            "#licenses_add form #additional_fields label[for='additional_field_3']"
+        )
+            .parent()
+            .find(".repeatableFieldList li")
+            .last()
+            .find(".clone_attribute")
+            .should("exist");
     });
 });
