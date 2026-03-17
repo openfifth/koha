@@ -15,6 +15,7 @@ import SysprefAPIClient from "@fetch/system-preferences-api-client";
 import SIP2APIClient from "@fetch/sip2-api-client";
 import PreservationAPIClient from "@fetch/preservation-api-client";
 import CirculationAPIClient from "@fetch/circulation-api-client";
+import LibraryAPIClient from "../../fetch/library-api-client";
 
 export const APIClient = {
     erm: new ERMAPIClient(HttpClient),
@@ -32,6 +33,7 @@ export const APIClient = {
     preservation: new PreservationAPIClient(HttpClient),
     record_sources: new RecordSourcesAPIClient(HttpClient),
     circulation: new CirculationAPIClient(HttpClient),
+    library: new LibraryAPIClient(HttpClient),
 };
 
 export default APIClient;
