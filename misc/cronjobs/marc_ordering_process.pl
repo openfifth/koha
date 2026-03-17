@@ -112,13 +112,13 @@ foreach my $acct (@accounts) {
     my $working_dir = $acct->download_directory;
 
     my $file_transport = $acct->file_transport;
-    if ($file_transport) {
+    if ( $file_transport && $confirm ) {
         if ( $file_transport->connect() ) {
             my $download_dir = $file_transport->download_directory;
 
             my $success = $download_dir ? $file_transport->change_directory($download_dir) : 1;
             if ( $download_dir && !$success ) {
-                say "Failed to change to download directory: $download_dir";
+                say "Failed to change to download directory: $download_dir" if $verbose;
             } else {
 
                 # Get file list
@@ -141,18 +141,18 @@ foreach my $acct (@accounts) {
                                     $file_transport->delete_file($filename);
                                 }
                             } else {
-                                say "Failed to download file: $filename";
+                                say "Failed to download file: $filename" if $verbose;
                             }
                         }
                     }
 
                 } else {
-                    say "Failed to get file list from transport";
+                    say "Failed to get file list from transport" if $verbose;
                 }
 
             }
         } else {
-            say "Failed to connect to file transport: " . $file_transport->id;
+            say "Failed to connect to file transport: " . $file_transport->id if $verbose;
         }
     }
 
