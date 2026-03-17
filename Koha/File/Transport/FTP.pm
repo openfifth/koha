@@ -304,7 +304,7 @@ sub _abort_operation {
             payload => {
                 detail => $self->{connection} ? $self->{connection}->status  : '',
                 error  => $self->{connection} ? $self->{connection}->message : $@,
-                path   => $path               ? $path                        : $self->{connection}->pwd,
+                path   => $path // ( $self->{connection} ? $self->{connection}->pwd : '' ),
             }
         }
     );
