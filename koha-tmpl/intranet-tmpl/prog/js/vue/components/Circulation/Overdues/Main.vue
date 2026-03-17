@@ -1,5 +1,5 @@
 <template>
-    <div v-if="true">
+    <div v-if="initialized">
         <div id="sub-header">
             <Breadcrumbs />
             <Help />
@@ -14,7 +14,7 @@
                 </div>
 
                 <div class="col-md-2 order-sm-2 order-md-1">
-                    <LeftMenu :title="$__('Filter on')"></LeftMenu>
+                    <OverdueFilters :patronAttrs="patronAttrs" />
                 </div>
             </div>
         </div>
@@ -29,6 +29,10 @@ import Breadcrumbs from "../../Breadcrumbs.vue";
 import Help from "../../Help.vue";
 import Dialog from "../../Dialog.vue";
 import LeftMenu from "../../LeftMenu.vue";
+import OverdueFilters from "./OverdueFilters.vue";
+import "vue-select/dist/vue-select.css";
+import { inject, onBeforeMount, ref } from "vue";
+import { storeToRefs } from "pinia";
 
 export default {
     components: {
@@ -36,6 +40,42 @@ export default {
         Dialog,
         Help,
         LeftMenu,
+        OverdueFilters,
+    },
+    setup(props) {
+        const initialized = ref(false);
+
+        const mainStore = inject("mainStore");
+        const { loading, loaded } = mainStore;
+
+        const overduesStore = inject("overduesStore");
+        const { authorisedValues } = storeToRefs(overduesStore);
+        const { loadAuthorisedValues } = overduesStore;
+
+        onBeforeMount(() => {
+            loading();
+            let needsAuthorisedValues = false;
+            authorisedValues.value = patronAttrs.reduce((acc, pa) => {
+                if (pa.authorised_value_category) {
+                    needsAuthorisedValues = true;
+                    acc[pa.code] = pa.authorised_value_category;
+                }
+                return acc;
+            }, {});
+            if (needsAuthorisedValues) {
+                loadAuthorisedValues(
+                    authorisedValues.value,
+                    overduesStore
+                ).then(() => {
+                    loaded();
+                    initialized.value = true;
+                });
+            }
+        });
+        return {
+            patronAttrs,
+            initialized,
+        };
     },
 };
 </script>
