@@ -55,13 +55,6 @@ vendor id for this account
 
 budget id for this account
 
-=head2 download_directory
-
-  data_type: 'mediumtext'
-  is_nullable: 1
-
-download directory for this account
-
 =head2 matcher_id
 
   data_type: 'integer'
@@ -140,6 +133,14 @@ the value to be matched against the marc record
 
 the field that a vendor can use to include a basket name that will be used to create the basket for the file
 
+=head2 file_transport_id
+
+  data_type: 'integer'
+  is_foreign_key: 1
+  is_nullable: 1
+
+the file transport configuration used to retrieve MARC files for this account
+
 =cut
 
 __PACKAGE__->add_columns(
@@ -151,8 +152,6 @@ __PACKAGE__->add_columns(
   { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
   "budget_id",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
-  "download_directory",
-  { data_type => "mediumtext", is_nullable => 1 },
   "matcher_id",
   { data_type => "integer", is_nullable => 1 },
   "overlay_action",
@@ -230,8 +229,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-04-24 19:44:04
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:LvRybSXMjycTWsAp2Bd4Dw
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-03-17 10:20:02
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:+VquKvpwIyuSbWjUlbNcQA
 
 __PACKAGE__->add_columns(
     '+parse_items' => { is_boolean => 1 },
