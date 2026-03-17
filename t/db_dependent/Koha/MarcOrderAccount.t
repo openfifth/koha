@@ -19,7 +19,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 5;
+use Test::More tests => 6;
 use Test::NoWarnings;
 
 use t::lib::TestBuilder;
@@ -196,6 +196,65 @@ subtest 'file_transport() relationship' => sub {
 
     can_ok( $local, 'download_file' );
     can_ok( $local, 'delete_file' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'file_transport() post-migration local transport scenario (Bug 42110)' => sub {
+    plan tests => 4;
+
+    $schema->storage->txn_begin;
+
+    # Simulate what the bug_42110 atomicupdate creates: a local transport with
+    # download_directory set, linked to a marc_order_account.
+    my $local_transport = $builder->build_object(
+        {
+            class => 'Koha::File::Transports',
+            value => {
+                transport          => 'local',
+                name               => 'MARC order account: Test account [1] (Migrated)',
+                host               => 'localhost',
+                port               => 0,
+                passive            => 1,
+                auth_mode          => 'noauth',
+                download_directory => '/srv/koha/marc_orders',
+                debug              => 0,
+            }
+        }
+    );
+
+    my $account = $builder->build_object(
+        {
+            class => 'Koha::MarcOrderAccounts',
+            value => { file_transport_id => $local_transport->id }
+        }
+    );
+
+    my $transport = $account->file_transport;
+
+    is(
+        ref($transport),
+        'Koha::File::Transport::Local',
+        '->file_transport returns Koha::File::Transport::Local for migrated account'
+    );
+
+    is(
+        $transport->download_directory,
+        '/srv/koha/marc_orders',
+        'download_directory is accessible through the file_transport relationship'
+    );
+
+    is(
+        $transport->transport,
+        'local',
+        'transport type is local'
+    );
+
+    is(
+        $transport->auth_mode,
+        'noauth',
+        'auth_mode is noauth as set by migration'
+    );
 
     $schema->storage->txn_rollback;
 };
