@@ -371,7 +371,7 @@ sub _abort_operation {
     my $payload = {
         status    => $self->{connection}->status,
         error     => $self->{connection}->error,
-        path      => $path ? $path : $self->{connection}->cwd,
+        path      => $path // ( $self->{connection} ? $self->{connection}->cwd : '' ),
         error_raw => $stderr
     };
 
