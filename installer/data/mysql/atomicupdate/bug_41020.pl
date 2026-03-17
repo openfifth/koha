@@ -12,7 +12,7 @@ return {
             $dbh->do(
                 q{
                 ALTER TABLE `marc_order_accounts`
-                  ADD COLUMN `file_transport_id` int(11) DEFAULT NULL AFTER `basket_name_field`,
+                  ADD COLUMN `file_transport_id` int(11) DEFAULT NULL COMMENT 'the file transport configuration used to retrieve MARC files for this account' AFTER `basket_name_field`,
                   ADD KEY `marc_order_accounts_file_transport_id` (`file_transport_id`),
                   ADD CONSTRAINT `marc_order_accounts_ibfk_file_transport`
                     FOREIGN KEY (`file_transport_id`)

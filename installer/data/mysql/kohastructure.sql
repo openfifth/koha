@@ -4659,10 +4659,11 @@ CREATE TABLE `marc_order_accounts` (
   `match_field` varchar(10) DEFAULT NULL COMMENT 'the field that a vendor account has been mapped to in a marc record',
   `match_value` varchar(50) DEFAULT NULL COMMENT 'the value to be matched against the marc record',
   `basket_name_field` varchar(10) DEFAULT NULL COMMENT 'the field that a vendor can use to include a basket name that will be used to create the basket for the file',
-  `file_transport_id` int(11) DEFAULT NULL,
+  `file_transport_id` int(11) DEFAULT NULL COMMENT 'the file transport configuration used to retrieve MARC files for this account',
   PRIMARY KEY (`id`),
   KEY `marc_ordering_account_ibfk_1` (`vendor_id`),
   KEY `marc_ordering_account_ibfk_2` (`budget_id`),
+  KEY `marc_order_accounts_file_transport_id` (`file_transport_id`),
   CONSTRAINT `marc_ordering_account_ibfk_1` FOREIGN KEY (`vendor_id`) REFERENCES `aqbooksellers` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `marc_ordering_account_ibfk_2` FOREIGN KEY (`budget_id`) REFERENCES `aqbudgets` (`budget_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `marc_order_accounts_ibfk_file_transport` FOREIGN KEY (`file_transport_id`) REFERENCES `file_transports` (`file_transport_id`) ON DELETE SET NULL ON UPDATE CASCADE
