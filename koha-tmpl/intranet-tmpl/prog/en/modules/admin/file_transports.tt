@@ -191,14 +191,14 @@
                         <span class="hint">Only applies to SFTP connections</span>
                     </li>
                     <li>
-                        <label for="download_directory">Remote download directory: </label>
+                        <label for="download_directory">Download directory: </label>
                         <input type="text" name="download_directory" id="download_directory" size="60" autocomplete="off" /><br />
-                        <span class="hint">The path on the remote server where we will download from</span>
+                        <span class="hint">The path to download files from</span>
                     </li>
                     <li>
-                        <label for="upload_directory">Remote upload directory: </label>
+                        <label for="upload_directory">Upload directory: </label>
                         <input type="text" name="upload_directory" id="upload_directory" size="60" autocomplete="off" /><br />
-                        <span class="hint">The path on the remote server where we will upload to</span>
+                        <span class="hint">The path to upload files to</span>
                     </li>
                     <input type="hidden" value="" name="status" id="status" />
                     <li>
@@ -366,14 +366,14 @@
                         <span class="hint">Only applies to SFTP connections</span>
                     </li>
                     <li>
-                        <label for="download_directory">Remote download directory: </label>
+                        <label for="download_directory">Download directory: </label>
                         <input type="text" value="[% file_transport.download_directory | html %]" name="download_directory" id="download_directory" size="60" autocomplete="off" /><br />
-                        <span class="hint">The path on the remote server where we will download from</span>
+                        <span class="hint">The path to download files from</span>
                     </li>
                     <li>
-                        <label for="upload_directory">Remote upload directory: </label>
+                        <label for="upload_directory">Upload directory: </label>
                         <input type="text" value="[% file_transport.upload_directory | html %]" name="upload_directory" id="upload_directory" size="60" autocomplete="off" /><br />
-                        <span class="hint">The path on the remote server where we will upload to</span>
+                        <span class="hint">The path to upload files to</span>
                     </li>
                     <input type="hidden" value="" name="status" id="status" />
                     <li>
