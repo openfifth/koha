@@ -195,11 +195,11 @@ Each hashref contains: filename, longname, size, perms.
 =cut
 
 sub list_files {
-    my ($self) = @_;
+    my ( $self, $path ) = @_;
     my $operation = "list";
 
     # Get detailed listing using dir() for consistency with SFTP format
-    my $detailed_list = $self->{connection}->dir or return $self->_abort_operation($operation);
+    my $detailed_list = $self->{connection}->dir($path) or return $self->_abort_operation($operation);
 
     # Convert to hash format consistent with SFTP
     my @file_list;
