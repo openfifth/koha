@@ -19,7 +19,7 @@ properties:
     enum:
       - ftp
       - sftp
-      - file
+      - local
     description: Transport of File transport (optional)
   auth_mode:
     type: string
