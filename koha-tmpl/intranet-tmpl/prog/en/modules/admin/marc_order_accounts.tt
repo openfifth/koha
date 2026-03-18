@@ -52,7 +52,6 @@
                         <th>Vendor</th>
                         <th>Budget</th>
                         <th>Description</th>
-                        <th>Download directory</th>
                         <th>Actions</th>
                     </tr>
                     [% FOREACH account IN accounts %]
@@ -61,7 +60,6 @@
                             <td><a href="/cgi-bin/koha/acquisition/vendors/[% account.vendor_id | uri %]">[% account.vendor.name | html %]</a></td>
                             <td><a href="/cgi-bin/koha/admin/aqbudgets.pl?budget_period_id=[% account.budget.budget_period_id | uri %]">[% account.budget.budget_name | html %]</a></td>
                             <td>[% account.description | html %]</td>
-                            <td>[% account.download_directory | html %]</td>
                             <td class="actions">
                                 <a class="btn btn-default btn-xs" href="/cgi-bin/koha/admin/marc_order_accounts.pl?op=acct_form&id=[% account.id | html %]"><i class="fa fa-pencil-alt"></i> Edit</a>
                                 <a class="btn btn-default btn-xs" href="/cgi-bin/koha/admin/marc_order_accounts.pl?op=delete_acct&id=[% account.id | html %]"><i class="fa fa-trash-can"></i> Delete</a>
@@ -134,11 +132,6 @@
                                 File transports can be managed in <a href="/cgi-bin/koha/admin/file_transports.pl">Administration &rsaquo; File transports</a>.
                             [% END %]
                         </div>
-                    </li>
-                    <li>
-                        <label for="download_directory">Download directory: </label>
-                        <input type="text" name="download_directory" id="download_directory" size="20" value="[% account.download_directory | html %]" />
-                        <div class="hint">The download directory specifies the directory in your Koha installation that should be searched for new files.</div>
                     </li>
                     <li>
                         <label for="match_field">Match field: </label>
