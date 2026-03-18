@@ -146,6 +146,7 @@
                         <select name="transport" id="transport" class="required">
                             <option value="ftp">FTP</option>
                             <option value="sftp" selected="selected">SFTP</option>
+                            <option value="local">Local</option>
                         </select>
                         <span class="required">Required</span>
                     </li>
@@ -295,6 +296,11 @@
                                 <option value="sftp" selected="selected">SFTP</option>
                             [% ELSE %]
                                 <option value="sftp">SFTP</option>
+                            [% END %]
+                            [% IF file_transport.transport == 'local' %]
+                                <option value="local" selected="selected">Local</option>
+                            [% ELSE %]
+                                <option value="local">Local</option>
                             [% END %]
                         </select>
                         <span class="required">Required</span>
@@ -670,19 +676,15 @@
             $('#confirm_key_accept_submit').on('click', function(event) {
                 event.preventDefault();
 
-                if ( $('#add').length > 0 ) {
-                    if( $('#add').valid() == true ) {
-                        modalChange();
-                        $('#confirm_key_accept').modal('show');
-                    } else {
-                        $('#confirm_key_accept').modal('hide');
-                    }
-                }
-
-                if ( $('#edit_save').length > 0 ) {
-                    if( $('#edit_save').valid() == true ) {
-                        modalChange();
-                        $('#confirm_key_accept').modal('show');
+                var form = $("#add").length > 0 ? $("#add") : $("#edit_save");
+                if (form.length > 0) {
+                    if (form.valid() == true) {
+                        if ($("#transport").val() == "local") {
+                            form.submit();
+                        } else {
+                            modalChange();
+                            $('#confirm_key_accept').modal('show');
+                        }
                     } else {
                         $('#confirm_key_accept').modal('hide');
                     }
@@ -745,6 +747,14 @@
                 if(port == 21) $("#port").val("22");
 
                 return authModeChange();
+            } else if (transport.val() == "local") {
+                $("#host").val("").attr("disabled", "disabled");
+                $("#port").val("").attr("disabled", "disabled");
+                $("#passive").val("1").attr("disabled", "disabled");
+                $("#auth_mode").val("noauth").attr("disabled", "disabled");
+                $("#user_name").val("").attr("disabled", "disabled");
+                $("#password").val("").attr("disabled", "disabled");
+                $("#key_file").val("").attr("disabled", "disabled");
             }
         }
 
