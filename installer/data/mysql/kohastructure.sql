@@ -4656,7 +4656,6 @@ CREATE TABLE `marc_order_accounts` (
   `description` varchar(250) NOT NULL COMMENT 'description of this account',
   `vendor_id` int(11) DEFAULT NULL COMMENT 'vendor id for this account',
   `budget_id` int(11) DEFAULT NULL COMMENT 'budget id for this account',
-  `download_directory` mediumtext DEFAULT NULL COMMENT 'download directory for this account',
   `matcher_id` int(11) DEFAULT NULL COMMENT 'the id of the match rule used (matchpoints.matcher_id)',
   `overlay_action` varchar(50) DEFAULT NULL COMMENT 'how to handle duplicate records',
   `nomatch_action` varchar(50) DEFAULT NULL COMMENT 'how to handle records where no match is found',

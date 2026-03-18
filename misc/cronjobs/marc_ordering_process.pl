@@ -23,7 +23,7 @@ marc_ordering_process.pl - cron script to retrieve MARC files and create order l
 
 =head1 SYNOPSIS
 
-./marc_ordering_process.pl [-c|--confirm] [-v|--verbose] [--dr|--delete-remote] [--rr|--rename-remote ext]
+./marc_ordering_process.pl [-c|--confirm] [-v|--verbose] [-d|--delete] [-r|--rename ext]
 
 or, in crontab:
 # Once every day
@@ -31,8 +31,8 @@ or, in crontab:
 
 =head1 DESCRIPTION
 
-This script searches for new MARC files in a configured location (local, FTP, or SFTP).
-If there are new files, it stages those files, adds bibliographic records/items and creates order lines.
+This script searches for new MARC files via configured file transports,
+stages those files, adds biblios/items and creates order lines.
 
 =head1 OPTIONS
 
@@ -48,15 +48,15 @@ Without this parameter no changes will be made
 
 =item B<-d|--delete>
 
-Delete the file once it has been processed
+Delete the remote source file once it has been processed
 
-=item B<--dr|--delete-remote>
+=item B<-r|--rename ext>
 
-Delete the remote file once it has been downloaded
+Rename the remote source file once it has been processed, adding the given file extension
 
-=item B<--rr|--rename-remote ext>
+=item B<-a|--archive dir>
 
-Rename the remote file once it has been downloaded, adding the given file extension
+Copy downloaded files into the specified local archive directory after processing
 
 =back
 
@@ -65,7 +65,8 @@ Rename the remote file once it has been downloaded, adding the given file extens
 use Modern::Perl;
 use Pod::Usage   qw( pod2usage );
 use Getopt::Long qw( GetOptions );
-use File::Copy   qw( copy move );
+use File::Copy   qw( copy );
+use File::Temp   qw( tempdir );
 
 use Koha::Script -cron;
 use Koha::MarcOrder;
@@ -76,14 +77,14 @@ use C4::Log qw( cronlogaction );
 my $command_line_options = join( " ", @ARGV );
 cronlogaction( { info => $command_line_options } );
 
-my ( $help, $verbose, $confirm, $delete, $rename_ext, $delete_remote );
+my ( $help, $verbose, $confirm, $delete, $rename_ext, $archive_dir );
 GetOptions(
-    'h|help'             => \$help,
-    'v|verbose'          => \$verbose,
-    'c|confirm'          => \$confirm,
-    'd|delete'           => \$delete,
-    'dr|delete-remote'   => \$delete_remote,
-    'rr|rename-remote=s' => \$rename_ext,
+    'h|help'      => \$help,
+    'v|verbose'   => \$verbose,
+    'c|confirm'   => \$confirm,
+    'd|delete'    => \$delete,
+    'r|rename=s'  => \$rename_ext,
+    'a|archive=s' => \$archive_dir,
 ) || pod2usage(1);
 
 pod2usage(0) if $help;
@@ -104,72 +105,64 @@ if ( scalar(@accounts) == 0 ) {
 my $valid_file_extensions = qr/\.(mrc|marcxml|mrk)$/i;
 
 foreach my $acct (@accounts) {
+    my $file_transport = $acct->file_transport;
+    unless ($file_transport) {
+        say "No file transport configured for account: " . $acct->description if $verbose;
+        next;
+    }
+
+    my $working_dir = $file_transport->download_directory;
+    unless ($working_dir) {
+        say "No download directory configured for file transport: " . $file_transport->id if $verbose;
+        next;
+    }
+
     if ($verbose) {
         say sprintf "Starting MARC ordering process for %s", $acct->vendor->name;
-        say sprintf "Looking for new files in %s",           $acct->download_directory;
+        say sprintf "Looking for new files in %s",           $working_dir;
     }
 
-    my $working_dir = $acct->download_directory;
-
-    my $file_transport = $acct->file_transport;
-    if ( $file_transport && $confirm ) {
-        if ( $file_transport->connect() ) {
-            my $download_dir = $file_transport->download_directory;
-
-            my $success = $download_dir ? $file_transport->change_directory($download_dir) : 1;
-            if ( $download_dir && !$success ) {
-                say "Failed to change to download directory: $download_dir" if $verbose;
-            } else {
-
-                # Get file list
-                my $file_list = $file_transport->list_files();
-                if ($file_list) {
-
-                    # Process files matching our criteria
-                    foreach my $file ( @{$file_list} ) {
-                        my $filename = $file->{filename};
-
-                        if ( $filename =~ $valid_file_extensions ) {
-
-                            my $local_file = "$working_dir/$filename";
-
-                            # Download the file
-                            if ( $file_transport->download_file( $filename, $local_file ) ) {
-                                if ($rename_ext) {
-                                    $file_transport->rename_file( $filename, "$filename.$rename_ext" )
-                                        or say "Failed to rename remote file: $filename";
-                                } elsif ($delete_remote) {
-                                    $file_transport->delete_file($filename)
-                                        or say "Failed to delete remote file: $filename";
-                                }
-                            } else {
-                                say "Failed to download file: $filename";
-                            }
-                        }
-                    }
-
-                } else {
-                    say "Failed to get file list from transport" if $verbose;
-                }
-
-            }
-        } else {
-            say "Failed to connect to file transport: " . $file_transport->id if $verbose;
-        }
+    unless ( $file_transport->connect() ) {
+        say "Failed to connect to file transport: " . $file_transport->id;
+        next;
     }
 
-    opendir my $dir, $working_dir or die "Can't open working directory '$working_dir': $!";
-    my @files = grep { /$valid_file_extensions/ } readdir $dir;
-    closedir $dir;
+    my $success = $file_transport->change_directory($working_dir);
+    if ( !$success ) {
+        say "Failed to change to download directory: $working_dir";
+        next;
+    }
+
+    # Get file list
+    my $file_list = $file_transport->list_files();
+    unless ($file_list) {
+        say "Failed to get file list from transport";
+        next;
+    }
+
+    my @files;
+    foreach my $file ( @{$file_list} ) {
+        my $filename = $file->{filename};
+        next unless $filename =~ $valid_file_extensions;
+        push @files, $filename;
+    }
+
     print "No new files found\n" if scalar(@files) == 0;
 
     my $files_processed = 0;
+    my $local_dir       = tempdir( CLEANUP => 1 );
 
     foreach my $filename (@files) {
-        my $full_path = "$working_dir/$filename";
-        my $args      = {
+        my $local_file = "$local_dir/$filename";
+
+        unless ( $file_transport->download_file( $filename, $local_file ) ) {
+            say "Failed to download file: $filename";
+            next;
+        }
+
+        my $args = {
             filename => $filename,
-            filepath => $full_path,
+            filepath => $local_file,
             profile  => $acct,
             agent    => 'cron'
         };
@@ -184,13 +177,17 @@ foreach my $acct (@accounts) {
             if ( $result->{success} ) {
                 $files_processed++;
                 say sprintf "Successfully processed file: %s", $filename if $verbose;
+                if ($archive_dir) {
+                    mkdir $archive_dir unless -d $archive_dir;
+                    say sprintf "Archiving file: %s to %s", $filename, $archive_dir if $verbose;
+                    copy( $local_file, "$archive_dir/$filename" );
+                }
                 if ($delete) {
-                    say sprintf "Deleting processed file: %s", $filename if $verbose;
-                    unlink $full_path;
-                } else {
-                    mkdir "$working_dir/archive" unless -d "$working_dir/archive";
-                    say sprintf "Moving file to archive: %s", $filename if $verbose;
-                    move( $full_path, "$working_dir/archive/$filename" );
+                    say sprintf "Deleting file: %s", $filename if $verbose;
+                    $file_transport->delete_file($filename);
+                } elsif ($rename_ext) {
+                    say sprintf "Renaming file: %s to %s.%s", $filename, $filename, $rename_ext if $verbose;
+                    $file_transport->rename_file( $filename, "$filename.$rename_ext" );
                 }
             } else {
                 say sprintf "Error processing file: %s", $filename        if $verbose;

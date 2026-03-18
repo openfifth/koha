@@ -75,22 +75,21 @@ if ( $op eq 'acct_form' ) {
 } else {
     if ( $op eq 'cud-save' ) {
         my $fields = {
-            id                 => scalar $input->param('id'),
-            description        => scalar $input->param('description'),
-            vendor_id          => scalar $input->param('vendor_id'),
-            budget_id          => scalar $input->param('budget_id'),
-            download_directory => scalar $input->param('download_directory'),
-            matcher_id         => scalar $input->param('matcher'),
-            overlay_action     => scalar $input->param('overlay_action'),
-            nomatch_action     => scalar $input->param('nomatch_action'),
-            parse_items        => scalar $input->param('parse_items'),
-            item_action        => scalar $input->param('item_action'),
-            record_type        => scalar $input->param('record_type'),
-            encoding           => scalar $input->param('encoding') || 'UTF-8',
-            match_field        => scalar $input->param('match_field'),
-            match_value        => scalar $input->param('match_value'),
-            basket_name_field  => scalar $input->param('basket_name_field'),
-            file_transport_id  => scalar $input->param('file_transport_id') || undef,
+            id                => scalar $input->param('id'),
+            description       => scalar $input->param('description'),
+            vendor_id         => scalar $input->param('vendor_id'),
+            budget_id         => scalar $input->param('budget_id'),
+            matcher_id        => scalar $input->param('matcher'),
+            overlay_action    => scalar $input->param('overlay_action'),
+            nomatch_action    => scalar $input->param('nomatch_action'),
+            parse_items       => scalar $input->param('parse_items'),
+            item_action       => scalar $input->param('item_action'),
+            record_type       => scalar $input->param('record_type'),
+            encoding          => scalar $input->param('encoding') || 'UTF-8',
+            match_field       => scalar $input->param('match_field'),
+            match_value       => scalar $input->param('match_value'),
+            basket_name_field => scalar $input->param('basket_name_field'),
+            file_transport_id => scalar $input->param('file_transport_id') || undef,
         };
 
         if ( scalar $input->param('id') ) {
