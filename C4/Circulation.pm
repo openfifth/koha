@@ -126,12 +126,8 @@ use Koha::Library::Hours;
 use Koha::Patron::Quotas;
 use Koha::Patron::Quota;
 use Koha::Patron::Quota::Usage;
-<<<<<<< HEAD
-use Carp            qw( carp );
-=======
 use Koha::Patron::Quota::Usages;
-use Carp qw( carp );
->>>>>>> b06f9b8816c (Bug 38924: Add quota picker to checkout confirmation)
+use Carp            qw( carp );
 use List::MoreUtils qw( any );
 use Scalar::Util    qw( looks_like_number blessed );
 use Date::Calc      qw( Date_to_Days );
@@ -1633,24 +1629,14 @@ sub AddIssue {
 
     my $onsite_checkout        = $params && $params->{onsite_checkout} ? 1 : 0;
     my $switch_onsite_checkout = $params && $params->{switch_onsite_checkout};
-<<<<<<< HEAD
     my $auto_renew             = $params && $params->{auto_renew};
     my $cancel_recall          = $params && $params->{cancel_recall};
     my $recall_id              = $params && $params->{recall_id};
     my $confirmations          = $params->{confirmations};
     my $forced                 = $params->{forced};
+    my $selected_quota_id      = $params && $params->{selected_quota_id};
     my $dbh                    = C4::Context->dbh;
     my $barcodecheck           = CheckValidBarcode($barcode);
-=======
-    my $auto_renew = $params && $params->{auto_renew};
-    my $cancel_recall = $params && $params->{cancel_recall};
-    my $recall_id = $params && $params->{recall_id};
-    my $confirmations = $params->{confirmations};
-    my $forced = $params->{forced};
-    my $selected_quota_id = $params && $params->{selected_quota_id};
-    my $dbh          = C4::Context->dbh;
-    my $barcodecheck = CheckValidBarcode($barcode);
->>>>>>> b06f9b8816c (Bug 38924: Add quota picker to checkout confirmation)
 
     my $issue;
 
