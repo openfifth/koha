@@ -317,8 +317,17 @@
                     search: "_INPUT_",
                     searchPlaceholder: _("Search"),
                 },
+            [% IF ( Koha.Preference('OPACTableColExpandedByDefault') ) %]
+                var responsive_display = DataTable.Responsive.display.childRowImmediate;
+            [% ELSE %]
+                var responsive_display = DataTable.Responsive.display.childRow;
+            [% END %]
                 responsive: {
-                    details: { type: "column", target: -1 },
+                    details: {
+                        display: responsive_display,
+                        type: "column",
+                        target: -1
+                    },
                 },
             });
 

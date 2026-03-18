@@ -301,8 +301,15 @@
                     { className: "dtr-control", orderable: false, targets: -1 },
                     { responsivePriority: 1, targets: 2 },
                 ],
+
+            [% IF ( Koha.Preference('OPACTableColExpandedByDefault') ) %]
+                var responsive_display = DataTable.Responsive.display.childRowImmediate;
+            [% ELSE %]
+                var responsive_display = DataTable.Responsive.display.childRow;
+            [% END %]
                 responsive: {
                     details: {
+                        display: responsive_display,
                         type: "column",
                         target: -1,
                     },

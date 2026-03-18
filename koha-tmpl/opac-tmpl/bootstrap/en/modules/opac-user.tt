@@ -1195,9 +1195,15 @@
                         search: "_INPUT_",
                         searchPlaceholder: _("Search")
                     },
+            [% IF ( Koha.Preference('OPACTableColExpandedByDefault') ) %]
+                var responsive_display = DataTable.Responsive.display.childRowImmediate;
+            [% ELSE %]
+                var responsive_display = DataTable.Responsive.display.childRow;
+            [% END %]
                     responsive: {
                         details: {
-                            type: 'column',
+                            display: responsive_display,
+                            type: "column",
                             target: -1
                         }
                     },
@@ -1229,7 +1235,11 @@
                     paging: false,
                     info: false,
                     responsive: {
-                        details: { type: "column", target: -1 },
+                        details: {
+                            display: responsive_display,
+                            type: "column",
+                            target: -1
+                        },
                     },
                     columnDefs: [{ className: "dtr-control", orderable: false, targets: -1 }],
                 });

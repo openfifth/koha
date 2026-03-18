@@ -488,8 +488,15 @@
                                 search: "_INPUT_",
                                 searchPlaceholder: _("Search"),
                             },
+
+            [% IF ( Koha.Preference('OPACTableColExpandedByDefault') ) %]
+                var responsive_display = DataTable.Responsive.display.childRowImmediate;
+            [% ELSE %]
+                var responsive_display = DataTable.Responsive.display.childRow;
+            [% END %]
                             responsive: {
                                 details: {
+                                    display: responsive_display,
                                     type: "column",
                                     target: -1,
                                 },
