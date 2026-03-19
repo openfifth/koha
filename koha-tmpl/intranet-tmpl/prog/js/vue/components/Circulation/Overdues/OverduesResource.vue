@@ -9,12 +9,21 @@ import BaseResource from "../../BaseResource.vue";
 import { useBaseResource } from "../../../composables/base-resource.js";
 import { APIClient } from "../../../fetch/api-client.js";
 import { $__ } from "@koha-vue/i18n";
+import { storeToRefs } from "pinia";
+import { inject } from "vue";
 
 export default {
     props: {
         routeAction: String,
     },
     setup(props) {
+        const patron_to_html = $patron_to_html;
+        const format_date = $date;
+
+        const overduesStore = inject("overduesStore");
+        const { authorisedValues, settings, itemTypes } =
+            storeToRefs(overduesStore);
+
         const defaultToolbarButtons = () => {
             return {
                 list: [],
@@ -34,7 +43,7 @@ export default {
             table: {
                 resourceTableUrl:
                     APIClient.circulation.httpClient._baseURL +
-                    "api/v1/checkouts",
+                    "/api/v1/checkouts",
             },
             i18n: {
                 displayName: $__("Overdue"),
@@ -42,16 +51,346 @@ export default {
             },
             props,
             defaultToolbarButtons,
-            resourceAttrs: [],
+            resourceAttrs: [
+                {
+                    type: "date",
+                    name: "due_date",
+                    label: $__("Due date"),
+                },
+                {
+                    type: "text",
+                    name: "patron_id",
+                    label: $__("Patron"),
+                    tableColumnDefinition: {
+                        title: $__("Patron"),
+                        data: "patron.firstname:patron.surname:patron.other_name:patron.preferred_name:patron.email",
+                        searchable: true,
+                        orderable: true,
+                        render: function (data, type, row, meta) {
+                            const { patron, item } = row;
+                            if (!patron.cardnumber && !patron.patron_id) {
+                                return escape_str(
+                                    $__("A patron from library %s").format(
+                                        patron.library.name
+                                    )
+                                );
+                            }
+                            let patronString =
+                                '<a href="/cgi-bin/koha/members/moremember.pl?borrowernumber=' +
+                                patron.patron_id +
+                                '">' +
+                                patron_to_html(patron) +
+                                "</a>";
+                            if (patron.email)
+                                patronString +=
+                                    `<span class="overdue_email"> [<a href="mailto:${patron.email}?subject=` +
+                                    $__("Overdue") +
+                                    `: ${item.biblio.title}">email</a>] </span>`;
+                            patronString += '<span class="overdue_phone">';
+                            patronString += patron.phone
+                                ? `(${patron.phone})`
+                                : patron.mobile
+                                  ? `(${patron.mobile})`
+                                  : `(${patron.secondary_phone})`;
+                            patronString += "</span>";
+                            return patronString;
+                        },
+                    },
+                },
+                {
+                    type: "text",
+                    name: "patron.category.name",
+                    label: $__("Patron category"),
+                },
+                {
+                    type: "text",
+                    name: "library.name",
+                    label: $__("Patron library"),
+                },
+                {
+                    type: "text",
+                    name: "item.biblio.title",
+                    label: $__("Title"),
+                    tableColumnDefinition: {
+                        title: $__("Title"),
+                        data: "item.biblio.title",
+                        searchable: true,
+                        orderable: true,
+                        render: function (data, type, row, meta) {
+                            if (row.item.biblio) {
+                                const biblioData = row.item.biblio;
+                                const {
+                                    IntranetBiblioDefaultView: defaultView,
+                                    viewMARC,
+                                    viewLabelledMARC,
+                                    viewISBD,
+                                } = settings.value;
+                                let url = "";
+                                if (defaultView === "marc" && viewMARC)
+                                    url =
+                                        "/cgi-bin/koha/catalogue/MARCdetail.pl?biblionumber=";
+                                else if (
+                                    defaultView === "labeled_marc" &&
+                                    viewLabelledMARC
+                                )
+                                    url =
+                                        "/cgi-bin/koha/catalogue/labeledMARCdetail.pl?biblionumber=";
+                                else if (defaultView === "isbd" && viewISBD)
+                                    url =
+                                        "/cgi-bin/koha/catalogue/ISBDdetail.pl?biblionumber=";
+                                else
+                                    url =
+                                        "/cgi-bin/koha/catalogue/detail.pl?biblionumber=";
+                                url += biblioData.biblio_id;
+
+                                let titleString = "";
+                                if (!biblioData.title)
+                                    titleString +=
+                                        '<span class="biblio-no-title">' +
+                                        $__("No title") +
+                                        "</span>";
+                                else
+                                    titleString +=
+                                        '<span class="biblio-title">%s</span>'.format(
+                                            biblioData.title
+                                        );
+
+                                if (biblioData.medium)
+                                    titleString +=
+                                        '<span class="biblio-medium">%s</span>'.format(
+                                            biblioData.medium
+                                        );
+
+                                if (biblioData.subtitles) {
+                                    const subtitles =
+                                        biblioData.subtitles.split(" \\| ");
+                                    subtitles.forEach(st => {
+                                        if (
+                                            settings.value.marcflavour ===
+                                            "unimarc"
+                                        )
+                                            titleString += ",";
+                                        titleString +=
+                                            '<span class="subtitle">%s</span>'.format(
+                                                st
+                                            );
+                                    });
+                                }
+                                if (
+                                    biblioData.part_numbers ||
+                                    biblioData.part_names
+                                ) {
+                                    const partNumbers =
+                                        biblioData.part_number?.split(
+                                            " \\| "
+                                        ) || [];
+                                    const partNames =
+                                        biblioData.part_name?.split(" \\| ") ||
+                                        [];
+                                    const iteratorValue =
+                                        partNumbers.length > partNames.length
+                                            ? partNumbers.length
+                                            : partNames.length;
+                                    let i = 0;
+                                    while (i < iteratorValue) {
+                                        if (partNumbers[i]) {
+                                            titleString +=
+                                                '<span class="part-number>%s</span>'.format(
+                                                    partNumbers[i]
+                                                );
+                                        }
+                                        if (partNames[i]) {
+                                            titleString +=
+                                                '<span class="part-name>%s</span>'.format(
+                                                    partNames[i]
+                                                );
+                                        }
+                                        i++;
+                                    }
+                                }
+                                if (
+                                    biblioData.author ||
+                                    row.item.serial_issue_number
+                                ) {
+                                    let biblioTitle =
+                                        '<a href="' +
+                                        url +
+                                        '" class="title">' +
+                                        titleString +
+                                        "</a>";
+                                    if (biblioData.author)
+                                        biblioTitle +=
+                                            ", " +
+                                            $__("by ") +
+                                            biblioData.author;
+                                    if (row.item.serial_issue_number)
+                                        biblioTitle +=
+                                            ", " + row.item.serial_issue_number;
+                                    return biblioTitle;
+                                } else {
+                                    return (
+                                        '<a href="' +
+                                        url +
+                                        '" class="title">' +
+                                        titleString +
+                                        "</a>"
+                                    );
+                                }
+                            } else {
+                                return (
+                                    '<span class="biblio-no-record">' +
+                                    $__("No bibliographic record") +
+                                    "</span>"
+                                );
+                            }
+                        },
+                    },
+                },
+                {
+                    type: "text",
+                    name: "item.home_library.name",
+                    label: $__("Home library"),
+                },
+                {
+                    type: "text",
+                    name: "item.holding_library.name",
+                    label: $__("Holding library"),
+                },
+                {
+                    type: "text",
+                    name: "item.location",
+                    label: $__("Shelving location"),
+                    tableColumnDefinition: {
+                        title: $__("Shelving location"),
+                        data: "item.location",
+                        searchable: true,
+                        orderable: true,
+                        render: function (data, type, row, meta) {
+                            return row.item.location
+                                ? authorisedValues.value.location.find(
+                                      av => av.value === row.item.location
+                                  ).description
+                                : "";
+                        },
+                    },
+                },
+                {
+                    type: "date",
+                    name: "checkout_date",
+                    label: $__("Checked out on"),
+                },
+                {
+                    type: "text",
+                    name: "item.external_id",
+                    label: $__("Barcode"),
+                    tableColumnDefinition: {
+                        title: $__("Barcode"),
+                        data: "item.external_id",
+                        searchable: true,
+                        orderable: true,
+                        render: function (data, type, row, meta) {
+                            return (
+                                '<a href="/cgi-bin/koha/catalogue/moredetail.pl?biblionumber=' +
+                                row.item.biblio_id +
+                                "&amp;itemnumber=" +
+                                row.item.item_id +
+                                "#item" +
+                                row.item.item_id +
+                                '">' +
+                                row.item.external_id +
+                                "</a>"
+                            );
+                        },
+                    },
+                },
+                {
+                    type: "text",
+                    name: "item.callnumber",
+                    label: $__("Call number"),
+                },
+                {
+                    type: "text",
+                    name: "item.item_type_id",
+                    label: $__("Item type"),
+                    tableColumnDefinition: {
+                        title: $__("Item type"),
+                        data: "item.item_type_id",
+                        searchable: true,
+                        orderable: true,
+                        render: function (data, type, row, meta) {
+                            return itemTypes.value.find(
+                                it => it.item_type_id === row.item.item_type_id
+                            ).description;
+                        },
+                    },
+                },
+                {
+                    type: "text",
+                    name: "item.replacement_price",
+                    label: $__("Price"),
+                    tableColumnDefinition: {
+                        title: $__("Price"),
+                        data: "item.replacement_price",
+                        searchable: true,
+                        orderable: true,
+                        render: function (data, type, row, meta) {
+                            return Number(
+                                row.item.replacement_price
+                            ).format_price();
+                        },
+                    },
+                },
+                {
+                    type: "text",
+                    name: "item.internal_notes",
+                    label: $__("Non-public note"),
+                },
+                ...(settings.value.ClaimReturnedLostValue
+                    ? [
+                          {
+                              type: "text",
+                              name: "item.return_claim.created_on",
+                              label: $__("Return claims"),
+                              tableColumnDefinition: {
+                                  title: $__("Return claims"),
+                                  data: "item.return_claim.created_on",
+                                  searchable: true,
+                                  orderable: true,
+                                  render: function (data, type, row, meta) {
+                                      if (row.item.return_claim?.created_on) {
+                                          return '<span class="badge text-bg-info">%s</span>'.format(
+                                              format_date(
+                                                  row.item.return_claim
+                                                      .created_on
+                                              )
+                                          );
+                                      } else {
+                                          return (
+                                              '<a class="btn btn-default btn-xs claim-returned-btn" data-itemnumber="' +
+                                              row.item.item_id +
+                                              '"> <i class="fa fa-exclamation-circle"></i> ' +
+                                              $__("Claim returned") +
+                                              " </a>"
+                                          );
+                                      }
+                                  },
+                              },
+                          },
+                      ]
+                    : []),
+            ],
         });
 
-        const tableUrl = () => {};
+        const tableUrl = () => {
+            let url = baseResource.getResourceTableUrl();
+            return url;
+        };
         const tableOptions = {
-            options: {},
-            url: tableUrl(),
-            actions: {
-                "-1": [],
+            options: {
+                embed: "patron,patron.library,patron.category,item.biblio,item.holding_library,item.home_library,library",
             },
+            url: tableUrl(),
+            table_settings,
         };
 
         return {

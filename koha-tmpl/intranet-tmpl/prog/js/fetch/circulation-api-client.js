@@ -91,6 +91,15 @@ export class CirculationAPIClient {
                 }),
         };
     }
+
+    get config() {
+        return {
+            get: () =>
+                this.httpClient.get({
+                    endpoint: "overdues/config",
+                }),
+        };
+    }
 }
 
 export default CirculationAPIClient;

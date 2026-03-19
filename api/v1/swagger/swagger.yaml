@@ -200,6 +200,8 @@ definitions:
     $ref: ./definitions/return_claim.yaml
   rota:
     $ref: ./definitions/rota.yaml
+  overdues_config:
+    $ref: ./definitions/overdues_config.yaml
   search_filter:
     $ref: ./definitions/search_filter.yaml
   sip2_account:
@@ -533,6 +535,8 @@ paths:
     $ref: ./paths/oauth.yaml#/~1oauth~1login~1{provider_code}~1{interface}
   /oauth/token:
     $ref: ./paths/oauth.yaml#/~1oauth~1token
+  /overdues/config:
+    $ref: ./paths/overdues_config.yaml#/~1overdues~1config
   /patrons:
     $ref: ./paths/patrons.yaml#/~1patrons
   "/patrons/{patron_id}":

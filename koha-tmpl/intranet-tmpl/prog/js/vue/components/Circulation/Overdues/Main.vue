@@ -33,6 +33,7 @@ import OverdueFilters from "./OverdueFilters.vue";
 import "vue-select/dist/vue-select.css";
 import { inject, onBeforeMount, ref } from "vue";
 import { storeToRefs } from "pinia";
+import { APIClient } from "../../../fetch/api-client.js";
 
 export default {
     components: {
@@ -49,28 +50,40 @@ export default {
         const { loading, loaded } = mainStore;
 
         const overduesStore = inject("overduesStore");
-        const { authorisedValues } = storeToRefs(overduesStore);
+        const { authorisedValues, settings, itemTypes } =
+            storeToRefs(overduesStore);
         const { loadAuthorisedValues } = overduesStore;
+
+        const fetchConfig = () => {
+            const client = APIClient.circulation;
+            client.config.get().then(result => {
+                settings.value = result.settings;
+                const itypesClient = APIClient.item;
+                itypesClient.item_types.getAll().then(itypes => {
+                    itemTypes.value = itypes;
+                    loaded();
+                    initialized.value = true;
+                });
+            });
+        };
 
         onBeforeMount(() => {
             loading();
-            let needsAuthorisedValues = false;
-            authorisedValues.value = patronAttrs.reduce((acc, pa) => {
+            const attributeAVs = patronAttrs.reduce((acc, pa) => {
                 if (pa.authorised_value_category) {
-                    needsAuthorisedValues = true;
                     acc[pa.code] = pa.authorised_value_category;
                 }
                 return acc;
             }, {});
-            if (needsAuthorisedValues) {
-                loadAuthorisedValues(
-                    authorisedValues.value,
-                    overduesStore
-                ).then(() => {
-                    loaded();
-                    initialized.value = true;
-                });
-            }
+            authorisedValues.value = {
+                ...authorisedValues.value,
+                ...attributeAVs,
+            };
+            loadAuthorisedValues(authorisedValues.value, overduesStore).then(
+                () => {
+                    fetchConfig();
+                }
+            );
         });
         return {
             patronAttrs,

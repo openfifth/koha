@@ -268,6 +268,49 @@ sub to_api_mapping {
     };
 }
 
+=head3 to_api
+
+    my $json = $checkout->to_api;
+
+Overloaded method that returns a JSON representation of the Koha::Checkout
+object, suitable for API output.
+
+=cut
+
+sub to_api {
+    my ( $self, $params ) = @_;
+
+    my $json = $self->SUPER::to_api($params);
+
+    my $userenv = C4::Context->userenv;
+    if ( $userenv and $userenv->{number} ) {
+        my $logged_in_user = Koha::Patrons->find( $userenv->{number} );
+        if ( !$logged_in_user->can_see_patron_infos( $self->patron ) ) {
+            delete $json->{patron}->{firstname};
+            delete $json->{patron}->{surname};
+            delete $json->{patron}->{other_name};
+            delete $json->{patron}->{preferred_name};
+            delete $json->{patron}->{middle_name};
+            delete $json->{patron}->{cardnumber};
+            delete $json->{patron}->{patron_id};
+            delete $json->{patron}->{title};
+            delete $json->{patron}->{phone};
+            delete $json->{patron}->{mobile};
+            delete $json->{patron}->{secondary_phone};
+            delete $json->{patron}->{email};
+            delete $json->{patron}->{address};
+            delete $json->{patron}->{address2};
+            delete $json->{patron}->{postal_code};
+            delete $json->{patron}->{city};
+            delete $json->{patron}->{country};
+            delete $json->{patron}->{street_number};
+            delete $json->{patron}->{street_type};
+        }
+    }
+
+    return $json;
+}
+
 =head3 public_read_list
 
 This method returns the list of publicly readable database fields for both API and UI output purposes

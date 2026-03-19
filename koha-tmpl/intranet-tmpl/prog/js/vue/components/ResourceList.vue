@@ -319,17 +319,23 @@ export default {
         });
 
         const tableEventList = computed(() => {
-            const actionButtons = props.instancedResource.tableOptions.actions[
-                "-1"
-            ].reduce((acc, curr) => {
-                if (typeof curr === "object") {
-                    const actionName = Object.keys(curr)[0];
-                    if (!curr[actionName].callback) return acc;
-                    acc[actionName] = curr[actionName].callback;
-                }
-                return acc;
-            }, {});
-            return { ...tableEvents.value, ...actionButtons };
+            const requiredActions =
+                props.instancedResource.tableOptions.actions;
+            if (requiredActions && requiredActions.hasOwnProperty("-1")) {
+                const actionButtons = requiredActions["-1"].reduce(
+                    (acc, curr) => {
+                        if (typeof curr === "object") {
+                            const actionName = Object.keys(curr)[0];
+                            if (!curr[actionName].callback) return acc;
+                            acc[actionName] = curr[actionName].callback;
+                        }
+                        return acc;
+                    },
+                    {}
+                );
+                return { ...tableEvents.value, ...actionButtons };
+            }
+            return { ...tableEvents.value };
         });
         onBeforeMount(() => {
             if (props.instancedResource.embedded) {

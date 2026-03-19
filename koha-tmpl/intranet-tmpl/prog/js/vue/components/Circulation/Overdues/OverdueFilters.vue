@@ -38,7 +38,7 @@ export default {
     },
     setup(props) {
         const overduesStore = inject("overduesStore");
-        const { authorisedValues } = storeToRefs(overduesStore);
+        const { authorisedValues, itemTypes } = storeToRefs(overduesStore);
 
         const handlePatronAttrs = () => {
             if (!props.patronAttrs.length) return [];
@@ -118,10 +118,10 @@ export default {
             ...handlePatronAttrs(),
             {
                 name: "item_type",
-                type: "relationshipSelect",
-                relationshipAPIClient: APIClient.item.item_types,
-                relationshipOptionLabelAttr: "description",
-                relationshipRequiredKey: "item_type_id",
+                type: "select",
+                selectLabel: "description",
+                requiredKey: "item_type_id",
+                options: itemTypes.value,
                 label: $__("Item type"),
             },
             {

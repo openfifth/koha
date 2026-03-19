@@ -4,7 +4,11 @@ import { withAuthorisedValueActions } from "../composables/authorisedValues";
 
 export const useOverduesStore = defineStore("overdues", () => {
     const store = reactive({
-        authorisedValues: {},
+        authorisedValues: {
+            location: "LOC",
+        },
+        settings: {},
+        itemTypes: [],
     });
     const sharedActions = withAuthorisedValueActions(store);
 
