@@ -30,6 +30,7 @@ import { $__ } from "@koha-vue/i18n";
 import { APIClient } from "../../../fetch/api-client.js";
 import ButtonSubmit from "../../ButtonSubmit.vue";
 import { storeToRefs } from "pinia";
+import { useRouter, useRoute } from "vue-router";
 
 export default {
     components: { FormElement, ButtonSubmit },
@@ -39,6 +40,9 @@ export default {
     setup(props) {
         const overduesStore = inject("overduesStore");
         const { authorisedValues, itemTypes } = storeToRefs(overduesStore);
+
+        const router = useRouter();
+        const route = useRoute();
 
         const handlePatronAttrs = () => {
             if (!props.patronAttrs.length) return [];
@@ -76,14 +80,24 @@ export default {
                         defaultValue: null,
                     },
                     {
-                        name: "dateduefrom",
+                        name: "due_date_from",
                         type: "date",
                         label: $__("From"),
+                        componentProps: {
+                            disabled: {
+                                resourceProperty: "showall",
+                            },
+                        },
                     },
                     {
-                        name: "datedueto",
+                        name: "due_date_to",
                         type: "date",
                         label: $__("To"),
+                        componentProps: {
+                            disabled: {
+                                resourceProperty: "showall",
+                            },
+                        },
                     },
                 ],
             },
@@ -150,17 +164,32 @@ export default {
             },
         ];
 
-        const filters = ref(
-            filterFormFields.reduce((acc, curr) => {
+        const generateFiltersFromQueryString = fields => {
+            const queryParams = route.query;
+            return fields.reduce((acc, curr) => {
                 if (curr.hasOwnProperty("defaultValue")) {
                     acc[curr.name] = curr.defaultValue;
                 }
+                if (queryParams.hasOwnProperty(curr.name)) {
+                    acc[curr.name] = queryParams[curr.name];
+                }
+                if (curr.subFields) {
+                    const parsedSubfields = generateFiltersFromQueryString(
+                        curr.subFields
+                    );
+                    acc = { ...acc, ...parsedSubfields };
+                }
                 return acc;
-            }, {})
-        );
+            }, {});
+        };
+        const filters = ref(generateFiltersFromQueryString(filterFormFields));
 
         const handleFilterFormSubmission = e => {
             e.preventDefault();
+            router.push({
+                name: "OverduesList",
+                query: filters.value,
+            });
         };
         return {
             filterFormFields,

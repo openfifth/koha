@@ -5,6 +5,7 @@
         :required="required"
         :config="fp_config"
         :data-date_to="date_to"
+        :disabled="disabled"
     />
 </template>
 
@@ -18,6 +19,7 @@ export default {
         modelValue: String,
         required: Boolean,
         date_to: String,
+        disabled: Boolean,
     },
     emits: ["update:modelValue"],
     setup(props, { emit }) {
