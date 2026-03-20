@@ -90,6 +90,15 @@ enrollment fee for the patron
 
 are overdue notices sent to this patron category (1 for yes, 0 for no)
 
+=head2 print_notice_charge
+
+  data_type: 'decimal'
+  default_value: 0.000000
+  is_nullable: 1
+  size: [28,6]
+
+charge for print notices (0.00 = disabled)
+
 =head2 hidelostitems
 
   data_type: 'tinyint'
@@ -164,6 +173,13 @@ if patrons of this category can do the password reset flow,
   is_nullable: 1
 
 if patrons of this category can change their passwords in the OAPC
+
+=head2 password_history_count
+
+  data_type: 'smallint'
+  is_nullable: 1
+
+Number of previous passwords to check against when changing password for this patron type
 
 =head2 min_password_length
 
@@ -287,6 +303,13 @@ __PACKAGE__->add_columns(
   { data_type => "decimal", is_nullable => 1, size => [28, 6] },
   "overduenoticerequired",
   { data_type => "tinyint", is_nullable => 1 },
+  "print_notice_charge",
+  {
+    data_type => "decimal",
+    default_value => "0.000000",
+    is_nullable => 1,
+    size => [28, 6],
+  },
   "hidelostitems",
   { data_type => "tinyint", default_value => 0, is_nullable => 0 },
   "category_type",
@@ -321,6 +344,8 @@ __PACKAGE__->add_columns(
   { data_type => "tinyint", is_nullable => 1 },
   "change_password",
   { data_type => "tinyint", is_nullable => 1 },
+  "password_history_count",
+  { data_type => "smallint", is_nullable => 1 },
   "min_password_length",
   { data_type => "smallint", is_nullable => 1 },
   "require_strong_password",
