@@ -39,7 +39,7 @@ export default {
     },
     setup(props) {
         const overduesStore = inject("overduesStore");
-        const { authorisedValues, itemTypes } = storeToRefs(overduesStore);
+        const { authorisedValues, itemTypes, settings } = storeToRefs(overduesStore);
 
         const router = useRouter();
         const route = useRoute();
@@ -48,6 +48,7 @@ export default {
             if (!props.patronAttrs.length) return [];
             return props.patronAttrs.map(pa => {
                 return {
+                    isExtendedAttribute: true,
                     type: "text",
                     label: pa.description,
                     name: pa.code,
@@ -77,7 +78,6 @@ export default {
                         name: "showall",
                         type: "checkbox",
                         label: $__("Show any items currently checked out"),
-                        defaultValue: null,
                     },
                     {
                         name: "due_date_from",
@@ -161,23 +161,45 @@ export default {
                 relationshipOptionLabelAttr: "name",
                 relationshipRequiredKey: "library_id",
                 label: $__("Library of the patron"),
+                ...(settings.value.patron_library_ids?.length && {
+                    query: {
+                        library_id: {
+                            "-in": settings.value.patron_library_ids,
+                        },
+                    },
+                }),
             },
         ];
 
         const generateFiltersFromQueryString = fields => {
             const queryParams = route.query;
-            return fields.reduce((acc, curr) => {
-                if (curr.hasOwnProperty("defaultValue")) {
-                    acc[curr.name] = curr.defaultValue;
+            return fields.reduce((acc, field) => {
+                if (field.hasOwnProperty("defaultValue")) {
+                    acc[field.name] = field.defaultValue;
                 }
-                if (queryParams.hasOwnProperty(curr.name)) {
-                    acc[curr.name] = queryParams[curr.name];
+                if (
+                    queryParams.hasOwnProperty(field.name) &&
+                    queryParams[field.name]
+                ) {
+                    acc[field.name] = queryParams[field.name];
+                    if (queryParams[field.name] == "false") {
+                        acc[field.name] = false;
+                    }
                 }
-                if (curr.subFields) {
+                if (field.subFields) {
                     const parsedSubfields = generateFiltersFromQueryString(
-                        curr.subFields
+                        field.subFields
                     );
                     acc = { ...acc, ...parsedSubfields };
+                }
+                if (
+                    field.isExtendedAttribute &&
+                    field.repeatable &&
+                    queryParams.hasOwnProperty(field.name)
+                ) {
+                    acc[field.name] = queryParams[field.name].map(val => {
+                        return { label: field.label, [field.name]: val };
+                    });
                 }
                 return acc;
             }, {});
@@ -186,9 +208,33 @@ export default {
 
         const handleFilterFormSubmission = e => {
             e.preventDefault();
+            const filterValues = JSON.parse(JSON.stringify(filters.value));
+            Object.keys(filterValues).forEach(key => {
+                if (!filterValues[key]) {
+                    delete filterValues[key];
+                }
+                const filterField = filterFormFields.find(
+                    field => field.name === key
+                );
+                if (
+                    filterField &&
+                    filterField.isExtendedAttribute &&
+                    Array.isArray(filterValues[key])
+                ) {
+                    filterValues[key] = filterValues[key].reduce(
+                        (acc, curr) => {
+                            if (!curr[key]) return acc;
+                            acc.push(curr[key]);
+                            return acc;
+                        },
+                        []
+                    );
+                    if (!filterValues[key].length) delete filterValues[key];
+                }
+            });
             router.push({
                 name: "OverduesList",
-                query: filters.value,
+                query: filterValues,
             });
         };
         return {

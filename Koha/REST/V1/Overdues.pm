@@ -47,6 +47,12 @@ sub config {
                 viewLabelledMARC          => C4::Context->preference('viewLabelledMARC'),
                 viewISBD                  => C4::Context->preference('viewISBD'),
                 marcflavour               => C4::Context->preference('marcflavour'),
+                'item-level_itypes'       => C4::Context->preference('item-level_itypes'),
+                FilterBeforeOverdueReport => C4::Context->preference('FilterBeforeOverdueReport') ? 1 : 0,
+                patron_library_ids        => do {
+                    my $logged_in_user = Koha::Patrons->find( C4::Context->userenv->{'number'} );
+                    [ $logged_in_user ? $logged_in_user->libraries_where_can_see_patrons : () ];
+                },
             },
         },
     );

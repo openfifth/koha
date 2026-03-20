@@ -32,12 +32,14 @@
             - issuer
             - item
             - item.biblio
+            - item.biblioitem
             - item.home_library
             - item.holding_library
             - library
             - patron
             - patron.library
             - patron.category
+            - patron.extended_attributes
             - renewals
         collectionFormat: csv
     produces:

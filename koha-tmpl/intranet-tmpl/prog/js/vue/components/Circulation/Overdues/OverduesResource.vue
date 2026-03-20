@@ -1,5 +1,10 @@
 <template>
+    <div v-if="showFilterPrompt">
+        <h1>{{ $__("Overdue report") }}</h1>
+        <p>{{ $__("Please choose one or more filters to proceed.") }}</p>
+    </div>
     <BaseResource
+        v-else
         :routeAction="routeAction"
         :instancedResource="this"
     ></BaseResource>
@@ -10,7 +15,7 @@ import { useBaseResource } from "../../../composables/base-resource.js";
 import { APIClient } from "../../../fetch/api-client.js";
 import { $__ } from "@koha-vue/i18n";
 import { storeToRefs } from "pinia";
-import { inject } from "vue";
+import { inject, computed } from "vue";
 
 export default {
     props: {
@@ -56,6 +61,19 @@ export default {
                     type: "date",
                     name: "due_date",
                     label: $__("Due date"),
+                    tableColumnDefinition: {
+                        title: $__("Due date"),
+                        data: "due_date",
+                        searchable: true,
+                        orderable: true,
+                        render: function (data, type, row, meta) {
+                            const formatted = format_date(row.due_date);
+                            if (new Date(row.due_date) < new Date()) {
+                                return `<span class="overdue">${formatted}</span>`;
+                            }
+                            return formatted;
+                        },
+                    },
                 },
                 {
                     type: "text",
@@ -86,13 +104,12 @@ export default {
                                     `<span class="overdue_email"> [<a href="mailto:${patron.email}?subject=` +
                                     $__("Overdue") +
                                     `: ${item.biblio.title}">email</a>] </span>`;
-                            patronString += '<span class="overdue_phone">';
-                            patronString += patron.phone
-                                ? `(${patron.phone})`
-                                : patron.mobile
-                                  ? `(${patron.mobile})`
-                                  : `(${patron.secondary_phone})`;
-                            patronString += "</span>";
+                            const phone =
+                                patron.phone ||
+                                patron.mobile ||
+                                patron.secondary_phone;
+                            if (phone)
+                                patronString += `<span class="overdue_phone">(${phone})</span>`;
                             return patronString;
                         },
                     },
@@ -177,8 +194,8 @@ export default {
                                     });
                                 }
                                 if (
-                                    biblioData.part_numbers ||
-                                    biblioData.part_names
+                                    biblioData.part_number ||
+                                    biblioData.part_name
                                 ) {
                                     const partNumbers =
                                         biblioData.part_number?.split(
@@ -195,13 +212,13 @@ export default {
                                     while (i < iteratorValue) {
                                         if (partNumbers[i]) {
                                             titleString +=
-                                                '<span class="part-number>%s</span>'.format(
+                                                '<span class="part-number">%s</span>'.format(
                                                     partNumbers[i]
                                                 );
                                         }
                                         if (partNames[i]) {
                                             titleString +=
-                                                '<span class="part-name>%s</span>'.format(
+                                                '<span class="part-name">%s</span>'.format(
                                                     partNames[i]
                                                 );
                                         }
@@ -383,20 +400,126 @@ export default {
 
         const tableUrl = () => {
             let url = baseResource.getResourceTableUrl();
+            const urlQueryParams = { ...baseResource.route.query };
+
+            const overdueQuery = {};
+            const filterToDbMapping = {
+                category: "patron.categorycode",
+                item_type: settings.value["item-level_itypes"]
+                    ? "item.itype"
+                    : "item.biblioitem.itemtype",
+                item_home_library: "item.home_library_id",
+                item_holding_library: "item.holding_library_id",
+                patron_library: "patron.library_id",
+            };
+            Object.keys(urlQueryParams).forEach(key => {
+                const mappedField = filterToDbMapping[key];
+                if (mappedField) {
+                    overdueQuery[mappedField] = urlQueryParams[key];
+                    delete urlQueryParams[key];
+                }
+            });
+            const today = new Date();
+            if (urlQueryParams.patron_name) {
+                const patronName = urlQueryParams.patron_name
+                    .replace(/\*/g, "%")
+                    .replace(/\?/g, "_");
+                overdueQuery["-or"] = [];
+                overdueQuery["-or"].push({
+                    "patron.firstname": { "-like": patronName + "%" },
+                });
+                overdueQuery["-or"].push({
+                    "patron.surname": { "-like": patronName + "%" },
+                });
+                overdueQuery["-or"].push({
+                    "patron.cardnumber": { "-like": patronName + "%" },
+                });
+                delete urlQueryParams.patron_name;
+            }
+            if (urlQueryParams.patron_flag) {
+                switch (urlQueryParams.patron_flag) {
+                    case "gone_no_address":
+                        overdueQuery["patron.incorrect_address"] = { "!=": 0 };
+                        break;
+                    case "debarred":
+                        overdueQuery["patron.debarred"] = { ">=": today };
+                        break;
+                    case "lost":
+                        overdueQuery["patron.patron_card_lost"] = { "!=": 0 };
+                        break;
+                }
+                delete urlQueryParams.patron_flag;
+            }
+            if (
+                urlQueryParams.showall === "false" &&
+                !urlQueryParams.due_date_to
+            )
+                overdueQuery.due_date = { "<": today };
+            if (urlQueryParams.due_date_from)
+                overdueQuery.due_date = {
+                    ">=": new Date(urlQueryParams.due_date_from),
+                };
+            if (urlQueryParams.due_date_to) {
+                const dueDateTo = new Date(urlQueryParams.due_date_to);
+                dueDateTo.setHours(23, 59, 59, 999);
+                overdueQuery.due_date = { "<=": dueDateTo };
+            }
+            if (urlQueryParams.due_date_from && urlQueryParams.due_date_to) {
+                const startDate = new Date(urlQueryParams.due_date_from);
+                startDate.setDate(startDate.getDate() - 1);
+                const endDate = new Date(urlQueryParams.due_date_to);
+                endDate.setDate(endDate.getDate() + 1);
+                overdueQuery.due_date = { "-between": [startDate, endDate] };
+            }
+            delete urlQueryParams.showall;
+            delete urlQueryParams.due_date_from;
+            delete urlQueryParams.due_date_to;
+
+            const extendedAttributes = Object.keys(urlQueryParams);
+            if (extendedAttributes.length) {
+                overdueQuery["-and"] = [];
+                extendedAttributes.forEach(attr => {
+                    if (Array.isArray(urlQueryParams[attr])) {
+                        urlQueryParams[attr].forEach(val => {
+                            overdueQuery["-and"].push({
+                                "patron.extended_attributes.code": attr,
+                                "patron.extended_attributes.attribute": val,
+                            });
+                        });
+                    } else {
+                        overdueQuery["-and"].push({
+                            "patron.extended_attributes.code": attr,
+                            "patron.extended_attributes.attribute":
+                                urlQueryParams[attr],
+                        });
+                    }
+                });
+            }
+
+            url += `?q=${JSON.stringify(overdueQuery)}`;
+
             return url;
         };
         const tableOptions = {
             options: {
-                embed: "patron,patron.library,patron.category,item.biblio,item.holding_library,item.home_library,library",
+                embed: "patron,patron.library,patron.category,patron.extended_attributes,item.biblio,item.biblioitem,item.holding_library,item.home_library,library",
+                pagingType: "full",
             },
             url: tableUrl(),
             table_settings,
         };
 
+        const showFilterPrompt = computed(
+            () =>
+                settings.value.FilterBeforeOverdueReport == 1 &&
+                !Object.keys(baseResource.route.query).length
+        );
+
         return {
             ...baseResource,
             tableOptions,
             tableUrl,
+            showFilterPrompt,
         };
     },
     name: "OverduesResource",
