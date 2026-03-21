@@ -29,13 +29,6 @@ describe("ERM Module Dashboard", () => {
             },
         }).as("getTitlesCount");
 
-        cy.intercept("GET", "/api/v1/erm/licenses*", {
-            statusCode: 200,
-            headers: {
-                "X-Total-Count": "5",
-            },
-        }).as("getLicensesCount");
-
         cy.intercept("GET", "/api/v1/erm/usage_data_providers*", {
             statusCode: 200,
             headers: {
