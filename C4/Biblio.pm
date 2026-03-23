@@ -490,6 +490,38 @@ MARC bib.
 
 =cut
 
+=head2 _marc_record_to_diffable
+
+  my $hashref = _marc_record_to_diffable($record);
+
+Converts a MARC::Record object into a plain hashref suitable for structural
+diffing. Control fields are stored as scalar values; data fields are stored
+as arrays of formatted strings containing indicators and subfields.
+
+=cut
+
+sub _marc_record_to_diffable {
+    my ($record) = @_;
+    return {} unless defined $record;
+    my %marc;
+    for my $field ( $record->fields ) {
+        my $tag = $field->tag;
+        if ( $field->is_control_field ) {
+            $marc{$tag} = $field->data;
+        } else {
+            my $ind1      = $field->indicator(1);
+            my $ind2      = $field->indicator(2);
+            my $formatted = "$ind1$ind2";
+            for my $subfield ( $field->subfields ) {
+                $formatted .= " \$$subfield->[0] $subfield->[1]";
+            }
+            push @{ $marc{$tag} }, $formatted;
+        }
+    }
+    return \%marc;
+}
+
+
 sub _strip_item_fields {
     my $record        = shift;
     my $frameworkcode = shift;
@@ -1973,6 +2005,18 @@ sub TransformKohaToMarc {
     }
     return $record;
 }
+
+=head2 _check_split
+
+  my $bool = _check_split( $params, $fld, $value );
+
+Checks whether C<$value> should be split into repeatable subfields. Returns
+true if the field is repeatable (consulting the passed framework when
+provided, otherwise falling back to the default framework structure), false
+otherwise. Returns undef if C<$value> contains no pipe character or splitting
+is disabled via C<$params->{no_split}>.
+
+=cut
 
 sub _check_split {
 

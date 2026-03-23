@@ -1401,7 +1401,17 @@ sub has_restricting_overdues {
     return 0;
 }
 
-# Fetch first delayX value from overduerules where debarredX is set, or 0 for no delay
+=head3 _get_overdue_debarred_delay
+
+  my $delay = _get_overdue_debarred_delay( $branchcode, $categorycode );
+
+Returns the first overdue delay value (delay1/delay2/delay3) from the
+overduerules for the given branch and category where the corresponding
+debarred flag is set. Falls back to default branch rules when no
+branch-specific rule exists. Returns 0 if no debarring rule is found.
+
+=cut
+
 sub _get_overdue_debarred_delay {
     my ( $branchcode, $categorycode ) = @_;
 
@@ -2707,6 +2717,16 @@ sub generate_userid {
     return $self;
 }
 
+=head3 _generate_userid_internal
+
+  $patron->_generate_userid_internal;
+
+Generates a userid for the patron using the traditional
+firstname.surname scheme, appending a numeric suffix when needed to
+ensure uniqueness. Modifies the patron object in place and returns C<$self>.
+
+=cut
+
 sub _generate_userid_internal {    # as we always did
     my ($self)    = @_;
     my $offset    = 0;
@@ -2976,6 +2996,18 @@ sub anonymize {
     }
     $self->anonymized(1)->store;
 }
+
+=head3 _anonymize_column
+
+  $patron->_anonymize_column( $col, $mandatory );
+
+Anonymizes a single column of the patron record. The replacement value is
+chosen based on the column's data type: text columns receive either a random
+token (if C<$mandatory>), NULL (if nullable), or an empty string; numeric
+columns receive NULL or 0; date/time columns receive NULL or the current
+datetime; enum columns receive NULL or the column default.
+
+=cut
 
 sub _anonymize_column {
     my ( $self, $col, $mandatory ) = @_;
