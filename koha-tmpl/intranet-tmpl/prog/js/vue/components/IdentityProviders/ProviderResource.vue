@@ -5,8 +5,7 @@
     <!-- SAML2 certificate generation modal -->
     <div
         v-if="certModalVisible"
-        class="modal fade show"
-        style="display: block"
+        class="modal fade show d-block"
         tabindex="-1"
         role="dialog"
         aria-modal="true"
@@ -798,6 +797,7 @@ export default {
         // Unpack the JSON config blob into flat _config_* fields so the form
         // and show views can bind to them individually.
         const afterResourceFetch = (componentData, resource) => {
+            activeFormResource.value = resource;
             selectedProtocol.value = resource.protocol || null;
             const config = resource.config || {};
             // Track SAML2 mode for reactive field visibility
@@ -896,6 +896,11 @@ export default {
         // mutations that ResourceFormSave makes when the user changes the
         // protocol dropdown.
         const formStateObj = reactive(baseResource.newResource.value);
+
+        // Always points to the object currently bound to the form:
+        // - add mode:  newResource.value (the template object above)
+        // - edit mode: the fetched resource (updated in afterResourceFetch)
+        const activeFormResource = ref(baseResource.newResource.value);
         watch(
             () => formStateObj.protocol,
             newProtocol => {
@@ -944,8 +949,8 @@ export default {
                             validity_days: certOptions.validity_days,
                         }
                     );
-                formStateObj._config_sp_cert = result.certificate;
-                formStateObj._config_sp_key = result.private_key;
+                activeFormResource.value._config_sp_cert = result.certificate;
+                activeFormResource.value._config_sp_key = result.private_key;
                 certModalVisible.value = false;
             } catch (err) {
                 certError.value =
