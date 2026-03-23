@@ -94,6 +94,10 @@ sub logaction {
         }
     } else {
         $updated = $infos;
+        if ( ref $infos eq 'HASH' && $modulename eq 'CATALOGUING' && $actionname eq 'MODIFY' ) {
+            local $Data::Dumper::Sortkeys = 1;
+            $infos = "biblio " . Dumper( ref $original eq 'HASH' ? $original : {} );
+        }
     }
 
     my $script =
