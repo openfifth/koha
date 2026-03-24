@@ -404,6 +404,7 @@
                                 />
                             </template>
                         </v-select>
+                        <span class="required">{{ $__("Required") }}</span>
                     </li>
                 </ol>
             </fieldset>
