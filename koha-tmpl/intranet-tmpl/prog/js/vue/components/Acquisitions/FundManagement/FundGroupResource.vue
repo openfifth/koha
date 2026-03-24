@@ -112,22 +112,20 @@ export default {
             delete fund_group.last_updated;
 
             if (fund_group_id) {
-                const acq_client = APIClient.acquisition;
-                acq_client.fundGroups.update(fund_group, fund_group_id).then(
-                    success => {
-                        baseResource.setMessage($__("Fund group updated"));
-                        baseResource.router.push({
-                            name: "FundGroupList",
-                        });
-                    },
-                    error => {}
-                );
+                return baseResource.apiClient
+                    .update(fund_group, fund_group_id)
+                    .then(
+                        fund_group => {
+                            baseResource.setMessage($__("Fund group updated"));
+                            return fund_group;
+                        },
+                        error => {}
+                    );
             } else {
-                const acq_client = APIClient.acquisition;
-                acq_client.fundGroups.create(fund_group).then(
-                    success => {
+                return baseResource.apiClient.create(fund_group).then(
+                    fund_group => {
                         baseResource.setMessage($__("Fund group created"));
-                        baseResource.router.push({ name: "FundGroupList" });
+                        return fund_group;
                     },
                     error => {}
                 );

@@ -274,26 +274,22 @@ export default {
             delete fiscal_period.ledgers;
 
             if (fiscal_period_id) {
-                const acq_client = APIClient.acquisition;
-                acq_client.fiscalPeriods
+                return baseResource.apiClient
                     .update(fiscal_period, fiscal_period_id)
                     .then(
-                        success => {
+                        fiscalPeriod => {
                             baseResource.setMessage(
                                 $__("Fiscal period updated")
                             );
-                            baseResource.router.push({
-                                name: "FiscalPeriodList",
-                            });
+                            return fiscalPeriod;
                         },
                         error => {}
                     );
             } else {
-                const acq_client = APIClient.acquisition;
-                acq_client.fiscalPeriods.create(fiscal_period).then(
-                    success => {
+                return baseResource.apiClient.create(fiscal_period).then(
+                    fiscalPeriod => {
                         baseResource.setMessage($__("Fiscal period created"));
-                        baseResource.router.push({ name: "FiscalPeriodList" });
+                        return fiscalPeriod;
                     },
                     error => {}
                 );

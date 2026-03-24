@@ -378,20 +378,18 @@ export default {
             delete ledger.managing_library;
 
             if (ledger_id) {
-                const acq_client = APIClient.acquisition;
-                acq_client.ledgers.update(ledger, ledger_id).then(
-                    success => {
+                return baseResource.apiClient.update(ledger, ledger_id).then(
+                    ledger => {
                         baseResource.setMessage($__("Ledger updated"));
-                        baseResource.router.push({ name: "LedgerList" });
+                        return ledger;
                     },
                     error => {}
                 );
             } else {
-                const acq_client = APIClient.acquisition;
-                acq_client.ledgers.create(ledger).then(
-                    success => {
+                return baseResource.apiClient.create(ledger).then(
+                    ledger => {
                         baseResource.setMessage($__("Ledger created"));
-                        baseResource.router.push({ name: "LedgerList" });
+                        return ledger;
                     },
                     error => {}
                 );
@@ -444,8 +442,12 @@ export default {
                             };
 
                             initialized.value = true;
+                        } else {
+                            initialized.value = true;
                         }
                     });
+            } else {
+                initialized.value = true;
             }
             return resource;
         };

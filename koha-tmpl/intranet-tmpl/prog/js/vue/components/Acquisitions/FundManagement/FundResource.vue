@@ -201,6 +201,7 @@ export default {
                                       },
                                   },
                               },
+                              disabled: true,
                               hideIn: ["List"],
                           },
                       ]
@@ -219,7 +220,7 @@ export default {
                               onSelected:
                                   filterLibGroupsAndFundGroupsBySelectedLedger,
                               query: getLedgersQuery,
-                              disabled: resource => !resource.fiscal_period_id,
+                              disabled: true,
                               showElement: {
                                   type: "text",
                                   value: "ledger.name",
@@ -514,20 +515,18 @@ export default {
             delete fund.managing_library;
 
             if (fund_id) {
-                const acq_client = APIClient.acquisition;
-                acq_client.funds.update(fund, fund_id).then(
-                    success => {
+                return baseResource.apiClient.update(fund, fund_id).then(
+                    fund => {
                         baseResource.setMessage($__("Fund updated"));
-                        baseResource.router.push({ name: "FundList" });
+                        return fund;
                     },
                     error => {}
                 );
             } else {
-                const acq_client = APIClient.acquisition;
-                acq_client.funds.create(fund).then(
-                    success => {
+                return baseResource.apiClient.create(fund).then(
+                    fund => {
                         baseResource.setMessage($__("Fund created"));
-                        baseResource.router.push({ name: "FundList" });
+                        return fund;
                     },
                     error => {}
                 );
@@ -821,7 +820,11 @@ export default {
             ];
         };
 
-        const afterNewResourceCreate = (resource, componentData) => {
+        const afterNewResourceCreate = (
+            resource,
+            componentData,
+            initialized
+        ) => {
             if (componentData.route.query.fund_id) {
                 resource.fund_parent_id = parseInt(
                     componentData.route.query.fund_id
@@ -835,6 +838,7 @@ export default {
                     componentData.route.query.fiscal_period_id
                 );
             }
+            initialized.value = true;
             return resource;
         };
 
