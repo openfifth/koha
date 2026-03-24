@@ -410,9 +410,11 @@ export const useCircRulesStore = defineStore("circRules", () => {
                 ...this.allDefaultLibraryRawRuleSets,
             ];
         },
-        async getSelectedRuleSet(context) {
-            const rawSelectedRuleSet =
-                await this.getRawSelectedRuleSet(context);
+        async getSelectedRuleSet(context, effective = true) {
+            const rawSelectedRuleSet = await this.getRawSelectedRuleSet(
+                context,
+                effective
+            );
             if (!rawSelectedRuleSet) {
                 return;
             }
