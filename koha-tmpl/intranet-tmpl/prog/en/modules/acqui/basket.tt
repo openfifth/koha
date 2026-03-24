@@ -1531,7 +1531,7 @@
     [% IF edifact_enabled && edifact_messages.size > 0 %]
         [% Asset.css("css/edifact_interchange.css") | $raw %]
         [% Asset.js("js/modals/edifact_interchange.js") | $raw %]
-        <script>
+        <script nonce="[% Koha.CSPNonce | $raw %]">
             EdifactDisplay.init({
                 modalId: "#EDI_modal",
                 expandByDefault: true,
