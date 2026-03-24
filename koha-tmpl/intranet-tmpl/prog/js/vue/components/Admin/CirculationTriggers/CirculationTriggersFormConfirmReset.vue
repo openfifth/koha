@@ -15,7 +15,7 @@
                 <p>
                     {{
                         $__(
-                            "To better understand which contexts will be affected, use 'Display all patron categories and items types.' on the circulations triggers page."
+                            "To better understand which contexts will be affected, use 'Display: all applied rules.' on the circulations triggers page."
                         )
                     }}
                 </p>
