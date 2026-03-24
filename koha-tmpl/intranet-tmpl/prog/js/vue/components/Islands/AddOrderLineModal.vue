@@ -60,7 +60,7 @@
                             </li>
                             <li>
                                 <a
-                                    :href="`/cgi-bin/koha/acqui/neworderempty.pl?booksellerid=${vendorid}&amp;basketno=${basketno}`"
+                                    :href="`/cgi-bin/koha/acquisitions/order_management/orderlines/add`"
                                     >{{ $__("From a new (empty) record") }}</a
                                 >
                             </li>
