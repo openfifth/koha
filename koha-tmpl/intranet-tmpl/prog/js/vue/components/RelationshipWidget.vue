@@ -68,9 +68,11 @@ export default {
             props.resourceRelationships.push({
                 ...props.newRelationshipDefaultAttrs,
             });
+            props.onRelationshipAddOrDelete(props.resource);
         };
         const deleteResourceRelationship = counter => {
             props.resourceRelationships.splice(counter, 1);
+            props.onRelationshipAddOrDelete(props.resource);
         };
         const getSelectOptions = filters => {
             const searchFilters = filters ? filters : {};
@@ -143,6 +145,7 @@ export default {
         name: String,
         resource: Object,
         disabled: { type: [Boolean, Function] },
+        onRelationshipAddOrDelete: { type: Function, default: () => {} },
     },
     components: {
         FormElement,
