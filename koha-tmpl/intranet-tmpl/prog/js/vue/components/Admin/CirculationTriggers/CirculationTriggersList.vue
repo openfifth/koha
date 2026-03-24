@@ -243,7 +243,7 @@
                     :options="[
                         {
                             value: 0,
-                            label: 'explictly set rules.',
+                            label: 'explicitly set rules.',
                         },
                         {
                             value: 1,
