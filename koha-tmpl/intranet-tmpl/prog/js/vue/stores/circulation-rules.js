@@ -413,6 +413,10 @@ export const useCircRulesStore = defineStore("circRules", () => {
         async getSelectedRuleSet(context) {
             const rawSelectedRuleSet =
                 await this.getRawSelectedRuleSet(context);
+            if (!rawSelectedRuleSet) {
+                return;
+            }
+
             let formattedSelectedRuleSet = cloneDeep(rawSelectedRuleSet);
             let i = 1;
             while (i <= this.triggerCounts[this.currentLibraryId]) {
