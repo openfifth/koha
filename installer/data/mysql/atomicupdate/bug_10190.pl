@@ -3,10 +3,35 @@ use Koha::Installer::Output qw(say_warning say_failure say_success say_info);
 
 return {
     bug_number  => "10190",
-    description => "Migrate overduerules to circulation_rules",
+    description => "Migrate overduerules to circulation_rules and add manage_circ_triggers permission",
     up          => sub {
         my ($args) = @_;
         my ( $dbh, $out ) = @$args{qw(dbh out)};
+
+        # Add the new dedicated permission for managing overdue notice triggers.
+        $dbh->do(
+            q{
+            INSERT IGNORE INTO permissions (module_bit, code, description) VALUES
+            (3, 'manage_circ_triggers', 'Manage overdue notice triggers')
+        }
+        );
+        say_success( $out, "Added new permission 'manage_circ_triggers'" );
+
+        # Grant manage_circ_triggers to any user who previously had edit_notice_status_triggers,
+        # so they retain access to the notice triggers page after the permission migration.
+        $dbh->do(
+            q{
+            INSERT IGNORE INTO user_permissions (borrowernumber, module_bit, code)
+            SELECT borrowernumber, 3, 'manage_circ_triggers'
+            FROM user_permissions
+            WHERE code = 'edit_notice_status_triggers'
+        }
+        );
+
+        # Remove the old tools sub-permission for notice triggers.
+        # user_permissions rows are cleaned up automatically via ON DELETE CASCADE.
+        $dbh->do(q|DELETE FROM permissions WHERE code = 'edit_notice_status_triggers'|);
+        say_success( $out, "Removed deprecated permission 'edit_notice_status_triggers'" );
 
         # This script pulls data from these tables then drops them.
         # Skip silently if they no longer exist (e.g. fresh install or already migrated).
@@ -14,12 +39,6 @@ return {
             say_info( $out, "Tables overduerules / overduerules_transport_types not found, skipping migration" );
             return;
         }
-
-        # Remove the tools sub-permission for notice triggers; access is now
-        # controlled by parameters/manage_circ_rules instead.
-        # user_permissions rows are cleaned up automatically via ON DELETE CASCADE.
-        $dbh->do(q|DELETE FROM permissions WHERE code = 'edit_notice_status_triggers'|);
-        say_success( $out, "Removed deprecated permission 'edit_notice_status_triggers'" );
 
         # Fetch all explicit overdue rules with their transport types.
         # No phantom rows are added - only rules that were explicitly configured are migrated.

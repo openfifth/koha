@@ -78,6 +78,7 @@
       permissions:
         - circulate: circulate_remaining_permissions
         - parameters: manage_circ_rules
+        - parameters: manage_circ_triggers
   put:
     x-mojo-to: CirculationRules#set_rules
     operationId: setCirculationRules
@@ -133,6 +134,7 @@
       permissions:
         - circulate: circulate_remaining_permissions
         - parameters: manage_circ_rules
+        - parameters: manage_circ_triggers
 /circulation_rules/kinds:
   get:
     x-mojo-to: CirculationRules#get_kinds
@@ -172,3 +174,4 @@
       permissions:
         - circulate: circulate_remaining_permissions
         - parameters: manage_circ_rules
+        - parameters: manage_circ_triggers
