@@ -293,6 +293,14 @@ export const routes = [
                                 alternateLeftMenu: "AcqMenu",
                             },
                             {
+                                path: "edit/:orderline_id",
+                                component: markRaw(ResourceWrapper),
+                                name: "OrderlineFormAddEdit",
+                                title: "Edit orderline",
+                                permission: "createOrderlines",
+                                alternateLeftMenu: "AcqMenu",
+                            },
+                            {
                                 path: "search",
                                 component: markRaw(ResourceWrapper),
                                 name: "OrderlineSearch",
