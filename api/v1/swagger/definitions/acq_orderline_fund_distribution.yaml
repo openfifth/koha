@@ -3,23 +3,52 @@ type: object
 properties:
   orderline_fund_distribution_id:
     type: number
+    readOnly: true
+    description: Unique identifier for the distribution
   orderline_id:
     type: number
+    description: Foreign key referencing the orderline
   fund_id:
     type: number
+    description: Foreign key referencing the fund
   percentage:
-    type: number
+    type:
+      - number
+      - "null"
+    description: The percentage of the value for the distribution
   distributed_amount_oc:
-    type: number
+    type:
+      - number
+      - "null"
+    description: The distributed amount in the original currency
   exchange_rate:
-    type: number
+    type:
+      - number
+      - "null"
+    description: The exchange rate
   distributed_amount:
-    type: number
+    type:
+      - number
+      - "null"
+    description: The final distributed amount
   tax_rate:
-    type: number
+    type:
+      - number
+      - "null"
+    description: The tax rate on the distribution
   tax_value:
-    type: number
+    type:
+      - number
+      - "null"
+    description: The value of the tax based on the tax rate
   distibuted_amount_tax_excluded:
-    type: number
+    type:
+      - number
+      - "null"
+    description: The amount distributed with tax excluded
   distibuted_amount_tax_included:
-    type: number
+    type:
+      - number
+      - "null"
+    description: The amount distributed with tax included
+additionalProperties: false

@@ -934,7 +934,7 @@ export default {
                     type: "date",
                     group: $__("Notes"),
                     label: $__("Estimated delivery date"),
-                    defaultValue: "",
+                    defaultValue: null,
                     hideIn: ["List", "Show", "Search"],
                 },
                 {
