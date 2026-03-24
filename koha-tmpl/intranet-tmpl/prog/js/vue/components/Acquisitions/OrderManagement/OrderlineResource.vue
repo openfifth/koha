@@ -720,6 +720,7 @@ export default {
                             noneCreatedYetMessage: $__(
                                 "There are no funds created yet"
                             ),
+                            addNewMessage: $__("Add new fund distribution"),
                         },
                         newRelationshipDefaultAttrs: {
                             type: "object",
