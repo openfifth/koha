@@ -4,6 +4,7 @@ import { APIClient } from "../fetch/api-client.js";
 import { isEqual } from "lodash";
 import { permissionsActions } from "../composables/permissions";
 import { reactive, toRefs, computed } from "vue";
+import { cloneDeep } from "lodash";
 
 // NOTES ON RULE SETS TYPES
 // exhaustive:  includes 'pure fallback' rules sets for contexts that no rules match.
@@ -160,6 +161,9 @@ export const useCircRulesStore = defineStore("circRules", () => {
             );
         },
         // services
+        formatMttForDisplay(rawMtt) {
+            return rawMtt?.split(",");
+        },
         findEffectiveRule(
             context,
             ruleSuffix,
@@ -406,13 +410,31 @@ export const useCircRulesStore = defineStore("circRules", () => {
                 ...this.allDefaultLibraryRawRuleSets,
             ];
         },
+        async getSelectedRuleSet(context) {
+            const rawSelectedRuleSet =
+                await this.getRawSelectedRuleSet(context);
+            let formattedSelectedRuleSet = cloneDeep(rawSelectedRuleSet);
+            let i = 1;
+            while (i <= this.triggerCounts[this.currentLibraryId]) {
+                if (rawSelectedRuleSet[`overdue_${i}_mtt`]) {
+                    formattedSelectedRuleSet[`overdue_${i}_mtt`] =
+                        this.formatMttForDisplay(
+                            rawSelectedRuleSet[`overdue_${i}_mtt`]
+                        );
+                }
+                i++;
+            }
+            return formattedSelectedRuleSet;
+        },
         // repositories
         async deleteRuleSet(ruleSet, triggerNumber) {
             if (!this.hasExplicitRulesForTrigger(ruleSet, triggerNumber)) {
                 return;
             }
 
-            const ruleSetInDb = await this.getSelectedRuleSet(ruleSet.context);
+            const ruleSetInDb = await this.getRawSelectedRuleSet(
+                ruleSet.context
+            );
 
             if (this.hasConflict(ruleSet, ruleSetInDb, triggerNumber)) {
                 throw "The rule set for the selected trigger context could not be reset as it was updated elsewhere. Please see the updated trigger above.";
@@ -495,7 +517,7 @@ export const useCircRulesStore = defineStore("circRules", () => {
             });
             this.patronCategories = patronCategories;
         },
-        async getSelectedRuleSet(context, effective = false) {
+        async getRawSelectedRuleSet(context, effective = false) {
             if (context.library_id === null) {
                 context.library_id = "*";
             }
