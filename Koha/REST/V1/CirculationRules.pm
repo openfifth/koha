@@ -254,6 +254,21 @@ sub set_rules {
             }
         }
 
+        unless ( haspermission( $logged_in_user->userid, { parameters => 'manage_circ_rules' } )
+            || haspermission( $logged_in_user->userid, { circulate => 'circulate_remaining_permissions' } ) )
+        {
+            my $rules_to_set = {%$body};
+            delete $rules_to_set->{context};
+            my @non_trigger_rules = grep { !/^overdue_/ } keys %{$rules_to_set};
+            if (@non_trigger_rules) {
+                return $c->render(
+                    status  => 403,
+                    openapi =>
+                        { error => 'manage_circ_rules permission is required to manage non-trigger circulation rules' }
+                );
+            }
+        }
+
         if ( $patron_category eq '*' ) {
             $patron_category = undef;
         } else {
