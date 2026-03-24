@@ -31,7 +31,7 @@ my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
         template_name => "admin/circulation_triggers.tt",
         query         => $query,
         type          => "intranet",
-        flagsrequired => { parameters => 'manage_circ_rules' },
+        flagsrequired => { parameters => 'manage_circ_triggers' },
     }
 );
 
