@@ -388,6 +388,51 @@ export default {
                 //     hideIn: ["List"],
                 // },
                 {
+                    name: "items",
+                    group: $__("Catalog details"),
+                    type: "relationshipWidget",
+                    componentProps: {
+                        resourceRelationships: {
+                            resourceProperty: "items",
+                        },
+                        relationshipI18n: {
+                            nameLowerCase: $__("item"),
+                            namePlural: $__("items"),
+                            nameUpperCase: $__("Item"),
+                            noneCreatedYetMessage: $__(
+                                "There are no items created yet"
+                            ),
+                            addNewMessage: $__("Add new item"),
+                        },
+                        newRelationshipDefaultAttrs: {
+                            type: "object",
+                            value: {
+                                title: "",
+                            },
+                        },
+                        resource: {
+                            type: "resource",
+                            value: null,
+                        },
+                        onRelationshipAddOrDelete: {
+                            type: "function",
+                            value: resource => {
+                                resource.quantity_ordered =
+                                    resource.items.length;
+                            },
+                        },
+                    },
+                    relationshipFields: [
+                        {
+                            type: "text",
+                            name: "title",
+                            label: "Temp",
+                            placeholder: "Placeholder for item fields",
+                        },
+                    ],
+                    hideIn: ["Show", "List"],
+                },
+                {
                     name: "patrons_to_notify",
                     group: $__("Patrons to notify"),
                     type: "component",
@@ -1201,6 +1246,8 @@ export default {
                     return { borrowernumber: mp };
                 }
             );
+
+            delete orderline.items;
 
             return handleAPIFormSubmission(orderline, orderline_id);
         };
