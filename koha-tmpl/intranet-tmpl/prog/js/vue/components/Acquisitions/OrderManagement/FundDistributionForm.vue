@@ -189,7 +189,7 @@ export default {
                             fund?.currency
                         );
                     fundDistributions.forEach(fd => {
-                        fd.currency = fund.currency || vendor_price_currency;
+                        fd.currency = fund?.currency || vendor_price_currency;
                         fd.exchange_rate = orderline.distribution_exchange_rate;
                         calculateDistributedAmount(fd);
                     });
