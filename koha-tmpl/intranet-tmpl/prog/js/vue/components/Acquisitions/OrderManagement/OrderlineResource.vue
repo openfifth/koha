@@ -22,8 +22,11 @@ export default {
     setup(props) {
         const acquisitionsStore = inject("acquisitionsStore");
         const { currencies } = storeToRefs(acquisitionsStore);
-        const { getCurrencyConversionRate, getActiveCurrency } =
-            acquisitionsStore;
+        const {
+            getCurrencyConversionRate,
+            getActiveCurrency,
+            formatValueWithCurrency,
+        } = acquisitionsStore;
 
         const baseResource = useBaseResource({
             resourceName: "orderline",
@@ -420,6 +423,12 @@ export default {
                     type: "number",
                     defaultValue: 1.0,
                     size: 6,
+                    formatInputValue: (value, resource) => {
+                        const currency =
+                            resource?.fund_distributions?.[0]?.fund?.currency ||
+                            getActiveCurrency.currency;
+                        return formatValueWithCurrency(value, currency);
+                    },
                     hideIn: ["List"],
                 },
                 {
