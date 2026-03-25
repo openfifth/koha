@@ -42,8 +42,10 @@ sub config {
     my $userflags   = C4::Auth::getuserflags( $patron->flags, $patron->id );
     my $permissions = Koha::Auth::Permissions->get_authz_from_flags( { flags => $userflags } );
 
-    my $calculate_fund_values_including_tax = C4::Context->preference('CalculateFundValuesIncludingTax');
-    my $acq_create_items                    = C4::Context->preference('AcqCreateItem');
+    my $calculate_fund_values_including_tax  = C4::Context->preference('CalculateFundValuesIncludingTax');
+    my $acq_create_items                     = C4::Context->preference('AcqCreateItem');
+    my $use_acq_framework_for_biblio_records = C4::Context->preference('UseAcqFrameworkForBiblioRecords');
+    my $marcflavour                          = C4::Context->preference('marcflavour');
 
     my @gst_values = map { option => $_ + 0.0 }, split( '\|', C4::Context->preference("TaxRates") );
 
@@ -53,8 +55,10 @@ sub config {
             permissions => $permissions,
             gst_values  => \@gst_values,
             sysprefs    => {
-                calculate_fund_values_including_tax => $calculate_fund_values_including_tax,
-                acq_create_items                    => $acq_create_items
+                calculate_fund_values_including_tax  => $calculate_fund_values_including_tax,
+                acq_create_items                     => $acq_create_items,
+                use_acq_framework_for_biblio_records => $use_acq_framework_for_biblio_records,
+                marcflavour                          => $marcflavour
             },
         },
     );
