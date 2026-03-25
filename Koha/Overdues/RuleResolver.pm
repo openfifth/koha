@@ -49,6 +49,27 @@ sub new {
     return bless $self, $class;
 }
 
+=head3 _find_effective_rule_value
+
+Retrieves the effective rule value for a specific context, delay, and action combination from the cache.
+If none is found, returns an empty scalar.
+
+=cut
+
+sub _find_effective_rule_value {
+    my ( $self, $branchcode, $categorycode, $itemtype, $delay, $action ) = @_;
+    foreach my $key ( @{ $self->_get_fallback_contexts( $branchcode, $categorycode, $itemtype, $delay ) } ) {
+        if ( !$self->{raw_overdue_rule_sets}->{$key} ) {
+            next;
+        }
+        if ( !defined $self->{raw_overdue_rule_sets}->{$key}->{actions}->{$action} ) {
+            next;
+        }
+        my $value = $self->{raw_overdue_rule_sets}->{$key}->{actions}->{$action};
+        return $value;
+    }
+}
+
 =head3 _get_fallback_contexts
 
 Generates the fallback context keys for a specific context / delay combination. Allows to resolve effective rule sets.
