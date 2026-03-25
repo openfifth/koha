@@ -201,7 +201,7 @@ export default {
                 label: $__("Distribution"),
                 type: "component",
                 componentPath:
-                    "./Acquisitions/OrderManagement/InputNumberPercentageToggle.vue",
+                    "@koha-vue/components/Acquisitions/OrderManagement/InputNumberPercentageToggle.vue",
                 componentProps: {
                     resource: {
                         type: "resource",

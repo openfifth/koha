@@ -36,12 +36,16 @@ export default {
             resourceName: "orderline",
             nameAttr: "orderline_id",
             idAttr: "orderline_id",
-            showComponent: "OrderlineShow",
-            listComponent: "OrderlineList",
-            addComponent: "OrderlineFormAdd",
-            editComponent: "OrderlineFormAddEdit",
+            components: {
+                show: "OrderlineShow",
+                list: "OrderlineList",
+                add: "OrderlineFormAdd",
+                edit: "OrderlineFormAddEdit",
+            },
             apiClient: APIClient.acquisition.orderlines,
-            resourceTableUrl: APIClient.acquisition._baseURL + "orderlines",
+            table: {
+                resourceTableUrl: APIClient.acquisition._baseURL + "orderlines",
+            },
             i18n: {
                 deleteConfirmationMessage: $__(
                     "Are you sure you want to remove this orderline?"
@@ -126,7 +130,7 @@ export default {
                     group: $__("Catalog details"),
                     type: "component",
                     componentPath:
-                        "./Acquisitions/OrderManagement/BiblioMarcFields.vue",
+                        "@koha-vue/components/Acquisitions/OrderManagement/BiblioMarcFields.vue",
                     componentProps: {
                         resource: {
                             type: "resource",
@@ -157,7 +161,7 @@ export default {
                     group: $__("Catalog details"),
                     type: "component",
                     componentPath:
-                        "./Acquisitions/OrderManagement/ItemMarcFields.vue",
+                        "@koha-vue/components/Acquisitions/OrderManagement/ItemMarcFields.vue",
                     componentProps: {
                         resource: {
                             type: "resource",
@@ -183,7 +187,7 @@ export default {
                     group: $__("Patrons to notify"),
                     type: "component",
                     label: $__("Notify on receiving"),
-                    componentPath: "./PatronSearch.vue",
+                    componentPath: "@koha-vue/components/PatronSearch.vue",
                     componentProps: {
                         name: {
                             type: "string",
@@ -228,7 +232,7 @@ export default {
                     group: $__("Library management"),
                     type: "component",
                     label: $__("Managed by"),
-                    componentPath: "./PatronSearch.vue",
+                    componentPath: "@koha-vue/components/PatronSearch.vue",
                     componentProps: {
                         name: {
                             type: "string",
@@ -340,7 +344,7 @@ export default {
                     type: "component",
                     label: $__("Discount"),
                     componentPath:
-                        "./Acquisitions/OrderManagement/InputNumberPercentageToggle.vue",
+                        "@koha-vue/components/Acquisitions/OrderManagement/InputNumberPercentageToggle.vue",
                     componentProps: {
                         resource: {
                             type: "resource",
@@ -382,7 +386,7 @@ export default {
                     group: $__("Accounting details"),
                     type: "component",
                     componentPath:
-                        "./Acquisitions/OrderManagement/PriceSummary.vue",
+                        "@koha-vue/components/Acquisitions/OrderManagement/PriceSummary.vue",
                     componentProps: {
                         resource: {
                             type: "resource",
@@ -396,7 +400,7 @@ export default {
                     type: "component",
                     group: $__("Fund / fund distributions"),
                     componentPath:
-                        "./Acquisitions/OrderManagement/CalculatedAmount.vue",
+                        "@koha-vue/components/Acquisitions/OrderManagement/CalculatedAmount.vue",
                     componentProps: {
                         resource: {
                             type: "resource",
@@ -465,7 +469,7 @@ export default {
                         {
                             type: "component",
                             componentPath:
-                                "./Acquisitions/OrderManagement/FundDistributionForm.vue",
+                                "@koha-vue/components/Acquisitions/OrderManagement/FundDistributionForm.vue",
                             indexRequired: true,
                             componentProps: {
                                 resource: {
@@ -521,7 +525,7 @@ export default {
                     type: "component",
                     group: $__("Fund / fund distributions"),
                     componentPath:
-                        "./Acquisitions/OrderManagement/CalculatedAmount.vue",
+                        "@koha-vue/components/Acquisitions/OrderManagement/CalculatedAmount.vue",
                     componentProps: {
                         resource: {
                             type: "resource",
@@ -611,7 +615,7 @@ export default {
             },
         };
 
-        const onSubmit = (e, orderlineToSave) => {
+        const onFormSave = (e, orderlineToSave) => {
             e.preventDefault();
             // TODOs:
             // Need to check all costs distributed (resource.remainderToDistribute)
@@ -659,7 +663,7 @@ export default {
         return {
             ...baseResource,
             tableOptions,
-            onSubmit,
+            onFormSave,
         };
     },
     components: { BaseResource },
