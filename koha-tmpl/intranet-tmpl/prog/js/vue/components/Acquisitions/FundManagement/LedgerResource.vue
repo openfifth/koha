@@ -415,7 +415,7 @@ export default {
                     .then(fiscalPeriod => {
                         if (
                             fiscalPeriod.managing_library
-                                ?.acquisitions_library_groups
+                                ?.acquisitions_library_groups.length
                         ) {
                             const groupNames =
                                 fiscalPeriod.managing_library?.acquisitions_library_groups.map(
