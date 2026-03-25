@@ -49,6 +49,58 @@ sub new {
     return bless $self, $class;
 }
 
+=head3 set_raw_overdue_rule_sets
+
+# TODO: refactor, rewrite descr
+Set the array of raw overdue rule sets that are relevant for the current cicrulation triggers script run.
+Format: {branchcode|categorycode|itemtype|delay => { charge, has_rules, mark_returned, mtt, notice, restrict, lost}}, where all properties are optional.
+This reflects the reality of what is stored in the database 
+It also ties the actions to the delay explicitly assigned to this set
+
+=cut
+
+sub set_raw_overdue_rule_sets {
+    my ( $self, $branch_list, $category_list, $itemtype_list ) = @_;
+
+    my $rules = $self->get_raw_overdue_rule_sets( $branch_list, $category_list, $itemtype_list );
+
+    if ( !$rules ) {
+        return;
+    }
+
+    # Temporary storage: {context}{trigger_number} = {delay => X, actions => { type => value }}
+    my $temporary_rule_sets = {};
+
+    # get all rules
+    while ( my $row = $rules->next ) {
+        my ( $trigger_number, $rule_type ) = $row->rule_name =~ /^overdue_(\d+)_(.+)$/ or next;
+        my $context_key = join( "|", $row->branchcode // '*', $row->categorycode // '*', $row->itemtype // '*' );
+
+        if ( $rule_type eq 'delay' ) {
+            $temporary_rule_sets->{$context_key}->{$trigger_number}->{delay} = $row->rule_value;
+            next;
+        }
+
+        $temporary_rule_sets->{$context_key}->{$trigger_number}->{actions}->{$rule_type} = $row->rule_value;
+    }
+
+    # format and cache all rules
+    foreach my $context_key ( keys %{$temporary_rule_sets} ) {
+        foreach my $trigger_number ( keys %{ $temporary_rule_sets->{$context_key} } ) {
+            my $rule_set = $temporary_rule_sets->{$context_key}->{$trigger_number};
+            my $delay    = $rule_set->{delay};
+            if ( !defined $delay ) {
+                Koha::Logger->get->warn(
+                    "Trigger $trigger_number for context $context_key has no delay value — skipping");
+                next;
+            }
+            my $cache_key = join( "|", $context_key, $delay );
+            $self->{raw_overdue_rule_sets}->{$cache_key} = $rule_set;
+        }
+    }
+}
+
+
 =head3 get_raw_overdue_rule_sets
 
 Retrieves the effective overdue rule set values for a given context
