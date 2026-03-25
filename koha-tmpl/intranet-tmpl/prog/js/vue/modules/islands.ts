@@ -72,6 +72,21 @@ export const componentRegistry: Map<string, WebComponentDynamicImport> =
                 },
             },
         ],
+        [
+            "add-order-line-modal",
+            {
+                importFn: async () => {
+                    const module = await import(
+                        /* webpackChunkName: "add-order-line-modal" */
+                        "../components/Islands/AddOrderLineModal.vue"
+                    );
+                    return module.default;
+                },
+                config: {
+                    stores: ["mainStore"],
+                },
+            },
+        ],
     ]);
 
 /**
