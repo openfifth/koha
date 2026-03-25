@@ -25,7 +25,7 @@ use Test::Mojo;
 use t::lib::TestBuilder;
 use t::lib::Mocks;
 
-use Koha::Acquisition::FundManagement::FundAllocations;
+use Koha::Acquisition::FundManagement::Allocations;
 use Koha::Database;
 
 my $schema  = Koha::Database->new->schema;
@@ -79,12 +79,12 @@ subtest 'list() tests' => sub {
 
     my $fund_allocation = $builder->build_object(
         {
-            class => 'Koha::Acquisition::FundManagement::FundAllocations',
+            class => 'Koha::Acquisition::FundManagement::Allocations',
             value => { lib_group_visibility => "|" . $lib_group->id . "|" }
         }
     );
 
-    my $module2 = Test::MockModule->new('Koha::Acquisition::FundManagement::FundAllocations');
+    my $module2 = Test::MockModule->new('Koha::Acquisition::FundManagement::Allocations');
     $module2->mock(
         'add_totals_to_fund_allocations',
         sub {
@@ -93,13 +93,14 @@ subtest 'list() tests' => sub {
             return \@allocations;
         }
     );
-    $t->get_ok("//$userid:$password@/api/v1/acquisitions/fund_allocations")->status_is(200)
+    $t->get_ok("//$userid:$password@/api/v1/acquisitions/fund_allocations")
+        ->status_is(200)
         ->json_is( '/0/currency'  => $fund_allocation->currency )
         ->json_is( '/0/reference' => $fund_allocation->reference );
 
     my $another_fa = $builder->build_object(
         {
-            class => 'Koha::Acquisition::FundManagement::FundAllocations',
+            class => 'Koha::Acquisition::FundManagement::Allocations',
             value => { lib_group_visibility => "|" . $lib_group->id . "|" }
         }
     );
@@ -115,9 +116,11 @@ subtest 'list() tests' => sub {
     );
 
     # Two fund_allocations created, they should both be returned
-    $t->get_ok("//$userid:$password@/api/v1/acquisitions/fund_allocations")->status_is(200)
+    $t->get_ok("//$userid:$password@/api/v1/acquisitions/fund_allocations")
+        ->status_is(200)
         ->json_is( '/0/currency'  => $fund_allocation->currency )
-        ->json_is( '/0/reference' => $fund_allocation->reference )->json_is( '/1/currency' => $another_fa->currency )
+        ->json_is( '/0/reference' => $fund_allocation->reference )
+        ->json_is( '/1/currency'  => $another_fa->currency )
         ->json_is( '/1/reference' => $another_fa->reference );
 
     # Attempt to search by title like 'ko'
@@ -131,11 +134,12 @@ subtest 'list() tests' => sub {
         }
     );
     $t->get_ok(qq~//$userid:$password@/api/v1/acquisitions/fund_allocations?q=[{"me.reference":{"like":"%ko%"}}]~)
-        ->status_is(200)->json_is( [] );
+        ->status_is(200)
+        ->json_is( [] );
 
     my $fund_allocations_search = $builder->build_object(
         {
-            class => 'Koha::Acquisition::FundManagement::FundAllocations',
+            class => 'Koha::Acquisition::FundManagement::Allocations',
             value => {
                 reference            => 'koha',
                 lib_group_visibility => "|" . $lib_group->id . "|"
@@ -153,11 +157,13 @@ subtest 'list() tests' => sub {
 
     # Search works, searching for title like 'ko'
     $t->get_ok(qq~//$userid:$password@/api/v1/acquisitions/fund_allocations?q=[{"me.reference":{"like":"%ko%"}}]~)
-        ->status_is(200)->json_is( '/0/currency' => $fund_allocations_search->currency )
+        ->status_is(200)
+        ->json_is( '/0/currency'  => $fund_allocations_search->currency )
         ->json_is( '/0/reference' => $fund_allocations_search->reference );
 
     # Warn on unsupported query parameter
-    $t->get_ok("//$userid:$password@/api/v1/acquisitions/fund_allocations?blah=blah")->status_is(400)
+    $t->get_ok("//$userid:$password@/api/v1/acquisitions/fund_allocations?blah=blah")
+        ->status_is(400)
         ->json_is( [ { path => '/query/blah', message => 'Malformed query string' } ] );
 
     $schema->storage->txn_rollback;
@@ -203,26 +209,28 @@ subtest 'get() tests' => sub {
     );
     my $fund_allocation = $builder->build_object(
         {
-            class => 'Koha::Acquisition::FundManagement::FundAllocations',
+            class => 'Koha::Acquisition::FundManagement::Allocations',
             value => { lib_group_visibility => "|" . $lib_group->id . "|" }
         }
     );
 
     # This fund_allocation exists, should get returned
     $t->get_ok( "//$userid:$password@/api/v1/acquisitions/fund_allocations/" . $fund_allocation->fund_allocation_id )
-        ->status_is(200)->json_is( $fund_allocation->to_api );
+        ->status_is(200)
+        ->json_is( $fund_allocation->to_api );
 
     # Attempt to get non-existent fund_allocations
     my $non_existent_fund_allocations = $builder->build_object(
         {
-            class => 'Koha::Acquisition::FundManagement::FundAllocations',
+            class => 'Koha::Acquisition::FundManagement::Allocations',
             value => { lib_group_visibility => "|" . $lib_group->id . "|" }
         }
     );
     my $non_existent_id = $non_existent_fund_allocations->fund_allocation_id;
     $non_existent_fund_allocations->delete;
 
-    $t->get_ok("//$userid:$password@/api/v1/acquisitions/fund_allocations/$non_existent_id")->status_is(404)
+    $t->get_ok("//$userid:$password@/api/v1/acquisitions/fund_allocations/$non_existent_id")
+        ->status_is(404)
         ->json_is( '/error' => 'Fund allocation not found' );
 
     $schema->storage->txn_rollback;
@@ -290,13 +298,16 @@ subtest 'add() tests' => sub {
     # Authorized attempt to write
     my $fund_allocation_id =
         $t->post_ok( "//$userid:$password@/api/v1/acquisitions/fund_allocations" => json => $fund_allocation )
-        ->status_is( 201, 'SWAGGER3.2.1' )->header_like(
+        ->status_is( 201, 'SWAGGER3.2.1' )
+        ->header_like(
         Location => qr|^/api/v1/acquisitions/fund_allocations/\d*|,
         'SWAGGER3.4.1'
-    )->json_is( '/allocation_amount' => $fund_allocation->{allocation_amount} )
-        ->json_is( '/reference'   => $fund_allocation->{reference} )->json_is( '/note' => $fund_allocation->{note} )
-        ->json_is( '/is_transfer' => $fund_allocation->{is_transfer} )
-        ->json_is( '/owner_id'    => $fund_allocation->{owner_id} )
+        )
+        ->json_is( '/allocation_amount'    => $fund_allocation->{allocation_amount} )
+        ->json_is( '/reference'            => $fund_allocation->{reference} )
+        ->json_is( '/note'                 => $fund_allocation->{note} )
+        ->json_is( '/is_transfer'          => $fund_allocation->{is_transfer} )
+        ->json_is( '/owner_id'             => $fund_allocation->{owner_id} )
         ->json_is( '/lib_group_visibility' => $fund_allocation->{lib_group_visibility} )
         ->tx->res->json->{fund_allocation_id};
 
@@ -336,14 +347,15 @@ subtest 'delete() tests' => sub {
 
     my $fund_allocation_id = $builder->build_object(
         {
-            class => 'Koha::Acquisition::FundManagement::FundAllocations',
+            class => 'Koha::Acquisition::FundManagement::Allocations',
             value => { lib_group_visibility => "|" . $lib_group->id . "|" }
         }
     )->fund_allocation_id;
 
     # Delete existing fund_allocations
     $t->delete_ok("//$userid:$password@/api/v1/acquisitions/fund_allocations/$fund_allocation_id")
-        ->status_is( 204, 'SWAGGER3.2.4' )->content_is( '', 'SWAGGER3.3.4' );
+        ->status_is( 204, 'SWAGGER3.2.4' )
+        ->content_is( '', 'SWAGGER3.3.4' );
 
     # Attempt to delete non-existent fund_allocations
     $t->delete_ok("//$userid:$password@/api/v1/acquisitions/fund_allocations/$fund_allocation_id")->status_is(404);

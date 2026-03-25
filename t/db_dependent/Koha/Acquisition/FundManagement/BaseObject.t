@@ -212,7 +212,7 @@ subtest 'total_allocations' => sub {
         }
     )->store();
 
-    my $allocation = Koha::Acquisition::FundManagement::FundAllocation->new(
+    my $allocation = Koha::Acquisition::FundManagement::Allocation->new(
         {
             fund_id           => $fund->fund_id,
             ledger_id         => $ledger->ledger_id,
@@ -224,7 +224,7 @@ subtest 'total_allocations' => sub {
 
     is( $fiscal_period->total_allocations + 0, -10, 'Total spent is -10' );
 
-    my $allocation2 = Koha::Acquisition::FundManagement::FundAllocation->new(
+    my $allocation2 = Koha::Acquisition::FundManagement::Allocation->new(
         {
             fund_id           => $fund->fund_id,
             ledger_id         => $ledger->ledger_id,
@@ -237,7 +237,7 @@ subtest 'total_allocations' => sub {
     is( $fiscal_period->total_allocations + 0, -15, 'Total spent is -15' );
 
     # Positive allocation to simulate a transfer from another fund or a credit note
-    my $allocation3 = Koha::Acquisition::FundManagement::FundAllocation->new(
+    my $allocation3 = Koha::Acquisition::FundManagement::Allocation->new(
         {
             fund_id           => $fund->fund_id,
             ledger_id         => $ledger->ledger_id,
@@ -290,7 +290,7 @@ subtest 'total_spent' => sub {
         }
     )->store();
 
-    my $allocation = Koha::Acquisition::FundManagement::FundAllocation->new(
+    my $allocation = Koha::Acquisition::FundManagement::Allocation->new(
         {
             fund_id           => $fund->fund_id,
             ledger_id         => $ledger->ledger_id,
@@ -302,7 +302,7 @@ subtest 'total_spent' => sub {
 
     is( $fiscal_period->total_spent + 0, -10, 'Total spent is -10' );
 
-    my $allocation2 = Koha::Acquisition::FundManagement::FundAllocation->new(
+    my $allocation2 = Koha::Acquisition::FundManagement::Allocation->new(
         {
             fund_id           => $fund->fund_id,
             ledger_id         => $ledger->ledger_id,
@@ -315,7 +315,7 @@ subtest 'total_spent' => sub {
     is( $fiscal_period->total_spent + 0, -15, 'Total spent is -15' );
 
     # encumbrance rather than spend
-    my $allocation3 = Koha::Acquisition::FundManagement::FundAllocation->new(
+    my $allocation3 = Koha::Acquisition::FundManagement::Allocation->new(
         {
             fund_id           => $fund->fund_id,
             ledger_id         => $ledger->ledger_id,
@@ -368,7 +368,7 @@ subtest 'total_encumbered' => sub {
         }
     )->store();
 
-    my $allocation = Koha::Acquisition::FundManagement::FundAllocation->new(
+    my $allocation = Koha::Acquisition::FundManagement::Allocation->new(
         {
             fund_id           => $fund->fund_id,
             ledger_id         => $ledger->ledger_id,
@@ -380,7 +380,7 @@ subtest 'total_encumbered' => sub {
 
     is( $fiscal_period->total_encumbered + 0, -10, 'Total encumbered is -10' );
 
-    my $allocation2 = Koha::Acquisition::FundManagement::FundAllocation->new(
+    my $allocation2 = Koha::Acquisition::FundManagement::Allocation->new(
         {
             fund_id           => $fund->fund_id,
             ledger_id         => $ledger->ledger_id,
@@ -393,7 +393,7 @@ subtest 'total_encumbered' => sub {
     is( $fiscal_period->total_encumbered + 0, -15, 'Total encumbered is -15' );
 
     # Spend rather than encumbrance
-    my $allocation3 = Koha::Acquisition::FundManagement::FundAllocation->new(
+    my $allocation3 = Koha::Acquisition::FundManagement::Allocation->new(
         {
             fund_id           => $fund->fund_id,
             ledger_id         => $ledger->ledger_id,
@@ -496,7 +496,7 @@ subtest 'is_spend_limit_breached' => sub {
         }
     )->store();
 
-    my $allocation = Koha::Acquisition::FundManagement::FundAllocation->new(
+    my $allocation = Koha::Acquisition::FundManagement::Allocation->new(
         {
             fund_id           => $fund->fund_id,
             ledger_id         => $ledger->ledger_id,
@@ -509,7 +509,7 @@ subtest 'is_spend_limit_breached' => sub {
     my $result = $ledger->is_spend_limit_breached( { new_allocation => $allocation } );
     is( $result->{within_limit}, 1, 'Within limit' );
 
-    my $allocation2 = Koha::Acquisition::FundManagement::FundAllocation->new(
+    my $allocation2 = Koha::Acquisition::FundManagement::Allocation->new(
         {
             fund_id           => $fund->fund_id,
             ledger_id         => $ledger->ledger_id,
@@ -523,7 +523,7 @@ subtest 'is_spend_limit_breached' => sub {
     is( $result->{breach_amount}, 1, 'Breached by 1' );
 
     # Warnings
-    $allocation2 = Koha::Acquisition::FundManagement::FundAllocation->new(
+    $allocation2 = Koha::Acquisition::FundManagement::Allocation->new(
         {
             fund_id           => $fund->fund_id,
             ledger_id         => $ledger->ledger_id,
@@ -537,7 +537,7 @@ subtest 'is_spend_limit_breached' => sub {
     is( $result->{within_limit}, 1, 'No breach' );
     is( $result->{oe_warning},   1, 'Warning for encumbrance triggered' );
 
-    $allocation2 = Koha::Acquisition::FundManagement::FundAllocation->new(
+    $allocation2 = Koha::Acquisition::FundManagement::Allocation->new(
         {
             fund_id           => $fund->fund_id,
             ledger_id         => $ledger->ledger_id,
@@ -599,7 +599,7 @@ subtest 'add_accounting_values' => sub {
         }
     )->store();
 
-    my $allocation1 = Koha::Acquisition::FundManagement::FundAllocation->new(
+    my $allocation1 = Koha::Acquisition::FundManagement::Allocation->new(
         {
             fund_id           => $fund->fund_id,
             ledger_id         => $ledger->ledger_id,
@@ -608,7 +608,7 @@ subtest 'add_accounting_values' => sub {
             type              => 'spent'
         }
     )->store();
-    my $allocation2 = Koha::Acquisition::FundManagement::FundAllocation->new(
+    my $allocation2 = Koha::Acquisition::FundManagement::Allocation->new(
         {
             fund_id           => $fund->fund_id,
             ledger_id         => $ledger->ledger_id,
@@ -617,7 +617,7 @@ subtest 'add_accounting_values' => sub {
             type              => 'spent'
         }
     )->store();
-    my $allocation3 = Koha::Acquisition::FundManagement::FundAllocation->new(
+    my $allocation3 = Koha::Acquisition::FundManagement::Allocation->new(
         {
             fund_id           => $fund2->fund_id,
             sub_fund_id       => $sub_fund->sub_fund_id,
@@ -627,7 +627,7 @@ subtest 'add_accounting_values' => sub {
             type              => 'spent'
         }
     )->store();
-    my $allocation4 = Koha::Acquisition::FundManagement::FundAllocation->new(
+    my $allocation4 = Koha::Acquisition::FundManagement::Allocation->new(
         {
             fund_id           => $fund2->fund_id,
             sub_fund_id       => $sub_fund->sub_fund_id,
@@ -650,8 +650,8 @@ subtest 'add_accounting_values' => sub {
 
     is( $result->{total_allocation},    -20, 'Total allocations is -20' );
     is( $result->{allocation_decrease}, -30, 'Total decrease is -30' );
-    is( $result->{allocation_increase}, 10,  'Total allocations is 10' );
-    is( $result->{net_transfers},       0,   'Total allocations is 0' );
+    is( $result->{allocation_increase},  10, 'Total allocations is 10' );
+    is( $result->{net_transfers},        0,  'Total allocations is 0' );
 
     $schema->storage->txn_rollback;
 };
@@ -766,7 +766,7 @@ subtest 'handle_spending_block_changes' => sub {
         }
     )->store();
 
-    my $allocation1 = Koha::Acquisition::FundManagement::FundAllocation->new(
+    my $allocation1 = Koha::Acquisition::FundManagement::Allocation->new(
         {
             fund_id           => $fund->fund_id,
             ledger_id         => $ledger->ledger_id,
@@ -779,7 +779,7 @@ subtest 'handle_spending_block_changes' => sub {
     my $error = $ledger->handle_spending_block_changes( { spend => 0 } );
     is( $error, undef, 'Ledger has no over spend so no check required' );
 
-    my $module = Test::MockModule->new('Koha::Acquisition::FundManagement::FundAllocation');
+    my $module = Test::MockModule->new('Koha::Acquisition::FundManagement::Allocation');
     $module->mock(
         'will_allocation_breach_spend_limits',
         sub {
@@ -787,7 +787,7 @@ subtest 'handle_spending_block_changes' => sub {
         }
     );
 
-    my $allocation2 = Koha::Acquisition::FundManagement::FundAllocation->new(
+    my $allocation2 = Koha::Acquisition::FundManagement::Allocation->new(
         {
             fund_id           => $fund->fund_id,
             ledger_id         => $ledger->ledger_id,

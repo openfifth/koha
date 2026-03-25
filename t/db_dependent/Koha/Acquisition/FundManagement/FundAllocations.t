@@ -23,7 +23,7 @@ use t::lib::TestBuilder;
 use t::lib::Mocks;
 
 use Koha::Database;
-use Koha::Acquisition::FundManagement::FundAllocations;
+use Koha::Acquisition::FundManagement::Allocations;
 
 my $schema  = Koha::Database->new->schema;
 my $builder = t::lib::TestBuilder->new;
@@ -66,7 +66,7 @@ subtest 'add_totals_to_fund_allocations' => sub {
         }
     );
 
-    my $allocation = Koha::Acquisition::FundManagement::FundAllocation->new(
+    my $allocation = Koha::Acquisition::FundManagement::Allocation->new(
         {
             fund_id           => $fund->fund_id,
             sub_fund_id       => undef,
@@ -76,7 +76,7 @@ subtest 'add_totals_to_fund_allocations' => sub {
             is_transfer       => 0
         }
     )->store();
-    my $allocation2 = Koha::Acquisition::FundManagement::FundAllocation->new(
+    my $allocation2 = Koha::Acquisition::FundManagement::Allocation->new(
         {
             fund_id           => $fund->fund_id,
             sub_fund_id       => undef,
@@ -86,7 +86,7 @@ subtest 'add_totals_to_fund_allocations' => sub {
             is_transfer       => 0
         }
     )->store();
-    my $allocation3 = Koha::Acquisition::FundManagement::FundAllocation->new(
+    my $allocation3 = Koha::Acquisition::FundManagement::Allocation->new(
         {
             fund_id           => $fund->fund_id,
             sub_fund_id       => undef,
@@ -97,7 +97,7 @@ subtest 'add_totals_to_fund_allocations' => sub {
         }
     )->store();
 
-    my $sorted_allocations = Koha::Acquisition::FundManagement::FundAllocations->add_totals_to_fund_allocations(
+    my $sorted_allocations = Koha::Acquisition::FundManagement::Allocations->add_totals_to_fund_allocations(
         { allocations => [ $allocation->unblessed, $allocation2->unblessed, $allocation3->unblessed ] } );
 
     is( @{$sorted_allocations}[0]->{allocation_index}, 1, 'Allocation index set correctly' );

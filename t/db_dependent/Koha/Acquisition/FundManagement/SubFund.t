@@ -82,7 +82,7 @@ subtest 'cascade_to_fund_allocations' => sub {
     );
     my $fund_allocation = $builder->build_object(
         {
-            class => 'Koha::Acquisition::FundManagement::FundAllocations',
+            class => 'Koha::Acquisition::FundManagement::Allocations',
             value => {
                 fiscal_period_id     => $fiscal_period->fiscal_period_id,
                 ledger_id            => $ledger->ledger_id,
@@ -99,7 +99,7 @@ subtest 'cascade_to_fund_allocations' => sub {
     $fiscal_period->store();
 
     my $updated_fund_allocation =
-        Koha::Acquisition::FundManagement::FundAllocations->find( $fund_allocation->fund_allocation_id );
+        Koha::Acquisition::FundManagement::Allocations->find( $fund_allocation->fund_allocation_id );
 
     is(
         $fiscal_period->lib_group_visibility, $updated_fund_allocation->lib_group_visibility,
@@ -111,7 +111,7 @@ subtest 'cascade_to_fund_allocations' => sub {
     $sub_fund->store();
 
     $updated_fund_allocation =
-        Koha::Acquisition::FundManagement::FundAllocations->find( $fund_allocation->fund_allocation_id );
+        Koha::Acquisition::FundManagement::Allocations->find( $fund_allocation->fund_allocation_id );
 
     is( $sub_fund->currency, $updated_fund_allocation->currency, 'Fund allocation has updated' );
     is( $sub_fund->owner_id, $updated_fund_allocation->owner_id, 'Fund allocation has updated' );
