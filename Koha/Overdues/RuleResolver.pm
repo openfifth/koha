@@ -51,6 +51,60 @@ sub new {
 
 =head3 _find_effective_rule_value
 
+Retrieves the effective rule sets value for a specific context, and delay combination from the cache.
+
+=cut
+
+sub _find_effective_overdue_rule_set {
+    my ( $self, $context, $delay ) = @_;
+
+    my $branchcode   = $context->{branchcode};
+    my $categorycode = $context->{categorycode};
+    my $itemtype     = $context->{itemtype};
+
+    my $effective_rule = { delay => $delay, actions => [] };
+
+    foreach my $action (@action_names) {
+        if ( $action eq 'notice' ) {
+            my $notice_code =
+                $self->_find_effective_rule_value( $branchcode, $categorycode, $itemtype, $delay, 'notice' );
+            if ( !defined $notice_code ) {
+                Koha::Logger->get->warn(
+                    "No notice rule found for context $branchcode|$categorycode|$itemtype at delay $delay — skipping notice action"
+                );
+                next;
+            }
+            my $mtt = $self->_find_effective_rule_value( $branchcode, $categorycode, $itemtype, $delay, 'mtt' );
+            if ( !defined $mtt ) {
+                Koha::Logger->get->warn(
+                    "No mtt rule found for notice $notice_code at delay $delay — skipping notice action");
+                next;
+            }
+            push @{ $effective_rule->{actions} }, {
+                type        => 'notice',
+                notice_code => $notice_code,
+                mtt         => $mtt,
+            };
+            next;
+        }
+
+        my $value = $self->_find_effective_rule_value( $branchcode, $categorycode, $itemtype, $delay, $action );
+
+        if ( !defined $value ) {
+            next;
+        }
+
+        push @{ $effective_rule->{actions} }, {
+            type  => $action,
+            value => $value
+        };
+    }
+
+    return $effective_rule;
+}
+
+=head3 _find_effective_rule_value
+
 Retrieves the effective rule value for a specific context, delay, and action combination from the cache.
 If none is found, returns an empty scalar.
 
