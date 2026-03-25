@@ -639,7 +639,7 @@ INSERT INTO systempreferences ( `variable`, `value` ) VALUES
 ('OverDrivePasswordRequired','0'),
 ('OverDriveUsername','cardnumber'),
 ('OverDriveWebsiteID',''),
-('OverdueNoticeCalendar','0'),
+('OverdueTriggersCalendar','0'),
 ('OverdueNoticeFrom', 'cron'),
 ('OverduesBlockCirc','noblock'),
 ('OverduesBlockRenewing','allow'),
