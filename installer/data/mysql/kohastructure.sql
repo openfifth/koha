@@ -3657,23 +3657,23 @@ CREATE TABLE `file_transports` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `fiscal_period`
+-- Table structure for table `acq_fiscal_period`
 --
 
-DROP TABLE IF EXISTS `fiscal_period`;
+DROP TABLE IF EXISTS `acq_fiscal_period`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `fiscal_period` (
+CREATE TABLE `acq_fiscal_period` (
   `fiscal_period_id` INT(11) NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(80) NOT NULL COMMENT 'name for the fiscal period',
   `description` longtext DEFAULT '' COMMENT 'description for the fiscal period',
-  `code` VARCHAR(255) DEFAULT NULL COMMENT 'code for the fiscal period',
   `start_date` date DEFAULT NULL COMMENT 'start date of the event',
   `end_date` date DEFAULT NULL COMMENT 'end date of the event',
-  `spend_limit` decimal(28,2) DEFAULT 0.00 COMMENT 'spend limit for the fiscal_period',
   `status` TINYINT(1) DEFAULT '1' COMMENT 'is the fiscal period currently active',
-  `last_updated` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'time of the last update to the fiscal period',
   `owner_id` INT(11) DEFAULT NULL COMMENT 'owner of the fiscal period',
   `managing_branch` varchar(10) DEFAULT NULL COMMENT 'branch responsible',
+  `created_date` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'time of the creation to the fiscal period',
+  `modified_date` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'time of the last update to the fiscal period',
   PRIMARY KEY (`fiscal_period_id`),
   FOREIGN KEY (`owner_id`) REFERENCES `borrowers` (`borrowernumber`),
   FOREIGN KEY (`managing_branch`) REFERENCES `branches` (`branchcode`) ON DELETE CASCADE ON UPDATE CASCADE
@@ -3681,43 +3681,37 @@ CREATE TABLE `fiscal_period` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `fund_allocation`
+-- Table structure for table `acq_allocations`
 --
 
-DROP TABLE IF EXISTS `fund_allocation`;
+DROP TABLE IF EXISTS `acq_allocations`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `fund_allocation` (
-  `fund_allocation_id` INT(11) NOT NULL AUTO_INCREMENT,
-  `fund_id` INT(11) DEFAULT NULL COMMENT 'fund the fund allocation applies to',
-  `ledger_id` INT(11) DEFAULT NULL COMMENT 'ledger the fund allocation applies to',
-  `fiscal_period_id` INT(11) DEFAULT NULL COMMENT 'fiscal period the fund allocation applies to',
+CREATE TABLE `acq_allocations` (
+  `allocation_id` INT(11) NOT NULL AUTO_INCREMENT,
+  `fund_id` INT(11) DEFAULT NULL COMMENT 'fund the allocation applies to',
+  `ledger_id` INT(11) DEFAULT NULL COMMENT 'ledger the allocation applies to',
   `allocation_amount` decimal(28,2) DEFAULT 0.00 COMMENT 'amount for the allocation',
+  `is_transferred_to` INT(11) DEFAULT NULL COMMENT 'entity making the allocation',
+  `is_transferred_from` INT(11) DEFAULT NULL COMMENT 'entity receiving the allocation',
+  `type` enum('increase','decrease','transfer') NOT NULL COMMENT 'type of the allocation',
   `reference` VARCHAR(255) DEFAULT NULL COMMENT 'allocation reference',
   `note` longtext DEFAULT '' COMMENT 'any notes associated to the allocation',
-  `currency` VARCHAR(10) DEFAULT NULL COMMENT 'currency of the fund allocation',
-  `owner_id` INT(11) DEFAULT NULL COMMENT 'owner of the fund allocation',
-  `type` enum('encumbered','spent', 'transfer', 'credit') DEFAULT NULL COMMENT 'type of the fund allocation',
-  `is_transfer` TINYINT(1) DEFAULT '0' COMMENT 'is the fund allocation a transfer to/from another fund',
-  `last_updated` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'time of the last update to the fund allocation',
-  `managing_branch` varchar(10) DEFAULT NULL COMMENT 'branch responsible',
-  PRIMARY KEY (`fund_allocation_id`),
-  FOREIGN KEY (`fund_id`) REFERENCES `funds` (`fund_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  FOREIGN KEY (`ledger_id`) REFERENCES `ledgers` (`ledger_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  FOREIGN KEY (`fiscal_period_id`) REFERENCES `fiscal_period` (`fiscal_period_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  FOREIGN KEY (`owner_id`) REFERENCES `borrowers` (`borrowernumber`),
-  FOREIGN KEY (`managing_branch`) REFERENCES `branches` (`branchcode`) ON DELETE CASCADE ON UPDATE CASCADE
+  `created_date` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'when the allocation was made',
+  PRIMARY KEY (`allocation_id`),
+  FOREIGN KEY (`fund_id`) REFERENCES `acq_funds` (`fund_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (`ledger_id`) REFERENCES `acq_ledgers` (`ledger_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `fund_group`
+-- Table structure for table `acq_fund_group`
 --
 
-DROP TABLE IF EXISTS `fund_group`;
+DROP TABLE IF EXISTS `acq_fund_group`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `fund_group` (
+CREATE TABLE `acq_fund_group` (
   `fund_group_id` INT(11) NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(255) DEFAULT NULL COMMENT 'name for the fund group',
   `currency` VARCHAR(10) DEFAULT NULL COMMENT 'currency of the fund allocation',
@@ -3728,38 +3722,36 @@ CREATE TABLE `fund_group` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `funds`
+-- Table structure for table `acq_funds`
 --
 
-DROP TABLE IF EXISTS `funds`;
+DROP TABLE IF EXISTS `acq_funds`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `funds` (
+CREATE TABLE `acq_funds` (
   `fund_id` INT(11) NOT NULL AUTO_INCREMENT,
   `fund_parent_id` INT(11) DEFAULT NULL COMMENT 'if this fund is a child of another the parent fund id will be stored here',
-  `ledger_id` INT(11) DEFAULT NULL COMMENT 'ledger the fund applies to',
-  `fiscal_period_id` INT(11) DEFAULT NULL COMMENT 'fiscal period the fund applies to',
-  `name` VARCHAR(255) DEFAULT NULL COMMENT 'name for the fund',
-  `description` longtext DEFAULT '' COMMENT 'description for the fund',
-  `fund_type` VARCHAR(255) DEFAULT NULL COMMENT 'type for the fund',
+  `ledger_id` INT(11) NOT NULL COMMENT 'ledger the fund applies to',
+  `fiscal_period_id` INT(11) NOT NULL COMMENT 'fiscal period the fund applies to',
   `fund_group_id` INT(11) DEFAULT NULL COMMENT 'group for the fund',
-  `code` VARCHAR(255) DEFAULT NULL COMMENT 'code for the fund',
+  `name` VARCHAR(80) DEFAULT NULL COMMENT 'name for the fund',
+  `code` VARCHAR(30) DEFAULT NULL COMMENT 'code for the fund',
+  `description` longtext DEFAULT '' COMMENT 'description for the fund',
   `external_id` VARCHAR(255) DEFAULT NULL COMMENT 'external id for the fund for use with external accounting systems',
-  `currency` VARCHAR(10) DEFAULT NULL COMMENT 'currency of the fund',
   `status` TINYINT(1) DEFAULT '1' COMMENT 'is the fund currently active',
-  `owner_id` INT(11) DEFAULT NULL COMMENT 'owner of the fund',
-  `spend_limit` decimal(28,2) DEFAULT 0.00 COMMENT 'spend limit for the fund',
-  `over_spend_allowed` TINYINT(1) DEFAULT '1' COMMENT 'is an overspend allowed on the fund',
-  `oe_warning_percent` decimal(5,4) DEFAULT 0.0000 COMMENT 'percentage limit for overencumbrance',
-  `oe_limit_amount` decimal(28,2) DEFAULT 0.00 COMMENT 'limit for overspend',
-  `os_warning_sum` decimal(28,2) DEFAULT 0.00 COMMENT 'amount to trigger a warning for overspend',
-  `os_limit_sum` decimal(28,2) DEFAULT 0.00 COMMENT 'amount to trigger a block on the fund for overspend',
-  `last_updated` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'time of the last update to the fund',
+  `fund_type` VARCHAR(255) DEFAULT NULL COMMENT 'type for the fund',
+  `fund_amount` decimal(28,2) DEFAULT 0.00 COMMENT 'spend limit for the fund',
   `managing_branch` varchar(10) DEFAULT NULL COMMENT 'branch responsible',
+  `owner_id` INT(11) DEFAULT NULL COMMENT 'owner of the fund',
+  `fund_permission` INT(11) DEFAULT NULL COMMENT 'level of permission for this fund',
+  `oe_warning_percent` decimal(5,4) DEFAULT 0.0000 COMMENT 'percentage limit for overencumbrance',
+  `oe_warning_amount` decimal(28,2) DEFAULT 0.00 COMMENT 'limit for overencumbrance',
+  `created_date` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'time of the creation of the fund',
+  `modified_date` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'time of the last update to the fund',
   PRIMARY KEY (`fund_id`),
-  FOREIGN KEY (`ledger_id`) REFERENCES `ledgers` (`ledger_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  FOREIGN KEY (`fiscal_period_id`) REFERENCES `fiscal_period` (`fiscal_period_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  FOREIGN KEY (`fund_group_id`) REFERENCES `fund_group` (`fund_group_id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  FOREIGN KEY (`ledger_id`) REFERENCES `acq_ledgers` (`ledger_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (`fiscal_period_id`) REFERENCES `acq_fiscal_period` (`fiscal_period_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (`fund_group_id`) REFERENCES `acq_fund_group` (`fund_group_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   FOREIGN KEY (`owner_id`) REFERENCES `borrowers` (`borrowernumber`),
   FOREIGN KEY (`managing_branch`) REFERENCES `branches` (`branchcode`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -4693,32 +4685,30 @@ CREATE TABLE `language_subtag_registry` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `ledgers`
+-- Table structure for table `acq_ledgers`
 --
 
-DROP TABLE IF EXISTS `ledgers`;
+DROP TABLE IF EXISTS `acq_ledgers`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `ledgers` (
+CREATE TABLE `acq_ledgers` (
   `ledger_id` INT(11) NOT NULL AUTO_INCREMENT,
   `fiscal_period_id` INT(11) DEFAULT NULL COMMENT 'fiscal period the ledger applies to',
-  `name` VARCHAR(255) DEFAULT NULL COMMENT 'name for the ledger',
+  `name` VARCHAR(80) NOT NULL DEFAULT '' COMMENT 'name for the ledger',
   `description` longtext DEFAULT '' COMMENT 'description for the ledger',
-  `code` VARCHAR(255) DEFAULT NULL COMMENT 'code for the ledger',
   `external_id` VARCHAR(255) DEFAULT NULL COMMENT 'external id for the ledger for use with external accounting systems',
-  `currency` VARCHAR(10) DEFAULT NULL COMMENT 'currency of the ledger',
   `status` TINYINT(1) DEFAULT '1' COMMENT 'is the ledger currently active',
-  `last_updated` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'time of the last update to the ledger',
+  `locked` TINYINT(1) DEFAULT '1' COMMENT 'is the ledger currently locked',
+  `currency` VARCHAR(10) NOT NULL COMMENT 'currency of the ledger',
+  `ledger_amount` decimal(28,2) NOT NULL DEFAULT 0.00 COMMENT 'spend limit for the ledger',
   `owner_id` INT(11) DEFAULT NULL COMMENT 'owner of the ledger',
   `managing_branch` varchar(10) DEFAULT NULL COMMENT 'branch responsible',
-  `spend_limit` decimal(28,2) DEFAULT 0.00 COMMENT 'spend limit for the ledger',
-  `over_spend_allowed` TINYINT(1) DEFAULT '1' COMMENT 'is an overspend allowed on the ledger',
   `oe_warning_percent` decimal(5,4) DEFAULT 0.0000 COMMENT 'percentage limit for overencumbrance',
-  `oe_limit_amount` decimal(28,2) DEFAULT 0.00 COMMENT 'limit for overspend',
-  `os_warning_sum` decimal(28,2) DEFAULT 0.00 COMMENT 'amount to trigger a warning for overspend',
-  `os_limit_sum` decimal(28,2) DEFAULT 0.00 COMMENT 'amount to trigger a block on the ledger for overspend',
+  `oe_warning_amount` decimal(28,2) DEFAULT 0.00 COMMENT 'warning limit for overencumbrance',
+  `created_date` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'time of the creation of the ledger',
+  `modified_date` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'time of the last update to the ledger',
   PRIMARY KEY (`ledger_id`),
-  FOREIGN KEY (`fiscal_period_id`) REFERENCES `fiscal_period` (`fiscal_period_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (`fiscal_period_id`) REFERENCES `acq_fiscal_period` (`fiscal_period_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   FOREIGN KEY (`owner_id`) REFERENCES `borrowers` (`borrowernumber`),
   FOREIGN KEY (`managing_branch`) REFERENCES `branches` (`branchcode`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
