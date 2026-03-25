@@ -420,5 +420,21 @@ __PACKAGE__->belongs_to(
     },
 );
 
+
+=head2 allocations
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::AcqAllocation>
+
+=cut
+
+__PACKAGE__->has_many(
+    "allocations",
+    "Koha::Schema::Result::AcqAllocation",
+    { "foreign.fund_id" => "self.fund_id" },
+    { cascade_copy      => 0, cascade_delete => 0 },
+);
+
 # You can replace this text with custom code or comments, and it will be preserved on regeneration
 1;
