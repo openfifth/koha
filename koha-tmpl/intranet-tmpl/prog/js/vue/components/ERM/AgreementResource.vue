@@ -132,7 +132,7 @@ export default {
                     type: "select",
                     label: $__("Status"),
                     avCat: "av_agreement_statuses",
-                    onSelected: resource => {
+                    onSelected: (e, resource) => {
                         if (resource.status !== "closed") {
                             resource.closure_reason = null;
                         }
