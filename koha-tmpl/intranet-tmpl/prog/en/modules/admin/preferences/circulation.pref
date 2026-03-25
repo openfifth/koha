@@ -439,11 +439,11 @@ Circulation:
             - pref: NoticeBcc
               class: email
         -
-            - pref: OverdueNoticeCalendar
+            - pref: OverdueTriggersCalendar
               choices:
                   1: "Use calendar"
                   0: "Ignore calendar"
-            - "when working out the period for overdue notices."
+            - "when processing overdue triggers."
         -
             - "Organize and send overdue notices using the"
             - pref: OverdueNoticeFrom
