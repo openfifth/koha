@@ -61,7 +61,7 @@ sub funds {
 =cut
 
 sub _type {
-    return 'FundGroup';
+    return 'AcqFundGroup';
 }
 
 1;

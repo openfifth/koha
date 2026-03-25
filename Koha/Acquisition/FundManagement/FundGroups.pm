@@ -37,7 +37,7 @@ Koha::Acquisition::FundManagement::FundGroups object set class
 =cut
 
 sub _type {
-    return 'FundGroup';
+    return 'AcqFundGroup';
 }
 
 =head3 object_class

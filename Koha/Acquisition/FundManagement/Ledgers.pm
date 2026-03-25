@@ -37,7 +37,7 @@ Koha::Acquisition::FundManagement::Ledgers object set class
 =cut
 
 sub _type {
-    return 'Ledger';
+    return 'AcqLedger';
 }
 
 =head3 object_class

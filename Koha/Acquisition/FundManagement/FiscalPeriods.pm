@@ -37,7 +37,7 @@ Koha::Acquisition::FundManagement::FiscalPeriods object set class
 =cut
 
 sub _type {
-    return 'FiscalPeriod';
+    return 'AcqFiscalPeriod';
 }
 
 =head3 object_class

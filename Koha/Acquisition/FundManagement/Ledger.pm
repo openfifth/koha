@@ -22,7 +22,7 @@ use base qw(Koha::Acquisition::FundManagement::BaseObject);
 
 use Koha::Acquisition::FundManagement::Funds;
 use Koha::Acquisition::FundManagement::FiscalPeriod;
-use Koha::Acquisition::FundManagement::FundAllocations;
+use Koha::Acquisition::FundManagement::Allocations;
 use Koha::Patron;
 
 =head1 NAME
@@ -109,7 +109,7 @@ sub _object_hierarchy {
 =cut
 
 sub _type {
-    return 'Ledger';
+    return 'AcqLedger';
 }
 
 1;

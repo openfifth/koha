@@ -163,16 +163,16 @@ sub funds {
     return Koha::Acquisition::FundManagement::Funds->_new_from_dbic($fund_rs);
 }
 
-=head3 fund_allocations
+=head3 allocations
 
 Method to embed fund allocations to the fund
 
 =cut
 
-sub fund_allocations {
+sub allocations {
     my ($self) = @_;
-    my $fund_allocation_rs = $self->_result->fund_allocations;
-    return Koha::Acquisition::FundManagement::FundAllocations->_new_from_dbic($fund_allocation_rs);
+    my $fund_allocation_rs = $self->_result->allocations;
+    return Koha::Acquisition::FundManagement::Allocations->_new_from_dbic($fund_allocation_rs);
 }
 
 =head3 owner
@@ -309,12 +309,12 @@ sub is_spend_limit_breached {
 
     # my $previous_allocation_amount = $args->{previous_allocation_amount} || 0;
     # my $new_allocation_amount =
-    #     defined $new_allocation && ref($new_allocation) eq 'Koha::Acquisition::FundManagement::FundAllocation'
+    #     defined $new_allocation && ref($new_allocation) eq 'Koha::Acquisition::FundManagement::Allocation'
     #     ? -$new_allocation->allocation_amount
     #     : looks_like_number($new_allocation) ? $new_allocation
     #     :                                      0;
     # my $new_allocation_type = defined $new_allocation
-    #     && ref($new_allocation) eq 'Koha::Acquisition::FundManagement::FundAllocation' ? $new_allocation->type : '';
+    #     && ref($new_allocation) eq 'Koha::Acquisition::FundManagement::Allocation' ? $new_allocation->type : '';
     # my $spend_limit       = $self->spend_limit;
     # my $total_allocations = -$self->total_allocations + $new_allocation_amount - $previous_allocation_amount;
     # my $total_spent =
@@ -429,15 +429,16 @@ sub to_api {
     my $needs_values = delete $self->{add_accounting_values};
 
     my $response = $self->SUPER::to_api($params);
-    $response = $self->add_accounting_values( { data => $response } ) if $needs_values;
 
-    if ( $self->can("_object_hierarchy") ) {
-        my $object_name = $self->_object_hierarchy()->{object};
-        my $value_field = $object_name . "_value";
+    # $response = $self->add_accounting_values( { data => $response } ) if $needs_values;
 
-        $response->{$value_field} = $self->spend_limit + $self->total_allocations
-            if $object_name ne 'fund_allocation' && $object_name ne 'fiscal_period';
-    }
+    # if ( $self->can("_object_hierarchy") ) {
+    #     my $object_name = $self->_object_hierarchy()->{object};
+    #     my $value_field = $object_name . "_value";
+
+    #     $response->{$value_field} = $self->spend_limit + $self->total_allocations
+    #         if $object_name ne 'fund_allocation' && $object_name ne 'fiscal_period';
+    # }
 
     my $overrides = {};
 

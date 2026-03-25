@@ -99,7 +99,7 @@ sub _object_hierarchy {
 =cut
 
 sub _type {
-    return 'FiscalPeriod';
+    return 'AcqFiscalPeriod';
 }
 
 1;

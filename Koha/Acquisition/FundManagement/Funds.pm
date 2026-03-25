@@ -37,7 +37,7 @@ Koha::Acquisition::FundManagement::Funds object set class
 =cut
 
 sub _type {
-    return 'Fund';
+    return 'AcqFund';
 }
 
 =head3 object_class

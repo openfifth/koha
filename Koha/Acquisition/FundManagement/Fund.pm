@@ -20,7 +20,7 @@ package Koha::Acquisition::FundManagement::Fund;
 use Modern::Perl;
 use base qw(Koha::Acquisition::FundManagement::BaseObject);
 
-use Koha::Acquisition::FundManagement::FundAllocations;
+use Koha::Acquisition::FundManagement::Allocations;
 use Koha::Acquisition::FundManagement::FiscalPeriod;
 use Koha::Acquisition::FundManagement::Ledger;
 use Koha::Acquisition::FundManagement::FundGroup;
@@ -44,7 +44,6 @@ sub store {
     $self->SUPER::store;
 
     unless ( $args->{no_cascade} ) {
-        $self->cascade_to_fund_allocations;
         $self->cascade_to_sub_funds;
     }
 
@@ -197,7 +196,7 @@ sub managing_library {
 =cut
 
 sub _type {
-    return 'Fund';
+    return 'AcqFund';
 }
 
 =head3 _embed_child_funds

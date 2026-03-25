@@ -1,4 +1,4 @@
-package Koha::Acquisition::FundManagement::FundAllocations;
+package Koha::Acquisition::FundManagement::Allocations;
 
 # Copyright 2024 PTFS Europe
 
@@ -20,11 +20,11 @@ package Koha::Acquisition::FundManagement::FundAllocations;
 use Modern::Perl;
 use base qw(Koha::Acquisition::FundManagement::BaseObjects);
 
-use Koha::Acquisition::FundManagement::FundAllocation;
+use Koha::Acquisition::FundManagement::Allocation;
 
 =head1 NAME
 
-Koha::Acquisition::FundManagement::FundAllocations object set class
+Koha::Acquisition::FundManagement::Allocations object set class
 
 =head1 API
 
@@ -59,7 +59,7 @@ sub add_totals_to_fund_allocations {
 =cut
 
 sub _type {
-    return 'FundAllocation';
+    return 'AcqAllocation';
 }
 
 =head3 object_class
@@ -67,7 +67,7 @@ sub _type {
 =cut
 
 sub object_class {
-    return 'Koha::Acquisition::FundManagement::FundAllocation';
+    return 'Koha::Acquisition::FundManagement::Allocation';
 }
 
 1;

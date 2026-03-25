@@ -1,4 +1,4 @@
-package Koha::Acquisition::FundManagement::FundAllocation;
+package Koha::Acquisition::FundManagement::Allocation;
 
 # Copyright 2024 PTFS Europe
 
@@ -28,7 +28,7 @@ use Koha::Exceptions::Acquisition::FundManagement;
 
 =head1 NAME
 
-Koha::Acquisition::FundManagement::FundAllocation Object class
+Koha::Acquisition::FundManagement::Allocation Object class
 
 =head1 API
 
@@ -122,7 +122,7 @@ sub will_allocation_breach_spend_limits {
 
 sub _object_hierarchy {
     return {
-        object => 'fund_allocation',
+        object => 'allocation',
     };
 }
 
@@ -133,7 +133,7 @@ sub _object_hierarchy {
 =cut
 
 sub _type {
-    return 'FundAllocation';
+    return 'AcqAllocation';
 }
 
 1;
