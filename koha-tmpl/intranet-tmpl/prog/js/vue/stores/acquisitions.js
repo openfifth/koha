@@ -3,6 +3,7 @@ import { permissionsMatrix } from "../data/permissionsMatrix";
 import { reactive, computed, toRefs } from "vue";
 import { withAuthorisedValueActions } from "../composables/authorisedValues";
 import { permissionsActions } from "../composables/permissions";
+import { acquisitionsActions } from "../composables/acquisitions";
 
 export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
     const store = reactive({
@@ -29,6 +30,7 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
     const actions = {
         ...withAuthorisedValueActions(store),
         ...permissionsActions(store),
+        ...acquisitionsActions(store),
         formatValueWithCurrency(value, currency) {
             const formattedPrice = Number(value).format_price();
             if (!currency) {

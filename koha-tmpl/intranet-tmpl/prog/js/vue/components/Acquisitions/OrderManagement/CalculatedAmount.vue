@@ -41,8 +41,11 @@ export default {
     },
     setup(props) {
         const acquisitionsStore = inject("acquisitionsStore");
-        const { formatValueWithCurrency, getActiveCurrency } =
-            acquisitionsStore;
+        const {
+            formatValueWithCurrency,
+            getActiveCurrency,
+            formatFloatingPoint,
+        } = acquisitionsStore;
 
         const remainingAmount = computed(() => {
             const calculatedAmount = props.resource.calculated_amount_oc
@@ -57,7 +60,9 @@ export default {
                     props.resource.vendor_price_currency
                 ),
                 percentage: remainderToDistribute
-                    ? (remainderToDistribute / calculatedAmount) * 100
+                    ? formatFloatingPoint(
+                          (remainderToDistribute / calculatedAmount) * 100
+                      )
                     : 0,
             };
             return result;
