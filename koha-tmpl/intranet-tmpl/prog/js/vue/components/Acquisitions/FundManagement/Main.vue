@@ -14,10 +14,7 @@
                 </div>
 
                 <div class="col-md-2 order-sm-2 order-md-1">
-                    <LeftMenu
-                        :title="'Acquisitions'"
-                        :key="modulesEnabled"
-                    ></LeftMenu>
+                    <LeftMenu :title="'Acquisitions'"></LeftMenu>
                 </div>
             </div>
         </div>

@@ -33,6 +33,7 @@ export const routes = [
                         component: markRaw(FundManagementHome),
                         name: "FundManagementHome",
                         is_navigation_item: false,
+                        alternateLeftMenu: "AcqMenu",
                     },
                     {
                         path: "fiscal_period",
@@ -47,6 +48,7 @@ export const routes = [
                                 name: "FiscalPeriodList",
                                 title: "List fiscal periods",
                                 permission: "manageFiscalPeriods",
+                                alternateLeftMenu: "AcqMenu",
                             },
                             {
                                 path: ":fiscal_period_id",
@@ -54,6 +56,7 @@ export const routes = [
                                 name: "FiscalPeriodShow",
                                 title: "Show fiscal period",
                                 permission: "manageFiscalPeriods",
+                                alternateLeftMenu: "AcqMenu",
                             },
                             {
                                 path: "add",
@@ -61,6 +64,7 @@ export const routes = [
                                 name: "FiscalPeriodFormAdd",
                                 title: "Add fiscal period",
                                 permission: "createFiscalPeriods",
+                                alternateLeftMenu: "AcqMenu",
                             },
                             {
                                 path: "edit/:fiscal_period_id",
@@ -68,6 +72,7 @@ export const routes = [
                                 name: "FiscalPeriodFormAddEdit",
                                 title: "Edit fiscal period",
                                 permission: "editFiscalPeriod",
+                                alternateLeftMenu: "AcqMenu",
                             },
                         ],
                     },
@@ -84,6 +89,7 @@ export const routes = [
                                 name: "LedgerList",
                                 title: "List ledgers",
                                 permission: "manageLedgers",
+                                alternateLeftMenu: "AcqMenu",
                             },
                             {
                                 path: ":ledger_id",
@@ -91,6 +97,7 @@ export const routes = [
                                 name: "LedgerShow",
                                 title: "Show ledger",
                                 permission: "manageLedgers",
+                                alternateLeftMenu: "AcqMenu",
                             },
                             {
                                 path: "add",
@@ -98,6 +105,7 @@ export const routes = [
                                 name: "LedgerFormAdd",
                                 title: "Add ledger",
                                 permission: "createLedger",
+                                alternateLeftMenu: "AcqMenu",
                             },
                             {
                                 path: "edit/:ledger_id",
@@ -105,6 +113,7 @@ export const routes = [
                                 name: "LedgerFormAddEdit",
                                 title: "Edit ledger",
                                 permission: "editLedger",
+                                alternateLeftMenu: "AcqMenu",
                             },
                         ],
                     },
@@ -121,6 +130,7 @@ export const routes = [
                                 name: "FundList",
                                 title: "List funds",
                                 permission: "manageFunds",
+                                alternateLeftMenu: "AcqMenu",
                             },
                             {
                                 path: ":fund_id",
@@ -128,6 +138,7 @@ export const routes = [
                                 name: "FundShow",
                                 title: "Show fund",
                                 permission: "manageFunds",
+                                alternateLeftMenu: "AcqMenu",
                             },
                             {
                                 path: "add",
@@ -135,6 +146,7 @@ export const routes = [
                                 name: "FundFormAdd",
                                 title: "Add fund",
                                 permission: "createFund",
+                                alternateLeftMenu: "AcqMenu",
                             },
                             {
                                 path: "edit/:fund_id",
@@ -142,6 +154,7 @@ export const routes = [
                                 name: "FundFormAddEdit",
                                 title: "Edit fund",
                                 permission: "editFund",
+                                alternateLeftMenu: "AcqMenu",
                             },
                             // {
                             //     path: ":fund_id/allocation/edit/:fund_allocation_id",
@@ -149,6 +162,8 @@ export const routes = [
                             //     name: "FundAllocationFormAddEdit",
                             //     title: "Edit fund allocation",
                             //     permission: "editFundAllocation",
+                            //alternateLeftMenu: "AcqMenu",
+
                             // },
                             // {
                             //     path: ":fund_id/:sub_fund_id?/allocate",
@@ -156,6 +171,8 @@ export const routes = [
                             //     name: "FundAllocationFormAdd",
                             //     title: "Allocate funds",
                             //     permission: "createFundAllocation",
+                            //alternateLeftMenu: "AcqMenu",
+
                             // },
                             {
                                 path: "transfer",
@@ -163,6 +180,7 @@ export const routes = [
                                 name: "TransferFunds",
                                 title: "Transfer funds",
                                 permission: "createFundAllocation",
+                                alternateLeftMenu: "AcqMenu",
                             },
                             {
                                 path: ":fund_id/sub_fund/add",
@@ -170,6 +188,7 @@ export const routes = [
                                 name: "SubFundFormAdd",
                                 title: "Add sub fund",
                                 permission: "createFund",
+                                alternateLeftMenu: "AcqMenu",
                             },
                             {
                                 path: ":fund_id/sub_fund/edit/:sub_fund_id",
@@ -177,6 +196,7 @@ export const routes = [
                                 name: "SubFundFormAddEdit",
                                 title: "Edit sub fund",
                                 permission: "editFund",
+                                alternateLeftMenu: "AcqMenu",
                             },
                             {
                                 path: "sub_fund/:sub_fund_id",
@@ -184,6 +204,7 @@ export const routes = [
                                 name: "SubFundShow",
                                 title: "Show sub fund",
                                 permission: "manageFunds",
+                                alternateLeftMenu: "AcqMenu",
                             },
                         ],
                     },
