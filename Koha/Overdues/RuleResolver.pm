@@ -49,6 +49,35 @@ sub new {
     return bless $self, $class;
 }
 
+=head3 set_effective_overdue_rule_sets
+
+Sets the array or effective (resolved) rule sets for a given run of the circulation triggers script.
+
+=cut
+
+sub set_effective_overdue_rule_sets {
+    my ( $self, $branch_list, $category_list, $itemtype_list, $known_delay_values ) = @_;
+
+    foreach my $branchcode (@$branch_list) {
+        foreach my $categorycode (@$category_list) {
+            foreach my $itemtype (@$itemtype_list) {
+                foreach my $delay (@$known_delay_values) {
+
+                    # create the rule set
+                    my $key     = join( "|", $branchcode, $categorycode, $itemtype, $delay );
+                    my $context = { branchcode => $branchcode, categorycode => $categorycode, itemtype => $itemtype };
+                    my $effective_rules = $self->_find_effective_overdue_rule_set( $context, $delay );
+
+                    if ( !@{ $effective_rules->{actions} } ) {
+                        next;
+                    }
+                    $self->{effective_overdue_rule_sets}{$key} = $effective_rules;
+                }
+            }
+        }
+    }
+}
+
 =head3 _find_effective_rule_value
 
 Retrieves the effective rule sets value for a specific context, and delay combination from the cache.
