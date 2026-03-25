@@ -33,6 +33,25 @@ export default {
             formatLibraryGroupIds,
         } = acquisitionsStore;
 
+        const additionalToolbarButtons = (resource, componentData) => {
+            const { instancedResource } = componentData;
+            return {
+                show: [
+                    {
+                        to: {
+                            name: "LedgerFormAdd",
+                            query: {
+                                fiscal_period_id: resource.fiscal_period_id,
+                            },
+                        },
+                        title: $__("Add ledger"),
+                        icon: "plus",
+                        index: -1,
+                    },
+                ],
+            };
+        };
+
         const baseResource = useBaseResource({
             resourceName: "fiscal_period",
             nameAttr: "code",
@@ -55,6 +74,7 @@ export default {
             },
             moduleStore: "acquisitionsStore",
             props,
+            additionalToolbarButtons,
             resourceAttrs: [
                 {
                     name: "fiscal_period_id",
