@@ -1,12 +1,12 @@
 use utf8;
-package Koha::Schema::Result::FundGroup;
+package Koha::Schema::Result::AcqFundGroup;
 
 # Created by DBIx::Class::Schema::Loader
 # DO NOT MODIFY THE FIRST PART OF THIS FILE
 
 =head1 NAME
 
-Koha::Schema::Result::FundGroup
+Koha::Schema::Result::AcqFundGroup
 
 =cut
 
@@ -15,11 +15,11 @@ use warnings;
 
 use base 'DBIx::Class::Core';
 
-=head1 TABLE: C<fund_group>
+=head1 TABLE: C<acq_fund_group>
 
 =cut
 
-__PACKAGE__->table("fund_group");
+__PACKAGE__->table("acq_fund_group");
 
 =head1 ACCESSORS
 
@@ -81,17 +81,17 @@ __PACKAGE__->set_primary_key("fund_group_id");
 
 =head1 RELATIONS
 
-=head2 funds
+=head2 acq_funds
 
 Type: has_many
 
-Related object: L<Koha::Schema::Result::Fund>
+Related object: L<Koha::Schema::Result::AcqFund>
 
 =cut
 
 __PACKAGE__->has_many(
-  "funds",
-  "Koha::Schema::Result::Fund",
+  "acq_funds",
+  "Koha::Schema::Result::AcqFund",
   { "foreign.fund_group_id" => "self.fund_group_id" },
   { cascade_copy => 0, cascade_delete => 0 },
 );
@@ -117,8 +117,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-11-20 11:09:21
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum://972mfly3AQM7gMhIbmTw
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-03-25 15:23:13
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:GKmzsTfG4CWoPQ3rzmQMAQ
 
 sub koha_object_class {
     'Koha::Acquisition::FundManagement::FundGroup';

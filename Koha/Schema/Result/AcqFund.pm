@@ -1,12 +1,12 @@
 use utf8;
-package Koha::Schema::Result::Fund;
+package Koha::Schema::Result::AcqFund;
 
 # Created by DBIx::Class::Schema::Loader
 # DO NOT MODIFY THE FIRST PART OF THIS FILE
 
 =head1 NAME
 
-Koha::Schema::Result::Fund
+Koha::Schema::Result::AcqFund
 
 =cut
 
@@ -15,11 +15,11 @@ use warnings;
 
 use base 'DBIx::Class::Core';
 
-=head1 TABLE: C<funds>
+=head1 TABLE: C<acq_funds>
 
 =cut
 
-__PACKAGE__->table("funds");
+__PACKAGE__->table("acq_funds");
 
 =head1 ACCESSORS
 
@@ -40,7 +40,7 @@ if this fund is a child of another the parent fund id will be stored here
 
   data_type: 'integer'
   is_foreign_key: 1
-  is_nullable: 1
+  is_nullable: 0
 
 ledger the fund applies to
 
@@ -48,33 +48,9 @@ ledger the fund applies to
 
   data_type: 'integer'
   is_foreign_key: 1
-  is_nullable: 1
+  is_nullable: 0
 
 fiscal period the fund applies to
-
-=head2 name
-
-  data_type: 'varchar'
-  is_nullable: 1
-  size: 255
-
-name for the fund
-
-=head2 description
-
-  data_type: 'longtext'
-  default_value: ''''
-  is_nullable: 1
-
-description for the fund
-
-=head2 fund_type
-
-  data_type: 'varchar'
-  is_nullable: 1
-  size: 255
-
-type for the fund
 
 =head2 fund_group_id
 
@@ -84,13 +60,29 @@ type for the fund
 
 group for the fund
 
+=head2 name
+
+  data_type: 'varchar'
+  is_nullable: 1
+  size: 80
+
+name for the fund
+
 =head2 code
 
   data_type: 'varchar'
   is_nullable: 1
-  size: 255
+  size: 30
 
 code for the fund
+
+=head2 description
+
+  data_type: 'longtext'
+  default_value: ''''
+  is_nullable: 1
+
+description for the fund
 
 =head2 external_id
 
@@ -100,14 +92,6 @@ code for the fund
 
 external id for the fund for use with external accounting systems
 
-=head2 currency
-
-  data_type: 'varchar'
-  is_nullable: 1
-  size: 10
-
-currency of the fund
-
 =head2 status
 
   data_type: 'tinyint'
@@ -116,15 +100,15 @@ currency of the fund
 
 is the fund currently active
 
-=head2 owner_id
+=head2 fund_type
 
-  data_type: 'integer'
-  is_foreign_key: 1
+  data_type: 'varchar'
   is_nullable: 1
+  size: 255
 
-owner of the fund
+type for the fund
 
-=head2 spend_limit
+=head2 fund_amount
 
   data_type: 'decimal'
   default_value: 0.00
@@ -132,59 +116,6 @@ owner of the fund
   size: [28,2]
 
 spend limit for the fund
-
-=head2 over_spend_allowed
-
-  data_type: 'tinyint'
-  default_value: 1
-  is_nullable: 1
-
-is an overspend allowed on the fund
-
-=head2 oe_warning_percent
-
-  data_type: 'decimal'
-  default_value: 0.0000
-  is_nullable: 1
-  size: [5,4]
-
-percentage limit for overencumbrance
-
-=head2 oe_limit_amount
-
-  data_type: 'decimal'
-  default_value: 0.00
-  is_nullable: 1
-  size: [28,2]
-
-limit for overspend
-
-=head2 os_warning_sum
-
-  data_type: 'decimal'
-  default_value: 0.00
-  is_nullable: 1
-  size: [28,2]
-
-amount to trigger a warning for overspend
-
-=head2 os_limit_sum
-
-  data_type: 'decimal'
-  default_value: 0.00
-  is_nullable: 1
-  size: [28,2]
-
-amount to trigger a block on the fund for overspend
-
-=head2 last_updated
-
-  data_type: 'timestamp'
-  datetime_undef_if_invalid: 1
-  default_value: current_timestamp
-  is_nullable: 0
-
-time of the last update to the fund
 
 =head2 managing_branch
 
@@ -195,6 +126,57 @@ time of the last update to the fund
 
 branch responsible
 
+=head2 owner_id
+
+  data_type: 'integer'
+  is_foreign_key: 1
+  is_nullable: 1
+
+owner of the fund
+
+=head2 fund_permission
+
+  data_type: 'integer'
+  is_nullable: 1
+
+level of permission for this fund
+
+=head2 oe_warning_percent
+
+  data_type: 'decimal'
+  default_value: 0.0000
+  is_nullable: 1
+  size: [5,4]
+
+percentage limit for overencumbrance
+
+=head2 oe_warning_amount
+
+  data_type: 'decimal'
+  default_value: 0.00
+  is_nullable: 1
+  size: [28,2]
+
+limit for overencumbrance
+
+=head2 created_date
+
+  data_type: 'timestamp'
+  datetime_undef_if_invalid: 1
+  default_value: current_timestamp
+  is_nullable: 0
+
+time of the creation of the fund
+
+=head2 modified_date
+
+  data_type: 'timestamp'
+  datetime_undef_if_invalid: 1
+  default_value: current_timestamp
+  is_nullable: 0
+
+time of the last update to the fund
+
 =cut
 
 __PACKAGE__->add_columns(
@@ -203,36 +185,36 @@ __PACKAGE__->add_columns(
   "fund_parent_id",
   { data_type => "integer", is_nullable => 1 },
   "ledger_id",
-  { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
+  { data_type => "integer", is_foreign_key => 1, is_nullable => 0 },
   "fiscal_period_id",
-  { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
-  "name",
-  { data_type => "varchar", is_nullable => 1, size => 255 },
-  "description",
-  { data_type => "longtext", default_value => "''", is_nullable => 1 },
-  "fund_type",
-  { data_type => "varchar", is_nullable => 1, size => 255 },
+  { data_type => "integer", is_foreign_key => 1, is_nullable => 0 },
   "fund_group_id",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
+  "name",
+  { data_type => "varchar", is_nullable => 1, size => 80 },
   "code",
-  { data_type => "varchar", is_nullable => 1, size => 255 },
+  { data_type => "varchar", is_nullable => 1, size => 30 },
+  "description",
+  { data_type => "longtext", default_value => "''", is_nullable => 1 },
   "external_id",
   { data_type => "varchar", is_nullable => 1, size => 255 },
-  "currency",
-  { data_type => "varchar", is_nullable => 1, size => 10 },
   "status",
   { data_type => "tinyint", default_value => 1, is_nullable => 1 },
-  "owner_id",
-  { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
-  "spend_limit",
+  "fund_type",
+  { data_type => "varchar", is_nullable => 1, size => 255 },
+  "fund_amount",
   {
     data_type => "decimal",
     default_value => "0.00",
     is_nullable => 1,
     size => [28, 2],
   },
-  "over_spend_allowed",
-  { data_type => "tinyint", default_value => 1, is_nullable => 1 },
+  "managing_branch",
+  { data_type => "varchar", is_foreign_key => 1, is_nullable => 1, size => 10 },
+  "owner_id",
+  { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
+  "fund_permission",
+  { data_type => "integer", is_nullable => 1 },
   "oe_warning_percent",
   {
     data_type => "decimal",
@@ -240,36 +222,27 @@ __PACKAGE__->add_columns(
     is_nullable => 1,
     size => [5, 4],
   },
-  "oe_limit_amount",
+  "oe_warning_amount",
   {
     data_type => "decimal",
     default_value => "0.00",
     is_nullable => 1,
     size => [28, 2],
   },
-  "os_warning_sum",
-  {
-    data_type => "decimal",
-    default_value => "0.00",
-    is_nullable => 1,
-    size => [28, 2],
-  },
-  "os_limit_sum",
-  {
-    data_type => "decimal",
-    default_value => "0.00",
-    is_nullable => 1,
-    size => [28, 2],
-  },
-  "last_updated",
+  "created_date",
   {
     data_type => "timestamp",
     datetime_undef_if_invalid => 1,
     default_value => \"current_timestamp",
     is_nullable => 0,
   },
-  "managing_branch",
-  { data_type => "varchar", is_foreign_key => 1, is_nullable => 1, size => 10 },
+  "modified_date",
+  {
+    data_type => "timestamp",
+    datetime_undef_if_invalid => 1,
+    default_value => \"current_timestamp",
+    is_nullable => 0,
+  },
 );
 
 =head1 PRIMARY KEY
@@ -286,17 +259,17 @@ __PACKAGE__->set_primary_key("fund_id");
 
 =head1 RELATIONS
 
-=head2 acq_orderline_fund_distributions
+=head2 acq_allocations
 
 Type: has_many
 
-Related object: L<Koha::Schema::Result::AcqOrderlineFundDistribution>
+Related object: L<Koha::Schema::Result::AcqAllocation>
 
 =cut
 
 __PACKAGE__->has_many(
-  "acq_orderline_fund_distributions",
-  "Koha::Schema::Result::AcqOrderlineFundDistribution",
+  "acq_allocations",
+  "Koha::Schema::Result::AcqAllocation",
   { "foreign.fund_id" => "self.fund_id" },
   { cascade_copy => 0, cascade_delete => 0 },
 );
@@ -305,48 +278,28 @@ __PACKAGE__->has_many(
 
 Type: belongs_to
 
-Related object: L<Koha::Schema::Result::FiscalPeriod>
+Related object: L<Koha::Schema::Result::AcqFiscalPeriod>
 
 =cut
 
 __PACKAGE__->belongs_to(
   "fiscal_period",
-  "Koha::Schema::Result::FiscalPeriod",
+  "Koha::Schema::Result::AcqFiscalPeriod",
   { fiscal_period_id => "fiscal_period_id" },
-  {
-    is_deferrable => 1,
-    join_type     => "LEFT",
-    on_delete     => "CASCADE",
-    on_update     => "CASCADE",
-  },
-);
-
-=head2 fund_allocations
-
-Type: has_many
-
-Related object: L<Koha::Schema::Result::FundAllocation>
-
-=cut
-
-__PACKAGE__->has_many(
-  "fund_allocations",
-  "Koha::Schema::Result::FundAllocation",
-  { "foreign.fund_id" => "self.fund_id" },
-  { cascade_copy => 0, cascade_delete => 0 },
+  { is_deferrable => 1, on_delete => "CASCADE", on_update => "CASCADE" },
 );
 
 =head2 fund_group
 
 Type: belongs_to
 
-Related object: L<Koha::Schema::Result::FundGroup>
+Related object: L<Koha::Schema::Result::AcqFundGroup>
 
 =cut
 
 __PACKAGE__->belongs_to(
   "fund_group",
-  "Koha::Schema::Result::FundGroup",
+  "Koha::Schema::Result::AcqFundGroup",
   { fund_group_id => "fund_group_id" },
   {
     is_deferrable => 1,
@@ -360,20 +313,15 @@ __PACKAGE__->belongs_to(
 
 Type: belongs_to
 
-Related object: L<Koha::Schema::Result::Ledger>
+Related object: L<Koha::Schema::Result::AcqLedger>
 
 =cut
 
 __PACKAGE__->belongs_to(
   "ledger",
-  "Koha::Schema::Result::Ledger",
+  "Koha::Schema::Result::AcqLedger",
   { ledger_id => "ledger_id" },
-  {
-    is_deferrable => 1,
-    join_type     => "LEFT",
-    on_delete     => "CASCADE",
-    on_update     => "CASCADE",
-  },
+  { is_deferrable => 1, on_delete => "CASCADE", on_update => "CASCADE" },
 );
 
 =head2 managing_branch
@@ -417,12 +365,11 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-02-05 10:43:51
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:ZiBz5fzh9OTXY3/npsE8zA
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-03-25 15:43:20
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:aZqveE/PMrqUivyLIkr7Kg
 
 __PACKAGE__->add_columns(
     '+status'             => { is_boolean => 1 },
-    '+over_spend_allowed' => { is_boolean => 1 },
 );
 
 sub koha_object_class {

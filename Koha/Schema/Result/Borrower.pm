@@ -941,6 +941,51 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 acq_fiscal_periods
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::AcqFiscalPeriod>
+
+=cut
+
+__PACKAGE__->has_many(
+  "acq_fiscal_periods",
+  "Koha::Schema::Result::AcqFiscalPeriod",
+  { "foreign.owner_id" => "self.borrowernumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+=head2 acq_funds
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::AcqFund>
+
+=cut
+
+__PACKAGE__->has_many(
+  "acq_funds",
+  "Koha::Schema::Result::AcqFund",
+  { "foreign.owner_id" => "self.borrowernumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+=head2 acq_ledgers
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::AcqLedger>
+
+=cut
+
+__PACKAGE__->has_many(
+  "acq_ledgers",
+  "Koha::Schema::Result::AcqLedger",
+  { "foreign.owner_id" => "self.borrowernumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 acq_orderline_managers
 
 Type: has_many
@@ -1421,51 +1466,6 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
-=head2 fiscal_periods
-
-Type: has_many
-
-Related object: L<Koha::Schema::Result::FiscalPeriod>
-
-=cut
-
-__PACKAGE__->has_many(
-  "fiscal_periods",
-  "Koha::Schema::Result::FiscalPeriod",
-  { "foreign.owner_id" => "self.borrowernumber" },
-  { cascade_copy => 0, cascade_delete => 0 },
-);
-
-=head2 fund_allocations
-
-Type: has_many
-
-Related object: L<Koha::Schema::Result::FundAllocation>
-
-=cut
-
-__PACKAGE__->has_many(
-  "fund_allocations",
-  "Koha::Schema::Result::FundAllocation",
-  { "foreign.owner_id" => "self.borrowernumber" },
-  { cascade_copy => 0, cascade_delete => 0 },
-);
-
-=head2 funds
-
-Type: has_many
-
-Related object: L<Koha::Schema::Result::Fund>
-
-=cut
-
-__PACKAGE__->has_many(
-  "funds",
-  "Koha::Schema::Result::Fund",
-  { "foreign.owner_id" => "self.borrowernumber" },
-  { cascade_copy => 0, cascade_delete => 0 },
-);
-
 =head2 hold_fill_targets
 
 Type: has_many
@@ -1658,21 +1658,6 @@ __PACKAGE__->has_many(
   "items_last_borrowers",
   "Koha::Schema::Result::ItemsLastBorrower",
   { "foreign.borrowernumber" => "self.borrowernumber" },
-  { cascade_copy => 0, cascade_delete => 0 },
-);
-
-=head2 ledgers
-
-Type: has_many
-
-Related object: L<Koha::Schema::Result::Ledger>
-
-=cut
-
-__PACKAGE__->has_many(
-  "ledgers",
-  "Koha::Schema::Result::Ledger",
-  { "foreign.owner_id" => "self.borrowernumber" },
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
@@ -2337,8 +2322,8 @@ Composing rels: L</user_permissions> -> permission
 __PACKAGE__->many_to_many("permissions", "user_permissions", "permission");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-02-05 11:20:27
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:V3vTxWXkFJHj8EzvGoq2fg
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-03-25 15:23:13
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:JYOMjUeNGi7BgzGI0vXHZw
 
 __PACKAGE__->belongs_to(
   "library",
