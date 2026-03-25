@@ -3,7 +3,6 @@ import { markRaw } from "vue";
 import Homepage from "../../components/Acquisitions/Homepage.vue";
 import FundManagementHome from "../../components/Acquisitions/FundManagement/FundManagementHome.vue";
 import OrderManagementHome from "../../components/Acquisitions/OrderManagement/OrderManagementHome.vue";
-import FundAllocationFormAdd from "../../components/Acquisitions/FundManagement/FundAllocationFormAdd.vue";
 import TransferFunds from "../../components/Acquisitions/FundManagement/TransferFunds.vue";
 
 import ResourceWrapper from "../../components/ResourceWrapper.vue";

@@ -165,18 +165,20 @@ export default {
                     required: true,
                     type: "text",
                     label: $__("Name"),
+                    group: $__("Information and status"),
                 },
                 {
                     name: "description",
                     type: "textarea",
                     label: $__("Description"),
-                    required: true,
+                    group: $__("Information and status"),
                 },
                 {
                     name: "code",
                     required: true,
                     type: "text",
                     label: $__("Code"),
+                    group: $__("Information and status"),
                 },
                 ...(!isSubFund.value
                     ? [
@@ -185,15 +187,16 @@ export default {
                               required: true,
                               type: "relationshipSelect",
                               label: $__("Fiscal period"),
+                              group: $__("Information and status"),
                               relationshipAPIClient:
                                   APIClient.acquisition.fiscalPeriods,
-                              relationshipOptionLabelAttr: "code",
+                              relationshipOptionLabelAttr: "name",
                               relationshipRequiredKey: "fiscal_period_id",
                               onSelected: filterLedgersBySelectedFiscalPeriod,
                               query: { "ledgers.ledger_id": { "!=": null } },
                               showElement: {
                                   type: "text",
-                                  value: "fiscal_period.code",
+                                  value: "fiscal_period.name",
                                   link: {
                                       name: "FiscalPeriodShow",
                                       params: {
@@ -213,6 +216,7 @@ export default {
                               required: true,
                               type: "relationshipSelect",
                               label: $__("Ledger"),
+                              group: $__("Information and status"),
                               relationshipAPIClient:
                                   APIClient.acquisition.ledgers,
                               relationshipOptionLabelAttr: "name",
@@ -241,12 +245,12 @@ export default {
                               name: "fund_parent_id",
                               type: "relationshipSelect",
                               label: $__("Parent fund"),
+                              group: $__("Information and status"),
                               relationshipAPIClient:
                                   APIClient.acquisition.funds,
                               relationshipOptionLabelAttr: "name",
                               relationshipRequiredKey: "fund_id",
                               query: getFundsQuery,
-                              disabled: resource => !resource.fiscal_period_id,
                               showElement: {
                                   type: "text",
                                   value: "parent_fund.name",
@@ -283,6 +287,7 @@ export default {
                               name: "fund_group_id",
                               type: "relationshipSelect",
                               label: $__("Fund group"),
+                              group: $__("Information and status"),
                               relationshipAPIClient:
                                   APIClient.acquisition.fundGroups,
                               relationshipOptionLabelAttr: "name",
@@ -290,7 +295,6 @@ export default {
                               onSelected:
                                   filterLibGroupsAndFundGroupsBySelectedLedger,
                               query: getFundGroupsQuery,
-                              disabled: resource => !resource.ledger_id,
                               showElement: {
                                   type: "text",
                                   value: "fund_group.name",
@@ -319,6 +323,7 @@ export default {
                     name: "managing_branch",
                     type: "relationshipSelect",
                     label: $__("Managing library"),
+                    group: $__("Management in library"),
                     relationshipAPIClient: APIClient.libraries.libraries,
                     relationshipOptionLabelAttr: "name",
                     relationshipRequiredKey: "library_id",
@@ -335,6 +340,51 @@ export default {
                     },
                     hideIn: ["List"],
                 },
+                {
+                    name: "owner_id",
+                    type: "patronSearch",
+                    label: $__("Owner"),
+                    group: $__("Management in library"),
+                    required: true,
+                    componentProps: {
+                        name: {
+                            type: "string",
+                            value: "owner_id",
+                        },
+                        required: {
+                            type: "boolean",
+                            value: true,
+                        },
+                        resource: {
+                            type: "resource",
+                            value: null,
+                        },
+                        label: {
+                            type: "string",
+                            value: $__("Owner"),
+                        },
+                        additionalFilters: {
+                            type: "object",
+                            value: {
+                                permission: "acquisition.budget_manage",
+                            },
+                        },
+                        fieldName: {
+                            type: "string",
+                            value: "owner",
+                        },
+                        filteredUrl: {
+                            type: "string",
+                            value: "/api/v1/acquisitions/fund_management/users",
+                        },
+                    },
+                    showElement: {
+                        type: "text",
+                        value: "owner",
+                        format: patron_to_html,
+                    },
+                    hideIn: ["List"],
+                },
                 ...(isSubFund.value
                     ? []
                     : [
@@ -342,32 +392,30 @@ export default {
                               name: "fund_type",
                               type: "select",
                               label: $__("Fund type"),
+                              group: $__("Information and status"),
                               avCat: "av_fund_type",
                               fallbackType: "text",
                           },
                       ]),
                 {
-                    name: "currency",
-                    type: "select",
-                    label: $__("Currency"),
-                    hideIn: ["List", "Form"],
-                },
-                {
                     name: "status",
                     type: "boolean",
                     label: $__("Active"),
+                    group: $__("Information and status"),
                     defaultValue: true,
                 },
                 {
                     name: "external_id",
                     type: "text",
                     label: $__("External ID"),
+                    group: $__("Information and status"),
                     hideIn: ["List"],
                 },
                 {
-                    name: "spend_limit",
+                    name: "fund_amount",
                     type: "number",
-                    label: $__("Spend limit"),
+                    label: $__("Fund amount"),
+                    group: $__("Financial controlling"),
                     defaultValue: 0,
                     size: 6,
                     format: (value, resource) =>
@@ -381,15 +429,10 @@ export default {
                     hideIn: ["List"],
                 },
                 {
-                    name: "over_spend_allowed",
-                    type: "boolean",
-                    label: $__("Overspend allowed"),
-                    hideIn: ["List"],
-                },
-                {
                     name: "oe_warning_percent",
                     type: "number",
                     label: $__("Overencumbrance warning percentage"),
+                    group: $__("Financial controlling"),
                     placeholder: $__(
                         "The percentage at which a warning is triggered"
                     ),
@@ -398,35 +441,12 @@ export default {
                     hideIn: ["List"],
                 },
                 {
-                    name: "oe_limit_amount",
+                    name: "oe_warning_amount",
                     type: "number",
-                    label: $__("Overencumbrance limit amount"),
-                    placeholder: $__(
-                        "The amount at which a block is triggered"
-                    ),
-                    size: 6,
-                    format: (value, resource) =>
-                        formatValueWithCurrency(value, resource.currency),
-                    hideIn: ["List"],
-                },
-                {
-                    name: "os_warning_sum",
-                    type: "number",
-                    label: $__("Overspend warning sum"),
+                    label: $__("Overencumbrance warning amount"),
+                    group: $__("Financial controlling"),
                     placeholder: $__(
                         "The amount at which a warning is triggered"
-                    ),
-                    size: 6,
-                    format: (value, resource) =>
-                        formatValueWithCurrency(value, resource.currency),
-                    hideIn: ["List"],
-                },
-                {
-                    name: "os_limit_sum",
-                    type: "number",
-                    label: $__("Overspend limit sum"),
-                    placeholder: $__(
-                        "The amount at which a block is triggered"
                     ),
                     size: 6,
                     format: (value, resource) =>
@@ -454,7 +474,7 @@ export default {
             url: tableURL(),
             table_settings: null,
             add_filters: true,
-            options: { embed: "sub_funds,fund_allocations,parent_fund" },
+            options: { embed: "sub_funds,allocations,parent_fund" },
             add_filters: true,
             ...(!props.embedded && {
                 actions: {
@@ -507,12 +527,14 @@ export default {
             }
             delete fund.last_updated;
             delete fund.owner;
-            delete fund.fund_allocations;
+            delete fund.allocations;
             delete fund.ledger;
             delete fund.fund_group;
             delete fund.fiscal_period;
             delete fund.sub_funds;
             delete fund.managing_library;
+            delete fund.patron;
+            delete fund.patron_str;
 
             if (fund_id) {
                 return baseResource.apiClient.update(fund, fund_id).then(
@@ -554,7 +576,7 @@ export default {
             const { resource } = componentData;
             let formatValueWithCurrencyHandler = formatValueWithCurrency;
             return [
-                ...(resource.fund_allocations?.length
+                ...(resource.allocations?.length
                     ? [
                           {
                               type: "component",
@@ -647,8 +669,7 @@ export default {
                                           ],
                                           url:
                                               APIClient.acquisition.httpClient
-                                                  ._baseURL +
-                                              "fund_allocations",
+                                                  ._baseURL + "allocations",
                                           table_settings: null,
                                           add_filters: true,
                                           actions: {
@@ -658,8 +679,7 @@ export default {
                                   },
                                   apiClient: {
                                       type: "object",
-                                      value: APIClient.acquisition
-                                          .fundAllocations,
+                                      value: APIClient.acquisition.allocations,
                                   },
                                   filters: {
                                       type: "filter",

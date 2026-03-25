@@ -90,18 +90,10 @@ export default {
                     group: $__("Information and status"),
                 },
                 {
-                    name: "code",
-                    required: true,
-                    type: "text",
-                    label: $__("Code"),
-                    group: $__("Information and status"),
-                },
-                {
                     name: "description",
                     type: "textarea",
                     label: $__("Description"),
                     group: $__("Information and status"),
-                    required: true,
                 },
                 {
                     name: "fiscal_period_id",
@@ -109,12 +101,12 @@ export default {
                     label: $__("Fiscal period"),
                     group: $__("Information and status"),
                     relationshipAPIClient: APIClient.acquisition.fiscalPeriods,
-                    relationshipOptionLabelAttr: "code",
+                    relationshipOptionLabelAttr: "name",
                     relationshipRequiredKey: "fiscal_period_id",
                     disabled: true,
                     showElement: {
                         type: "text",
-                        value: "fiscal_period.code",
+                        value: "fiscal_period.name",
                         link: {
                             name: "FiscalPeriodShow",
                             params: {
@@ -122,6 +114,7 @@ export default {
                             },
                         },
                     },
+                    required: true,
                     hideIn: ["List"],
                 },
                 {
@@ -151,9 +144,9 @@ export default {
                     hideIn: ["List"],
                 },
                 {
-                    name: "spend_limit",
+                    name: "ledger_amount",
                     type: "number",
-                    label: $__("Spend limit"),
+                    label: $__("Ledger amount"),
                     group: $__("Financial controlling"),
                     defaultValue: 0,
                     size: 6,
@@ -256,13 +249,6 @@ export default {
                     hideIn: ["List"],
                 },
                 {
-                    name: "over_spend_allowed",
-                    type: "boolean",
-                    label: $__("Overspend allowed"),
-                    group: $__("Financial controlling"),
-                    hideIn: ["List"],
-                },
-                {
                     name: "oe_warning_percent",
                     type: "number",
                     label: $__("Overencumbrance warning percentage"),
@@ -275,38 +261,12 @@ export default {
                     hideIn: ["List"],
                 },
                 {
-                    name: "oe_limit_amount",
+                    name: "oe_warning_amount",
                     type: "number",
-                    label: $__("Overencumbrance limit amount"),
-                    group: $__("Financial controlling"),
-                    placeholder: $__(
-                        "The amount at which a block is triggered"
-                    ),
-                    size: 6,
-                    format: (value, resource) =>
-                        formatValueWithCurrency(value, resource.currency),
-                    hideIn: ["List"],
-                },
-                {
-                    name: "os_warning_sum",
-                    type: "number",
-                    label: $__("Overspend warning amount"),
+                    label: $__("Overencumbrance warning amount"),
                     group: $__("Financial controlling"),
                     placeholder: $__(
                         "The amount at which a warning is triggered"
-                    ),
-                    size: 6,
-                    format: (value, resource) =>
-                        formatValueWithCurrency(value, resource.currency),
-                    hideIn: ["List"],
-                },
-                {
-                    name: "os_limit_sum",
-                    type: "number",
-                    label: $__("Overspend limit sum"),
-                    group: $__("Financial controlling"),
-                    placeholder: $__(
-                        "The amount at which a block is triggered"
                     ),
                     size: 6,
                     format: (value, resource) =>
@@ -489,8 +449,8 @@ export default {
                                                   },
                                               },
                                               {
-                                                  title: __("Code"),
-                                                  data: "code",
+                                                  title: __("Name"),
+                                                  data: "name",
                                                   searchable: true,
                                                   orderable: true,
                                               },

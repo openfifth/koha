@@ -185,7 +185,7 @@ export default {
             );
 
             const acq_client = APIClient.acquisition;
-            acq_client.fundAllocations.transfer(fundTransfer).then(
+            acq_client.allocations.transfer(fundTransfer).then(
                 success => {
                     setMessage($__("Funds successfully transferred"));
                     router.push({

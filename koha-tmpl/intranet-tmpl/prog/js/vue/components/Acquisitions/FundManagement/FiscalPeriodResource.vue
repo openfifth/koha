@@ -45,7 +45,7 @@ export default {
 
         const baseResource = useBaseResource({
             resourceName: "fiscal_period",
-            nameAttr: "code",
+            nameAttr: "name",
             idAttr: "fiscal_period_id",
             components: {
                 show: "FiscalPeriodShow",
@@ -80,10 +80,10 @@ export default {
                     hideIn: ["Form", "Show"],
                 },
                 {
-                    name: "code",
+                    name: "name",
                     required: true,
                     type: "text",
-                    label: $__("Code"),
+                    label: $__("Name"),
                     group: $__("Information and status"),
                 },
                 {
@@ -91,7 +91,6 @@ export default {
                     type: "textarea",
                     label: $__("Description"),
                     group: $__("Information and status"),
-                    required: true,
                 },
                 {
                     name: "status",
@@ -122,22 +121,7 @@ export default {
                     type: "date",
                     label: $__("End date"),
                     group: $__("Information and status"),
-                    required: false,
-                },
-                {
-                    name: "spend_limit",
-                    type: "number",
-                    label: $__("Spend limit"),
-                    group: $__("Information and status"),
-                    defaultValue: null,
-                    size: 6,
-                    formatInputValue: (value, resource) => {
-                        return formatValueWithCurrency(
-                            value,
-                            resource.currency
-                        );
-                    },
-                    hideIn: ["List"],
+                    required: true,
                 },
                 {
                     name: "managing_branch",
@@ -333,8 +317,8 @@ export default {
                                                   },
                                               },
                                               {
-                                                  title: __("Code"),
-                                                  data: "code",
+                                                  title: __("Name"),
+                                                  data: "name",
                                                   searchable: true,
                                                   orderable: true,
                                               },
