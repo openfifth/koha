@@ -244,6 +244,9 @@ export default {
                     onChange: resource => {
                         createItemsWhen.value = resource.create_items;
                     },
+                    toolTip: $__(
+                        "Based on the value in the AcqCreateItem system preference"
+                    ),
                     hideIn: ["List", "Show", "Search"],
                 },
                 ...(!nonBibliographic.value
