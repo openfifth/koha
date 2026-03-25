@@ -1,6 +1,12 @@
 <template>
-    <fieldset class="rows" :id="`${name + '_' + 'relationship'}`">
-        <legend v-if="title">{{ title }}</legend>
+    <fieldset
+        class="rows"
+        :id="`${name + '_' + 'relationship'}`"
+        style="margin-bottom: 2em"
+    >
+        <legend v-if="relationshipTitle" style="margin-bottom: 2em">
+            {{ relationshipTitle }}
+        </legend>
         <fieldset
             :id="`${name + '_' + counter}`"
             class="rows"
@@ -30,7 +36,7 @@
         </fieldset>
         <a
             v-if="resourceRelationshipCount > 0 || noCountRequired"
-            class="btn btn-default add-new-relationship"
+            :class="`btn btn-default add-new-relationship ${disableAddButton ? 'disabled' : ''}`"
             @click="addResourceRelationship"
             ><font-awesome-icon icon="plus" />
             {{ relationshipI18n.addNewMessage }}</a
@@ -42,7 +48,7 @@
 </template>
 
 <script>
-import { onBeforeMount, provide, ref } from "vue";
+import { computed, onBeforeMount, provide, ref } from "vue";
 import FormElement from "./FormElement.vue";
 
 export default {
@@ -54,6 +60,9 @@ export default {
         const options = ref(null);
 
         provide("resourceRelationships", props.resourceRelationships);
+        if (props.resource) {
+            provide("resource", props.resource);
+        }
 
         const addResourceRelationship = () => {
             props.resourceRelationships.push({
@@ -75,6 +84,22 @@ export default {
             if (!options.value) return {};
             return { options: options.value };
         };
+        const relationshipTitle = computed(() => {
+            if (!props.title) return null;
+            if (typeof props.title === "string") {
+                return props.title;
+            } else {
+                return props.title(props.resource);
+            }
+        });
+
+        const disableAddButton = computed(() => {
+            if (typeof props.disabled === "boolean") {
+                return props.disabled;
+            } else {
+                return props.disabled(props.resource);
+            }
+        });
 
         onBeforeMount(() => {
             if (props.apiClient) {
@@ -102,18 +127,22 @@ export default {
             deleteResourceRelationship,
             handleOptions,
             initialized,
+            relationshipTitle,
+            disableAddButton,
         };
     },
     props: {
         resourceRelationships: Array,
         relationshipFields: Array,
         relationshipI18n: Object,
-        title: String,
+        title: { type: [String, Function] },
         apiClient: Object,
         newRelationshipDefaultAttrs: Object,
         filters: Object,
         fetchOptions: Boolean,
         name: String,
+        resource: Object,
+        disabled: { type: [Boolean, Function] },
     },
     components: {
         FormElement,
