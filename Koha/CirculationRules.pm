@@ -804,6 +804,36 @@ sub get_effective_daysmode {
 
 }
 
+=head3 get_known_overdue_delay_values
+
+Return an array of existing overdue delays, sorted in ascending order.
+Checks through every rule set existing in the database, regardless of context, and include any delay that is DISTINCT.
+For use in process_circulation_triggers.pl
+
+=cut
+
+sub get_known_overdue_delay_values {
+    my ( $self, $params ) = @_;
+
+    my $overdue_delay_rules = $self->search( { 'me.rule_name' => { -like => 'overdue%delay' } }, {} );
+
+    if ( $overdue_delay_rules->count == 0 ) {
+        return ();
+    }
+
+    my %unique_delay_values;
+    while ( my $rule = $overdue_delay_rules->next ) {
+        my $value = $rule->rule_value;
+
+        if ( !defined $value || $value !~ /^\d+$/ || defined $unique_delay_values{$value} ) {
+            next;
+        }
+
+        $unique_delay_values{$value} = 1;
+    }
+    return sort { $a <=> $b } keys %unique_delay_values;
+}
+
 =head3 get_effective_expire_reserves_charge
 
 Return the value for expire_reserves_charge defined in the circulation rules.
