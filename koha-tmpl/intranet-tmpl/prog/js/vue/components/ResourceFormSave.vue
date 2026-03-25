@@ -132,9 +132,17 @@ export default {
         const editMode = ref(false);
 
         const resourceToSave = computed(() => {
-            return (
-                resource.value || reactive(props.instancedResource.newResource)
-            );
+            if (resource.value) return resource.value;
+            if (props.instancedResource.afterNewResourceCreate) {
+                const formattedResource =
+                    props.instancedResource.afterNewResourceCreate(
+                        props.instancedResource.newResource,
+                        props.instancedResource
+                    );
+                return reactive(formattedResource);
+            } else {
+                return reactive(props.instancedResource.newResource);
+            }
         });
 
         const resourceForm = computed({
