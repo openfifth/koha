@@ -41,8 +41,6 @@ my $library         = $builder->build( { source => 'Branch' } );
 my $itemtype        = $builder->build( { source => 'Itemtype' } )->{itemtype};
 my $patron_category = $builder->build( { source => 'Category' } );
 
-t::lib::Mocks::mock_userenv( { branchcode => $library->{branchcode} } );
-
 my $borrower = Koha::Patron->new(
     {
         firstname    => 'my firstname',
@@ -51,6 +49,8 @@ my $borrower = Koha::Patron->new(
         branchcode   => $library->{branchcode},
     }
 )->store;
+
+t::lib::Mocks::mock_userenv( { branchcode => $library->{branchcode}, borrowernumber => $borrower->borrowernumber } );
 
 my $record = MARC::Record->new();
 my ( $biblionumber, $biblioitemnumber ) = AddBiblio( $record, '' );
