@@ -435,9 +435,8 @@ export default {
                 {
                     name: "patrons_to_notify",
                     group: $__("Patrons to notify"),
-                    type: "component",
+                    type: "patronSearch",
                     label: $__("Notify on receiving"),
-                    componentPath: "@koha-vue/components/PatronSearch.vue",
                     componentProps: {
                         name: {
                             type: "string",
@@ -512,9 +511,8 @@ export default {
                 {
                     name: "managed_by",
                     group: $__("Library management"),
-                    type: "component",
+                    type: "patronSearch",
                     label: $__("Managed by"),
-                    componentPath: "@koha-vue/components/PatronSearch.vue",
                     componentProps: {
                         name: {
                             type: "string",

@@ -132,7 +132,7 @@ export default {
                     type: "select",
                     label: $__("Status"),
                     avCat: "av_agreement_statuses",
-                    onSelected: (e, resource) => {
+                    onSelected: (e, options, resource) => {
                         if (resource.status !== "closed") {
                             resource.closure_reason = null;
                         }
@@ -312,10 +312,8 @@ export default {
                     relationshipFields: [
                         {
                             name: "user_id",
-                            type: "component",
+                            type: "patronSearch",
                             label: $__("User"),
-                            componentPath:
-                                "@koha-vue/components/PatronSearch.vue",
                             required: true,
                             indexRequired: true,
                             componentProps: {

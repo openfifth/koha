@@ -169,10 +169,9 @@ export default {
                 },
                 {
                     name: "owner_id",
-                    type: "component",
+                    type: "patronSearch",
                     label: $__("Owner"),
                     group: $__("Management in library"),
-                    componentPath: "@koha-vue/components/PatronSearch.vue",
                     required: true,
                     componentProps: {
                         name: {

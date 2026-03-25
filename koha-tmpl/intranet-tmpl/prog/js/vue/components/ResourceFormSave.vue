@@ -185,6 +185,8 @@ export default {
                 onFormSave,
                 router,
                 idAttr,
+                resourceAttrs,
+                setWarning,
             } = props.instancedResource;
             // Default to show
             const navigationAction =
@@ -194,6 +196,31 @@ export default {
             const idParamRequired =
                 navigationAction === components.show ||
                 navigationAction === components.edit;
+            const checkForPatronSearch = resourceAttrs.reduce((acc, ra) => {
+                if (ra.type === "patronSearch" && ra.required) acc.push(ra);
+                return acc;
+            }, []);
+            if (checkForPatronSearch.length) {
+                const errors = [];
+                checkForPatronSearch.forEach(ps => {
+                    const valueIsArray = Array.isArray(resourceToSave[ps.name]);
+                    const valueSet = valueIsArray
+                        ? !!resourceToSave[ps.name].length
+                        : !!resourceToSave[ps.name];
+                    if (!valueSet) {
+                        errors.push(
+                            $__("Please provide a value for '%s'").format(
+                                ps.label
+                            )
+                        );
+                    }
+                });
+                if (errors.length) {
+                    setWarning(errors.join("<br>"));
+                    $event.preventDefault();
+                    return;
+                }
+            }
             onFormSave($event, resourceToSave).then(resource => {
                 if (resource) {
                     router.push({

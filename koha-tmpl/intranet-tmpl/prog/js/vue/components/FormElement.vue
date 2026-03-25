@@ -206,6 +206,9 @@
             @additional-fields-changed="additionalFieldsChanged"
         ></AdditionalFieldsEntry>
     </template>
+    <template v-else-if="attr.type == 'patronSearch'">
+        <PatronSearch v-bind="getComponentProps()" />
+    </template>
     <template v-else-if="attr.type == 'display'">
         <span>{{
             attr?.format ? formatValue(attr, resource) : resource[attr.name]
@@ -241,6 +244,7 @@ import InputRadio from "./Elements/InputRadio.vue";
 import { useBaseElement } from "../composables/base-element.js";
 import { computed, defineAsyncComponent, ref } from "vue";
 import { loadComponent } from "@koha-vue/loaders/componentResolver";
+import PatronSearch from "./PatronSearch.vue";
 
 export default {
     props: {
@@ -259,7 +263,6 @@ export default {
         const isVModelRequired = componentPath => {
             let vModelRequired = true;
             const componentsNotRequiringVModel = [
-                "PatronSearch",
                 "Documents",
                 "AdditionalFields",
             ];
@@ -370,6 +373,7 @@ export default {
         InputCheckbox,
         TextArea,
         InputRadio,
+        PatronSearch,
     },
 };
 </script>
