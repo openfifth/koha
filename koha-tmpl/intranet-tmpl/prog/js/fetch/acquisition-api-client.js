@@ -187,7 +187,7 @@ export class AcquisitionAPIClient {
                     endpoint: "funds/" + id,
                     headers: {
                         "x-koha-embed":
-                            "owner,managing_library,fiscal_period,fund_group,ledger,fund_allocations,sub_funds,parent_fund",
+                            "owner,managing_library,fiscal_period,fund_group,ledger,allocations,sub_funds,parent_fund",
                         ...headers,
                     },
                 }),
@@ -236,18 +236,18 @@ export class AcquisitionAPIClient {
         };
     }
 
-    get fundAllocations() {
+    get allocations() {
         return {
             get: (id, headers) =>
                 this.httpClient.get({
-                    endpoint: "fund_allocations/" + id,
+                    endpoint: "allocations/" + id,
                     ...(headers && {
                         headers,
                     }),
                 }),
             getAll: (query, params, headers) =>
                 this.httpClient.getAll({
-                    endpoint: "fund_allocations",
+                    endpoint: "allocations",
                     query,
                     params,
                     ...(headers && {
@@ -256,27 +256,27 @@ export class AcquisitionAPIClient {
                 }),
             delete: id =>
                 this.httpClient.delete({
-                    endpoint: "fund_allocations/" + id,
+                    endpoint: "allocations/" + id,
                 }),
-            create: fund_allocation =>
+            create: allocation =>
                 this.httpClient.post({
-                    endpoint: "fund_allocations",
-                    body: fund_allocation,
+                    endpoint: "allocations",
+                    body: allocation,
                 }),
-            transfer: fund_allocation =>
+            transfer: allocation =>
                 this.httpClient.post({
-                    endpoint: "fund_allocations/transfer",
-                    body: fund_allocation,
+                    endpoint: "allocations/transfer",
+                    body: allocation,
                 }),
-            update: (fund_allocation, id) =>
+            update: (allocation, id) =>
                 this.httpClient.put({
-                    endpoint: "fund_allocations/" + id,
-                    body: fund_allocation,
+                    endpoint: "allocations/" + id,
+                    body: allocation,
                 }),
             count: (query = {}) =>
                 this.httpClient.count({
                     endpoint:
-                        "fund_allocations?" +
+                        "allocations?" +
                         new URLSearchParams({
                             _page: 1,
                             _per_page: 1,

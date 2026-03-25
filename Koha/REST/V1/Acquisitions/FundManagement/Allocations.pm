@@ -1,4 +1,4 @@
-package Koha::REST::V1::Acquisitions::FundManagement::FundAllocations;
+package Koha::REST::V1::Acquisitions::FundManagement::Allocations;
 
 # Copyright 2024 PTFS Europe
 
@@ -24,8 +24,8 @@ use Mojo::JSON qw(decode_json);
 use Try::Tiny;
 
 use Koha::Acquisition::FundManagement::Funds;
-use Koha::Acquisition::FundManagement::FundAllocation;
-use Koha::Acquisition::FundManagement::FundAllocations;
+use Koha::Acquisition::FundManagement::Allocation;
+use Koha::Acquisition::FundManagement::Allocations;
 use Koha::Exceptions::Acquisition::FundManagement::LimitExceeded;
 
 use C4::Context;
@@ -42,11 +42,11 @@ sub list {
     my $c = shift->openapi->valid_input or return;
 
     return try {
-        my $fund_allocations_set = Koha::Acquisition::FundManagement::FundAllocations->new;
-        my $fund_allocations     = $c->objects->search($fund_allocations_set);
+        my $allocations_set = Koha::Acquisition::FundManagement::Allocations->new;
+        my $allocations     = $c->objects->search($allocations_set);
 
-        my $sorted_allocations = Koha::Acquisition::FundManagement::FundAllocations->add_totals_to_fund_allocations(
-            { allocations => $fund_allocations } );
+        my $sorted_allocations = Koha::Acquisition::FundManagement::Allocations->add_totals_to_allocations(
+            { allocations => $allocations } );
 
         return $c->render( status => 200, openapi => $sorted_allocations );
     } catch {
@@ -63,19 +63,19 @@ sub get {
     my $c = shift->openapi->valid_input or return;
 
     return try {
-        my $fund_allocations_set = Koha::Acquisition::FundManagement::FundAllocations->new;
-        my $fund_allocation      = $c->objects->find( $fund_allocations_set, $c->param('fund_allocation_id') );
+        my $allocations_set = Koha::Acquisition::FundManagement::Allocations->new;
+        my $allocation      = $c->objects->find( $allocations_set, $c->param('allocation_id') );
 
-        unless ($fund_allocation) {
+        unless ($allocation) {
             return $c->render(
                 status  => 404,
-                openapi => { error => "Fund allocation not found" }
+                openapi => { error => "Allocation not found" }
             );
         }
 
         return $c->render(
             status  => 200,
-            openapi => $fund_allocation
+            openapi => $allocation
         );
     } catch {
         $c->unhandled_exception($_);
@@ -96,18 +96,18 @@ sub add {
                 my $body = $c->req->json;
                 delete $body->{lib_groups} if $body->{lib_groups};
 
-                my $fund_allocation =
-                    Koha::Acquisition::FundManagement::FundAllocation->new_from_api($body)->store->discard_changes;
+                my $allocation =
+                    Koha::Acquisition::FundManagement::Allocation->new_from_api($body)->store->discard_changes;
 
-                $c->res->headers->location( $c->req->url->to_string . '/' . $fund_allocation->fund_allocation_id );
+                $c->res->headers->location( $c->req->url->to_string . '/' . $allocation->allocation_id );
                 return $c->render(
                     status  => 201,
-                    openapi => $fund_allocation->to_api
+                    openapi => $allocation->to_api
                 );
             }
         );
     } catch {
-        my $to_api_mapping = Koha::Acquisition::FundManagement::FundAllocation->new->to_api_mapping;
+        my $to_api_mapping = Koha::Acquisition::FundManagement::Allocation->new->to_api_mapping;
 
         if ( blessed $_ ) {
             if ( $_->isa('Koha::Exceptions::Acquisition::FundManagement::LimitExceeded') ) {
@@ -129,19 +129,19 @@ sub add {
 
 =head3 update
 
-Controller function that handles updating a Koha::Acquisition::FundManagement::FundAllocation object
+Controller function that handles updating a Koha::Acquisition::FundManagement::Allocation object
 
 =cut
 
 sub update {
     my $c = shift->openapi->valid_input or return;
 
-    my $fund_allocation = Koha::Acquisition::FundManagement::FundAllocations->find( $c->param('fund_allocation_id') );
+    my $allocation = Koha::Acquisition::FundManagement::Allocations->find( $c->param('allocation_id') );
 
-    unless ($fund_allocation) {
+    unless ($allocation) {
         return $c->render(
             status  => 404,
-            openapi => { error => "Fund allocation not found" }
+            openapi => { error => "Allocation not found" }
         );
     }
 
@@ -155,17 +155,17 @@ sub update {
                 delete $body->{fiscal_period} if $body->{fiscal_period};
                 delete $body->{last_updated}  if $body->{last_updated};
 
-                $fund_allocation->set_from_api($body)->store;
+                $allocation->set_from_api($body)->store;
 
-                $c->res->headers->location( $c->req->url->to_string . '/' . $fund_allocation->fund_allocation_id );
+                $c->res->headers->location( $c->req->url->to_string . '/' . $allocation->allocation_id );
                 return $c->render(
                     status  => 200,
-                    openapi => $fund_allocation->to_api
+                    openapi => $allocation->to_api
                 );
             }
         );
     } catch {
-        my $to_api_mapping = Koha::Acquisition::FundManagement::FundAllocation->new->to_api_mapping;
+        my $to_api_mapping = Koha::Acquisition::FundManagement::Allocation->new->to_api_mapping;
 
         if ( blessed $_ ) {
             if ( $_->isa('Koha::Exceptions::Object::FKConstraint') ) {
@@ -207,17 +207,17 @@ sub update {
 sub delete {
     my $c = shift->openapi->valid_input or return;
 
-    my $fund_allocation = Koha::Acquisition::FundManagement::FundAllocations->find( $c->param('fund_allocation_id') );
-    unless ($fund_allocation) {
+    my $allocation = Koha::Acquisition::FundManagement::Allocations->find( $c->param('allocation_id') );
+    unless ($allocation) {
         return $c->render(
             status  => 404,
-            openapi => { error => "Fund allocation not found" }
+            openapi => { error => "Allocation not found" }
         );
     }
 
     return try {
-        my $fund_id = $fund_allocation->fund_id;
-        $fund_allocation->delete;
+        my $fund_id = $allocation->fund_id;
+        $allocation->delete;
 
         return $c->render(
             status  => 204,
@@ -254,7 +254,7 @@ sub transfer {
                 my $fund_id_from = $body->{sub_fund_id_from} ? undef : $body->{fund_id_from};
                 my $fund_id_to   = $body->{sub_fund_id_to}   ? undef : $body->{fund_id_to};
 
-                my $allocation_from = Koha::Acquisition::FundManagement::FundAllocation->new(
+                my $allocation_from = Koha::Acquisition::FundManagement::Allocation->new(
                     {
                         fund_id           => $fund_id_from,
                         sub_fund_id       => $body->{sub_fund_id_from},
@@ -269,7 +269,7 @@ sub transfer {
                         is_transfer       => 1
                     }
                 )->store();
-                my $allocation_to = Koha::Acquisition::FundManagement::FundAllocation->new(
+                my $allocation_to = Koha::Acquisition::FundManagement::Allocation->new(
                     {
                         fund_id           => $fund_id_to,
                         sub_fund_id       => $body->{sub_fund_id_to},

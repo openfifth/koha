@@ -80,22 +80,23 @@ sub add {
             sub {
 
                 my $body = $c->req->json;
-                delete $body->{lib_groups} if $body->{lib_groups};
 
-                $body = _inherit_currency_and_owner($body);
+                # delete $body->{lib_groups} if $body->{lib_groups};
 
-                if ( $body->{spend_limit} ) {
-                    my $ledger = Koha::Acquisition::FundManagement::Ledgers->find( $body->{ledger_id} );
-                    my $result = $ledger->check_spend_limits( { new_allocation => $body->{spend_limit} } );
-                    return $c->render(
-                        status  => 400,
-                        openapi => {
-                                  error => "Ledger spend limit breached, please reduce spend limit by "
-                                . $result->{breach_amount}
-                                . " or increase the spend limit for this ledger"
-                        }
-                    ) unless $result->{within_limit};
-                }
+                # $body = _inherit_currency_and_owner($body);
+
+                # if ( $body->{spend_limit} ) {
+                #     my $ledger = Koha::Acquisition::FundManagement::Ledgers->find( $body->{ledger_id} );
+                #     my $result = $ledger->check_spend_limits( { new_allocation => $body->{spend_limit} } );
+                #     return $c->render(
+                #         status  => 400,
+                #         openapi => {
+                #                   error => "Ledger spend limit breached, please reduce spend limit by "
+                #                 . $result->{breach_amount}
+                #                 . " or increase the spend limit for this ledger"
+                #         }
+                #     ) unless $result->{within_limit};
+                # }
 
                 my $fund = Koha::Acquisition::FundManagement::Fund->new_from_api($body)->store->discard_changes;
 
