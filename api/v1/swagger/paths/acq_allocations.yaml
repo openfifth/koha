@@ -1,11 +1,11 @@
 ---
-/acquisitions/fund_allocations:
+/acquisitions/allocations:
   get:
-    x-mojo-to: Acquisitions::FundManagement::FundAllocations#list
-    operationId: GetFundAllocation
+    x-mojo-to: Acquisitions::FundManagement::Allocations#list
+    operationId: GetAllocation
     description: Retrieves the fund allocations for the acquisitions module
     tags:
-      - GetFundAllocation
+      - GetAllocation
     produces:
       - application/json
     parameters:
@@ -33,7 +33,7 @@
         description: Fund allocation data
         schema:
           items:
-            $ref: "../swagger.yaml#/definitions/acq_fund_allocation"
+            $ref: "../swagger.yaml#/definitions/acq_allocation"
           type: array
       "400":
         description: |
@@ -61,10 +61,10 @@
       permissions:
         acquisition: budget_manage_all
   post:
-    x-mojo-to: Acquisitions::FundManagement::FundAllocations#add
-    operationId: StoreFundAllocation
+    x-mojo-to: Acquisitions::FundManagement::Allocations#add
+    operationId: StoreAllocation
     tags:
-      - StoreFundAllocation
+      - StoreAllocation
     summary: Add fund allocation
     consumes:
       - application/json
@@ -76,13 +76,13 @@
         name: body
         required: true
         schema:
-            $ref: "../swagger.yaml#/definitions/acq_fund_allocation"
+            $ref: "../swagger.yaml#/definitions/acq_allocation"
     responses:
       '201':
         description: Fund allocation
         schema:
           items:
-            $ref: "../swagger.yaml#/definitions/acq_fund_allocation"
+            $ref: "../swagger.yaml#/definitions/acq_allocation"
       400:
         description: Bad request
         schema:
@@ -120,9 +120,9 @@
     x-koha-authorization:
       permissions:
         acquisition: budget_manage_all
-/acquisitions/fund_allocations/transfer:
+/acquisitions/allocations/transfer:
   post:
-    x-mojo-to: Acquisitions::FundManagement::FundAllocations#transfer
+    x-mojo-to: Acquisitions::FundManagement::Allocations#transfer
     operationId: AcquireTransferFunds
     tags:
       - Acquire
@@ -152,15 +152,15 @@
     x-koha-authorization:
       permissions:
         acquisition: budget_manage_all
-/acquisitions/fund_allocations/{fund_allocation_id}:
+/acquisitions/allocations/{allocation_id}:
   get:
-    x-mojo-to: Acquisitions::FundManagement::FundAllocations#get
-    operationId: getFundAllocation
+    x-mojo-to: Acquisitions::FundManagement::Allocations#get
+    operationId: getAllocation
     tags:
       - acquire
     description: Get a single fund allocation
     parameters:
-      - $ref: "../swagger.yaml#/parameters/fund_allocation_id_pp"
+      - $ref: "../swagger.yaml#/parameters/allocation_id_pp"
       - name: x-koha-embed
         in: header
         description: Embed
@@ -180,7 +180,7 @@
       '200':
         description: Fund allocation
         schema:
-          $ref: "../swagger.yaml#/definitions/acq_fund_allocation"
+          $ref: "../swagger.yaml#/definitions/acq_allocation"
       '400':
         description: Bad request
         schema:
@@ -235,26 +235,26 @@
       permissions:
         acquisition: budget_manage_all
   put:
-    x-mojo-to: Acquisitions::FundManagement::FundAllocations#update
-    operationId: updateFundAllocation
+    x-mojo-to: Acquisitions::FundManagement::Allocations#update
+    operationId: updateAllocation
     tags:
       - acquire
     description: Update a fund allocation
     parameters:
-      - $ref: "../swagger.yaml#/parameters/fund_allocation_id_pp"
+      - $ref: "../swagger.yaml#/parameters/allocation_id_pp"
       - name: body
         in: body
         description: Fund allocation object that needs to be added
         required: true
         schema:
-          $ref: "../swagger.yaml#/definitions/acq_fund_allocation"
+          $ref: "../swagger.yaml#/definitions/acq_allocation"
     produces:
       - application/json
     responses:
       '200':
         description: Fund allocation
         schema:
-          $ref: "../swagger.yaml#/definitions/acq_fund_allocation"
+          $ref: "../swagger.yaml#/definitions/acq_allocation"
       '400':
         description: Bad request
         schema:
@@ -309,13 +309,13 @@
       permissions:
         acquisition: budget_manage_all
   delete:
-    x-mojo-to: Acquisitions::FundManagement::FundAllocations#delete
-    operationId: deleteFundAllocation
+    x-mojo-to: Acquisitions::FundManagement::Allocations#delete
+    operationId: deleteAllocation
     tags:
       - acquire
     description: Delete a fund allocation
     parameters:
-      - $ref: "../swagger.yaml#/parameters/fund_allocation_id_pp"
+      - $ref: "../swagger.yaml#/parameters/allocation_id_pp"
     produces:
       - application/json
     responses:

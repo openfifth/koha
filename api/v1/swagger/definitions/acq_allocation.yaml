@@ -1,7 +1,7 @@
 ---
 type: object
 properties:
-  fund_allocation_id:
+  allocation_id:
     type:
       - integer
       - "null"
@@ -17,26 +17,11 @@ properties:
       - integer
       - "null"
     description: Internal ledger identifier
-  fiscal_period_id:
-    type:
-      - integer
-      - "null"
-    description: Internal fiscal period identifier
   allocation_amount:
     type:
       - number
       - "null"
     description: Amount allocated to the fund
-  allocation_index:
-    type:
-      - integer
-      - "null"
-    description: Index of the allocation
-  new_fund_value:
-    type:
-      - integer
-      - "null"
-    description: Value of the fund after the allocation
   reference:
     type:
       - string
@@ -47,24 +32,26 @@ properties:
       - string
       - "null"
     description: Allocation note
-  currency:
-    type:
-      - string
-      - "null"
-    description: Fund currency
   type:
     type:
       - string
       - "null"
     description: Type of the allocation
-  is_transfer:
-    description: is the allocation a transfer
-    type: boolean
-  last_updated:
+  is_transferred_to:
+    type:
+      - integer
+      - "null"
+    description: Entity receiving the allocation
+  is_transferred_from:
+    type:
+      - integer
+      - "null"
+    description: Entity sending the allocation
+  created_date:
     type: string
     format: date-time
     readOnly: true
-    description: Last update
+    description: Date created
   owner_id:
     type:
       - integer
@@ -75,11 +62,6 @@ properties:
       - string
       - "null"
     description: Branch responsible for managing the resource
-  fiscal_period:
-    type: object
-    description: Fiscal_period
-    items:
-      $ref: "acq_fiscal_period.yaml"
   ledger:
     type: object
     description: Ledger

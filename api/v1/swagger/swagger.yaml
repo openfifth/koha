@@ -14,8 +14,8 @@ definitions:
     $ref: ./definitions/acq_fund.yaml
   acq_fund_group:
     $ref: ./definitions/acq_fund_group.yaml
-  acq_fund_allocation:
-    $ref: ./definitions/acq_fund_allocation.yaml
+  acq_allocation:
+    $ref: ./definitions/acq_allocation.yaml
   acq_ledger:
     $ref: ./definitions/acq_ledger.yaml
   acq_orderline:
@@ -243,12 +243,12 @@ paths:
     $ref: ./paths/acquisitions_funds.yaml#/~1acquisitions~1funds~1owners
   /acquisitions/funds/users:
     $ref: ./paths/acquisitions_funds.yaml#/~1acquisitions~1funds~1users
-  /acquisitions/fund_allocations:
-    $ref: ./paths/acq_fund_allocations.yaml#/~1acquisitions~1fund_allocations
-  /acquisitions/fund_allocations/transfer:
-    $ref: ./paths/acq_fund_allocations.yaml#/~1acquisitions~1fund_allocations~1transfer
-  "/acquisitions/fund_allocations/{fund_allocation_id}":
-    $ref: ./paths/acq_fund_allocations.yaml#/~1acquisitions~1fund_allocations~1{fund_allocation_id}
+  /acquisitions/allocations:
+    $ref: ./paths/acq_allocations.yaml#/~1acquisitions~1allocations
+  /acquisitions/allocations/transfer:
+    $ref: ./paths/acq_allocations.yaml#/~1acquisitions~1allocations~1transfer
+  "/acquisitions/allocations/{allocation_id}":
+    $ref: ./paths/acq_allocations.yaml#/~1acquisitions~1allocations~1{allocation_id}
   /acquisitions/fund_groups:
     $ref: ./paths/acq_fund_groups.yaml#/~1acquisitions~1fund_groups
   "/acquisitions/fund_groups/{fund_group_id}":
@@ -871,10 +871,10 @@ parameters:
     name: fund_group_id
     required: true
     type: integer
-  fund_allocation_id_pp:
+  allocation_id_pp:
     description: Fund allocation id
     in: path
-    name: fund_allocation_id
+    name: allocation_id
     required: true
     type: integer
   hold_id_pp:

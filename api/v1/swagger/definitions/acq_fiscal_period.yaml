@@ -12,11 +12,11 @@ properties:
       - string
       - "null"
     description: Description
-  code:
+  name:
     type:
       - string
       - "null"
-    description: Fiscal period code
+    description: Fiscal period name
   start_date:
     type: string
     format: date
@@ -27,16 +27,16 @@ properties:
       - "null"
     format: date
     description: End date for the fiscal period
-  spend_limit:
-    type:
-      - number
-      - "null"
-    description: Spend limit of the fiscal period
-  last_updated:
+  modified_date:
     type: string
     format: date-time
     readOnly: true
     description: Last update
+  created_date:
+    type: string
+    format: date-time
+    readOnly: true
+    description: Creation date
   status:
     description: Is the fiscal period active
     type: boolean

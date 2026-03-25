@@ -18,7 +18,7 @@
           enum:
           - fiscal_period
           - ledger
-          - fund_allocations
+          - allocations
           - owner
           - sub_funds
           - parent_fund
@@ -139,7 +139,7 @@
           enum:
           - fiscal_period
           - ledger
-          - fund_allocations
+          - allocations
           - owner
           - managing_library
           - fund_group

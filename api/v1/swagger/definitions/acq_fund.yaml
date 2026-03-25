@@ -57,11 +57,16 @@ properties:
       - string
       - "null"
     description: Fund currency
-  last_updated:
+  modified_date:
     type: string
     format: date-time
     readOnly: true
     description: Last update
+  created_date:
+    type: string
+    format: date-time
+    readOnly: true
+    description: Date created
   status:
     description: Is the fund active
     type: boolean
@@ -75,39 +80,26 @@ properties:
       - string
       - "null"
     description: Branch responsible for managing the resource
-  spend_limit:
+  fund_amount:
     type:
       - number
       - "null"
     description: Spend limit of the fund
-  fund_value:
+  fund_permission:
     type:
-      - number
+      - integer
       - "null"
-    description: Value of the fund
-  over_spend_allowed:
-    description: Is over spend allowed on the fund
-    type: boolean
+    description: Identifier for the parent fund (if applicable)
   oe_warning_percent:
     type:
       - number
       - "null"
     description: Over encumbrance warning percentage
-  oe_limit_amount:
+  oe_warning_amount:
     type:
       - number
       - "null"
-    description: Over encumbrance limit amount
-  os_warning_sum:
-    type:
-      - number
-      - "null"
-    description: Over spend warning sum
-  os_limit_sum:
-    type:
-      - number
-      - "null"
-    description: Over spend limit sum
+    description: Over encumbrance warning amount
   fiscal_period:
     type: object
     description: Fiscal_period
@@ -125,11 +117,11 @@ properties:
     description: Fund group
     items:
       $ref: "acq_fund_group.yaml"
-  fund_allocations:
+  allocations:
     type: array
-    description: List of fund_allocations
+    description: List of allocations
     items:
-      $ref: "acq_fund_allocation.yaml"
+      $ref: "acq_allocation.yaml"
   sub_funds:
     type: array
     description: List of sub_funds
@@ -140,26 +132,6 @@ properties:
     description: Owner of the ledger
     items:
       $ref: "patron.yaml"
-  allocation_decrease:
-    type:
-      - integer
-      - "null"
-    description: The amount that has been removed from this fund
-  allocation_increase:
-    type:
-      - integer
-      - "null"
-    description: The amount that has been allocated to this fund
-  net_transfers:
-    type:
-      - integer
-      - "null"
-    description: The amount that has been transferred in and out of this fund
-  total_allocation:
-    type:
-      - integer
-      - "null"
-    description: The total value of the fund
   managing_library:
     description: Information about the managing library for the fund
     type:

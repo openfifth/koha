@@ -22,11 +22,6 @@ properties:
       - string
       - "null"
     description: Description
-  code:
-    type:
-      - string
-      - "null"
-    description: Ledger code
   external_id:
     type:
       - string
@@ -37,13 +32,21 @@ properties:
       - string
       - "null"
     description: Ledger currency
-  last_updated:
+  modified_date:
     type: string
     format: date-time
     readOnly: true
     description: Last update
+  created_date:
+    type: string
+    format: date-time
+    readOnly: true
+    description: Date created
   status:
     description: Is the ledger active
+    type: boolean
+  locked:
+    description: Is the ledger locked
     type: boolean
   owner_id:
     type:
@@ -55,39 +58,21 @@ properties:
       - string
       - "null"
     description: Branch responsible for managing the resource
-  spend_limit:
+  ledger_amount:
     type:
       - number
       - "null"
     description: Spend limit of the ledger
-  ledger_value:
-    type:
-      - number
-      - "null"
-    description: Value of the ledger
-  over_spend_allowed:
-    description: Is over spend allowed on the ledger
-    type: boolean
   oe_warning_percent:
     type:
       - number
       - "null"
     description: Over encumbrance warning percentage
-  oe_limit_amount:
+  oe_warning_amount:
     type:
       - number
       - "null"
-    description: Over encumbrance limit amount
-  os_warning_sum:
-    type:
-      - number
-      - "null"
-    description: Over spend warning sum
-  os_limit_sum:
-    type:
-      - number
-      - "null"
-    description: Over spend limit sum
+    description: Over encumbrance warning amount
   fiscal_period:
     type: object
     description: Fiscal period
