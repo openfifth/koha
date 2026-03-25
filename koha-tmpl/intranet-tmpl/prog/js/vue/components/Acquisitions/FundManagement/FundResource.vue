@@ -769,6 +769,18 @@ export default {
             ];
         };
 
+        const afterNewResourceCreate = (resource, componentData) => {
+            if (componentData.route.query.ledger_id) {
+                resource.ledger_id = parseInt(
+                    componentData.route.query.ledger_id
+                );
+                resource.fiscal_period_id = parseInt(
+                    componentData.route.query.fiscal_period_id
+                );
+            }
+            return resource;
+        };
+
         onUnmounted(() => {
             resetOwnersAndVisibleGroups();
         });
@@ -782,6 +794,7 @@ export default {
             ledgersQuery,
             isSubFund,
             appendToShow,
+            afterNewResourceCreate,
         };
     },
     components: { BaseResource },

@@ -336,6 +336,15 @@ export default {
             }
         };
 
+        const afterNewResourceCreate = (resource, componentData) => {
+            if (componentData.route.query.fiscal_period_id) {
+                resource.fiscal_period_id = parseInt(
+                    componentData.route.query.fiscal_period_id
+                );
+            }
+            return resource;
+        };
+
         onUnmounted(() => {
             resetOwnersAndVisibleGroups();
         });
@@ -345,6 +354,7 @@ export default {
             tableOptions,
             onSubmit,
             afterResourceFetch,
+            afterNewResourceCreate,
         };
     },
     components: { BaseResource },
