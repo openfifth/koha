@@ -1,12 +1,11 @@
 import { defineStore } from "pinia";
 import { permissionsMatrix } from "../data/permissionsMatrix";
-import { reactive } from "vue";
-import { toRefs } from "vue";
+import { reactive, computed, toRefs } from "vue";
 import { withAuthorisedValueActions } from "../composables/authorisedValues";
 import { permissionsActions } from "../composables/permissions";
 import { libraryGroupsActions } from "../composables/libraryGroups";
 
-export const useAcquisitionsStore = defineStore("acquisitions", () => {
+export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
     const store = reactive({
         user: {
             loggedInUser: null,
@@ -27,6 +26,7 @@ export const useAcquisitionsStore = defineStore("acquisitions", () => {
         authorisedValues: {
             acquire_fund_types: "ACQUIRE_FUND_TYPE",
         },
+        userPermissions: null,
     });
     const actions = {
         ...withAuthorisedValueActions(store),
@@ -49,15 +49,14 @@ export const useAcquisitionsStore = defineStore("acquisitions", () => {
             returnAll = false
         ) {
             const filteredUsers = [];
-            this.permittedUsers.forEach(user => {
+            store.permittedUsers.forEach(user => {
                 user.displayName = user.firstname + " " + user.surname;
                 if (returnAll) {
                     filteredUsers.push(user);
                 } else {
-                    const userPermitted = this.isUserPermitted(
-                        operation,
-                        user.permissions
-                    );
+                    const userPermitted = permissionsActions(
+                        store
+                    ).isUserPermitted(operation, user.permissions);
                     if (userPermitted) {
                         filteredUsers.push(user);
                     }
@@ -71,59 +70,59 @@ export const useAcquisitionsStore = defineStore("acquisitions", () => {
                 return filteredUsers;
             }
         },
-        isUserPermitted(operation, flags) {
-            const userflags = flags ? flags : this.user.userflags;
-            if (!operation) return true;
-            if (this.permissionsMatrix[operation].length === 0) return true;
+        // isUserPermitted(operation, flags) {
+        //     const userflags = flags ? flags : this.user.userflags;
+        //     if (!operation) return true;
+        //     if (this.permissionsMatrix[operation].length === 0) return true;
 
-            const { acquisition, parameters, superlibrarian } = userflags;
-            if (operation === "manageSettings") {
-                let checkResult = false;
-                if (
-                    superlibrarian ||
-                    parameters === 1 ||
-                    parameters.manage_sysprefs
-                ) {
-                    checkResult = true;
-                } else {
-                    checkResult = false;
-                }
-                return checkResult;
-            }
+        //     const { acquisition, parameters, superlibrarian } = userflags;
+        //     if (operation === "manageSettings") {
+        //         let checkResult = false;
+        //         if (
+        //             superlibrarian ||
+        //             parameters === 1 ||
+        //             parameters.manage_sysprefs
+        //         ) {
+        //             checkResult = true;
+        //         } else {
+        //             checkResult = false;
+        //         }
+        //         return checkResult;
+        //     }
 
-            if (acquisition === 1 || superlibrarian) {
-                return true;
-            } else {
-                const checks = this.permissionsMatrix[operation].map(
-                    permission => {
-                        if (acquisition[permission]) {
-                            return true;
-                        } else {
-                            return false;
-                        }
-                    }
-                );
-                const failedChecks = checks.filter(check => !check).length;
-                return failedChecks > 0 ? false : true;
-            }
-        },
+        //     if (acquisition === 1 || superlibrarian) {
+        //         return true;
+        //     } else {
+        //         const checks = this.permissionsMatrix[operation].map(
+        //             permission => {
+        //                 if (acquisition[permission]) {
+        //                     return true;
+        //                 } else {
+        //                     return false;
+        //                 }
+        //             }
+        //         );
+        //         const failedChecks = checks.filter(check => !check).length;
+        //         return failedChecks > 0 ? false : true;
+        //     }
+        // },
         filterGroupsBasedOnOwner(e, data, groups) {
             const libGroups = this.filterLibGroupsByUsersBranchcode(
                 null,
                 groups
             );
             const permittedUsers = this.filterUsersByPermissions(
-                this.currentPermission
+                store.currentPermission
             );
             if (!e) {
-                this.visibleGroups = libGroups;
-                this.owners = permittedUsers;
+                store.visibleGroups = libGroups;
+                store.owners = permittedUsers;
                 data.lib_group_visibility = null;
             } else {
                 const { branchcode } = permittedUsers.find(
-                    user => user.borrowernumber === e
+                    user => user.borrowernumber === e.borrowernumber
                 );
-                this.visibleGroups = this.filterLibGroupsByUsersBranchcode(
+                store.visibleGroups = this.filterLibGroupsByUsersBranchcode(
                     branchcode,
                     groups
                 );
@@ -135,11 +134,11 @@ export const useAcquisitionsStore = defineStore("acquisitions", () => {
                 groups
             );
             const permittedUsers = this.filterUsersByPermissions(
-                this.currentPermission
+                store.currentPermission
             );
             if (!e.length) {
-                this.visibleGroups = libGroups;
-                this.owners = permittedUsers;
+                store.visibleGroups = libGroups;
+                store.owners = permittedUsers;
                 data.owner_id = null;
             } else {
                 const filteredGroups = libGroups.filter(group =>
@@ -147,30 +146,32 @@ export const useAcquisitionsStore = defineStore("acquisitions", () => {
                 );
                 const branchcodes =
                     this._findBranchCodesInGroup(filteredGroups);
-                this.owners = this.filterUsersByPermissions(
-                    this.currentPermission,
+                store.owners = this.filterUsersByPermissions(
+                    store.currentPermission,
                     branchcodes
                 );
             }
         },
         setOwnersBasedOnPermission(permission) {
-            if (this.permittedUsers) {
-                this.owners = this.filterUsersByPermissions(permission);
+            if (store.permittedUsers) {
+                store.owners = this.filterUsersByPermissions(permission);
             }
         },
         resetOwnersAndVisibleGroups(groups) {
-            this.owners = this.filterUsersByPermissions(this.currentPermission);
-            this.visibleGroups = this.filterLibGroupsByUsersBranchcode(
+            store.owners = this.filterUsersByPermissions(
+                store.currentPermission
+            );
+            store.visibleGroups = this.filterLibGroupsByUsersBranchcode(
                 null,
                 groups
             );
         },
         getSetting(input) {
             if (typeof input === "string") {
-                return this.settings[input];
+                return store.settings[input];
             } else {
                 return input.map(setting => {
-                    return this.settings[setting];
+                    return store.settings[setting];
                 });
             }
         },
@@ -182,7 +183,7 @@ export const useAcquisitionsStore = defineStore("acquisitions", () => {
             return settingsObject;
         },
         formatValueWithCurrency(currency, value) {
-            const { symbol } = this.currencies.find(
+            const { symbol } = store.currencies.find(
                 curr => curr.currency === currency
             );
             if (!value) {
@@ -202,7 +203,7 @@ export const useAcquisitionsStore = defineStore("acquisitions", () => {
         getVisibleGroups: computed(() => {
             return store.visibleGroups?.length
                 ? store.visibleGroups
-                : this.filterLibGroupsByUsersBranchcode();
+                : actions.filterLibGroupsByUsersBranchcode();
         }),
         getOwners: computed(() => {
             return store.owners;
