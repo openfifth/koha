@@ -84,18 +84,23 @@
 </template>
 
 <script>
-import { onMounted, ref, watch, inject } from "vue";
+import { onMounted, onUnmounted, ref, watch, inject } from "vue";
 import WidgetPicker from "./WidgetPicker.vue";
 import { $__ } from "@koha-vue/i18n";
 import { VueDraggableNext } from "vue-draggable-next";
+import { getRegisteredWidgets } from "../../modules/widget-registry.ts";
 
 export default {
     props: {
         availableWidgets: Array,
         name: String,
+        module: {
+            type: String,
+            required: true,
+        },
     },
     setup(props) {
-        const availableWidgets = props.availableWidgets;
+        const availableWidgets = [...props.availableWidgets];
         const name = props.name;
         const selectedWidgetsLeft = ref([]);
         const selectedWidgetsRight = ref([]);
@@ -239,9 +244,57 @@ export default {
                         selectedWidgetsRight.value.push(widget);
                     }
                 });
+                // Add any new widgets (e.g. from plugins) not yet in localStorage
+                availableWidgets.forEach(widget => {
+                    if (
+                        !selectedWidgetsLeft.value.includes(widget) &&
+                        !selectedWidgetsRight.value.includes(widget)
+                    ) {
+                        addWidget(widget);
+                    }
+                });
             } else {
                 availableWidgets.forEach(widget => addWidget(widget));
             }
+
+            // Catch up on plugin widgets registered before this component mounted
+            // (plugin module scripts run before the router resolves Home.vue)
+            const pluginWidgets = getRegisteredWidgets(props.module);
+            for (const widget of pluginWidgets) {
+                if (!availableWidgets.some(w => w.name === widget.name)) {
+                    availableWidgets.push(widget);
+                }
+                if (!isWidgetSelected(widget.name)) {
+                    addWidget(widget);
+                }
+            }
+        });
+
+        // Listen for plugin widgets registered after mount
+        function isWidgetSelected(name) {
+            return (
+                selectedWidgetsLeft.value.some(w => w.name === name) ||
+                selectedWidgetsRight.value.some(w => w.name === name)
+            );
+        }
+        function onWidgetRegistered(e) {
+            if (e.detail?.module !== props.module) return;
+            const newWidgets = getRegisteredWidgets(props.module);
+            for (const widget of newWidgets) {
+                if (!availableWidgets.some(w => w.name === widget.name)) {
+                    availableWidgets.push(widget);
+                }
+                if (!isWidgetSelected(widget.name)) {
+                    addWidget(widget);
+                }
+            }
+        }
+        window.addEventListener("koha:widget-registered", onWidgetRegistered);
+        onUnmounted(() => {
+            window.removeEventListener(
+                "koha:widget-registered",
+                onWidgetRegistered
+            );
         });
 
         watch(

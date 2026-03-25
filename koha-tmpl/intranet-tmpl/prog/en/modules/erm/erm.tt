@@ -45,6 +45,9 @@
         const logged_in_user = [% To.json(logged_in_user.unblessed) | $raw %];
     </script>
     [% Asset.js("js/vue/dist/erm.js") | $raw %]
+    [% # Make islands.esm.js discoverable for plugin widget registration %]
+    [% SET islands_src = Asset.js("js/vue/dist/islands.esm.js").match('src="([^"]+)"').0 %]
+    <script src="[% islands_src | $raw %]" type="module" nonce="[% Koha.CSPNonce | $raw %]"></script>
     [% INCLUDE 'select2.inc' %]
     [% SET columns = ['cardnumber','name','category','branch','action'] %]
     [% SET filter = "erm_users" %]

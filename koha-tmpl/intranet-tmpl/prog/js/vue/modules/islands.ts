@@ -5,6 +5,8 @@ import { $__ } from "../i18n";
 import { useMainStore } from "../stores/main";
 import { useNavigationStore } from "../stores/navigation";
 import { useVendorStore } from "../stores/vendors";
+export { registerWidget, getRegisteredWidgets } from "./widget-registry.ts";
+export { useBaseWidget } from "../composables/base-widget";
 
 /**
  * Represents a web component with an import function and optional configuration.
