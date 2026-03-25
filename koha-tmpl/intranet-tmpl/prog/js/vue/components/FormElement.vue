@@ -17,6 +17,8 @@
             :disabled="disabled"
             @update:modelValue="checkForInputErrorAndRunOnChangeHandler()"
             :disabled="disabled"
+            :formatInputValue="attr.formatInputValue"
+            :resource="resource"
         />
     </template>
     <template v-else-if="attr.type == 'text'">

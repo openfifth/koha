@@ -9,11 +9,14 @@
         :disabled="disabled"
         :max="max"
         :min="min"
+        :step="step"
+        @blur="isInputActive = false"
+        @focus="isInputActive = true"
     />
 </template>
 
 <script>
-import { computed } from "vue";
+import { computed, ref } from "vue";
 export default {
     props: {
         id: String,
@@ -24,18 +27,32 @@ export default {
         disabled: Boolean,
         max: Number | null,
         min: Number | null,
+        step: Number | null,
+        formatInputValue: Function,
+        resource: Object,
     },
     emits: ["update:modelValue"],
     setup(props, { emit }) {
+        const isInputActive = ref(false);
         const model = computed({
             get() {
-                return props.modelValue;
+                if (props.formatInputValue == null) {
+                    return props.modelValue;
+                }
+                if (isInputActive.value) {
+                    return props.modelValue;
+                } else {
+                    return props.formatInputValue(
+                        props.modelValue,
+                        props.resource
+                    );
+                }
             },
             set(value) {
                 emit("update:modelValue", value);
             },
         });
-        return { model };
+        return { model, isInputActive };
     },
     name: "InputText",
 };
