@@ -49,6 +49,28 @@ sub new {
     return bless $self, $class;
 }
 
+=head3 _get_fallback_contexts
+
+Generates the fallback context keys for a specific context / delay combination. Allows to resolve effective rule sets.
+
+=cut
+
+sub _get_fallback_contexts {
+    my ( $self, $branchcode, $categorycode, $itemtype, $delay ) = @_;
+
+    # Fallback order for contexts
+    my @keys = (
+        join( "|", $branchcode, $categorycode, $itemtype, $delay ),    # exact match
+        join( "|", $branchcode, $categorycode, "*",       $delay ),    # library + category
+        join( "|", $branchcode, "*",           $itemtype, $delay ),    # library + itemtype
+        join( "|", $branchcode, "*",           "*",       $delay ),    # library only
+        join( "|", "*",         $categorycode, "*",       $delay ),    # category only
+        join( "|", "*",         "*",           $itemtype, $delay ),    # itemtype only
+        join( "|", "*",         "*",           "*",       $delay ),    # default
+    );
+    return \@keys;
+}
+
 =head3 set_raw_overdue_rule_sets
 
 # TODO: refactor, rewrite descr
@@ -99,7 +121,6 @@ sub set_raw_overdue_rule_sets {
         }
     }
 }
-
 
 =head3 get_raw_overdue_rule_sets
 
