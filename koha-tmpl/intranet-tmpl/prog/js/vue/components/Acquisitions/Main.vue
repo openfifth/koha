@@ -67,7 +67,6 @@ export default {
         onBeforeMount(() => {
             loading();
 
-<<<<<<< HEAD
             loadAuthorisedValues(
                 authorisedValues.value,
                 acquisitionsStore
@@ -89,52 +88,6 @@ export default {
                             label: `${Number(gv.option * 100).format_price()}%`,
                             value: gv.option,
                         };
-=======
-            const libraryGroupClient = APIClient.library_groups;
-            libraryGroupClient.libraryGroups.getAll().then(
-                libraryGroups => {
-                    setLibraryGroups(libraryGroups);
-                    loadAuthorisedValues(
-                        authorisedValues.value,
-                        acquisitionsStore
-                    ).then(() => {
-                        const client = APIClient.acquisition;
-                        client.config.get("fund_management").then(result => {
-                            userPermissions.value = result.permissions;
-                            permittedUsers.value = permitted_patrons;
-                            const { permission } = route.meta.self;
-                            const permissionRequired = permission
-                                ? permission
-                                : null;
-                            user.value.loggedInUser = logged_in_user;
-                            user.value.loggedInUser.loggedInBranch =
-                                logged_in_branch.branchcode;
-                            user.value.userflags = userflags;
-                            currencies.value = currencyList;
-                            sysprefs.value = result.sysprefs;
-                            gstValues.value = result.gst_values.map(gv => {
-                                return {
-                                    label: `${Number(gv.option * 100).format_price()}%`,
-                                    value: gv.option,
-                                };
-                            });
-                            const { acquisition, superlibrarian } =
-                                user.value.userflags;
-                            if (!acquisition && !superlibrarian) {
-                                return setError(
-                                    $__(
-                                        "You do not have permission to access this module. Please contact your system administrator."
-                                    ),
-                                    false
-                                );
-                            }
-                            visibleGroups.value =
-                                filterLibGroupsByUsersBranchcode();
-                            userPermitted.value = true;
-                            loaded();
-                            initialized.value = true;
-                        });
->>>>>>> 598c7ca970d (Add sysprefs to the module config endpoint)
                     });
                     const { acquisition, superlibrarian } =
                         user.value.userflags;

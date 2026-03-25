@@ -4,14 +4,13 @@ import { reactive, computed, toRefs } from "vue";
 import { withAuthorisedValueActions } from "../composables/authorisedValues";
 import { permissionsActions } from "../composables/permissions";
 
-
 export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
     const store = reactive({
         user: {
             loggedInUser: null,
             userflags: null,
         },
-        settings: null,
+        sysprefs: null,
         permittedUsers: null,
         libGroupFilter: "",
         navigationBlocked: false,
@@ -31,8 +30,9 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
         ...withAuthorisedValueActions(store),
         ...permissionsActions(store),
         formatValueWithCurrency(value, currency) {
+            const formattedPrice = Number(value).format_price();
             if (!currency) {
-                return "";
+                return formattedPrice;
             }
             const { symbol } = store.currencies.find(
                 curr => curr.currency === currency
@@ -40,7 +40,6 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
             if (!value) {
                 return `${symbol}0`;
             }
-            const formattedPrice = Number(value).format_price();
             if (!formattedPrice) {
                 return `${symbol}0`;
             }
@@ -58,6 +57,25 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
         getActiveCurrency: computed(() => {
             return store.currencies.find(curr => curr.active);
         }),
+        getSystemCurrencyRate(currency) {
+            return store.currencies.find(curr => curr.currency === currency)
+                .rate;
+        },
+        getCurrencyConversionRate(currencyFrom, currencyTo) {
+            if (currencyFrom === currencyTo) return 1.0;
+            const activeCurrency = getters.getActiveCurrency;
+            if (!currencyTo) currencyTo = activeCurrency.currency;
+            if (!currencyFrom) currencyFrom = activeCurrency.currency;
+            if (currencyFrom === activeCurrency.currency)
+                return activeCurrency.rate;
+            if (currencyTo === activeCurrency.currency)
+                return getters.getSystemCurrencyRate(currencyFrom);
+
+            const currencyFromRate =
+                getters.getSystemCurrencyRate(currencyFrom);
+            const currencyToRate = getters.getSystemCurrencyRate(currencyTo);
+            return (currencyToRate * 100) / (currencyFromRate * 100);
+        },
     };
 
     return {

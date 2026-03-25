@@ -5,6 +5,9 @@
             v-model="resource[toggleValue]"
             :size="6"
             @update:modelValue="verifyFieldValue()"
+            :max="toggleValue == percentageField ? 100 : null"
+            :min="toggleValue == percentageField ? 0 : null"
+            :step="0.01"
         />
         <button
             type="button"
@@ -36,32 +39,42 @@ export default {
         resource: Object,
         percentageField: String,
         amountField: String,
+        onChange: Function,
     },
     inheritAttrs: false,
-    setup(props) {
+    setup(props, { emit }) {
         const toggleValue = ref(props.percentageField);
         const fieldError = ref("");
 
         const setToPercentage = () => {
-            toggleValue.value = percentageField;
+            toggleValue.value = props.percentageField;
             props.resource[props.amountField] = undefined;
+            props.resource[props.percentageField] = undefined;
+            emit("toggleChanged", props.resource, toggleValue.value);
         };
 
         const setToAmount = () => {
             toggleValue.value = props.amountField;
             props.resource[props.percentageField] = undefined;
+            props.resource[props.amountField] = undefined;
+            emit("toggleChanged", props.resource, toggleValue.value);
         };
 
         const verifyFieldValue = () => {
             if (toggleValue.value === props.percentageField) {
-                const result = /^[\-]?\d{0,2}(\.\d{0,3})*$/.test(
+                const result = /^[\-]?\d{0,3}(\.\d{0,3})*$/.test(
                     props.resource[props.percentageField]
                 );
                 if (!result) {
                     fieldError.value = $__(
                         "Please enter a decimal number in the format: 0.0"
                     );
+                } else {
+                    fieldError.value = "";
                 }
+            }
+            if (!fieldError.value && props.onChange) {
+                props.onChange(props.resource, toggleValue.value);
             }
             return true;
         };
@@ -76,6 +89,7 @@ export default {
     components: {
         InputNumberElement,
     },
+    emits: ["toggleChanged"],
 };
 </script>
 

@@ -7,6 +7,8 @@
         :required="required"
         :class="classNames"
         :disabled="disabled"
+        :max="max"
+        :min="min"
     />
 </template>
 
@@ -20,6 +22,8 @@ export default {
         required: Boolean,
         classNames: String,
         disabled: Boolean,
+        max: Number | null,
+        min: Number | null,
     },
     emits: ["update:modelValue"],
     setup(props, { emit }) {
