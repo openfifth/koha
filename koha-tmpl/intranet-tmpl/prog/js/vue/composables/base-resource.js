@@ -110,7 +110,8 @@ export function useBaseResource(resourceConfig) {
             )
                 ? resourceConfig.additionalToolbarButtons(
                       resource || {},
-                      componentData
+                      componentData,
+                      router
                   )
                 : additionalToolbarButtons(resource, componentData);
 

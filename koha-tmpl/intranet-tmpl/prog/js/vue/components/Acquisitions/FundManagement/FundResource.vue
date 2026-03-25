@@ -127,12 +127,16 @@ export default {
             resourceName: "fund",
             nameAttr: "name",
             idAttr: "fund_id",
-            showComponent: "FundShow",
-            listComponent: "FundList",
-            addComponent: "FundFormAdd",
-            editComponent: "FundFormAddEdit",
+            components: {
+                show: "FundShow",
+                list: "FundList",
+                add: "FundFormAdd",
+                edit: "FundFormAddEdit",
+            },
             apiClient: APIClient.acquisition.funds,
-            resourceTableUrl: APIClient.acquisition._baseURL + "funds",
+            table: {
+                resourceTableUrl: APIClient.acquisition._baseURL + "funds",
+            },
             i18n: {
                 deleteConfirmationMessage: $__(
                     "Are you sure you want to remove this fund?"
@@ -453,7 +457,7 @@ export default {
             }),
         };
 
-        const onSubmit = (e, fundToSave) => {
+        const onFormSave = (e, fundToSave) => {
             e.preventDefault();
 
             if (!baseResource.isUserPermitted("createFund")) {
@@ -789,7 +793,7 @@ export default {
         return {
             ...baseResource,
             tableOptions,
-            onSubmit,
+            onFormSave,
             afterResourceFetch,
             fundGroupsQuery,
             ledgersQuery,

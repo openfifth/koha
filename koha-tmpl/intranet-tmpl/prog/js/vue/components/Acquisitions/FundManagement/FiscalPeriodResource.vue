@@ -43,12 +43,13 @@ export default {
             resourceName: "fiscal_period",
             nameAttr: "code",
             idAttr: "fiscal_period_id",
-            showComponent: "FiscalPeriodShow",
-            listComponent: "FiscalPeriodList",
-            addComponent: "FiscalPeriodFormAdd",
-            editComponent: "FiscalPeriodFormAddEdit",
+            components: {
+                show: "FiscalPeriodShow",
+                list: "FiscalPeriodList",
+                add: "FiscalPeriodFormAdd",
+                edit: "FiscalPeriodFormAddEdit",
+            },
             apiClient: APIClient.acquisition.fiscalPeriods,
-            resourceTableUrl: APIClient.acquisition._baseURL + "fiscal_periods",
             i18n: {
                 deleteConfirmationMessage: $__(
                     "Are you sure you want to remove this fiscal period?"
@@ -58,6 +59,10 @@ export default {
                 editLabel: $__("Edit fiscal period #%s"),
                 emptyListMessage: $__("There are no fiscal periods defined"),
                 newLabel: $__("New fiscal period"),
+            },
+            table: {
+                resourceTableUrl:
+                    APIClient.acquisition._baseURL + "fiscal_periods",
             },
             moduleStore: "acquisitionsStore",
             props,
@@ -121,7 +126,7 @@ export default {
                     name: "owner_id",
                     type: "component",
                     label: $__("Owner"),
-                    componentPath: "./PatronSearch.vue",
+                    componentPath: "@koha-vue/components/PatronSearch.vue",
                     required: true,
                     componentProps: {
                         name: {
@@ -202,7 +207,7 @@ export default {
             },
         };
 
-        const onSubmit = (e, fiscalPeriodToSave) => {
+        const onFormSave = (e, fiscalPeriodToSave) => {
             e.preventDefault();
 
             if (!baseResource.isUserPermitted("createFiscalPeriods")) {
@@ -254,7 +259,7 @@ export default {
         return {
             ...baseResource,
             tableOptions,
-            onSubmit,
+            onFormSave,
         };
     },
     components: { BaseResource },

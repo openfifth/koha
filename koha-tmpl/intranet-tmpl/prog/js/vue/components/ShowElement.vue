@@ -212,7 +212,6 @@ export default {
             ...baseElement,
             requiredComponent,
             attribute,
-            formatValue,
             radioOptionText,
             tableColumns,
         };

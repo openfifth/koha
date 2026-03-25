@@ -51,12 +51,16 @@ export default {
             resourceName: "ledger",
             nameAttr: "name",
             idAttr: "ledger_id",
-            showComponent: "LedgerShow",
-            listComponent: "LedgerList",
-            addComponent: "LedgerFormAdd",
-            editComponent: "LedgerFormAddEdit",
+            components: {
+                show: "LedgerShow",
+                list: "LedgerList",
+                add: "LedgerFormAdd",
+                edit: "LedgerFormAddEdit",
+            },
             apiClient: APIClient.acquisition.ledgers,
-            resourceTableUrl: APIClient.acquisition._baseURL + "ledgers",
+            table: {
+                resourceTableUrl: APIClient.acquisition._baseURL + "ledgers",
+            },
             i18n: {
                 deleteConfirmationMessage: $__(
                     "Are you sure you want to remove this ledger?"
@@ -152,7 +156,7 @@ export default {
                     name: "owner_id",
                     type: "component",
                     label: $__("Owner"),
-                    componentPath: "./PatronSearch.vue",
+                    componentPath: "@koha-vue/components/PatronSearch.vue",
                     required: true,
                     componentProps: {
                         name: {
@@ -303,7 +307,7 @@ export default {
             }),
         };
 
-        const onSubmit = (e, ledgerToSave) => {
+        const onFormSave = (e, ledgerToSave) => {
             e.preventDefault();
 
             if (!baseResource.isUserPermitted("createLedger")) {
@@ -366,7 +370,7 @@ export default {
         return {
             ...baseResource,
             tableOptions,
-            onSubmit,
+            onFormSave,
             afterResourceFetch,
             afterNewResourceCreate,
         };

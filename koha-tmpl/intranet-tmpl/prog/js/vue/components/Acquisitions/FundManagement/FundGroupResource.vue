@@ -27,12 +27,17 @@ export default {
             resourceName: "fund_group",
             nameAttr: "name",
             idAttr: "fund_group_id",
-            showComponent: "FundGroupShow",
-            listComponent: "FundGroupList",
-            addComponent: "FundGroupFormAdd",
-            editComponent: "FundGroupFormAddEdit",
+            components: {
+                show: "FundGroupShow",
+                list: "FundGroupList",
+                add: "FundGroupFormAdd",
+                edit: "FundGroupFormAddEdit",
+            },
             apiClient: APIClient.acquisition.fundGroups,
-            resourceTableUrl: APIClient.acquisition._baseURL + "fund_groups",
+            table: {
+                resourceTableUrl:
+                    APIClient.acquisition._baseURL + "fund_groups",
+            },
             i18n: {
                 deleteConfirmationMessage: $__(
                     "Are you sure you want to remove this fund group?"
@@ -88,7 +93,7 @@ export default {
             },
         };
 
-        const onSubmit = (e, fundGroupToSave) => {
+        const onFormSave = (e, fundGroupToSave) => {
             e.preventDefault();
 
             if (!baseResource.isUserPermitted("createFundGroups")) {
@@ -132,7 +137,7 @@ export default {
         return {
             ...baseResource,
             tableOptions,
-            onSubmit,
+            onFormSave,
         };
     },
     components: { BaseResource },
