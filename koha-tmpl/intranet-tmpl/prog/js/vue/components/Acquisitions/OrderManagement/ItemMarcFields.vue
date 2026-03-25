@@ -8,7 +8,10 @@
                         v-for="(attr, index) in frameworkFields"
                         v-bind:key="index"
                     >
-                        <div class="subfield_line">
+                        <div
+                            class="subfield_line"
+                            :id="`subfield${attr.subfield}`"
+                        >
                             <FormElement
                                 :resource="fieldValues"
                                 :attr="attr"
@@ -29,7 +32,6 @@
                 </ol>
             </div>
         </fieldset>
-        <button-submit />
     </form>
 </template>
 
@@ -37,7 +39,6 @@
 import { onBeforeMount, ref } from "vue";
 import { APIClient } from "../../../fetch/api-client.js";
 import FormElement from "../../FormElement.vue";
-import ButtonSubmit from "../../ButtonSubmit.vue";
 export default {
     props: {
         orderNumber: String,
@@ -73,6 +74,7 @@ export default {
                     required: field.mandatory,
                     type,
                     placeholder: "",
+                    subfield: field.subfield,
                     ...(type === "select" && {
                         options: buildOptionsArray(field.marc_value),
                         selectLabel: "label",
@@ -84,7 +86,7 @@ export default {
                         dataPlugin: field.marc_value
                             .split('data-plugin="')[1]
                             .split('"')[0],
-                        class: "input_marceditor framework_plugin",
+                        class: "input_marceditor framework_plugin noEnterSubmit",
                     }),
                     id: field.id,
                 };
@@ -171,22 +173,14 @@ export default {
                 );
         });
 
-        const onSubmit = e => {
-            e.preventDefault();
-            // console.log(e)
-            // console.log(fieldValues.value)
-        };
-
         return {
             frameworkFields,
             initialized,
-            onSubmit,
             fieldValues,
         };
     },
     components: {
         FormElement,
-        ButtonSubmit,
     },
 };
 </script>

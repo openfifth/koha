@@ -50,7 +50,7 @@ my $builder = sub {
                 overwriteMode: 'replace',
             });
 
-            new Maskito( instance.altInput, options );
+            new Maskito( instance.altInput || instance.input, options );
         },
         onOpen: function(selectedDates, dateStr, instance) {
             if (dateStr == '') {

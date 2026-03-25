@@ -12,6 +12,7 @@ import { useBaseResource } from "../../../composables/base-resource";
 import { $__ } from "@koha-vue/i18n";
 import { inject } from "vue";
 import { storeToRefs } from "pinia";
+import { useRoute } from "vue-router";
 
 export default {
     props: {
@@ -27,6 +28,9 @@ export default {
             getActiveCurrency,
             formatValueWithCurrency,
         } = acquisitionsStore;
+
+        const route = useRoute();
+        const queryParams = route.query;
 
         const baseResource = useBaseResource({
             resourceName: "orderline",
@@ -115,6 +119,63 @@ export default {
                         { description: $__("Cataloging"), value: "cataloging" },
                     ],
                     defaultValue: sysprefs.value.acq_create_items,
+                    hideIn: ["List"],
+                },
+                {
+                    name: "biblio",
+                    group: $__("Catalog details"),
+                    type: "component",
+                    componentPath:
+                        "./Acquisitions/OrderManagement/BiblioMarcFields.vue",
+                    componentProps: {
+                        resource: {
+                            type: "resource",
+                            value: null,
+                        },
+                        unimarc: {
+                            type: "boolean",
+                            value: sysprefs.value.marc_flavour === "UNIMARC",
+                        },
+                        useAcqFramework: {
+                            type: "boolean",
+                            value:
+                                sysprefs.value
+                                    .use_acq_framework_for_biblio_records ===
+                                "0"
+                                    ? false
+                                    : true,
+                        },
+                        biblionumber: {
+                            type: "string",
+                            value: queryParams.biblionumber,
+                        },
+                    },
+                    hideIn: ["List"],
+                },
+                {
+                    name: "items",
+                    group: $__("Catalog details"),
+                    type: "component",
+                    componentPath:
+                        "./Acquisitions/OrderManagement/ItemMarcFields.vue",
+                    componentProps: {
+                        resource: {
+                            type: "resource",
+                            value: null,
+                        },
+                        biblionumber: {
+                            type: "string",
+                            value: queryParams.biblionumber,
+                        },
+                        ordernumber: {
+                            type: "string",
+                            value: queryParams.ordernumber,
+                        },
+                        frameworkCode: {
+                            type: "string",
+                            value: "ACQ",
+                        },
+                    },
                     hideIn: ["List"],
                 },
                 {
