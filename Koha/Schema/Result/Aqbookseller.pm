@@ -210,6 +210,14 @@ the payment method for the vendor
 
 the language for the vendor
 
+=head2 lib_group_visibility
+
+  data_type: 'varchar'
+  is_nullable: 1
+  size: 255
+
+the language for the vendor
+
 =cut
 
 __PACKAGE__->add_columns(
@@ -278,6 +286,36 @@ __PACKAGE__->add_columns(
 __PACKAGE__->set_primary_key("id");
 
 =head1 RELATIONS
+
+=head2 acq_orderlines
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::AcqOrderline>
+
+=cut
+
+__PACKAGE__->has_many(
+  "acq_orderlines",
+  "Koha::Schema::Result::AcqOrderline",
+  { "foreign.vendor_id" => "self.id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+=head2 acq_purchase_orders
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::AcqPurchaseOrder>
+
+=cut
+
+__PACKAGE__->has_many(
+  "acq_purchase_orders",
+  "Koha::Schema::Result::AcqPurchaseOrder",
+  { "foreign.vendor_id" => "self.id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
 
 =head2 aqbasketgroups
 

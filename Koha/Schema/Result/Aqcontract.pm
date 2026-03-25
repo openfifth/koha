@@ -89,6 +89,21 @@ __PACKAGE__->set_primary_key("contractnumber");
 
 =head1 RELATIONS
 
+=head2 acq_purchase_orders
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::AcqPurchaseOrder>
+
+=cut
+
+__PACKAGE__->has_many(
+  "acq_purchase_orders",
+  "Koha::Schema::Result::AcqPurchaseOrder",
+  { "foreign.contract_id" => "self.contractnumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 aqbaskets
 
 Type: has_many
@@ -120,8 +135,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07042 @ 2018-02-16 17:54:53
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:ar69aHSxYQohZDQ+GtIIqA
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-08-18 10:28:31
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:J4jHVULhGGDDJSNB/k2EwQ
 
 
 # You can replace this text with custom content, and it will be preserved on regeneration

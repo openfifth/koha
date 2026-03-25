@@ -205,6 +205,21 @@ __PACKAGE__->set_primary_key("biblionumber");
 
 =head1 RELATIONS
 
+=head2 acq_orderlines
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::AcqOrderline>
+
+=cut
+
+__PACKAGE__->has_many(
+  "acq_orderlines",
+  "Koha::Schema::Result::AcqOrderline",
+  { "foreign.deleted_biblionumber" => "self.biblionumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 deletedbiblio_metadatas
 
 Type: has_many

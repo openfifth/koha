@@ -320,6 +320,51 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 acq_orderlines
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::AcqOrderline>
+
+=cut
+
+__PACKAGE__->has_many(
+  "acq_orderlines",
+  "Koha::Schema::Result::AcqOrderline",
+  { "foreign.managing_branch" => "self.branchcode" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+=head2 acq_purchase_orders_billing_branches
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::AcqPurchaseOrder>
+
+=cut
+
+__PACKAGE__->has_many(
+  "acq_purchase_orders_billing_branches",
+  "Koha::Schema::Result::AcqPurchaseOrder",
+  { "foreign.billing_branch" => "self.branchcode" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+=head2 acq_purchase_orders_delivery_branches
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::AcqPurchaseOrder>
+
+=cut
+
+__PACKAGE__->has_many(
+  "acq_purchase_orders_delivery_branches",
+  "Koha::Schema::Result::AcqPurchaseOrder",
+  { "foreign.delivery_branch" => "self.branchcode" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 additional_contents
 
 Type: has_many
@@ -1071,8 +1116,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2024-05-03 13:13:25
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:HiH1QNlDqKcq9GeM85Pu0A
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-08-18 10:28:31
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:Lvhn59IfA6ew3QvRihcczA
 
 __PACKAGE__->has_many(
     "additional_field_values",

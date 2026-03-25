@@ -941,6 +941,21 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 acq_orderlines
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::AcqOrderline>
+
+=cut
+
+__PACKAGE__->has_many(
+  "acq_orderlines",
+  "Koha::Schema::Result::AcqOrderline",
+  { "foreign.created_by" => "self.borrowernumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 additional_contents
 
 Type: has_many

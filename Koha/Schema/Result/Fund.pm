@@ -286,6 +286,21 @@ __PACKAGE__->set_primary_key("fund_id");
 
 =head1 RELATIONS
 
+=head2 acq_orderline_fund_distributions
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::AcqOrderlineFundDistribution>
+
+=cut
+
+__PACKAGE__->has_many(
+  "acq_orderline_fund_distributions",
+  "Koha::Schema::Result::AcqOrderlineFundDistribution",
+  { "foreign.fund_id" => "self.fund_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 fiscal_period
 
 Type: belongs_to
@@ -402,8 +417,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-08-05 12:15:32
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:dArdCf+NzwH49PgPPzN1Og
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-08-18 10:28:31
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:KzhdHuZwtl8QIu31boXUBg
 
 __PACKAGE__->add_columns(
     '+status' => { is_boolean => 1 },

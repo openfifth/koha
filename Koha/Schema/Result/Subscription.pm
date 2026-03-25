@@ -460,6 +460,21 @@ __PACKAGE__->set_primary_key("subscriptionid");
 
 =head1 RELATIONS
 
+=head2 acq_orderlines
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::AcqOrderline>
+
+=cut
+
+__PACKAGE__->has_many(
+  "acq_orderlines",
+  "Koha::Schema::Result::AcqOrderline",
+  { "foreign.subscriptionid" => "self.subscriptionid" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 aqbooksellerid
 
 Type: belongs_to
