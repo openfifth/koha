@@ -76,6 +76,11 @@ export default {
                 newLabel: $__("New orderline"),
             },
             formGroupsDisplayMode: "accordion",
+            showGroupsDisplayMode: "splitScreen",
+            splitScreenGroupings: [
+                { name: "Order information", pane: 1 },
+                { name: "General information", pane: 2 },
+            ],
             extendedAttributesResourceType: "orderline",
             props,
             moduleStore: "acquisitionsStore",

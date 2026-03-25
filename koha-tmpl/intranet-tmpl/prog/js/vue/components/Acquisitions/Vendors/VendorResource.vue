@@ -377,7 +377,7 @@ export default {
                         type: "component",
                         hidden: vendor => !!vendor.interfaces?.length,
                         componentPath:
-                            "@koha-vue/components/Vendors/VendorInterfaces.vue",
+                            "@koha-vue/components/Acquisitions/Vendors/VendorInterfaces.vue",
                         componentProps: {
                             vendor: {
                                 type: "resource",

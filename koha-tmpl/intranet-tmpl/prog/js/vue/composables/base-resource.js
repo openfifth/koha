@@ -495,9 +495,6 @@ export function useBaseResource(resourceConfig) {
                     );
                 if (splitScreenGrouping) {
                     groupInfo.splitPane = splitScreenGrouping.pane;
-                } else {
-                    // Default to first pane
-                    groupInfo.splitPane = 1;
                 }
             }
             if (component === "Show" && resource) {
