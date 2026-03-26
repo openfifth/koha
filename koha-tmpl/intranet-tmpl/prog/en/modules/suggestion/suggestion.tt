@@ -258,11 +258,7 @@
                                     [% END %]
                                 </td>
                             </tr>
-                            [%
-                                PROCESS select_manager_show
-                                manager => suggestion.manager
-                                display => "table"
-                            %]
+                            [% PROCESS select_manager_show manager => suggestion.manager, display => "table" %]
                             <tr>
                                 <th>Accepted on:</th>
                                 <td>[% suggestion.accepteddate | $KohaDates %]</td>
@@ -599,12 +595,7 @@
                                     <label for="managedon">Managed on:</label>
                                     <input type="text" id="managedon" name="manageddate" class="flatpickr" size="10" maxlength="10" value="[% default_manageddate | html %]" />[% INCLUDE 'date-format.inc' %]
                                 </li>
-                                [%
-                                    PROCESS select_manager_form
-                                    manager => suggestion.manager
-                                    notify_option => 1
-                                    required_permission => CAN_user_suggestions_suggestions_manage
-                                %]
+                                [% PROCESS select_manager_form manager => suggestion.manager, notify_option => 1, required_permission => CAN_user_suggestions_suggestions_manage %]
                             </ol>
                         </fieldset>
 
@@ -885,12 +876,7 @@
                                                             [% id_val = "set_manager_" _ suggestion.suggestiontype %]
                                                             [% data_tab_val = suggestion.suggestiontype %]
 
-                                                            [%
-                                                                PROCESS select_manager_button
-                                                                href = hash_href_val
-                                                                id = id_val
-                                                                data_tab = data_tab_val
-                                                            %]
+                                                            [% PROCESS select_manager_button href = hash_href_val, id = id_val, data_tab = data_tab_val %]
                                                             <span id="managedby_name-[% suggestion.suggestiontype | html %]"></span>
                                                         </fieldset>
                                                         <fieldset class="action">
@@ -1220,10 +1206,7 @@
 
 [% MACRO jsinclude BLOCK %]
     [% INCLUDE 'calendar.inc' %]
-    [%
-        INCLUDE 'select_manager.inc'
-        manager => suggestion.manager
-    %]
+    [% INCLUDE 'select_manager.inc' manager => suggestion.manager %]
     <script nonce="[% Koha.CSPNonce | $raw %]">
         function select_suggester(borrowernumber, borrower) {
             $.ajax({
