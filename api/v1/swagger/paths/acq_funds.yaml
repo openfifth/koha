@@ -143,6 +143,7 @@
           - allocations
           - owner
           - managing_library
+          - managing_library.acquisitions_library_groups
           - fund_group
           - sub_funds
           - parent_fund

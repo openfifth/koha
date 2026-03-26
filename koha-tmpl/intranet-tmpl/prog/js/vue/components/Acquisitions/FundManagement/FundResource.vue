@@ -387,6 +387,36 @@ export default {
                     },
                     hideIn: ["List"],
                 },
+                {
+                    name: "fund_permission",
+                    type: "select",
+                    label: $__("Restrict access to"),
+                    group: $__("Management in library"),
+                    selectLabel: "description",
+                    requiredKey: "value",
+                    options: [
+                        { description: $__("Owner only"), value: 1 },
+                        { description: $__("Owner and users"), value: 2 },
+                        {
+                            description: $__(
+                                "Owner, users and managing library"
+                            ),
+                            value: 3,
+                        },
+                        {
+                            description: $__(
+                                "Owner, users, managing library and library group"
+                            ),
+                            value: 4,
+                        },
+                    ],
+                    toolTip: $__(
+                        "Please note: These restrictions will override your library group configuration!"
+                    ),
+                    format: (val, resource, attr) =>
+                        attr.options.find(op => op.value === val).description,
+                    hideIn: ["List"],
+                },
             ],
         });
 
@@ -500,7 +530,7 @@ export default {
                 resource.fiscal_period.name;
             componentData.resource.value.ledger_name = resource.ledger.name;
             componentData.resource.value.fund_parent_name =
-                resource.parent_fund.name;
+                resource.parent_fund?.name;
             componentData.resource.value.currency = resource.ledger.currency;
         };
 
@@ -800,7 +830,7 @@ export default {
                     const acqLibGroups =
                         resultLedger.managing_library
                             ?.acquisitions_library_groups;
-                    resource.parent_fund_name = isSubFund.value
+                    resource.fund_parent_name = isSubFund.value
                         ? result.name
                         : null;
                     if (acqLibGroups.length) {
