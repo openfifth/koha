@@ -326,8 +326,8 @@ export default {
                                                   },
                                               },
                                               {
-                                                  title: __("Name"),
-                                                  data: "name",
+                                                  title: __("Description"),
+                                                  data: "description",
                                                   searchable: true,
                                                   orderable: true,
                                               },

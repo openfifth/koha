@@ -480,8 +480,8 @@ export default {
                                                   },
                                               },
                                               {
-                                                  title: __("Name"),
-                                                  data: "name",
+                                                  title: __("Code"),
+                                                  data: "code",
                                                   searchable: true,
                                                   orderable: true,
                                               },
@@ -499,23 +499,6 @@ export default {
                                                       return row.status
                                                           ? __("Active")
                                                           : __("Inactive");
-                                                  },
-                                              },
-                                              {
-                                                  title: __("Fund value"),
-                                                  data: "fund_value",
-                                                  searchable: true,
-                                                  orderable: true,
-                                                  render: function (
-                                                      data,
-                                                      type,
-                                                      row,
-                                                      meta
-                                                  ) {
-                                                      return formatValueWithCurrency(
-                                                          row.fund_value,
-                                                          row.currency
-                                                      );
                                                   },
                                               },
                                           ],
