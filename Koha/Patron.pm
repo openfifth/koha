@@ -3945,6 +3945,13 @@ sub _unblessed_for_log {
     my %data = map { $_ => $self->get_column($_) } $self->{_result}->result_source->columns;
     delete @data{qw(password lastseen updated_on)};
     for my $key ( keys %data ) {
+
+        # Koha::Object::AUTOLOAD calls set_column directly (bypassing DBIC deflation),
+        # so date/datetime columns set via Koha accessors may hold DateTime objects
+        # in _column_data. Stringify them so encode_json doesn't choke.
+        if ( ref $data{$key} && $data{$key}->isa('DateTime') ) {
+            $data{$key} = "$data{$key}";
+        }
         delete $data{$key} unless defined $data{$key} && $data{$key} ne '';
     }
     return \%data;
