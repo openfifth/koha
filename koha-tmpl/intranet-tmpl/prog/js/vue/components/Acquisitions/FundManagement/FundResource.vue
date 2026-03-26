@@ -30,30 +30,6 @@ export default {
         const { formatValueWithCurrency, getBranchnamesFromGroups } =
             acquisitionsStore;
 
-        const fundGroupsQuery = ref({});
-        const getFundGroupsQuery = computed(() => fundGroupsQuery.value);
-
-        const filterLibGroupsAndFundGroupsBySelectedLedger = (
-            e,
-            options,
-            resource
-        ) => {
-            if (!e && resource.ledger_id) {
-                fundGroupsQuery.value = {
-                    currency: resource.currency,
-                };
-                return;
-            }
-            const selectedLedger = options.find(
-                ledger => ledger.ledger_id === e
-            );
-            if (selectedLedger) {
-                fundGroupsQuery.value = {
-                    currency: selectedLedger.currency,
-                };
-            }
-        };
-
         const defaultToolbarButtons = (defaultButtons, resource, router) => {
             return {
                 list: defaultButtons.list,
@@ -233,34 +209,6 @@ export default {
                     label: $__("Description"),
                     group: $__("Information and status"),
                 },
-                ...(!isSubFund.value
-                    ? [
-                          {
-                              name: "fund_group_id",
-                              type: "relationshipSelect",
-                              label: $__("Fund group"),
-                              group: $__("Information and status"),
-                              relationshipAPIClient:
-                                  APIClient.acquisition.fundGroups,
-                              relationshipOptionLabelAttr: "name",
-                              relationshipRequiredKey: "fund_group_id",
-                              onSelected:
-                                  filterLibGroupsAndFundGroupsBySelectedLedger,
-                              query: getFundGroupsQuery,
-                              showElement: {
-                                  type: "text",
-                                  value: "fund_group.name",
-                                  link: {
-                                      name: "FundGroupShow",
-                                      params: {
-                                          fund_group_id: "fund_group_id",
-                                      },
-                                  },
-                              },
-                              hideIn: ["List"],
-                          },
-                      ]
-                    : []),
                 {
                     name: "external_id",
                     type: "text",
@@ -514,7 +462,6 @@ export default {
             delete fund.owner;
             delete fund.allocations;
             delete fund.ledger;
-            delete fund.fund_group;
             delete fund.fiscal_period;
             delete fund.sub_funds;
             delete fund.managing_library;
@@ -555,13 +502,6 @@ export default {
             componentData.resource.value.fund_parent_name =
                 resource.parent_fund.name;
             componentData.resource.value.currency = resource.ledger.currency;
-            if (caller === "form") {
-                filterLibGroupsAndFundGroupsBySelectedLedger(
-                    null,
-                    null,
-                    componentData.resource.value
-                );
-            }
         };
 
         const appendToShow = componentData => {
@@ -898,7 +838,6 @@ export default {
             tableOptions,
             onFormSave,
             afterResourceFetch,
-            fundGroupsQuery,
             isSubFund,
             appendToShow,
             afterNewResourceCreate,
