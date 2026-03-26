@@ -42,7 +42,7 @@ sub store {
 
     $self->SUPER::store;
 
-    $self->cascade_to_funds unless $args->{no_cascade};
+    # $self->cascade_to_funds unless $args->{no_cascade};
 
     return $self;
 }
@@ -66,7 +66,7 @@ sub cascade_to_funds {
                 child         => $fund
             }
         );
-        my @data_to_cascade = ( 'fiscal_period_id', 'currency', 'owner_id' );
+        my @data_to_cascade = ( 'fiscal_period_id', 'owner_id' );
         my $data_updated    = $self->cascade_data(
             {
                 parent     => $self,
