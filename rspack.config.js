@@ -3,39 +3,97 @@ const { VueLoaderPlugin } = require("vue-loader");
 const path = require("path");
 const rspack = require("@rspack/core");
 
-const islandsExport = application => {
-    const vueDir =
-        application === "intranet"
-            ? "intranet-tmpl/prog"
-            : "opac-tmpl/bootstrap";
+const vueDistPath = path.resolve(
+    __dirname,
+    "koha-tmpl/intranet-tmpl/prog/js/vue/dist/"
+);
 
-    return {
-        resolve: {
-            alias: {
-                "@fetch": path.resolve(
-                    __dirname,
-                    "koha-tmpl/intranet-tmpl/prog/js/fetch"
-                ),
-                "@koha-vue": path.resolve(
-                    __dirname,
-                    "koha-tmpl/intranet-tmpl/prog/js/vue"
-                ),
-            },
+const opacVueDistPath = path.resolve(
+    __dirname,
+    "koha-tmpl/opac-tmpl/bootstrap/js/vue/dist/"
+);
+
+const commonResolve = {
+    alias: {
+        "@fetch": path.resolve(
+            __dirname,
+            "koha-tmpl/intranet-tmpl/prog/js/fetch"
+        ),
+        "@koha-vue": path.resolve(
+            __dirname,
+            "koha-tmpl/intranet-tmpl/prog/js/vue"
+        ),
+        "@cypress": path.resolve(__dirname, "t/cypress"),
+    },
+};
+
+const commonModuleRules = [
+    {
+        test: /\.vue$/,
+        loader: "vue-loader",
+        options: {
+            experimentalInlineMatchResource: true,
         },
+    },
+    {
+        test: /\.ts$/,
+        loader: "builtin:swc-loader",
+        options: {
+            jsc: {
+                parser: {
+                    syntax: "typescript",
+                },
+            },
+            appendTsSuffixTo: [/\.vue$/],
+        },
+        exclude: [/node_modules/, path.resolve(__dirname, "t/cypress/")],
+        type: "javascript/auto",
+    },
+    {
+        test: /\.css$/i,
+        type: "javascript/auto",
+        use: ["style-loader", "css-loader"],
+    },
+];
+
+const vueFeatureFlags = new rspack.DefinePlugin({
+    __VUE_OPTIONS_API__: true,
+    __VUE_PROD_DEVTOOLS__: false,
+    __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: false,
+});
+
+const commonPlugins = [new VueLoaderPlugin(), vueFeatureFlags];
+
+// Externals for ESM output — resolved via the import map in doc-head-close.inc.
+// NOTE: The import map keys ("jQuery", "DataTable") are the external *values*,
+// not the npm package names. rspack emits `import ... from "<value>"` in ESM
+// mode. If these values change, the import map must be updated to match.
+const esmExternals = {
+    jquery: "jQuery",
+    vue: "vue",
+    "datatables.net": "DataTable",
+    "datatables.net-buttons": "DataTable",
+    "datatables.net-buttons/js/buttons.html5": "DataTable",
+    "datatables.net-buttons/js/buttons.print": "DataTable",
+    "datatables.net-buttons/js/buttons.colVis": "DataTable",
+};
+
+module.exports = [
+    // Vue runtime ESM — bundles Vue with feature flags applied by DefinePlugin.
+    // The import map resolves "vue" to this file so all other ESM bundles
+    // share the same Vue instance with correct Options API / devtools settings.
+    {
         experiments: {
             outputModule: true,
         },
         entry: {
-            islands: [
-                "./koha-tmpl/intranet-tmpl/prog/js/vue/csp-nonce.js",
-                "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/islands.ts",
+            vue: [
+                "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/vue-runtime.ts",
             ],
         },
         output: {
             filename: "[name].esm.js",
-            path: path.resolve(__dirname, `koha-tmpl/${vueDir}/js/vue/dist/`),
-            chunkFilename: "[name].[contenthash].esm.js",
-            globalObject: "window",
+            path: vueDistPath,
             library: {
                 type: "module",
             },
@@ -43,71 +101,29 @@ const islandsExport = application => {
         module: {
             rules: [
                 {
-                    test: /\.vue$/,
-                    loader: "vue-loader",
-                    options: {
-                        experimentalInlineMatchResource: true,
-                    },
-                    exclude: [path.resolve(__dirname, "t/cypress/")],
-                },
-                {
                     test: /\.ts$/,
                     loader: "builtin:swc-loader",
                     options: {
                         jsc: {
-                            parser: {
-                                syntax: "typescript",
-                            },
+                            parser: { syntax: "typescript" },
                         },
-                        appendTsSuffixTo: [/\.vue$/],
                     },
-                    exclude: [
-                        /node_modules/,
-                        path.resolve(__dirname, "t/cypress/"),
-                    ],
                     type: "javascript/auto",
-                },
-                {
-                    test: /\.css$/i,
-                    type: "javascript/auto",
-                    use: ["style-loader", "css-loader"],
                 },
             ],
         },
-        plugins: [
-            new VueLoaderPlugin(),
-            new rspack.DefinePlugin({
-                __VUE_OPTIONS_API__: true,
-                __VUE_PROD_DEVTOOLS__: false,
-                __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: false,
-            }),
-        ],
-        externals: {
-            jquery: "jQuery",
-            "datatables.net": "DataTable",
-            "datatables.net-buttons": "DataTable",
-            "datatables.net-buttons/js/buttons.html5": "DataTable",
-            "datatables.net-buttons/js/buttons.print": "DataTable",
-            "datatables.net-buttons/js/buttons.colVis": "DataTable",
-        },
-    };
-};
+        plugins: [vueFeatureFlags],
+        // No vue external here — this IS the Vue bundle.
+    },
 
-module.exports = [
+    // ESM bundles — all share the single Vue instance via import map.
+    // Vue is externalized and resolved to vue.esm.js by the browser.
     {
-        resolve: {
-            alias: {
-                "@fetch": path.resolve(
-                    __dirname,
-                    "koha-tmpl/intranet-tmpl/prog/js/fetch"
-                ),
-                "@koha-vue": path.resolve(
-                    __dirname,
-                    "koha-tmpl/intranet-tmpl/prog/js/vue"
-                ),
-                "@cypress": path.resolve(__dirname, "t/cypress"),
-            },
+        resolve: commonResolve,
+        experiments: {
+            outputModule: true,
         },
+        externalsType: "module-import",
         entry: {
             erm: [
                 "./koha-tmpl/intranet-tmpl/prog/js/vue/csp-nonce.js",
@@ -139,67 +155,48 @@ module.exports = [
             ],
         },
         output: {
-            filename: "[name].js",
-            path: path.resolve(
-                __dirname,
-                "koha-tmpl/intranet-tmpl/prog/js/vue/dist/"
-            ),
-            chunkFilename: "[name].[contenthash].js",
+            filename: "[name].esm.js",
+            path: vueDistPath,
+            chunkFilename: "[name].[contenthash].esm.js",
             globalObject: "window",
+            library: {
+                type: "module",
+            },
         },
-        module: {
-            rules: [
-                {
-                    test: /\.vue$/,
-                    loader: "vue-loader",
-                    options: {
-                        experimentalInlineMatchResource: true,
-                    },
-                    //exclude: [path.resolve(__dirname, "t/cypress/")],
-                },
-                {
-                    test: /\.ts$/,
-                    loader: "builtin:swc-loader",
-                    options: {
-                        jsc: {
-                            parser: {
-                                syntax: "typescript",
-                            },
-                        },
-                        appendTsSuffixTo: [/\.vue$/],
-                    },
-                    exclude: [
-                        /node_modules/,
-                        path.resolve(__dirname, "t/cypress/"),
-                    ],
-                    type: "javascript/auto",
-                },
-                {
-                    test: /\.css$/i,
-                    type: "javascript/auto",
-                    use: ["style-loader", "css-loader"],
-                },
+        module: { rules: commonModuleRules },
+        plugins: commonPlugins,
+        externals: esmExternals,
+    },
+
+    // OPAC islands ESM — same source as the intranet islands entry, emitted
+    // into the OPAC dist directory so opac-bootstrap templates can load it.
+    {
+        resolve: commonResolve,
+        experiments: {
+            outputModule: true,
+        },
+        externalsType: "module-import",
+        entry: {
+            islands: [
+                "./koha-tmpl/intranet-tmpl/prog/js/vue/csp-nonce.js",
+                "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/islands.ts",
             ],
         },
-        plugins: [
-            new VueLoaderPlugin(),
-            new rspack.DefinePlugin({
-                __VUE_OPTIONS_API__: true,
-                __VUE_PROD_DEVTOOLS__: false,
-                __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: false,
-            }),
-        ],
-        externals: {
-            jquery: "jQuery",
-            "datatables.net": "DataTable",
-            "datatables.net-buttons": "DataTable",
-            "datatables.net-buttons/js/buttons.html5": "DataTable",
-            "datatables.net-buttons/js/buttons.print": "DataTable",
-            "datatables.net-buttons/js/buttons.colVis": "DataTable",
+        output: {
+            filename: "[name].esm.js",
+            path: opacVueDistPath,
+            chunkFilename: "[name].[contenthash].esm.js",
+            globalObject: "window",
+            library: {
+                type: "module",
+            },
         },
+        module: { rules: commonModuleRules },
+        plugins: commonPlugins,
+        externals: esmExternals,
     },
-    islandsExport("intranet"),
-    islandsExport("opac"),
+
+    // Cypress API client — CJS for Node.js test runner
     {
         entry: {
             "api-client.cjs": [

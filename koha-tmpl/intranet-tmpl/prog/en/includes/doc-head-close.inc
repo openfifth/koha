@@ -11,6 +11,18 @@
 <script nonce="[% Koha.CSPNonce | $raw %]">
     window.__CSP_NONCE__ = "[% Koha.CSPNonce | $raw %]";
 </script>
+[%- SET vue_esm_src = Asset.js("js/vue/dist/vue.esm.js").match('src="([^"]+)"').0 -%]
+[%- SET jquery_shim_src = Asset.js("js/shims/jquery.esm.js").match('src="([^"]+)"').0 -%]
+[%- SET dt_shim_src = Asset.js("js/shims/datatables.esm.js").match('src="([^"]+)"').0 -%]
+<script type="importmap" nonce="[% Koha.CSPNonce | $raw %]">
+    {
+        "imports": {
+            "vue": "[% vue_esm_src | $raw %]",
+            "jQuery": "[% jquery_shim_src | $raw %]",
+            "DataTable": "[% dt_shim_src | $raw %]"
+        }
+    }
+</script>
 [%# Prevent XFS attacks -%]
 [% UNLESS popup %]
     <style nonce="[% Koha.CSPNonce | $raw %]" id="antiClickjack">
