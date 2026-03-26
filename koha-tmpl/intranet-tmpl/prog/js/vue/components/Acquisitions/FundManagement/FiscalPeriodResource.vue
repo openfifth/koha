@@ -128,6 +128,8 @@ export default {
                         { description: $__("Active"), value: true },
                         { description: $__("Inactive"), value: false },
                     ],
+                    format: (val, resource, attr) =>
+                        attr.options.find(op => op.value === val).description,
                     required: true,
                 },
                 {
