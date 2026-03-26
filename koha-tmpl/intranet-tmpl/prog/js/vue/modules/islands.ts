@@ -7,6 +7,40 @@ import { useNavigationStore } from "../stores/navigation";
 import { useVendorStore } from "../stores/vendors";
 export { registerWidget, getRegisteredWidgets } from "./widget-registry.ts";
 export { useBaseWidget } from "../composables/base-widget";
+export { default as WidgetWrapper } from "../components/ModuleDashboard/WidgetWrapper.vue";
+
+// Re-export Vue APIs for plugin use. With Vue externalized, `export * from "vue"`
+// doesn't work (rspack can't statically resolve external exports), so we
+// explicitly re-export the APIs plugins need. Plugins can also import directly
+// from "vue" via the import map.
+export {
+    h,
+    ref,
+    reactive,
+    computed,
+    watch,
+    watchEffect,
+    provide,
+    inject,
+    onMounted,
+    onUnmounted,
+    onBeforeMount,
+    onBeforeUnmount,
+    nextTick,
+    defineComponent,
+    defineAsyncComponent,
+    markRaw,
+    toRef,
+    toRefs,
+    shallowRef,
+    shallowReactive,
+    readonly,
+    unref,
+    isRef,
+    toRaw,
+    Fragment,
+    Teleport,
+} from "vue";
 
 /**
  * Represents a web component with an import function and optional configuration.
