@@ -192,7 +192,7 @@ describe("Circulation Triggers - Initial Load", () => {
         cy.visit("/cgi-bin/koha/admin/circulation_triggers");
         cy.wait("@get-rules");
 
-        cy.get("#circ_triggers_tabs").should("exist");
+        cy.get("#circ-triggers-tabs").should("exist");
         cy.get(".nav-link").contains("Trigger 1").should("exist");
         cy.get(".nav-link").contains("Trigger 2").should("exist");
     });
