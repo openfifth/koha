@@ -17,399 +17,76 @@
             ></router-link>
         </div>
         <div class="modal-body">
-            <div class="page-section bg-info" v-if="ruleSetInitialized">
-                <h2>{{ $__("Circulation context") }}</h2>
-                <TriggerContext :ruleSetInfo="ruleSetInfo" />
+            <div class="page-section">
+                <fieldset class="rows" v-if="alertMessage">
+                    <div class="alert alert-warning">{{ alertMessage }}</div>
+                </fieldset>
+            </div>
+            <div class="page-section">
+                <ConfirmContext
+                    :context="context"
+                    :contextInitialized="contextInitialized"
+                    :editMode="editMode"
+                    :canManageAnyLibrary="canManageAnyLibrary"
+                    :libraries="libraries"
+                    :logged_in_library_id="logged_in_library_id"
+                    :patronCategories="patronCategories"
+                    :itemTypes="itemTypes"
+                />
+            </div>
+            <div class="page-section" v-if="ruleSetInitialized">
+                <CirculationRulesSummary :ruleSetInfo="ruleSetInfo" />
             </div>
             <div v-else-if="editMode !== 'confirmContext'">
                 <p>{{ $__("Loading rule set information...") }}</p>
             </div>
-            <fieldset class="rows" v-if="contextInitialized">
-                <legend>{{ $__("Confirm trigger context") }}</legend>
-                <ol id="confirm-context-list">
-                    <li>
-                        <label for="library_id" class="required"
-                            >{{ $__("Library") }}:</label
-                        >
-                        <v-select
-                            id="library_id"
-                            v-model="context.library_id"
-                            label="name"
-                            :reduce="lib => lib.library_id"
-                            :options="
-                                canManageAnyLibrary
-                                    ? libraries
-                                    : libraries.filter(
-                                          lib =>
-                                              lib.library_id ===
-                                              logged_in_library_id
-                                      )
-                            "
-                            :disabled="
-                                editMode !== 'confirmContext' ||
-                                !canManageAnyLibrary
-                            "
-                        >
-                            <template #search="{ attributes, events }">
-                                <input
-                                    :required="!context.library_id"
-                                    class="vs__search"
-                                    v-bind="attributes"
-                                    v-on="events"
-                                />
-                            </template>
-                        </v-select>
-                        <span class="required">{{ $__("Required") }}</span>
-                    </li>
-                    <li>
-                        <label for="patron_category_id" class="required"
-                            >{{ $__("Patron category") }}:</label
-                        >
-                        <v-select
-                            id="patron_category_id"
-                            v-model="context.patron_category_id"
-                            label="name"
-                            :reduce="cat => cat.patron_category_id"
-                            :options="patronCategories"
-                            :disabled="editMode !== 'confirmContext'"
-                        >
-                            <template #search="{ attributes, events }">
-                                <input
-                                    :required="!context.patron_category_id"
-                                    class="vs__search"
-                                    v-bind="attributes"
-                                    v-on="events"
-                                />
-                            </template>
-                        </v-select>
-                        <span class="required">{{ $__("Required") }}</span>
-                    </li>
-                    <li>
-                        <label for="item_type_id" class="required"
-                            >{{ $__("Item type") }}:</label
-                        >
-                        <v-select
-                            id="item_type_id"
-                            v-model="context.item_type_id"
-                            label="description"
-                            :reduce="type => type.item_type_id"
-                            :options="itemTypes"
-                            :disabled="editMode !== 'confirmContext'"
-                        >
-                            <template #search="{ attributes, events }">
-                                <input
-                                    :required="!context.item_type_id"
-                                    class="vs__search"
-                                    v-bind="attributes"
-                                    v-on="events"
-                                />
-                            </template>
-                        </v-select>
-                        <span class="required">{{ $__("Required") }}</span>
-                    </li>
-                </ol>
-                <div v-if="editMode === 'confirmContext'">
-                    <router-link
-                        :to="{
-                            name: 'CirculationTriggersSelectOrAdd',
-                            query: context,
-                        }"
-                        class="btn btn-default btn-xs float-end"
-                        ><i class="fa-solid fa-pencil"></i>
-                        {{ $__("Confirm context") }}</router-link
-                    >
-                </div>
-                <div
-                    class="page-section"
-                    v-if="ruleSetInitialized && editMode !== 'confirmContext'"
-                >
-                    <TriggersTable
-                        :triggerNumber="triggerNumber"
-                        :modal="true"
-                        :actions="true"
-                        :ruleSets="effectiveTriggerFilteredRuleSets"
-                        :ruleSetBeingEdited="currentRuleSet"
-                        :triggerBeingEdited="triggerBeingEdited"
-                    />
-                </div>
-            </fieldset>
-            <div v-else>
-                <p>{{ $__("Loading context...") }}</p>
-            </div>
-            <fieldset class="rows" v-if="alertMessage">
-                <div class="alert alert-warning">{{ alertMessage }}</div>
-            </fieldset>
-            <fieldset
-                class="rows"
-                v-if="
-                    (ruleSetInitialized && editMode === 'edit') ||
-                    editMode === 'add'
-                "
-                id="trigger-edit-form-general-section"
+            <div
+                class="page-section"
+                v-if="ruleSetInitialized && editMode !== 'confirmContext'"
             >
-                <legend v-if="editMode === 'add'">
-                    {{ $__("Add new trigger") }}
-                    {{ " " + triggerNumber }}
-                </legend>
-                <legend v-else>
-                    {{ $__("Edit trigger") }} {{ " " + triggerNumber }}
-                </legend>
-                <div class="page-section bg-info">
-                    <p>
-                        {{
-                            $__(
-                                "NOTE: Delay for a given trigger can be pushed forward or backwards only within the bounds of what its two neighbouring triggers allows."
-                            )
-                        }}
-                    </p>
-                </div>
-                <ol>
-                    <li>
-                        <label for="overdue_delay">{{ $__("Delay") }}: </label>
-                        <div class="numeric-input-wrapper">
-                            <div class="input-with-clear">
-                                <input
-                                    @input="setAllowSubmission"
-                                    id="overdue_delay"
-                                    v-model="
-                                        ruleSetToSubmit[
-                                            `overdue_${triggerNumber}_delay`
-                                        ]
-                                    "
-                                    type="number"
-                                    :placeholder="
-                                        fallbackRuleSet?.[
-                                            `overdue_${triggerNumber}_delay`
-                                        ]
-                                    "
-                                    :min="minDelay"
-                                    :max="maxDelay"
-                                    class="numeric-input"
-                                />
-                                <button
-                                    v-if="
-                                        ruleSetToSubmit[
-                                            `overdue_${triggerNumber}_delay`
-                                        ] !== null &&
-                                        ruleSetToSubmit[
-                                            `overdue_${triggerNumber}_delay`
-                                        ] !== undefined
-                                    "
-                                    type="button"
-                                    class="clear-btn"
-                                    @click="handleSetDelayToNull"
-                                >
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        width="10"
-                                        height="10"
-                                    >
-                                        <path
-                                            d="M6.895455 5l2.842897-2.842898c.348864-.348863.348864-.914488 0-1.263636L9.106534.261648c-.348864-.348864-.914489-.348864-1.263636 0L5 3.104545 2.157102.261648c-.348863-.348864-.914488-.348864-1.263636 0L.261648.893466c-.348864.348864-.348864.914489 0 1.263636L3.104545 5 .261648 7.842898c-.348864.348863-.348864.914488 0 1.263636l.631818.631818c.348864.348864.914773.348864 1.263636 0L5 6.895455l2.842898 2.842897c.348863.348864.914772.348864 1.263636 0l.631818-.631818c.348864-.348864.348864-.914489 0-1.263636L6.895455 5z"
-                                        ></path>
-                                    </svg>
-                                </button>
-                                <div class="chevron-buttons">
-                                    <button
-                                        type="button"
-                                        class="increment-btn"
-                                        @click="incrementDelay"
-                                    >
-                                        ▴
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="decrement-btn"
-                                        @click="decrementDelay"
-                                    >
-                                        ▾
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </li>
-                    <li>
-                        <label for="restricts"
-                            >{{ $__("Restricts checkouts") }}:</label
-                        >
-                        <div>
-                            <input
-                                @click="setAllowSubmission"
-                                type="radio"
-                                id="restricts-yes"
-                                v-model="
-                                    ruleSetToSubmit[
-                                        `overdue_${triggerNumber}_restrict`
-                                    ]
-                                "
-                                :value="1"
-                            />
-                            {{ $__("Yes") }}
-                            <input
-                                @click="setAllowSubmission"
-                                type="radio"
-                                id="restricts-no"
-                                v-model="
-                                    ruleSetToSubmit[
-                                        `overdue_${triggerNumber}_restrict`
-                                    ]
-                                "
-                                :value="0"
-                            />
-                            {{ $__("No") }}
-                            <input
-                                @click="setAllowSubmission"
-                                type="radio"
-                                id="restricts-fallback"
-                                v-model="
-                                    ruleSetToSubmit[
-                                        `overdue_${triggerNumber}_restrict`
-                                    ]
-                                "
-                                :value="null"
-                            />
-                            {{ $__("Fallback to default") }}
-                            <span
-                                v-if="
-                                    fallbackRuleSet?.[
-                                        `overdue_${triggerNumber}_restrict`
-                                    ] !== null
-                                "
-                            >
-                                ({{
-                                    fallbackRuleSet?.[
-                                        `overdue_${triggerNumber}_restrict`
-                                    ] === "1"
-                                        ? $__("Yes")
-                                        : $__("No")
-                                }})
-                            </span>
-                        </div>
-                    </li>
-                </ol>
-            </fieldset>
-            <div v-else-if="editMode === 'add' || editMode === 'edit'">
-                <p>{{ $__("Loading circulation rules...") }}</p>
+                <TriggersTable
+                    :triggerNumber="triggerNumber"
+                    :modal="true"
+                    :actions="true"
+                    :ruleSets="effectiveTriggerFilteredRuleSets"
+                    :ruleSetBeingEdited="currentRuleSet"
+                    :triggerBeingEdited="triggerBeingEdited"
+                />
             </div>
-            <fieldset
-                class="rows"
-                v-if="
-                    (ruleSetInitialized && editMode === 'edit') ||
-                    editMode === 'add'
-                "
-                id="trigger-edit-form-notice-section"
+            <div
+                class="page-section"
+                v-if="editMode === 'add' || editMode === 'edit'"
             >
-                <legend v-if="ruleSetInfo.triggerCount < triggerNumber">
-                    {{ $__("Notice for trigger") }}
-                    {{ " " + triggerNumber }}
-                </legend>
-                <legend v-else>
-                    {{ $__("Edit notice for trigger") }}
-                    {{ " " + triggerNumber }}
-                </legend>
-                <ol>
-                    <li>
-                        <label for="letter_code">{{ $__("Letter") }}:</label>
-                        <v-select
-                            id="letter_code"
-                            v-model="
-                                ruleSetToSubmit[
-                                    `overdue_${triggerNumber}_notice`
-                                ]
-                            "
-                            label="name"
-                            :reduce="type => type.code"
-                            :options="filteredLetters"
-                            @update:modelValue="setAllowSubmission"
-                        >
-                            <template #search="{ attributes, events }">
-                                <input
-                                    class="vs__search"
-                                    v-bind="attributes"
-                                    v-on="events"
-                                    :placeholder="
-                                        ruleSetToSubmit[
-                                            `overdue_${triggerNumber}_notice`
-                                        ] === null ||
-                                        ruleSetToSubmit[
-                                            `overdue_${triggerNumber}_notice`
-                                        ] === undefined
-                                            ? letters.find(
-                                                  letter =>
-                                                      letter.code ===
-                                                      fallbackRuleSet?.[
-                                                          `overdue_${triggerNumber}_notice`
-                                                      ]
-                                              )?.name ||
-                                              fallbackRuleSet?.[
-                                                  `overdue_${triggerNumber}_notice`
-                                              ]
-                                            : ''
-                                    "
-                                />
-                            </template>
-                        </v-select>
-                    </li>
-                    <li
-                        v-if="
-                            ruleSetToSubmit[
-                                `overdue_${triggerNumber}_notice`
-                            ] !== '' &&
-                            ruleSetToSubmit[
-                                `overdue_${triggerNumber}_notice`
-                            ] !== null &&
-                            ruleSetToSubmit[
-                                `overdue_${triggerNumber}_notice`
-                            ] !== undefined
-                        "
-                    >
-                        <label for="mtt">{{ $__("Transport type(s)") }}:</label>
-                        <v-select
-                            id="mtt"
-                            v-model="
-                                ruleSetToSubmit[`overdue_${triggerNumber}_mtt`]
-                            "
-                            label="name"
-                            :reduce="type => type.code"
-                            :options="transportTypes"
-                            multiple
-                            :required="true"
-                            @update:modelValue="setAllowSubmission"
-                        >
-                            <template #search="{ attributes, events }">
-                                <input
-                                    class="vs__search"
-                                    v-bind="attributes"
-                                    v-on="events"
-                                    :placeholder="
-                                        ruleSetToSubmit[
-                                            `overdue_${triggerNumber}_mtt`
-                                        ] === null ||
-                                        ruleSetToSubmit[
-                                            `overdue_${triggerNumber}_mtt`
-                                        ] === undefined ||
-                                        ruleSetToSubmit[
-                                            `overdue_${triggerNumber}_mtt`
-                                        ].length === 0
-                                            ? fallbackRuleSet?.[
-                                                  `overdue_${triggerNumber}_mtt`
-                                              ]
-                                            : ''
-                                    "
-                                    :required="
-                                        !ruleSetToSubmit[
-                                            `overdue_${triggerNumber}_mtt`
-                                        ]?.length
-                                    "
-                                />
-                            </template>
-                        </v-select>
-                        <span class="required">{{ $__("Required") }}</span>
-                    </li>
-                </ol>
-            </fieldset>
-            <div v-else-if="editMode === 'add' || editMode === 'edit'">
-                <p>{{ $__("Loading circulation rules...") }}</p>
+                <EditActions
+                    :ruleSetInitialized="ruleSetInitialized"
+                    :editMode="editMode"
+                    :triggerNumber="triggerNumber"
+                    :ruleSetToSubmit="ruleSetToSubmit"
+                    :fallbackRuleSet="fallbackRuleSet"
+                    :minDelay="minDelay"
+                    :maxDelay="maxDelay"
+                    :setAllowSubmission="setAllowSubmission"
+                    :handleSetDelayToNull="handleSetDelayToNull"
+                    :incrementDelay="incrementDelay"
+                    :decrementDelay="decrementDelay"
+                />
+            </div>
+            <div
+                class="page-section"
+                v-if="editMode === 'add' || editMode === 'edit'"
+            >
+                <EditNotice
+                    :ruleSetInitialized="ruleSetInitialized"
+                    :editMode="editMode"
+                    :triggerNumber="triggerNumber"
+                    :ruleSetToSubmit="ruleSetToSubmit"
+                    :fallbackRuleSet="fallbackRuleSet"
+                    :ruleSetInfo="ruleSetInfo"
+                    :filteredLetters="filteredLetters"
+                    :letters="letters"
+                    :transportTypes="transportTypes"
+                    :setAllowSubmission="setAllowSubmission"
+                />
             </div>
         </div>
         <div class="modal-footer">
@@ -432,7 +109,10 @@ import TriggersTable from "./TriggersTable.vue";
 import { inject } from "vue";
 import { storeToRefs } from "pinia";
 import ButtonSubmit from "../../ButtonSubmit.vue";
-import TriggerContext from "./TriggerContext.vue";
+import CirculationRulesSummary from "./CirculationRulesSummary.vue";
+import ConfirmContext from "./ConfirmContext.vue";
+import EditActions from "./EditActions.vue";
+import EditNotice from "./EditNotice.vue";
 import { isEqual, cloneDeep } from "lodash";
 
 export default {
@@ -445,6 +125,7 @@ export default {
             setEffectiveTriggerFilteredRuleSet,
             updateCircRuleSets,
             hasConflict,
+            scrollToElementById,
         } = circRulesStore;
         const {
             letters,
@@ -474,6 +155,7 @@ export default {
             storeInitialized,
             canManageAnyLibrary,
             logged_in_library_id,
+            scrollToElementById,
         };
     },
     data() {
@@ -524,12 +206,16 @@ export default {
             next();
             return;
         }
-        next(vm => vm.initializeComponent());
+        next(vm => vm.initializeComponent(to));
+    },
+    beforeRouteUpdate(to, from, next) {
+        next();
+        this.initializeComponent(to);
     },
     methods: {
-        initializeComponent() {
-            const { query } = this.$route;
-            this.setEditMode();
+        initializeComponent(route) {
+            const { query } = route ?? this.$route;
+            this.setEditMode(route);
             this.setContext(query);
             this.contextInitialized = true;
             this.setTriggerNumber(query.triggerNumber, this.context.library_id);
@@ -688,9 +374,10 @@ export default {
             this.context.item_type_id = query.item_type_id ?? "*";
             this.context.patron_category_id = query.patron_category_id ?? "*";
         },
-        setEditMode() {
-            this.editMode = this.$route.path.substring(
-                this.$route.path.lastIndexOf("/") + 1
+        setEditMode(route) {
+            const resolvedRoute = route ?? this.$route;
+            this.editMode = resolvedRoute.path.substring(
+                resolvedRoute.path.lastIndexOf("/") + 1
             );
         },
         setRuleSetInfo() {
@@ -700,6 +387,8 @@ export default {
                 fine: this.currentRuleSet.fine,
                 chargeperiod: this.currentRuleSet.chargeperiod,
                 lengthunit: this.currentRuleSet.lengthunit,
+                renewalsallowed: this.currentRuleSet.renewalsallowed,
+                auto_renew: this.currentRuleSet.auto_renew,
                 triggerCount: this.triggerCounts[this.context.library_id],
             };
         },
@@ -715,7 +404,7 @@ export default {
         setTriggerNumber(triggerNumber, library_id) {
             this.triggerNumber =
                 this.editMode === "edit"
-                    ? triggerNumber
+                    ? parseInt(triggerNumber)
                     : (this.triggerCounts[library_id] ?? 0) + 1;
         },
         setFallbackRuleSet() {
@@ -891,20 +580,6 @@ export default {
             this.ruleSetToSubmit[`overdue_${this.triggerNumber}_delay`] = null;
             this.setAllowSubmission();
         },
-        async scrollToTriggerEditForm() {
-            let count = 0;
-            // ensures that the relevant section is loaded before we attempt to scroll it into view
-            while (
-                !document.getElementById("trigger-edit-form-general-section") &&
-                count < 8
-            ) {
-                await new Promise(resolve => setTimeout(resolve, 250));
-                count++;
-            }
-            document
-                .getElementById("trigger-edit-form-general-section")
-                .scrollIntoView({ behavior: "smooth" });
-        },
     },
     watch: {
         $route: {
@@ -915,7 +590,7 @@ export default {
                     !oldVal.fullPath.includes("add") &&
                     !oldVal.fullPath.includes("edit") &&
                     oldVal.query.triggerNumber &&
-                    newVal.query.triggerNumber !== oldVal.query.triggerNumber
+                    newVal.query.triggerNumber != oldVal.query.triggerNumber
                 ) {
                     this.$router.go(0);
                 }
@@ -924,114 +599,24 @@ export default {
         async editMode(newValue) {
             if (newValue === "add" || newValue === "edit") {
                 await this.$nextTick();
-                await this.scrollToTriggerEditForm();
+                await this.scrollToElementById("trigger-table-form");
             }
         },
     },
-    components: { TriggersTable, ButtonSubmit, TriggerContext },
+    components: {
+        TriggersTable,
+        ButtonSubmit,
+        CirculationRulesSummary,
+        ConfirmContext,
+        EditActions,
+        EditNotice,
+    },
 };
 </script>
 
 <style scoped>
 #circulation-trigger-form-add {
     max-height: 90vh;
-}
-
-form li {
-    display: flex;
-    align-items: center;
-}
-
-.numeric-input-wrapper {
-    position: relative;
-    display: inline-block;
-    width: 30%;
-}
-
-.input-with-clear {
-    position: relative;
-    display: flex;
-    align-items: center;
-    width: 100%;
-}
-
-.numeric-input {
-    padding-right: 40px; /* Adjust to leave space for clear button */
-    padding-left: 0.25em;
-    padding-top: 2px;
-    padding-bottom: 2px;
-    width: 100%;
-    border-radius: 4px;
-    border: 1px solid #ccc;
-    font-size: 16px;
-    box-sizing: border-box;
-    transition: border-color 0.2s ease;
-}
-
-.clear-btn {
-    position: absolute;
-    right: 22px; /* Adjust positioning */
-    fill: var(--vs-controls-color);
-    background-color: transparent;
-    border: 0;
-    font-size: 1.2em;
-    color: #333;
-    cursor: pointer;
-    z-index: 2; /* Ensure it is above the input */
-}
-
-.button:active:hover,
-.clear-btn:active:hover {
-    background-color: #d4d4d4;
-    border-color: #8c8c8c;
-}
-
-/* Chevron buttons container */
-.chevron-buttons {
-    display: flex;
-    flex-direction: column;
-    position: absolute;
-    right: 0px;
-    top: 0;
-    bottom: 0;
-    width: 16px;
-    padding: 0px 5px 0px 2px;
-    justify-content: center;
-    z-index: 2;
-}
-
-/* Chevron button styles */
-.increment-btn,
-.decrement-btn {
-    background-color: transparent;
-    border: 0px solid #ccc;
-    font-size: 10px;
-    padding: 0px;
-    cursor: pointer;
-    color: rgba(60, 60, 60, 0.5);
-    border-radius: 2px;
-}
-
-.increment-btn:hover,
-.decrement-btn:hover {
-    background-color: #ddd;
-}
-
-/* Hide the native increment/decrement buttons */
-input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
-
-input[type="number"] {
-    -moz-appearance: textfield; /* For Firefox */
-}
-
-.numeric-input:focus,
-.numeric-input:hover {
-    border-color: #007bff; /* Match focus color of v-select */
-    outline: none;
 }
 
 .dialog.alert
@@ -1056,37 +641,5 @@ input[type="number"] {
 
 .modal-body {
     min-height: 280px;
-}
-
-#confirm-context-list {
-    display: flex;
-    gap: 20px;
-    height: fit-content;
-}
-
-#confirm-context-list li {
-    display: flex;
-    flex-direction: column;
-    width: 320px;
-}
-
-#confirm-context-list .v-select {
-    width: 100%;
-}
-
-#confirm-context-list label {
-    width: 100%;
-    text-align: left;
-    padding: 0 0 4px 10px;
-}
-
-#confirm-context-list span {
-    width: 100%;
-    align-content: right;
-    padding-top: 4px;
-}
-
-#confirm-context-list :deep(.v-select ul) {
-    max-height: 120px;
 }
 </style>

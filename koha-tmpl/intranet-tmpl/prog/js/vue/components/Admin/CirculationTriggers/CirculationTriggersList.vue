@@ -256,8 +256,11 @@
             </div>
         </div>
     </div>
-    <div v-if="filtersInitialized && ruleSetInitialized">
-        <div id="circ_triggers_tabs" class="toptabs numbered">
+    <div
+        v-if="filtersInitialized && ruleSetInitialized"
+        id="circ-triggers-content"
+    >
+        <div id="circ-triggers-tabs" class="toptabs numbered">
             <ul class="nav nav-tabs" role="tablist">
                 <li
                     v-for="number in triggerCounts[currentLibraryId]"
@@ -355,6 +358,7 @@ export default {
             setAllExhaustiveEffectiveRuleSets,
             isLastTrigger,
             getLibrariesWithRules,
+            scrollToElementById,
         } = circRulesStore;
         const {
             currentLibraryId,
@@ -395,6 +399,7 @@ export default {
             from_branch,
             canManageAnyLibrary,
             logged_in_library_id,
+            scrollToElementById,
         };
     },
     data() {
@@ -497,6 +502,9 @@ export default {
             immediate: true,
             handler: function (newVal, oldVal) {
                 this.showModal = newVal.meta && newVal.meta.showModal;
+                const overflow = this.showModal ? "hidden" : "";
+                const body = document.querySelector("body");
+                body.style.overflow = overflow;
             },
         },
         "$route.query": {
@@ -517,6 +525,7 @@ export default {
                     }
                     await this.$nextTick();
                     await this.filterRuleSetsbySearchParam();
+                    await this.scrollToElementById("circ-triggers-content");
                 }
                 this.filtersInitialized = true;
             },

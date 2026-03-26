@@ -267,7 +267,6 @@
 <script>
 import ButtonSubmit from "../../ButtonSubmit.vue";
 import CirculationTriggersForm from "./CirculationTriggersForm.vue";
-import TriggerContext from "./TriggerContext.vue";
 import { inject } from "vue";
 import { storeToRefs } from "pinia";
 
@@ -356,10 +355,10 @@ export default {
             this.library_id = query.library_id ?? "*";
             this.item_type_id = query.item_type_id ?? "*";
             this.patron_category_id = query.patron_category_id ?? "*";
-            this.triggerNumber = query.triggerNumber;
+            this.triggerNumber = parseInt(query.triggerNumber);
         },
     },
-    components: { ButtonSubmit, TriggerContext, CirculationTriggersForm },
+    components: { ButtonSubmit, CirculationTriggersForm },
 };
 </script>
 

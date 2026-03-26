@@ -41,7 +41,6 @@
 </template>
 <script>
 import TriggersTable from "./TriggersTable.vue";
-import TriggerContext from "./TriggerContext.vue";
 import CirculationTriggersForm from "./CirculationTriggersForm.vue";
 import { inject } from "vue";
 import { storeToRefs } from "pinia";
@@ -134,10 +133,10 @@ export default {
         },
         setContext(query) {
             this.library_id = query.library_id ?? "*";
-            this.triggerNumber = query.triggerNumber;
+            this.triggerNumber = parseInt(query.triggerNumber);
         },
     },
-    components: { TriggerContext, TriggersTable, CirculationTriggersForm },
+    components: { TriggersTable, CirculationTriggersForm },
 };
 </script>
 
