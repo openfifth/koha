@@ -215,8 +215,8 @@ export default {
                     },
                 },
                 {
-                    title: __("Code"),
-                    data: "code",
+                    title: __("Description"),
+                    data: "description",
                     searchable: true,
                     orderable: true,
                 },
