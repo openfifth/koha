@@ -202,7 +202,7 @@ export function useBaseElement(instancedElement) {
         if (valueKey?.includes(".")) {
             return accessNestedProperty(valueKey, resource);
         }
-        const displayValue = attr.format(resource[valueKey], resource);
+        const displayValue = attr.format(resource[valueKey], resource, attr);
         if (displayValue == "Invalid Date") {
             return "";
         }
