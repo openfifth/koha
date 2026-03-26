@@ -115,17 +115,24 @@ export function getRegisteredWidgets(module: string): Component[] {
     for (const entry of widgetRegistry.values()) {
         if (entry.module !== module) continue;
 
+        let component: Component & { name?: string };
         if (typeof entry.component === "function") {
-            widgets.push(
-                markRaw(
-                    defineAsyncComponent(
-                        entry.component as () => Promise<Component>
-                    )
-                )
+            component = defineAsyncComponent(
+                entry.component as () => Promise<Component>
             );
         } else {
-            widgets.push(markRaw(entry.component));
+            component = entry.component;
         }
+
+        // Ensure the component has a name — ModuleDashboard uses widget.name
+        // for localStorage persistence, deduplication, and v-for keys.
+        // defineAsyncComponent wrappers don't carry .name, and plain objects
+        // might omit it, so we fall back to the registry entry id.
+        if (!component.name) {
+            component.name = entry.id;
+        }
+
+        widgets.push(markRaw(component));
     }
     return widgets;
 }
