@@ -391,7 +391,7 @@
 [% END %]
 
 [% BLOCK sysinfo_panel %]
-    [% IF Asset.css("css/staff-global.css") == "" || Asset.js("js/vue/dist/erm.js") == "" %]
+    [% IF Asset.css("css/staff-global.css") == "" || Asset.js("js/vue/dist/erm.esm.js") == "" %]
         [% SET warnMissingCompiledFiles = 1 %]
     [% END %]
     [% WRAPPER tab_panel tabname= "sysinfo" bt_active = 1 %]

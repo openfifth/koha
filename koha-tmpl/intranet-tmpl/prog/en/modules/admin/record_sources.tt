@@ -35,7 +35,9 @@
     [% INCLUDE 'datatables.inc' %]
     [% INCLUDE 'js-date-format.inc' %]
     [% Asset.js("js/admin-menu.js") | $raw %]
-    [% Asset.js("js/vue/dist/admin/record_sources.js") | $raw %]
+    [% SET record_sources_esm_src = Asset.js("js/vue/dist/admin/record_sources.esm.js").match('src="([^"]+)"').0 %]
+    <script src="[% record_sources_esm_src | $raw %]" type="module" nonce="[% Koha.CSPNonce | $raw %]">
+</script>
 [% END %]
 
 [% INCLUDE 'intranet-bottom.inc' %]
