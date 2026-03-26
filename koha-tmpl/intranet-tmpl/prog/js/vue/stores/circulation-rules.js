@@ -75,6 +75,15 @@ export const useCircRulesStore = defineStore("circRules", () => {
             await this.getConfigurationOptions();
         },
         // utilities
+        compareLetterNames(a, b) {
+            if (a.name < b.name) {
+                return -1;
+            }
+            if (a.name > b.name) {
+                return 1;
+            }
+            return 0;
+        },
         formatTriggerSpecificRuleSetForDisplay(
             context,
             triggerNumber,
@@ -159,6 +168,23 @@ export const useCircRulesStore = defineStore("circRules", () => {
                 parseInt(triggerNumber) ===
                 this.triggerCounts[this.currentLibraryId]
             );
+        },
+        async scrollToElementById(id) {
+            let count = 0;
+            // ensures that the relevant section is loaded before we attempt to scroll it into view
+            while (
+                !document.getElementById(id) &&
+                count < 8
+            ) {
+                await new Promise(resolve => setTimeout(resolve, 250));
+                count++;
+            }
+            const element = document.getElementById(id);
+            if (!element) {
+                // handle loading the page if the element is not at all present
+                return;
+            }
+            element.scrollIntoView({ behavior: "smooth" });
         },
         // services
         formatMttForDisplay(rawMtt) {
