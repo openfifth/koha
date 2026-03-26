@@ -139,6 +139,7 @@
           enum:
           - fiscal_period
           - ledger
+          - ledger.managing_library
           - allocations
           - owner
           - managing_library

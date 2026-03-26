@@ -29,21 +29,25 @@ export default {
             acquisitionsStore;
 
         const additionalToolbarButtons = (resource, componentData) => {
-            const { instancedResource } = componentData;
             return {
                 show: [
-                    {
-                        to: {
-                            name: "FundFormAdd",
-                            query: {
-                                ledger_id: resource.ledger_id,
-                                fiscal_period_id: resource.fiscal_period_id,
-                            },
-                        },
-                        title: $__("Add fund"),
-                        icon: "plus",
-                        index: -1,
-                    },
+                    ...(!resource.locked
+                        ? [
+                              {
+                                  to: {
+                                      name: "FundFormAdd",
+                                      query: {
+                                          ledger_id: resource.ledger_id,
+                                          fiscal_period_id:
+                                              resource.fiscal_period_id,
+                                      },
+                                  },
+                                  title: $__("Add fund"),
+                                  icon: "plus",
+                                  index: -1,
+                              },
+                          ]
+                        : []),
                 ],
             };
         };
@@ -83,6 +87,23 @@ export default {
                     hideIn: ["Form", "Show"],
                 },
                 {
+                    name: "fiscal_period_name",
+                    type: "display",
+                    label: $__("Fiscal period"),
+                    group: $__("Information and status"),
+                    showElement: {
+                        type: "text",
+                        value: "fiscal_period.name",
+                        link: {
+                            name: "FiscalPeriodShow",
+                            params: {
+                                fiscal_period_id: "fiscal_period_id",
+                            },
+                        },
+                    },
+                    hideIn: ["List"],
+                },
+                {
                     name: "name",
                     required: true,
                     type: "text",
@@ -96,40 +117,35 @@ export default {
                     group: $__("Information and status"),
                 },
                 {
-                    name: "fiscal_period_id",
-                    type: "relationshipSelect",
-                    label: $__("Fiscal period"),
-                    group: $__("Information and status"),
-                    relationshipAPIClient: APIClient.acquisition.fiscalPeriods,
-                    relationshipOptionLabelAttr: "name",
-                    relationshipRequiredKey: "fiscal_period_id",
-                    disabled: true,
-                    showElement: {
-                        type: "text",
-                        value: "fiscal_period.name",
-                        link: {
-                            name: "FiscalPeriodShow",
-                            params: {
-                                fiscal_period_id: "fiscal_period_id",
-                            },
-                        },
-                    },
-                    required: true,
-                    hideIn: ["List"],
-                },
-                {
-                    name: "status",
-                    type: "boolean",
-                    label: $__("Active"),
-                    group: $__("Information and status"),
-                    defaultValue: true,
-                },
-                {
                     name: "external_id",
                     type: "text",
                     label: $__("External ID"),
                     group: $__("Information and status"),
                     hideIn: ["List"],
+                },
+                {
+                    name: "status",
+                    type: "select",
+                    label: $__("Status"),
+                    group: $__("Information and status"),
+                    defaultValue: true,
+                    selectLabel: "description",
+                    requiredKey: "value",
+                    options: [
+                        { description: $__("Active"), value: true },
+                        { description: $__("Inactive"), value: false },
+                    ],
+                    required: true,
+                },
+                {
+                    name: "locked",
+                    type: "boolean",
+                    label: $__("Ledger locked?"),
+                    group: $__("Information and status"),
+                    defaultValue: false,
+                    tooltip: $__(
+                        "Please note: if you lock the ledger it will not be possible to add new funds"
+                    ),
                 },
                 {
                     name: "currency",
@@ -140,7 +156,6 @@ export default {
                     requiredKey: "currency",
                     options: currencies.value,
                     defaultValue: null,
-                    required: true,
                     hideIn: ["List"],
                 },
                 {
@@ -158,6 +173,9 @@ export default {
                             resource.currency
                         );
                     },
+                    toolTip: $__(
+                        "Please note: you can change this amount after creating the ledger record"
+                    ),
                     hideIn: ["List"],
                 },
                 {
@@ -245,7 +263,12 @@ export default {
                                 },
                             },
                         },
+                        required: {
+                            type: "boolean",
+                            value: true,
+                        },
                     },
+                    required: true,
                     hideIn: ["List"],
                 },
                 {
@@ -329,12 +352,15 @@ export default {
             ledger.oe_warning_percent = oe_warning_percent / 100;
 
             delete ledger.ledger_id;
-            delete ledger.last_updated;
             delete ledger.patron;
             delete ledger.patron_str;
             delete ledger.owner;
             delete ledger.fiscal_period;
+            delete ledger.fiscal_period_name;
             delete ledger.managing_library;
+            delete ledger.modified_date;
+            delete ledger.created_date;
+            delete ledger.funds;
 
             if (ledger_id) {
                 return baseResource.apiClient.update(ledger, ledger_id).then(
@@ -358,6 +384,8 @@ export default {
         const afterResourceFetch = (componentData, resource, caller) => {
             componentData.resource.value.oe_warning_percent =
                 resource.oe_warning_percent * 100;
+            componentData.resource.value.fiscal_period_name =
+                resource.fiscal_period.name;
         };
 
         const afterNewResourceCreate = (
@@ -372,6 +400,7 @@ export default {
                 APIClient.acquisition.fiscalPeriods
                     .get(resource.fiscal_period_id)
                     .then(fiscalPeriod => {
+                        resource.fiscal_period_name = fiscalPeriod.name;
                         if (
                             fiscalPeriod.managing_library
                                 ?.acquisitions_library_groups.length

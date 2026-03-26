@@ -11,6 +11,7 @@ import { APIClient } from "../../../fetch/api-client.js";
 import { useBaseResource } from "../../../composables/base-resource";
 import { $__ } from "@koha-vue/i18n";
 import { computed, inject, ref } from "vue";
+import { storeToRefs } from "pinia";
 
 export default {
     props: {
@@ -25,13 +26,11 @@ export default {
         const patron_to_html = $patron_to_html;
 
         const acquisitionsStore = inject("acquisitionsStore");
-        const { formatValueWithCurrency } = acquisitionsStore;
+        const { user, authorisedValues } = storeToRefs(acquisitionsStore);
+        const { formatValueWithCurrency, getBranchnamesFromGroups } =
+            acquisitionsStore;
 
-        const ledgersQuery = ref({});
-        const fundsQuery = ref({});
         const fundGroupsQuery = ref({});
-        const getLedgersQuery = computed(() => ledgersQuery.value);
-        const getFundsQuery = computed(() => fundsQuery.value);
         const getFundGroupsQuery = computed(() => fundGroupsQuery.value);
 
         const filterLibGroupsAndFundGroupsBySelectedLedger = (
@@ -43,9 +42,6 @@ export default {
                 fundGroupsQuery.value = {
                     currency: resource.currency,
                 };
-                fundsQuery.value = {
-                    ledger_id: resource.ledger_id,
-                };
                 return;
             }
             const selectedLedger = options.find(
@@ -55,28 +51,6 @@ export default {
                 fundGroupsQuery.value = {
                     currency: selectedLedger.currency,
                 };
-                fundsQuery.value = {
-                    ledger_id: e,
-                };
-            }
-        };
-
-        const filterLedgersBySelectedFiscalPeriod = (e, options, resource) => {
-            if (!e && resource.fiscal_period_id) {
-                ledgersQuery.value = {
-                    fiscal_period_id: resource.fiscal_period_id,
-                };
-                return;
-            }
-            if (!e) {
-                ledgersQuery.value = {};
-                resource.ledger_id = null;
-                return;
-            }
-            ledgersQuery.value = { fiscal_period_id: e };
-
-            if (e !== resource.fiscal_period_id) {
-                resource.ledger_id = null;
             }
         };
 
@@ -160,40 +134,13 @@ export default {
                     type: "text",
                     hideIn: ["Form", "Show"],
                 },
-                {
-                    name: "name",
-                    required: true,
-                    type: "text",
-                    label: $__("Name"),
-                    group: $__("Information and status"),
-                },
-                {
-                    name: "description",
-                    type: "textarea",
-                    label: $__("Description"),
-                    group: $__("Information and status"),
-                },
-                {
-                    name: "code",
-                    required: true,
-                    type: "text",
-                    label: $__("Code"),
-                    group: $__("Information and status"),
-                },
                 ...(!isSubFund.value
                     ? [
                           {
-                              name: "fiscal_period_id",
-                              required: true,
-                              type: "relationshipSelect",
+                              name: "fiscal_period_name",
+                              type: "display",
                               label: $__("Fiscal period"),
                               group: $__("Information and status"),
-                              relationshipAPIClient:
-                                  APIClient.acquisition.fiscalPeriods,
-                              relationshipOptionLabelAttr: "name",
-                              relationshipRequiredKey: "fiscal_period_id",
-                              onSelected: filterLedgersBySelectedFiscalPeriod,
-                              query: { "ledgers.ledger_id": { "!=": null } },
                               showElement: {
                                   type: "text",
                                   value: "fiscal_period.name",
@@ -204,7 +151,6 @@ export default {
                                       },
                                   },
                               },
-                              disabled: true,
                               hideIn: ["List"],
                           },
                       ]
@@ -212,19 +158,10 @@ export default {
                 ...(!isSubFund.value
                     ? [
                           {
-                              name: "ledger_id",
-                              required: true,
-                              type: "relationshipSelect",
+                              name: "ledger_name",
+                              type: "display",
                               label: $__("Ledger"),
                               group: $__("Information and status"),
-                              relationshipAPIClient:
-                                  APIClient.acquisition.ledgers,
-                              relationshipOptionLabelAttr: "name",
-                              relationshipRequiredKey: "ledger_id",
-                              onSelected:
-                                  filterLibGroupsAndFundGroupsBySelectedLedger,
-                              query: getLedgersQuery,
-                              disabled: true,
                               showElement: {
                                   type: "text",
                                   value: "ledger.name",
@@ -242,15 +179,10 @@ export default {
                 ...(!isSubFund.value || props.routeAction === "list"
                     ? [
                           {
-                              name: "fund_parent_id",
-                              type: "relationshipSelect",
+                              name: "fund_parent_name",
+                              type: "display",
                               label: $__("Parent fund"),
                               group: $__("Information and status"),
-                              relationshipAPIClient:
-                                  APIClient.acquisition.funds,
-                              relationshipOptionLabelAttr: "name",
-                              relationshipRequiredKey: "fund_id",
-                              query: getFundsQuery,
                               showElement: {
                                   type: "text",
                                   value: "parent_fund.name",
@@ -281,6 +213,26 @@ export default {
                           },
                       ]
                     : []),
+                {
+                    name: "name",
+                    required: true,
+                    type: "text",
+                    label: $__("Name"),
+                    group: $__("Information and status"),
+                },
+                {
+                    name: "code",
+                    required: true,
+                    type: "text",
+                    label: $__("Code"),
+                    group: $__("Information and status"),
+                },
+                {
+                    name: "description",
+                    type: "textarea",
+                    label: $__("Description"),
+                    group: $__("Information and status"),
+                },
                 ...(!isSubFund.value
                     ? [
                           {
@@ -310,34 +262,136 @@ export default {
                       ]
                     : []),
                 {
-                    name: "owner_id",
-                    label: $__("Owner"),
-                    showElement: {
-                        name: "owner",
-                        type: "select",
-                        format: patron_to_html,
+                    name: "external_id",
+                    type: "text",
+                    label: $__("External ID"),
+                    group: $__("Information and status"),
+                    hideIn: ["List"],
+                },
+                {
+                    name: "status",
+                    type: "select",
+                    label: $__("Status"),
+                    group: $__("Information and status"),
+                    defaultValue: true,
+                    selectLabel: "description",
+                    requiredKey: "value",
+                    options: [
+                        { description: $__("Active"), value: true },
+                        { description: $__("Inactive"), value: false },
+                    ],
+                    required: true,
+                },
+                ...(!isSubFund.value &&
+                authorisedValues.value.av_fund_type.length
+                    ? [
+                          {
+                              name: "fund_type",
+                              type: "select",
+                              label: $__("Fund type"),
+                              group: $__("Information and status"),
+                              avCat: "av_fund_type",
+                          },
+                      ]
+                    : []),
+                {
+                    name: "currency",
+                    type: "display",
+                    label: $__("Currency"),
+                    group: $__("Financial controlling"),
+                    hideIn: ["List"],
+                },
+                {
+                    name: "fund_amount",
+                    type: "number",
+                    label: $__("Fund amount"),
+                    group: $__("Financial controlling"),
+                    defaultValue: 0,
+                    size: 6,
+                    format: (value, resource) =>
+                        formatValueWithCurrency(value, resource.currency),
+                    formatInputValue: (value, resource) => {
+                        return formatValueWithCurrency(
+                            value,
+                            resource.currency
+                        );
                     },
-                    hideIn: ["List", "Form"],
+                    toolTip: $__(
+                        "Please note: you can change this amount after creating the ledger record"
+                    ),
+                    hideIn: ["List"],
+                },
+                {
+                    name: "oe_warning_percent",
+                    type: "number",
+                    label: $__("Overencumbrance warning percentage"),
+                    group: $__("Financial controlling"),
+                    placeholder: $__(
+                        "The percentage at which a warning is triggered"
+                    ),
+                    size: 6,
+                    format: v => v + "%",
+                    hideIn: ["List"],
+                },
+                {
+                    name: "oe_warning_amount",
+                    type: "number",
+                    label: $__("Overencumbrance warning amount"),
+                    group: $__("Financial controlling"),
+                    placeholder: $__(
+                        "The amount at which a warning is triggered"
+                    ),
+                    size: 6,
+                    format: (value, resource) =>
+                        formatValueWithCurrency(value, resource.currency),
+                    hideIn: ["List"],
                 },
                 {
                     name: "managing_branch",
-                    type: "relationshipSelect",
                     label: $__("Managing library"),
                     group: $__("Management in library"),
-                    relationshipAPIClient: APIClient.libraries.libraries,
-                    relationshipOptionLabelAttr: "name",
-                    relationshipRequiredKey: "library_id",
-                    showElement: {
-                        type: "text",
-                        value: "managing_library.name",
-                        link: {
-                            href: "/cgi-bin/koha/admin/branches.pl",
-                            params: {
-                                op: "view",
-                                branchcode: "managing_branch",
+                    type: "component",
+                    componentPath: "@koha-vue/components/ManagingLibrary.vue",
+                    componentProps: {
+                        relationshipAPIClient: {
+                            type: "object",
+                            value: APIClient.libraries.libraries,
+                        },
+                        relationshipOptionLabelAttr: {
+                            type: "string",
+                            value: "name",
+                        },
+                        relationshipRequiredKey: {
+                            type: "string",
+                            value: "library_id",
+                        },
+                        name: {
+                            type: "string",
+                            value: "managing_branch",
+                        },
+                        resource: {
+                            type: "resource",
+                        },
+                        routeAction: {
+                            type: "string",
+                            value: props.routeAction,
+                        },
+                        linkData: {
+                            type: "object",
+                            value: {
+                                href: "/cgi-bin/koha/admin/branches.pl",
+                                params: {
+                                    op: "view",
+                                    branchcode: "managing_branch",
+                                },
                             },
                         },
+                        required: {
+                            type: "boolean",
+                            value: true,
+                        },
                     },
+                    required: true,
                     hideIn: ["List"],
                 },
                 {
@@ -383,74 +437,6 @@ export default {
                         value: "owner",
                         format: patron_to_html,
                     },
-                    hideIn: ["List"],
-                },
-                ...(isSubFund.value
-                    ? []
-                    : [
-                          {
-                              name: "fund_type",
-                              type: "select",
-                              label: $__("Fund type"),
-                              group: $__("Information and status"),
-                              avCat: "av_fund_type",
-                              fallbackType: "text",
-                          },
-                      ]),
-                {
-                    name: "status",
-                    type: "boolean",
-                    label: $__("Active"),
-                    group: $__("Information and status"),
-                    defaultValue: true,
-                },
-                {
-                    name: "external_id",
-                    type: "text",
-                    label: $__("External ID"),
-                    group: $__("Information and status"),
-                    hideIn: ["List"],
-                },
-                {
-                    name: "fund_amount",
-                    type: "number",
-                    label: $__("Fund amount"),
-                    group: $__("Financial controlling"),
-                    defaultValue: 0,
-                    size: 6,
-                    format: (value, resource) =>
-                        formatValueWithCurrency(value, resource.currency),
-                    formatInputValue: (value, resource) => {
-                        return formatValueWithCurrency(
-                            value,
-                            resource.currency
-                        );
-                    },
-                    hideIn: ["List"],
-                },
-                {
-                    name: "oe_warning_percent",
-                    type: "number",
-                    label: $__("Overencumbrance warning percentage"),
-                    group: $__("Financial controlling"),
-                    placeholder: $__(
-                        "The percentage at which a warning is triggered"
-                    ),
-                    size: 6,
-                    format: v => v + "%",
-                    hideIn: ["List"],
-                },
-                {
-                    name: "oe_warning_amount",
-                    type: "number",
-                    label: $__("Overencumbrance warning amount"),
-                    group: $__("Financial controlling"),
-                    placeholder: $__(
-                        "The amount at which a warning is triggered"
-                    ),
-                    size: 6,
-                    format: (value, resource) =>
-                        formatValueWithCurrency(value, resource.currency),
                     hideIn: ["List"],
                 },
             ],
@@ -525,7 +511,6 @@ export default {
                 fund.fund_parent_id =
                     baseResource.route.query.fund_id || fund.fund_id;
             }
-            delete fund.last_updated;
             delete fund.owner;
             delete fund.allocations;
             delete fund.ledger;
@@ -535,6 +520,12 @@ export default {
             delete fund.managing_library;
             delete fund.patron;
             delete fund.patron_str;
+            delete fund.fiscal_period_name;
+            delete fund.ledger_name;
+            delete fund.fund_parent_name;
+            delete fund.currency;
+            delete fund.modified_date;
+            delete fund.created_date;
 
             if (fund_id) {
                 return baseResource.apiClient.update(fund, fund_id).then(
@@ -558,12 +549,13 @@ export default {
         const afterResourceFetch = (componentData, resource, caller) => {
             componentData.resource.value.oe_warning_percent =
                 resource.oe_warning_percent * 100;
+            componentData.resource.value.fiscal_period_name =
+                resource.fiscal_period.name;
+            componentData.resource.value.ledger_name = resource.ledger.name;
+            componentData.resource.value.fund_parent_name =
+                resource.parent_fund.name;
+            componentData.resource.value.currency = resource.ledger.currency;
             if (caller === "form") {
-                filterLedgersBySelectedFiscalPeriod(
-                    null,
-                    null,
-                    componentData.resource.value
-                );
                 filterLibGroupsAndFundGroupsBySelectedLedger(
                     null,
                     null,
@@ -845,20 +837,59 @@ export default {
             componentData,
             initialized
         ) => {
-            if (componentData.route.query.fund_id) {
+            resource.fiscal_period_id = parseInt(
+                componentData.route.query.fiscal_period_id
+            );
+            resource.ledger_id = parseInt(componentData.route.query.ledger_id);
+            if (isSubFund.value) {
                 resource.fund_parent_id = parseInt(
                     componentData.route.query.fund_id
                 );
             }
-            if (componentData.route.query.ledger_id) {
-                resource.ledger_id = parseInt(
-                    componentData.route.query.ledger_id
-                );
-                resource.fiscal_period_id = parseInt(
-                    componentData.route.query.fiscal_period_id
-                );
-            }
-            initialized.value = true;
+            const clientName = isSubFund.value ? "funds" : "ledgers";
+            const searchKey = isSubFund.value ? "fund_id" : "ledger_id";
+            APIClient.acquisition[clientName]
+                .get(resource[searchKey])
+                .then(result => {
+                    resource.fiscal_period_name = result.fiscal_period.name;
+                    const resultLedger = isSubFund.value
+                        ? result.ledger
+                        : result;
+                    resource.ledger_name = resultLedger.name;
+                    resource.currency = resultLedger.currency;
+                    const acqLibGroups =
+                        resultLedger.managing_library
+                            ?.acquisitions_library_groups;
+                    resource.parent_fund_name = isSubFund.value
+                        ? result.name
+                        : null;
+                    if (acqLibGroups.length) {
+                        const groupNames = acqLibGroups.map(
+                            alg => alg.group.title
+                        );
+                        baseResource.setMessage(
+                            $__("Access restriction for group(s) %s").format(
+                                groupNames.join(", ")
+                            )
+                        );
+
+                        resource.managing_branch =
+                            user.value.loggedInUser.loggedInBranch;
+                        const branchAttr = componentData.resourceAttrs.find(
+                            ra => ra.name === "managing_branch"
+                        );
+                        const branchNames =
+                            getBranchnamesFromGroups(acqLibGroups);
+                        branchAttr.componentProps.query = {
+                            type: "object",
+                            value: { branchname: { "-in": branchNames } },
+                        };
+
+                        initialized.value = true;
+                    } else {
+                        initialized.value = true;
+                    }
+                });
             return resource;
         };
 
@@ -868,7 +899,6 @@ export default {
             onFormSave,
             afterResourceFetch,
             fundGroupsQuery,
-            ledgersQuery,
             isSubFund,
             appendToShow,
             afterNewResourceCreate,

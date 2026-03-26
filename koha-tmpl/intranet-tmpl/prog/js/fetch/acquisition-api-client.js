@@ -187,7 +187,7 @@ export class AcquisitionAPIClient {
                     endpoint: "funds/" + id,
                     headers: {
                         "x-koha-embed":
-                            "owner,managing_library,fiscal_period,fund_group,ledger,allocations,sub_funds,parent_fund",
+                            "owner,managing_library,fiscal_period,fund_group,ledger,ledger.managing_library,allocations,sub_funds,parent_fund",
                         ...headers,
                     },
                 }),

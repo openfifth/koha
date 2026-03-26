@@ -93,13 +93,6 @@ export default {
                     group: $__("Information and status"),
                 },
                 {
-                    name: "status",
-                    type: "boolean",
-                    label: $__("Active"),
-                    group: $__("Information and status"),
-                    defaultValue: true,
-                },
-                {
                     name: "start_date",
                     type: "date",
                     label: $__("Start date"),
@@ -121,6 +114,20 @@ export default {
                     type: "date",
                     label: $__("End date"),
                     group: $__("Information and status"),
+                    required: true,
+                },
+                {
+                    name: "status",
+                    type: "select",
+                    label: $__("Status"),
+                    group: $__("Information and status"),
+                    defaultValue: true,
+                    selectLabel: "description",
+                    requiredKey: "value",
+                    options: [
+                        { description: $__("Active"), value: true },
+                        { description: $__("Inactive"), value: false },
+                    ],
                     required: true,
                 },
                 {
