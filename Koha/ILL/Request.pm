@@ -1482,6 +1482,17 @@ sub check_limits {
     }
 }
 
+=head3 _limit_counter
+
+    my $count = $self->_limit_counter( $method, $target );
+
+Internal helper that counts existing ILL requests for rate-limiting. C<$method>
+is either C<'annual'> (requests placed this calendar year) or C<'active'>
+(non-completed requests). C<$target> is a hashref of the search constraint,
+e.g. C<{ borrowernumber => $n }> or C<{ branchcode => $b }>.
+
+=cut
+
 sub _limit_counter {
     my ( $self, $method, $target ) = @_;
 
