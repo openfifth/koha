@@ -6,7 +6,7 @@
         :id="name"
         :reduce="relatedResource => relatedResource[relationshipRequiredKey]"
         :options="relatedResourcesOptions"
-        :required="required && !resource[name]"
+        :required="isRequired"
         :multiple="allowMultipleChoices"
         :filter-by="filterRelatedResourcesOptions"
         v-model="resource[name]"
@@ -82,6 +82,13 @@ export default {
             );
         };
 
+        const isRequired = computed(() => {
+            const valueDefined = Array.isArray(props.resource[props.name])
+                ? !!props.resource[props.name].length
+                : props.resource[props.name];
+            return props.required && !valueDefined;
+        });
+
         watch(
             () => queryParameters.value,
             () => {
@@ -105,6 +112,7 @@ export default {
             shouldBeDisabled,
             filterRelatedResourcesOptions,
             queryParameters,
+            isRequired,
         };
     },
     emits: ["resourcesLoaded"],
