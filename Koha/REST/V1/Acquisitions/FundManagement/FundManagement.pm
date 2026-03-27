@@ -20,7 +20,7 @@ package Koha::REST::V1::Acquisitions::FundManagement::FundManagement;
 use Modern::Perl;
 
 use Mojo::Base 'Mojolicious::Controller';
-use Mojo::JSON qw(decode_json);
+use Mojo::JSON qw(encode_json decode_json);
 use Try::Tiny;
 
 use C4::Context;
@@ -75,9 +75,26 @@ sub list_users {
 
     return try {
         my $query = decode_json( $c->req->param('q') );
-        $c->req->params->remove('q');
+        my $permission;
+        if ( $query->{permission} ) {
+            $permission = $query->{permission};
+            delete $query->{permission};
+        } else {
+            if ( $query->{'-and'} || $query->{'-or'} ) {
+                foreach my $param ( ( '-and', '-or' ) ) {
+                    if ( $query->{$param} ) {
+                        my ($permission_query) = grep( ref($_) eq 'HASH' && $_->{permission}, @{ $query->{$param} } );
+                        my @filtered_params = grep( ref($_) ne 'HASH' || ( ref($_) eq 'HASH' && !$_->{permission} ),
+                            @{ $query->{$param} } );
+                        $query->{$param} = \@filtered_params;
+                        $permission = $permission_query->{permission};
+                    }
+                }
+            }
+        }
+        $c->req->param( 'q', encode_json($query) );
 
-        my $patrons_rs = Koha::Patrons->search->filter_by_have_permission( $query->{permission} );
+        my $patrons_rs = Koha::Patrons->new->filter_by_have_permission($permission);
         my $patrons    = $c->objects->search($patrons_rs);
 
         return $c->render(
