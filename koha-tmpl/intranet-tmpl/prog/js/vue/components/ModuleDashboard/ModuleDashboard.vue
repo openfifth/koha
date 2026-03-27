@@ -223,6 +223,15 @@ export default {
         };
 
         onMounted(() => {
+            // Merge plugin widgets registered before mount into
+            // availableWidgets so localStorage restore can find them
+            const pluginWidgets = getRegisteredWidgets(props.module);
+            for (const widget of pluginWidgets) {
+                if (!availableWidgets.some(w => w.name === widget.name)) {
+                    availableWidgets.push(widget);
+                }
+            }
+
             const storedWidgets = localStorage.getItem(
                 name + "-dashboard-widgets"
             );
@@ -244,7 +253,7 @@ export default {
                         selectedWidgetsRight.value.push(widget);
                     }
                 });
-                // Add any new widgets (e.g. from plugins) not yet in localStorage
+                // Add any new widgets not yet in localStorage
                 availableWidgets.forEach(widget => {
                     if (
                         !selectedWidgetsLeft.value.includes(widget) &&
@@ -255,18 +264,6 @@ export default {
                 });
             } else {
                 availableWidgets.forEach(widget => addWidget(widget));
-            }
-
-            // Catch up on plugin widgets registered before this component mounted
-            // (plugin module scripts run before the router resolves Home.vue)
-            const pluginWidgets = getRegisteredWidgets(props.module);
-            for (const widget of pluginWidgets) {
-                if (!availableWidgets.some(w => w.name === widget.name)) {
-                    availableWidgets.push(widget);
-                }
-                if (!isWidgetSelected(widget.name)) {
-                    addWidget(widget);
-                }
             }
         });
 
@@ -280,12 +277,25 @@ export default {
         function onWidgetRegistered(e) {
             if (e.detail?.module !== props.module) return;
             const newWidgets = getRegisteredWidgets(props.module);
+            const storedWidgets = localStorage.getItem(
+                name + "-dashboard-widgets"
+            );
+            const saved = storedWidgets ? JSON.parse(storedWidgets) : null;
             for (const widget of newWidgets) {
                 if (!availableWidgets.some(w => w.name === widget.name)) {
                     availableWidgets.push(widget);
                 }
                 if (!isWidgetSelected(widget.name)) {
-                    addWidget(widget);
+                    // Restore to saved position if available
+                    if (saved?.left.includes(widget.name)) {
+                        const idx = saved.left.indexOf(widget.name);
+                        selectedWidgetsLeft.value.splice(idx, 0, widget);
+                    } else if (saved?.right.includes(widget.name)) {
+                        const idx = saved.right.indexOf(widget.name);
+                        selectedWidgetsRight.value.splice(idx, 0, widget);
+                    } else {
+                        addWidget(widget);
+                    }
                 }
             }
         }
