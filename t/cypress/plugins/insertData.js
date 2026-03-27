@@ -935,11 +935,19 @@ const insertSampleEdifactMessages = async () => {
     });
     const vendor_id = vendorResult.insertId;
 
+    // Create a file transport for the EDI account
+    const fileTransportResult = await query({
+        sql: `INSERT INTO file_transports (name, host, port, transport, passive, user_name, password, auth_mode, download_directory, upload_directory)
+              VALUES ('Test EDI Transport', 'test.edi.host', 22, 'sftp', 1, 'testuser', 'testpass', 'password', '/download', '/upload')`,
+        values: [],
+    });
+    const file_transport_id = fileTransportResult.insertId;
+
     // Create a test EDI account for the vendor
     const ediAccountResult = await query({
-        sql: `INSERT INTO vendor_edi_accounts (description, host, username, password, vendor_id, san, standard, quotes_enabled, invoices_enabled, orders_enabled, responses_enabled, auto_orders, plugin)
-              VALUES ('Test EDI Account', 'test.edi.host', 'testuser', 'testpass', ?, 'TEST123', 'EUR', 1, 1, 1, 1, 0, '')`,
-        values: [vendor_id],
+        sql: `INSERT INTO vendor_edi_accounts (description, vendor_id, san, standard, quotes_enabled, invoices_enabled, orders_enabled, responses_enabled, auto_orders, plugin, file_transport_id)
+              VALUES ('Test EDI Account', ?, 'TEST123', 'EUR', 1, 1, 1, 1, 0, '', ?)`,
+        values: [vendor_id, file_transport_id],
     });
     const edi_acct = ediAccountResult.insertId;
 
@@ -999,6 +1007,7 @@ const insertSampleEdifactMessages = async () => {
         message_ids: inserted_ids,
         vendor_id: vendor_id,
         edi_acct: edi_acct,
+        file_transport_id: file_transport_id,
     };
 };
 
@@ -1010,6 +1019,9 @@ const deleteSampleEdifactMessages = async test_data => {
         });
         await query({
             sql: "DELETE FROM vendor_edi_accounts WHERE description = 'Test EDI Account'",
+        });
+        await query({
+            sql: "DELETE FROM file_transports WHERE name = 'Test EDI Transport'",
         });
         await query({
             sql: "DELETE FROM aqbooksellers WHERE name = 'Test EDI Vendor'",
@@ -1030,6 +1042,14 @@ const deleteSampleEdifactMessages = async test_data => {
         await query({
             sql: "DELETE FROM vendor_edi_accounts WHERE id = ?",
             values: [test_data.edi_acct],
+        });
+    }
+
+    if (test_data.file_transport_id) {
+        // Delete the test file transport
+        await query({
+            sql: "DELETE FROM file_transports WHERE file_transport_id = ?",
+            values: [test_data.file_transport_id],
         });
     }
 
