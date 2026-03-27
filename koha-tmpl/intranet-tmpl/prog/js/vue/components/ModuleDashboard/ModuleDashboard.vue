@@ -283,7 +283,15 @@ export default {
         }
         function onWidgetRegistered(e) {
             if (e.detail?.module !== props.module) return;
-            const newWidgets = getRegisteredWidgets(props.module);
+            const widget = getRegisteredWidgets(props.module).find(
+                w => w.name === e.detail.id
+            );
+            if (!widget) return;
+            if (!availableWidgets.some(w => w.name === widget.name)) {
+                availableWidgets.push(widget);
+            }
+            if (isWidgetSelected(widget.name)) return;
+
             const storedWidgets = localStorage.getItem(
                 name + "-dashboard-widgets"
             );
@@ -293,22 +301,14 @@ export default {
             } catch {
                 saved = null;
             }
-            for (const widget of newWidgets) {
-                if (!availableWidgets.some(w => w.name === widget.name)) {
-                    availableWidgets.push(widget);
-                }
-                if (!isWidgetSelected(widget.name)) {
-                    // Restore to saved position if available
-                    if (saved?.left.includes(widget.name)) {
-                        const idx = saved.left.indexOf(widget.name);
-                        selectedWidgetsLeft.value.splice(idx, 0, widget);
-                    } else if (saved?.right.includes(widget.name)) {
-                        const idx = saved.right.indexOf(widget.name);
-                        selectedWidgetsRight.value.splice(idx, 0, widget);
-                    } else {
-                        addWidget(widget);
-                    }
-                }
+
+            // Restore to saved column if available, otherwise default
+            if (saved?.left.includes(widget.name)) {
+                selectedWidgetsLeft.value.push(widget);
+            } else if (saved?.right.includes(widget.name)) {
+                selectedWidgetsRight.value.push(widget);
+            } else {
+                addWidget(widget);
             }
         }
         window.addEventListener("koha:widget-registered", onWidgetRegistered);
