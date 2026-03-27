@@ -243,7 +243,8 @@ export default {
                 parsed = null;
             }
             if (parsed) {
-                const { left, right } = parsed;
+                const { left, right, known } = parsed;
+                const knownSet = new Set(known ?? []);
                 left.forEach(widgetName => {
                     const widget = availableWidgets.find(
                         widget => widget.name === widgetName
@@ -260,9 +261,12 @@ export default {
                         selectedWidgetsRight.value.push(widget);
                     }
                 });
-                // Add any new widgets not yet in localStorage
+                // Auto-add only genuinely new widgets (not in known).
+                // Widgets in known but absent from left/right were
+                // deliberately removed by the user.
                 availableWidgets.forEach(widget => {
                     if (
+                        !knownSet.has(widget.name) &&
                         !selectedWidgetsLeft.value.includes(widget) &&
                         !selectedWidgetsRight.value.includes(widget)
                     ) {
@@ -302,6 +306,11 @@ export default {
                 saved = null;
             }
 
+            const knownSet = new Set(saved?.known ?? []);
+
+            // Widget was deliberately removed — don't re-add
+            if (knownSet.has(widget.name)) return;
+
             // Restore to saved column if available, otherwise default
             if (saved?.left.includes(widget.name)) {
                 selectedWidgetsLeft.value.push(widget);
@@ -324,11 +333,13 @@ export default {
             ([left, right]) => {
                 const leftWidgetNames = left.map(widget => widget.name);
                 const rightWidgetNames = right.map(widget => widget.name);
+                const allKnown = availableWidgets.map(w => w.name);
                 localStorage.setItem(
                     name + "-dashboard-widgets",
                     JSON.stringify({
                         left: leftWidgetNames,
                         right: rightWidgetNames,
+                        known: allKnown,
                     })
                 );
             },
