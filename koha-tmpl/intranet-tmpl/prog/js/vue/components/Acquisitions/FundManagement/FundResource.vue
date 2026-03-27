@@ -24,6 +24,7 @@ export default {
         const isSubFund = ref(props.route.query.fund_id ? true : false);
 
         const patron_to_html = $patron_to_html;
+        const format_date = $date;
 
         const acquisitionsStore = inject("acquisitionsStore");
         const { user, authorisedValues } = storeToRefs(acquisitionsStore);
@@ -575,7 +576,6 @@ export default {
                           {
                               type: "component",
                               name: $__("Allocations"),
-                              hidden: fund => fund.fund_id,
                               componentPath:
                                   "@koha-vue/components/RelationshipTableDisplay.vue",
                               componentProps: {
@@ -584,8 +584,8 @@ export default {
                                       value: {
                                           columns: [
                                               {
-                                                  title: __("Date"),
-                                                  data: "last_updated",
+                                                  title: __("Type"),
+                                                  data: "type",
                                                   searchable: true,
                                                   orderable: true,
                                                   render: function (
@@ -594,9 +594,13 @@ export default {
                                                       row,
                                                       meta
                                                   ) {
-                                                      return row.last_updated.substring(
-                                                          0,
-                                                          10
+                                                      return (
+                                                          String(row.type)
+                                                              .charAt(0)
+                                                              .toUpperCase() +
+                                                          String(
+                                                              row.type
+                                                          ).slice(1)
                                                       );
                                                   },
                                               },
@@ -611,40 +615,27 @@ export default {
                                                       row,
                                                       meta
                                                   ) {
-                                                      const symbol =
-                                                          row.allocation_amount >=
-                                                          0
-                                                              ? "+"
-                                                              : "";
-                                                      const colour =
-                                                          row.allocation_amount >=
-                                                          0
-                                                              ? "green"
-                                                              : "red";
+                                                      const isIncrease =
+                                                          row.type ===
+                                                              "increase" ||
+                                                          (row.type ===
+                                                              "transfer" &&
+                                                              row.is_transferred_from);
+                                                      const symbol = isIncrease
+                                                          ? "+"
+                                                          : "-";
+                                                      const colour = isIncrease
+                                                          ? "green"
+                                                          : "red";
                                                       return (
                                                           '<span style="color:' +
                                                           colour +
                                                           ';">' +
                                                           symbol +
-                                                          row.allocation_amount +
+                                                          formatValueWithCurrency(
+                                                              row.allocation_amount
+                                                          ) +
                                                           "</span>"
-                                                      );
-                                                  },
-                                              },
-                                              {
-                                                  title: __("New fund total"),
-                                                  data: "new_fund_value",
-                                                  searchable: true,
-                                                  orderable: true,
-                                                  render: function (
-                                                      data,
-                                                      type,
-                                                      row,
-                                                      meta
-                                                  ) {
-                                                      return formatValueWithCurrencyHandler(
-                                                          row.new_fund_value,
-                                                          row.currency
                                                       );
                                                   },
                                               },
@@ -659,6 +650,23 @@ export default {
                                                   data: "note",
                                                   searchable: true,
                                                   orderable: true,
+                                              },
+                                              {
+                                                  title: __("Timestamp"),
+                                                  data: "created_date",
+                                                  searchable: true,
+                                                  orderable: true,
+                                                  render: function (
+                                                      data,
+                                                      type,
+                                                      row,
+                                                      meta
+                                                  ) {
+                                                      return format_date(
+                                                          row.created_date,
+                                                          { withtime: true }
+                                                      );
+                                                  },
                                               },
                                           ],
                                           url:

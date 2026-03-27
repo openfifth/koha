@@ -93,4 +93,9 @@ properties:
     type:
       - object
       - "null"
+  allocations:
+    type: array
+    description: List of allocations
+    items:
+      $ref: "acq_allocation.yaml"
 additionalProperties: false

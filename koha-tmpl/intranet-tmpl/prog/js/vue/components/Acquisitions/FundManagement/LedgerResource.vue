@@ -21,6 +21,7 @@ export default {
     },
     setup(props) {
         const patron_to_html = $patron_to_html;
+        const format_date = $date;
 
         const acquisitionsStore = inject("acquisitionsStore");
         const { currencies, user } = storeToRefs(acquisitionsStore);
@@ -480,11 +481,11 @@ export default {
         const appendToShow = componentData => {
             const { resource } = componentData;
             return [
-                ...(resource.funds?.length
+                ...(resource.allocations?.length
                     ? [
                           {
                               type: "component",
-                              name: $__("Funds"),
+                              name: $__("Allocations"),
                               componentPath:
                                   "@koha-vue/components/RelationshipTableDisplay.vue",
                               componentProps: {
@@ -493,8 +494,25 @@ export default {
                                       value: {
                                           columns: [
                                               {
-                                                  title: __("Name"),
-                                                  data: "name:fund_id",
+                                                  title: __("Timestamp"),
+                                                  data: "created_date",
+                                                  searchable: true,
+                                                  orderable: true,
+                                                  render: function (
+                                                      data,
+                                                      type,
+                                                      row,
+                                                      meta
+                                                  ) {
+                                                      return format_date(
+                                                          row.created_date,
+                                                          { withtime: true }
+                                                      );
+                                                  },
+                                              },
+                                              {
+                                                  title: __("Type"),
+                                                  data: "type",
                                                   searchable: true,
                                                   orderable: true,
                                                   render: function (
@@ -504,25 +522,18 @@ export default {
                                                       meta
                                                   ) {
                                                       return (
-                                                          '<a href="/cgi-bin/koha/acquisitions/fund_management/fund/' +
-                                                          row.fund_id +
-                                                          '" class="showFund">' +
-                                                          escape_str(
-                                                              `${row.name}`
-                                                          ) +
-                                                          "</a>"
+                                                          String(row.type)
+                                                              .charAt(0)
+                                                              .toUpperCase() +
+                                                          String(
+                                                              row.type
+                                                          ).slice(1)
                                                       );
                                                   },
                                               },
                                               {
-                                                  title: __("Code"),
-                                                  data: "code",
-                                                  searchable: true,
-                                                  orderable: true,
-                                              },
-                                              {
-                                                  title: __("Status"),
-                                                  data: "status",
+                                                  title: __("Amount"),
+                                                  data: "allocation_amount",
                                                   searchable: true,
                                                   orderable: true,
                                                   render: function (
@@ -531,64 +542,76 @@ export default {
                                                       row,
                                                       meta
                                                   ) {
-                                                      return row.status
-                                                          ? __("Active")
-                                                          : __("Inactive");
+                                                      const isIncrease =
+                                                          row.type ===
+                                                              "increase" ||
+                                                          (row.type ===
+                                                              "transfer" &&
+                                                              row.is_transferred_from);
+                                                      const symbol = isIncrease
+                                                          ? "+"
+                                                          : "-";
+                                                      const colour = isIncrease
+                                                          ? "green"
+                                                          : "red";
+                                                      return (
+                                                          '<span style="color:' +
+                                                          colour +
+                                                          ';">' +
+                                                          symbol +
+                                                          formatValueWithCurrency(
+                                                              row.allocation_amount
+                                                          ) +
+                                                          "</span>"
+                                                      );
                                                   },
+                                              },
+                                              {
+                                                  title: __("Reference"),
+                                                  data: "reference",
+                                                  searchable: true,
+                                                  orderable: true,
+                                              },
+                                              {
+                                                  title: __("Note"),
+                                                  data: "note",
+                                                  searchable: true,
+                                                  orderable: true,
                                               },
                                           ],
                                           url:
                                               APIClient.acquisition.httpClient
-                                                  ._baseURL + "funds",
+                                                  ._baseURL + "allocations",
                                           table_settings: null,
                                           add_filters: true,
                                           actions: {
-                                              0: [
-                                                  {
-                                                      showFund: {
-                                                          callback: (
-                                                              fund,
-                                                              dt,
-                                                              event
-                                                          ) => {
-                                                              event?.preventDefault();
-                                                              baseResource.router.push(
-                                                                  {
-                                                                      name: "FundShow",
-                                                                      params: {
-                                                                          fund_id:
-                                                                              fund.fund_id,
-                                                                      },
-                                                                  }
-                                                              );
-                                                          },
-                                                      },
-                                                  },
-                                              ],
+                                              0: ["show"],
                                           },
                                       },
                                   },
                                   apiClient: {
                                       type: "object",
-                                      value: APIClient.acquisition.funds,
+                                      value: APIClient.acquisition.allocations,
                                   },
                                   filters: {
                                       type: "filter",
                                       keys: {
-                                          ledger_id: { property: "ledger_id" },
+                                          ledger_id: {
+                                              property: "ledger_id",
+                                          },
                                       },
                                   },
-                                  resource: {
-                                      type: "resource",
-                                  },
-                                  resourceName: {
-                                      type: "string",
-                                      value: "fund",
-                                  },
-                                  resourceNamePlural: {
-                                      type: "string",
-                                      value: "funds",
-                                  },
+                              },
+                              resource: {
+                                  type: "resource",
+                              },
+                              resourceName: {
+                                  type: "string",
+                                  value: "allocation",
+                              },
+                              resourceNamePlural: {
+                                  type: "string",
+                                  value: "allocations",
                               },
                           },
                       ]

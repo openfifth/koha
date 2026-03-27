@@ -140,7 +140,7 @@ export class AcquisitionAPIClient {
                     endpoint: "ledgers/" + id,
                     headers: {
                         "x-koha-embed":
-                            "owner,managing_library,managing_library.acquisitions_library_groups,fiscal_period,funds",
+                            "owner,managing_library,managing_library.acquisitions_library_groups,fiscal_period,funds,allocations",
                         ...headers,
                     },
                 }),

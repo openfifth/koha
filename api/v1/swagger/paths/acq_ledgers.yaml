@@ -138,6 +138,7 @@
           - fiscal_period
           - funds
           - funds.allocations
+          - allocations
           - owner
           - managing_library
           - managing_library.acquisitions_library_groups
