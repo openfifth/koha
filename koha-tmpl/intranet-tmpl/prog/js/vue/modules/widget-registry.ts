@@ -109,6 +109,21 @@ export function registerWidget(entry: WidgetRegistryEntry): void {
         );
         return;
     }
+    // Resolve the component once at registration time so
+    // getRegisteredWidgets always returns the same object reference.
+    let component: Component & { name?: string };
+    if (typeof entry.component === "function") {
+        component = defineAsyncComponent(
+            entry.component as () => Promise<Component>
+        );
+    } else {
+        component = entry.component;
+    }
+    if (!component.name) {
+        component.name = entry.id;
+    }
+    entry.component = markRaw(component);
+
     widgetRegistry.set(entry.id, entry);
     window.dispatchEvent(
         new CustomEvent("koha:widget-registered", {
@@ -128,25 +143,7 @@ export function getRegisteredWidgets(module: string): Component[] {
     const widgets: Component[] = [];
     for (const entry of widgetRegistry.values()) {
         if (entry.module !== module) continue;
-
-        let component: Component & { name?: string };
-        if (typeof entry.component === "function") {
-            component = defineAsyncComponent(
-                entry.component as () => Promise<Component>
-            );
-        } else {
-            component = entry.component;
-        }
-
-        // Ensure the component has a name — ModuleDashboard uses widget.name
-        // for localStorage persistence, deduplication, and v-for keys.
-        // defineAsyncComponent wrappers don't carry .name, and plain objects
-        // might omit it, so we fall back to the registry entry id.
-        if (!component.name) {
-            component.name = entry.id;
-        }
-
-        widgets.push(markRaw(component));
+        widgets.push(entry.component);
     }
     return widgets;
 }
