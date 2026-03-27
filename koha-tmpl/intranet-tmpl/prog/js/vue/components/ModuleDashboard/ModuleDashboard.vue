@@ -235,8 +235,15 @@ export default {
             const storedWidgets = localStorage.getItem(
                 name + "-dashboard-widgets"
             );
-            if (storedWidgets) {
-                const { left, right } = JSON.parse(storedWidgets);
+            let parsed;
+            try {
+                parsed = storedWidgets ? JSON.parse(storedWidgets) : null;
+            } catch {
+                localStorage.removeItem(name + "-dashboard-widgets");
+                parsed = null;
+            }
+            if (parsed) {
+                const { left, right } = parsed;
                 left.forEach(widgetName => {
                     const widget = availableWidgets.find(
                         widget => widget.name === widgetName
@@ -280,7 +287,12 @@ export default {
             const storedWidgets = localStorage.getItem(
                 name + "-dashboard-widgets"
             );
-            const saved = storedWidgets ? JSON.parse(storedWidgets) : null;
+            let saved;
+            try {
+                saved = storedWidgets ? JSON.parse(storedWidgets) : null;
+            } catch {
+                saved = null;
+            }
             for (const widget of newWidgets) {
                 if (!availableWidgets.some(w => w.name === widget.name)) {
                     availableWidgets.push(widget);
