@@ -49,14 +49,18 @@ const widgetRegistry = getOrCreateRegistry();
  *
  * Plugins call this from their intranet_js() hook.
  *
- * IMPORTANT: Plugin components must use Options API (data, methods, render)
- * rather than Composition API (ref, reactive) for reactive state. The host
- * Vue app (e.g. erm.js) and islands.esm.js bundle separate Vue runtimes;
- * Options API data() is processed by the host, ensuring correct reactivity.
+ * All Vue module bundles share a single Vue instance via the import map
+ * (see doc-head-close.inc), so both Composition API (ref, reactive, etc.)
+ * and Options API (data, methods, render) work correctly in plugin widgets.
+ *
+ * Plugins import from the islands ESM bundle which re-exports Vue APIs
+ * and widget helpers (useBaseWidget, WidgetWrapper).
  *
  * @example
  * ```js
- * const { registerWidget, h } = await import(islandsSrc);
+ * const {
+ *     registerWidget, useBaseWidget, WidgetWrapper, h, ref,
+ * } = await import(islandsSrc);
  * registerWidget({
  *     id: "PluginMyWidget",
  *     module: "erm",
@@ -64,9 +68,19 @@ const widgetRegistry = getOrCreateRegistry();
  *         name: "PluginMyWidget",
  *         props: { display: String, dashboardColumn: String },
  *         emits: ["removed", "added", "moveWidget"],
- *         data() { return { count: 0 }; },
- *         render() {
- *             return h("div", {}, `Clicked ${this.count} times`);
+ *         setup(props, { emit }) {
+ *             const base = useBaseWidget({
+ *                 id: "PluginMyWidget",
+ *                 name: "My Widget",
+ *                 icon: "fas fa-puzzle-piece",
+ *                 ...props,
+ *             }, emit);
+ *             const count = ref(0);
+ *             base.onDashboardMounted(() => { base.loading.value = false; });
+ *             return () => h(WidgetWrapper, base.widgetWrapperProps.value, {
+ *                 default: () => [h("button", { onClick: () => count.value++ },
+ *                     `Clicked ${count.value} times`)],
+ *             });
  *         },
  *     },
  * });
