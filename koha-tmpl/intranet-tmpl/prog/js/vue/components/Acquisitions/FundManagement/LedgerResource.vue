@@ -29,6 +29,40 @@ export default {
             acquisitionsStore;
 
         const additionalToolbarButtons = (resource, componentData) => {
+            const handleAllocationButtons = () => {
+                return [
+                    {
+                        title: $__("Increase ledger amount"),
+                        action: "increase",
+                        icon: "plus",
+                    },
+                    {
+                        title: $__("Decrease ledger amount"),
+                        action: "decrease",
+                        icon: "minus",
+                    },
+                    {
+                        title: $__("Transfer ledger amount"),
+                        action: "transfer",
+                        icon: "arrow-right-arrow-left",
+                    },
+                ].map(({ title, action, icon }) => {
+                    return {
+                        to: {
+                            name: "AllocationFormAdd",
+                            params: {
+                                entity: "ledger",
+                                entity_id: resource.ledger_id,
+                            },
+                            query: {
+                                action,
+                            },
+                        },
+                        title,
+                        icon,
+                    };
+                });
+            };
             return {
                 show: [
                     ...(!resource.locked
@@ -48,6 +82,7 @@ export default {
                               },
                           ]
                         : []),
+                    ...handleAllocationButtons(),
                 ],
             };
         };

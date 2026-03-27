@@ -577,6 +577,23 @@ sub handle_spend_limit_changes {
     return;
 }
 
+=head3 update_amount
+
+=cut
+
+sub update_amount {
+    my ( $self, $args ) = @_;
+
+    my $entity            = $self->_object_hierarchy()->{object};
+    my $value_change_type = $args->{type};
+    my $value             = $args->{value};
+
+    my $entity_field = $entity . "_amount";
+
+    my $new_value = $value_change_type eq 'increase' ? $self->$entity_field + $value : $self->$entity_field - $value;
+    $self->$entity_field($new_value)->store;
+}
+
 sub _format_object_name {
     my ($name) = @_;
 

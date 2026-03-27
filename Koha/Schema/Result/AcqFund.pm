@@ -404,13 +404,13 @@ __PACKAGE__->belongs_to(
 
 Type: belongs_to
 
-Related object: L<Koha::Schema::Result::Fund>
+Related object: L<Koha::Schema::Result::AcqFund>
 
 =cut
 
 __PACKAGE__->belongs_to(
     "parent_fund",
-    "Koha::Schema::Result::Fund",
+    "Koha::Schema::Result::AcqFund",
     { fund_id => "fund_parent_id" },
     {
         is_deferrable => 1,

@@ -24,6 +24,7 @@ use Mojo::JSON qw(decode_json);
 use Try::Tiny;
 
 use Koha::Acquisition::FundManagement::Funds;
+use Koha::Acquisition::FundManagement::Ledgers;
 use Koha::Acquisition::FundManagement::Allocation;
 use Koha::Acquisition::FundManagement::Allocations;
 use Koha::Exceptions::Acquisition::FundManagement::LimitExceeded;
@@ -45,10 +46,7 @@ sub list {
         my $allocations_set = Koha::Acquisition::FundManagement::Allocations->new;
         my $allocations     = $c->objects->search($allocations_set);
 
-        my $sorted_allocations = Koha::Acquisition::FundManagement::Allocations->add_totals_to_allocations(
-            { allocations => $allocations } );
-
-        return $c->render( status => 200, openapi => $sorted_allocations );
+        return $c->render( status => 200, openapi => $allocations );
     } catch {
         $c->unhandled_exception($_);
     };
@@ -94,10 +92,39 @@ sub add {
             sub {
 
                 my $body = $c->req->json;
-                delete $body->{lib_groups} if $body->{lib_groups};
 
                 my $allocation =
                     Koha::Acquisition::FundManagement::Allocation->new_from_api($body)->store->discard_changes;
+
+                my $entities = {
+                    funds => {
+                        entity    => Koha::Acquisition::FundManagement::Funds->find( $body->{fund_id} ),
+                        id_param  => 'fund_id',
+                        recipient => Koha::Acquisition::FundManagement::Funds->find( $body->{is_transferred_to} )
+                    },
+                    ledgers => {
+                        entity    => Koha::Acquisition::FundManagement::Ledgers->find( $body->{ledger_id} ),
+                        id_param  => 'ledger_id',
+                        recipient => Koha::Acquisition::FundManagement::Ledgers->find( $body->{is_transferred_to} )
+                    },
+                };
+                my $module = $body->{fund_id} ? $entities->{funds} : $entities->{ledgers};
+
+                my $entity      = $module->{entity};
+                my $change_type = $body->{type} eq 'transfer' ? 'decrease' : $body->{type};
+                $entity->update_amount( { type => $change_type, value => $body->{allocation_amount} } );
+
+                if ( $body->{type} eq 'transfer' && $body->{is_transferred_to} ) {
+                    my $recipient = $module->{recipient};
+                    $recipient->update_amount( { type => 'increase', value => $body->{allocation_amount} } );
+                    my $transfer = {%$body};
+                    $transfer->{ $module->{id_param} } = $body->{is_transferred_to};
+                    $transfer->{is_transferred_from}   = $body->{ $module->{id_param} };
+                    $transfer->{is_transferred_to}     = undef;
+
+                    my $transfer_allocation =
+                        Koha::Acquisition::FundManagement::Allocation->new_from_api($transfer)->store->discard_changes;
+                }
 
                 $c->res->headers->location( $c->req->url->to_string . '/' . $allocation->allocation_id );
                 return $c->render(
@@ -150,10 +177,6 @@ sub update {
             sub {
 
                 my $body = $c->req->json;
-
-                delete $body->{lib_groups}    if $body->{lib_groups};
-                delete $body->{fiscal_period} if $body->{fiscal_period};
-                delete $body->{last_updated}  if $body->{last_updated};
 
                 $allocation->set_from_api($body)->store;
 

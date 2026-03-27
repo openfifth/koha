@@ -42,6 +42,40 @@ export default {
         };
 
         const additionalToolbarButtons = resource => {
+            const handleAllocationButtons = () => {
+                return [
+                    {
+                        title: $__("Increase fund amount"),
+                        action: "increase",
+                        icon: "plus",
+                    },
+                    {
+                        title: $__("Decrease fund amount"),
+                        action: "decrease",
+                        icon: "minus",
+                    },
+                    {
+                        title: $__("Transfer fund amount"),
+                        action: "transfer",
+                        icon: "arrow-right-arrow-left",
+                    },
+                ].map(({ title, action, icon }) => {
+                    return {
+                        to: {
+                            name: "AllocationFormAdd",
+                            params: {
+                                entity: "fund",
+                                entity_id: resource.fund_id,
+                            },
+                            query: {
+                                action,
+                            },
+                        },
+                        title,
+                        icon,
+                    };
+                });
+            };
             return {
                 show: [
                     ...(!isSubFund.value
@@ -56,19 +90,7 @@ export default {
                               },
                           ]
                         : []),
-                    {
-                        to: {
-                            name: "TransferFunds",
-                            query: {
-                                fund_id: resource.fund_id,
-                                ...(isSubFund.value && {
-                                    fund_parent_id: resource.fund_parent_id,
-                                }),
-                            },
-                        },
-                        icon: "arrow-right-arrow-left",
-                        title: $__("Transfer funds"),
-                    },
+                    ...handleAllocationButtons(),
                 ],
             };
         };
@@ -415,8 +437,12 @@ export default {
                     toolTip: $__(
                         "Please note: These restrictions will override your library group configuration!"
                     ),
-                    format: (val, resource, attr) =>
-                        attr.options.find(op => op.value === val).description,
+                    format: (val, resource, attr) => {
+                        const selectedOption = attr.options.find(
+                            op => op.value === val
+                        );
+                        return selectedOption ? selectedOption.description : "";
+                    },
                     hideIn: ["List"],
                 },
             ],
@@ -505,6 +531,10 @@ export default {
             delete fund.currency;
             delete fund.modified_date;
             delete fund.created_date;
+
+            fund.fund_permission = fund.fund_permission
+                ? parseInt(fund.fund_permission)
+                : null;
 
             if (fund_id) {
                 return baseResource.apiClient.update(fund, fund_id).then(
