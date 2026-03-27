@@ -105,7 +105,11 @@
                     <ButtonSubmit :title="$__('Save')" />
                 </DropdownButtons>
                 <router-link
-                    :to="{ name: instancedResource.components.list }"
+                    :to="{
+                        name:
+                            instancedResource.components.list ||
+                            instancedResource.navigationOnFormSave,
+                    }"
                     role="button"
                     class="cancel"
                     >{{ $__("Cancel") }}</router-link
@@ -116,7 +120,7 @@
 </template>
 
 <script>
-import { computed, onBeforeMount, reactive, ref, useTemplateRef } from "vue";
+import { computed, onBeforeMount, ref, useTemplateRef } from "vue";
 import FormElement from "./FormElement.vue";
 import ButtonSubmit from "./ButtonSubmit.vue";
 import DropdownButtons from "./DropdownButtons.vue";
