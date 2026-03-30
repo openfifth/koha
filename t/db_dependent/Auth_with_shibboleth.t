@@ -35,6 +35,13 @@ use t::lib::Dates;
 use C4::Auth_with_shibboleth qw( shib_ok login_shib_url get_login_shib checkpw_shib );
 use Koha::Database;
 use Koha::DateUtils qw( dt_from_string );
+use Koha::Auth::Hostname;
+use Koha::Auth::Hostnames;
+use Koha::Auth::Identity::Provider;
+use Koha::Auth::Identity::Provider::Hostname;
+use Koha::Auth::Identity::Provider::Mapping;
+use Koha::Auth::Identity::Provider::SAML2;
+use Koha::Auth::Identity::Providers;
 
 BEGIN {
     use_ok(
@@ -48,9 +55,7 @@ $schema->storage->txn_begin;
 my $builder = t::lib::TestBuilder->new;
 my $logger  = t::lib::Mocks::Logger->new();
 
-# Mock variables
 my $shibboleth;
-change_config( {} );
 my $interface = 'opac';
 
 # Mock few preferences
@@ -59,11 +64,12 @@ t::lib::Mocks::mock_preference( 'StaffClientBaseURL',   'teststaff.com' );
 t::lib::Mocks::mock_preference( 'EmailFieldPrimary',    '' );
 t::lib::Mocks::mock_preference( 'EmailFieldPrecedence', 'emailpro' );
 
-# Mock Context: config, tz and interface
+# Mock Context: tz and interface
 my $context = Test::MockModule->new('C4::Context');
-$context->mock( 'config',    sub { return $shibboleth; } );    # easier than caching by Mocks::mock_config
 $context->mock( 'timezone',  sub { return 'local'; } );
 $context->mock( 'interface', sub { return $interface; } );
+
+change_config( {} );
 
 # Mock Letters: GetPreparedLetter, EnqueueLetter and SendQueuedMessages
 # We want to test the params
@@ -97,20 +103,22 @@ $mocked_letters->mock(
 # Start testing ----------------------------------------------------------------
 
 subtest "shib_ok tests" => sub {
-    plan tests => 5;
+    plan tests => 6;
     my $result;
 
     # correct config, no debug
     is( shib_ok(), '1', "good config" );
 
-    # bad config, no debug
+    # bad config, no debug - clear matchpoint on hostname entries
+    $schema->resultset('IdentityProviderHostname')->update( { matchpoint => undef } );
     delete $shibboleth->{matchpoint};
+    $logger->clear();
     warnings_are { $result = shib_ok() }
-    [ { carped => 'shibboleth matchpoint not defined' }, ],
-        "undefined matchpoint = fatal config, warning given";
+    [ { carped => 'shibboleth matchpoint not defined' } ],
+        "matchpoint warning given when no matchpoint set";
     is( $result, '0', "bad config" );
 
-    change_config( { matchpoint => 'email' } );
+    change_config( { matchpoint => 'email', mapping => { email => { content => 'default@example.com' } } } );
     warnings_are { $result = shib_ok() }
     [ { carped => 'shibboleth matchpoint not mapped' }, ],
         "unmapped matchpoint = fatal config, warning given";
@@ -119,6 +127,7 @@ subtest "shib_ok tests" => sub {
     # add test for undefined shibboleth block
     $logger->clear;
     change_config( {} );
+    is( shib_ok(), '1', 'good config after reset' );
 };
 
 subtest "login_shib_url tests" => sub {
@@ -279,6 +288,10 @@ subtest "checkpw_shib tests" => sub {
     );
 
     # sync user
+    my $saml2_provider = Koha::Auth::Identity::Providers->search( { protocol => 'SAML2' } )->next;
+    my $saml2_config   = $saml2_provider->get_config // {};
+    $saml2_config->{sync} = 1;
+    $saml2_provider->set_config($saml2_config)->store;
     $shibboleth->{sync} = 1;
     $ENV{'city'} = 'AnotherCity';
     ( $retval, $retcard, $retuserid, $retpatron ) = checkpw_shib($shib_login);
@@ -335,7 +348,7 @@ subtest "checkpw_shib tests" => sub {
     $ENV{'emailpro'} = 'me@myemail.com';
     $ENV{branchcode} = $library->branchcode;      # needed since T::D::C does no longer hides the FK constraint
 
-    checkpw($shib_login);
+    ( $retval, $retcard, $retuserid, $retpatron ) = checkpw_shib($shib_login);
     ok(
         my $new_user_autocreated = Koha::Patrons->find( { userid => 'test43210' } ),
         "new user found"
@@ -424,6 +437,38 @@ $schema->storage->txn_rollback;
 sub change_config {
     my $params = shift;
 
+    # Remove any existing SAML2 providers
+    Koha::Auth::Identity::Providers->search( { protocol => 'SAML2' } )->delete;
+
+    my $provider = Koha::Auth::Identity::Provider::SAML2->new(
+        {
+            code        => 'shibboleth',
+            description => 'Shibboleth',
+            enabled     => 1,
+        }
+    )->store;
+
+    $provider->set_config(
+        {
+            autocreate => $params->{autocreate} // 0,
+            sync       => $params->{sync}       // 0,
+            welcome    => $params->{welcome}    // 0,
+        }
+    )->store;
+
+    # Link provider to the test hostname so _get_shib_config can find it
+    my $test_hostname = 'testopac.com';
+    $ENV{HTTP_HOST} = $test_hostname;
+    my $hostname_obj = Koha::Auth::Hostnames->search( { hostname => $test_hostname } )->next
+        // $builder->build_object( { class => 'Koha::Auth::Hostnames', value => { hostname => $test_hostname } } );
+    Koha::Auth::Identity::Provider::Hostname->new(
+        {
+            hostname_id          => $hostname_obj->hostname_id,
+            identity_provider_id => $provider->identity_provider_id,
+            is_enabled           => 1,
+        }
+    )->store;
+
     my %mapping = (
         'userid'       => { 'is' => 'uid' },
         'surname'      => { 'is' => 'sn' },
@@ -437,15 +482,32 @@ sub change_config {
     if ( exists $params->{mapping} ) {
         $mapping{$_} = $params->{mapping}->{$_} for keys %{ $params->{mapping} };
     }
+
+    my $matchpoint = $params->{matchpoint} // 'userid';
+
+    foreach my $koha_field ( keys %mapping ) {
+        Koha::Auth::Identity::Provider::Mapping->new(
+            {
+                identity_provider_id => $provider->identity_provider_id,
+                koha_field           => $koha_field,
+                provider_field       => $mapping{$koha_field}->{is},
+                default_content      => $mapping{$koha_field}->{content},
+            }
+        )->store;
+    }
+
+    $schema->resultset('IdentityProviderHostname')
+        ->search( { identity_provider_id => $provider->identity_provider_id } )
+        ->update( { matchpoint           => $matchpoint } );
+
     $shibboleth = {
         autocreate => $params->{autocreate} // 0,
         welcome    => $params->{welcome}    // 0,
         sync       => $params->{sync}       // 0,
-        matchpoint => $params->{matchpoint} // 'userid',
+        matchpoint => $matchpoint,
         mapping    => \%mapping,
     };
 
-    # Change environment too
     $ENV{'uid'}      = "test1234";
     $ENV{'sn'}       = undef;
     $ENV{'exp'}      = undef;
