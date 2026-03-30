@@ -95,6 +95,20 @@ __PACKAGE__->has_many(
 # Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-03-27 13:06:43
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:e5JUPRXeKJcN4w/fJujVZg
 
-__PACKAGE__->meta->make_immutable;
+=head2 koha_object_class
+
+Missing POD for koha_object_class.
+
+=cut
+
+sub koha_object_class  { 'Koha::Auth::Hostname' }
+
+=head2 koha_objects_class
+
+Missing POD for koha_objects_class.
+
+=cut
+
+sub koha_objects_class { 'Koha::Auth::Hostnames' }
 
 1;

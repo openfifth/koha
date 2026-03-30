@@ -159,6 +159,27 @@ __PACKAGE__->belongs_to(
 # Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-03-27 13:06:43
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:ECreELIyUuT+mfPkkaxt/g
 
-__PACKAGE__->meta->make_immutable;
+
+__PACKAGE__->add_columns(
+    '+is_enabled'  => { is_boolean => 1 },
+    '+is_exclusive' => { is_boolean => 1 },
+);
+
+=head2 koha_object_class
+
+Missing POD for koha_object_class.
+
+=cut
+
+
+sub koha_object_class  { 'Koha::Auth::Identity::Provider::Hostname' }
+
+=head2 koha_objects_class
+
+Missing POD for koha_objects_class.
+
+=cut
+
+sub koha_objects_class { 'Koha::Auth::Identity::Provider::Hostnames' }
 
 1;
