@@ -29,16 +29,25 @@ use Koha::Cache::Memory::Lite;
 sub startup {
     my ($self) = @_;
 
+    # Load config
+    my $mojo_config = $ENV{MOJO_CONFIG} || '/etc/koha/mojo-opac.conf';
+    $self->plugin( 'Config', { file => $mojo_config } ) if -f $mojo_config;
+
+    # Setup app
     push @{ $self->plugins->namespaces }, 'Koha::App::Plugin';
     push @{ $self->static->paths },       $self->home->rel_file('koha-tmpl');
     $self->routes->namespaces( ['Koha::App::Controller'] );
 
+    $self->app->log->info('Greetings from Koha - OPAC (' . $self->mode . ')');
+
     # Create routes for API
     $self->plugin('RESTV1');
 
+    # Plugins for wider system
     $self->plugin('CSRF');
     $self->plugin('Language');
 
+    # Custom hooks
     $self->hook( before_dispatch => \&_before_dispatch );
     $self->hook( around_action   => \&_around_action );
 

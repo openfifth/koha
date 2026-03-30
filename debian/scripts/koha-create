@@ -813,6 +813,11 @@ eof
     mkdir "/var/log/koha/$name"
     chown "$username:$username" "/var/log/koha/$name"
 
+    # Generate and install Hypnotoad config files.
+    generate_config_file "mojo-opac.conf.in" \
+        "/etc/koha/sites/$name/mojo-opac.conf"
+    generate_config_file "mojo-intranet.conf.in" \
+        "/etc/koha/sites/$name/mojo-intranet.conf"
 
     # Generate and install main Koha config file.
     generate_config_file koha-conf-site.xml.in \
