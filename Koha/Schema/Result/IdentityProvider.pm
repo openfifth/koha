@@ -50,7 +50,7 @@ Description for the provider
 =head2 protocol
 
   data_type: 'enum'
-  extra: {list => ["OAuth","OIDC","LDAP","CAS"]}
+  extra: {list => ["OAuth","OIDC","SAML2"]}
   is_nullable: 0
 
 Protocol provider speaks
@@ -62,20 +62,13 @@ Protocol provider speaks
 
 Configuration of the provider in JSON format
 
-=head2 mapping
+=head2 enabled
 
-  data_type: 'longtext'
+  data_type: 'tinyint'
+  default_value: 1
   is_nullable: 0
 
-Configuration to map provider data to Koha user
-
-=head2 matchpoint
-
-  data_type: 'enum'
-  extra: {list => ["email","userid","cardnumber"]}
-  is_nullable: 0
-
-The patron attribute to be used as matchpoint
+Whether this provider is active
 
 =head2 icon_url
 
@@ -97,19 +90,13 @@ __PACKAGE__->add_columns(
   "protocol",
   {
     data_type => "enum",
-    extra => { list => ["OAuth", "OIDC", "LDAP", "CAS"] },
+    extra => { list => ["OAuth", "OIDC", "SAML2"] },
     is_nullable => 0,
   },
   "config",
   { data_type => "longtext", is_nullable => 0 },
-  "mapping",
-  { data_type => "longtext", is_nullable => 0 },
-  "matchpoint",
-  {
-    data_type => "enum",
-    extra => { list => ["email", "userid", "cardnumber"] },
-    is_nullable => 0,
-  },
+  "enabled",
+  { data_type => "tinyint", default_value => 1, is_nullable => 0 },
   "icon_url",
   { data_type => "varchar", is_nullable => 1, size => 255 },
 );
@@ -157,13 +144,61 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 identity_provider_hostnames
 
-# Created by DBIx::Class::Schema::Loader v0.07049 @ 2022-11-10 13:01:32
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:xSD/bRC3hJCF+nP/EYwn3Q
+Type: has_many
+
+Related object: L<Koha::Schema::Result::IdentityProviderHostname>
+
+=cut
+
+__PACKAGE__->has_many(
+  "identity_provider_hostnames",
+  "Koha::Schema::Result::IdentityProviderHostname",
+  { "foreign.identity_provider_id" => "self.identity_provider_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+=head2 identity_provider_mappings
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::IdentityProviderMapping>
+
+=cut
+
+__PACKAGE__->has_many(
+  "identity_provider_mappings",
+  "Koha::Schema::Result::IdentityProviderMapping",
+  { "foreign.identity_provider_id" => "self.identity_provider_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-03-27 13:06:43
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:/p34ABqMAq2J2RxlmSwkBA
+
+__PACKAGE__->add_columns(
+    '+enabled'         => { is_boolean => 1 },
+);
 
 __PACKAGE__->has_many(
   "domains",
   "Koha::Schema::Result::IdentityProviderDomain",
+  { "foreign.identity_provider_id" => "self.identity_provider_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+__PACKAGE__->has_many(
+  "hostnames",
+  "Koha::Schema::Result::IdentityProviderHostname",
+  { "foreign.identity_provider_id" => "self.identity_provider_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+__PACKAGE__->has_many(
+  "mappings",
+  "Koha::Schema::Result::IdentityProviderMapping",
   { "foreign.identity_provider_id" => "self.identity_provider_id" },
   { cascade_copy => 0, cascade_delete => 0 },
 );
