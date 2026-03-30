@@ -317,8 +317,8 @@ export default {
                 columnData: "mappings",
                 hidden: provider => !!provider.mappings?.length,
                 columns: [
-                    { name: __("IdP field"), value: "provider_field" },
                     { name: __("Koha field"), value: "koha_field" },
+                    { name: __("IdP field"), value: "provider_field" },
                     { name: __("Default value"), value: "default_content" },
                 ],
             },
@@ -341,14 +341,6 @@ export default {
             },
             relationshipFields: [
                 {
-                    name: "provider_field",
-                    required: true,
-                    indexRequired: true,
-                    type: "text",
-                    label: __("IdP field"),
-                    placeholder: __("e.g. given_name"),
-                },
-                {
                     name: "koha_field",
                     required: true,
                     indexRequired: true,
@@ -357,6 +349,13 @@ export default {
                     options: borrowerColumnsArray,
                     requiredKey: "value",
                     selectLabel: "label",
+                },
+                {
+                    name: "provider_field",
+                    indexRequired: true,
+                    type: "text",
+                    label: __("IdP field"),
+                    placeholder: __("e.g. given_name"),
                 },
                 {
                     name: "default_content",
