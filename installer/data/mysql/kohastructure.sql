@@ -3649,6 +3649,21 @@ CREATE TABLE `housebound_visit` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `hostnames`
+--
+
+DROP TABLE IF EXISTS `hostnames`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `hostnames` (
+  `hostname_id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'Unique identifier for this hostname',
+  `hostname` varchar(255) NOT NULL COMMENT 'Server hostname string; use * as a wildcard matching any hostname',
+  PRIMARY KEY (`hostname_id`),
+  UNIQUE KEY `hostname` (`hostname`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Canonical hostname registry for identity provider selection';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `identity_provider_domains`
 --
 
@@ -3666,6 +3681,7 @@ CREATE TABLE `identity_provider_domains` (
   `allow_staff` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Allow provider from staff interface',
   `auto_register_opac` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Allow user auto register (OPAC)',
   `auto_register_staff` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Allow user auto register (Staff interface)',
+  `send_welcome_email` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Send welcome email to patron on first login',
   PRIMARY KEY (`identity_provider_domain_id`),
   UNIQUE KEY `identity_provider_id` (`identity_provider_id`,`domain`),
   KEY `domain` (`domain`),
@@ -3680,6 +3696,48 @@ CREATE TABLE `identity_provider_domains` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `identity_provider_hostnames`
+--
+
+DROP TABLE IF EXISTS `identity_provider_hostnames`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `identity_provider_hostnames` (
+  `identity_provider_hostname_id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'unique key, used to identify the hostname entry',
+  `hostname_id` int(11) NOT NULL COMMENT 'FK to hostnames table',
+  `identity_provider_id` int(11) NOT NULL COMMENT 'Identity provider associated with this hostname',
+  `is_enabled` tinyint(1) NOT NULL DEFAULT 1 COMMENT 'Whether this hostname is active for this provider',
+  `is_exclusive` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Exclusive provider for this hostname; suppress all other auth methods',
+  `matchpoint` varchar(255) DEFAULT NULL COMMENT 'Koha field used to match incoming users against existing patrons',
+  PRIMARY KEY (`identity_provider_hostname_id`),
+  UNIQUE KEY `hostname_id_provider` (`hostname_id`,`identity_provider_id`),
+  KEY `idp_hostname_provider_idx` (`identity_provider_id`),
+  CONSTRAINT `fk_iph_hostname` FOREIGN KEY (`hostname_id`) REFERENCES `hostnames` (`hostname_id`) ON DELETE CASCADE,
+  CONSTRAINT `idp_hostname_ibfk_1` FOREIGN KEY (`identity_provider_id`) REFERENCES `identity_providers` (`identity_provider_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Maps server hostnames to identity providers (many-to-many). A hostname may be linked to multiple providers.';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `identity_provider_mappings`
+--
+
+DROP TABLE IF EXISTS `identity_provider_mappings`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `identity_provider_mappings` (
+  `mapping_id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'primary key',
+  `identity_provider_id` int(11) NOT NULL COMMENT 'Reference to identity provider',
+  `provider_field` varchar(255) DEFAULT NULL COMMENT 'Attribute name from the identity provider',
+  `koha_field` varchar(255) NOT NULL COMMENT 'Corresponding field in Koha borrowers table',
+  `default_content` varchar(255) DEFAULT NULL COMMENT 'Default value if provider does not supply this field',
+  PRIMARY KEY (`mapping_id`),
+  UNIQUE KEY `provider_koha_field` (`identity_provider_id`,`koha_field`),
+  KEY `provider_field_idx` (`provider_field`),
+  CONSTRAINT `idp_mapping_ibfk_1` FOREIGN KEY (`identity_provider_id`) REFERENCES `identity_providers` (`identity_provider_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `identity_providers`
 --
 
@@ -3690,10 +3748,9 @@ CREATE TABLE `identity_providers` (
   `identity_provider_id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'unique key, used to identify the provider',
   `code` varchar(20) NOT NULL COMMENT 'Provider code',
   `description` varchar(255) NOT NULL COMMENT 'Description for the provider',
-  `protocol` enum('OAuth','OIDC','LDAP','CAS') NOT NULL COMMENT 'Protocol provider speaks',
+  `protocol` enum('OAuth','OIDC','SAML2') NOT NULL COMMENT 'Protocol provider speaks',
   `config` longtext NOT NULL COMMENT 'Configuration of the provider in JSON format',
-  `mapping` longtext NOT NULL COMMENT 'Configuration to map provider data to Koha user',
-  `matchpoint` enum('email','userid','cardnumber') NOT NULL COMMENT 'The patron attribute to be used as matchpoint',
+  `enabled` tinyint(1) NOT NULL DEFAULT 1 COMMENT 'Whether this provider is active',
   `icon_url` varchar(255) DEFAULT NULL COMMENT 'Provider icon URL',
   PRIMARY KEY (`identity_provider_id`),
   UNIQUE KEY `code` (`code`),
