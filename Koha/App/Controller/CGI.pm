@@ -18,6 +18,7 @@ use Mojo::Base 'Mojolicious::Controller';
 use CGI::Compile;
 use CGI::Emulate::PSGI;
 use CGI;
+use JSON qw( to_json );
 
 =head1 NAME
 
@@ -53,6 +54,7 @@ sub intranet {
     $c->inactivity_timeout(300) if $script eq 'installer/install.pl';
 
     $c->_render_script($script);
+    $c->_log_request( $c->req, $c->res );
 }
 
 =head2 opac
@@ -68,6 +70,7 @@ sub opac {
     $script = "opac/$script";
 
     $c->_render_script($script);
+    $c->_log_request( $c->req, $c->res );
 }
 
 sub _render_script {
@@ -125,6 +128,25 @@ sub _psgi_env {
     }
 
     return $env;
+}
+
+sub _log_request {
+    my ( $c, $req, $res ) = @_;
+
+    my $to_obj = {
+        request_id => $req->{request_id},
+        code       => $res->{code} || '500',
+        headers    => $req->content->headers->to_hash,
+        host       => $req->content->headers->header('Host'),
+        ip_address => $c->tx->remote_address,
+        method     => $req->{method},
+        size       => $req->{raw_size} ? '' . $req->{raw_size} : '0',
+        url        => $req->url->to_string,
+        version    => $req->{version} || '1.1',
+    };
+    my $to_json = to_json($to_obj);
+
+    return $c->app->log->info($to_json);
 }
 
 1;

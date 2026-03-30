@@ -21,6 +21,8 @@ override_dh_auto_install:
 	rm $(TMP)/etc/koha/apache.conf
 	rm $(TMP)/etc/koha/nginx.conf
 	rm $(TMP)/etc/koha/koha-worker.service
+	rm $(TMP)/etc/koha/mojo-opac.conf
+	rm $(TMP)/etc/koha/mojo-intranet.conf
 	rm -r $(TMP)/usr/share/koha/doc
 	rm -r $(TMP)/var/run
 	rm -r $(TMP)/var/lock
