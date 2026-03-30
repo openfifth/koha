@@ -20,13 +20,17 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 7;
+use Test::More tests => 8;
 
 use Test::MockModule;
 use Test::Exception;
 
 use JSON qw(encode_json);
 
+use Koha::Auth::Hostnames;
+use Koha::Auth::Identity::Provider;
+use Koha::Auth::Identity::Provider::Hostnames;
+use Koha::Auth::Identity::Provider::Mappings;
 use Koha::Auth::Identity::Providers;
 
 use t::lib::TestBuilder;
@@ -88,7 +92,6 @@ subtest 'set_config() tests' => sub {
 
         my $provider =
             $builder->build_object( { class => 'Koha::Auth::Identity::Providers', value => { protocol => 'OIDC' } } );
-        $provider = $provider->upgrade_class;
 
         my $config = {
             key    => 'key',
@@ -114,7 +117,6 @@ subtest 'set_config() tests' => sub {
 
         my $provider =
             $builder->build_object( { class => 'Koha::Auth::Identity::Providers', value => { protocol => 'OAuth' } } );
-        $provider = $provider->upgrade_class;
 
         my $config = {
             key       => 'key',
@@ -135,15 +137,15 @@ subtest 'set_config() tests' => sub {
         is_deeply( $provider->get_config, $config, 'Configuration stored correctly' );
     };
 
-    subtest 'Unsupported protocol tests' => sub {
+    subtest 'Base class (unsupported protocol) tests' => sub {
 
         plan tests => 2;
 
-        my $provider =
-            $builder->build_object( { class => 'Koha::Auth::Identity::Providers', value => { protocol => 'CAS' } } );
+        # Cannot build in DB with invalid protocol; instantiate base class directly
+        my $provider = Koha::Auth::Identity::Provider->new( { protocol => 'OAuth' } );
 
-        throws_ok { $provider->set_config() }
-        'Koha::Exception', 'Exception thrown on unsupported protocol';
+        throws_ok { $provider->set_config( {} ) }
+        'Koha::Exception', 'Exception thrown when calling set_config on base class';
 
         like( "$@", qr/This method needs to be subclassed/, 'Message is correct' );
     };
@@ -151,48 +153,66 @@ subtest 'set_config() tests' => sub {
     $schema->storage->txn_rollback;
 };
 
-subtest 'get_mapping() tests' => sub {
+subtest 'mappings() tests' => sub {
 
-    plan tests => 2;
-
-    $schema->storage->txn_begin;
-
-    my $provider = $builder->build_object( { class => 'Koha::Auth::Identity::Providers', value => { config => '{' } } );
-
-    throws_ok { $provider->get_mapping() }
-    'Koha::Exceptions::Object::BadValue', 'Expected exception thrown on bad JSON';
-
-    my $mapping = { some => 'value', and => 'another' };
-    $provider->mapping( encode_json($mapping) )->store;
-
-    is_deeply( $provider->get_mapping, $mapping, 'Mapping correctly retrieved' );
-
-    $schema->storage->txn_rollback;
-};
-
-subtest 'set_mapping() tests' => sub {
-
-    plan tests => 1;
+    plan tests => 3;
 
     $schema->storage->txn_begin;
 
     my $provider = $builder->build_object( { class => 'Koha::Auth::Identity::Providers' } );
+    my $mappings = $provider->mappings;
 
-    my $mapping = { some => 'value', and => 'another' };
-    $provider->set_mapping($mapping)->store;
+    is( ref($mappings),   'Koha::Auth::Identity::Provider::Mappings', 'Type is correct' );
+    is( $mappings->count, 0,                                          'No mappings defined' );
 
-    is_deeply( $provider->get_mapping, $mapping, 'Mapping correctly retrieved' );
+    $builder->build(
+        {
+            source => 'IdentityProviderMapping',
+            value  => { identity_provider_id => $provider->id, koha_field => 'userid', provider_field => 'uid' }
+        }
+    );
+    $builder->build(
+        {
+            source => 'IdentityProviderMapping',
+            value  => { identity_provider_id => $provider->id, koha_field => 'email', provider_field => 'mail' }
+        }
+    );
+
+    is( $provider->mappings->count, 2, 'The provider has 2 mappings defined' );
 
     $schema->storage->txn_rollback;
 };
 
-subtest 'upgrade_class() tests' => sub {
+subtest 'hostnames() tests' => sub {
 
-    plan tests => 5;
+    plan tests => 3;
 
     $schema->storage->txn_begin;
 
-    my $mapping   = Koha::Auth::Identity::Provider::protocol_to_class_mapping;
+    my $provider  = $builder->build_object( { class => 'Koha::Auth::Identity::Providers' } );
+    my $hostnames = $provider->hostnames;
+
+    is( ref($hostnames),   'Koha::Auth::Identity::Provider::Hostnames', 'Type is correct' );
+    is( $hostnames->count, 0,                                           'No hostnames defined' );
+
+    $builder->build_object(
+        { class => 'Koha::Auth::Identity::Provider::Hostnames', value => { identity_provider_id => $provider->id } } );
+    $builder->build_object(
+        { class => 'Koha::Auth::Identity::Provider::Hostnames', value => { identity_provider_id => $provider->id } } );
+
+    is( $provider->hostnames->count, 2, 'The provider has 2 hostnames defined' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'polymorphic_retrieval() tests' => sub {
+
+    plan tests => 7;
+
+    $schema->storage->txn_begin;
+
+    my $providers = Koha::Auth::Identity::Providers->new;
+    my $mapping   = $providers->_polymorphic_map;
     my @protocols = keys %{$mapping};
 
     foreach my $protocol (@protocols) {
@@ -204,20 +224,85 @@ subtest 'upgrade_class() tests' => sub {
             }
         );
 
-        is( ref($provider), 'Koha::Auth::Identity::Provider', "Base class used for $protocol" );
+        is( ref($provider), $mapping->{$protocol}, "build_object returns correct subclass for $protocol" );
 
-        # upgrade
-        $provider = $provider->upgrade_class;
-        is(
-            ref($provider), $mapping->{$protocol},
-            "Class upgraded to " . $mapping->{$protocol} . "for protocol $protocol"
-        );
+        my $found = Koha::Auth::Identity::Providers->find( $provider->id );
+        is( ref($found), $mapping->{$protocol}, "Providers->find returns correct subclass for $protocol" );
     }
 
     my $provider = Koha::Auth::Identity::Provider->new( { protocol => 'Invalid' } );
-    throws_ok { $provider->upgrade }
-    'Koha::Exception',
-        'Exception throw on invalid protocol';
+    throws_ok { $provider->set_config( {} ) } 'Koha::Exception', 'Exception thrown calling set_config on base class';
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'find_exclusive_provider() tests' => sub {
+
+    plan tests => 8;
+
+    $schema->storage->txn_begin;
+
+    # No hostname argument returns undef
+    is(
+        Koha::Auth::Identity::Providers->find_exclusive_provider(undef), undef,
+        'Returns undef when hostname is undef'
+    );
+    is(
+        Koha::Auth::Identity::Providers->find_exclusive_provider(''), undef,
+        'Returns undef when hostname is empty string'
+    );
+
+    my $provider = $builder->build_object(
+        { class => 'Koha::Auth::Identity::Providers', value => { protocol => 'OIDC', enabled => 1 } } );
+
+    my $hostname_record =
+        $builder->build_object( { class => 'Koha::Auth::Hostnames', value => { hostname => 'sso.example.com' } } );
+
+    # Hostname linked but is_exclusive=0 (default)
+    $builder->build_object(
+        {
+            class => 'Koha::Auth::Identity::Provider::Hostnames',
+            value => {
+                identity_provider_id => $provider->id,
+                hostname_id          => $hostname_record->hostname_id,
+                is_enabled           => 1,
+                is_exclusive         => 0,
+            }
+        }
+    );
+    is(
+        Koha::Auth::Identity::Providers->find_exclusive_provider('sso.example.com'),
+        undef, 'Returns undef when hostname is linked but is_exclusive is 0'
+    );
+
+    # Update to is_exclusive=1 but is_enabled=0 on the hostname link
+    Koha::Auth::Identity::Provider::Hostnames->search(
+        { identity_provider_id => $provider->id, hostname_id => $hostname_record->hostname_id } )
+        ->update( { is_exclusive => 1, is_enabled => 0 } );
+    is(
+        Koha::Auth::Identity::Providers->find_exclusive_provider('sso.example.com'),
+        undef, 'Returns undef when hostname link has is_enabled=0'
+    );
+
+    # Enable the hostname link but disable the provider itself
+    Koha::Auth::Identity::Provider::Hostnames->search(
+        { identity_provider_id => $provider->id, hostname_id => $hostname_record->hostname_id } )
+        ->update( { is_enabled => 1 } );
+    $provider->update( { enabled => 0 } );
+    is(
+        Koha::Auth::Identity::Providers->find_exclusive_provider('sso.example.com'),
+        undef, 'Returns undef when provider itself is disabled'
+    );
+
+    # Re-enable the provider - now all conditions met
+    $provider->update( { enabled => 1 } );
+    my $exclusive = Koha::Auth::Identity::Providers->find_exclusive_provider('sso.example.com');
+    ok( $exclusive, 'Returns provider when hostname linked with is_exclusive=1, is_enabled=1, and provider enabled=1' );
+    is(
+        ref($exclusive), 'Koha::Auth::Identity::Provider::OIDC',
+        'Returned object is the correct Identity Provider subclass'
+    );
+    is( $exclusive->id, $provider->id, 'Returns the correct provider' );
 
     $schema->storage->txn_rollback;
 };

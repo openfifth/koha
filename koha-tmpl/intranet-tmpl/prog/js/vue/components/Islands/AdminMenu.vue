@@ -120,18 +120,6 @@
                         >{{ $__("Self-service circulation (SIP2)") }}</a
                     >
                 </li>
-                <li
-                    v-if="
-                        can_user_parameters_manage_identity_providers &&
-                        shibbolethauthentication
-                    "
-                >
-                    <a
-                        :ref="el => templateRefs.push(el)"
-                        href="/cgi-bin/koha/shibboleth/shibboleth.pl"
-                        >{{ $__("Shibboleth configuration") }}</a
-                    >
-                </li>
                 <li v-if="can_user_parameters_manage_item_circ_alerts">
                     <a
                         :ref="el => templateRefs.push(el)"
@@ -601,7 +589,6 @@ export default {
         can_user_parameters_manage_additional_fields: Number,
         can_user_parameters_manage_keyboard_shortcuts: Number,
         can_user_ill: Number,
-        shibbolethauthentication: Number,
         usecirculationdesks: Number,
         usecashregisters: Number,
         savedsearchfilters: Number,

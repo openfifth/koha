@@ -23,6 +23,7 @@ use Mojo::Base 'Mojolicious::Plugin';
 
 use Koha::Exceptions;
 use Koha::Exceptions::Auth;
+use Koha::Patron::Attribute;
 use Koha::Patrons;
 
 use C4::Auth qw(create_basic_session);
@@ -89,7 +90,21 @@ if other values or none are passed.
                 Koha::Exceptions::Auth::Unauthorized->throw( code => 401 );
             }
 
-            return Koha::Patron->new($data)->store;
+            my ( %patron_attrs, %borrower_data );
+            for my $key ( keys %$data ) {
+                if ( $key =~ /^patron_attribute:(.+)$/ ) {
+                    $patron_attrs{$1} = $data->{$key};
+                } else {
+                    $borrower_data{$key} = $data->{$key};
+                }
+            }
+            my $patron = Koha::Patron->new( \%borrower_data )->store;
+            for my $code ( keys %patron_attrs ) {
+                Koha::Patron::Attribute->new(
+                    { borrowernumber => $patron->borrowernumber, code => $code, attribute => $patron_attrs{$code} } )
+                    ->store;
+            }
+            return $patron;
         }
     );
 

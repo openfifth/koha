@@ -56,11 +56,13 @@ export default {
         provide("resourceRelationships", props.resourceRelationships);
 
         const addResourceRelationship = () => {
+            if (!props.resourceRelationships) return;
             props.resourceRelationships.push({
                 ...props.newRelationshipDefaultAttrs,
             });
         };
         const deleteResourceRelationship = counter => {
+            if (!props.resourceRelationships) return;
             props.resourceRelationships.splice(counter, 1);
         };
         const getSelectOptions = filters => {

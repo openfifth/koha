@@ -16,12 +16,13 @@
 
 use Modern::Perl;
 
-use Test::More tests => 3;
+use Test::More tests => 4;
 use Test::Exception;
 use Test::MockModule;
 use Test::NoWarnings;
 
 use t::lib::TestBuilder;
+use t::lib::Mocks;
 use t::lib::Mocks::Logger;
 
 BEGIN {
@@ -70,6 +71,7 @@ subtest 'get_providers() tests' => sub {
                 die "DBD::mysql::st execute failed: Unknown column 'domains.auto_register_opac' in 'field list'";
             }
         );
+        $mock->mock( 'find_exclusive_provider', sub { return } );
 
         my $plugin = Koha::Template::Plugin::AuthClient->new();
         my $providers;
@@ -83,4 +85,29 @@ subtest 'get_providers() tests' => sub {
 
         $schema->storage->txn_rollback;
     };
+};
+
+subtest 'hostname_candidates() tests' => sub {
+
+    plan tests => 5;
+
+    my @candidates;
+
+    @candidates = Koha::Auth::Identity::Providers->hostname_candidates('example.com');
+    is_deeply( \@candidates, [ 'example.com', '*' ], 'No port: returns hostname and wildcard (deduplicated)' );
+
+    @candidates = Koha::Auth::Identity::Providers->hostname_candidates('example.com:8080');
+    is_deeply(
+        \@candidates, [ 'example.com:8080', 'example.com', '*' ],
+        'With port: returns host:port, bare hostname, and wildcard'
+    );
+
+    @candidates = Koha::Auth::Identity::Providers->hostname_candidates('localhost:8081');
+    is_deeply( \@candidates, [ 'localhost:8081', 'localhost', '*' ], 'localhost with port works correctly' );
+
+    @candidates = Koha::Auth::Identity::Providers->hostname_candidates('*');
+    is_deeply( \@candidates, ['*'], 'Wildcard input returns only wildcard (deduplicated)' );
+
+    @candidates = Koha::Auth::Identity::Providers->hostname_candidates(undef);
+    is_deeply( \@candidates, ['*'], 'Undef hostname returns only wildcard' );
 };

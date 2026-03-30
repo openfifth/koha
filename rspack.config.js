@@ -43,6 +43,10 @@ module.exports = [
                 "./koha-tmpl/intranet-tmpl/prog/js/vue/csp-nonce.js",
                 "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/sip2.ts",
             ],
+            "admin/identity_providers": [
+                "./koha-tmpl/intranet-tmpl/prog/js/vue/csp-nonce.js",
+                "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/identity-providers.ts",
+            ],
         },
         output: {
             filename: "[name].js",

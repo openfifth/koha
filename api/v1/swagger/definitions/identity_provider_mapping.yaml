@@ -1,0 +1,27 @@
+---
+type: object
+properties:
+  mapping_id:
+    type: integer
+    description: Internally assigned mapping identifier
+    readOnly: true
+  identity_provider_id:
+    type: integer
+    description: Reference to identity provider
+    readOnly: true
+  provider_field:
+    type:
+      - string
+      - "null"
+    description: Attribute name from the identity provider
+  koha_field:
+    type: string
+    description: Corresponding field in Koha borrowers table
+  default_content:
+    type:
+      - string
+      - "null"
+    description: Default value to use if the provider does not supply this attribute
+additionalProperties: false
+required:
+  - koha_field

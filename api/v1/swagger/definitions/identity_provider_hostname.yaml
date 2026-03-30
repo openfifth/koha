@@ -1,0 +1,34 @@
+---
+type: object
+properties:
+  identity_provider_hostname_id:
+    type: integer
+    description: Internally assigned identifier for this hostname-provider association
+    readOnly: true
+  hostname_id:
+    description: Identifier of the associated hostname record
+    type: integer
+  hostname:
+    description: >
+      Server hostname string. When creating a new association, supply either
+      this field (the backend will find-or-create the canonical hostname record)
+      or hostname_id. In responses this field is always populated.
+    type: string
+  identity_provider_id:
+    description: Identity provider associated with this hostname
+    type: integer
+  is_enabled:
+    description: Whether this hostname is active for this provider
+    type: boolean
+  is_exclusive:
+    description: >
+      Mark this provider as the exclusive auth method for this hostname.
+      Suppresses all other login options (local form, CAS, other providers).
+      Only one identity provider should have this enabled per hostname.
+    type: boolean
+  matchpoint:
+    description: Koha field used to match incoming users against existing patrons
+    type:
+      - string
+      - "null"
+additionalProperties: false
