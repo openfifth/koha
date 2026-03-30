@@ -46,6 +46,7 @@ use Koha;
 use Koha::Logger;
 use Koha::Caches;
 use Koha::AuthUtils qw( get_script_name hash_password );
+use Koha::Auth::Identity::Providers;
 use Koha::Auth::TwoFactorAuth;
 use Koha::Checkouts;
 use Koha::DateUtils qw( dt_from_string );
@@ -173,7 +174,7 @@ sub get_template_and_user {
     my $cookie_mgr = Koha::CookieManager->new;
 
     # Get shibboleth login attribute
-    my $shib       = C4::Context->config('useshibboleth') && shib_ok();
+    my $shib       = shib_ok();
     my $shib_login = $shib ? get_login_shib() : undef;
 
     C4::Context->interface( $in->{type} );
@@ -414,13 +415,18 @@ sub get_template_and_user {
         }
     } else {    # if this is an anonymous session, setup to display public lists...
 
-        # If shibboleth is enabled, and we're in an anonymous session, we should allow
-        # the user to attempt login via shibboleth.
+        # Always provide shibbolethLoginUrl for SAML2 providers in the login loop.
+        # shibbolethAuthentication is only set when shib is fully configured.
+        $template->param( shibbolethLoginUrl => login_shib_url( $in->{'query'} ) );
+
+        # Tell the masthead login modal which protocol is exclusive (if any) so it
+        # can suppress local login fields, mirroring what checkauth does for the
+        # dedicated login page template.
+        my $exclusive_provider = Koha::Auth::Identity::Providers->find_exclusive_provider( $ENV{HTTP_HOST} );
+        $template->param( exclusive_auth_protocol => $exclusive_provider->protocol ) if $exclusive_provider;
+
         if ($shib) {
-            $template->param(
-                shibbolethAuthentication => $shib,
-                shibbolethLoginUrl       => login_shib_url( $in->{'query'} ),
-            );
+            $template->param( shibbolethAuthentication => $shib );
 
             # If shibboleth is enabled and we have a shibboleth login attribute,
             # but we are in an anonymous session, then we clearly have an invalid
@@ -838,7 +844,7 @@ sub checkauth {
     my $query = shift;
 
     # Get shibboleth login attribute
-    my $shib       = C4::Context->config('useshibboleth') && shib_ok();
+    my $shib       = shib_ok();
     my $shib_login = $shib ? get_login_shib() : undef;
 
     # $authnotrequired will be set for scripts which will run without authentication
@@ -1048,6 +1054,13 @@ sub checkauth {
         $auth_state = 'logout';
     }
 
+    my $is_sco_sci =
+        (      $query->param('sco_user_login')
+            || $query->param('sci_user_login')
+            || ( $template_name && $template_name =~ m|sc[io]/| ) );
+    my $exclusive_provider =
+        $is_sco_sci ? undef : Koha::Auth::Identity::Providers->find_exclusive_provider( $ENV{HTTP_HOST} );
+
     unless ($userid) {
 
         #we initiate a session prior to checking for a username to allow for anonymous sessions...
@@ -1177,17 +1190,9 @@ sub checkauth {
                 }
             }
 
-            # If shib configured and shibOnly enabled, we should ignore anything other than a shibboleth type login.
-            if (
-                   $shib
-                && !$shibSuccess
-                && (
-                    ( ( $type eq 'opac' ) && C4::Context->preference('OPACShibOnly') )
-                    || ( ( $type ne 'opac' )
-                        && C4::Context->preference('staffShibOnly') )
-                )
-                )
-            {
+            # If an exclusive provider is configured for this hostname, reject any login
+            # that didn't arrive via that provider (e.g. local password, CAS).
+            if ( $exclusive_provider && !$shibSuccess ) {
                 $return = 0;
             }
 
@@ -1550,6 +1555,30 @@ sub checkauth {
         );
     }
 
+    if ($exclusive_provider) {
+        my $redirect_url;
+        if ( $exclusive_provider->protocol eq 'SAML2' ) {
+            $redirect_url = login_shib_url($query) if $shib;
+        } elsif ( $exclusive_provider->protocol eq 'OIDC' || $exclusive_provider->protocol eq 'OAuth' ) {
+            my $base = ( $type eq 'opac' ) ? "/api/v1/public/oauth/login" : "/api/v1/oauth/login";
+            $redirect_url = "$base/" . $exclusive_provider->code . "/$type";
+        }
+        if ($redirect_url) {
+
+            # Staff always requires authentication so always redirect.
+            # OPAC only force-redirects when not public; if public, show the login page
+            # with only the exclusive provider's button visible.
+            if ( $type ne 'opac' || !C4::Context->preference('OpacPublic') ) {
+                print $query->redirect( -uri => $redirect_url, -status => 303 );
+                safe_exit;
+            }
+        }
+
+        # Tell the login page template which protocol is exclusive so it can
+        # suppress all other auth methods (local form, CAS, other providers).
+        $template->param( exclusive_auth_protocol => $exclusive_provider->protocol );
+    }
+
     if ($cas) {
 
         # Is authentication against multiple CAS servers enabled?
@@ -1570,21 +1599,12 @@ sub checkauth {
         $template->param( invalidCasLogin => $info{'invalidCasLogin'} );
     }
 
+    # Always provide shibbolethLoginUrl so SAML2 providers in the identity_providers
+    # loop have a URL to link to.  shibbolethAuthentication is only true when shib_ok()
+    # confirms a properly-configured SAML2 provider exists for this hostname.
+    $template->param( shibbolethLoginUrl => login_shib_url($query) );
     if ($shib) {
-
-        #If shibOnly is enabled just go ahead and redirect directly
-        if (   ( ( $type eq 'opac' ) && C4::Context->preference('OPACShibOnly') )
-            || ( ( $type ne 'opac' ) && C4::Context->preference('staffShibOnly') ) )
-        {
-            my $redirect_url = login_shib_url($query);
-            print $query->redirect( -uri => "$redirect_url", -status => 303 );
-            safe_exit;
-        }
-
-        $template->param(
-            shibbolethAuthentication => $shib,
-            shibbolethLoginUrl       => login_shib_url($query),
-        );
+        $template->param( shibbolethAuthentication => $shib );
     }
 
     if ( C4::Context->preference('GoogleOpenIDConnect') ) {
@@ -2041,7 +2061,7 @@ sub checkpw {
     $type = 'opac' unless $type;
 
     # Get shibboleth login attribute
-    my $shib       = C4::Context->config('useshibboleth') && shib_ok();
+    my $shib       = shib_ok();
     my $shib_login = $shib ? get_login_shib() : undef;
 
     my $anonymous_patron = C4::Context->preference('AnonymousPatron');

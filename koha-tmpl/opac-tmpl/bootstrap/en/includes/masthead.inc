@@ -136,7 +136,7 @@
                             <a tabindex="0" role="menuitem" class="logout js-hide" href="/cgi-bin/koha/opac-main.pl?logout.x=1"><i class="fa fa-fw fa-sign-out" aria-hidden="true"></i> Log out</a>
                         [% ELSE %]
                             [% IF Koha.Preference('casAuthentication') %]
-                                [%# CAS authentication is too complicated for modal window %]
+                                [%# CAS authentication and Shibboleth force SSO are too complicated for modal window %]
                                 <a class="nav-link login-link" href="/cgi-bin/koha/opac-user.pl" aria-label="Log in to your account"
                                     ><i class="fa fa-user fa-icon-black fa-fw" aria-hidden="true"></i> <span class="userlabel">Log in to your account</span></a
                                 >
@@ -466,42 +466,43 @@
                     [% INCLUDE 'csrf-token.inc' %]
                     <input type="hidden" name="has-search-query" id="has-search-query" value="" />
                     <div class="modal-body">
-                        [% IF ( Koha.Preference('GoogleOpenIDConnect') == 1 ) %]
+                        [% IF ( invalidShibLogin ) %]
+                            <div class="alert alert-info">
+                                <p>Sorry, your Shibboleth identity does not match a valid library identity. If you have a local login, you may use that below.</p>
+                            </div>
+                        [% END %]
+
+                        [% IF ( Koha.Preference('GoogleOpenIDConnect') == 1 ) && !exclusive_auth_protocol %]
                             <a href="/cgi-bin/koha/svc/auth/googleopenidconnect" class="btn btn-light" id="openid_connect"><i class="fa-brands fa-google" aria-hidden="true"></i> Log in with Google</a>
                             <p>If you do not have a Google account, but do have a local account, you can still log in: </p>
                         [% END # /IF GoogleOpenIDConnect %]
-                        [% IF ( shibbolethAuthentication ) %]
-                            [% IF ( invalidShibLogin ) %]
-                                <!-- This is what is displayed if shibboleth login has failed to match a koha user -->
-                                <div class="alert alert-info">
-                                    <p>Sorry, your Shibboleth identity does not match a valid library identity. If you have a local login, you may use that below.</p>
-                                </div>
-                            [% ELSE %]
-                                <h3 class="shib_title">Shibboleth login</h3>
-                                <p><a id="shib_url" class="shib_url" href="[% shibbolethLoginUrl | $raw %]">Log in using a Shibboleth account</a>.</p>
-                                [% UNLESS Koha.Preference('opacShibOnly') %]
-                                    <h3 class="shib_local_title">Local login</h3>
+
+                        [% SET identity_providers = AuthClient.get_providers('opac', shibbolethLoginUrl) %]
+                        [% IF ( ! identity_providers.empty ) %]
+                            [% FOREACH provider IN identity_providers %]
+                                [% IF provider.protocol == 'SAML2' %]
+                                    [% SET provider_href = provider.url %]
+                                [% ELSE %]
+                                    [% SET provider_href = provider.url | url %]
                                 [% END %]
+                                <p class="clearfix">
+                                    <a href="[% provider_href | $raw %]" class="btn btn-light col-md-12" id="provider_[% provider.code | html %]">
+                                        [% IF provider.icon_url %]
+                                            <img src="[% provider.icon_url | url %]" style="max-height: 20px; max-width: 20px;" />
+                                        [% ELSE %]
+                                            <i class="fa fa-user" aria-hidden="true"></i>
+                                        [% END %]
+                                        [% tx("Log in with {identity_provider}", { identity_provider = provider.description } ) | html %]
+                                    </a>
+                                </p>
                             [% END %]
-                        [% END %]
-                        [% UNLESS Koha.Preference('opacShibOnly') %]
-                            [% SET identity_providers = AuthClient.get_providers('opac') %]
-                            [% IF ( ! identity_providers.empty ) %]
-                                [% FOREACH provider IN identity_providers %]
-                                    <p class="clearfix">
-                                        <a href="[% provider.url | url %]" class="btn btn-light col-md-12" id="provider_[% provider.code | html %]">
-                                            [% IF provider.icon_url %]
-                                                <img src="[% provider.icon_url | url %]" />
-                                            [% ELSE %]
-                                                <i class="fa fa-user" aria-hidden="true"></i>
-                                            [% END %]
-                                            [% tx("Log in with {identity_provider}", { identity_provider = provider.description } ) | html %]
-                                        </a>
-                                    </p>
-                                [% END %]
+                            [% UNLESS exclusive_auth_protocol %]
                                 <hr />
                                 <p>If you do not have an external account, but do have a local account, you can still log in: </p>
-                            [% END # /IF  identity_providers.size %]
+                            [% END %]
+                        [% END # /IF identity_providers %]
+
+                        [% UNLESS exclusive_auth_protocol %]
                             <input type="hidden" name="koha_login_context" value="opac" />
                             <fieldset class="brief">
                                 <div class="local-login">
@@ -526,7 +527,7 @@
                                     </div>
                                 [% END %]
                             </fieldset>
-                        [% END %]
+                        [% END # /UNLESS exclusive_auth_protocol %]
                     </div>
                 </form>
                 <!-- /#auth -->

@@ -117,18 +117,17 @@ sub _provider_entry {
     my $protocol = $provider->protocol;
     my $code     = $provider->code;
 
+    my $entry;
     if ( $protocol eq 'OIDC' || $protocol eq 'OAuth' ) {
-        return {
+        $entry = {
             code        => $code,
             description => $provider->description,
             icon_url    => $provider->icon_url,
             url         => "$base_url/$code/$interface",
             protocol    => $protocol,
         };
-    }
-
-    if ( $protocol eq 'SAML2' && $shib_url ) {
-        return {
+    } elsif ( $protocol eq 'SAML2' && $shib_url ) {
+        $entry = {
             code        => $code,
             description => $provider->description,
             icon_url    => $provider->icon_url,
@@ -137,7 +136,15 @@ sub _provider_entry {
         };
     }
 
-    return;
+    return unless $entry;
+
+    # These URLs are emitted with $raw in the login templates because
+    # url-filtering would double-encode their query strings. Make HTML
+    # attribute breakout impossible instead: these characters are never
+    # valid raw in a URL
+    $entry->{url} =~ tr/<>"'//d if defined $entry->{url};
+
+    return $entry;
 }
 
 1;
