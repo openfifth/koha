@@ -45,9 +45,20 @@ subtest 'get_user() tests' => sub {
 
     $schema->storage->txn_begin;
 
-    my $client = Koha::Auth::Client::OAuth->new;
-    my $provider =
-        $builder->build_object( { class => 'Koha::Auth::Identity::Providers', value => { matchpoint => 'email' } } );
+    my $client   = Koha::Auth::Client::OAuth->new;
+    my $provider = $builder->build_object( { class => 'Koha::Auth::Identity::Providers' } );
+    my $hostname_obj =
+        $builder->build_object( { class => 'Koha::Auth::Hostnames', value => { hostname => 'test.library.com' } } );
+    $builder->build_object(
+        {
+            class => 'Koha::Auth::Identity::Provider::Hostnames',
+            value => {
+                identity_provider_id => $provider->id,
+                hostname_id          => $hostname_obj->id,
+                matchpoint           => 'email',
+            }
+        }
+    );
     my $domain = $builder->build_object(
         {
             class => 'Koha::Auth::Identity::Provider::Domains',
@@ -59,12 +70,26 @@ subtest 'get_user() tests' => sub {
     );
     my $patron = $builder->build_object( { class => 'Koha::Patrons', value => { email => 'patron@test.com' } } );
     t::lib::Mocks::mock_userenv( { patron => $patron } );
-    my $mapping = {
-        email     => 'electronic_mail',
-        firstname => 'given_name',
-        surname   => 'family_name'
-    };
-    $provider->set_mapping($mapping)->store;
+    $builder->build_object(
+        {
+            class => 'Koha::Auth::Identity::Provider::Mappings',
+            value =>
+                { identity_provider_id => $provider->id, koha_field => 'email', provider_field => 'electronic_mail' }
+        }
+    );
+    $builder->build_object(
+        {
+            class => 'Koha::Auth::Identity::Provider::Mappings',
+            value =>
+                { identity_provider_id => $provider->id, koha_field => 'firstname', provider_field => 'given_name' }
+        }
+    );
+    $builder->build_object(
+        {
+            class => 'Koha::Auth::Identity::Provider::Mappings',
+            value => { identity_provider_id => $provider->id, koha_field => 'surname', provider_field => 'family_name' }
+        }
+    );
 
     my $id_token = 'header.' . encode_base64url(
         encode_json(
@@ -78,7 +103,8 @@ subtest 'get_user() tests' => sub {
     my $data = { id_token => $id_token };
 
     my ( $resolved_patron, $mapped_data, $resolved_domain ) =
-        $client->get_user( { provider => $provider->code, data => $data, interface => 'opac' } );
+        $client->get_user(
+        { provider => $provider->code, data => $data, interface => 'opac', hostname => 'test.library.com' } );
     is_deeply(
         $resolved_patron->to_api( { user => $patron } ), $patron->to_api( { user => $patron } ),
         'Patron correctly retrieved'
@@ -95,10 +121,9 @@ subtest 'get_valid_domain_config() tests' => sub {
 
     $schema->storage->txn_begin;
 
-    my $client = Koha::Auth::Client->new;
-    my $provider =
-        $builder->build_object( { class => 'Koha::Auth::Identity::Providers', value => { matchpoint => 'email' } } );
-    my $domain1 = $builder->build_object(
+    my $client   = Koha::Auth::Client->new;
+    my $provider = $builder->build_object( { class => 'Koha::Auth::Identity::Providers' } );
+    my $domain1  = $builder->build_object(
         {
             class => 'Koha::Auth::Identity::Provider::Domains',
             value => { identity_provider_id => $provider->id, domain => '', allow_opac => 0, allow_staff => 0 }
@@ -200,10 +225,9 @@ subtest 'has_valid_domain_config() tests' => sub {
     plan tests => 2;
     $schema->storage->txn_begin;
 
-    my $client = Koha::Auth::Client->new;
-    my $provider =
-        $builder->build_object( { class => 'Koha::Auth::Identity::Providers', value => { matchpoint => 'email' } } );
-    my $domain1 = $builder->build_object(
+    my $client   = Koha::Auth::Client->new;
+    my $provider = $builder->build_object( { class => 'Koha::Auth::Identity::Providers' } );
+    my $domain1  = $builder->build_object(
         {
             class => 'Koha::Auth::Identity::Provider::Domains',
             value => { identity_provider_id => $provider->id, domain => '', allow_opac => 1, allow_staff => 0 }

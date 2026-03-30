@@ -50,19 +50,32 @@ subtest '_get_data_and_patron() with id_token tests' => sub {
     );
 
     # Create provider with email matchpoint
-    my $provider = $builder->build_object(
+    my $provider = $builder->build_object( { class => 'Koha::Auth::Identity::Providers' } );
+    my $hostname_obj =
+        $builder->build_object( { class => 'Koha::Auth::Hostnames', value => { hostname => 'test.library.com' } } );
+    $builder->build_object(
         {
-            class => 'Koha::Auth::Identity::Providers',
-            value => {
-                matchpoint => 'email',
-                mapping    => encode_json(
-                    {
-                        email     => 'mail',
-                        firstname => 'given_name',
-                        surname   => 'family_name'
-                    }
-                )
-            }
+            class => 'Koha::Auth::Identity::Provider::Hostnames',
+            value => { identity_provider_id => $provider->id, hostname_id => $hostname_obj->id, matchpoint => 'email' }
+        }
+    );
+    $builder->build_object(
+        {
+            class => 'Koha::Auth::Identity::Provider::Mappings',
+            value => { identity_provider_id => $provider->id, koha_field => 'email', provider_field => 'mail' }
+        }
+    );
+    $builder->build_object(
+        {
+            class => 'Koha::Auth::Identity::Provider::Mappings',
+            value =>
+                { identity_provider_id => $provider->id, koha_field => 'firstname', provider_field => 'given_name' }
+        }
+    );
+    $builder->build_object(
+        {
+            class => 'Koha::Auth::Identity::Provider::Mappings',
+            value => { identity_provider_id => $provider->id, koha_field => 'surname', provider_field => 'family_name' }
         }
     );
 
@@ -83,7 +96,8 @@ subtest '_get_data_and_patron() with id_token tests' => sub {
         {
             provider => $provider,
             data     => $data,
-            config   => $config
+            config   => $config,
+            hostname => 'test.library.com',
         }
     );
 
@@ -112,18 +126,26 @@ subtest '_get_data_and_patron() with userinfo_url tests' => sub {
     );
 
     # Create provider with email matchpoint
-    my $provider = $builder->build_object(
+    my $provider = $builder->build_object( { class => 'Koha::Auth::Identity::Providers' } );
+    my $hostname_obj =
+        $builder->build_object( { class => 'Koha::Auth::Hostnames', value => { hostname => 'test2.library.com' } } );
+    $builder->build_object(
         {
-            class => 'Koha::Auth::Identity::Providers',
-            value => {
-                matchpoint => 'email',
-                mapping    => encode_json(
-                    {
-                        email     => 'email',
-                        firstname => 'first_name'
-                    }
-                )
-            }
+            class => 'Koha::Auth::Identity::Provider::Hostnames',
+            value => { identity_provider_id => $provider->id, hostname_id => $hostname_obj->id, matchpoint => 'email' }
+        }
+    );
+    $builder->build_object(
+        {
+            class => 'Koha::Auth::Identity::Provider::Mappings',
+            value => { identity_provider_id => $provider->id, koha_field => 'email', provider_field => 'email' }
+        }
+    );
+    $builder->build_object(
+        {
+            class => 'Koha::Auth::Identity::Provider::Mappings',
+            value =>
+                { identity_provider_id => $provider->id, koha_field => 'firstname', provider_field => 'first_name' }
         }
     );
 
@@ -179,7 +201,8 @@ subtest '_get_data_and_patron() with userinfo_url tests' => sub {
         {
             provider => $provider,
             data     => $data,
-            config   => $config
+            config   => $config,
+            hostname => 'test2.library.com',
         }
     );
 
@@ -205,7 +228,8 @@ subtest '_get_data_and_patron() with userinfo_url tests' => sub {
         {
             provider => $provider,
             data     => $data,
-            config   => $config
+            config   => $config,
+            hostname => 'test2.library.com',
         }
     );
 
@@ -223,13 +247,19 @@ subtest '_get_data_and_patron() no patron found tests' => sub {
     my $client = Koha::Auth::Client::OAuth->new;
 
     # Create provider
-    my $provider = $builder->build_object(
+    my $provider = $builder->build_object( { class => 'Koha::Auth::Identity::Providers' } );
+    my $hostname_obj =
+        $builder->build_object( { class => 'Koha::Auth::Hostnames', value => { hostname => 'test3.library.com' } } );
+    $builder->build_object(
         {
-            class => 'Koha::Auth::Identity::Providers',
-            value => {
-                matchpoint => 'email',
-                mapping    => encode_json( { email => 'mail' } )
-            }
+            class => 'Koha::Auth::Identity::Provider::Hostnames',
+            value => { identity_provider_id => $provider->id, hostname_id => $hostname_obj->id, matchpoint => 'email' }
+        }
+    );
+    $builder->build_object(
+        {
+            class => 'Koha::Auth::Identity::Provider::Mappings',
+            value => { identity_provider_id => $provider->id, koha_field => 'email', provider_field => 'mail' }
         }
     );
 
@@ -245,7 +275,8 @@ subtest '_get_data_and_patron() no patron found tests' => sub {
         {
             provider => $provider,
             data     => $data,
-            config   => $config
+            config   => $config,
+            hostname => 'test3.library.com',
         }
     );
 
