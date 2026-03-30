@@ -360,7 +360,20 @@ export default {
                 {
                     name: "default_content",
                     indexRequired: true,
-                    type: "text",
+                    type: "component",
+                    componentPath:
+                        "@koha-vue/components/PatronFieldValueInput.vue",
+                    componentProps: {
+                        resource: { type: "resource" },
+                        librariesArray: {
+                            type: "object",
+                            value: librariesArray,
+                        },
+                        categoriesArray: {
+                            type: "object",
+                            value: categoriesArray,
+                        },
+                    },
                     label: __("Default value"),
                     toolTip: __(
                         "Static value to use for this field when the IdP does not provide one. Only applied when creating a new patron account and only when 'Sync on creation' is enabled. Never used on update. For library and category defaults that vary by email domain, use the 'Default library' and 'Default category' settings on the Email Domain Rule instead."
