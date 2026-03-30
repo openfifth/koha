@@ -56,9 +56,20 @@ subtest 'auth_client_get_user hook tests' => sub {
     # Test Plugin manipulates mapped_data
     my $plugin = Koha::Plugin::Test->new->enable;
 
-    my $client = Koha::Auth::Client::OAuth->new;
-    my $provider =
-        $builder->build_object( { class => 'Koha::Auth::Identity::Providers', value => { matchpoint => 'email' } } );
+    my $client   = Koha::Auth::Client::OAuth->new;
+    my $provider = $builder->build_object( { class => 'Koha::Auth::Identity::Providers' } );
+    my $hostname_obj =
+        $builder->build_object( { class => 'Koha::Auth::Hostnames', value => { hostname => 'test.library.com' } } );
+    $builder->build_object(
+        {
+            class => 'Koha::Auth::Identity::Provider::Hostnames',
+            value => {
+                identity_provider_id => $provider->id,
+                hostname_id          => $hostname_obj->id,
+                matchpoint           => 'email',
+            }
+        }
+    );
     my $domain = $builder->build_object(
         {
             class => 'Koha::Auth::Identity::Provider::Domains',
@@ -68,14 +79,34 @@ subtest 'auth_client_get_user hook tests' => sub {
             }
         }
     );
-    my $patron  = $builder->build_object( { class => 'Koha::Patrons', value => { email => 'patron@test.com' } } );
-    my $mapping = {
-        email      => 'electronic_mail',
-        firstname  => 'given_name',
-        surname    => 'family_name',
-        cardnumber => 'cardnumber',
-    };
-    $provider->set_mapping($mapping)->store;
+    my $patron = $builder->build_object( { class => 'Koha::Patrons', value => { email => 'patron@test.com' } } );
+    $builder->build_object(
+        {
+            class => 'Koha::Auth::Identity::Provider::Mappings',
+            value =>
+                { identity_provider_id => $provider->id, koha_field => 'email', provider_field => 'electronic_mail' }
+        }
+    );
+    $builder->build_object(
+        {
+            class => 'Koha::Auth::Identity::Provider::Mappings',
+            value =>
+                { identity_provider_id => $provider->id, koha_field => 'firstname', provider_field => 'given_name' }
+        }
+    );
+    $builder->build_object(
+        {
+            class => 'Koha::Auth::Identity::Provider::Mappings',
+            value => { identity_provider_id => $provider->id, koha_field => 'surname', provider_field => 'family_name' }
+        }
+    );
+    $builder->build_object(
+        {
+            class => 'Koha::Auth::Identity::Provider::Mappings',
+            value =>
+                { identity_provider_id => $provider->id, koha_field => 'cardnumber', provider_field => 'cardnumber' }
+        }
+    );
 
     my $id_token = 'header.' . encode_base64url(
         encode_json(
@@ -90,7 +121,8 @@ subtest 'auth_client_get_user hook tests' => sub {
     my $data = { id_token => $id_token };
 
     my ( $resolved_patron, $mapped_data, $resolved_domain ) =
-        $client->get_user( { provider => $provider->code, data => $data, interface => 'opac' } );
+        $client->get_user(
+        { provider => $provider->code, data => $data, interface => 'opac', hostname => 'test.library.com' } );
     is( $mapped_data->{cardnumber}, '12345', 'Plugin manipulated mapped_data successfully' );
     isnt( $resolved_patron->borrowernumber, $patron->borrowernumber, 'Plugin changed the resolved patron' );
     isnt( $resolved_domain->domain,         $domain->domain,         'Plugin changed the resolved domain' );

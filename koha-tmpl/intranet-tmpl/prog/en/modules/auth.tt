@@ -130,21 +130,22 @@
             </div>
         [% END %]
 
-        [% IF (shibbolethAuthentication) %]
-            <!-- This is what is displayed if shib login has failed -->
-            [% IF (invalidShibLogin ) %]
-                <div id="login_error"><strong>Error: </strong>Shibboleth login failed</div>
-            [% END %]
-            <p><a href="[% shibbolethLoginUrl | $raw %]">Log in using a Shibboleth account</a>.</p>
+        [% IF invalidShibLogin %]
+            <div id="login_error"><strong>Error: </strong>Shibboleth login failed</div>
         [% END %]
 
-        [% IF !TwoFA_prompt && !TwoFA_setup && !Koha.Preference('staffShibOnly') %]
+        [% IF !TwoFA_prompt && !TwoFA_setup %]
             <!-- login prompt time-->
-            [% SET identity_providers = AuthClient.get_providers('staff') %]
+            [% SET identity_providers = AuthClient.get_providers('staff', shibbolethLoginUrl) %]
             [% IF ( ! identity_providers.empty ) %]
                 [% FOREACH provider IN identity_providers %]
+                    [% IF provider.protocol == 'SAML2' %]
+                        [% SET provider_href = provider.url %]
+                    [% ELSE %]
+                        [% SET provider_href = provider.url | url %]
+                    [% END %]
                     <p class="clearfix">
-                        <a href="[% provider.url | url %]" class="btn btn-light col" id="provider_[% provider.code | html %]">
+                        <a href="[% provider_href | $raw %]" class="btn btn-light col" id="provider_[% provider.code | html %]">
                             [% IF provider.icon_url %]
                                 <img src="[% provider.icon_url | url %]" style="max-height: 20px; max-width: 20px;" />
                             [% ELSE %]
@@ -154,102 +155,106 @@
                         </a>
                     </p>
                 [% END %]
-                <hr />
-                <p>If you do not have an external account, but do have a local account, you can still log in: </p>
+                [% UNLESS exclusive_auth_protocol %]
+                    <hr />
+                    <p>If you do not have an external account, but do have a local account, you can still log in: </p>
+                [% END %]
             [% END # /IF  identity_providers.size %]
 
-            <form action="[% script_name | html %]" method="post" name="loginform" id="loginform" class="validated">
-                [% INCLUDE 'csrf-token.inc' %]
-                <input type="hidden" name="login_op" value="cud-login" />
-                <input type="hidden" name="koha_login_context" value="intranet" />
-                [% FOREACH INPUT IN INPUTS %]
-                    [% NEXT IF INPUT.name == "csrf_token" %]
-                    [% NEXT IF INPUT.name == "koha_login_context" %]
-                    [% NEXT IF INPUT.name == "branch" %]
-                    <input type="hidden" name="[% INPUT.name | html %]" value="[% INPUT.value | html %]" />
-                [% END %]
-                <p>
-                    <label for="userid">Username:</label>
-                    <input type="text" name="login_userid" id="userid" class="input focus" value="[% userid | html %]" size="20" tabindex="1" autocomplete="off" />
-                </p>
-                <p>
-                    <label for="password">Password:</label>
-                    <input type="password" name="login_password" id="password" class="input" value="" size="20" tabindex="2" autocomplete="off" />
-                </p>
-
-                [% UNLESS IndependentBranches %]
+            [% UNLESS exclusive_auth_protocol %]
+                <form action="[% script_name | html %]" method="post" name="loginform" id="loginform" class="validated">
+                    [% INCLUDE 'csrf-token.inc' %]
+                    <input type="hidden" name="login_op" value="cud-login" />
+                    <input type="hidden" name="koha_login_context" value="intranet" />
+                    [% FOREACH INPUT IN INPUTS %]
+                        [% NEXT IF INPUT.name == "csrf_token" %]
+                        [% NEXT IF INPUT.name == "koha_login_context" %]
+                        [% NEXT IF INPUT.name == "branch" %]
+                        <input type="hidden" name="[% INPUT.name | html %]" value="[% INPUT.value | html %]" />
+                    [% END %]
                     <p>
-                        [% IF Koha.Preference('ForceLibrarySelection') %]
-                            <label for="set-library-branch" class="required">Library:</label>
-                            <select name="branch" id="set-library-branch" class="input" tabindex="3" required="required">
-                                <option value=""></option>
-                                [% FOREACH l IN Branches.all( unfiltered => 1 ip_limit => 1 ) %]
-                                    <option value="[% l.branchcode | html %]">[% l.branchname | html %]</option>
-                                [% END %]
-                                <span class="required">Required</span>
-                            </select>
-                        [% ELSE %]
-                            <label for="set-library-branch">Library:</label>
-                            <select name="branch" id="set-library-branch" class="input" tabindex="3">
-                                <option value="">My library</option>
-                                [% FOREACH l IN Branches.all( unfiltered => 1 ip_limit => 1 ) %]
-                                    <option value="[% l.branchcode | html %]">[% l.branchname | html %]</option>
-                                [% END %]
-                            </select>
-                        [% END %]
-
-                        [% IF Koha.Preference('StaffLoginLibraryBasedOnIP') %]
-                            <span class="warning">Note: Your selection may be overridden if your current IP matches a specified IP for a branch in Koha</span>
-                        [% END %]
+                        <label for="userid">Username:</label>
+                        <input type="text" name="login_userid" id="userid" class="input focus" value="[% userid | html %]" size="20" tabindex="1" autocomplete="off" />
+                    </p>
+                    <p>
+                        <label for="password">Password:</label>
+                        <input type="password" name="login_password" id="password" class="input" value="" size="20" tabindex="2" autocomplete="off" />
                     </p>
 
-                    [% IF Koha.Preference('UseCirculationDesks') && Desks.all %]
+                    [% UNLESS IndependentBranches %]
                         <p>
-                            <label for="set-library-desk_id">Desk:</label>
-                            <select name="desk_id" id="set-library-desk_id" class="input" tabindex="3">
-                                <option id="nodesk" value="">---</option>
-                                [% FOREACH d IN Desks.all %]
-                                    <option class="[% d.branchcode | html %]" value="[% d.desk_id | html %]" disabled>[% d.desk_name | html %]</option>
-                                [% END %]
-                            </select>
+                            [% IF Koha.Preference('ForceLibrarySelection') %]
+                                <label for="set-library-branch" class="required">Library:</label>
+                                <select name="branch" id="set-library-branch" class="input" tabindex="3" required="required">
+                                    <option value=""></option>
+                                    [% FOREACH l IN Branches.all( unfiltered => 1 ip_limit => 1 ) %]
+                                        <option value="[% l.branchcode | html %]">[% l.branchname | html %]</option>
+                                    [% END %]
+                                    <span class="required">Required</span>
+                                </select>
+                            [% ELSE %]
+                                <label for="set-library-branch">Library:</label>
+                                <select name="branch" id="set-library-branch" class="input" tabindex="3">
+                                    <option value="">My library</option>
+                                    [% FOREACH l IN Branches.all( unfiltered => 1 ip_limit => 1 ) %]
+                                        <option value="[% l.branchcode | html %]">[% l.branchname | html %]</option>
+                                    [% END %]
+                                </select>
+                            [% END %]
+
+                            [% IF Koha.Preference('StaffLoginLibraryBasedOnIP') %]
+                                <span class="warning">Note: Your selection may be overridden if your current IP matches a specified IP for a branch in Koha</span>
+                            [% END %]
                         </p>
-                    [% END %]
 
-                    [% IF Koha.Preference('UseCashRegisters') && Registers.all().size %]
-                        <p>
-                            <label for="set-library-register_id">Cash register:</label>
-                            <select name="register_id" id="set-library-register_id" class="input" tabindex="4">
-                                <option id="noregister" value="" selected="selected">Library default</option>
-                                [% PROCESS options_for_registers registers => Registers.all() %]
-                            </select>
-                        </p>
-                    [% END %]
-                [% END %]
-
-                <p class="submit"><input id="submit-button" type="submit" class="btn btn-primary" value="Log in" tabindex="4" /></p>
-            </form>
-
-            [% IF ( casAuthentication ) %]
-                <h4>CAS login</h4>
-
-                [% IF ( invalidCasLogin ) %]
-                    <!-- This is what is displayed if cas login has failed -->
-                    <p>Sorry, the CAS login failed.</p>
-                [% END %]
-
-                [% IF ( casServerUrl ) %]
-                    <p><a href="[% casServerUrl | $raw %]">If you have a CAS account, please click here to login</a>.</p>
-                [% END %]
-
-                [% IF ( casServersLoop ) %]
-                    <p>If you have a CAS account, please choose against which one you would like to authenticate:</p>
-                    <ul>
-                        [% FOREACH casServer IN casServersLoop %]
-                            <li><a href="[% casServer.value | $raw %]">[% casServer.name | html %]</a></li>
+                        [% IF Koha.Preference('UseCirculationDesks') && Desks.all %]
+                            <p>
+                                <label for="set-library-desk_id">Desk:</label>
+                                <select name="desk_id" id="set-library-desk_id" class="input" tabindex="3">
+                                    <option id="nodesk" value="">---</option>
+                                    [% FOREACH d IN Desks.all %]
+                                        <option class="[% d.branchcode | html %]" value="[% d.desk_id | html %]" disabled>[% d.desk_name | html %]</option>
+                                    [% END %]
+                                </select>
+                            </p>
                         [% END %]
-                    </ul>
+
+                        [% IF Koha.Preference('UseCashRegisters') && Registers.all().size %]
+                            <p>
+                                <label for="set-library-register_id">Cash register:</label>
+                                <select name="register_id" id="set-library-register_id" class="input" tabindex="4">
+                                    <option id="noregister" value="" selected="selected">Library default</option>
+                                    [% PROCESS options_for_registers registers => Registers.all() %]
+                                </select>
+                            </p>
+                        [% END %]
+                    [% END %]
+
+                    <p class="submit"><input id="submit-button" type="submit" class="btn btn-primary" value="Log in" tabindex="4" /></p>
+                </form>
+
+                [% IF ( casAuthentication ) %]
+                    <h4>CAS login</h4>
+
+                    [% IF ( invalidCasLogin ) %]
+                        <!-- This is what is displayed if cas login has failed -->
+                        <p>Sorry, the CAS login failed.</p>
+                    [% END %]
+
+                    [% IF ( casServerUrl ) %]
+                        <p><a href="[% casServerUrl | $raw %]">If you have a CAS account, please click here to login</a>.</p>
+                    [% END %]
+
+                    [% IF ( casServersLoop ) %]
+                        <p>If you have a CAS account, please choose against which one you would like to authenticate:</p>
+                        <ul>
+                            [% FOREACH casServer IN casServersLoop %]
+                                <li><a href="[% casServer.value | $raw %]">[% casServer.name | html %]</a></li>
+                            [% END %]
+                        </ul>
+                    [% END %]
                 [% END %]
-            [% END %]
+            [% END # /UNLESS exclusive_auth_protocol %]
         [% ELSIF TwoFA_prompt %]
             <form action="[% script_name | html %]" method="post" name="loginform" id="loginform" autocomplete="off">
                 [% INCLUDE 'csrf-token.inc' %]
