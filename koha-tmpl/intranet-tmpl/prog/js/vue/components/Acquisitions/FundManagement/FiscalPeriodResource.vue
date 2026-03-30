@@ -258,12 +258,13 @@ export default {
             const fiscal_period_id = fiscal_period.fiscal_period_id;
 
             delete fiscal_period.fiscal_period_id;
-            delete fiscal_period.last_updated;
             delete fiscal_period.patron;
             delete fiscal_period.patron_str;
             delete fiscal_period.owner;
             delete fiscal_period.managing_library;
             delete fiscal_period.ledgers;
+            delete fiscal_period.created_date;
+            delete fiscal_period.modified_date;
 
             if (fiscal_period_id) {
                 return baseResource.apiClient
