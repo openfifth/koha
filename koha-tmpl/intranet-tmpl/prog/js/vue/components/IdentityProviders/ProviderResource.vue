@@ -276,7 +276,7 @@ export default {
                     taggable: true,
                     createOption: h => ({ hostname: h }),
                     toolTip: __(
-                        "Base URL used to access this Koha interface, protocol not required"
+                        "Base URL used to access this Koha interface, protocol not required. Use '*' to surface this provider on all login pages regardless of hostname."
                     ),
                 },
                 {
