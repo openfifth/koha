@@ -346,7 +346,7 @@ sub _autocreate {
         if ( $saml_attr && defined $saml_attributes->{$saml_attr} ) {
             $value = $saml_attributes->{$saml_attr};
         } elsif ( $mapping->{$koha_field}{sync_on_creation} ) {
-            $value = $mapping->{$koha_field}{default_content} // '';
+            $value = $mapping->{$koha_field}{content} // '';
         } else {
             next;
         }
