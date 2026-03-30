@@ -390,6 +390,9 @@ export default {
                     label: __("Sync on creation"),
                     badgeTrueLabel: __("Sync on creation"),
                     badgeTrueClass: "bg-success",
+                    toolTip: __(
+                        "Populate this field when a new patron account is created via SSO. Only applies when 'Auto-register' is enabled in the matching Email Domain Rule."
+                    ),
                 },
                 {
                     name: "sync_on_update",
@@ -398,6 +401,9 @@ export default {
                     label: __("Sync on update"),
                     badgeTrueLabel: __("Sync on update"),
                     badgeTrueClass: "bg-success",
+                    toolTip: __(
+                        "Update this field on every login. Only applies when 'Update patron data on login' is enabled in the matching Email Domain Rule."
+                    ),
                 },
             ],
         };
