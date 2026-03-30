@@ -362,6 +362,9 @@ export default {
                     indexRequired: true,
                     type: "text",
                     label: __("Default value"),
+                    toolTip: __(
+                        "Static value to use for this field when the IdP does not provide one. Only applied when creating a new patron account and only when 'Sync on creation' is enabled. Never used on update. For library and category defaults that vary by email domain, use the 'Default library' and 'Default category' settings on the Email Domain Rule instead."
+                    ),
                 },
             ],
         };
@@ -488,6 +491,9 @@ export default {
                     options: librariesArray,
                     requiredKey: "value",
                     selectLabel: "label",
+                    toolTip: __(
+                        "Home library assigned to new patrons created by auto-registration for this domain rule. Acts as a fallback — any attribute mapping that provides a value for the patron's home library takes precedence. Setting this per domain rule allows patrons from different email domains to be assigned to different libraries automatically."
+                    ),
                 },
                 {
                     name: "default_category_id",
@@ -497,6 +503,9 @@ export default {
                     options: categoriesArray,
                     requiredKey: "value",
                     selectLabel: "label",
+                    toolTip: __(
+                        "Patron category assigned to new patrons created by auto-registration for this domain rule. Acts as a fallback — any attribute mapping that provides a value for the patron category takes precedence. Setting this per domain rule allows patrons from different email domains to be assigned to different categories automatically."
+                    ),
                 },
             ],
         };
