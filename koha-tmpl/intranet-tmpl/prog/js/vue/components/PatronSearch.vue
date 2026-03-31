@@ -105,6 +105,8 @@ export default {
         };
         onMounted(() => {
             passSearchDataToModal();
+            $("#memberresultst").DataTable().clear().destroy();
+            buildDatatable();
         });
 
         const addPatron = () => {

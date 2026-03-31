@@ -335,12 +335,10 @@
             [% END %]
 
             let vueCallback;
-            let additionalPatronFilters;
             $(document).on("shown.bs.modal", function(){
                 const vueData = $("#vuePatronSearchData")
                 const actionType = vueData.data("action_type")
                 vueCallback = vueData.data("callback")
-                additionalPatronFilters = $("#vuePatronSearchData").data("additional_patron_filters")
                 if(!actionButtons.includes(actionType) ) actionButtons.push(actionType)
                 const vueFilteredEndpoint = vueData.data("patron_search_filter")
                 if(vueFilteredEndpoint) {
@@ -357,7 +355,7 @@
                 });
             });
 
-            $(document).ready(function(){
+            function buildDatatable() {
                 let parent_block = $("#[% search_results_block_id | html %]");
                 let patron_search_form = get_patron_search_form();
 
@@ -387,12 +385,14 @@
                     }
                 });
 
+                const additionalPatronFilters = $("#vuePatronSearchData").data("additional_patron_filters")
                 let additional_filters = {
                     surname: function(){
                         let start_with = parent_block.find(".firstletter_filter").val()
                         if (!start_with) return "";
                         return { "like": start_with + "%" }
                     },
+                    ...(additionalPatronFilters && JSON.parse(additionalPatronFilters)),
                     "-and": function(){
                         let filters = [];
 
@@ -813,7 +813,12 @@
                     [% END %]
                     fixedHeader: false,
                 }, typeof table_settings !== 'undefined' ? table_settings : null, 1, additional_filters, filters_options, external_filter_nodes, parent_block.find(".search_description"), additional_search_descriptions );
+            }
 
+            $(document).ready(function() {
+                buildDatatable()
+                let parent_block = $("#[% search_results_block_id | html %]");
+                let patron_search_form = get_patron_search_form();
                 patron_search_form.on('submit', filter);
                 patron_search_form.on('submit', update_search_type);
                 patron_search_form.on('submit', function(){
@@ -949,10 +954,6 @@
                 table_dt.on('draw.dt', function () {
                     patron_search_form.find(".search_patron_filter_btn").prop({disabled: false});
                 });
-                if(additionalPatronFilters) {
-                    let url = patron_search_url + "?q=" + additionalPatronFilters
-                    table_dt.ajax.url(url)
-                }
                 table_dt.draw();
                 return false;
             }
