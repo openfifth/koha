@@ -758,7 +758,7 @@ sub _is_https {
 
 =head1 SEE ALSO
 
-L<Koha::Auth::SAML2>, L<C4::Auth_with_shibboleth>, L<Plack::Middleware>
+L<Koha::Auth::SAML2>, L<Koha::Auth::Client::SAML2>, L<Plack::Middleware>
 
 =head1 AUTHORS
 

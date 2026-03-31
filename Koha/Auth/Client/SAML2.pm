@@ -26,6 +26,7 @@ our @ISA = ('Koha::Auth::Client');
 require Koha::Auth::Client;
 
 use Carp qw( carp );
+use JSON qw( decode_json );
 use URI;
 use URI::Escape qw( uri_escape_utf8 );
 
@@ -40,6 +41,7 @@ use Koha::Patron;
 use Koha::Patron::Attribute;
 use Koha::Patron::Attributes;
 use Koha::Patrons;
+use Koha::Session;
 
 =head1 NAME
 
@@ -63,6 +65,45 @@ emails, delegating to the identity provider's DB configuration.
 =head1 API
 
 =head2 Class methods
+
+=head3 is_enabled
+
+    my $enabled = Koha::Auth::Client::SAML2->is_enabled;
+
+Returns true if at least one enabled SAML2 identity provider is configured for
+the current request hostname. Equivalent to the former C<C4::Auth_with_shibboleth::shib_ok>.
+
+=cut
+
+sub is_enabled {
+    return _get_shib_config() ? 1 : 0;
+}
+
+=head3 get_matchpoint_value
+
+    my $value = Koha::Auth::Client::SAML2->get_matchpoint_value;
+
+Returns the matchpoint attribute value for the current request by reading the
+appropriate HTTP environment variable.  Used in IPC (mod_shib) mode; in native
+mode the value is read from the CGI session instead.
+
+Equivalent to the former C<C4::Auth_with_shibboleth::get_login_shib>.
+
+=cut
+
+sub get_matchpoint_value {
+    my $config = _get_shib_config();
+    return '' unless $config;
+
+    my $matchAttribute = $config->{mapping}->{ $config->{matchpoint} }->{is};
+    return '' unless $matchAttribute;
+
+    if ( C4::Context->psgi_env ) {
+        return $ENV{ 'HTTP_' . uc($matchAttribute) } || '';
+    } else {
+        return $ENV{$matchAttribute} || '';
+    }
+}
 
 =head3 _get_data_and_patron
 
@@ -170,7 +211,12 @@ from the SAML assertion.
 sub checkpw {
     my ( $self, $match_value, $saml_attributes, $hostname ) = @_;
 
-    $hostname        //= $ENV{SERVER_NAME} // '';
+    $hostname //= _request_hostname();
+
+    # If no attributes provided, try native SAML2 session first, then IPC ENV vars
+    unless ( defined $saml_attributes ) {
+        $saml_attributes = _load_saml_attributes_from_request($hostname);
+    }
     $saml_attributes //= {};
 
     my $logger = Koha::Logger->get;
@@ -444,6 +490,104 @@ sub _sync_patron {
     return;
 }
 
+sub _request_hostname {
+
+    # Prefer HTTP_HOST (actual vhost name) over SERVER_NAME (proxy target).
+    # Strip any port suffix.
+    my $hostname = $ENV{HTTP_HOST} // $ENV{SERVER_NAME} // '';
+    $hostname =~ s/:\d+$//;
+    return $hostname;
+}
+
+sub _get_shib_config {
+    my $hostname     = _request_hostname();
+    my @h_candidates = Koha::Auth::Identity::Providers->hostname_candidates($hostname);
+    my $provider     = Koha::Auth::Identity::Providers->search(
+        {
+            'me.protocol'          => 'SAML2',
+            'me.enabled'           => 1,
+            'hostname.hostname'    => \@h_candidates,
+            'hostnames.is_enabled' => 1,
+        },
+        { prefetch => [ 'mappings', { 'hostnames' => 'hostname' } ], rows => 1 }
+    )->next;
+    return 0 unless $provider;
+
+    my $mapping       = $provider->mappings->as_auth_mapping;
+    my $hostname_link = $provider->hostnames->search(
+        { 'hostname.hostname' => \@h_candidates },
+        { join                => 'hostname' }
+    )->next;
+    my $matchpoint = $hostname_link ? $hostname_link->matchpoint : undef;
+
+    unless ($matchpoint) {
+        carp 'shibboleth matchpoint not defined';
+        return 0;
+    }
+
+    unless ( defined $mapping->{$matchpoint}->{is} ) {
+        carp 'shibboleth matchpoint not mapped';
+        return 0;
+    }
+
+    my $saml2_config = $provider->get_config // {};
+    my $config       = {
+        matchpoint => $matchpoint,
+        mapping    => $mapping,
+        autocreate => $saml2_config->{autocreate} || 0,
+        sync       => $saml2_config->{sync}       || 0,
+        welcome    => $saml2_config->{welcome}    || 0,
+    };
+
+    my $logger = Koha::Logger->get;
+    $logger->debug( 'koha borrower field to match: ' . $config->{matchpoint} );
+    $logger->debug( 'shibboleth attribute to match: ' . $mapping->{ $config->{matchpoint} }->{is} );
+
+    return $config;
+}
+
+sub _get_session_id_from_env {
+    my $cookie_str = $ENV{HTTP_COOKIE} // '';
+    if ( $cookie_str =~ /(?:^|;\s*)CGISESSID=([^;]+)/ ) {
+        return $1;
+    }
+    return;
+}
+
+sub _load_saml_attributes_from_request {
+    my ($hostname) = @_;
+
+    # Try native SAML2 session first (attributes stored by Koha::Middleware::SAML2)
+    my $session_id = _get_session_id_from_env();
+    if ($session_id) {
+        eval {
+            my $session = Koha::Session->get_session( { sessionID => $session_id } );
+            if ( $session && $session->id ) {
+                my $json = $session->param('saml2_all_attributes');
+                return decode_json($json) if $json;
+            }
+        };
+    }
+
+    # IPC mode fallback: build attribute hash from HTTP environment variables
+    my $config = _get_shib_config();
+    if ( $config && $config->{mapping} ) {
+        my %saml_attributes;
+        while ( my ( $koha_field, $entry ) = each %{ $config->{mapping} } ) {
+            my $attr_name = $entry->{is};
+            next unless $attr_name;
+            my $value =
+                C4::Context->psgi_env
+                ? ( $ENV{ 'HTTP_' . uc($attr_name) } // $entry->{content} )
+                : ( $ENV{$attr_name} // $entry->{content} );
+            $saml_attributes{$attr_name} = $value if defined $value;
+        }
+        return \%saml_attributes;
+    }
+
+    return;
+}
+
 sub _get_uri {
     my $protocol  = 'https://';
     my $interface = C4::Context->interface;
@@ -472,10 +616,10 @@ sub _get_uri {
 sub _get_return {
     my ($query) = @_;
 
-    my $uri_base_part = _get_uri() . get_script_name();
+    my $uri_base_part = _get_uri() . ( get_script_name() // '' );
 
     my $uri_params_part = '';
-    for my $param ( sort $query->url_param() ) {
+    for my $param ( sort { ( $a // '' ) cmp( $b // '' ) } $query->url_param() ) {
         my $uriPiece = $query->param($param);
         if ($uriPiece) {
             $uri_params_part .= '&' if $uri_params_part;
@@ -492,7 +636,7 @@ sub _get_return {
 
 =head1 SEE ALSO
 
-L<Koha::Auth::Client>, L<C4::Auth_with_shibboleth>, L<Koha::Auth::SAML2>
+L<Koha::Auth::Client>, L<Koha::Auth::SAML2>
 
 =head1 AUTHORS
 

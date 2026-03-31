@@ -424,7 +424,7 @@ sub _init_sp {
 
 =head1 SEE ALSO
 
-L<Koha::Middleware::SAML2>, L<C4::Auth_with_shibboleth>, L<Net::SAML2>
+L<Koha::Middleware::SAML2>, L<Koha::Auth::Client::SAML2>, L<Net::SAML2>
 
 =head1 AUTHORS
 
