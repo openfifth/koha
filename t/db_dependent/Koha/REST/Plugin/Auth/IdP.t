@@ -73,12 +73,16 @@ post '/start_session' => sub {
 };
 
 use Test::NoWarnings;
-use Test::More tests => 3;
+use Test::More tests => 4;
 use Test::Mojo;
+use Test::MockModule;
+use Test::Warn;
 
 use t::lib::Mocks;
 use t::lib::TestBuilder;
 use Koha::Database;
+use Koha::Notice::Messages;
+use Koha::Notice::Templates;
 
 my $schema  = Koha::Database->new()->schema();
 my $builder = t::lib::TestBuilder->new;
@@ -180,6 +184,115 @@ subtest 'auth.register helper' => sub {
             { data => {}, domain_id => $domain_1->identity_provider_domain_id, interface => 'invalid' } )
         ->status_is(400)
         ->json_is( '/message', 'bad parameter: interface' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'auth.register welcome email' => sub {
+
+    plan tests => 9;
+
+    $schema->storage->txn_begin;
+
+    # Avoid trying to actually deliver mail from the test suite
+    my $mocked_letters = Test::MockModule->new('C4::Letters');
+    $mocked_letters->mock( 'SendQueuedMessages', sub { return 1 } );
+
+    my $provider = $builder->build_object( { class => 'Koha::Auth::Identity::Providers' } );
+    my $domain   = $builder->build_object(
+        {
+            class => 'Koha::Auth::Identity::Provider::Domains',
+            value => {
+                identity_provider_id => $provider->id,
+                domain               => 'welcome.com',
+                auto_register_opac   => 1,
+                auto_register_staff  => 0,
+                send_welcome_email   => 1
+            }
+        }
+    );
+
+    my $library  = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $category = $builder->build_object( { class => 'Koha::Patron::Categories' } );
+
+    t::lib::Mocks::mock_userenv( { branchcode => $library->branchcode } );
+
+    my $patron_to_delete_1 = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $patron_to_delete_2 = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $userid_1           = $patron_to_delete_1->userid;
+    my $userid_2           = $patron_to_delete_2->userid;
+    $patron_to_delete_1->delete;
+    $patron_to_delete_2->delete;
+
+    # No WELCOME template defined: registration must still succeed and
+    # return the newly created patron
+    Koha::Notice::Templates->search( { code => 'WELCOME' } )->delete;
+
+    warning_like {
+        $t->post_ok(
+            '/register_user' => json => {
+                data => {
+                    firstname    => 'test',
+                    surname      => 'test',
+                    userid       => $userid_1,
+                    email        => 'user1@welcome.com',
+                    branchcode   => $library->branchcode,
+                    categorycode => $category->categorycode
+                },
+                domain_id => $domain->identity_provider_domain_id,
+                interface => 'opac'
+            }
+            )
+            ->status_is( 200, 'patron created even when WELCOME template is missing' )
+            ->json_is( '/userid', $userid_1 );
+    }
+    qr/No members WELCOME letter transported by email/, 'missing template is reported as a warning';
+
+    is(
+        Koha::Notice::Messages->search( { letter_code => 'WELCOME' } )->count, 0,
+        'no message queued when WELCOME template is missing'
+    );
+
+    # WELCOME template defined: a message gets queued
+    $builder->build_object(
+        {
+            class => 'Koha::Notice::Templates',
+            value => {
+                module                 => 'members',
+                code                   => 'WELCOME',
+                branchcode             => '',
+                name                   => 'Welcome notice',
+                title                  => 'Welcome',
+                content                => 'Welcome to the library',
+                message_transport_type => 'email',
+                lang                   => 'default',
+                is_html                => 0
+            }
+        }
+    );
+
+    $t->post_ok(
+        '/register_user' => json => {
+            data => {
+                firstname    => 'test',
+                surname      => 'test',
+                userid       => $userid_2,
+                email        => 'user2@welcome.com',
+                branchcode   => $library->branchcode,
+                categorycode => $category->categorycode
+            },
+            domain_id => $domain->identity_provider_domain_id,
+            interface => 'opac'
+        }
+    )->status_is(200)->json_is( '/userid', $userid_2 );
+
+    my $patron = Koha::Patrons->find( { userid => $userid_2 } );
+    is(
+        Koha::Notice::Messages->search( { borrowernumber => $patron->borrowernumber, letter_code => 'WELCOME' } )
+            ->count,
+        1,
+        'welcome message queued when template exists'
+    );
 
     $schema->storage->txn_rollback;
 };

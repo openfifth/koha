@@ -26,7 +26,8 @@ use Koha::Exceptions::Auth;
 use Koha::Patron::Attribute;
 use Koha::Patrons;
 
-use C4::Auth qw(create_basic_session);
+use C4::Auth    qw(create_basic_session);
+use C4::Letters qw(GetPreparedLetter EnqueueLetter SendQueuedMessages);
 
 use CGI;
 use List::MoreUtils qw(any);
@@ -103,6 +104,41 @@ if other values or none are passed.
                 Koha::Patron::Attribute->new(
                     { borrowernumber => $patron->borrowernumber, code => $code, attribute => $patron_attrs{$code} } )
                     ->store;
+            }
+
+            # Send welcome email if enabled
+            if ( $domain->send_welcome_email ) {
+                my $emailaddr = $patron->notice_email_address;
+
+                # if we manage to find a valid email address, send notice
+                if ($emailaddr) {
+                    my $letter = C4::Letters::GetPreparedLetter(
+                        module      => 'members',
+                        letter_code => 'WELCOME',
+                        branchcode  => $patron->branchcode,
+
+                        lang   => $patron->lang || 'default',
+                        tables => {
+                            'branches'  => $patron->branchcode,
+                            'borrowers' => $patron->borrowernumber,
+                        },
+                        want_librarian => 1,
+                    );
+
+                    # A missing or broken WELCOME letter must not hide the
+                    # newly created patron from the caller
+                    if ($letter) {
+                        my $message_id = C4::Letters::EnqueueLetter(
+                            {
+                                letter                 => $letter,
+                                borrowernumber         => $patron->id,
+                                to_address             => $emailaddr,
+                                message_transport_type => 'email'
+                            }
+                        );
+                        C4::Letters::SendQueuedMessages( { message_id => $message_id } ) if $message_id;
+                    }
+                }
             }
             return $patron;
         }
