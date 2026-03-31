@@ -456,6 +456,19 @@ sub change_config {
         }
     )->store;
 
+    Koha::Auth::Identity::Provider::Domain->new(
+        {
+            identity_provider_id => $provider->identity_provider_id,
+            domain               => undef, # wildcard
+            allow_opac           => 1,
+            allow_staff          => 1,
+            auto_register_opac   => $params->{autocreate} // 0,
+            auto_register_staff  => $params->{autocreate} // 0,
+            update_on_auth       => $params->{sync}       // 0,
+            send_welcome_email   => $params->{welcome}    // 0,
+        }
+    )->store;
+
     # Link provider to the test hostname so _get_shib_config can find it
     my $test_hostname = 'testopac.com';
     $ENV{HTTP_HOST} = $test_hostname;

@@ -34,6 +34,10 @@ use Carp            qw( carp );
 use List::MoreUtils qw( any );
 
 use Koha::Logger;
+use Koha::Auth::Client;
+use Koha::Auth::Identity::Providers;
+use Koha::Patron::Attribute;
+use Koha::Patron::Attributes;
 
 # Check that shib config is not malformed
 
@@ -94,6 +98,30 @@ sub checkpw_shib {
     my ($match) = @_;
     my $config = _get_shib_config();
 
+    # Try to find domain and override config
+    my $interface = C4::Context->interface eq 'intranet' ? 'staff' : 'opac';
+    my $email_entry = $config->{mapping}->{email};
+    my $email = '';
+    if ($email_entry) {
+        my $email_attr = $email_entry->{is};
+        $email = C4::Context->psgi_env
+                 ? ( $email_attr && $ENV{ "HTTP_" . uc($email_attr) } ) || $email_entry->{content} || ''
+                 : ( $email_attr && $ENV{ $email_attr } ) || $email_entry->{content} || '';
+    }
+    if ($email) {
+        my $client = Koha::Auth::Client->new();
+        my $domain = eval {
+            $client->get_valid_domain_config(
+                { provider => $config->{provider}, email => $email, interface => $interface } );
+        };
+        if ($domain) {
+            $config->{autocreate} = $interface eq 'staff' ? $domain->auto_register_staff : $domain->auto_register_opac;
+            $config->{sync}       = $domain->update_on_auth;
+            $config->{welcome}    = $domain->send_welcome_email;
+            $config->{domain}     = $domain;
+        }
+    }
+
     # Does the given shibboleth attribute value ($match) match a valid koha user ?
     my $borrowers = Koha::Patrons->search( { $config->{matchpoint} => $match } );
     if ( $borrowers->count > 1 ) {
@@ -133,6 +161,11 @@ sub _autocreate {
         } else {
             $borrower{$key} = ( $entry->{'is'} && $ENV{ $entry->{'is'} } ) || $entry->{'content'} || '';
         }
+    }
+
+    if ( my $domain = $config->{domain} ) {
+        $borrower{categorycode} //= $domain->default_category_id;
+        $borrower{branchcode}   //= $domain->default_library_id;
     }
 
     my $patron = Koha::Patron->new( \%borrower )->store;
@@ -263,6 +296,23 @@ sub _get_shib_config {
         }
         return 0;
     }
+
+    my $saml2_config = $provider->get_config // {};
+
+    my $config = {
+        provider   => $provider,
+        matchpoint => $matchpoint,
+        mapping    => $mapping,
+        autocreate => $saml2_config->{autocreate} || 0,
+        sync       => $saml2_config->{sync}       || 0,
+        welcome    => $saml2_config->{welcome}    || 0,
+    };
+
+    my $logger = Koha::Logger->get;
+    $logger->debug( "koha borrower field to match: " . $config->{matchpoint} );
+    $logger->debug( "shibboleth attribute to match: " . $mapping->{ $config->{matchpoint} }->{is} );
+
+    return $config;
 }
 
 1;
