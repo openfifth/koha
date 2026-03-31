@@ -48,8 +48,10 @@ sub new {
 =head3 mandatory_config_attributes
 
 SAML2 providers are configured at the web-server level (e.g. mod_shib).
-Koha stores optional behavioural settings in C<config> (autocreate, sync, welcome)
-but none are mandatory.
+Koha stores optional protocol-specific settings in C<config>, but
+behavioural settings like C<auto_register_opac>, C<update_on_auth>
+and C<send_welcome_email> are configured at the domain level.
+None are mandatory.
 
 =cut
 

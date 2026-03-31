@@ -112,12 +112,11 @@ sub get_config {
         }
     );
 
-    # SAML2 (config holds protocol-specific settings like autocreate/sync/welcome)
+    # SAML2 (config stores protocol-specific settings if any, but behaviour
+    # like autocreate/sync/welcome is now configured at the domain level)
     $provider->set_config(
         {
-            autocreate => 1,
-            sync       => 1,
-            welcome    => 0,
+            # Example protocol-specific settings...
         }
     );
 
