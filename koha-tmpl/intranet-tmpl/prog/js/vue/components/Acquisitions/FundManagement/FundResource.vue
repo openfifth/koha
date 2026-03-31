@@ -133,85 +133,71 @@ export default {
                     type: "text",
                     hideIn: ["Form", "Show"],
                 },
-                ...(!isSubFund.value
-                    ? [
-                          {
-                              name: "fiscal_period_name",
-                              type: "display",
-                              label: $__("Fiscal period"),
-                              group: $__("Information and status"),
-                              showElement: {
-                                  type: "text",
-                                  value: "fiscal_period.name",
-                                  link: {
-                                      name: "FiscalPeriodShow",
-                                      params: {
-                                          fiscal_period_id: "fiscal_period_id",
-                                      },
-                                  },
-                              },
-                              hideIn: ["List"],
-                          },
-                      ]
-                    : []),
-                ...(!isSubFund.value
-                    ? [
-                          {
-                              name: "ledger_name",
-                              type: "display",
-                              label: $__("Ledger"),
-                              group: $__("Information and status"),
-                              showElement: {
-                                  type: "text",
-                                  value: "ledger.name",
-                                  link: {
-                                      name: "LedgerShow",
-                                      params: {
-                                          ledger_id: "ledger_id",
-                                      },
-                                  },
-                              },
-                              hideIn: ["List"],
-                          },
-                      ]
-                    : []),
-                ...(!isSubFund.value || props.routeAction === "list"
-                    ? [
-                          {
-                              name: "fund_parent_name",
-                              type: "display",
-                              label: $__("Parent fund"),
-                              group: $__("Information and status"),
-                              showElement: {
-                                  type: "text",
-                                  value: "parent_fund.name",
-                                  link: {
-                                      name: "FundShow",
-                                      params: {
-                                          fund_id: "fund_parent_id",
-                                      },
-                                  },
-                              },
-                              tableColumnDefinition: {
-                                  title: $__("Parent fund"),
-                                  data: "parent_fund.name",
-                                  searchable: true,
-                                  orderable: true,
-                                  render(data, type, row, meta) {
-                                      return row.parent_fund
-                                          ? '<a href="/cgi-bin/koha/acquisitions/fund_management/fund' +
-                                                row.parent_fund.fund_id +
-                                                '" class="show">' +
-                                                escape_str(
-                                                    row.parent_fund.name
-                                                ) +
-                                                "</a>"
-                                          : "";
-                                  },
-                              },
-                          },
-                      ]
-                    : []),
+                {
+                    name: "fiscal_period_name",
+                    type: "display",
+                    label: $__("Fiscal period"),
+                    group: $__("Information and status"),
+                    showElement: {
+                        type: "text",
+                        value: "fiscal_period.name",
+                        link: {
+                            name: "FiscalPeriodShow",
+                            params: {
+                                fiscal_period_id: "fiscal_period_id",
+                            },
+                        },
+                    },
+                    hideIn: ["List"],
+                },
+                {
+                    name: "ledger_name",
+                    type: "display",
+                    label: $__("Ledger"),
+                    group: $__("Information and status"),
+                    showElement: {
+                        type: "text",
+                        value: "ledger.name",
+                        link: {
+                            name: "LedgerShow",
+                            params: {
+                                ledger_id: "ledger_id",
+                            },
+                        },
+                    },
+                    hideIn: ["List"],
+                },
+                {
+                    name: "fund_parent_name",
+                    type: "display",
+                    label: $__("Parent fund"),
+                    group: $__("Information and status"),
+                    showElement: {
+                        type: "text",
+                        value: "parent_fund.name",
+                        link: {
+                            name: "FundShow",
+                            params: {
+                                fund_id: "fund_parent_id",
+                            },
+                        },
+                    },
+                    tableColumnDefinition: {
+                        title: $__("Parent fund"),
+                        data: "parent_fund.name",
+                        searchable: true,
+                        orderable: true,
+                        render(data, type, row, meta) {
+                            return row.parent_fund
+                                ? '<a href="/cgi-bin/koha/acquisitions/fund_management/fund' +
+                                      row.parent_fund.fund_id +
+                                      '" class="show">' +
+                                      escape_str(row.parent_fund.name) +
+                                      "</a>"
+                                : "";
+                        },
+                    },
+                },
                 {
                     name: "name",
                     required: true,
@@ -532,6 +518,7 @@ export default {
             delete fund.currency;
             delete fund.modified_date;
             delete fund.created_date;
+            delete fund.child_object_managing_branches;
 
             fund.fund_permission = fund.fund_permission
                 ? parseInt(fund.fund_permission)
@@ -565,6 +552,42 @@ export default {
             componentData.resource.value.fund_parent_name =
                 resource.parent_fund?.name;
             componentData.resource.value.currency = resource.ledger.currency;
+            const parentKey = isSubFund.value ? "parent_fund" : "ledger";
+            const { branchNames, groupNames } = getBranchnamesFromGroups(
+                resource[parentKey].managing_library
+                    ?.acquisitions_library_groups
+            );
+            const childManagingBranches = resource
+                .child_object_managing_branches.length
+                ? resource.child_object_managing_branches.reduce(
+                      (acc, comb) => {
+                          if (
+                              !acc.includes(comb.branchcode) &&
+                              branchNames.includes(comb.branchname)
+                          ) {
+                              acc.push(comb.branchcode);
+                          }
+                          return acc;
+                      },
+                      [resource.managing_branch]
+                  )
+                : branchNames;
+            baseResource.setMessage(
+                $__("Access restriction for group(s) %s").format(
+                    groupNames.join(", ")
+                )
+            );
+            const branchAttr = baseResource.resourceAttrs.find(
+                ra => ra.name === "managing_branch"
+            );
+            branchAttr.componentProps.query = {
+                type: "object",
+                value: {
+                    [resource.child_object_managing_branches
+                        ? "branchcode"
+                        : "branchname"]: { "-in": childManagingBranches },
+                },
+            };
         };
 
         const appendToShow = componentData => {
@@ -847,20 +870,20 @@ export default {
             componentData,
             initialized
         ) => {
-            resource.fiscal_period_id = parseInt(
-                componentData.route.query.fiscal_period_id
-            );
-            resource.ledger_id = parseInt(componentData.route.query.ledger_id);
-            if (isSubFund.value) {
-                resource.fund_parent_id = parseInt(
-                    componentData.route.query.fund_id
-                );
-            }
             const clientName = isSubFund.value ? "funds" : "ledgers";
             const searchKey = isSubFund.value ? "fund_id" : "ledger_id";
             APIClient.acquisition[clientName]
-                .get(resource[searchKey])
+                .get(componentData.route.query[searchKey])
                 .then(result => {
+                    resource.fiscal_period_id = parseInt(
+                        result.fiscal_period_id
+                    );
+                    resource.ledger_id = parseInt(result.ledger_id);
+                    if (isSubFund.value) {
+                        resource.fund_parent_id = parseInt(
+                            componentData.route.query.fund_id
+                        );
+                    }
                     resource.fiscal_period_name = result.fiscal_period.name;
                     const resultLedger = isSubFund.value
                         ? result.ledger
@@ -868,15 +891,14 @@ export default {
                     resource.ledger_name = resultLedger.name;
                     resource.currency = resultLedger.currency;
                     const acqLibGroups =
-                        resultLedger.managing_library
-                            ?.acquisitions_library_groups;
+                        result.managing_library?.acquisitions_library_groups ||
+                        [];
                     resource.fund_parent_name = isSubFund.value
                         ? result.name
                         : null;
                     if (acqLibGroups.length) {
-                        const groupNames = acqLibGroups.map(
-                            alg => alg.group.title
-                        );
+                        const { branchNames, groupNames } =
+                            getBranchnamesFromGroups(acqLibGroups);
                         baseResource.setMessage(
                             $__("Access restriction for group(s) %s").format(
                                 groupNames.join(", ")
@@ -888,8 +910,6 @@ export default {
                         const branchAttr = componentData.resourceAttrs.find(
                             ra => ra.name === "managing_branch"
                         );
-                        const branchNames =
-                            getBranchnamesFromGroups(acqLibGroups);
                         branchAttr.componentProps.query = {
                             type: "object",
                             value: { branchname: { "-in": branchNames } },

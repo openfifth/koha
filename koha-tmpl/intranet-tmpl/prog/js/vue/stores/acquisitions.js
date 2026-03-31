@@ -51,6 +51,20 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
             }
             return `${symbol}${formattedPrice}`;
         },
+        getBranchnamesFromGroups(libraryGroups) {
+            return libraryGroups.reduce(
+                (acc, alg) => {
+                    alg.libraries.forEach(lib => {
+                        if (!acc.branchNames.includes(lib.branchname)) {
+                            acc.branchNames.push(lib.branchname);
+                        }
+                    });
+                    acc.groupNames.push(alg?.group?.title);
+                    return acc;
+                },
+                { branchNames: [], groupNames: [] }
+            );
+        },
     };
     const getters = {
         modulesEnabled: computed(() => {
@@ -78,16 +92,6 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
                 getters.getSystemCurrencyRate(currencyFrom);
             const currencyToRate = getters.getSystemCurrencyRate(currencyTo);
             return (currencyToRate * 100) / (currencyFromRate * 100);
-        },
-        getBranchnamesFromGroups(libraryGroups) {
-            return libraryGroups.reduce((acc, alg) => {
-                alg.libraries.forEach(lib => {
-                    if (!acc.includes(lib.branchname)) {
-                        acc.push(lib.branchname);
-                    }
-                });
-                return acc;
-            }, []);
         },
     };
 

@@ -92,7 +92,7 @@ export class AcquisitionAPIClient {
                     endpoint: "fiscal_periods/" + id,
                     headers: {
                         "x-koha-embed":
-                            "owner,managing_library,managing_library.acquisitions_library_groups,ledgers",
+                            "owner,managing_library,managing_library.acquisitions_library_groups,ledgers,child_object_managing_branches",
                         ...headers,
                     },
                 }),
@@ -140,7 +140,7 @@ export class AcquisitionAPIClient {
                     endpoint: "ledgers/" + id,
                     headers: {
                         "x-koha-embed":
-                            "owner,managing_library,managing_library.acquisitions_library_groups,fiscal_period,funds,allocations",
+                            "owner,managing_library,managing_library.acquisitions_library_groups,fiscal_period.managing_library.acquisitions_library_groups,funds,funds.managing_library,allocations,child_object_managing_branches",
                         ...headers,
                     },
                 }),
@@ -187,7 +187,7 @@ export class AcquisitionAPIClient {
                     endpoint: "funds/" + id,
                     headers: {
                         "x-koha-embed":
-                            "owner,managing_library,fiscal_period,fund_group,ledger,ledger.managing_library,managing_library.acquisitions_library_groups,allocations,sub_funds,parent_fund",
+                            "owner,managing_library,fiscal_period,fund_group,ledger,ledger.managing_library,ledger.managing_library.acquisitions_library_groups,managing_library.acquisitions_library_groups,allocations,sub_funds,parent_fund,parent_fund.managing_library.acquisitions_library_groups,child_object_managing_branches",
                         ...headers,
                     },
                 }),

@@ -1,0 +1,13 @@
+---
+type: object
+properties:
+  branchcode:
+    description: Branchcode for the managing branch
+    type: string
+  branchname:
+    description: Branchname for the managing branch
+    type: string
+additionalProperties: false
+required:
+  - branchcode
+  - branchname

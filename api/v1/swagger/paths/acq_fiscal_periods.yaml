@@ -129,6 +129,7 @@
           - owner
           - managing_library
           - managing_library.acquisitions_library_groups
+          - child_object_managing_branches
         collectionFormat: csv
     produces:
       - application/json

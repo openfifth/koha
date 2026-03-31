@@ -265,6 +265,7 @@ export default {
             delete fiscal_period.ledgers;
             delete fiscal_period.created_date;
             delete fiscal_period.modified_date;
+            delete fiscal_period.child_object_managing_branches;
 
             if (fiscal_period_id) {
                 return baseResource.apiClient
@@ -410,11 +411,28 @@ export default {
             ];
         };
 
+        const afterResourceFetch = (componentData, resource, caller) => {
+            if (resource.child_object_managing_branches) {
+                const childManagingBranches =
+                    resource.child_object_managing_branches
+                        .map(comb => comb.branchcode)
+                        .push(resource.managing_branch);
+                const branchAttr = baseResource.resourceAttrs.find(
+                    ra => ra.name === "managing_branch"
+                );
+                branchAttr.componentProps.query = {
+                    type: "object",
+                    value: { branchcode: { "-in": childManagingBranches } },
+                };
+            }
+        };
+
         return {
             ...baseResource,
             tableOptions,
             onFormSave,
             appendToShow,
+            afterResourceFetch,
         };
     },
     components: { BaseResource },

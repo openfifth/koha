@@ -71,7 +71,7 @@ Returns any sub funds with any further nested funds embedded
 sub sub_funds {
     my ( $self, $args ) = @_;
 
-    my $embed_children = $args->{embed_children} || 1;
+    my $embed_children = $args->{embed_children} || 0;
 
     my $sub_funds = Koha::Acquisition::FundManagement::Funds->search( { fund_parent_id => $self->fund_id } );
 

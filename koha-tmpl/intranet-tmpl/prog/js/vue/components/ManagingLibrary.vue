@@ -54,7 +54,9 @@ export default {
             props.resource?.managing_library?.acquisitions_library_groups || []
         );
         const groupAccessList = computed(() => {
-            return getBranchnamesFromGroups(groupAccess.value).join(", ");
+            return getBranchnamesFromGroups(groupAccess.value).branchNames.join(
+                ", "
+            );
         });
 
         const setGroupAccessValue = (e, options, resource) => {

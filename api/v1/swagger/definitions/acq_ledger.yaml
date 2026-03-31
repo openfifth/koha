@@ -98,4 +98,9 @@ properties:
     description: List of allocations
     items:
       $ref: "acq_allocation.yaml"
+  child_object_managing_branches:
+    type: array
+    description: List of managing branches of any child objects
+    items:
+      $ref: "acq_child_object_managing_branch.yaml"
 additionalProperties: false

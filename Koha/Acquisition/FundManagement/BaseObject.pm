@@ -594,6 +594,30 @@ sub update_amount {
     $self->$entity_field($new_value)->store;
 }
 
+=head3 child_object_managing_branches
+
+=cut
+
+sub child_object_managing_branches {
+    my ( $self, $args ) = @_;
+
+    my $children_class = $self->_object_hierarchy()->{children};
+    my $children       = $self->$children_class->as_list;
+
+    my $managing_branches = $args->{managing_branches} || [];
+    foreach my $child (@$children) {
+        my $managing_library = $child->managing_library;
+        my $branch           = {
+            branchcode => $child->managing_branch,
+            branchname => $managing_library->branchname
+        };
+        push( @$managing_branches, $branch )
+            unless grep( $_->{branchcode} eq $branch->{branchcode}, @$managing_branches );
+        $managing_branches = $child->child_object_managing_branches( { managing_branches => $managing_branches } );
+    }
+    return $managing_branches;
+}
+
 sub _format_object_name {
     my ($name) = @_;
 

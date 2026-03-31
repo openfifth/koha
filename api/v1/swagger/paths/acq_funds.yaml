@@ -140,6 +140,7 @@
           - fiscal_period
           - ledger
           - ledger.managing_library
+          - ledger.managing_library.acquisitions_library_groups
           - allocations
           - owner
           - managing_library
@@ -147,6 +148,8 @@
           - fund_group
           - sub_funds
           - parent_fund
+          - parent_fund.managing_library.acquisitions_library_groups
+          - child_object_managing_branches
         collectionFormat: csv
     produces:
       - application/json

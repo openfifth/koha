@@ -70,4 +70,9 @@ properties:
     type:
       - object
       - "null"
+  child_object_managing_branches:
+    type: array
+    description: List of managing branches of any child objects
+    items:
+      $ref: "acq_child_object_managing_branch.yaml"
 additionalProperties: false

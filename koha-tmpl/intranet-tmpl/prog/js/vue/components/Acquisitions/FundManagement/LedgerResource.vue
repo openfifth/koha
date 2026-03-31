@@ -194,6 +194,7 @@ export default {
                     requiredKey: "currency",
                     options: currencies.value,
                     defaultValue: null,
+                    required: true,
                     hideIn: ["List"],
                 },
                 {
@@ -399,6 +400,8 @@ export default {
             delete ledger.modified_date;
             delete ledger.created_date;
             delete ledger.funds;
+            delete ledger.child_object_managing_branches;
+            delete ledger.allocations;
 
             if (ledger_id) {
                 return baseResource.apiClient.update(ledger, ledger_id).then(
@@ -424,6 +427,41 @@ export default {
                 resource.oe_warning_percent * 100;
             componentData.resource.value.fiscal_period_name =
                 resource.fiscal_period.name;
+            const { branchNames, groupNames } = getBranchnamesFromGroups(
+                resource.fiscal_period.managing_library
+                    ?.acquisitions_library_groups
+            );
+            const childManagingBranches = resource
+                .child_object_managing_branches.length
+                ? resource.child_object_managing_branches.reduce(
+                      (acc, comb) => {
+                          if (
+                              !acc.includes(comb.branchcode) &&
+                              branchNames.includes(comb.branchname)
+                          ) {
+                              acc.push(comb.branchcode);
+                          }
+                          return acc;
+                      },
+                      [resource.managing_branch]
+                  )
+                : branchNames;
+            baseResource.setMessage(
+                $__("Access restriction for group(s) %s").format(
+                    groupNames.join(", ")
+                )
+            );
+            const branchAttr = baseResource.resourceAttrs.find(
+                ra => ra.name === "managing_branch"
+            );
+            branchAttr.componentProps.query = {
+                type: "object",
+                value: {
+                    [resource.child_object_managing_branches
+                        ? "branchcode"
+                        : "branchname"]: { "-in": childManagingBranches },
+                },
+            };
         };
 
         const afterNewResourceCreate = (
@@ -443,9 +481,10 @@ export default {
                             fiscalPeriod.managing_library
                                 ?.acquisitions_library_groups.length
                         ) {
-                            const groupNames =
-                                fiscalPeriod.managing_library?.acquisitions_library_groups.map(
-                                    alg => alg.group.title
+                            const { branchNames, groupNames } =
+                                getBranchnamesFromGroups(
+                                    fiscalPeriod.managing_library
+                                        ?.acquisitions_library_groups
                                 );
                             baseResource.setMessage(
                                 $__(
@@ -457,10 +496,6 @@ export default {
                                 user.value.loggedInUser.loggedInBranch;
                             const branchAttr = componentData.resourceAttrs.find(
                                 ra => ra.name === "managing_branch"
-                            );
-                            const branchNames = getBranchnamesFromGroups(
-                                fiscalPeriod.managing_library
-                                    ?.acquisitions_library_groups
                             );
                             branchAttr.componentProps.query = {
                                 type: "object",
