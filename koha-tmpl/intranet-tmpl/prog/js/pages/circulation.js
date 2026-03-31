@@ -102,6 +102,7 @@ $(document).ready(function () {
     });
 
     /* Preselect Bootstrap tab based on location hash */
+    console.log('calling selectBsTabByHash');
     selectBsTabByHash("finesholdsissues");
 
     if ($("#clubs_panel").length) {
