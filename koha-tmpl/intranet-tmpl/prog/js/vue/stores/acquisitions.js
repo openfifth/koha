@@ -93,6 +93,11 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
             const currencyToRate = getters.getSystemCurrencyRate(currencyTo);
             return (currencyToRate * 100) / (currencyFromRate * 100);
         },
+        differentCurrenciesInLedgers: computed(() => {
+            return store.sysprefs.different_currencies_in_ledgers === "1"
+                ? true
+                : false;
+        }),
     };
 
     return {

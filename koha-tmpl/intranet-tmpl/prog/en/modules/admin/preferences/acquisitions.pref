@@ -146,6 +146,13 @@ Acquisitions:
                 1: Enable
                 0:  Disable
             - automatic order line creation from MARC records.
+        -
+            - pref: DifferentCurrenciesInLedgers
+              default: no
+              choices:
+                1: Allow
+                0: Don't allow
+            - ledgers to have different currencies to the active system currency.
     Printing:
         -
             - Use the

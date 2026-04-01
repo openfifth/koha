@@ -168,5 +168,11 @@ return {
         );
         say_success( $out, "Added new authorised values to those categories" );
 
+        $dbh->do(
+            q{INSERT IGNORE INTO systempreferences (variable,value,options,explanation,type)
+            VALUES ('DifferentCurrenciesInLedgers', 0, NULL, 'Allow ledgers to be in different currencies', 'YesNo' )}
+        );
+        say_success( $out, "Added new system preference DifferentCurrenciesInLedgers" );
+
     },
 };

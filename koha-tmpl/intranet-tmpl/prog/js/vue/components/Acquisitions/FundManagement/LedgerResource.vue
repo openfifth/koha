@@ -10,7 +10,7 @@ import BaseResource from "../../BaseResource.vue";
 import { APIClient } from "../../../fetch/api-client.js";
 import { useBaseResource } from "../../../composables/base-resource";
 import { $__ } from "@koha-vue/i18n";
-import { inject } from "vue";
+import { inject, ref } from "vue";
 import { storeToRefs } from "pinia";
 
 export default {
@@ -24,10 +24,13 @@ export default {
         const format_date = $date;
 
         const acquisitionsStore = inject("acquisitionsStore");
-        const { currencies, user } = storeToRefs(acquisitionsStore);
+        const { currencies, user, sysprefs } = storeToRefs(acquisitionsStore);
 
-        const { formatValueWithCurrency, getBranchnamesFromGroups } =
-            acquisitionsStore;
+        const {
+            formatValueWithCurrency,
+            getBranchnamesFromGroups,
+            differentCurrenciesInLedgers,
+        } = acquisitionsStore;
 
         const additionalToolbarButtons = (resource, componentData) => {
             const handleAllocationButtons = () => {
@@ -202,14 +205,14 @@ export default {
                 },
                 {
                     name: "currency",
-                    type: "select",
+                    type: differentCurrenciesInLedgers ? "select" : "display",
                     label: $__("Currency"),
                     group: $__("Financial controlling"),
                     selectLabel: "currency",
                     requiredKey: "currency",
                     options: currencies.value,
                     defaultValue: activeCurrency,
-                    required: true,
+                    required: differentCurrenciesInLedgers ? true : false,
                     disabled: ledger => !!ledger.ledger_id,
                     hideIn: ["List"],
                 },

@@ -55,10 +55,11 @@ sub config {
             permissions => $permissions,
             gst_values  => \@gst_values,
             sysprefs    => {
-                calculate_fund_values_including_tax  => $calculate_fund_values_including_tax,
-                acq_create_items                     => $acq_create_items,
-                use_acq_framework_for_biblio_records => $use_acq_framework_for_biblio_records,
-                marcflavour                          => $marcflavour
+                calculate_fund_values_including_tax  => C4::Context->preference('CalculateFundValuesIncludingTax'),
+                acq_create_items                     => C4::Context->preference('AcqCreateItem'),
+                use_acq_framework_for_biblio_records => C4::Context->preference('UseAcqFrameworkForBiblioRecords'),
+                marcflavour                          => C4::Context->preference('marcflavour'),
+                different_currencies_in_ledgers      => C4::Context->preference('DifferentCurrenciesInLedgers'),
             },
         },
     );
