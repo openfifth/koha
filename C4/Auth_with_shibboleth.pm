@@ -18,10 +18,13 @@ package C4::Auth_with_shibboleth;
 # along with Koha; if not, see <https://www.gnu.org/licenses>.
 
 use Modern::Perl;
-use base 'Exporter';
+
+our ( @ISA, @EXPORT_OK );
 
 BEGIN {
-    our @EXPORT_OK = qw(shib_ok logout_shib login_shib_url checkpw_shib get_login_shib);
+    require Exporter;
+    @ISA       = qw(Exporter);
+    @EXPORT_OK = qw(shib_ok logout_shib login_shib_url checkpw_shib get_login_shib);
 }
 
 use C4::Context;
@@ -97,19 +100,16 @@ sub checkpw_shib {
 
     my ($match) = @_;
     my $config = _get_shib_config();
+    my $client = Koha::Auth::Client->new();
 
     # Try to find domain and override config
     my $interface = C4::Context->interface eq 'intranet' ? 'staff' : 'opac';
-    my $email_entry = $config->{mapping}->{email};
-    my $email = '';
-    if ($email_entry) {
-        my $email_attr = $email_entry->{is};
-        $email = C4::Context->psgi_env
-                 ? ( $email_attr && $ENV{ "HTTP_" . uc($email_attr) } ) || $email_entry->{content} || ''
-                 : ( $email_attr && $ENV{ $email_attr } ) || $email_entry->{content} || '';
-    }
+
+    # Map data from environment
+    my $mapped_data = $client->_get_mapped_data( { provider => $config->{provider}, raw_data => \%ENV } );
+
+    my $email = $mapped_data->{email};
     if ($email) {
-        my $client = Koha::Auth::Client->new();
         my $domain = eval {
             $client->get_valid_domain_config(
                 { provider => $config->{provider}, email => $email, interface => $interface } );
@@ -123,25 +123,30 @@ sub checkpw_shib {
     }
 
     # Does the given shibboleth attribute value ($match) match a valid koha user ?
-    my $borrowers = Koha::Patrons->search( { $config->{matchpoint} => $match } );
-    if ( $borrowers->count > 1 ) {
-
-        # If we have more than 1 borrower the matchpoint is not unique
-        # we cannot know which patron is the correct one, so we should fail
-        Koha::Logger->get->warn(
-            "There are several users with $config->{matchpoint} of $match, matchpoints must be unique");
-        return 0;
-    }
-    my $borrower = $borrowers->next;
-    if ( defined($borrower) ) {
-        if ( $config->{'sync'} ) {
-            _sync( $borrower->borrowernumber, $config, $match );
+    my $hostname_link = $config->{provider}->hostnames->search(
+        { 'hostname.hostname' => $ENV{HTTP_HOST} },
+        { join                => 'hostname' }
+    )->next;
+    my $matchpoint = $hostname_link ? $hostname_link->matchpoint : undef;
+    my $patron = eval { $client->_find_patron_by_matchpoint( $matchpoint, $match ) };
+    if ($@) {
+        if ( ref($@) eq 'Koha::Exceptions::Auth::DuplicateMatchpoint' ) {
+            Koha::Logger->get->warn(
+                "There are several users with $matchpoint of $match, matchpoints must be unique");
+            return 0;
         }
-        return ( 1, $borrower->get_column('cardnumber'), $borrower->get_column('userid'), $borrower );
+        die $@;
+    }
+
+    if ($patron) {
+        if ( $config->{'sync'} ) {
+            _sync( $patron->borrowernumber, $config, $mapped_data );
+        }
+        return ( 1, $patron->cardnumber, $patron->userid, $patron );
     }
 
     if ( $config->{'autocreate'} ) {
-        return _autocreate( $config, $match );
+        return _autocreate( $config, $mapped_data );
     } else {
 
         # If we reach this point, the user is not a valid koha user
@@ -151,15 +156,13 @@ sub checkpw_shib {
 }
 
 sub _autocreate {
-    my ( $config, $match ) = @_;
+    my ( $config, $mapped_data ) = @_;
+    my $client = Koha::Auth::Client->new();
 
-    my %borrower = ( $config->{matchpoint} => $match );
-
-    while ( my ( $key, $entry ) = each %{ $config->{'mapping'} } ) {
-        if ( C4::Context->psgi_env ) {
-            $borrower{$key} = ( $entry->{'is'} && $ENV{ "HTTP_" . uc( $entry->{'is'} ) } ) || $entry->{'content'} || '';
-        } else {
-            $borrower{$key} = ( $entry->{'is'} && $ENV{ $entry->{'is'} } ) || $entry->{'content'} || '';
+    my %borrower;
+    for my $key ( keys %$mapped_data ) {
+        unless ( $key =~ /^patron_attribute:(.+)$/ ) {
+            $borrower{$key} = $mapped_data->{$key};
         }
     }
 
@@ -169,6 +172,8 @@ sub _autocreate {
     }
 
     my $patron = Koha::Patron->new( \%borrower )->store;
+
+    $client->_update_patron_from_mapped_data( { patron => $patron, mapped_data => $mapped_data } );
     $patron->discard_changes;
 
     C4::Members::Messaging::SetMessagingPreferencesFromDefaults(
@@ -212,18 +217,11 @@ sub _autocreate {
 }
 
 sub _sync {
-    my ( $borrowernumber, $config, $match ) = @_;
-    my %borrower;
-    $borrower{'borrowernumber'} = $borrowernumber;
-    while ( my ( $key, $entry ) = each %{ $config->{'mapping'} } ) {
-        if ( C4::Context->psgi_env ) {
-            $borrower{$key} = ( $entry->{'is'} && $ENV{ "HTTP_" . uc( $entry->{'is'} ) } ) || $entry->{'content'} || '';
-        } else {
-            $borrower{$key} = ( $entry->{'is'} && $ENV{ $entry->{'is'} } ) || $entry->{'content'} || '';
-        }
-    }
+    my ( $borrowernumber, $config, $mapped_data ) = @_;
+    my $client = Koha::Auth::Client->new();
+
     my $patron = Koha::Patrons->find($borrowernumber);
-    $patron->set( \%borrower )->store;
+    $client->_update_patron_from_mapped_data( { patron => $patron, mapped_data => $mapped_data } );
 }
 
 sub _get_uri {
@@ -254,10 +252,10 @@ sub _get_uri {
 sub _get_return {
     my ($query) = @_;
 
-    my $uri_base_part = _get_uri() . get_script_name();
+    my $uri_base_part = _get_uri() . ( get_script_name() // '' );
 
     my $uri_params_part = '';
-    foreach my $param ( sort $query->url_param() ) {
+    foreach my $param ( sort grep { defined } $query->url_param() ) {
 
         # url_param() always returns parameters that were deleted by delete()
         # This additional check ensure that parameter was not deleted.
@@ -274,26 +272,33 @@ sub _get_return {
 }
 
 sub _get_shib_config {
-    my $config = C4::Context->config('shibboleth');
+    my $hostname     = $ENV{HTTP_HOST};
+    my @h_candidates = Koha::Auth::Identity::Providers->hostname_candidates($hostname);
+    my $provider     = Koha::Auth::Identity::Providers->search(
+        {
+            'me.protocol'          => 'SAML2',
+            'me.enabled'           => 1,
+            'hostname.hostname'    => \@h_candidates,
+            'hostnames.is_enabled' => 1,
+        },
+        { prefetch => [ 'mappings', { 'hostnames' => 'hostname' } ], rows => 1 }
+    )->next;
+    return 0 unless $provider;
 
-    if ( !$config ) {
-        Koha::Logger->get->warn('shibboleth config not defined');
+    my $mapping       = $provider->mappings->as_auth_mapping;
+    my $hostname_link = $provider->hostnames->search(
+        { 'hostname.hostname' => \@h_candidates },
+        { join                => 'hostname' }
+    )->next;
+    my $matchpoint = $hostname_link ? $hostname_link->matchpoint : undef;
+
+    unless ($matchpoint) {
+        carp 'shibboleth matchpoint not defined';
         return 0;
     }
 
-    if ( $config->{matchpoint}
-        && defined( $config->{mapping}->{ $config->{matchpoint} }->{is} ) )
-    {
-        my $logger = Koha::Logger->get;
-        $logger->debug( "koha borrower field to match: " . $config->{matchpoint} );
-        $logger->debug( "shibboleth attribute to match: " . $config->{mapping}->{ $config->{matchpoint} }->{is} );
-        return $config;
-    } else {
-        if ( !$config->{matchpoint} ) {
-            carp 'shibboleth matchpoint not defined';
-        } else {
-            carp 'shibboleth matchpoint not mapped';
-        }
+    unless ( defined $mapping->{$matchpoint}->{is} ) {
+        carp 'shibboleth matchpoint not mapped';
         return 0;
     }
 
@@ -454,6 +459,15 @@ Given a shib_login attribute, this routine checks for a matching local user and 
 A sugar function to that simply returns the current page URI with appropriate protocol attached
 
 This routine is NOT exported
+
+=head2 get_force_sso_setting
+
+  my $force_sso = get_force_sso_setting($interface);
+
+Returns the force SSO setting for the given interface (opac or intranet).
+Returns 0 if shibboleth is not configured or the setting is disabled.
+
+  $interface - 'opac' or 'intranet'
 
 =head2 _get_shib_config
 

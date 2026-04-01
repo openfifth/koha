@@ -36,6 +36,11 @@ use Exception::Class (
         isa         => 'Koha::Exceptions::Auth',
         description => 'Cannot create session'
     },
+    'Koha::Exceptions::Auth::DuplicateMatchpoint' => {
+        isa         => 'Koha::Exceptions::Auth',
+        description => 'More than one patron found for matchpoint',
+        fields      => [ 'matchpoint', 'value' ]
+    },
 );
 
 1;
