@@ -88,6 +88,12 @@ export default {
             };
         };
 
+        const defaultToolbarButtons = (defaultButtons, resource) => {
+            return {
+                list: [],
+            };
+        };
+
         const baseResource = useBaseResource({
             resourceName: "ledger",
             nameAttr: "name",
@@ -115,6 +121,7 @@ export default {
             moduleStore: "acquisitionsStore",
             props,
             additionalToolbarButtons,
+            defaultToolbarButtons,
             resourceAttrs: [
                 {
                     name: "ledger_id",
@@ -377,6 +384,10 @@ export default {
                         "You do not have the required permissions to create ledgers."
                     )
                 );
+                return;
+            }
+            if (!ledgerToSave.fiscal_period_id) {
+                setWarning($__("You have not selected a fiscal period."));
                 return;
             }
 

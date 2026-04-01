@@ -33,7 +33,7 @@ export default {
 
         const defaultToolbarButtons = (defaultButtons, resource, router) => {
             return {
-                list: defaultButtons.list,
+                list: [],
                 show: !resource.sub_funds?.length
                     ? defaultButtons.show
                     : defaultButtons.show.filter(
@@ -483,6 +483,10 @@ export default {
                         "You do not have the required permissions to create funds."
                     )
                 );
+                return;
+            }
+            if (!fundToSave.ledger_id) {
+                setWarning($__("You have not selected a ledger."));
                 return;
             }
 
