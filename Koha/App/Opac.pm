@@ -38,6 +38,7 @@ sub startup {
 
     $self->plugin('CSRF');
     $self->plugin('Language');
+    $self->plugin( 'SAML2', { interface => 'opac' } );
 
     $self->hook( before_dispatch => \&_before_dispatch );
     $self->hook( around_action   => \&_around_action );
@@ -87,5 +88,15 @@ Run the Koha Opac using Mojolicious servers
 =head2 startup
 
 Called at application startup; Sets up routes, loads plugins and invokes hooks.
+
+=head2 _before_dispatch
+
+Hook called before each request dispatch. Strips the Koha version string from
+asset URLs so versioned CSS/JS files are served correctly.
+
+=head2 _around_action
+
+Hook called around each controller action. Flushes L1 and memory-lite caches
+before every request to prevent stale data from being served.
 
 =cut
