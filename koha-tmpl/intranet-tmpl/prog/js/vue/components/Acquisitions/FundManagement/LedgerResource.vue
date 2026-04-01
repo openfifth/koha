@@ -208,7 +208,7 @@ export default {
                 },
                 {
                     name: "ledger_amount",
-                    type: "number",
+                    type: props.routeAction === "edit" ? "display" : "number",
                     label: $__("Ledger amount"),
                     group: $__("Financial controlling"),
                     defaultValue: 0,
@@ -221,9 +221,12 @@ export default {
                             resource.currency
                         );
                     },
-                    toolTip: $__(
-                        "Please note: you can change this amount after creating the ledger record"
-                    ),
+                    toolTip:
+                        props.routeAction === "edit"
+                            ? null
+                            : $__(
+                                  "Please note: you can change this amount after creating the ledger record"
+                              ),
                     hideIn: ["List"],
                 },
                 {
