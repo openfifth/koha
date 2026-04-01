@@ -95,6 +95,13 @@ export default {
             };
         };
 
+        const specifiedActiveCurrency = currencies.value.find(
+            curr => curr.active
+        );
+        const activeCurrency = specifiedActiveCurrency
+            ? specifiedActiveCurrency.currency
+            : null;
+
         const baseResource = useBaseResource({
             resourceName: "ledger",
             nameAttr: "name",
@@ -201,7 +208,7 @@ export default {
                     selectLabel: "currency",
                     requiredKey: "currency",
                     options: currencies.value,
-                    defaultValue: null,
+                    defaultValue: activeCurrency,
                     required: true,
                     disabled: ledger => !!ledger.ledger_id,
                     hideIn: ["List"],
