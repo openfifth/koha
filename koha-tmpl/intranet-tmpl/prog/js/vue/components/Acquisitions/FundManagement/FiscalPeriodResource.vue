@@ -172,7 +172,12 @@ export default {
                                 },
                             },
                         },
+                        required: {
+                            type: "boolean",
+                            value: true,
+                        },
                     },
+                    required: true,
                     hideIn: ["List"],
                 },
                 {
@@ -180,15 +185,10 @@ export default {
                     type: "patronSearch",
                     label: $__("Owner"),
                     group: $__("Management and restrictions"),
-                    required: true,
                     componentProps: {
                         name: {
                             type: "string",
                             value: "owner_id",
-                        },
-                        required: {
-                            type: "boolean",
-                            value: true,
                         },
                         resource: {
                             type: "resource",

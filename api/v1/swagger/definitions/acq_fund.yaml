@@ -128,7 +128,9 @@ properties:
     items:
       $ref: "acq_fund.yaml"
   owner:
-    type: object
+    type:
+      - object
+      - "null"
     description: Owner of the ledger
     items:
       $ref: "patron.yaml"

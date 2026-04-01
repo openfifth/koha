@@ -184,6 +184,7 @@ Method to embed the owner to a given fund
 sub owner {
     my ($self) = @_;
     my $owner_rs = $self->_result->owner;
+    return unless $owner_rs;
     return Koha::Patron->_new_from_dbic($owner_rs);
 }
 
