@@ -129,10 +129,10 @@
         <div class="alert alert-warning">This patron could not be renewed: they need a guarantor.</div>
     [% END %]
 
-                    [% IF issue && issue.quota %]
-                        [% SET quota = issue.quota %]
-                        <div class="alert alert-info">Usage recorded against[% IF quota.patron_id != issue.borrowernumber %][% INCLUDE 'patron-title.inc' patron = quota.patron no_cardnumber = 1 %][% END %] [% quota.description | html %] quota.</div>
-                    [% END %]
+    [% IF issue && issue.quota %]
+        [% SET quota = issue.quota %]
+        <div class="alert alert-info">Usage recorded against[% IF quota.patron_id != issue.borrowernumber %][% INCLUDE 'patron-title.inc' patron = quota.patron no_cardnumber = 1 %][% END %] [% quota.description | html %] quota.</div>
+    [% END %]
 
     [% IF is_anonymous %]
         <div class="alert alert-warning">This is the anonymous patron, so circulation is disabled.</div>
@@ -475,10 +475,10 @@
                             <button type="submit" class="btn btn-default approve" accesskey="y"><i class="fa fa-check"></i> Yes, renew (Y)</button>
                         [% ELSE %]
                             [% IF sessionConfirmationKeys.size %]
-                            <p>
-                                <label for="patron_session_confirmation">Remember for the session for this patron</label>
-                                <input type="checkbox" id="patron_session_confirmation" name="patron_session_confirmation" />
-                            </p>
+                                <p>
+                                    <label for="patron_session_confirmation">Remember for the session for this patron</label>
+                                    <input type="checkbox" id="patron_session_confirmation" name="patron_session_confirmation" />
+                                </p>
                             [% END %]
                             <button type="submit" class="btn btn-default approve" accesskey="y"><i class="fa fa-check"></i> Yes, check out (Y)</button>
                         [% END %]
@@ -511,10 +511,10 @@
                         <button type="submit" class="btn btn-default approve" accesskey="y"><i class="fa fa-check"></i> Yes, renew (Y)</button>
                     [% ELSE %]
                         [% IF sessionConfirmationKeys.size %]
-                        <p>
-                            <label for="patron_session_confirmation">Remember for the session for this patron</label>
-                            <input type="checkbox" id="patron_session_confirmation" name="patron_session_confirmation" />
-                        </p>
+                            <p>
+                                <label for="patron_session_confirmation">Remember for the session for this patron</label>
+                                <input type="checkbox" id="patron_session_confirmation" name="patron_session_confirmation" />
+                            </p>
                         [% END %]
                         <button type="submit" class="btn btn-default approve" accesskey="y"><i class="fa fa-check"></i> Yes, check out (Y)</button>
                     [% END %]

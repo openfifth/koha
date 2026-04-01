@@ -42,16 +42,16 @@ Show detailed progress information
 
 =cut
 
-my $help = 0;
+my $help    = 0;
 my $dry_run = 1;
 my $confirm = 0;
 my $verbose = 0;
 
 GetOptions(
-    'help|?'          => \$help,
-    'dry-run'         => \$dry_run,
-    'confirm'         => \$confirm,
-    'verbose'         => \$verbose,
+    'help|?'  => \$help,
+    'dry-run' => \$dry_run,
+    'confirm' => \$confirm,
+    'verbose' => \$verbose,
 ) or pod2usage(2);
 
 if ($confirm) {
@@ -68,21 +68,22 @@ print "\n";
 
 # Step 1: Remove all existing EDI_CHARGE adjustments
 print "Step 1: Removing existing EDI_CHARGE adjustments...\n";
-my @existing_adjustments = $schema->resultset('AqinvoiceAdjustment')->search({
-    reason => 'EDI_CHARGE'
-})->all;
+my @existing_adjustments = $schema->resultset('AqinvoiceAdjustment')->search( { reason => 'EDI_CHARGE' } )->all;
 
 print "Found " . scalar(@existing_adjustments) . " existing EDI_CHARGE adjustments\n";
 
 my $removed_count = 0;
 foreach my $adj (@existing_adjustments) {
     if ($verbose) {
-        print "  Removing adjustment ID " . $adj->adjustment_id . 
-              " from invoice " . $adj->invoiceid . 
-              " (amount: " . $adj->adjustment . ")\n";
+        print "  Removing adjustment ID "
+            . $adj->adjustment_id
+            . " from invoice "
+            . $adj->invoiceid
+            . " (amount: "
+            . $adj->adjustment . ")\n";
     }
-    
-    if (!$dry_run) {
+
+    if ( !$dry_run ) {
         $adj->delete();
     }
     $removed_count++;
@@ -92,10 +93,12 @@ print "Removed $removed_count EDI_CHARGE adjustments\n\n";
 
 # Step 2: Reset EDI invoice message statuses to 'received'
 print "Step 2: Resetting EDI invoice message statuses...\n";
-my @processed_messages = $schema->resultset('EdifactMessage')->search({
-    message_type => 'INVOICE',
-    status => 'processed'
-})->all;
+my @processed_messages = $schema->resultset('EdifactMessage')->search(
+    {
+        message_type => 'INVOICE',
+        status       => 'processed'
+    }
+)->all;
 
 print "Found " . scalar(@processed_messages) . " processed EDI invoice messages\n";
 
@@ -104,8 +107,8 @@ foreach my $msg (@processed_messages) {
     if ($verbose) {
         print "  Resetting message " . $msg->id . " (" . $msg->filename . ") to 'received'\n";
     }
-    
-    if (!$dry_run) {
+
+    if ( !$dry_run ) {
         $msg->status('received');
         $msg->update();
     }
