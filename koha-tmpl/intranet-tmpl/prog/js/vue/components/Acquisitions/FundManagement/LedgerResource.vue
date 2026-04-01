@@ -442,7 +442,7 @@ export default {
                 resource.fiscal_period.name;
             const { branchNames, groupNames } = getBranchnamesFromGroups(
                 resource.fiscal_period.managing_library
-                    ?.acquisitions_library_groups
+                    ?.acquisitions_library_groups || []
             );
             const childManagingBranches = resource
                 .child_object_managing_branches.length
@@ -467,14 +467,16 @@ export default {
             const branchAttr = baseResource.resourceAttrs.find(
                 ra => ra.name === "managing_branch"
             );
-            branchAttr.componentProps.query = {
-                type: "object",
-                value: {
-                    [resource.child_object_managing_branches
-                        ? "branchcode"
-                        : "branchname"]: { "-in": childManagingBranches },
-                },
-            };
+            if (childManagingBranches.length) {
+                branchAttr.componentProps.query = {
+                    type: "object",
+                    value: {
+                        [resource.child_object_managing_branches
+                            ? "branchcode"
+                            : "branchname"]: { "-in": childManagingBranches },
+                    },
+                };
+            }
         };
 
         const afterNewResourceCreate = (

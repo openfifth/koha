@@ -552,7 +552,7 @@ export default {
             const parentKey = isSubFund.value ? "parent_fund" : "ledger";
             const { branchNames, groupNames } = getBranchnamesFromGroups(
                 resource[parentKey].managing_library
-                    ?.acquisitions_library_groups
+                    ?.acquisitions_library_groups || []
             );
             const childManagingBranches = resource
                 .child_object_managing_branches.length
@@ -577,14 +577,16 @@ export default {
             const branchAttr = baseResource.resourceAttrs.find(
                 ra => ra.name === "managing_branch"
             );
-            branchAttr.componentProps.query = {
-                type: "object",
-                value: {
-                    [resource.child_object_managing_branches
-                        ? "branchcode"
-                        : "branchname"]: { "-in": childManagingBranches },
-                },
-            };
+            if (childManagingBranches.length) {
+                branchAttr.componentProps.query = {
+                    type: "object",
+                    value: {
+                        [resource.child_object_managing_branches
+                            ? "branchcode"
+                            : "branchname"]: { "-in": childManagingBranches },
+                    },
+                };
+            }
         };
 
         const appendToShow = componentData => {
