@@ -27,8 +27,10 @@ use Plack::Response;
 use URI;
 
 use C4::Context;
+use Koha::Auth::Client::SAML2;
 use Koha::Auth::Identity::Providers;
 use Koha::Logger;
+use Koha::Patrons;
 use Koha::Session;
 
 =head1 NAME
@@ -229,7 +231,6 @@ sub _handle_acs {
         return $self->_error_response( 500, 'Session error' );
     }
 
-    # Store SAML data so C4::Auth / Koha::Auth::Client::SAML2 can complete login
     my $all_attrs = $result->{all_attributes} // {};
 
     # check_cookie_auth validates lasttime (expiry) and ip (SessionRestrictionByIP).
@@ -243,8 +244,36 @@ sub _handle_acs {
     $session->param( 'saml2_session_index', $result->{session_index} )
         if $result->{session_index};
 
-    # Resolve the matchpoint value from SAML attributes so that the
-    # C4::Auth session bridge (which reads saml2_pending_matchpoint) works.
+    # Authenticate the patron now, while the assertion is fresh.
+    # On success, store the borrowernumber so C4::Auth can establish the
+    # Koha session without calling checkpw() again on the next request.
+    # Derive interface from the relay_state URL (which was set from the
+    # original target page).
+    my $interface = 'opac';
+    {
+        my $staff_base = C4::Context->preference('staffClientBaseURL') // '';
+        $staff_base =~ s{/+$}{};
+        $interface = 'staff' if $staff_base && index( $relay_state, $staff_base ) == 0;
+    }
+
+    my $client = Koha::Auth::Client::SAML2->new;
+    my ( $patron, $auth_error ) = $client->authenticate(
+        {
+            provider  => $provider,
+            data      => $all_attrs,
+            hostname  => $hostname,
+            interface => $interface,
+        }
+    );
+
+    if ($patron) {
+        $session->param( 'saml2_authenticated_borrowernumber', $patron->borrowernumber );
+        $logger->warn( 'SAML2 ACS: authenticated borrowernumber=' . $patron->borrowernumber );
+    } else {
+        $logger->warn("SAML2 ACS: authentication deferred: $auth_error");
+    }
+
+    # Resolve matchpoint and match_value for debug logging
     my $mapping       = $provider->mappings->as_auth_mapping;
     my $hostname_link = $provider->hostnames->search(
         { 'hostname.hostname' => $hostname },
@@ -256,8 +285,6 @@ sub _handle_acs {
         my $saml_attr = $mapping->{$matchpoint}{is};
         $match_value = defined $saml_attr ? $all_attrs->{$saml_attr} : undef;
         $match_value //= $result->{nameid};
-        $session->param( 'saml2_pending_matchpoint', $match_value )
-            if defined $match_value;
     }
 
     $session->flush;

@@ -968,10 +968,11 @@ sub checkauth {
 
         # Native SAML2 session bridge: if in native SAML2 mode and no match
         # attribute was obtained from mod_shib ENV headers, check whether the
-        # SAML2 middleware stored a pending matchpoint in the anonymous session.
+        # SAML2 middleware already authenticated the patron (borrowernumber
+        # stored in session by Koha::Middleware::SAML2 at ACS time).
         if ( $shib && !$shib_login && _is_native_saml2() && $session && $return eq 'anon' ) {
-            my $pending = $session->param('saml2_pending_matchpoint');
-            $shib_login = $pending if $pending;
+            $shib_login = 1
+                if $session->param('saml2_authenticated_borrowernumber');
         }
 
         # We are at the second screen if the waiting-for-2FA is set in session
@@ -1138,13 +1139,16 @@ sub checkauth {
 
                 if ( _is_native_saml2() ) {
 
-                    # For native SAML2 the matchpoint value came from the session bridge,
-                    # not from mod_shib ENV vars.  Calling checkpw() would re-read
-                    # get_matchpoint_value() (which returns '' in native mode) and never
-                    # reach the shib branch, so we call checkpw() directly instead.
-                    my $shib_patron;
-                    ( $return, $cardnumber, $retuserid, $shib_patron ) =
-                        Koha::Auth::Client::SAML2->new->checkpw($shib_login);
+                    # For native SAML2, the patron was already authenticated by
+                    # Koha::Middleware::SAML2 at ACS time.  Read the borrowernumber
+                    # stored in the session — no need to re-run checkpw().
+                    my $borrowernumber = $session->param('saml2_authenticated_borrowernumber');
+                    my $shib_patron    = $borrowernumber ? Koha::Patrons->find($borrowernumber) : undef;
+                    if ($shib_patron) {
+                        $return     = 1;
+                        $cardnumber = $shib_patron->cardnumber;
+                        $retuserid  = $shib_patron->userid;
+                    }
                 } else {
 
                     # Do not pass password here, else shib will not be checked in checkpw.
@@ -1390,7 +1394,7 @@ sub checkauth {
                     $session->param( 'lasttime',     time() );
                     $session->param( 'interface',    $type );
                     $session->param( 'shibboleth',   $shibSuccess );
-                    $session->clear('saml2_pending_matchpoint') if _is_native_saml2();
+                    $session->clear('saml2_authenticated_borrowernumber') if _is_native_saml2();
                     $session->param( 'register_id',   $register_id );
                     $session->param( 'register_name', $register_name );
                     $session->param( 'sco_user',      $is_sco_user );
