@@ -473,7 +473,7 @@ export default {
                     name: "managing_branch",
                     group:
                         componentToDisplay === "Form"
-                            ? $__("Library management")
+                            ? $__("Management in library")
                             : $__("Order information"),
                     type: "relationshipSelect",
                     label: $__("Managing library"),
@@ -513,7 +513,7 @@ export default {
                 },
                 {
                     name: "managed_by",
-                    group: $__("Library management"),
+                    group: $__("Management in library"),
                     type: "patronSearch",
                     label: $__("Managed by"),
                     componentProps: {
