@@ -96,7 +96,11 @@ sub register {
                     )->rendered(400);
                 }
 
-                if ( $c->cookie('CGISESSID') && !$self->is_csrf_valid( $c->req ) ) {
+                # The csrf_exempt stash flag is reserved for endpoints that
+                # legitimately receive cross-origin POSTs from an external
+                # service (e.g. a SAML2 IdP posting to the ACS endpoint).
+                # NEVER set it on a route serving user-initiated forms.
+                if ( $c->cookie('CGISESSID') && !$c->stash('csrf_exempt') && !$self->is_csrf_valid( $c->req ) ) {
                     return $c->reply->exception('Wrong CSRF token')->rendered(403);
                 }
             }
