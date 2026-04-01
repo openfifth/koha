@@ -91,6 +91,7 @@ export default {
         const defaultToolbarButtons = (defaultButtons, resource) => {
             return {
                 list: [],
+                show: defaultButtons.show,
             };
         };
 
@@ -305,12 +306,7 @@ export default {
                                 },
                             },
                         },
-                        required: {
-                            type: "boolean",
-                            value: true,
-                        },
                     },
-                    required: true,
                     hideIn: ["List"],
                 },
                 {

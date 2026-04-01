@@ -345,12 +345,7 @@ export default {
                                 },
                             },
                         },
-                        required: {
-                            type: "boolean",
-                            value: true,
-                        },
                     },
-                    required: true,
                     hideIn: ["List"],
                 },
                 {

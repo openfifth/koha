@@ -172,12 +172,7 @@ export default {
                                 },
                             },
                         },
-                        required: {
-                            type: "boolean",
-                            value: true,
-                        },
                     },
-                    required: true,
                     hideIn: ["List"],
                 },
                 {
@@ -414,9 +409,11 @@ export default {
         const afterResourceFetch = (componentData, resource, caller) => {
             if (resource.child_object_managing_branches) {
                 const childManagingBranches =
-                    resource.child_object_managing_branches
-                        .map(comb => comb.branchcode)
-                        .push(resource.managing_branch);
+                    resource.child_object_managing_branches.map(
+                        comb => comb.branchcode
+                    );
+                if (!childManagingBranches.includes(resource.managing_branch))
+                    childManagingBranches.push(resource.managing_branchs);
                 const branchAttr = baseResource.resourceAttrs.find(
                     ra => ra.name === "managing_branch"
                 );
