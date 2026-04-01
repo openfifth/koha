@@ -135,7 +135,7 @@ export default {
                 {
                     name: "managing_branch",
                     label: $__("Managing library"),
-                    group: $__("Management and restrictions"),
+                    group: $__("Management in library"),
                     type: "component",
                     componentPath: "@koha-vue/components/ManagingLibrary.vue",
                     componentProps: {
@@ -184,7 +184,7 @@ export default {
                     name: "owner_id",
                     type: "patronSearch",
                     label: $__("Owner"),
-                    group: $__("Management and restrictions"),
+                    group: $__("Management in library"),
                     componentProps: {
                         name: {
                             type: "string",
