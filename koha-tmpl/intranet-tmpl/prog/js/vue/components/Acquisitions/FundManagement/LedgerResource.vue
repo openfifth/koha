@@ -195,6 +195,7 @@ export default {
                     options: currencies.value,
                     defaultValue: null,
                     required: true,
+                    disabled: ledger => !!ledger.ledger_id,
                     hideIn: ["List"],
                 },
                 {
