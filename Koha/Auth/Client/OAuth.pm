@@ -54,23 +54,25 @@ sub _get_data_and_patron {
     my $provider = $params->{provider};
     my $data     = $params->{data};
     my $config   = $params->{config};
+    my $hostname = $params->{hostname};
 
     my $patron;
-    my $mapped_data;
+    my $mapped_data = {};
 
-    my $mapping    = decode_json( $provider->mapping );
-    my $matchpoint = $provider->matchpoint;
+    my $hostname_link = $hostname
+        ? $provider->hostnames->search(
+        { 'hostname.hostname' => $hostname },
+        { join                => 'hostname' }
+        )->next
+        : undef;
+    my $matchpoint = $hostname_link ? $hostname_link->matchpoint : undef;
 
     if ( $data->{id_token} ) {
         my ( $header_part, $claims_part, $footer_part ) = split( /\./, $data->{id_token} );
 
         my $claim = decode_json( decode_base64url($claims_part) );
 
-        foreach my $key ( keys %$mapping ) {
-            my $pkey = $mapping->{$key};
-            $mapped_data->{$key} = $claim->{$pkey}
-                if defined $claim->{$pkey};
-        }
+        $mapped_data = $self->_get_mapped_data( { provider => $provider, raw_data => $claim } );
 
         $patron = $self->_find_patron_by_matchpoint( $matchpoint, $mapped_data->{$matchpoint} );
     }
@@ -87,12 +89,8 @@ sub _get_data_and_patron {
             ? $tx->res->json
             : Mojo::Parameters->new( $tx->res->body )->to_hash;
 
-        foreach my $key ( keys %$mapping ) {
-            my $pkey  = $mapping->{$key};
-            my $value = $self->_traverse_hash( { base => $claim, keys => $pkey } );
-            $mapped_data->{$key} = $value
-                if defined $value;
-        }
+        my $userinfo_mapped_data = $self->_get_mapped_data( { provider => $provider, raw_data => $claim } );
+        $mapped_data = { %$mapped_data, %$userinfo_mapped_data };
 
         unless ($patron) {
             $patron = $self->_find_patron_by_matchpoint( $matchpoint, $mapped_data->{$matchpoint} );
@@ -101,25 +99,6 @@ sub _get_data_and_patron {
     }
 
     return ( $mapped_data, $patron );
-}
-
-=head3 _find_patron_by_matchpoint
-
-    my $patron = $client->_find_patron_by_matchpoint( $matchpoint, $value );
-
-Internal method to find a patron by the given matchpoint and value.
-Returns the patron object if found, undef otherwise.
-
-=cut
-
-sub _find_patron_by_matchpoint {
-    my ( $self, $matchpoint, $value ) = @_;
-
-    return unless defined $value;
-
-    my $matchpoint_rs = Koha::Patrons->search( { $matchpoint => $value } );
-
-    return $matchpoint_rs->count ? $matchpoint_rs->next : undef;
 }
 
 1;
