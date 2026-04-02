@@ -19,7 +19,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 10;
+use Test::More tests => 13;
 use Test::MockModule;
 use Test::NoWarnings;
 use Test::Warn;
@@ -95,6 +95,8 @@ sub _build_provider {
                     koha_field           => $m->{koha_field},
                     provider_field       => $m->{provider_field},
                     default_content      => undef,
+                    sync_on_creation     => $m->{sync_on_creation} // 0,
+                    sync_on_update       => $m->{sync_on_update}   // 0,
                 },
             }
         );
@@ -102,6 +104,145 @@ sub _build_provider {
 
     return ( $provider, $hostname_obj );
 }
+
+# -----------------------------------------------------------------------
+# _get_data_and_patron() - basic attribute mapping
+# -----------------------------------------------------------------------
+
+subtest '_get_data_and_patron() - maps SAML attributes and finds patron by regular field' => sub {
+    plan tests => 5;
+
+    $schema->storage->txn_begin;
+
+    my $client = Koha::Auth::Client::SAML2->new;
+
+    my $patron = $builder->build_object( { class => 'Koha::Patrons', value => { userid => 'jdoe_saml' } } );
+
+    my ( $provider, $hostname_obj ) = _build_provider(
+        {
+            hostname   => 'saml1.library.com',
+            matchpoint => 'userid',
+            mappings   => [
+                { koha_field => 'userid',    provider_field => 'uid' },
+                { koha_field => 'firstname', provider_field => 'givenName' },
+                { koha_field => 'email',     provider_field => 'mail' },
+            ],
+        }
+    );
+
+    my $saml_attrs = {
+        uid       => 'jdoe_saml',
+        givenName => 'Jane',
+        mail      => 'jane@example.com',
+    };
+
+    my ( $mapped_data, $found_patron ) = $client->_get_data_and_patron(
+        {
+            provider => $provider,
+            data     => $saml_attrs,
+            hostname => 'saml1.library.com',
+        }
+    );
+
+    is( $mapped_data->{userid},    'jdoe_saml',        'userid mapped correctly' );
+    is( $mapped_data->{firstname}, 'Jane',             'firstname mapped correctly' );
+    is( $mapped_data->{email},     'jane@example.com', 'email mapped correctly' );
+    is( $found_patron->id,         $patron->id,        'patron found by userid matchpoint' );
+
+    # No patron found for unknown value
+    my ( undef, $no_patron ) = $client->_get_data_and_patron(
+        {
+            provider => $provider,
+            data     => { uid => 'nobody_saml', givenName => 'X', mail => 'x@x.com' },
+            hostname => 'saml1.library.com',
+        }
+    );
+    is( $no_patron, undef, 'returns undef patron when not found' );
+
+    $schema->storage->txn_rollback;
+};
+
+# -----------------------------------------------------------------------
+# _get_data_and_patron() - patron_attribute: matchpoint
+# -----------------------------------------------------------------------
+
+subtest '_get_data_and_patron() - finds patron by patron_attribute: matchpoint' => sub {
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    my $client = Koha::Auth::Client::SAML2->new;
+
+    my $attr_type =
+        $builder->build_object( { class => 'Koha::Patron::Attribute::Types', value => { code => 'SAML_UID' } } );
+
+    my $patron = $builder->build_object( { class => 'Koha::Patrons' } );
+    Koha::Patron::Attribute->new(
+        { borrowernumber => $patron->borrowernumber, code => 'SAML_UID', attribute => 'ext-42' } )->store;
+
+    my ( $provider, $hostname_obj ) = _build_provider(
+        {
+            hostname   => 'saml2.library.com',
+            matchpoint => 'patron_attribute:SAML_UID',
+            mappings   => [
+                { koha_field => 'patron_attribute:SAML_UID', provider_field => 'samAccountName' },
+            ],
+        }
+    );
+
+    my ( $mapped_data, $found_patron ) = $client->_get_data_and_patron(
+        {
+            provider => $provider,
+            data     => { samAccountName => 'ext-42' },
+            hostname => 'saml2.library.com',
+        }
+    );
+
+    ok( defined $found_patron, 'patron found via patron_attribute matchpoint' );
+    is( $found_patron->id, $patron->id, 'correct patron returned' );
+
+    $schema->storage->txn_rollback;
+};
+
+# -----------------------------------------------------------------------
+# _find_patron_by_matchpoint()
+# -----------------------------------------------------------------------
+
+subtest '_find_patron_by_matchpoint()' => sub {
+    plan tests => 5;
+
+    $schema->storage->txn_begin;
+
+    my $client = Koha::Auth::Client::SAML2->new;
+
+    my $patron = $builder->build_object( { class => 'Koha::Patrons', value => { userid => 'mp_testuser' } } );
+
+    # By regular field
+    my $found = $client->_find_patron_by_matchpoint( 'userid', 'mp_testuser' );
+    is( $found->id, $patron->id, 'finds patron by regular field' );
+
+    # Returns undef when value is undef
+    my $none = $client->_find_patron_by_matchpoint( 'userid', undef );
+    is( $none, undef, 'returns undef when value is undef' );
+
+    # Returns undef when no match
+    my $miss = $client->_find_patron_by_matchpoint( 'userid', 'does_not_exist_xyz' );
+    is( $miss, undef, 'returns undef when patron not found' );
+
+    # By patron_attribute:CODE
+    my $attr_type =
+        $builder->build_object( { class => 'Koha::Patron::Attribute::Types', value => { code => 'EXT_ID' } } );
+    Koha::Patron::Attribute->new(
+        { borrowernumber => $patron->borrowernumber, code => 'EXT_ID', attribute => 'uid-99' } )->store;
+
+    my $by_attr = $client->_find_patron_by_matchpoint( 'patron_attribute:EXT_ID', 'uid-99' );
+    is( $by_attr->id, $patron->id, 'finds patron by patron_attribute:CODE' );
+
+    my $attr_miss = $client->_find_patron_by_matchpoint( 'patron_attribute:EXT_ID', 'no-such-uid' );
+    is( $attr_miss, undef, 'returns undef when patron_attribute value not found' );
+
+    $schema->storage->txn_rollback;
+};
 
 # -----------------------------------------------------------------------
 # checkpw() - failure cases
@@ -115,25 +256,27 @@ subtest 'checkpw() - failure cases' => sub {
     my $client = Koha::Auth::Client::SAML2->new;
 
     # No provider found for hostname
-    my $result = $client->checkpw( 'anyone', {}, 'no-provider.example.com' );
+    my $result = $client->checkpw( 'anyone', 'no-provider.example.com' );
     is( $result, 0, 'returns 0 when no SAML2 provider found for hostname' );
 
-    # Matchpoint not mapped (provider has matchpoint='userid' but no mapping for userid)
+    # Matchpoint not defined (hostname link has matchpoint=undef)
     my ( $provider_no_map, $hostname_no_map ) = _build_provider(
         {
             hostname   => 'saml-nomap.library.com',
             matchpoint => 'userid',
-            mappings   => [ { koha_field => 'email', provider_field => 'mail' } ],    # userid NOT mapped
+            mappings   => [ { koha_field => 'email', provider_field => 'mail' } ],
         }
     );
-    my $r2;
-    {
-        local $SIG{__WARN__} = sub { };    # suppress expected carp from checkpw
-        $r2 = $client->checkpw( 'anyone', {}, 'saml-nomap.library.com' );
-    }
-    is( $r2, 0, 'returns 0 when matchpoint field is not in mappings' );
+    $schema->resultset('IdentityProviderHostname')
+        ->search( { identity_provider_id => $provider_no_map->id } )
+        ->update( { matchpoint           => undef } );
+    my $r2 = $client->checkpw( 'anyone', 'saml-nomap.library.com' );
+    is( $r2, 0, 'returns 0 when matchpoint not defined' );
 
     # Multiple patrons with same matchpoint value
+    my $library_dup = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $category_dup =
+        $builder->build_object( { class => 'Koha::Patron::Categories', value => { category_type => 'A' } } );
     my ( $provider_dup, $hostname_dup ) = _build_provider(
         {
             hostname   => 'saml-dup.library.com',
@@ -141,12 +284,31 @@ subtest 'checkpw() - failure cases' => sub {
             mappings   => [ { koha_field => 'email', provider_field => 'mail' } ],
         }
     );
+    $builder->build_object(
+        {
+            class => 'Koha::Auth::Identity::Provider::Domains',
+            value => {
+                identity_provider_id => $provider_dup->id,
+                domain               => undef,
+                allow_opac           => 1,
+                allow_staff          => 0,
+                auto_register_opac   => 0,
+                auto_register_staff  => 0,
+                default_library_id   => $library_dup->branchcode,
+                default_category_id  => $category_dup->categorycode,
+            },
+        }
+    );
     $builder->build_object( { class => 'Koha::Patrons', value => { email => 'dup@example.com' } } );
     $builder->build_object( { class => 'Koha::Patrons', value => { email => 'dup@example.com' } } );
-    my $r3 = $client->checkpw( 'dup@example.com', { mail => 'dup@example.com' }, 'saml-dup.library.com' );
+    local $ENV{mail} = 'dup@example.com';
+    my $r3 = $client->checkpw( 'dup@example.com', 'saml-dup.library.com' );
     is( $r3, 0, 'returns 0 when multiple patrons match' );
 
     # Patron not found, autocreate disabled
+    my $library_noac = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $category_noac =
+        $builder->build_object( { class => 'Koha::Patron::Categories', value => { category_type => 'A' } } );
     my ( $provider_noac, $hostname_noac ) = _build_provider(
         {
             hostname   => 'saml-noac.library.com',
@@ -155,7 +317,23 @@ subtest 'checkpw() - failure cases' => sub {
             mappings   => [ { koha_field => 'userid', provider_field => 'uid' } ],
         }
     );
-    my $r4 = $client->checkpw( 'ghost_user', { uid => 'ghost_user' }, 'saml-noac.library.com' );
+    $builder->build_object(
+        {
+            class => 'Koha::Auth::Identity::Provider::Domains',
+            value => {
+                identity_provider_id => $provider_noac->id,
+                domain               => undef,
+                allow_opac           => 1,
+                allow_staff          => 0,
+                auto_register_opac   => 0,
+                auto_register_staff  => 0,
+                default_library_id   => $library_noac->branchcode,
+                default_category_id  => $category_noac->categorycode,
+            },
+        }
+    );
+    local $ENV{uid} = 'ghost_user';
+    my $r4 = $client->checkpw( 'ghost_user', 'saml-noac.library.com' );
     is( $r4, 0, 'returns 0 when patron not found and autocreate disabled' );
 
     $schema->storage->txn_rollback;
@@ -172,7 +350,9 @@ subtest 'checkpw() - patron found returns correct values' => sub {
 
     my $client = Koha::Auth::Client::SAML2->new;
 
-    my $patron = $builder->build_object( { class => 'Koha::Patrons', value => { userid => 'saml_found_user' } } );
+    my $library  = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $category = $builder->build_object( { class => 'Koha::Patron::Categories', value => { category_type => 'A' } } );
+    my $patron   = $builder->build_object( { class => 'Koha::Patrons', value => { userid => 'saml_found_user' } } );
 
     my ( $provider, $hostname_obj ) = _build_provider(
         {
@@ -181,9 +361,24 @@ subtest 'checkpw() - patron found returns correct values' => sub {
             mappings   => [ { koha_field => 'userid', provider_field => 'uid' } ],
         }
     );
+    $builder->build_object(
+        {
+            class => 'Koha::Auth::Identity::Provider::Domains',
+            value => {
+                identity_provider_id => $provider->id,
+                domain               => undef,
+                allow_opac           => 1,
+                allow_staff          => 0,
+                default_library_id   => $library->branchcode,
+                default_category_id  => $category->categorycode,
+            },
+        }
+    );
 
+    # IPC mode: attrs read from %ENV
+    local $ENV{uid} = 'saml_found_user';
     my ( $ok, $cardnumber, $userid, $returned_patron ) =
-        $client->checkpw( 'saml_found_user', { uid => 'saml_found_user' }, 'saml-found.library.com' );
+        $client->checkpw( 'saml_found_user', 'saml-found.library.com' );
 
     is( $ok,                  1,                   'returns 1 on success' );
     is( $cardnumber,          $patron->cardnumber, 'returns correct cardnumber' );
@@ -211,9 +406,9 @@ subtest 'checkpw() - autocreate' => sub {
             matchpoint => 'userid',
             config     => { autocreate => 1 },
             mappings   => [
-                { koha_field => 'userid',    provider_field => 'uid' },
-                { koha_field => 'firstname', provider_field => 'givenName' },
-                { koha_field => 'surname',   provider_field => 'sn' },
+                { koha_field => 'userid',    provider_field => 'uid',       sync_on_creation => 1 },
+                { koha_field => 'firstname', provider_field => 'givenName', sync_on_creation => 1 },
+                { koha_field => 'surname',   provider_field => 'sn',        sync_on_creation => 1 },
             ],
         }
     );
@@ -241,9 +436,12 @@ subtest 'checkpw() - autocreate' => sub {
         }
     );
 
+    # IPC mode: attrs read from %ENV
+    local $ENV{uid}       = 'new_saml_patron';
+    local $ENV{givenName} = 'Auto';
+    local $ENV{sn}        = 'Created';
     my ( $ok, $cardnumber, $userid, $new_patron ) = $client->checkpw(
         'new_saml_patron',
-        { uid => 'new_saml_patron', givenName => 'Auto', sn => 'Created' },
         'saml-ac.library.com'
     );
 
@@ -282,9 +480,9 @@ subtest 'checkpw() - syncs patron data when sync config is enabled' => sub {
             matchpoint => 'userid',
             config     => { sync => 1 },
             mappings   => [
-                { koha_field => 'userid',    provider_field => 'uid' },
-                { koha_field => 'firstname', provider_field => 'givenName' },
-                { koha_field => 'surname',   provider_field => 'sn' },
+                { koha_field => 'userid',    provider_field => 'uid',       sync_on_update => 1 },
+                { koha_field => 'firstname', provider_field => 'givenName', sync_on_update => 1 },
+                { koha_field => 'surname',   provider_field => 'sn',        sync_on_update => 1 },
             ],
         }
     );
@@ -309,11 +507,11 @@ subtest 'checkpw() - syncs patron data when sync config is enabled' => sub {
         }
     );
 
-    $client->checkpw(
-        'sync_user_saml',
-        { uid => 'sync_user_saml', givenName => 'NewFirst', sn => 'NewSurname' },
-        'saml-sync.library.com'
-    );
+    # IPC mode: attrs read from %ENV
+    local $ENV{uid}       = 'sync_user_saml';
+    local $ENV{givenName} = 'NewFirst';
+    local $ENV{sn}        = 'NewSurname';
+    $client->checkpw( 'sync_user_saml', 'saml-sync.library.com' );
 
     $patron->discard_changes;
     is( $patron->firstname, 'NewFirst',   'firstname synced on login' );
@@ -519,6 +717,7 @@ subtest '_get_uri() - builds base URI from sysprefs' => sub {
         'warns when StaffClientBaseURL not set'
     )->clear;
 
+    $context->unmock_all();
     $schema->storage->txn_rollback;
 };
 
@@ -526,7 +725,7 @@ subtest '_get_uri() - builds base URI from sysprefs' => sub {
 # checkpw() - IPC mode: attributes loaded from ENV when undef
 # -----------------------------------------------------------------------
 
-subtest 'checkpw() - IPC mode loads attributes from ENV when saml_attributes is undef' => sub {
+subtest 'checkpw() - IPC mode loads attributes from ENV' => sub {
     plan tests => 5;
 
     $schema->storage->txn_begin;
@@ -535,6 +734,7 @@ subtest 'checkpw() - IPC mode loads attributes from ENV when saml_attributes is 
     local $ENV{uid}       = 'ipc_user';
     local $ENV{sn}        = 'IpcSurname';
 
+    my $library  = $builder->build_object( { class => 'Koha::Libraries' } );
     my $category = $builder->build_object( { class => 'Koha::Patron::Categories', value => { category_type => 'A' } } );
     my $patron   = $builder->build_object(
         {
@@ -554,11 +754,25 @@ subtest 'checkpw() - IPC mode loads attributes from ENV when saml_attributes is 
             ],
         }
     );
+    $builder->build_object(
+        {
+            class => 'Koha::Auth::Identity::Provider::Domains',
+            value => {
+                identity_provider_id => $provider->id,
+                domain               => undef,
+                allow_opac           => 1,
+                allow_staff          => 0,
+                auto_register_opac   => 0,
+                auto_register_staff  => 0,
+                default_library_id   => $library->branchcode,
+                default_category_id  => $category->categorycode,
+            },
+        }
+    );
 
     my $client = Koha::Auth::Client::SAML2->new;
 
-    # Pass undef for saml_attributes — should auto-load from ENV
-    my ( $ok, $cardnumber, $userid, $ret_patron ) = $client->checkpw( 'ipc_user', undef, 'ipc-test.library.com' );
+    my ( $ok, $cardnumber, $userid, $ret_patron ) = $client->checkpw( 'ipc_user', 'ipc-test.library.com' );
 
     is( $ok,              1,                   'patron authenticated in IPC mode' );
     is( $cardnumber,      $patron->cardnumber, 'correct cardnumber returned' );
@@ -566,7 +780,8 @@ subtest 'checkpw() - IPC mode loads attributes from ENV when saml_attributes is 
     is( ref($ret_patron), 'Koha::Patron',      'Koha::Patron object returned' );
 
     # Unknown patron, autocreate disabled → should fail
-    my $r2 = $client->checkpw( 'unknown_ipc_user', undef, 'ipc-test.library.com' );
+    local $ENV{uid} = 'unknown_ipc_user';
+    my $r2 = $client->checkpw( 'unknown_ipc_user', 'ipc-test.library.com' );
     is( $r2, 0, 'returns 0 for unknown patron with autocreate disabled' );
 
     $schema->storage->txn_rollback;
