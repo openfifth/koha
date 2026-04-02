@@ -59,11 +59,13 @@ sub get_user {
     my $data          = $params->{data};
     my $interface     = $params->{interface};
     my $config        = $params->{config};
+    my $hostname      = $params->{hostname};
 
     my $provider = Koha::Auth::Identity::Providers->search( { code => $provider_code } )->next;
 
     my ( $mapped_data, $patron ) =
-        $self->_get_data_and_patron( { provider => $provider, data => $data, config => $config } );
+        $self->_get_data_and_patron(
+        { provider => $provider, data => $data, config => $config, hostname => $hostname } );
 
     $mapped_data //= {};
 
@@ -85,7 +87,9 @@ sub get_user {
     $patron      = $args->{'patron'};
     $domain      = $args->{'domain'};
 
-    $patron->set($mapped_data)->store if $patron && $domain->update_on_auth;
+    if ( $patron && $domain->update_on_auth ) {
+        $self->_update_patron_from_mapped_data( { patron => $patron, mapped_data => $mapped_data } );
+    }
 
     $mapped_data->{categorycode} = $domain->default_category_id;
     $mapped_data->{branchcode}   = $domain->default_library_id;
@@ -199,6 +203,79 @@ own mapping returned.
 
 sub _get_data_and_patron {
     return {};
+}
+
+=head3 _update_patron_from_mapped_data
+
+    $self->_update_patron_from_mapped_data( { patron => $patron, mapped_data => $mapped_data } );
+
+Updates the patron from the mapped data, including core borrower fields
+and extended patron attributes.
+
+=cut
+
+sub _update_patron_from_mapped_data {
+    my ( $self, $params ) = @_;
+    my $patron      = $params->{patron};
+    my $mapped_data = $params->{mapped_data};
+
+    $patron->set($mapped_data)->store;
+}
+
+=head3 _find_patron_by_matchpoint
+
+    my $patron = $client->_find_patron_by_matchpoint( $matchpoint, $value );
+
+Internal method to find a patron by the given matchpoint and value.
+Returns the patron object if found, undef otherwise.
+
+=cut
+
+sub _find_patron_by_matchpoint {
+    my ( $self, $matchpoint, $value ) = @_;
+
+    return unless defined $value && $value ne '';
+
+    my $patron_rs = Koha::Patrons->search( { $matchpoint => $value } );
+
+    if ( $patron_rs->count > 1 ) {
+        Koha::Exceptions::Auth::DuplicateMatchpoint->throw(
+            matchpoint => $matchpoint,
+            value      => $value
+        );
+    }
+
+    return $patron_rs->count ? $patron_rs->next : undef;
+}
+
+=head3 _get_mapped_data
+
+    my $mapped_data = $self->_get_mapped_data( { provider => $provider, raw_data => $raw_data } );
+
+Internal method to map raw IdP data to Koha borrower fields using the
+configured provider mappings.
+
+=cut
+
+sub _get_mapped_data {
+    my ( $self, $params ) = @_;
+    my $provider = $params->{provider};
+    my $raw_data = $params->{raw_data};
+
+    my $mapped_data;
+    my $mappings = $provider->mappings;
+
+    while ( my $mapping = $mappings->next ) {
+        my $koha_field     = $mapping->koha_field;
+        my $provider_field = $mapping->provider_field;
+
+        my $value = $self->_traverse_hash( { base => $raw_data, keys => $provider_field } );
+        $value //= $mapping->default_content;
+
+        $mapped_data->{$koha_field} = $value if defined $value;
+    }
+
+    return $mapped_data;
 }
 
 =head3 _traverse_hash
