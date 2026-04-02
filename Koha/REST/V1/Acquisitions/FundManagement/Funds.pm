@@ -140,13 +140,13 @@ sub update {
                 delete $body->{last_updated} if $body->{last_updated};
                 delete $body->{fund_value}   if exists $body->{fund_value};
 
-                $body = _inherit_currency_and_owner($body);
+                # $body = _inherit_currency_and_owner($body);
 
-                my $error = $fund->verify_updated_fields( { updated_fields => $body } );
-                return $c->render(
-                    status  => 400,
-                    openapi => { error => $error }
-                ) if $error;
+                # my $error = $fund->verify_updated_fields( { updated_fields => $body } );
+                # return $c->render(
+                #     status  => 400,
+                #     openapi => { error => $error }
+                # ) if $error;
 
                 $fund->set_from_api($body)->store;
 
