@@ -513,6 +513,8 @@ export default {
             delete fund.ledger_name;
             delete fund.fund_parent_name;
             delete fund.currency;
+            delete fund.parent_fund;
+            delete fund.fund_group;
             delete fund.modified_date;
             delete fund.created_date;
             delete fund.child_object_managing_branches;
@@ -572,7 +574,8 @@ export default {
             baseResource.setMessage(
                 $__("Access restriction for group(s) %s").format(
                     groupNames.join(", ")
-                )
+                ),
+                true
             );
             const branchAttr = baseResource.resourceAttrs.find(
                 ra => ra.name === "managing_branch"
@@ -901,7 +904,8 @@ export default {
                         baseResource.setMessage(
                             $__("Access restriction for group(s) %s").format(
                                 groupNames.join(", ")
-                            )
+                            ),
+                            true
                         );
 
                         resource.managing_branch =

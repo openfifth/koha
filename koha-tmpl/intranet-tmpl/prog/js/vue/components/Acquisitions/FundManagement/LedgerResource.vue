@@ -465,7 +465,8 @@ export default {
             baseResource.setMessage(
                 $__("Access restriction for group(s) %s").format(
                     groupNames.join(", ")
-                )
+                ),
+                true
             );
             const branchAttr = baseResource.resourceAttrs.find(
                 ra => ra.name === "managing_branch"
@@ -507,7 +508,8 @@ export default {
                             baseResource.setMessage(
                                 $__(
                                     "Access restriction for group(s) %s"
-                                ).format(groupNames.join(", "))
+                                ).format(groupNames.join(", ")),
+                                true
                             );
 
                             resource.managing_branch =
