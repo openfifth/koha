@@ -336,6 +336,7 @@ sub add_item {
                   C4::Barcodes::ValueBuilder::hbyymmincr::get_barcode(
                     { year => $year, mon => $month } );
                 $barcode = $homebranch . $barcode;
+<<<<<<< HEAD
             }
             elsif ( $autoBarcode eq 'EAN13' ) {
 
@@ -363,6 +364,11 @@ sub add_item {
                 $barcode = $nextnum;
             }
             else {
+=======
+            } elsif ( $autoBarcode eq 'EAN13' ) {
+                ($barcode) = C4::Barcodes::ValueBuilder::EAN13::get_barcode();
+            } else {
+>>>>>>> 2d41a8dd66f (Bug 42221: Fix EAN-13 autoBarcode not incrementing)
                 warn "ERROR: unknown autoBarcode: $autoBarcode";
             }
             $item->barcode($barcode) if $barcode;
