@@ -1340,12 +1340,18 @@ subtest 'checkpw() return values tests' => sub {
 
         my @shib_return = ( 1, $patron->cardnumber, $patron->userid, Koha::Patrons->find( $patron->id ) );
 
-        my $auth_mock = Test::MockModule->new('C4::Auth');
-        $auth_mock->mock( 'shib_ok',        1 );
-        $auth_mock->mock( 'get_login_shib', 1 );
-
-        my $shib_mock = Test::MockModule->new('C4::Auth_with_shibboleth');
-        $shib_mock->mock( 'checkpw_shib', sub { return @shib_return; } );
+        my $saml2_mock = Test::MockModule->new('Koha::Auth::Client::SAML2');
+        $saml2_mock->mock( 'is_enabled',           sub { return 1 } );
+        $saml2_mock->mock( 'get_matchpoint_value', sub { return 1 } );
+        $saml2_mock->mock( 'checkpw',              sub { return @shib_return } );
+        $saml2_mock->mock(
+            'login_url',
+            sub {
+                return
+                    'https://testopac.com/cgi-bin/koha/saml2/login?target=https://testopac.com/cgi-bin/koha/opac-user.pl';
+            }
+        );
+        $saml2_mock->mock( 'logout_url', sub { return 'https://testopac.com/cgi-bin/koha/saml2/logout' } );
 
         $account_locked = 1;
         my @return = checkpw( $patron->userid );
