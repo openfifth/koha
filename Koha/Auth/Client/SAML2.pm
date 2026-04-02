@@ -44,6 +44,8 @@ use Koha::Patron::Attributes;
 use Koha::Patrons;
 use Koha::Session;
 
+=encoding utf8
+
 =head1 NAME
 
 Koha::Auth::Client::SAML2 - Koha SAML2/Shibboleth auth client
@@ -104,6 +106,84 @@ sub get_matchpoint_value {
     } else {
         return $ENV{$matchAttribute} || '';
     }
+}
+
+=head3 _get_data_and_patron
+
+    my ( $mapped_data, $patron ) = $client->_get_data_and_patron(
+        {
+            provider => $provider,
+            data     => \%saml_attributes,
+            hostname => $hostname,
+        }
+    );
+
+Maps SAML attribute names to Koha patron fields using the provider's mapping
+configuration, and attempts to find the matching patron using the hostname's
+configured matchpoint.
+
+=cut
+
+sub _get_data_and_patron {
+    my ( $self, $params ) = @_;
+
+    my $provider = $params->{provider};
+    my $data     = $params->{data} // {};
+    my $hostname = $params->{hostname};
+
+    my $mapping       = $provider->mappings->as_auth_mapping;
+    my $hostname_link = $hostname
+        ? $provider->hostnames->search(
+        { 'hostname.hostname' => $hostname },
+        { join                => 'hostname' }
+        )->next
+        : undef;
+    my $matchpoint = $hostname_link ? $hostname_link->matchpoint : undef;
+
+    my %mapped_data;
+    for my $koha_field ( keys %$mapping ) {
+        my $saml_attr = $mapping->{$koha_field}{is};
+        next unless defined $saml_attr;
+        my $value = $data->{$saml_attr};
+        $mapped_data{$koha_field} = $value if defined $value;
+    }
+
+    my $patron;
+    if ($matchpoint) {
+        $patron = $self->_find_patron_by_matchpoint( $matchpoint, $mapped_data{$matchpoint} );
+    }
+
+    return ( \%mapped_data, $patron );
+}
+
+=head3 _find_patron_by_matchpoint
+
+    my $patron = $client->_find_patron_by_matchpoint( $matchpoint, $value );
+
+Finds a patron by the given matchpoint field and value. Supports
+C<patron_attribute:CODE> syntax for extended patron attributes.
+
+Returns the patron object if exactly one is found, undef otherwise.
+
+=cut
+
+sub _find_patron_by_matchpoint {
+    my ( $self, $matchpoint, $value ) = @_;
+
+    return unless defined $value;
+
+    my $patron_rs;
+    if ( $matchpoint =~ /^patron_attribute:(.+)$/ ) {
+        my $code = $1;
+        $patron_rs = Koha::Patrons->search(
+            { 'borrower_attributes.code' => $code, 'borrower_attributes.attribute' => $value },
+            { join                       => 'borrower_attributes' }
+        );
+    } else {
+        $patron_rs = Koha::Patrons->search( { $matchpoint => $value } );
+    }
+
+    return $patron_rs->count ? $patron_rs->next : undef;
 }
 
 =head3 checkpw

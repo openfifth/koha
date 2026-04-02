@@ -87,6 +87,7 @@ requires 'Mojolicious::Plugin::OpenAPI', '5.09';
 requires 'Mojolicious::Plugin::RenderFile', '0.12';
 requires 'Net::CIDR', '0.17';
 requires 'Net::Netmask', '1.9022';
+recommends 'Net::SAML2', '>= 0.71';
 requires 'Net::Stomp', '0.57';
 requires 'Net::Z3950::ZOOM', '1.16';
 requires 'Number::Format', '1.52';
