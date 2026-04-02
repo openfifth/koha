@@ -19,7 +19,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 13;
+use Test::More tests => 14;
 use Test::MockModule;
 use Test::NoWarnings;
 use Test::Warn;
@@ -208,8 +208,8 @@ subtest '_get_data_and_patron() - finds patron by patron_attribute: matchpoint' 
 # _find_patron_by_matchpoint()
 # -----------------------------------------------------------------------
 
-subtest '_find_patron_by_matchpoint()' => sub {
-    plan tests => 5;
+subtest '_find_patron_by_matchpoint() - inherited from base class' => sub {
+    plan tests => 7;
 
     $schema->storage->txn_begin;
 
@@ -240,6 +240,19 @@ subtest '_find_patron_by_matchpoint()' => sub {
 
     my $attr_miss = $client->_find_patron_by_matchpoint( 'patron_attribute:EXT_ID', 'no-such-uid' );
     is( $attr_miss, undef, 'returns undef when patron_attribute value not found' );
+
+    # Returns undef for empty string
+    my $empty = $client->_find_patron_by_matchpoint( 'userid', '' );
+    is( $empty, undef, 'returns undef when value is empty string' );
+
+    # Throws DuplicateMatchpoint when multiple patrons match (use email, which allows duplicates)
+    $builder->build_object( { class => 'Koha::Patrons', value => { email => 'dup_mp@example.com' } } );
+    $builder->build_object( { class => 'Koha::Patrons', value => { email => 'dup_mp@example.com' } } );
+    eval { $client->_find_patron_by_matchpoint( 'email', 'dup_mp@example.com' ) };
+    ok(
+        ref $@ && $@->isa('Koha::Exceptions::Auth::DuplicateMatchpoint'),
+        'throws DuplicateMatchpoint when multiple patrons share matchpoint value'
+    );
 
     $schema->storage->txn_rollback;
 };
@@ -335,6 +348,65 @@ subtest 'checkpw() - failure cases' => sub {
     local $ENV{uid} = 'ghost_user';
     my $r4 = $client->checkpw( 'ghost_user', 'saml-noac.library.com' );
     is( $r4, 0, 'returns 0 when patron not found and autocreate disabled' );
+
+    $schema->storage->txn_rollback;
+};
+
+# -----------------------------------------------------------------------
+# checkpw() - duplicate matchpoint does not trigger autocreate
+# -----------------------------------------------------------------------
+
+subtest 'checkpw() - duplicate matchpoint blocks autocreate' => sub {
+    plan tests => 3;
+
+    $schema->storage->txn_begin;
+
+    my $client = Koha::Auth::Client::SAML2->new;
+
+    my $library  = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $category = $builder->build_object( { class => 'Koha::Patron::Categories', value => { category_type => 'A' } } );
+
+    my ( $provider, $hostname_obj ) = _build_provider(
+        {
+            hostname   => 'saml-dup-ac.library.com',
+            matchpoint => 'email',
+            config     => { autocreate => 1 },
+            mappings   => [
+                { koha_field => 'email',   provider_field => 'mail', sync_on_creation => 1 },
+                { koha_field => 'surname', provider_field => 'sn',   sync_on_creation => 1 },
+            ],
+        }
+    );
+    $builder->build_object(
+        {
+            class => 'Koha::Auth::Identity::Provider::Domains',
+            value => {
+                identity_provider_id => $provider->id,
+                domain               => undef,
+                allow_opac           => 1,
+                allow_staff          => 0,
+                auto_register_opac   => 1,
+                auto_register_staff  => 0,
+                default_library_id   => $library->branchcode,
+                default_category_id  => $category->categorycode,
+            },
+        }
+    );
+
+    # Create two patrons with the same email (duplicate matchpoint)
+    $builder->build_object( { class => 'Koha::Patrons', value => { email => 'dup-ac@example.com' } } );
+    $builder->build_object( { class => 'Koha::Patrons', value => { email => 'dup-ac@example.com' } } );
+
+    my $patron_count_before = Koha::Patrons->search( { email => 'dup-ac@example.com' } )->count;
+    is( $patron_count_before, 2, 'two patrons with duplicate email exist' );
+
+    local $ENV{mail} = 'dup-ac@example.com';
+    local $ENV{sn}   = 'Duplicate';
+    my $result = $client->checkpw( 'dup-ac@example.com', 'saml-dup-ac.library.com' );
+    is( $result, 0, 'returns 0 when duplicate matchpoint found despite autocreate enabled' );
+
+    my $patron_count_after = Koha::Patrons->search( { email => 'dup-ac@example.com' } )->count;
+    is( $patron_count_after, 2, 'no additional patron created — autocreate was blocked' );
 
     $schema->storage->txn_rollback;
 };
