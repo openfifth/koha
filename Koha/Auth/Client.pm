@@ -24,6 +24,9 @@ use C4::Context;
 use Koha::Exceptions;
 use Koha::Exceptions::Auth;
 use Koha::Auth::Identity::Providers;
+use Koha::Patron::Attribute;
+use Koha::Patron::Attribute::Types;
+use Koha::Patron::Attributes;
 
 =head1 NAME
 
@@ -250,7 +253,21 @@ sub _update_patron_from_mapped_data {
     my $patron      = $params->{patron};
     my $mapped_data = $params->{mapped_data};
 
-    $patron->set($mapped_data)->store;
+    my ( %patron_attrs, %borrower_data );
+    for my $key ( keys %$mapped_data ) {
+        if ( $key =~ /^patron_attribute:(.+)$/ ) {
+            $patron_attrs{$1} = $mapped_data->{$key};
+        } else {
+            $borrower_data{$key} = $mapped_data->{$key};
+        }
+    }
+    $patron->set( \%borrower_data )->store;
+    for my $code ( keys %patron_attrs ) {
+        my $existing = Koha::Patron::Attributes->search( { borrowernumber => $patron->borrowernumber, code => $code } );
+        $existing->delete;
+        Koha::Patron::Attribute->new(
+            { borrowernumber => $patron->borrowernumber, code => $code, attribute => $patron_attrs{$code} } )->store;
+    }
 }
 
 =head3 _find_patron_by_matchpoint
@@ -267,7 +284,16 @@ sub _find_patron_by_matchpoint {
 
     return unless defined $value && $value ne '';
 
-    my $patron_rs = Koha::Patrons->search( { $matchpoint => $value } );
+    my $patron_rs;
+    if ( $matchpoint =~ /^patron_attribute:(.+)$/ ) {
+        my $code = $1;
+        $patron_rs = Koha::Patrons->search(
+            { 'borrower_attributes.code' => $code, 'borrower_attributes.attribute' => $value },
+            { join                       => 'borrower_attributes' }
+        );
+    } else {
+        $patron_rs = Koha::Patrons->search( { $matchpoint => $value } );
+    }
 
     if ( $patron_rs->count > 1 ) {
         Koha::Exceptions::Auth::DuplicateMatchpoint->throw(
