@@ -58,7 +58,7 @@ use Koha::Patrons;
 use Koha::Patron::Consents;
 use List::MoreUtils qw( any );
 use Encode;
-use C4::Auth_with_shibboleth qw( shib_ok get_login_shib login_shib_url logout_shib checkpw_shib );
+use Koha::Auth::Client::SAML2;
 use Net::CIDR;
 use C4::Log qw( logaction );
 use Koha::CookieManager;
@@ -174,8 +174,8 @@ sub get_template_and_user {
     my $cookie_mgr = Koha::CookieManager->new;
 
     # Get shibboleth login attribute
-    my $shib       = shib_ok();
-    my $shib_login = $shib ? get_login_shib() : undef;
+    my $shib       = Koha::Auth::Client::SAML2->is_enabled();
+    my $shib_login = $shib ? Koha::Auth::Client::SAML2->get_matchpoint_value() : undef;
 
     C4::Context->interface( $in->{type} );
 
@@ -417,7 +417,7 @@ sub get_template_and_user {
 
         # Always provide shibbolethLoginUrl for SAML2 providers in the login loop.
         # shibbolethAuthentication is only set when shib is fully configured.
-        $template->param( shibbolethLoginUrl => login_shib_url( $in->{'query'} ) );
+        $template->param( shibbolethLoginUrl => Koha::Auth::Client::SAML2->new->login_url( $in->{'query'} ) );
 
         # Tell the masthead login modal which protocol is exclusive (if any) so it
         # can suppress local login fields, mirroring what checkauth does for the
@@ -844,8 +844,8 @@ sub checkauth {
     my $query = shift;
 
     # Get shibboleth login attribute
-    my $shib       = shib_ok();
-    my $shib_login = $shib ? get_login_shib() : undef;
+    my $shib       = Koha::Auth::Client::SAML2->is_enabled();
+    my $shib_login = $shib ? Koha::Auth::Client::SAML2->get_matchpoint_value() : undef;
 
     # $authnotrequired will be set for scripts which will run without authentication
     my $authnotrequired = shift;
@@ -1047,7 +1047,7 @@ sub checkauth {
 
         # If we are in a shibboleth session (shibboleth is enabled, a shibboleth match attribute is set and matches koha matchpoint)
         if ( $shib and $shib_login and $shibSuccess ) {
-            logout_shib($query);
+            print $query->redirect( Koha::Auth::Client::SAML2->new->logout_url($query) );
         }
 
         $session    = undef;
@@ -1558,7 +1558,7 @@ sub checkauth {
     if ($exclusive_provider) {
         my $redirect_url;
         if ( $exclusive_provider->protocol eq 'SAML2' ) {
-            $redirect_url = login_shib_url($query) if $shib;
+            $redirect_url = Koha::Auth::Client::SAML2->new->login_url($query) if $shib;
         } elsif ( $exclusive_provider->protocol eq 'OIDC' || $exclusive_provider->protocol eq 'OAuth' ) {
             my $base = ( $type eq 'opac' ) ? "/api/v1/public/oauth/login" : "/api/v1/oauth/login";
             $redirect_url = "$base/" . $exclusive_provider->code . "/$type";
@@ -1600,9 +1600,9 @@ sub checkauth {
     }
 
     # Always provide shibbolethLoginUrl so SAML2 providers in the identity_providers
-    # loop have a URL to link to.  shibbolethAuthentication is only true when shib_ok()
+    # loop have a URL to link to.  shibbolethAuthentication is only true when is_enabled()
     # confirms a properly-configured SAML2 provider exists for this hostname.
-    $template->param( shibbolethLoginUrl => login_shib_url($query) );
+    $template->param( shibbolethLoginUrl => Koha::Auth::Client::SAML2->new->login_url($query) );
     if ($shib) {
         $template->param( shibbolethAuthentication => $shib );
     }
@@ -2061,8 +2061,8 @@ sub checkpw {
     $type = 'opac' unless $type;
 
     # Get shibboleth login attribute
-    my $shib       = shib_ok();
-    my $shib_login = $shib ? get_login_shib() : undef;
+    my $shib       = Koha::Auth::Client::SAML2->is_enabled();
+    my $shib_login = $shib ? Koha::Auth::Client::SAML2->get_matchpoint_value() : undef;
 
     my $anonymous_patron = C4::Context->preference('AnonymousPatron');
 
@@ -2116,7 +2116,7 @@ sub checkpw {
         if ($shib_login) {
             my ( $retval, $retcard, $retuserid );
             ( $retval, $retcard, $retuserid, $patron ) =
-                C4::Auth_with_shibboleth::checkpw_shib($shib_login);    # EXTERNAL AUTH
+                Koha::Auth::Client::SAML2->new->checkpw($shib_login);    # EXTERNAL AUTH
             if ($retval) {
                 @return = ( $retval, $retcard, $retuserid, $patron );
             }

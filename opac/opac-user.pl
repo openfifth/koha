@@ -21,9 +21,9 @@ use Modern::Perl;
 use CGI qw ( -utf8 );
 use URI;
 
-use C4::Auth                 qw( get_template_and_user );
-use C4::Auth_with_shibboleth qw( shib_ok );
-use C4::Koha                 qw(
+use C4::Auth qw( get_template_and_user );
+use Koha::Auth::Client::SAML2;
+use C4::Koha qw(
     getitemtypeimagelocation
     GetNormalizedISBN
 );
@@ -81,7 +81,7 @@ for ( C4::Context->preference("OPACShowHoldQueueDetails") ) {
 my $patronupdate = $query->param('patronupdate');
 my $canrenew     = 1;
 
-$template->param( shibbolethAuthentication => shib_ok() );
+$template->param( shibbolethAuthentication => Koha::Auth::Client::SAML2->is_enabled() );
 
 # get borrower information ....
 my $patron = Koha::Patrons->find($borrowernumber);
