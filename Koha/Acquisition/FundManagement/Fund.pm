@@ -189,6 +189,27 @@ sub managing_library {
     return Koha::Library->_new_from_dbic($managing_library_rs);
 }
 
+=head3 to_api
+
+    my $json = $av->to_api;
+
+Overloaded method that returns a JSON representation of the object,
+suitable for API output.
+
+=cut
+
+sub to_api {
+    my ( $self, $params ) = @_;
+
+    my $response = $self->SUPER::to_api($params);
+
+    $response->{currency} = $self->ledger->currency;
+
+    my $overrides = {};
+
+    return { %$response, %$overrides };
+}
+
 =head2 Internal methods
 
 =head3 _type

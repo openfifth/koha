@@ -608,12 +608,14 @@ sub child_object_managing_branches {
     my $managing_branches = $args->{managing_branches} || [];
     foreach my $child (@$children) {
         my $managing_library = $child->managing_library;
-        my $branch           = {
-            branchcode => $child->managing_branch,
-            branchname => $managing_library->branchname
-        };
-        push( @$managing_branches, $branch )
-            unless grep( $_->{branchcode} eq $branch->{branchcode}, @$managing_branches );
+        if ($managing_library) {
+            my $branch = {
+                branchcode => $child->managing_branch,
+                branchname => $managing_library->branchname
+            };
+            push( @$managing_branches, $branch )
+                unless grep( $_->{branchcode} eq $branch->{branchcode}, @$managing_branches );
+        }
         $managing_branches = $child->child_object_managing_branches( { managing_branches => $managing_branches } );
     }
     return $managing_branches;

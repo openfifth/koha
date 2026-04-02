@@ -32,6 +32,7 @@ export default {
             formatValueWithCurrency,
             getActiveCurrency,
             formatFloatingPoint,
+            differentCurrenciesInLedgers,
         } = acquisitionsStore;
 
         const fundDistributions = inject("resourceRelationships");
@@ -121,7 +122,7 @@ export default {
                 if (!firstSelection) {
                     return props.options;
                 } else {
-                    const availableFunds = props.options.filter(
+                    const fundsNotYetSelected = props.options.filter(
                         fund =>
                             !fundDistributions.some(
                                 fd => fd.fund_id == fund.fund_id
@@ -134,12 +135,14 @@ export default {
                                 fundDistributions[props.index].fund_id
                         );
                     if (currentlySelectedFundForThisResource)
-                        availableFunds.push(
+                        fundsNotYetSelected.push(
                             currentlySelectedFundForThisResource
                         );
-                    return availableFunds.filter(
-                        fund => fund.currency == firstSelection.currency
-                    );
+                    return differentCurrenciesInLedgers
+                        ? fundsNotYetSelected.filter(
+                              fund => fund.currency == firstSelection.currency
+                          )
+                        : fundsNotYetSelected;
                 }
             } else {
                 return props.options;
@@ -189,7 +192,9 @@ export default {
                             fund?.currency
                         );
                     fundDistributions.forEach(fd => {
-                        fd.currency = fund?.currency || vendor_price_currency;
+                        fd.currency = differentCurrenciesInLedgers
+                            ? fund?.currency || vendor_price_currency
+                            : getActiveCurrency.currency;
                         fd.exchange_rate = orderline.distribution_exchange_rate;
                         calculateDistributedAmount(fd);
                     });

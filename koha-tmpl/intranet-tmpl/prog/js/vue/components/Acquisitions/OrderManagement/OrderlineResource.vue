@@ -29,6 +29,7 @@ export default {
             getCurrencyConversionRate,
             getActiveCurrency,
             formatValueWithCurrency,
+            differentCurrenciesInLedgers,
         } = acquisitionsStore;
 
         const route = useRoute();
@@ -637,7 +638,10 @@ export default {
                     label: $__("Currency"),
                     options: currencies.value,
                     onSelected: (e, options, resource) => {
-                        if (resource.fund_distributions.length) {
+                        if (
+                            resource.fund_distributions.length &&
+                            differentCurrenciesInLedgers
+                        ) {
                             resource.fund_distributions.forEach(fd => {
                                 const fxRate = getCurrencyConversionRate(
                                     e,
