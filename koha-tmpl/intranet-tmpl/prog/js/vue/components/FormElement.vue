@@ -81,8 +81,8 @@
             >{{ $__("Yes") }}:
             <InputRadio
                 type="radio"
-                :name="attr.name"
-                :id="attr.name + '_yes'"
+                :name="getElementId"
+                :id="getElementId + '_yes'"
                 :value="true"
                 :checked="resource[attr.name] == true"
                 v-model="resource[attr.name]"
@@ -92,8 +92,8 @@
             >{{ $__("No") }}:
             <InputRadio
                 type="radio"
-                :name="attr.name"
-                :id="attr.name + '_no'"
+                :name="getElementId"
+                :id="getElementId + '_no'"
                 :checked="resource[attr.name] == false"
                 :value="false"
                 v-model="resource[attr.name]"
@@ -110,6 +110,9 @@
             :required="!resource[attr.name] && attr.required"
             :disabled="disabled"
             :multiple="attr.allowMultipleChoices"
+            :taggable="attr.taggable || false"
+            :create-option="attr.createOption"
+            :placeholder="attr.placeholder"
             @option:selected="attr.onSelected && attr.onSelected(resource)"
             @update:modelValue="attr.onUpdated && attr.onUpdated(resource)"
         >

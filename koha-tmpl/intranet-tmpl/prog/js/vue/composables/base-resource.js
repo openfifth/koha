@@ -421,7 +421,7 @@ export function useBaseResource(resourceConfig) {
         const attributesToConsider = resourceConfig.resourceAttrs.reduce(
             (acc, ra) => {
                 if (ra.type === "relationshipWidget") {
-                    ra.relationshipFields.forEach(relationshipField => {
+                    ra.relationshipFields?.forEach(relationshipField => {
                         relationshipField.relationshipName = ra.name;
                     });
                 }
@@ -494,6 +494,18 @@ export function useBaseResource(resourceConfig) {
                 fields: groupFields,
                 hasDataToDisplay: false,
             };
+            if (
+                groupFields.length > 0 &&
+                groupFields.every(f => f.type === "group_placeholder")
+            ) {
+                groupInfo.placeholder = {
+                    description: groupFields[0].description || null,
+                };
+                groupInfo.fields = [];
+            }
+            if (groupFields.some(f => f.groupMeta?.requiresId)) {
+                groupInfo.requiresId = true;
+            }
             if (
                 component === "Show" &&
                 resourceConfig.showGroupsDisplayMode === "splitScreen" &&
@@ -718,6 +730,20 @@ export function useBaseResource(resourceConfig) {
 
     created();
 
+    const onShowSectionSave =
+        resourceConfig.onShowSectionSave ||
+        (async (sectionName, updatedResource, currentResource, isNew) => {
+            const merged = { ...currentResource, ...updatedResource };
+            if (isNew) {
+                return await resourceConfig.apiClient.create(merged);
+            } else {
+                return await resourceConfig.apiClient.update(
+                    merged,
+                    merged[resourceConfig.idAttr]
+                );
+            }
+        });
+
     return {
         ...resourceConfig,
         ...moduleStoreUtils,
@@ -754,5 +780,6 @@ export function useBaseResource(resourceConfig) {
         route,
         router,
         i18n,
+        onShowSectionSave,
     };
 }
