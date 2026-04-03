@@ -160,6 +160,16 @@
         </LinkWrapper>
     </template>
     <template
+        v-else-if="attr.type === 'relationshipWidget' && attr.componentProps"
+    >
+        <component
+            :is="requiredComponent"
+            :title="attr.group ? null : attr.label"
+            :name="attr.name"
+            v-bind="getComponentProps(true)"
+        ></component>
+    </template>
+    <template
         v-else-if="
             attr.type == 'additional_fields' &&
             resource._strings?.additional_field_values.length > 0
