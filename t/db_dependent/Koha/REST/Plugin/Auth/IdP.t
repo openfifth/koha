@@ -105,8 +105,7 @@ subtest 'auth.register helper' => sub {
     $patron_to_delete_1->delete;
     $patron_to_delete_2->delete;
 
-    my $provider =
-        $builder->build_object( { class => 'Koha::Auth::Identity::Providers', value => { matchpoint => 'email' } } );
+    my $provider = $builder->build_object( { class => 'Koha::Auth::Identity::Providers' } );
 
     my $domain_1 = $builder->build_object(
         {

@@ -45,7 +45,6 @@
     can_user_parameters_manage_additional_fields="[% CAN_user_parameters_manage_additional_fields | html %]"
     can_user_parameters_manage_keyboard_shortcuts="[% CAN_user_parameters_manage_keyboard_shortcuts | html %]"
     can_user_ill="[% CAN_user_ill | html %]"
-    shibbolethauthentication="[% Koha.Preference('ShibbolethAuthentication') | html %]"
     usecirculationdesks="[% Koha.Preference('UseCirculationDesks') | html %]"
     usecashregisters="[% Koha.Preference('UseCashRegisters') | html %]"
     savedsearchfilters="[% Koha.Preference('SavedSearchFilters') | html %]"
