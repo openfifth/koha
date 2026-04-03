@@ -1,0 +1,13 @@
+---
+type: object
+properties:
+  hostname_id:
+    description: Internally assigned identifier for this hostname
+    type: integer
+    readOnly: true
+  hostname:
+    description: Server hostname string (matches SERVER_NAME)
+    type: string
+additionalProperties: false
+required:
+  - hostname

@@ -38,6 +38,9 @@ properties:
   allow_staff:
     description: If this domain can be used for staff login
     type: boolean
+  send_welcome_email:
+    description: Send welcome email to patron on first login via this domain
+    type: boolean
 additionalProperties: false
 required:
   - identity_provider_domain_id
@@ -49,3 +52,4 @@ required:
   - default_category_id
   - allow_opac
   - allow_staff
+  - send_welcome_email

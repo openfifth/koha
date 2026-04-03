@@ -22,6 +22,8 @@ use Modern::Perl;
 use base qw(Koha::Object Koha::Object::JSONFields);
 
 use Koha::Auth::Identity::Provider::Domains;
+use Koha::Auth::Identity::Provider::Hostnames;
+use Koha::Auth::Identity::Provider::Mappings;
 use Koha::Exceptions;
 
 =head1 NAME
@@ -44,6 +46,35 @@ sub domains {
     my ($self) = @_;
 
     return Koha::Auth::Identity::Provider::Domains->_new_from_dbic( scalar $self->_result->domains );
+}
+
+=head3 mappings
+
+    my $mappings = $provider->mappings;
+
+Returns the related I<Koha::Auth::Identity::Provider::Mappings> iterator.
+
+=cut
+
+sub mappings {
+    my ($self) = @_;
+
+    return Koha::Auth::Identity::Provider::Mappings->_new_from_dbic(
+        scalar $self->_result->identity_provider_mappings );
+}
+
+=head3 hostnames
+
+    my $hostnames = $provider->hostnames;
+
+Returns the related I<Koha::Auth::Identity::Provider::Hostnames> iterator.
+
+=cut
+
+sub hostnames {
+    my ($self) = @_;
+
+    return Koha::Auth::Identity::Provider::Hostnames->_new_from_dbic( scalar $self->_result->hostnames );
 }
 
 =head3 get_config
@@ -81,6 +112,15 @@ sub get_config {
         }
     );
 
+    # SAML2 (config holds protocol-specific settings like autocreate/sync/welcome)
+    $provider->set_config(
+        {
+            autocreate => 1,
+            sync       => 1,
+            welcome    => 0,
+        }
+    );
+
 This method stores the passed config in JSON format.
 
 =cut
@@ -99,53 +139,16 @@ sub set_config {
     return $self->set_encoded_json_field( { data => $config, field => 'config' } );
 }
 
-=head3 get_mapping
+=head3 store
 
-    my $mapping = $provider->get_mapping;
-
-Returns a I<hashref> containing the attribute mapping for the provider.
+Identity provider specific store method to ensure config population before saving to db
 
 =cut
 
-sub get_mapping {
+sub store {
     my ($self) = @_;
-
-    return $self->decode_json_field( { field => 'mapping' } );
-}
-
-=head3 set_mapping
-
-    $provider->mapping( $mapping );
-
-This method stores the passed mappings in JSON format.
-
-=cut
-
-sub set_mapping {
-    my ( $self, $mapping ) = @_;
-
-    return $self->set_encoded_json_field( { data => $mapping, field => 'mapping' } );
-}
-
-=head3 upgrade_class
-
-    my $upgraded_object = $provider->upgrade_class
-
-Returns a new instance of the object, with the right class.
-
-=cut
-
-sub upgrade_class {
-    my ($self) = @_;
-    my $protocol = $self->protocol;
-
-    my $class = $self->protocol_to_class_mapping->{$protocol};
-
-    Koha::Exception->throw( $protocol . ' is not a valid protocol' )
-        unless $class;
-
-    eval "require $class";
-    return $class->_new_from_dbic( $self->_result );
+    $self->config( $self->config // '{}' );
+    return $self->SUPER::store();
 }
 
 =head2 Internal methods
@@ -162,12 +165,10 @@ suitable for API output.
 sub to_api {
     my ( $self, $params ) = @_;
 
-    my $config  = $self->get_config;
-    my $mapping = $self->get_mapping;
+    my $config = $self->get_config;
 
     my $json = $self->SUPER::to_api($params);
-    $json->{config}  = $config;
-    $json->{mapping} = $mapping;
+    $json->{config} = $config;
 
     return $json;
 }
@@ -178,22 +179,6 @@ sub to_api {
 
 sub _type {
     return 'IdentityProvider';
-}
-
-=head3 protocol_to_class_mapping
-
-    my $mapping = Koha::Auth::Identity::Provider::protocol_to_class_mapping
-
-Internal method that returns a mapping between I<protocol> codes and
-implementing I<classes>. To be used by B<upgrade_class>.
-
-=cut
-
-sub protocol_to_class_mapping {
-    return {
-        OAuth => 'Koha::Auth::Identity::Provider::OAuth',
-        OIDC  => 'Koha::Auth::Identity::Provider::OIDC',
-    };
 }
 
 =head3 mandatory_config_attributes

@@ -22,6 +22,12 @@ definitions:
     $ref: ./definitions/identity_provider.yaml
   identity_provider_domain:
     $ref: ./definitions/identity_provider_domain.yaml
+  identity_provider_mapping:
+    $ref: ./definitions/identity_provider_mapping.yaml
+  hostname:
+    $ref: ./definitions/hostname.yaml
+  identity_provider_hostname:
+    $ref: ./definitions/identity_provider_hostname.yaml
   basket:
     $ref: ./definitions/basket.yaml
   booking:
@@ -295,6 +301,18 @@ paths:
     $ref: ./paths/auth.yaml#/~1auth~1identity_providers~1{identity_provider_id}~1domains
   "/auth/identity_providers/{identity_provider_id}/domains/{identity_provider_domain_id}":
     $ref: ./paths/auth.yaml#/~1auth~1identity_providers~1{identity_provider_id}~1domains~1{identity_provider_domain_id}
+  "/auth/identity_providers/{identity_provider_id}/mappings":
+    $ref: ./paths/auth.yaml#/~1auth~1identity_providers~1{identity_provider_id}~1mappings
+  "/auth/identity_providers/{identity_provider_id}/mappings/{identity_provider_mapping_id}":
+    $ref: "./paths/auth.yaml#/~1auth~1identity_providers~1{identity_provider_id}~1mappings~1{identity_provider_mapping_id}"
+  /auth/hostnames:
+    $ref: ./paths/auth.yaml#/~1auth~1hostnames
+  "/auth/hostnames/{hostname_id}":
+    $ref: "./paths/auth.yaml#/~1auth~1hostnames~1{hostname_id}"
+  "/auth/identity_providers/{identity_provider_id}/hostnames":
+    $ref: "./paths/auth.yaml#/~1auth~1identity_providers~1{identity_provider_id}~1hostnames"
+  "/auth/identity_providers/{identity_provider_id}/hostnames/{identity_provider_hostname_id}":
+    $ref: "./paths/auth.yaml#/~1auth~1identity_providers~1{identity_provider_id}~1hostnames~1{identity_provider_hostname_id}"
   /authorised_value_categories:
     $ref: ./paths/authorised_value_categories.yaml#/~1authorised_value_categories
   "/authorised_value_categories/{authorised_value_category_name}/authorised_values":
@@ -765,6 +783,24 @@ parameters:
     description: Identity provider domain internal identifier
     in: path
     name: identity_provider_domain_id
+    required: true
+    type: integer
+  identity_provider_mapping_id_pp:
+    description: Identity provider field mapping internal identifier
+    in: path
+    name: identity_provider_mapping_id
+    required: true
+    type: integer
+  hostname_id_pp:
+    description: Hostname internal identifier
+    in: path
+    name: hostname_id
+    required: true
+    type: integer
+  identity_provider_hostname_id_pp:
+    description: Identity provider hostname internal identifier
+    in: path
+    name: identity_provider_hostname_id
     required: true
     type: integer
   biblio_id_pp:
