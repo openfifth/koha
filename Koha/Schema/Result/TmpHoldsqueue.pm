@@ -102,6 +102,12 @@ __PACKAGE__->table("tmp_holdsqueue");
   data_type: 'mediumtext'
   is_nullable: 1
 
+=head2 hold_group_id
+
+  data_type: 'integer'
+  extra: {unsigned => 1}
+  is_nullable: 1
+
 =head2 item_level_request
 
   data_type: 'tinyint'
@@ -148,6 +154,8 @@ __PACKAGE__->add_columns(
   { data_type => "varchar", is_nullable => 1, size => 10 },
   "notes",
   { data_type => "mediumtext", is_nullable => 1 },
+  "hold_group_id",
+  { data_type => "integer", extra => { unsigned => 1 }, is_nullable => 1 },
   "item_level_request",
   { data_type => "tinyint", default_value => 0, is_nullable => 0 },
   "timestamp",
@@ -224,8 +232,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07049 @ 2023-07-26 17:44:52
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:5vbBn2tKY/nPx5aA4gaEtg
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-06 15:10:13
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:XNHA8r0iQAT4P/UkCiUilw
 
 __PACKAGE__->add_columns(
     '+item_level_request' => { is_boolean => 1 }
