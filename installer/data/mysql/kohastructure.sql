@@ -6880,6 +6880,7 @@ CREATE TABLE `tmp_holdsqueue` (
   `holdingbranch` varchar(10) DEFAULT NULL,
   `pickbranch` varchar(10) DEFAULT NULL,
   `notes` mediumtext DEFAULT NULL,
+  `hold_group_id` int(10) unsigned DEFAULT NULL,
   `item_level_request` tinyint(4) NOT NULL DEFAULT 0,
   `timestamp` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'date and time this entry as added/last updated',
   PRIMARY KEY (`itemnumber`),
