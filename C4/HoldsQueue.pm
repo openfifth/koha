@@ -1074,8 +1074,8 @@ sub CreatePicklistFromItemMap {
     my $sth_load = $dbh->prepare( "
         INSERT INTO tmp_holdsqueue (biblionumber,itemnumber,barcode,surname,firstname,phone,borrowernumber,
                                     cardnumber,reservedate,title, itemcallnumber,
-                                    holdingbranch,pickbranch,notes, item_level_request)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                                    holdingbranch,pickbranch,notes, hold_group_id, item_level_request)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     " );
 
     foreach my $itemnumber ( sort keys %$item_map ) {
@@ -1101,10 +1101,17 @@ sub CreatePicklistFromItemMap {
         my $biblio = Koha::Biblios->find($biblionumber);
         my $title  = $biblio->title;
 
+        my $hold_group_id;
+        if ( C4::Context->preference("DisplayAddHoldGroups") ) {
+            my $reserve_id = $mapped_item->{reserve_id};
+            my $hold       = Koha::Holds->find($reserve_id);
+            $hold_group_id = $hold ? $hold->hold_group_id : undef;
+        }
+
         $sth_load->execute(
             $biblionumber,  $itemnumber,  $barcode,      $surname, $firstname, $phone, $borrowernumber,
             $cardnumber,    $reservedate, $title,        $itemcallnumber,
-            $holdingbranch, $pickbranch,  $reservenotes, $item_level
+            $holdingbranch, $pickbranch,  $reservenotes, $hold_group_id, $item_level
         );
     }
 }
