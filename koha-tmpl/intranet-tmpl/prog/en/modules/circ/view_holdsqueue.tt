@@ -221,6 +221,9 @@
                                                     <td class="hq-title">
                                                         <p> [% INCLUDE 'biblio-title.inc' biblio=itemsloo.biblio link = 1 %] </p>
                                                         <div class="hq-biblionumber content_hidden">[% itemsloo.biblionumber | html %]</div>
+                                                        [% IF ( itemsloo.hold_group_id ) %]
+                                                            <p>(part of a <a class="hold-group" href="/cgi-bin/koha/reserve/hold-group.pl?hold_group_id=[% itemsloo.hold_group_id | html %]">hold group</a>)</p>
+                                                        [% END %]
                                                     </td>
                                                     <td class="hq-author">[% itemsloo.biblio.author | html %]</td>
                                                     <td class="hq-pubdetails">
@@ -271,10 +274,6 @@
                                                                 ></strong
                                                             >
                                                             <em>or any available</em>
-                                                        [% END %]
-                                                        [% # NOTE: This will never work as hold_group_id doesn't appear in the tmp_holdsqueue table %]
-                                                        [% IF itemsloo.can('hold_group_id') && ( itemsloo.hold_group_id ) %]
-                                                            <div>(part of a <a href="/cgi-bin/koha/reserve/hold-group.pl?hold_group_id=[% itemsloo.hold_group_id | uri %]" class="hold-group">hold group</a>)</div>
                                                         [% END %]
                                                     </td>
                                                     <td class="hq-patron">
