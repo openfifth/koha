@@ -161,7 +161,7 @@ export function hydrate(): void {
             )
         );
 
-        requestedIslands.forEach(async name => {
+        const islandPromises = Array.from(requestedIslands).map(async name => {
             const { importFn, config } = componentRegistry.get(name);
             if (!importFn) {
                 return;
@@ -200,6 +200,16 @@ export function hydrate(): void {
                     }),
                 })
             );
+
+            document.dispatchEvent(
+                new CustomEvent("koha:island-loaded", {
+                    detail: { name },
+                })
+            );
+        });
+
+        Promise.all(islandPromises).then(() => {
+            document.dispatchEvent(new CustomEvent("koha:islands-ready"));
         });
     });
 }
