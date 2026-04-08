@@ -21,7 +21,6 @@ use Modern::Perl;
 
 use Carp;
 
-use Koha::Calendar;
 use Koha::DateUtils qw( dt_from_string );
 use Koha::Exceptions;
 
@@ -108,7 +107,7 @@ sub accumulate_rentalcharge {
     return 0 unless $rentalcharge_increment && $rentalcharge_increment > 0;
 
     my $duration;
-    my $calendar = Koha::Calendar->new( branchcode => $self->library->id );
+    my $calendar = $self->library->calendar;
 
     if ( $units eq 'hours' ) {
         if ( $itemtype->rentalcharge_hourly_calendar ) {
