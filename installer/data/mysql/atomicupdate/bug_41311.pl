@@ -8,11 +8,13 @@ return {
         my ($args) = @_;
         my ( $dbh, $out ) = @$args{qw(dbh out)};
 
-        $dbh->do(
-            q{
-            ALTER TABLE sip_accounts ADD COLUMN `patron_branchcode_in_ao` tinyint(1) AFTER `send_patron_home_library_in_af`;
+        if ( !column_exists( 'sip_accounts', 'patron_branchcode_in_ao' ) ) {
+            $dbh->do(
+                q{
+                ALTER TABLE sip_accounts ADD COLUMN `patron_branchcode_in_ao` tinyint(1) AFTER `send_patron_home_library_in_af`;
+            }
+            );
         }
-        );
 
         say_success( $out, "Added column 'sip_accounts.patron_branchcode_in_ao'" );
     },
