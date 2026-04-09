@@ -14,6 +14,7 @@ import PreservationAPIClient from "@fetch/preservation-api-client";
 import MarcFrameworkAPIClient from "@fetch/marc-framework-api-client";
 import BiblioAPIClient from "@fetch/biblio-api-client";
 import LibraryAPIClient from "@fetch/library-api-client";
+import DefaultAPIClient from "@fetch/default-api-client";
 
 export const APIClient = {
     erm: new ERMAPIClient(HttpClient),
@@ -30,6 +31,7 @@ export const APIClient = {
     record_sources: new RecordSourcesAPIClient(HttpClient),
     libraries: new LibraryAPIClient(HttpClient),
     biblios: new BiblioAPIClient(HttpClient),
+    default: new DefaultAPIClient(HttpClient),
 };
 
 export default APIClient;
