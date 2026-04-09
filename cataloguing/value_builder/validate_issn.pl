@@ -33,7 +33,7 @@ my $builder = sub {
 function Change$id(event) {
     field = \$('#'+event.data.id);
     issn = field.val();
-    var url = '../cataloguing/plugin_launcher.pl?plugin_name=validate_issn.pl&issn=' + issn;
+    var url = '/cgi-bin/koha/cataloguing/plugin_launcher.pl?plugin_name=validate_issn.pl&issn=' + issn;
     var req = \$.get(url);
     req.done(function(resp){
         field.addClass("checked_issn");

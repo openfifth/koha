@@ -49,7 +49,7 @@ my $builder = sub {
         function Click$params->{id}(ev) {
                 ev.preventDefault();
                 var code = document.getElementById(ev.data.id);
-                var url = '../cataloguing/plugin_launcher.pl?plugin_name=callnumber-KU.pl&code=' + code.value;
+                var url = '/cgi-bin/koha/cataloguing/plugin_launcher.pl?plugin_name=callnumber-KU.pl&code=' + code.value;
                 var req = \$.get(url);
                 req.done(function(resp){
                     code.value = resp;

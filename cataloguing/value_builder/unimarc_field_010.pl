@@ -29,7 +29,7 @@ sub plugin_javascript {
     <script>
         function Blur$field_number(ev) {
                 var isbn = document.getElementById(ev.data.id);
-                var url = '../cataloguing/plugin_launcher.pl?plugin_name=unimarc_field_010.pl&isbn=' + isbn.value;
+                var url = '/cgi-bin/koha/cataloguing/plugin_launcher.pl?plugin_name=unimarc_field_010.pl&isbn=' + isbn.value;
                 var req = \$.get(url);
                 req.done(function(resp){
                         var elems = document.getElementsByTagName('input');

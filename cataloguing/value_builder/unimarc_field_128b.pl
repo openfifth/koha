@@ -36,7 +36,7 @@ function Clic$function_name(event) {
     event.preventDefault();
     const id = event.data.id;
     defaultvalue=document.getElementById(id).value;
-    newin=window.open(\"../cataloguing/plugin_launcher.pl?plugin_name=unimarc_field_128b.pl&index=\" + id + \"&result=\"+defaultvalue,\"unimarc_field_128b\",'width=1000,height=375,toolbar=false,scrollbars=yes');
+    newin=window.open(\"/cgi-bin/koha/cataloguing/plugin_launcher.pl?plugin_name=unimarc_field_128b.pl&index=\" + id + \"&result=\"+defaultvalue,\"unimarc_field_128b\",'width=1000,height=375,toolbar=false,scrollbars=yes');
 
 }
 </script>

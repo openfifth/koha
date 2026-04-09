@@ -34,7 +34,7 @@ sub plugin_javascript {
 function Clic$function_name(event) {
     event.preventDefault();
     defaultvalue=document.getElementById(event.data.id).value;
-    window.open(\"../cataloguing/plugin_launcher.pl?plugin_name=unimarc_field_124d.pl&index=\"+event.data.id+\"&result=\"+defaultvalue,\"unimarc_field_124d\",'width=1000,height=375,toolbar=false,scrollbars=yes');
+    window.open(\"/cgi-bin/koha/cataloguing/plugin_launcher.pl?plugin_name=unimarc_field_124d.pl&index=\"+event.data.id+\"&result=\"+defaultvalue,\"unimarc_field_124d\",'width=1000,height=375,toolbar=false,scrollbars=yes');
 
 }
 </script>

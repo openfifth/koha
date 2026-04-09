@@ -44,7 +44,7 @@ function Click$function_name(ev) {
         window_height = localStorage.getItem(\"popup_window_height\");
     }
 
-    var windowref = window.open(\"../cataloguing/plugin_launcher.pl?plugin_name=cn_browser.pl&popup&q=\"+encodeURIComponent(q.value),\"cnbrowser\",\"width=\"+window_width+\"\,height=\"+window_height+\"\,toolbar=false,scrollbars=yes\");
+    var windowref = window.open(\"/cgi-bin/koha/cataloguing/plugin_launcher.pl?plugin_name=cn_browser.pl&popup&q=\"+encodeURIComponent(q.value),\"cnbrowser\",\"width=\"+window_width+\"\,height=\"+window_height+\"\,toolbar=false,scrollbars=yes\");
 
     windowref.onresize = function(){
         localStorage.setItem(\"popup_window_height\", windowref.innerHeight);

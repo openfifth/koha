@@ -46,7 +46,7 @@ my $builder = sub {
     <script>
         function Blur$params->{id}(ev) {
                 var code = document.getElementById(ev.data.id);
-                var url = '../cataloguing/plugin_launcher.pl?plugin_name=stocknumberam123.pl&code=' + code.value;
+                var url = '/cgi-bin/koha/cataloguing/plugin_launcher.pl?plugin_name=stocknumberam123.pl&code=' + code.value;
                 var req = \$.get(url);
                 req.done(function(resp){
                     code.value = resp;

@@ -41,7 +41,7 @@ sub plugin_javascript {
             alert('error when getting '+i);
             return;
         }
-        window.open(\"../cataloguing/plugin_launcher.pl?plugin_name=unimarc_field_115a.pl&index=\" + i + \"&result=\"+defaultvalue,\"unimarc_field_115a\",'width=1200,height=600,toolbar=false,scrollbars=yes');
+        window.open(\"/cgi-bin/koha/cataloguing/plugin_launcher.pl?plugin_name=unimarc_field_115a.pl&index=\" + i + \"&result=\"+defaultvalue,\"unimarc_field_115a\",'width=1200,height=600,toolbar=false,scrollbars=yes');
     }
 
     </script>

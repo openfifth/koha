@@ -45,7 +45,7 @@ sub plugin_javascript {
 function Clic$function_name(event) {
     event.preventDefault();
     defaultvalue=escape(document.getElementById(event.data.id).value);
-    newin=window.open(\"../cataloguing/plugin_launcher.pl?plugin_name=unimarc_field_210c.pl&index=\" + event.data.id, \"unimarc_225a\",'width=500,height=600,toolbar=false,scrollbars=yes');
+    newin=window.open(\"/cgi-bin/koha/cataloguing/plugin_launcher.pl?plugin_name=unimarc_field_210c.pl&index=\" + event.data.id, \"unimarc_225a\",'width=500,height=600,toolbar=false,scrollbars=yes');
 }
 </script>
 ";
@@ -106,7 +106,7 @@ sub plugin {
         my $to   = ( $offset + $resultsperpage > $total ) ? $total : $offset + $resultsperpage;
 
         my $link =
-              "../cataloguing/plugin_launcher.pl?plugin_name=unimarc_field_210c.pl&amp;authtypecode=EDITORS&amp;"
+            "/cgi-bin/koha/cataloguing/plugin_launcher.pl?plugin_name=unimarc_field_210c.pl&amp;authtypecode=EDITORS&amp;"
             . join( "&amp;", map { "value=" . $_ } @value )
             . "&amp;op=do_search&amp;type=intranet&amp;index=$index";
 

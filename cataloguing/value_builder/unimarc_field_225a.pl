@@ -83,7 +83,7 @@ sub plugin_javascript {
             }
                     
             defaultvalue = document.getElementById(event.data.id).value;
-            window.open(\"../cataloguing/plugin_launcher.pl?plugin_name=unimarc_field_225a.pl&index=\"+event.data.id+\"&result=\"+defaultvalue+\"&editor_found=\"+editor_found,\"unimarc225a\",'width=500,height=400,toolbar=false,scrollbars=no');
+            window.open(\"/cgi-bin/koha/cataloguing/plugin_launcher.pl?plugin_name=unimarc_field_225a.pl&index=\"+event.data.id+\"&result=\"+defaultvalue+\"&editor_found=\"+editor_found,\"unimarc225a\",'width=500,height=400,toolbar=false,scrollbars=no');
     
         }
     </script>

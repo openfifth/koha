@@ -77,7 +77,7 @@ function Blur$id(event) {
 
 function Click$id(event) {
     var fieldvalue=\$('#'+event.data.id).val();
-    window.open(\"../cataloguing/plugin_launcher.pl?plugin_name=EXAMPLE.pl&index=\"+event.data.id+\"&result=\"+fieldvalue,\"tag_editor\",'width=700,height=700,toolbar=false,scrollbars=yes');
+    window.open(\"/cgi-bin/koha/cataloguing/plugin_launcher.pl?plugin_name=EXAMPLE.pl&index=\"+event.data.id+\"&result=\"+fieldvalue,\"tag_editor\",'width=700,height=700,toolbar=false,scrollbars=yes');
 }
 </script>|;
 };

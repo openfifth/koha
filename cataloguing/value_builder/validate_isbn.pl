@@ -33,7 +33,7 @@ my $builder = sub {
 function Change$id(event) {
     field = \$('#'+event.data.id);
     isbn = field.val();
-    var url = '../cataloguing/plugin_launcher.pl?plugin_name=validate_isbn.pl&isbn=' + isbn;
+    var url = '/cgi-bin/koha/cataloguing/plugin_launcher.pl?plugin_name=validate_isbn.pl&isbn=' + isbn;
     var req = \$.get(url);
     req.done(function(resp){
         field.addClass("checked_isbn");

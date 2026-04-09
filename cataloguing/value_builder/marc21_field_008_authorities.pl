@@ -54,7 +54,7 @@ function Focus$function_name(event) {
 function Click$function_name(event) {
     var authtype=document.forms['f'].elements['authtypecode'].value;
     defaultvalue=document.getElementById(event.data.id).value;
-    newin=window.open(\"../cataloguing/plugin_launcher.pl?plugin_name=marc21_field_008_authorities.pl&index=\"+ event.data.id +\"&result=\"+defaultvalue+\"&authtypecode=\"+authtype,\"tag_editor\",'width=1000,height=600,toolbar=false,scrollbars=yes');
+    newin=window.open(\"/cgi-bin/koha/cataloguing/plugin_launcher.pl?plugin_name=marc21_field_008_authorities.pl&index=\"+ event.data.id +\"&result=\"+defaultvalue+\"&authtypecode=\"+authtype,\"tag_editor\",'width=1000,height=600,toolbar=false,scrollbars=yes');
 
 }
 </script>
