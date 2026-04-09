@@ -1,7 +1,8 @@
 <template>
     <div v-if="createItems.value === 'ordering'">
         <!-- <fieldset v-if="initialized" class="rows" id="itemfieldset"> -->
-        <div id="items_list" v-if="orderNumber" class="page-section">
+        <input type="hidden" id="vueItemForm" />
+        <div id="items_list" class="page-section">
             <p>
                 <strong>{{ $__("Items list") }}</strong>
             </p>
@@ -101,142 +102,138 @@ export default {
         const frameworkFields = ref(null);
         const initialized = ref(false);
         const fieldValues = ref({});
-        const valueBuilders = ref("");
+        // const valueBuilders = ref("");
 
-        const buildOptionsArray = field => {
-            field.labels[0] = "";
-            return Object.keys(field.labels).map((key, index) => ({
-                label: field.labels[key],
-                value: field.values[index],
-            }));
-        };
+        // const buildOptionsArray = field => {
+        //     field.labels[0] = "";
+        //     return Object.keys(field.labels).map((key, index) => ({
+        //         label: field.labels[key],
+        //         value: field.values[index],
+        //     }));
+        // };
 
-        const formatMarcFields = fields => {
-            const visibleFields = fields.reduce((acc, field) => {
-                if (field.hidden) return acc;
-                let type =
-                    typeof field.marc_value === "object"
-                        ? "select"
-                        : field.marc_value.includes("<script>")
-                          ? "valueBuilder"
-                          : "text";
-                const usesFlatpickr =
-                    typeof field.marc_value === "string" &&
-                    field.marc_value.includes("flatpickr");
-                const fieldDefinition = {
-                    name: field.kohafield.split(".").pop(),
-                    label: field.subfield + " - " + field.marc_lib,
-                    required: resource => {
-                        if (props.createItems.value !== "ordering")
-                            return false;
-                        return field.mandatory ? true : false;
-                    },
-                    type,
-                    placeholder: "",
-                    subfield: field.subfield,
-                    ...(type === "select" && {
-                        options: buildOptionsArray(field.marc_value),
-                        selectLabel: "label",
-                        requiredKey: "value",
-                    }),
-                    ...(type === "valueBuilder" && {
-                        type: usesFlatpickr ? "date" : "text",
-                        valueBuilder: true,
-                        dataPlugin: [
-                            field.marc_value
-                                .split('data-plugin="')[1]
-                                .split('"')[0],
-                        ],
-                        class: "input_marceditor framework_plugin noEnterSubmit",
-                    }),
-                    id: usesFlatpickr ? `flatpickr-${field.id}` : field.id,
-                };
-                if (type === "valueBuilder") {
-                    const valueScript = field.marc_value
-                        .split("<script>")[1]
-                        .split("<\/script>")[0];
-                    valueBuilders.value += "\n" + valueScript;
-                    const noPopup = field.marc_value.includes("No popup");
-                    fieldDefinition.noPopup = noPopup;
-                }
-                fieldValues.value[fieldDefinition.name] = null;
-                return [...acc, fieldDefinition];
-            }, []);
-            return visibleFields;
-        };
+        // const formatMarcFields = fields => {
+        //     const visibleFields = fields.reduce((acc, field) => {
+        //         if (field.hidden) return acc;
+        //         let type =
+        //             typeof field.marc_value === "object"
+        //                 ? "select"
+        //                 : field.marc_value.includes("<script>")
+        //                   ? "valueBuilder"
+        //                   : "text";
+        //         const usesFlatpickr =
+        //             typeof field.marc_value === "string" &&
+        //             field.marc_value.includes("flatpickr");
+        //         const fieldDefinition = {
+        //             name: field.kohafield.split(".").pop(),
+        //             label: field.subfield + " - " + field.marc_lib,
+        //             required: resource => {
+        //                 if (props.createItems.value !== "ordering")
+        //                     return false;
+        //                 return field.mandatory ? true : false;
+        //             },
+        //             type,
+        //             placeholder: "",
+        //             subfield: field.subfield,
+        //             ...(type === "select" && {
+        //                 options: buildOptionsArray(field.marc_value),
+        //                 selectLabel: "label",
+        //                 requiredKey: "value",
+        //             }),
+        //             ...(type === "valueBuilder" && {
+        //                 type: usesFlatpickr ? "date" : "text",
+        //                 valueBuilder: true,
+        //                 dataPlugin: [
+        //                     field.marc_value
+        //                         .split('data-plugin="')[1]
+        //                         .split('"')[0],
+        //                 ],
+        //                 class: "input_marceditor framework_plugin noEnterSubmit",
+        //             }),
+        //             id: usesFlatpickr ? `flatpickr-${field.id}` : field.id,
+        //         };
+        //         if (type === "valueBuilder") {
+        //             const valueScript = field.marc_value
+        //                 .split("<script>")[1]
+        //                 .split("<\/script>")[0];
+        //             valueBuilders.value += "\n" + valueScript;
+        //             const noPopup = field.marc_value.includes("No popup");
+        //             fieldDefinition.noPopup = noPopup;
+        //         }
+        //         fieldValues.value[fieldDefinition.name] = null;
+        //         return [...acc, fieldDefinition];
+        //     }, []);
+        //     return visibleFields;
+        // };
 
         onMounted(() => {
             cloneItemBlock(0, "barcode");
         });
 
-        // onBeforeMount(() => {
-        //     APIClient.marc_framework.frameworkMarcFields
-        //         .get(props.frameworkCode)
-        //         .then(
-        //             frameworkMarcFields => {
-        //                 frameworkFields.value = formatMarcFields(
-        //                     frameworkMarcFields.iteminformation
-        //                 );
-        //                 initialized.value = true;
-        //                 eval(valueBuilders.value);
-        //                 $(document).ready(function () {
-        //                     function callClickPluginEventHandler(event) {
-        //                         event.preventDefault();
-        //                         callPluginEventHandler.call(this, event);
-        //                     }
+        onBeforeMount(() => {
+            // APIClient.marc_framework.frameworkMarcFields
+            //     .get(props.frameworkCode)
+            //     .then(
+            //         frameworkMarcFields => {
+            //             frameworkFields.value = formatMarcFields(
+            //                 frameworkMarcFields.iteminformation
+            //             );
+            //             initialized.value = true;
+            //             eval(valueBuilders.value);
+            $(document).ready(function () {
+                function callClickPluginEventHandler(event) {
+                    event.preventDefault();
+                    callPluginEventHandler.call(this, event);
+                }
 
-        //                     function callPluginEventHandler(event) {
-        //                         event.stopPropagation();
+                function callPluginEventHandler(event) {
+                    event.stopPropagation();
 
-        //                         const plugin =
-        //                             event.target.getAttribute("data-plugin");
-        //                         if (
-        //                             plugin &&
-        //                             plugin in Koha.frameworkPlugins &&
-        //                             event.type in Koha.frameworkPlugins[plugin]
-        //                         ) {
-        //                             event.data = {};
-        //                             if (
-        //                                 event.target.classList.contains(
-        //                                     "framework_plugin"
-        //                                 ) ||
-        //                                 event.target.classList.contains(
-        //                                     "buttonDot"
-        //                                 )
-        //                             ) {
-        //                                 event.data.id = event.target
-        //                                     .closest(".subfield_line")
-        //                                     .querySelector(
-        //                                         "input.input_marceditor"
-        //                                     ).id;
-        //                             } else {
-        //                                 event.data.id = event.target.id;
-        //                             }
+                    const plugin = event.target.getAttribute("data-plugin");
+                    if (
+                        plugin &&
+                        plugin in Koha.frameworkPlugins &&
+                        event.type in Koha.frameworkPlugins[plugin]
+                    ) {
+                        event.data = {};
+                        if (
+                            event.target.classList.contains(
+                                "framework_plugin"
+                            ) ||
+                            event.target.classList.contains("buttonDot")
+                        ) {
+                            event.data.id = event.target
+                                .closest(".subfield_line")
+                                .querySelector("input.input_marceditor").id;
+                        } else {
+                            event.data.id = event.target.id;
+                        }
 
-        //                             Koha.frameworkPlugins[plugin][
-        //                                 event.type
-        //                             ].call(this, event);
-        //                         }
-        //                     }
+                        Koha.frameworkPlugins[plugin][event.type].call(
+                            this,
+                            event
+                        );
+                    }
+                }
 
-        //                     // We use delegated event handlers here so that dynamically added elements
-        //                     // (like when cloning a field or a subfield) respond to these events
-        //                     // without having to re-attach events manually
-        //                     $(".marc_editor").on(
-        //                         "click",
-        //                         ".tag_editor.framework_plugin",
-        //                         callClickPluginEventHandler
-        //                     );
-        //                     $(".marc_editor").on(
-        //                         "focusin focusout change mousedown mouseup keydown keyup",
-        //                         "input.input_marceditor.framework_plugin",
-        //                         callPluginEventHandler
-        //                     );
-        //                 });
-        //             },
-        //             error => {}
-        //         );
-        // });
+                // We use delegated event handlers here so that dynamically added elements
+                // (like when cloning a field or a subfield) respond to these events
+                // without having to re-attach events manually
+                $(".marc_editor").on(
+                    "click",
+                    ".tag_editor.framework_plugin",
+                    callClickPluginEventHandler
+                );
+                $(".marc_editor").on(
+                    "focusin focusout change mousedown mouseup keydown keyup",
+                    "input.input_marceditor.framework_plugin",
+                    callPluginEventHandler
+                );
+            });
+            //     },
+            //     error => {}
+            // );
+        });
 
         return {
             frameworkFields,

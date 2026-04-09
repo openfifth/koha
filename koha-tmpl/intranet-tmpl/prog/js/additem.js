@@ -19,7 +19,7 @@ function addItem(node, unique_item_fields) {
         return false;
     }
 
-    var current_qty = parseInt($("#quantity").val());
+    var current_qty = parseInt($("#quantity").val()) || 0;
     var max_qty;
     if ($("#quantity_to_receive").length != 0) {
         max_qty = parseInt($("#quantity_to_receive").val());
@@ -56,6 +56,8 @@ function addItem(node, unique_item_fields) {
             .replaceWith(tr);
     }
     $("#" + index).hide();
+    if ($("#vueItemForm").length)
+        window.scrollTo(0, getScrollto("outeritemblock", "toolbar"));
 }
 
 function addMulti(count, node, unique_item_fields) {
@@ -161,12 +163,18 @@ function constructTrNode(index, unique_item_fields) {
     ];
 
     var result = "<tr idblock='" + index + "'>";
-    var edit_link =
-        "<a href='#itemfieldset' style='text-decoration:none' onclick='showItem(\"" +
-        index +
-        "\");' class='btn btn-default btn-xs'><i class='fa fa-pencil'></i> " +
-        __("Edit") +
-        "</a>";
+    const isVueForm = $("#vueItemForm").length;
+    var edit_link = isVueForm
+        ? "<span style='text-decoration:none' onclick='showItem(\"" +
+          index +
+          "\");' class='btn btn-default btn-xs'><i class='fa fa-pencil'></i> " +
+          __("Edit") +
+          "</span>"
+        : "<a href='#itemfieldset' style='text-decoration:none' onclick='showItem(\"" +
+          index +
+          "\");' class='btn btn-default btn-xs'><i class='fa fa-pencil'></i> " +
+          __("Edit") +
+          "</a>";
     var del_link =
         "<a style='cursor:pointer' " +
         "onclick='deleteItemBlock(this, \"" +
