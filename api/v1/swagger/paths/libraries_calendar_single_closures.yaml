@@ -1,0 +1,174 @@
+---
+"/libraries/{library_id}/calendar/single_closures":
+  post:
+    x-mojo-to: Libraries::Calendar::SingleClosures#add
+    operationId: addSingleClosure
+    tags:
+      - libraries
+    summary: Add a single-date closure
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/library_id_pp"
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            date:
+              type: string
+              format: date
+              description: Date (ISO 8601)
+            title:
+              type: string
+            description:
+              type: string
+          required:
+            - date
+          additionalProperties: false
+    produces:
+      - application/json
+    responses:
+      "201":
+        description: Closure created
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Library not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "409":
+        description: |
+          Conflict. Possible `error_code` attribute values:
+
+          * `duplicate`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        tools: edit_calendar
+"/libraries/{library_id}/calendar/single_closures/{single_closure_id}":
+  get:
+    x-mojo-to: Libraries::Calendar::SingleClosures#get
+    operationId: getSingleClosure
+    tags:
+      - libraries
+    summary: Get a single closure
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/library_id_pp"
+      - name: single_closure_id
+        in: path
+        required: true
+        type: integer
+    produces:
+      - application/json
+    responses:
+      "200":
+        description: A single closure
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        catalogue: "1"
+  put:
+    x-mojo-to: Libraries::Calendar::SingleClosures#update
+    operationId: updateSingleClosure
+    tags:
+      - libraries
+    summary: Update a single closure
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/library_id_pp"
+      - name: single_closure_id
+        in: path
+        required: true
+        type: integer
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            title:
+              type: string
+            description:
+              type: string
+          additionalProperties: false
+    produces:
+      - application/json
+    responses:
+      "200":
+        description: Updated closure
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        tools: edit_calendar
+  delete:
+    x-mojo-to: Libraries::Calendar::SingleClosures#delete
+    operationId: deleteSingleClosure
+    tags:
+      - libraries
+    summary: Delete a single closure
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/library_id_pp"
+      - name: single_closure_id
+        in: path
+        required: true
+        type: integer
+    produces:
+      - application/json
+    responses:
+      "204":
+        description: Deleted
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        tools: edit_calendar
