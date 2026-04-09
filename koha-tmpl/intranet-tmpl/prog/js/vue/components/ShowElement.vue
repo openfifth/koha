@@ -51,7 +51,7 @@
     </template>
     <template v-else-if="attribute.type === 'table'">
         <template v-if="attribute.hidden && attribute.hidden(resource)">
-            <label>{{ attribute.label }}</label>
+            <label v-if="attribute.label">{{ attribute.label }}</label>
             <table>
                 <thead>
                     <th
@@ -69,11 +69,12 @@
                         <td
                             v-for="dataColumn in tableColumns"
                             :key="dataColumn.name + 'data'"
+                            :class="dataColumn.cssClass"
                         >
                             <template
                                 v-if="
                                     dataColumn.format ||
-                                    dataColumn.value.includes('.')
+                                    dataColumn.value?.includes('.')
                                 "
                             >
                                 <LinkWrapper
@@ -95,6 +96,20 @@
                                         )
                                     }}
                                 </LinkWrapper>
+                            </template>
+                            <template v-else-if="dataColumn.buttons">
+                                <InputButton
+                                    v-for="(
+                                        button, buttonIndex
+                                    ) in dataColumn.buttons"
+                                    :key="buttonIndex"
+                                    :title="button.title"
+                                    :callback="() => button.callback(counter)"
+                                    :cssClass="
+                                        button.cssClass ||
+                                        'btn btn-default btn-xs'
+                                    "
+                                />
                             </template>
                             <template v-else>
                                 <LinkWrapper
@@ -154,11 +169,11 @@ import LinkWrapper from "./LinkWrapper.vue";
 import AdditionalFieldsDisplay from "./AdditionalFieldsDisplay.vue";
 import { useBaseElement } from "../composables/base-element.js";
 import { computed, defineAsyncComponent } from "vue";
-
 import { loadComponent } from "@koha-vue/loaders/componentResolver";
+import InputButton from "./InputButton.vue";
 
 export default {
-    components: { LinkWrapper, AdditionalFieldsDisplay },
+    components: { LinkWrapper, AdditionalFieldsDisplay, InputButton },
     setup(props) {
         const baseElement = useBaseElement({ ...props });
 
