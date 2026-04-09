@@ -14,3 +14,41 @@ form#illfilter_form div.ms-parent div.ms-drop input[type="checkbox"] {
 form#illfilter_form div.ms-parent div.ms-drop ul > li {
     padding: .25rem 8px;
 }
+
+.ill-batches-backend-option-row {
+    display: flex;
+    align-items: center;
+    min-height: 24px;
+    margin-bottom: 4px;
+}
+
+.ill-batches-backend-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 2px 0;
+    margin-bottom: 0 !important;
+}
+
+.ill-batches-backend-label input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+}
+
+.ill-batches-backend-info-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    min-height: 24px;
+    margin-left: 4px;
+    padding: 0 4px;
+    text-decoration: none !important;
+}
+
+.ill-batches-backend-status-icon {
+    display: inline-block;
+    width: 1.2em;
+    text-align: center;
+}
