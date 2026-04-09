@@ -1150,27 +1150,29 @@
                         : item.error === "" || !!item.error
                           ? '<i class="fa-solid fa-xmark"></i> '
                           : item.warning === "" || !!item.warning
-                            ? '<i class="fa-solid fa-exclamation-circle"></i> '
+                            ? '<i class="fa-solid fa-exclamation"></i> '
                             : "";
+                const tooltipIcon =
+                    item.error === "" || !!item.error
+                        ? "exclamation"
+                        : "question";
                 return `
-                <label style="color: ${color};">
-                    <input type="radio" name="auto_backend_${row_index}" value="${item.name}" ${checked} ${disabled}>
-                    <span class="d-inline-block text-center align-middle" style="width:1em;">
-                        ${statusIcon}
-                    </span>
-                     ${item.name}
-                </label>
-                ${
-                    item.success || item.warning || item.error
-                        ? `
-                <a href="#" data-bs-toggle="tooltip" style="color: ${color};"
-                title="${item.success || item.warning || item.error}">
-                <i class="fa-solid fa-circle-exclamation"></i>
-                </a>`
-                        : ""
-                }
-                <br>
-            `;
+                    <div class="ill-batches-backend-option-row">
+                        <label class="ill-batches-backend-label" style="color: ${color};">
+                            <input type="radio" class="backend-selection" name="auto_backend_${row_index}" value="${item.name}" ${checked} ${disabled}>
+                            <span class="ill-batches-backend-status-icon">${statusIcon}</span>
+                            ${item.name}
+                        </label>
+                        ${
+                            item.success || item.warning || item.error
+                                ? `
+                            <a href="#" class="ill-batches-backend-info-link" data-bs-toggle="tooltip" style="color: ${color};" title="${item.success || item.warning || item.error}">
+                                <i class="fa-solid fa-circle-${tooltipIcon}"></i>
+                            </a>`
+                                : ""
+                        }
+                    </div>
+                `;
             })
             .join("");
 
