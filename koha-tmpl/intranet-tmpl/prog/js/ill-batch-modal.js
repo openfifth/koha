@@ -211,6 +211,7 @@
         displaySupportedIdentifiers();
         createButtonEventListener();
         updateRowCount();
+        storeBackendSelectionEventListener();
     }
 
     function initPostCreate() {
@@ -480,6 +481,22 @@
         identifierTable.removeEventListener("click", toggleMetadata);
         identifierTable.removeEventListener("click", removeRow);
         createRequestsButton.removeEventListener("click", requestRequestable);
+    }
+
+    function storeBackendSelectionEventListener() {
+        identifierTable.addEventListener("change", function (ev) {
+            if (ev.target.name && ev.target.name.startsWith("auto_backend_")) {
+                var rowIndex = ev.target.name.split("_").pop();
+                var selectedValue = ev.target.value;
+
+                tableContent.data[rowIndex].auto_backends.forEach(
+                    function (backend) {
+                        backend.suggested =
+                            backend.name === selectedValue ? 1 : 0;
+                    }
+                );
+            }
+        });
     }
 
     function finishButtonEventListener() {
