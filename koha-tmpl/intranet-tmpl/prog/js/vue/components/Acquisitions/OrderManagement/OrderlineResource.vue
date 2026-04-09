@@ -275,6 +275,9 @@ export default {
                     defaultValue: createItemsDefault(),
                     onChange: resource => {
                         createItemsWhen.value = resource.create_items;
+                        if (resource.create_items !== "ordering") {
+                            resource.quantity_ordered = 1;
+                        }
                     },
                     toolTip: $__(
                         "Based on the value in the AcqCreateItem system preference"
@@ -392,80 +395,36 @@ export default {
                           },
                       ]
                     : []),
-                // {
-                //     name: "items",
-                //     group: $__("Catalog details"),
-                //     type: "component",
-                //     componentPath:
-                //         "@koha-vue/components/Acquisitions/OrderManagement/ItemMarcFields.vue",
-                //     componentProps: {
-                //         resource: {
-                //             type: "resource",
-                //             value: null,
-                //         },
-                //         biblionumber: {
-                //             type: "string",
-                //             value: queryParams.biblionumber,
-                //         },
-                //         ordernumber: {
-                //             type: "string",
-                //             value: queryParams.ordernumber,
-                //         },
-                //         frameworkCode: {
-                //             type: "string",
-                //             value: "ACQ",
-                //         },
-                //         createItems: {
-                //             type: "object",
-                //             value: createItems,
-                //         },
-                //     },
-                //     hideIn: ["List"],
-                // },
                 {
                     name: "items",
                     group: $__("Catalog details"),
-                    type: "relationshipWidget",
+                    type: "component",
+                    componentPath:
+                        "@koha-vue/components/Acquisitions/OrderManagement/ItemMarcFieldsCopy.vue",
+                    defaultValue: [],
                     componentProps: {
-                        resourceRelationships: {
-                            resourceProperty: "items",
-                        },
-                        relationshipI18n: {
-                            nameLowerCase: $__("item"),
-                            namePlural: $__("items"),
-                            nameUpperCase: $__("Item"),
-                            noneCreatedYetMessage: $__(
-                                "There are no items created yet"
-                            ),
-                            addNewMessage: $__("Add new item"),
-                        },
-                        newRelationshipDefaultAttrs: {
-                            type: "object",
-                            value: {
-                                title: "",
-                            },
-                        },
                         resource: {
                             type: "resource",
                             value: null,
                         },
-                        onRelationshipAddOrDelete: {
-                            type: "function",
-                            value: resource => {
-                                resource.quantity_ordered =
-                                    resource.items.length;
-                            },
+                        biblioNumber: {
+                            type: "string",
+                            value: queryParams.biblionumber,
+                        },
+                        orderNumber: {
+                            type: "string",
+                            value: queryParams.ordernumber,
+                        },
+                        frameworkCode: {
+                            type: "string",
+                            value: "ACQ",
+                        },
+                        createItems: {
+                            type: "object",
+                            value: createItems,
                         },
                     },
-                    relationshipFields: [
-                        {
-                            type: "text",
-                            name: "title",
-                            label: "Temp",
-                            placeholder: "Placeholder for item fields",
-                        },
-                    ],
-                    hideIn: ["Show", "List"],
+                    hideIn: ["List"],
                 },
                 {
                     name: "patrons_to_notify",
@@ -637,6 +596,7 @@ export default {
                 },
                 {
                     name: "quantity_ordered",
+                    id: "quantity",
                     group: $__("Accounting details"),
                     type: "number",
                     label: $__("Quantity"),

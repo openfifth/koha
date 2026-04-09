@@ -42,11 +42,6 @@ sub config {
     my $userflags   = C4::Auth::getuserflags( $patron->flags, $patron->id );
     my $permissions = Koha::Auth::Permissions->get_authz_from_flags( { flags => $userflags } );
 
-    my $calculate_fund_values_including_tax  = C4::Context->preference('CalculateFundValuesIncludingTax');
-    my $acq_create_items                     = C4::Context->preference('AcqCreateItem');
-    my $use_acq_framework_for_biblio_records = C4::Context->preference('UseAcqFrameworkForBiblioRecords');
-    my $marcflavour                          = C4::Context->preference('marcflavour');
-
     my @gst_values = map { option => $_ + 0.0 }, split( '\|', C4::Context->preference("TaxRates") );
 
     return $c->render(
@@ -60,6 +55,7 @@ sub config {
                 use_acq_framework_for_biblio_records => C4::Context->preference('UseAcqFrameworkForBiblioRecords'),
                 marcflavour                          => C4::Context->preference('marcflavour'),
                 different_currencies_in_ledgers      => C4::Context->preference('DifferentCurrenciesInLedgers'),
+                unique_item_fields                   => C4::Context->preference('UniqueItemFields'),
             },
         },
     );
