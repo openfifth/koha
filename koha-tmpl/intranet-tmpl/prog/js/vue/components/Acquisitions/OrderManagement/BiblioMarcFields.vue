@@ -16,7 +16,7 @@
 </template>
 
 <script>
-import { computed, onBeforeMount, ref } from "vue";
+import { computed, inject, onBeforeMount, ref } from "vue";
 import FormElement from "../../FormElement.vue";
 import { APIClient } from "../../../fetch/api-client";
 import { $__ } from "@koha-vue/i18n";
@@ -38,6 +38,7 @@ export default {
         const itemTypes = ref([]);
         const route = useRoute();
 
+        const { updateSubComponentReadyState } = inject("subComponentsReady");
         const getItemTypes = computed(() => {
             return itemTypes.value;
         });
@@ -109,9 +110,11 @@ export default {
                             .then(biblio => {
                                 props.resource.biblio = biblio;
                                 initialized.value = true;
+                                updateSubComponentReadyState("biblio");
                             });
                     } else {
                         initialized.value = true;
+                        updateSubComponentReadyState("biblio");
                     }
                 });
         });

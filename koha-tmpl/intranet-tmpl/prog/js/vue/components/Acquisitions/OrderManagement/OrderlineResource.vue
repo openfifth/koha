@@ -1,5 +1,6 @@
 <template>
     <BaseResource
+        v-show="readyToDisplay"
         :routeAction="routeAction"
         :instancedResource="this"
     ></BaseResource>
@@ -10,7 +11,7 @@ import BaseResource from "../../BaseResource.vue";
 import { APIClient } from "../../../fetch/api-client.js";
 import { useBaseResource } from "../../../composables/base-resource";
 import { $__ } from "@koha-vue/i18n";
-import { computed, inject, ref } from "vue";
+import { computed, inject, provide, reactive, ref } from "vue";
 import { storeToRefs } from "pinia";
 import { useRoute } from "vue-router";
 
@@ -31,6 +32,9 @@ export default {
             formatValueWithCurrency,
             differentCurrenciesInLedgers,
         } = acquisitionsStore;
+        const mainStore = inject("mainStore");
+        const { loading, loaded } = mainStore;
+        loading();
 
         const route = useRoute();
         const queryParams = route.query;
@@ -40,6 +44,33 @@ export default {
             return createItemsWhen.value;
         });
         const nonBibliographic = ref(route.query.no_biblio || false);
+
+        const subComponentsReady = reactive({ biblio: false, items: false });
+        const updateSubComponentReadyState = key => {
+            subComponentsReady[key] = true;
+        };
+        provide("subComponentsReady", {
+            subComponentsReady,
+            updateSubComponentReadyState,
+        });
+        const readyToDisplay = computed(() => {
+            if (
+                ["add", "edit"].includes(props.routeAction) &&
+                !nonBibliographic.value
+            ) {
+                const ready = Object.keys(subComponentsReady).every(
+                    el => subComponentsReady[el]
+                );
+                if (ready) {
+                    loaded();
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+            loaded();
+            return true;
+        });
 
         const orderlineStatuses = ref({
             draft: "DRAFT",
@@ -1306,6 +1337,7 @@ export default {
             onFormSave,
             navigationOnFormSaveAdditionalOptions,
             handleResourceSearch,
+            readyToDisplay,
         };
     },
     components: { BaseResource },
