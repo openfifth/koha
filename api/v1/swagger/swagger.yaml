@@ -527,6 +527,26 @@ paths:
     $ref: ./paths/libraries.yaml#/~1libraries
   "/libraries/{library_id}":
     $ref: "./paths/libraries.yaml#/~1libraries~1{library_id}"
+  "/libraries/{library_id}/calendar":
+    $ref: "./paths/libraries_calendar.yaml#/~1libraries~1{library_id}~1calendar"
+  "/libraries/{library_id}/calendar/weekly_closures":
+    $ref: "./paths/libraries_calendar_weekly_closures.yaml#/~1libraries~1{library_id}~1calendar~1weekly_closures"
+  "/libraries/{library_id}/calendar/weekly_closures/{weekly_closure_id}":
+    $ref: "./paths/libraries_calendar_weekly_closures.yaml#/~1libraries~1{library_id}~1calendar~1weekly_closures~1{weekly_closure_id}"
+  "/libraries/{library_id}/calendar/repeating_closures":
+    $ref: "./paths/libraries_calendar_repeating_closures.yaml#/~1libraries~1{library_id}~1calendar~1repeating_closures"
+  "/libraries/{library_id}/calendar/repeating_closures/{repeating_closure_id}":
+    $ref: "./paths/libraries_calendar_repeating_closures.yaml#/~1libraries~1{library_id}~1calendar~1repeating_closures~1{repeating_closure_id}"
+  "/libraries/{library_id}/calendar/single_closures":
+    $ref: "./paths/libraries_calendar_single_closures.yaml#/~1libraries~1{library_id}~1calendar~1single_closures"
+  "/libraries/{library_id}/calendar/single_closures/{single_closure_id}":
+    $ref: "./paths/libraries_calendar_single_closures.yaml#/~1libraries~1{library_id}~1calendar~1single_closures~1{single_closure_id}"
+  "/libraries/{library_id}/calendar/closure_exceptions":
+    $ref: "./paths/libraries_calendar_closure_exceptions.yaml#/~1libraries~1{library_id}~1calendar~1closure_exceptions"
+  "/libraries/{library_id}/calendar/closure_exceptions/{closure_exception_id}":
+    $ref: "./paths/libraries_calendar_closure_exceptions.yaml#/~1libraries~1{library_id}~1calendar~1closure_exceptions~1{closure_exception_id}"
+  "/libraries/{library_id}/calendar/copy":
+    $ref: "./paths/libraries_calendar.yaml#/~1libraries~1{library_id}~1calendar~1copy"
   "/libraries/{library_id}/cash_registers":
     $ref: "./paths/libraries.yaml#/~1libraries~1{library_id}~1cash_registers"
   "/libraries/{library_id}/desks":
