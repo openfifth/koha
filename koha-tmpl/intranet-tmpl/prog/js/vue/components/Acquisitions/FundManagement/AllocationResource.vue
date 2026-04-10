@@ -147,6 +147,7 @@ export default {
                                       "!=": entity_id,
                                   },
                               },
+                              required: true,
                           },
                       ]
                     : []),
