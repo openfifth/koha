@@ -754,7 +754,7 @@
     }
 
     async function processIdentifiers() {
-        var content = textarea.value;
+        var content = textarea.value.trim();
         hideErrors();
         if (content.length === 0) return;
 
