@@ -2481,7 +2481,10 @@ subtest 'calculate_hold_fee() tests' => sub {
 
     t::lib::Mocks::mock_preference( 'TitleHoldFeeStrategy', 'highest' );
     $fee = $title_hold->calculate_hold_fee();
-    is( $fee, 3.00, 'Title-level hold: items with negative notforloan (on order, holdable) included in fee calculation' );
+    is(
+        $fee, 3.00,
+        'Title-level hold: items with negative notforloan (on order, holdable) included in fee calculation'
+    );
 
     # Restore for remaining tests
     $item2->notforloan(1)->store;
