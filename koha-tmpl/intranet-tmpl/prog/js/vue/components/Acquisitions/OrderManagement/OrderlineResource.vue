@@ -31,6 +31,7 @@ export default {
             getActiveCurrency,
             formatValueWithCurrency,
             differentCurrenciesInLedgers,
+            applyNumberValidation,
         } = acquisitionsStore;
         const mainStore = inject("mainStore");
         const { loading, loaded } = mainStore;
@@ -618,6 +619,7 @@ export default {
                     label: $__("Price"),
                     defaultValue: null,
                     size: 6,
+                    ...applyNumberValidation(),
                     hideIn: ["Search"],
                 },
                 {

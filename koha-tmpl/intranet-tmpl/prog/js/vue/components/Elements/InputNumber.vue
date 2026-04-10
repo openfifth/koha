@@ -45,7 +45,7 @@ export default {
                 }
             },
             set(value) {
-                emit("update:modelValue", value ? parseInt(value) : value);
+                emit("update:modelValue", value);
             },
         });
         return { model, isInputActive };

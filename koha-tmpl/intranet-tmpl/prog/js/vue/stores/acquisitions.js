@@ -4,6 +4,7 @@ import { reactive, computed, toRefs } from "vue";
 import { withAuthorisedValueActions } from "../composables/authorisedValues";
 import { permissionsActions } from "../composables/permissions";
 import { acquisitionsActions } from "../composables/acquisitions";
+import { $__ } from "@koha-vue/i18n";
 
 export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
     const store = reactive({
@@ -64,6 +65,16 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
                 },
                 { branchNames: [], groupNames: [] }
             );
+        },
+        applyNumberValidation() {
+            return {
+                formErrorHandler: value => {
+                    return /^[\-]?\d*(\.\d{0,2})*$/.test(value);
+                },
+                formErrorMessage: $__(
+                    "Please add amount in valid format: 0.00"
+                ),
+            };
         },
     };
     const getters = {
