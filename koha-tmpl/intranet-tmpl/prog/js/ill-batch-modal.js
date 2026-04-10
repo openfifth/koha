@@ -624,6 +624,10 @@
                 return response.json();
             })
             .then(function (jsoned) {
+                if (jsoned.patron && jsoned.patron.cardnumber) {
+                    jsoned.cardnumber = jsoned.patron.cardnumber;
+                }
+
                 batch.data = {
                     ill_batch_id: jsoned.ill_batch_id,
                     name: jsoned.name,
