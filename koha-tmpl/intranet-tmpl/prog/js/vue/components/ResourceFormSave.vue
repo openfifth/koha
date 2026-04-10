@@ -225,6 +225,30 @@ export default {
                     return;
                 }
             }
+            const formErrorFields = resourceAttrs.filter(ra =>
+                ra.hasOwnProperty("formErrorHandler")
+            );
+            const errors = [];
+            if (formErrorFields.length) {
+                formErrorFields.forEach(ef => {
+                    const result = ef.formErrorHandler(resourceToSave[ef.name]);
+                    if (!result)
+                        errors.push({
+                            label: ef.label,
+                            message: ef.formErrorMessage,
+                        });
+                });
+            }
+            if (errors.length) {
+                let errorString =
+                    "The form contains the following errors: <br>";
+                errors.forEach(err => {
+                    errorString += err.label + " - " + err.message + "<br>";
+                });
+                $event.preventDefault();
+                setWarning(errorString);
+                return;
+            }
             onFormSave($event, resourceToSave).then(resource => {
                 if (resource) {
                     router.push({
