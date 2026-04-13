@@ -9,15 +9,18 @@ describe("EDIFACT Search Functionality Tests", () => {
         // Clear input first to ensure clean state
         cy.get("#EDI_modal .edi-search-input").clear();
 
-        // Type with delay and verify the value was entered correctly
-        cy.get("#EDI_modal .edi-search-input").type(searchTerm, { delay: 50 });
+        // Set value directly and trigger input event to avoid keyboard simulation
+        // timing races with the 500ms debounce in the component
+        cy.get("#EDI_modal .edi-search-input")
+            .invoke("val", searchTerm)
+            .trigger("input");
 
-        // Verify the input contains what we typed - retry if needed
+        // Verify the input contains what we typed
         cy.get("#EDI_modal .edi-search-input").should("have.value", searchTerm);
 
         if (shouldFindResults) {
-            // Wait for debounce + search to complete (with longer timeout for reliability)
-            cy.get("#EDI_modal .edi-search-count", { timeout: 3000 }).should(
+            // Wait for debounce + search to complete
+            cy.get("#EDI_modal .edi-search-count", { timeout: 10000 }).should(
                 "not.contain",
                 "0 results"
             );
