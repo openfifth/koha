@@ -128,11 +128,18 @@ export default {
         const { updateSubComponentReadyState } = inject("subComponentsReady");
 
         const buildOptionsArray = (field, name) => {
-            field.labels[0] = "";
-            const options = Object.keys(field.labels).map((key, index) => ({
-                label: field.labels[key],
-                value: field.values[index],
-            }));
+            const options = Object.keys(field.labels).reduce(
+                (acc, key, index) => {
+                    if (field.values[index]) {
+                        acc.push({
+                            label: field.labels[key],
+                            value: field.values[index],
+                        });
+                    }
+                    return acc;
+                },
+                []
+            );
             selectOptions.value[name] = options;
             return options;
         };
