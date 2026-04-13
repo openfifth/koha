@@ -95,6 +95,18 @@ sub parent_fund {
     return Koha::Acquisition::FundManagement::Fund->_new_from_dbic($fund_rs);
 }
 
+=head3 is_sub_fund
+
+Checks if a fund is a sub fund
+
+=cut
+
+sub is_sub_fund {
+    my ( $self, $args ) = @_;
+
+    return $self->fund_parent_id ? 1 : 0;
+}
+
 =head3 has_sub_funds
 
 Checks if a fund has sub funds

@@ -71,6 +71,9 @@ export default {
                 editLabel: $__("Edit allocation #%s"),
                 emptyListMessage: $__("There are no allocations defined"),
                 newLabel: $__("New allocation"),
+                breachAmountMessage: $__(
+                    "The parent amount will be breached by %s. Please reduce the amount for this allocation."
+                ),
             },
             moduleStore: "acquisitionsStore",
             props,
@@ -232,7 +235,13 @@ export default {
                     baseResource.setMessage($__("Allocation created"));
                     return allocation;
                 },
-                error => {}
+                error => {
+                    baseResource.setWarning(
+                        baseResource.i18n.breachAmountMessage.format(
+                            formatValueWithCurrency(error.result.breach_amount)
+                        )
+                    );
+                }
             );
         };
 

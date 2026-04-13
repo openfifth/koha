@@ -217,11 +217,23 @@ sub update_amount {
     my $entity            = $self->_object_hierarchy()->{object};
     my $value_change_type = $args->{type};
     my $value             = $args->{value};
+    my $is_increase       = $value_change_type eq 'increase' ? 1 : 0;
 
     my $entity_field = $entity . "_amount";
 
-    my $new_value = $value_change_type eq 'increase' ? $self->$entity_field + $value : $self->$entity_field - $value;
-    $self->$entity_field($new_value)->store;
+    my $new_value = $is_increase ? $self->$entity_field + $value : $self->$entity_field - $value;
+    if ($is_increase) {
+        my $result =
+              $entity ne 'ledger'
+            ? $self->validate_child_object_amounts_against_parent_amount( { new_allocation => $value } )
+            : { within_limit => 1 };
+        if ( $result->{within_limit} ) {
+            $self->$entity_field($new_value)->store;
+            return $result;
+        } else {
+            return $result;
+        }
+    }
 }
 
 =head3 child_object_managing_branches
@@ -250,34 +262,50 @@ sub child_object_managing_branches {
     return $managing_branches;
 }
 
-=head3 validate_child_object_amounts
+=head3 validate_child_object_amounts_against_parent_amount
 
 =cut
 
-sub validate_child_object_amounts {
+sub validate_child_object_amounts_against_parent_amount {
     my ( $self, $args ) = @_;
 
-    my $children   = $args->{children};
-    my $new_object = $args->{new_object};
+    my $parent_level        = $self->is_sub_fund ? 'fund' : 'ledger';
+    my $parent_amount_field = $parent_level . "_amount";
+    my $parent              = $self->parent_object;
 
-    my $current_object     = $self->_object_hierarchy()->{object};
-    my $object_value_field = $current_object . "_amount";
-    my $child_object       = $self->_object_hierarchy()->{child};
-    my $child_value_field  = $child_object . "_amount";
-    my $id_field           = $child_object . "_id";
+    my $search_fields = {};
+    my $search_id     = $parent_level . "_id";
+    $search_fields->{$search_id} = $self->$search_id;
+    my $children = Koha::Acquisition::FundManagement::Funds->search($search_fields);
 
     my $children_value;
     foreach my $child ( @{ $children->as_list } ) {
-        next if $child->$id_field eq $new_object->$id_field;
-        $children_value += $child->$child_value_field;
+        $children_value += $child->fund_amount;
     }
-    $children_value += $new_object->$child_value_field;
+    my $new_allocation = defined $args->{new_allocation} ? $args->{new_allocation} : $self->fund_amount;
+    $children_value += $new_allocation;
+    my $parent_value = $parent->$parent_amount_field;
 
-    my $parent_value = $self->$object_value_field;
     return {
         within_limit  => $children_value <= $parent_value ? 1 : 0,
         breach_amount => $children_value - $parent_value
     };
+}
+
+=head3 parent_object
+
+=cut
+
+sub parent_object {
+    my ( $self, $args ) = @_;
+
+    my $parent;
+    if ( $self->is_sub_fund ) {
+        $parent = Koha::Acquisition::FundManagement::Funds->find( $self->fund_parent_id );
+    } else {
+        $parent = Koha::Acquisition::FundManagement::Ledgers->find( $self->ledger_id );
+    }
+    return $parent;
 }
 
 1;

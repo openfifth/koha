@@ -90,11 +90,10 @@ sub add {
     return try {
         Koha::Database->new->schema->txn_do(
             sub {
-
                 my $body = $c->req->json;
+                my $is_parent_amount_breached;
 
-                my $allocation =
-                    Koha::Acquisition::FundManagement::Allocation->new_from_api($body)->store->discard_changes;
+                my $allocation = Koha::Acquisition::FundManagement::Allocation->new_from_api($body);
 
                 my $entities = {
                     funds => {
@@ -112,18 +111,39 @@ sub add {
 
                 my $entity      = $module->{entity};
                 my $change_type = $body->{type} eq 'transfer' ? 'decrease' : $body->{type};
-                $entity->update_amount( { type => $change_type, value => $body->{allocation_amount} } );
+                $is_parent_amount_breached =
+                    $entity->update_amount( { type => $change_type, value => $body->{allocation_amount} } );
+                if ($is_parent_amount_breached) {
+                    return $c->render(
+                        status  => 400,
+                        openapi => {
+                            error          => 'Amount has been breached', result => $is_parent_amount_breached,
+                            dialog_confirm => 1
+                        }
+                    ) unless $is_parent_amount_breached->{within_limit};
+                }
+                $allocation->store->discard_changes;
 
                 if ( $body->{type} eq 'transfer' && $body->{is_transferred_to} ) {
                     my $recipient = $module->{recipient};
-                    $recipient->update_amount( { type => 'increase', value => $body->{allocation_amount} } );
+                    $is_parent_amount_breached =
+                        $recipient->update_amount( { type => 'increase', value => $body->{allocation_amount} } );
                     my $transfer = {%$body};
                     $transfer->{ $module->{id_param} } = $body->{is_transferred_to};
                     $transfer->{is_transferred_from}   = $body->{ $module->{id_param} };
                     $transfer->{is_transferred_to}     = undef;
 
-                    my $transfer_allocation =
-                        Koha::Acquisition::FundManagement::Allocation->new_from_api($transfer)->store->discard_changes;
+                    my $transfer_allocation = Koha::Acquisition::FundManagement::Allocation->new_from_api($transfer);
+                    if ($is_parent_amount_breached) {
+                        return $c->render(
+                            status  => 400,
+                            openapi => {
+                                error          => 'Amount has been breached', result => $is_parent_amount_breached,
+                                dialog_confirm => 1
+                            }
+                        ) unless $is_parent_amount_breached->{within_limit};
+                    }
+                    $transfer_allocation->store->discard_changes;
                 }
 
                 $c->res->headers->location( $c->req->url->to_string . '/' . $allocation->allocation_id );
