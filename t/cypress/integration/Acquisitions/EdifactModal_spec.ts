@@ -404,11 +404,8 @@ describe("EDIFACT Modal Tests", () => {
             // Type a search query that should have multiple results
             cy.get("#EDI_modal .edi-search-input").type("UNH");
 
-            // Wait for search to complete
-            cy.wait(1000);
-
-            // Check that results are found and navigation buttons are enabled
-            cy.get("#EDI_modal .edi-search-count").should(
+            // Wait for debounce + search to complete
+            cy.get("#EDI_modal .edi-search-count", { timeout: 10000 }).should(
                 "not.contain",
                 "0 results"
             );
@@ -426,20 +423,21 @@ describe("EDIFACT Modal Tests", () => {
 
             // Search for something likely to exist
             cy.get("#EDI_modal .edi-search-input").type("UN");
-            cy.wait(1000);
 
-            // If results found, navigation should be enabled
-            cy.get("#EDI_modal .edi-search-count").then($count => {
-                const countText = $count.text();
-                if (!countText.includes("0 results")) {
-                    cy.get("#EDI_modal .edi-search-prev").should(
-                        "not.be.disabled"
-                    );
-                    cy.get("#EDI_modal .edi-search-next").should(
-                        "not.be.disabled"
-                    );
+            // Wait for debounce + search to complete
+            cy.get("#EDI_modal .edi-search-count", { timeout: 10000 }).then(
+                $count => {
+                    const countText = $count.text();
+                    if (!countText.includes("0 results")) {
+                        cy.get("#EDI_modal .edi-search-prev").should(
+                            "not.be.disabled"
+                        );
+                        cy.get("#EDI_modal .edi-search-next").should(
+                            "not.be.disabled"
+                        );
+                    }
                 }
-            });
+            );
         });
 
         it("should clear search when input is cleared", () => {
