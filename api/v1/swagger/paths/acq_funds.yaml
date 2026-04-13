@@ -145,7 +145,6 @@
           - owner
           - managing_library
           - managing_library.acquisitions_library_groups
-          - fund_group
           - sub_funds
           - parent_fund
           - parent_fund.managing_library.acquisitions_library_groups

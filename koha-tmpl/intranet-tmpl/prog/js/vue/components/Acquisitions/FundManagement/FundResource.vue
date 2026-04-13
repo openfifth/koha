@@ -521,7 +521,6 @@ export default {
             delete fund.fund_parent_name;
             delete fund.currency;
             delete fund.parent_fund;
-            delete fund.fund_group;
             delete fund.modified_date;
             delete fund.created_date;
             delete fund.child_object_managing_branches;

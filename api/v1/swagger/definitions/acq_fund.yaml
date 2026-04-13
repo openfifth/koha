@@ -22,11 +22,6 @@ properties:
       - integer
       - "null"
     description: Internal fiscal period identifier
-  fund_group_id:
-    type:
-      - integer
-      - "null"
-    description: Internal fund group identifier
   name:
     type:
       - string
@@ -110,13 +105,6 @@ properties:
     description: Ledger
     items:
       $ref: "acq_ledger.yaml"
-  fund_group:
-    type:
-      - object
-      - "null"
-    description: Fund group
-    items:
-      $ref: "acq_fund_group.yaml"
   allocations:
     type: array
     description: List of allocations

@@ -66,25 +66,6 @@ return {
             say_info( $out, "Table 'acq_ledgers' already exists" );
         }
 
-        unless ( TableExists('acq_fund_group') ) {
-            $dbh->do(
-                q{
-                CREATE TABLE `acq_fund_group` (
-                `fund_group_id` INT(11) NOT NULL AUTO_INCREMENT,
-                `name` VARCHAR(255) DEFAULT NULL COMMENT 'name for the fund group',
-                `currency` VARCHAR(10) DEFAULT NULL COMMENT 'currency of the fund allocation',
-                `managing_branch` varchar(10) DEFAULT NULL COMMENT 'branch responsible',
-                PRIMARY KEY (`fund_group_id`),
-                FOREIGN KEY (`managing_branch`) REFERENCES `branches` (`branchcode`) ON DELETE CASCADE ON UPDATE CASCADE
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-            }
-            );
-
-            say_success( $out, "Added new table 'acq_fund_group'" );
-        } else {
-            say_info( $out, "Table 'acq_fund_group' already exists" );
-        }
-
         unless ( TableExists('acq_funds') ) {
             $dbh->do(
                 q{
@@ -93,7 +74,6 @@ return {
                 `fund_parent_id` INT(11) DEFAULT NULL COMMENT 'if this fund is a child of another the parent fund id will be stored here',
                 `ledger_id` INT(11) NOT NULL COMMENT 'ledger the fund applies to',
                 `fiscal_period_id` INT(11) NOT NULL COMMENT 'fiscal period the fund applies to',
-                `fund_group_id` INT(11) DEFAULT NULL COMMENT 'group for the fund',
                 `name` VARCHAR(80) DEFAULT NULL COMMENT 'name for the fund',
                 `code` VARCHAR(30) DEFAULT NULL COMMENT 'code for the fund',
                 `description` longtext DEFAULT '' COMMENT 'description for the fund',
@@ -111,7 +91,6 @@ return {
                 PRIMARY KEY (`fund_id`),
                 FOREIGN KEY (`ledger_id`) REFERENCES `acq_ledgers` (`ledger_id`) ON DELETE CASCADE ON UPDATE CASCADE,
                 FOREIGN KEY (`fiscal_period_id`) REFERENCES `acq_fiscal_period` (`fiscal_period_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-                FOREIGN KEY (`fund_group_id`) REFERENCES `acq_fund_group` (`fund_group_id`) ON DELETE SET NULL ON UPDATE CASCADE,
                 FOREIGN KEY (`owner_id`) REFERENCES `borrowers` (`borrowernumber`),
                 FOREIGN KEY (`managing_branch`) REFERENCES `branches` (`branchcode`) ON DELETE CASCADE ON UPDATE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

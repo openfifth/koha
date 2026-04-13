@@ -335,21 +335,6 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
-=head2 acq_fund_groups
-
-Type: has_many
-
-Related object: L<Koha::Schema::Result::AcqFundGroup>
-
-=cut
-
-__PACKAGE__->has_many(
-  "acq_fund_groups",
-  "Koha::Schema::Result::AcqFundGroup",
-  { "foreign.managing_branch" => "self.branchcode" },
-  { cascade_copy => 0, cascade_delete => 0 },
-);
-
 =head2 acq_funds
 
 Type: has_many
@@ -1101,8 +1086,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-03-25 15:23:13
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:dflL9os957MDCCDRqLXtDw
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-13 15:39:21
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:llJMfSQQJHhnS9UTveTMzw
 
 __PACKAGE__->has_many(
     "additional_field_values",

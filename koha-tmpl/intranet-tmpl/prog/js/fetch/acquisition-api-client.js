@@ -187,7 +187,7 @@ export class AcquisitionAPIClient {
                     endpoint: "funds/" + id,
                     headers: {
                         "x-koha-embed":
-                            "owner,managing_library,fiscal_period,fund_group,ledger,ledger.managing_library,ledger.managing_library.acquisitions_library_groups,managing_library.acquisitions_library_groups,allocations,sub_funds,parent_fund,parent_fund.managing_library.acquisitions_library_groups,child_object_managing_branches",
+                            "owner,managing_library,fiscal_period,ledger,ledger.managing_library,ledger.managing_library.acquisitions_library_groups,managing_library.acquisitions_library_groups,allocations,sub_funds,parent_fund,parent_fund.managing_library.acquisitions_library_groups,child_object_managing_branches",
                         ...headers,
                     },
                 }),
@@ -223,15 +223,6 @@ export class AcquisitionAPIClient {
                             _per_page: 1,
                             ...(query && { q: JSON.stringify(query) }),
                         }),
-                }),
-            getFundGroup: (query, params, headers) =>
-                this.httpClient.getAll({
-                    endpoint: "fund_groups",
-                    query,
-                    params,
-                    ...(headers && {
-                        headers,
-                    }),
                 }),
         };
     }
@@ -277,51 +268,6 @@ export class AcquisitionAPIClient {
                 this.httpClient.count({
                     endpoint:
                         "allocations?" +
-                        new URLSearchParams({
-                            _page: 1,
-                            _per_page: 1,
-                            ...(query && { q: JSON.stringify(query) }),
-                        }),
-                }),
-        };
-    }
-
-    get fundGroups() {
-        return {
-            get: (id, headers) =>
-                this.httpClient.get({
-                    endpoint: "fund_groups/" + id,
-                    ...(headers && {
-                        headers,
-                    }),
-                }),
-            getAll: (query, params, headers) =>
-                this.httpClient.getAll({
-                    endpoint: "fund_groups",
-                    query,
-                    params,
-                    ...(headers && {
-                        headers,
-                    }),
-                }),
-            delete: id =>
-                this.httpClient.delete({
-                    endpoint: "fund_groups/" + id,
-                }),
-            create: fund_group =>
-                this.httpClient.post({
-                    endpoint: "fund_groups",
-                    body: fund_group,
-                }),
-            update: (fund_group, id) =>
-                this.httpClient.put({
-                    endpoint: "fund_groups/" + id,
-                    body: fund_group,
-                }),
-            count: (query = {}) =>
-                this.httpClient.count({
-                    endpoint:
-                        "fund_groups?" +
                         new URLSearchParams({
                             _page: 1,
                             _per_page: 1,

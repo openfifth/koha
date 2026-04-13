@@ -23,7 +23,6 @@ use base qw(Koha::Acquisition::FundManagement::BaseObject);
 use Koha::Acquisition::FundManagement::Allocations;
 use Koha::Acquisition::FundManagement::FiscalPeriod;
 use Koha::Acquisition::FundManagement::Ledger;
-use Koha::Acquisition::FundManagement::FundGroup;
 use Koha::Patron;
 
 =head1 NAME

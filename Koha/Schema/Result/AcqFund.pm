@@ -52,14 +52,6 @@ ledger the fund applies to
 
 fiscal period the fund applies to
 
-=head2 fund_group_id
-
-  data_type: 'integer'
-  is_foreign_key: 1
-  is_nullable: 1
-
-group for the fund
-
 =head2 name
 
   data_type: 'varchar'
@@ -188,8 +180,6 @@ __PACKAGE__->add_columns(
   { data_type => "integer", is_foreign_key => 1, is_nullable => 0 },
   "fiscal_period_id",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 0 },
-  "fund_group_id",
-  { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
   "name",
   { data_type => "varchar", is_nullable => 1, size => 80 },
   "code",
@@ -289,26 +279,6 @@ __PACKAGE__->belongs_to(
   { is_deferrable => 1, on_delete => "CASCADE", on_update => "CASCADE" },
 );
 
-=head2 fund_group
-
-Type: belongs_to
-
-Related object: L<Koha::Schema::Result::AcqFundGroup>
-
-=cut
-
-__PACKAGE__->belongs_to(
-  "fund_group",
-  "Koha::Schema::Result::AcqFundGroup",
-  { fund_group_id => "fund_group_id" },
-  {
-    is_deferrable => 1,
-    join_type     => "LEFT",
-    on_delete     => "SET NULL",
-    on_update     => "CASCADE",
-  },
-);
-
 =head2 ledger
 
 Type: belongs_to
@@ -365,8 +335,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-03-25 15:43:20
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:aZqveE/PMrqUivyLIkr7Kg
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-13 15:39:21
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:SGDmuQJFOnTTU7dqut9iww
 
 __PACKAGE__->add_columns(
     '+status'             => { is_boolean => 1 },

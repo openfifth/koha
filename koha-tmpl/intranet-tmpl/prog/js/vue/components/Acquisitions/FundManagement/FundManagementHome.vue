@@ -13,12 +13,6 @@
             v-if="isUserPermitted('manageLedgers')"
         />
         <ToolbarLink
-            :to="{ name: 'FundGroupList' }"
-            icon="pen-to-square"
-            :title="$__('Manage fund groups')"
-            v-if="isUserPermitted('manageFundGroups')"
-        />
-        <ToolbarLink
             :to="{ name: 'FundList' }"
             icon="pen-to-square"
             :title="$__('Manage funds')"
@@ -60,26 +54,6 @@
                         :reduce="av => av.value"
                         :options="authorisedValues.av_fund_type"
                         label="description"
-                    >
-                        <template #search="{ attributes, events }">
-                            <input
-                                class="vs__search"
-                                v-bind="attributes"
-                                v-on="events"
-                            />
-                        </template>
-                    </v-select>
-                </div>
-                <div class="filter-grid-cell">
-                    <label for="fund_fund_group" class="filter-label"
-                        >{{ $__("Fund group") }}:</label
-                    >
-                    <v-select
-                        id="fund_fund_group"
-                        v-model="filters.fund_group"
-                        :reduce="av => av.fund_group_id"
-                        :options="fundGroups"
-                        label="name"
                     >
                         <template #search="{ attributes, events }">
                             <input
@@ -177,7 +151,6 @@ export default {
         const filters = ref({
             status: null,
             fund_type: null,
-            fund_group: null,
             owner_id: null,
             fiscal_period_id: null,
             ledger_id: null,
@@ -186,8 +159,7 @@ export default {
             { description: $__("Active"), value: true },
             { description: $__("Inactive"), value: false },
         ]);
-        const fundGroups = ref([]);
-        const initialized = ref(false);
+        const initialized = ref(true);
 
         const tableUrl = (type, query) => {
             let url = `/api/v1/acquisitions/${type}`;
@@ -233,9 +205,6 @@ export default {
             if (tableFilters.hasOwnProperty("fund_type")) {
                 delete tableFilters.fund_type;
             }
-            if (tableFilters.hasOwnProperty("fund_group")) {
-                delete tableFilters.fund_group;
-            }
             ledgersTable.value.redraw(tableUrl("ledgers", tableFilters));
         };
         const clearFilters = () => {
@@ -270,24 +239,13 @@ export default {
         const filterLimitations = computed(() => {
             const filterLimitations = {};
             Object.keys(filters.value)
-                .filter(key => !["fund_type", "fund_group"].includes(key))
+                .filter(key => !["fund_type"].includes(key))
                 .forEach(key => {
                     if (filters.value[key]) {
                         filterLimitations[key] = filters.value[key];
                     }
                 });
             return filterLimitations;
-        });
-
-        onBeforeMount(() => {
-            const client = APIClient.acquisition;
-            client.fundGroups.getAll().then(
-                result => {
-                    fundGroups.value = result;
-                    initialized.value = true;
-                },
-                error => {}
-            );
         });
 
         return {
@@ -299,7 +257,6 @@ export default {
             tableOptionsFunds,
             filters,
             statusOptions,
-            fundGroups,
             initialized,
             filterLimitations,
             filterTables,

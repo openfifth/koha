@@ -182,43 +182,6 @@ export const routes = [
                         ],
                     },
                     {
-                        path: "fund_group",
-                        title: "Fund groups",
-                        is_navigation_item: false,
-                        resource:
-                            "Acquisitions/FundManagement/FundGroupResource.vue",
-                        children: [
-                            {
-                                path: "",
-                                component: markRaw(ResourceWrapper),
-                                name: "FundGroupList",
-                                title: "List fund groups",
-                                permission: "manageFundGroups",
-                            },
-                            {
-                                path: ":fund_group_id",
-                                component: markRaw(ResourceWrapper),
-                                name: "FundGroupShow",
-                                title: "Show fund group",
-                                permission: "manageFundGroups",
-                            },
-                            {
-                                path: "add",
-                                component: markRaw(ResourceWrapper),
-                                name: "FundGroupFormAdd",
-                                title: "Add fund group",
-                                permission: "createFundGroup",
-                            },
-                            {
-                                path: "edit/:fund_group_id",
-                                component: markRaw(ResourceWrapper),
-                                name: "FundGroupFormAddEdit",
-                                title: "Edit fund group",
-                                permission: "editFundGroup",
-                            },
-                        ],
-                    },
-                    {
                         path: ":entity/:entity_id/allocate",
                         title: $__("Allocate funds"),
                         is_navigation_item: false,

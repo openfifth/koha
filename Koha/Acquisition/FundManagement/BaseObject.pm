@@ -126,19 +126,6 @@ sub fund {
     return Koha::Acquisition::FundManagement::Fund->_new_from_dbic($fund_rs);
 }
 
-=head3 fund_group
-
-Method to embed the fund group to a given fund
-
-=cut
-
-sub fund_group {
-    my ($self) = @_;
-    my $fund_group_rs = $self->_result->fund_group;
-    return unless $fund_group_rs;
-    return Koha::Acquisition::FundManagement::FundGroup->_new_from_dbic($fund_group_rs);
-}
-
 =head3 ledgers
 
 Method to embed ledgers to the fiscal period
