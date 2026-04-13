@@ -107,9 +107,6 @@ sub update {
     return try {
         my $body = $c->req->json;
 
-        delete $body->{lib_groups}   if $body->{lib_groups};
-        delete $body->{last_updated} if $body->{last_updated};
-
         $fiscal_period->set_from_api($body)->store;
 
         $c->res->headers->location( $c->req->url->to_string . '/' . $fiscal_period->fiscal_period_id );

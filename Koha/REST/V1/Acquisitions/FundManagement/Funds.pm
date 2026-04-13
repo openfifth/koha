@@ -61,7 +61,6 @@ sub get {
         return $c->render_resource_not_found("Fund")
             unless $fund;
 
-        $fund->{add_accounting_values} = 1;
         return $c->render( status => 200, openapi => $c->objects->to_api($fund), );
     } catch {
         $c->unhandled_exception($_);
@@ -80,23 +79,6 @@ sub add {
             sub {
 
                 my $body = $c->req->json;
-
-                # delete $body->{lib_groups} if $body->{lib_groups};
-
-                # $body = _inherit_currency_and_owner($body);
-
-                # if ( $body->{spend_limit} ) {
-                #     my $ledger = Koha::Acquisition::FundManagement::Ledgers->find( $body->{ledger_id} );
-                #     my $result = $ledger->check_spend_limits( { new_allocation => $body->{spend_limit} } );
-                #     return $c->render(
-                #         status  => 400,
-                #         openapi => {
-                #                   error => "Ledger spend limit breached, please reduce spend limit by "
-                #                 . $result->{breach_amount}
-                #                 . " or increase the spend limit for this ledger"
-                #         }
-                #     ) unless $result->{within_limit};
-                # }
 
                 my $fund = Koha::Acquisition::FundManagement::Fund->new_from_api($body)->store->discard_changes;
 
@@ -135,18 +117,6 @@ sub update {
             sub {
 
                 my $body = $c->req->json;
-
-                delete $body->{lib_groups}   if $body->{lib_groups};
-                delete $body->{last_updated} if $body->{last_updated};
-                delete $body->{fund_value}   if exists $body->{fund_value};
-
-                # $body = _inherit_currency_and_owner($body);
-
-                # my $error = $fund->verify_updated_fields( { updated_fields => $body } );
-                # return $c->render(
-                #     status  => 400,
-                #     openapi => { error => $error }
-                # ) if $error;
 
                 $fund->set_from_api($body)->store;
 
@@ -207,25 +177,6 @@ sub delete {
     } catch {
         $c->unhandled_exception($_);
     };
-}
-
-sub _inherit_currency_and_owner {
-    my ($fund) = @_;
-
-    if ( $fund->{fund_parent_id} ) {
-        my $parent = Koha::Acquisition::FundManagement::Funds->find( $fund->{fund_parent_id} );
-        $fund->{currency}         = $parent->currency;
-        $fund->{owner_id}         = $parent->owner_id;
-        $fund->{ledger_id}        = $parent->ledger_id;
-        $fund->{fiscal_period_id} = $parent->fiscal_period_id;
-        return $fund;
-    }
-    my $ledger = Koha::Acquisition::FundManagement::Ledgers->find( { ledger_id => $fund->{ledger_id} } );
-
-    $fund->{currency} = $ledger->currency;
-    $fund->{owner_id} = $ledger->owner_id;
-
-    return $fund;
 }
 
 1;

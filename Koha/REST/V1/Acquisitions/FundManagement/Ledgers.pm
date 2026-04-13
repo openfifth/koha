@@ -61,7 +61,6 @@ sub get {
         return $c->render_resource_not_found("Ledger")
             unless $ledger;
 
-        $ledger->{add_accounting_values} = 1;
         return $c->render( status => 200, openapi => $c->objects->to_api($ledger), );
     } catch {
         $c->unhandled_exception($_);
@@ -80,22 +79,6 @@ sub add {
             sub {
 
                 my $body = $c->req->json;
-                delete $body->{lib_groups} if $body->{lib_groups};
-
-                if ( $body->{spend_limit} ) {
-                    my $fiscal_period =
-                        Koha::Acquisition::FundManagement::FiscalPeriods->find( $body->{fiscal_period_id} );
-                    my $result = $fiscal_period->check_spend_limits( { new_allocation => $body->{spend_limit} } );
-                    return $c->render(
-                        status  => 400,
-                        openapi => {
-                                  error => "Fiscal period spend limit breached, please reduce spend limit by "
-                                . $result->{breach_amount}
-                                . " or increase the spend limit for this fiscal period"
-                        }
-
-                    ) unless $result->{within_limit};
-                }
 
                 my $ledger = Koha::Acquisition::FundManagement::Ledger->new_from_api($body)->store->discard_changes;
 
@@ -135,16 +118,7 @@ sub update {
 
                 my $body = $c->req->json;
 
-                my $error = $ledger->verify_updated_fields( { updated_fields => $body } );
-                return $c->render(
-                    status  => 400,
-                    openapi => { error => $error }
-                ) if $error;
-
-                delete $body->{lib_groups}    if $body->{lib_groups};
                 delete $body->{fiscal_period} if $body->{fiscal_period};
-                delete $body->{last_updated}  if $body->{last_updated};
-                delete $body->{ledger_value}  if exists $body->{ledger_value};
 
                 $ledger->set_from_api($body)->store;
 
