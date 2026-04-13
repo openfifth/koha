@@ -250,4 +250,34 @@ sub child_object_managing_branches {
     return $managing_branches;
 }
 
+=head3 validate_child_object_amounts
+
+=cut
+
+sub validate_child_object_amounts {
+    my ( $self, $args ) = @_;
+
+    my $children   = $args->{children};
+    my $new_object = $args->{new_object};
+
+    my $current_object     = $self->_object_hierarchy()->{object};
+    my $object_value_field = $current_object . "_amount";
+    my $child_object       = $self->_object_hierarchy()->{child};
+    my $child_value_field  = $child_object . "_amount";
+    my $id_field           = $child_object . "_id";
+
+    my $children_value;
+    foreach my $child ( @{ $children->as_list } ) {
+        next if $child->$id_field eq $new_object->$id_field;
+        $children_value += $child->$child_value_field;
+    }
+    $children_value += $new_object->$child_value_field;
+
+    my $parent_value = $self->$object_value_field;
+    return {
+        within_limit  => $children_value <= $parent_value ? 1 : 0,
+        breach_amount => $children_value - $parent_value
+    };
+}
+
 1;

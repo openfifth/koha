@@ -51,7 +51,7 @@ class HttpClient {
                             let json = JSON.parse(text);
                             message =
                                 json.error ||
-                                json.errors.map(e => e.message).join("\n") ||
+                                json.errors?.map(e => e.message).join("\n") ||
                                 json;
                             errorResponse = {
                                 message,

@@ -173,7 +173,7 @@ sub _object_hierarchy {
     return {
         object   => 'fund',
         parent   => 'ledger',
-        child    => 'sub_fund',
+        child    => 'fund',
         children => 'sub_funds'
     };
 }

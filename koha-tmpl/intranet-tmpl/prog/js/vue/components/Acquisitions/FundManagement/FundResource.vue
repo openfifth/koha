@@ -121,6 +121,13 @@ export default {
                 newLabel: isSubFund.value
                     ? $__("New sub fund")
                     : $__("New fund"),
+                breachAmountMessage: isSubFund.value
+                    ? $__(
+                          "The parent fund amount will be breached by %s. Please reduce the amount for this sub fund."
+                      )
+                    : $__(
+                          "The parent ledger amount will be breached by %s. Please reduce the amount for this fund."
+                      ),
             },
             moduleStore: "acquisitionsStore",
             props,
@@ -529,7 +536,15 @@ export default {
                         baseResource.setMessage($__("Fund updated"));
                         return fund;
                     },
-                    error => {}
+                    error => {
+                        baseResource.setWarning(
+                            baseResource.i18n.breachAmountMessage.format(
+                                formatValueWithCurrency(
+                                    error.result.breach_amount
+                                )
+                            )
+                        );
+                    }
                 );
             } else {
                 return baseResource.apiClient.create(fund).then(
@@ -537,7 +552,15 @@ export default {
                         baseResource.setMessage($__("Fund created"));
                         return fund;
                     },
-                    error => {}
+                    error => {
+                        baseResource.setWarning(
+                            baseResource.i18n.breachAmountMessage.format(
+                                formatValueWithCurrency(
+                                    error.result.breach_amount
+                                )
+                            )
+                        );
+                    }
                 );
             }
         };

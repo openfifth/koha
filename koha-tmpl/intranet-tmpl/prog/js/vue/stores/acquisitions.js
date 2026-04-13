@@ -33,25 +33,6 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
         ...withAuthorisedValueActions(store),
         ...permissionsActions(store),
         ...acquisitionsActions(store),
-        formatValueWithCurrency(value, currency) {
-            const formattedPrice = Number(value).format_price();
-            if (!currency) {
-                return formattedPrice;
-            }
-            const { symbol } = store.currencies.find(
-                curr => curr.currency === currency
-            );
-            if (!value) {
-                return `${symbol}0`;
-            }
-            if (!formattedPrice) {
-                return `${symbol}0`;
-            }
-            if (formattedPrice < 0) {
-                return `-${symbol}${-formattedPrice}`;
-            }
-            return `${symbol}${formattedPrice}`;
-        },
         getBranchnamesFromGroups(libraryGroups) {
             return libraryGroups.reduce(
                 (acc, alg) => {

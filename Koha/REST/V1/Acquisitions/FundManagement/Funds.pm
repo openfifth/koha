@@ -77,11 +77,31 @@ sub add {
     return try {
         Koha::Database->new->schema->txn_do(
             sub {
-
                 my $body = $c->req->json;
 
-                my $fund = Koha::Acquisition::FundManagement::Fund->new_from_api($body)->store->discard_changes;
+                my $fund = Koha::Acquisition::FundManagement::Fund->new_from_api($body);
 
+                if ( $fund->fund_parent_id ) {
+                    my $parent_fund =
+                        Koha::Acquisition::FundManagement::Funds->find( { fund_id => $body->{fund_parent_id} } );
+                    my $result = $parent_fund->validate_child_object_amounts(
+                        { children => $parent_fund->sub_funds, new_object => $fund } );
+                    return $c->render(
+                        status  => 400,
+                        openapi =>
+                            { error => 'Parent fund amount has been breached', result => $result, dialog_confirm => 1 }
+                    ) unless $result->{within_limit};
+                }
+
+                my $ledger = Koha::Acquisition::FundManagement::Ledgers->find( $body->{ledger_id} );
+                my $result =
+                    $ledger->validate_child_object_amounts( { children => $ledger->funds, new_object => $fund } );
+                return $c->render(
+                    status  => 400,
+                    openapi => { error => 'Ledger amount has been breached', result => $result, dialog_confirm => 1 }
+                ) unless $result->{within_limit};
+
+                $fund->store->discard_changes;
                 $c->res->headers->location( $c->req->url->to_string . '/' . $fund->fund_id );
                 return $c->render(
                     status  => 201,
