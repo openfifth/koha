@@ -3,7 +3,6 @@ import { markRaw } from "vue";
 import Homepage from "../../components/Acquisitions/Homepage.vue";
 import FundManagementHome from "../../components/Acquisitions/FundManagement/FundManagementHome.vue";
 import OrderManagementHome from "../../components/Acquisitions/OrderManagement/OrderManagementHome.vue";
-import TransferFunds from "../../components/Acquisitions/FundManagement/TransferFunds.vue";
 
 import ResourceWrapper from "../../components/ResourceWrapper.vue";
 
@@ -154,32 +153,6 @@ export const routes = [
                                 name: "FundFormAddEdit",
                                 title: "Edit fund",
                                 permission: "editFund",
-                                alternateLeftMenu: "AcqMenu",
-                            },
-                            // {
-                            //     path: ":fund_id/allocation/edit/:fund_allocation_id",
-                            //     component: markRaw(FundAllocationFormAdd),
-                            //     name: "FundAllocationFormAddEdit",
-                            //     title: "Edit fund allocation",
-                            //     permission: "editFundAllocation",
-                            //alternateLeftMenu: "AcqMenu",
-
-                            // },
-                            // {
-                            //     path: ":fund_id/:sub_fund_id?/allocate",
-                            //     component: markRaw(FundAllocationFormAdd),
-                            //     name: "FundAllocationFormAdd",
-                            //     title: "Allocate funds",
-                            //     permission: "createFundAllocation",
-                            //alternateLeftMenu: "AcqMenu",
-
-                            // },
-                            {
-                                path: "transfer",
-                                component: markRaw(TransferFunds),
-                                name: "TransferFunds",
-                                title: "Transfer funds",
-                                permission: "createFundAllocation",
                                 alternateLeftMenu: "AcqMenu",
                             },
                             {
