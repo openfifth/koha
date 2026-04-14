@@ -575,6 +575,21 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 acq_orderline_items
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::AcqOrderlineItem>
+
+=cut
+
+__PACKAGE__->has_many(
+  "acq_orderline_items",
+  "Koha::Schema::Result::AcqOrderlineItem",
+  { "foreign.itemnumber" => "self.itemnumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 article_requests
 
 Type: has_many
@@ -990,9 +1005,19 @@ __PACKAGE__->might_have(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 orderlines
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-01-22 21:05:23
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:d/Q+Ym3pNstyDcgjVhLykQ
+Type: many_to_many
+
+Composing rels: L</acq_orderline_items> -> orderline
+
+=cut
+
+__PACKAGE__->many_to_many("orderlines", "acq_orderline_items", "orderline");
+
+
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-14 11:16:24
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:dExmiAflKg6bSpyZpK6xTg
 
 __PACKAGE__->belongs_to( biblioitem => "Koha::Schema::Result::Biblioitem", "biblioitemnumber" );
 
