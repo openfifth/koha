@@ -1349,18 +1349,29 @@
                 </thead>
                 <tbody>
                     [% FOREACH result IN batch_results %]
-                        <tr class="[% IF result.success %]table-success[% ELSE %]table-danger[% END %]">
+                        [% SET row_class = 'table-danger' %]
+                        [% IF result.status == 'returned' %]
+                            [% SET row_class = 'table-success' %]
+                        [% ELSIF result.status == 'not_issued' %]
+                            [% SET row_class = 'table-info' %]
+                        [% ELSIF result.status == 'needs_confirm' OR result.status == 'bundle_confirm' %]
+                            [% SET row_class = 'table-warning' %]
+                        [% END %]
+                        <tr class="[% row_class | html %][% IF result.status == 'not_issued' %]batch-row-notissued[% END %]">
                             <td>[% result.barcode | html %]</td>
                             <td>
-                                [% IF result.success %]
+                                [% SWITCH result.status %]
+                                [% CASE 'returned' %]
                                     <span class="badge bg-success">Returned</span>
-                                [% ELSIF result.needs_confirm %]
+                                [% CASE 'not_issued' %]
+                                    <span class="badge bg-secondary">Not checked out</span>
+                                [% CASE 'needs_confirm' %]
                                     <span class="badge bg-warning text-dark">Needs confirmation</span>
-                                [% ELSIF result.bundle_confirm %]
+                                [% CASE 'bundle_confirm' %]
                                     <span class="badge bg-warning text-dark">Bundle confirmation required</span>
-                                [% ELSIF result.messages.BadBarcode %]
+                                [% CASE 'bad_barcode' %]
                                     <span class="badge bg-danger">Invalid barcode</span>
-                                [% ELSE %]
+                                [% CASE %]
                                     <span class="badge bg-danger">Failed</span>
                                 [% END %]
                             </td>
@@ -1652,7 +1663,7 @@
                 $('#batch-mode-keep-selection').prop('checked', true);
             if ( batch_mode_settings.match('BATCH_CHECKIN_IGNORE_NOTISSUED') ) {
                 $('#batch-mode-ignore-notissued').prop('checked', true);
-                $('div.alert.notissued').hide();
+                $('tr.batch-row-notissued').hide();
             }
 
             // Automatic hold capture depends on HoldsAutoFill
