@@ -21,7 +21,8 @@ use Modern::Perl;
 
 use Mojo::Base 'Mojolicious::Controller';
 
-use JSON qw( decode_json encode_json );
+use JSON      qw( decode_json encode_json );
+use Net::CIDR qw( range2cidr cidrlookup );
 
 use C4::Auth qw( create_basic_session );
 use C4::Context;
@@ -389,6 +390,17 @@ sub attributes {
         );
     }
 
+    my $client_ip   = $c->tx->remote_address;
+    my $allowed_ips = $saml2_config->{debug_allowed_ips};
+    unless ( _ip_in_allowed_range( $allowed_ips, $client_ip ) ) {
+        $logger->warn("SAML2 attributes: access denied for IP $client_ip");
+        return $c->render(
+            status => 403,
+            text   => "SAML2 debug page: your IP address ($client_ip) is not in the allowed list."
+                . ' Update "Debug allowed IPs" in the Identity Provider configuration.',
+        );
+    }
+
     my $entries       = _read_debug_log( $provider->code );
     my $mapping       = $provider->mappings->as_auth_mapping;
     my $hostname_link = $provider->hostnames->search(
@@ -407,6 +419,45 @@ sub attributes {
 # -------------------------------------------------------------------------
 # Private helpers
 # -------------------------------------------------------------------------
+
+=head2 _ip_in_allowed_range
+
+Checks whether C<$client_ip> is contained in the space-separated list of IP
+addresses / CIDR ranges given in C<$allowed_ips_str>.  When the string is
+empty or undefined the default C<127.0.0.1 ::1> (localhost) is used so that
+the debug page is never accidentally world-readable.
+
+Returns true (1) if the IP is allowed, false (0) otherwise.  Errors in
+the range specification are logged and treated as a deny (fail-closed).
+
+=cut
+
+sub _ip_in_allowed_range {
+    my ( $allowed_ips_str, $client_ip ) = @_;
+
+    my $ranges = $allowed_ips_str // '';
+    $ranges =~ s/^\s+|\s+$//g;
+    $ranges = '127.0.0.1 ::1' unless length $ranges;
+
+    my @allowed = split /\s+/, $ranges;
+    return 0 unless @allowed;
+
+    my @cidr;
+    eval { @cidr = range2cidr(@allowed) };
+    if ($@) {
+        Koha::Logger->get->warn("SAML2 debug _ip_in_allowed_range: bad range '$ranges': $@");
+        return 0;
+    }
+
+    my $ok;
+    eval { $ok = cidrlookup( $client_ip, @cidr ) };
+    if ($@) {
+        Koha::Logger->get->warn("SAML2 debug cidrlookup failed for '$client_ip': $@");
+        return 0;
+    }
+
+    return $ok ? 1 : 0;
+}
 
 =head2 _request_hostname
 
@@ -695,7 +746,7 @@ sub _attributes_html {
 </head>
 <body>
   <h1>SAML2 Attribute Debug &mdash; $provider_name_esc</h1>
-  <p class="warn">&#9888; This page is only visible when <strong>Debug mode</strong> is enabled in the Identity Provider configuration. Disable it in production.</p>
+  <p class="warn"><strong>&#9888; Security warning:</strong> This debug page exposes sensitive data including SAML NameIDs, session identifiers, and attribute values. Access is restricted to IP addresses listed in <em>Debug allowed IPs</em>. <strong>Disable debug mode when you are finished troubleshooting.</strong></p>
 
   <h2>Matchpoint configuration</h2>
   $mp_html

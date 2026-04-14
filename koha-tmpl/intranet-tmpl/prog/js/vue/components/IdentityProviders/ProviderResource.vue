@@ -269,7 +269,18 @@ const PROTOCOL_CONFIG_FIELDS = {
             group: "SAML2 settings",
             nativeOnly: true,
             toolTip: __(
-                "When enabled, the /cgi-bin/koha/saml2/attributes page shows received SAML attributes and matchpoint resolution to help configure attribute mappings. Disable in production."
+                "When enabled, the /auth/saml2/attributes page shows received SAML attributes and matchpoint resolution to help configure attribute mappings. Access is restricted by IP address. Disable in production."
+            ),
+        },
+        {
+            name: "debug_allowed_ips",
+            label: __("Debug allowed IPs"),
+            type: "text",
+            group: "SAML2 settings",
+            nativeOnly: true,
+            debugOnly: true,
+            toolTip: __(
+                "Space-separated IP addresses or CIDR ranges allowed to view the debug page (e.g. '127.0.0.1 ::1 192.168.1.0/24'). Defaults to localhost only when empty."
             ),
         },
     ],
@@ -304,6 +315,10 @@ export default {
         // Tracks the SAML2 mode (ipc/native) so mode-specific config fields
         // can be shown or hidden reactively via hideIn closures.
         const selectedSAML2Mode = ref(null);
+
+        // Tracks whether SAML2 debug mode is enabled so the debug_allowed_ips
+        // field can be shown or hidden reactively via hideIn closures.
+        const selectedDebugMode = ref(null);
 
         // Tracks the IDs of sub-resources that existed when the provider was
         // loaded, so we can delete any that the user removed during editing.
@@ -402,6 +417,10 @@ export default {
                             f.nativeOnly &&
                             selectedSAML2Mode.value !== "native"
                         ) {
+                            return ["Form", "Show", "List"];
+                        }
+                        // Debug-level check: debugOnly fields only visible when debug is enabled
+                        if (f.debugOnly && !selectedDebugMode.value) {
                             return ["Form", "Show", "List"];
                         }
                         // showOnly fields are hidden in the edit/add form
@@ -800,11 +819,13 @@ export default {
             activeFormResource.value = resource;
             selectedProtocol.value = resource.protocol || null;
             const config = resource.config || {};
-            // Track SAML2 mode for reactive field visibility
+            // Track SAML2 mode and debug state for reactive field visibility
             if (resource.protocol === "SAML2") {
                 selectedSAML2Mode.value = config.mode || null;
+                selectedDebugMode.value = config.debug || null;
             } else {
                 selectedSAML2Mode.value = null;
+                selectedDebugMode.value = null;
             }
             const fields = PROTOCOL_CONFIG_FIELDS[resource.protocol] || [];
             fields.forEach(field => {
@@ -905,9 +926,10 @@ export default {
             () => formStateObj.protocol,
             newProtocol => {
                 selectedProtocol.value = newProtocol || null;
-                // Reset SAML2 mode tracking when protocol changes
+                // Reset SAML2 mode and debug tracking when protocol changes
                 if (!newProtocol || newProtocol !== "SAML2") {
                     selectedSAML2Mode.value = null;
+                    selectedDebugMode.value = null;
                 }
             }
         );
@@ -923,6 +945,13 @@ export default {
                         ? newMode.value
                         : newMode || null;
                 selectedSAML2Mode.value = modeStr;
+            }
+        );
+        // Watch the SAML2 debug flag so debug_allowed_ips appears/disappears reactively.
+        watch(
+            () => formStateObj._config_debug,
+            newDebug => {
+                selectedDebugMode.value = newDebug || null;
             }
         );
 

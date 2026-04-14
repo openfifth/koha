@@ -19,7 +19,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 14;
+use Test::More tests => 17;
 use Test::MockModule;
 use Test::Mojo;
 use Test::NoWarnings;
@@ -312,6 +312,45 @@ subtest 'GET /auth/saml2/attributes - disabled by default => 403' => sub {
     plan tests => 2;
 
     $t->get_ok('/auth/saml2/attributes')->status_is(403);
+};
+
+subtest 'GET /auth/saml2/attributes - debug on, default IPs (localhost) => 200' => sub {
+    plan tests => 2;
+
+    # Enable debug with no explicit allowed IPs — defaults to localhost.
+    # Test::Mojo makes requests from 127.0.0.1, so this should succeed.
+    $native_provider->set_config( { mode => 'native', debug => 1 } );
+    $native_provider->store;
+
+    $t->get_ok('/auth/saml2/attributes')->status_is(200);
+
+    # Restore
+    $native_provider->set_config( { mode => 'native' } );
+    $native_provider->store;
+};
+
+subtest 'GET /auth/saml2/attributes - debug on, explicit localhost => 200' => sub {
+    plan tests => 2;
+
+    $native_provider->set_config( { mode => 'native', debug => 1, debug_allowed_ips => '127.0.0.1 ::1' } );
+    $native_provider->store;
+
+    $t->get_ok('/auth/saml2/attributes')->status_is(200);
+
+    $native_provider->set_config( { mode => 'native' } );
+    $native_provider->store;
+};
+
+subtest 'GET /auth/saml2/attributes - debug on, non-matching IP => 403' => sub {
+    plan tests => 2;
+
+    $native_provider->set_config( { mode => 'native', debug => 1, debug_allowed_ips => '10.99.99.99' } );
+    $native_provider->store;
+
+    $t->get_ok('/auth/saml2/attributes')->status_is(403);
+
+    $native_provider->set_config( { mode => 'native' } );
+    $native_provider->store;
 };
 
 subtest 'IPC mode provider is ignored by controller (returns 404)' => sub {
