@@ -455,6 +455,39 @@ export default {
                               componentPath:
                                   "@koha-vue/components/Acquisitions/OrderManagement/ItemMarcFieldsCopy.vue",
                               defaultValue: [],
+                              showElement: {
+                                  type: "table",
+                                  label: $__("Ordered items"),
+                                  hidden: resource => !!resource.items?.length,
+                                  columnData: "items",
+                                  columns: [
+                                      {
+                                          name: $__("Item ID"),
+                                          value: "item_id",
+                                          link: {
+                                              href: "/cgi-bin/koha/catalogue/moredetail.pl",
+                                              params: {
+                                                  biblionumber: "biblio_id",
+                                                  itemnumber: "item_id",
+                                              },
+                                              fragment: resource =>
+                                                  `item${resource.item_id}`,
+                                          },
+                                      },
+                                      {
+                                          name: $__("Item type"),
+                                          value: "item_type.description",
+                                      },
+                                      {
+                                          name: $__("Location"),
+                                          value: "location",
+                                      },
+                                      {
+                                          name: $__("Collection"),
+                                          value: "collection_code",
+                                      },
+                                  ],
+                              },
                               componentProps: {
                                   resource: {
                                       type: "resource",

@@ -51,7 +51,7 @@
     </template>
     <template v-else-if="attribute.type === 'table'">
         <template v-if="attribute.hidden && attribute.hidden(resource)">
-            <label v-if="attribute.label">{{ attribute.label }}</label>
+            <label v-if="attribute.label">{{ attribute.label }}:</label>
             <table>
                 <thead>
                     <th
