@@ -160,6 +160,11 @@ export default {
                 params: { identity_provider_id: providerId.value },
             });
 
+        // A failed save rejects and propagates to ResourceFormSave, which
+        // surfaces the error and skips its own navigation. Unlike
+        // ProviderResource we navigate explicitly here: mappings are a
+        // sub-resource with no standalone show page, so on success we return
+        // to the parent provider.
         const onFormSave = async (e, mappingToSave) => {
             e.preventDefault();
 
@@ -169,29 +174,25 @@ export default {
             delete mapping.mapping_id;
             delete mapping.identity_provider_id;
 
-            try {
-                if (mapping_id) {
-                    await APIClient.identity_providers.mappings.update(
-                        providerId.value,
-                        mapping,
-                        mapping_id
-                    );
-                    baseResource.setMessage(__("Mapping updated"));
-                } else {
-                    await APIClient.identity_providers.mappings.create(
-                        providerId.value,
-                        mapping
-                    );
-                    baseResource.setMessage(__("Mapping created"));
-                }
-
-                baseResource.router.push({
-                    name: "ProviderShow",
-                    params: { identity_provider_id: providerId.value },
-                });
-            } catch (error) {
-                // Errors handled by base resource
+            if (mapping_id) {
+                await APIClient.identity_providers.mappings.update(
+                    providerId.value,
+                    mapping,
+                    mapping_id
+                );
+                baseResource.setMessage(__("Mapping updated"));
+            } else {
+                await APIClient.identity_providers.mappings.create(
+                    providerId.value,
+                    mapping
+                );
+                baseResource.setMessage(__("Mapping created"));
             }
+
+            baseResource.router.push({
+                name: "ProviderShow",
+                params: { identity_provider_id: providerId.value },
+            });
         };
 
         const tableOptions = {

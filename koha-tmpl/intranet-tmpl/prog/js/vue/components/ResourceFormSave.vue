@@ -228,7 +228,10 @@ export default {
                     });
                 }
             } catch (error) {
-                // onFormSave or router push might throw, handled by instancedResource usually
+                // The error has already been surfaced to the user by
+                // httpClient.setError() before onFormSave re-throws it. We
+                // swallow it here only to prevent navigating away from the
+                // form after a failed save.
             }
         };
 
