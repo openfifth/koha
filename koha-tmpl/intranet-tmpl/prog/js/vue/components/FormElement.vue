@@ -111,7 +111,7 @@
             :label="attr.selectLabel"
             :reduce="av => selectRequiredKey(av)"
             :options="selectOptions"
-            :required="!resource[attr.name] && required"
+            :required="resource[attr.name] == null && required"
             :disabled="disabled"
             :multiple="attr.allowMultipleChoices"
             @update:modelValue="
@@ -120,7 +120,7 @@
         >
             <template v-if="required" #search="{ attributes, events }">
                 <input
-                    :required="!resource[attr.name]"
+                    :required="resource[attr.name] == null"
                     class="vs__search"
                     v-bind="attributes"
                     v-on="events"
