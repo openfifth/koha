@@ -1345,6 +1345,7 @@
                         <th>Title</th>
                         <th>Patron</th>
                         <th>Messages</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1376,13 +1377,13 @@
                                 [% END %]
                             </td>
                             <td>
-                                [% IF result.item %]
-                                    <a href="/cgi-bin/koha/catalogue/detail.pl?biblionumber=[% result.item.biblio.biblionumber | uri %]"> [% result.item.biblio.title | html %] </a>
+                                [% IF result.biblionumber %]
+                                    <a href="/cgi-bin/koha/catalogue/detail.pl?biblionumber=[% result.biblionumber | uri %]"> [% result.title | html %] </a>
                                 [% END %]
                             </td>
                             <td>
-                                [% IF result.borrower %]
-                                    <a href="/cgi-bin/koha/members/moremember.pl?borrowernumber=[% result.borrower.borrowernumber | uri %]"> [% result.borrower.firstname | html %] [% result.borrower.surname | html %] </a>
+                                [% IF result.borrowernumber %]
+                                    <a href="/cgi-bin/koha/members/moremember.pl?borrowernumber=[% result.borrowernumber | uri %]"> [% result.borrower_firstname | html %] [% result.borrower_surname | html %] </a>
                                 [% END %]
                             </td>
                             <td>
@@ -1390,6 +1391,24 @@
                                     <div class="alert alert-[% result.checkinmsgtype || 'info' %]">[% result.checkinmsg | html %]</div>
                                 [% END %]
                                 [% INCLUDE 'checkin-messages.inc' messages=result.messages %]
+                            </td>
+                            <td>
+                                [% IF result.status == 'needs_confirm' OR result.status == 'bundle_confirm' %]
+                                    <form method="post" action="/cgi-bin/koha/circ/returns.pl" class="batch-confirm-form">
+                                        [% INCLUDE 'csrf-token.inc' %]
+                                        <input type="hidden" name="op" value="cud-checkin" />
+                                        <input type="hidden" name="batch_confirm_barcode" value="[% result.barcode | html %]" />
+                                        <input type="hidden" name="batch_remaining_barcodes" value="[% batch_remaining_barcodes | html %]" />
+                                        <input type="hidden" name="batch_completed_results" value="[% batch_completed_json | html %]" />
+                                        [% IF result.status == 'needs_confirm' %]
+                                            <input type="hidden" name="multiple_confirm" value="1" />
+                                            <button type="submit" class="btn btn-sm btn-warning">Confirm all parts present</button>
+                                        [% ELSE %]
+                                            <input type="hidden" name="confirm_items_bundle_return" value="1" />
+                                            <button type="submit" class="btn btn-sm btn-warning">Confirm bundle return</button>
+                                        [% END %]
+                                    </form>
+                                [% END %]
                             </td>
                         </tr>
                     [% END %]

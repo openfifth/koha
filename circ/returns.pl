@@ -33,6 +33,7 @@ use Modern::Perl;
 
 use CGI qw ( -utf8 );
 use DateTime;
+use JSON qw( encode_json decode_json );
 
 use C4::Auth        qw( get_template_and_user get_session haspermission );
 use C4::Circulation qw( barcodedecode GetBranchItemRule AddReturn LostItem );
@@ -158,6 +159,15 @@ sub process_batch_checkin_item {
         return \%result;
     }
 
+    # Populate flat scalar fields so the template can render from both
+    # freshly-built results and results restored from a JSON round-trip
+    # (see batch confirm flow further down).
+    my $biblio = $item->biblio;
+    if ($biblio) {
+        $result{title}        = $biblio->title;
+        $result{biblionumber} = $biblio->biblionumber;
+    }
+
     my $itemtype = Koha::ItemTypes->find( $item->effective_itemtype );
     if ( $itemtype && $itemtype->checkinmsg ) {
         $result{checkinmsg}     = $itemtype->checkinmsg;
@@ -193,6 +203,11 @@ sub process_batch_checkin_item {
     $result{messages} = $messages;
     $result{issue}    = $issue;
     $result{borrower} = $borrower;
+    if ($borrower) {
+        $result{borrower_firstname} = $borrower->{firstname};
+        $result{borrower_surname}   = $borrower->{surname};
+        $result{borrowernumber}     = $borrower->{borrowernumber};
+    }
 
     if ( $query->param('confirm_hold') && $messages->{ResFound} ) {
         my $resFound = $messages->{ResFound};
@@ -280,8 +295,11 @@ my $borrower;
 my $returned = 0;
 my $messages;
 my $issue;
-my $barcode_input  = $query->param('barcode');
-my $batch_barcodes = $query->param('batch_barcodes');
+my $barcode_input           = $query->param('barcode');
+my $batch_barcodes          = $query->param('batch_barcodes');
+my $batch_confirm_barcode   = $query->param('batch_confirm_barcode');
+my $batch_remaining_input   = $query->param('batch_remaining_barcodes') // '';
+my $batch_completed_json_in = $query->param('batch_completed_results')  // '';
 
 # Check if barcode input contains multiple lines (batch mode)
 my $is_batch_mode = $barcode_input && $barcode_input =~ /\n/;
@@ -378,13 +396,49 @@ if ( $transit && $op eq 'cud-transfer' ) {
 # actually return book and prepare item table.....
 my $returnbranch;
 
+# Build a JSON-serialisable plain-hash form of a batch result, stripping
+# blessed Koha::Item / Koha::Patron / Koha::Checkout objects so the hidden
+# batch_completed_results round-trip can survive encode_json.
+sub _batch_result_to_plain {
+    my ($result) = @_;
+    return {} unless $result && ref $result eq 'HASH';
+    my %plain;
+    for my $k (
+        qw( barcode status success needs_confirm bundle_confirm
+        checkinmsg checkinmsgtype title biblionumber
+        borrower_firstname borrower_surname borrowernumber )
+        )
+    {
+        $plain{$k} = $result->{$k} if exists $result->{$k};
+    }
+
+    # messages may be a plain hashref of scalar keys; copy only scalar
+    # entries to avoid serialising blessed ResFound / Wrongbranch bits.
+    if ( ref $result->{messages} eq 'HASH' ) {
+        my %msg;
+        for my $mk ( keys %{ $result->{messages} } ) {
+            my $v = $result->{messages}{$mk};
+            $msg{$mk} = $v if !ref $v;
+        }
+        $plain{messages} = \%msg;
+    }
+    return \%plain;
+}
+
 # Handle batch returns
 my @batch_results;
+my @remaining_for_confirm;
+my $stopped_on_confirm = 0;
 if ( $batch_barcodes && $op eq 'cud-checkin' ) {
     my @barcodes = split /\s*\n\s*/, $batch_barcodes;
     @barcodes = grep { $_ && $_ !~ /^\s*$/ } @barcodes;    # Remove empty lines
 
     foreach my $batch_barcode (@barcodes) {
+        if ($stopped_on_confirm) {
+            push @remaining_for_confirm, $batch_barcode;
+            next;
+        }
+
         $batch_barcode = barcodedecode($batch_barcode);
         next unless $batch_barcode;
 
@@ -423,9 +477,124 @@ if ( $batch_barcodes && $op eq 'cud-checkin' ) {
         }
 
         push @batch_results, $result;
+
+        if ( $result->{needs_confirm} || $result->{bundle_confirm} ) {
+            $stopped_on_confirm = 1;
+        }
     }
 
     $template->param( batch_results => \@batch_results );
+
+    if (@batch_results) {
+        my @plain   = map { _batch_result_to_plain($_) } @batch_results;
+        my $encoded = eval { encode_json( \@plain ) };
+        $template->param( batch_completed_json => $encoded ) if $encoded;
+    }
+    if (@remaining_for_confirm) {
+        $template->param( batch_remaining_barcodes => join( "\n", @remaining_for_confirm ) );
+    }
+}
+
+# Re-enter the batch flow after the librarian clicked "Resolve" on a row
+# that hit needs_confirm or bundle_confirm. We restore the already-completed
+# results from the hidden JSON blob, re-run the confirm-required item (now
+# with the confirm param set), then drain any remaining barcodes.
+if (
+       $batch_confirm_barcode
+    && $op eq 'cud-checkin'
+    && (   $query->param('multiple_confirm')
+        || $query->param('confirm_items_bundle_return') )
+    )
+{
+    my @completed;
+    if ( length $batch_completed_json_in ) {
+        my $decoded = eval { decode_json($batch_completed_json_in) };
+        @completed = @{$decoded} if $decoded && ref $decoded eq 'ARRAY';
+    }
+
+    my $return_date =
+          $dropboxmode
+        ? $dropboxdate
+        : dt_from_string($return_date_override);
+
+    my $confirm_result = process_batch_checkin_item(
+        query       => $query,
+        barcode     => barcodedecode($batch_confirm_barcode),
+        branch      => $userenv_branch,
+        exemptfine  => $exemptfine,
+        return_date => $return_date,
+        desk_id     => $desk_id,
+    );
+    push @completed, $confirm_result;
+
+    if ( $confirm_result->{success} ) {
+        unshift @checkins, {
+            barcode        => $batch_confirm_barcode,
+            duedate        => $confirm_result->{issue} ? $confirm_result->{issue}->date_due       : undef,
+            borrowernumber => $confirm_result->{issue} ? $confirm_result->{issue}->borrowernumber : undef,
+            not_returned   => 0,
+        };
+    }
+
+    my @remaining = split /\s*\n\s*/, $batch_remaining_input;
+    @remaining = grep { $_ && $_ !~ /^\s*$/ } @remaining;
+
+    my $stopped_again = 0;
+    my @still_remaining;
+    foreach my $bc (@remaining) {
+        if ($stopped_again) {
+            push @still_remaining, $bc;
+            next;
+        }
+        my $decoded_bc = barcodedecode($bc);
+        next unless $decoded_bc;
+
+        my $r = process_batch_checkin_item(
+            query       => $query,
+            barcode     => $decoded_bc,
+            branch      => $userenv_branch,
+            exemptfine  => $exemptfine,
+            return_date => $return_date,
+            desk_id     => $desk_id,
+        );
+
+        if ( $r->{success} ) {
+            unshift @checkins, {
+                barcode        => $decoded_bc,
+                duedate        => $r->{issue} ? $r->{issue}->date_due       : undef,
+                borrowernumber => $r->{issue} ? $r->{issue}->borrowernumber : undef,
+                not_returned   => 0,
+            };
+        } elsif ( C4::Context->preference('ShowAllCheckins')
+            && !$r->{messages}{BadBarcode}
+            && !$r->{needs_confirm}
+            && !$r->{bundle_confirm} )
+        {
+            unshift @checkins, {
+                barcode        => $decoded_bc,
+                duedate        => $r->{issue} ? $r->{issue}->date_due       : undef,
+                borrowernumber => $r->{issue} ? $r->{issue}->borrowernumber : undef,
+                not_returned   => 1,
+            };
+        }
+
+        push @completed, $r;
+
+        if ( $r->{needs_confirm} || $r->{bundle_confirm} ) {
+            $stopped_again = 1;
+        }
+    }
+
+    $template->param( batch_results => \@completed );
+
+    if (@completed) {
+        my @plain   = map { _batch_result_to_plain($_) } @completed;
+        my $encoded = eval { encode_json( \@plain ) };
+        $template->param( batch_completed_json => $encoded ) if $encoded;
+    }
+    if (@still_remaining) {
+        $template->param( batch_remaining_barcodes => join( "\n", @still_remaining ) );
+    }
 }
 
 if ( $barcode && ( $op eq 'cud-checkin' || $op eq 'cud-affect_reserve' ) ) {
