@@ -3,6 +3,35 @@ export class AcquisitionAPIClient {
         this.httpClient = new HttpClient({
             baseURL: "/api/v1/acquisitions/",
         });
+        this.suggestionHttpClient = new HttpClient({
+            baseURL: "/api/v1/suggestions",
+        });
+    }
+
+    get suggestions() {
+        return {
+            getAll: (query, params, headers) =>
+                this.suggestionHttpClient.getAll({
+                    endpoint: "",
+                    query,
+                    params,
+                    headers: {
+                        "x-koha-embed":
+                            "+strings,manager,suggester,library,fund",
+                        ...headers,
+                    },
+                }),
+            count: (query = {}) =>
+                this.suggestionHttpClient.count({
+                    endpoint:
+                        "?" +
+                        new URLSearchParams({
+                            _page: 1,
+                            _per_page: 1,
+                            ...(query && { q: JSON.stringify(query) }),
+                        }),
+                }),
+        };
     }
 
     get config() {

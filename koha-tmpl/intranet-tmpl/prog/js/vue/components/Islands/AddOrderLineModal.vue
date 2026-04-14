@@ -48,7 +48,7 @@
                             </li>
                             <li>
                                 <a
-                                    :href="`/cgi-bin/koha/acqui/newordersuggestion.pl?booksellerid=${vendorid}&amp;basketno=${basketno}`"
+                                    href="/cgi-bin/koha/acquisitions/order_management/suggestions"
                                     >{{ $__("From a suggestion") }}</a
                                 >
                             </li>

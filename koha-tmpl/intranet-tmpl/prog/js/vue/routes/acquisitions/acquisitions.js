@@ -211,6 +211,23 @@ export const routes = [
                         alternateLeftMenu: "AcqMenu",
                     },
                     {
+                        path: "suggestions",
+                        title: "Suggestions",
+                        is_navigation_item: false,
+                        resource:
+                            "Acquisitions/OrderManagement/SuggestionResource.vue",
+                        children: [
+                            {
+                                path: "",
+                                component: markRaw(ResourceWrapper),
+                                name: "SuggestionList",
+                                title: "List suggestions",
+                                permission: "manageOrderlines",
+                                alternateLeftMenu: "AcqMenu",
+                            },
+                        ],
+                    },
+                    {
                         path: "orderlines",
                         title: "Orderlines",
                         is_navigation_item: false,
