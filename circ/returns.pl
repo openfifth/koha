@@ -930,7 +930,7 @@ $template->param(
     forgivemanualholdsexpire => $forgivemanualholdsexpire,
     overduecharges           => $overduecharges,
     AudioAlerts              => C4::Context->preference("AudioAlerts"),
-    debounceInterval         => C4::Context->config('rfid_debounce_interval') // q{},
+    debounceInterval         => C4::Context->config('batch_checkin_debounce_interval') // q{},
 );
 
 if ($barcode) {
