@@ -310,6 +310,11 @@
             </div>
         [% END %]
     [% END %]
+    [% IF ( CAN_user_acquisition_order_manage ) %]
+        <div class="btn-group">
+            <a class="btn btn-default" href="/cgi-bin/koha/acquisitions/order_management/orderlines/add?biblionumber=[% biblionumber | uri %]" role="button"><i class="fa fa-shopping-basket"></i> Add order line</a>
+        </div>
+    [% END %]
 
     [% FOREACH p IN plugins %]
         [% p.intranet_catalog_biblio_enhancements_toolbar_button | $raw %]
