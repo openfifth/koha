@@ -20,11 +20,14 @@ package Koha::Acquisition::OrderManagement::Orderline;
 use Modern::Perl;
 use base qw(Koha::Object::Mixin::AdditionalFields Koha::Object);
 
+use Koha::Acquisition::OrderManagement::OrderlineItem;
+use Koha::Acquisition::OrderManagement::OrderlineItems;
 use Koha::Acquisition::OrderManagement::OrderlineUser;
 use Koha::Acquisition::OrderManagement::OrderlineUsers;
 use Koha::Acquisition::OrderManagement::OrderlineManager;
 use Koha::Acquisition::OrderManagement::OrderlineManagers;
 use Koha::Acquisition::OrderManagement::OrderlineFundDistributions;
+use Koha::Item;
 use Koha::Util::MARC;
 use Koha::Acquisition::Bookseller;
 use Koha::Library;
@@ -144,6 +147,30 @@ sub biblio {
     my $rs = $self->_result->biblio;
     return unless $rs;
     return Koha::Biblio->_new_from_dbic($rs);
+}
+
+=head3 items
+
+=cut
+
+sub items {
+    my ( $self, $items_data ) = @_;
+
+    if ($items_data) {
+        for my $item_data (@$items_data) {
+            $item_data->{biblio_id} = $self->biblionumber;
+            my $item = Koha::Item->new_from_api($item_data)->store->discard_changes;
+            Koha::Acquisition::OrderManagement::OrderlineItem->new(
+                {
+                    orderline_id => $self->orderline_id,
+                    itemnumber   => $item->itemnumber,
+                }
+            )->store;
+        }
+    }
+
+    my $rs = $self->_result->acq_orderline_items;
+    return Koha::Acquisition::OrderManagement::OrderlineItems->_new_from_dbic($rs);
 }
 
 =head3 vendor

@@ -128,12 +128,13 @@ export default {
         const { updateSubComponentReadyState } = inject("subComponentsReady");
 
         const buildOptionsArray = (field, name) => {
+            const definedValues = field.values.filter(value => value);
             const options = Object.keys(field.labels).reduce(
                 (acc, key, index) => {
-                    if (field.values[index]) {
+                    if (definedValues[index]) {
                         acc.push({
                             label: field.labels[key],
-                            value: field.values[index],
+                            value: definedValues[index],
                         });
                     }
                     return acc;
@@ -143,7 +144,6 @@ export default {
             selectOptions.value[name] = options;
             return options;
         };
-
         const formatMarcFields = fields => {
             const visibleFields = fields.reduce((acc, field) => {
                 if (field.hidden) return acc;
@@ -156,7 +156,7 @@ export default {
                 const usesFlatpickr =
                     typeof field.marc_value === "string" &&
                     field.marc_value.includes("flatpickr");
-                const name = field.kohafield.split(".").pop();
+                const name = field.api_name;
                 const fieldDefinition = {
                     name,
                     label: field.subfield + " - " + field.marc_lib,
@@ -193,7 +193,7 @@ export default {
                     const noPopup = field.marc_value.includes("No popup");
                     fieldDefinition.noPopup = noPopup;
                 }
-                fieldValues.value[fieldDefinition.name] = "";
+                fieldValues.value[fieldDefinition.name] = null;
                 return [...acc, fieldDefinition];
             }, []);
             return visibleFields;
@@ -201,7 +201,7 @@ export default {
 
         onBeforeMount(() => {
             APIClient.marc_framework.frameworkMarcFields
-                .get(props.frameworkCode)
+                .get({ frameworkcode: props.frameworkCode })
                 .then(
                     frameworkMarcFields => {
                         frameworkFields.value = formatMarcFields(
@@ -369,7 +369,7 @@ export default {
                 indexOfItemBeingUpdated = null;
             } else {
                 const numberOfItems = addingMultipleItems.value
-                    ? numberOfItemsToAdd.value
+                    ? parseInt(numberOfItemsToAdd.value)
                     : 1;
                 props.resource.quantity_ordered = items.length + numberOfItems;
                 items.push(
@@ -400,30 +400,33 @@ export default {
         const handleSelectColumn = (value, resource, attr) => {
             const selectOptionList = selectOptions.value[attr.value];
             if (selectOptionList) {
-                return selectOptionList.find(so => so.value === value).label;
+                const selectedOption = selectOptionList.find(
+                    so => so.value === value
+                );
+                return selectedOption ? selectedOption.label : "";
             }
             return value;
         };
         const tableColumns = [
             {
                 name: $__("Barcode"),
-                value: "barcode",
+                value: "external_id",
             },
             {
                 name: $__("Home library"),
-                value: "homebranch",
+                value: "home_library_id",
             },
             {
                 name: $__("Holding library"),
-                value: "holdingbranch",
+                value: "holding_library_id",
             },
             {
                 name: $__("Not for loan"),
-                value: "notforloan",
+                value: "not_for_loan_status",
             },
             {
                 name: $__("Restricted"),
-                value: "restricted",
+                value: "restricted_status",
             },
             {
                 name: $__("Location"),
@@ -431,31 +434,31 @@ export default {
             },
             {
                 name: $__("Call number"),
-                value: "itemcallnumber",
+                value: "callnumber",
             },
             {
                 name: $__("Copy number"),
-                value: "copynumber",
+                value: "copy_number",
             },
             {
                 name: $__("Inventory number"),
-                value: "stocknumber",
+                value: "inventory_number",
             },
             {
                 name: $__("Collection"),
-                value: "ccode",
+                value: "collection_code",
             },
             {
                 name: $__("Item type"),
-                value: "itype",
+                value: "item_type_id",
             },
             {
                 name: $__("Materials"),
-                value: "materials",
+                value: "materials_notes",
             },
             {
                 name: $__("Notes"),
-                value: "itemnotes",
+                value: "public_notes",
             },
         ].map(tc => {
             return { ...tc, format: handleSelectColumn };

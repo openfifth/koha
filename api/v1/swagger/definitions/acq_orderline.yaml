@@ -250,6 +250,12 @@ properties:
       - array
     items:
       $ref: acq_orderline_user.yaml
+  items:
+    description: Items linked to the orderline
+    type:
+      - array
+    items:
+      $ref: item.yaml
 additionalProperties: false
 required:
   - orderline_id

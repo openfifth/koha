@@ -34,6 +34,7 @@ use JSON       qw( to_json );
 use C4::Auth   qw( get_template_and_user );
 use C4::Output qw( output_html_with_http_headers output_with_http_headers );
 use C4::Items  qw( PrepareItemrecordDisplay );
+use Koha::Item;
 
 my $input = CGI->new;
 my ( $template, $loggedinuser, $cookie, $flags ) = get_template_and_user(
@@ -45,10 +46,10 @@ my ( $template, $loggedinuser, $cookie, $flags ) = get_template_and_user(
     }
 );
 
-my $biblionumber  = $input->param('biblionumber')  || '';
-my $itemnumber    = $input->param('itemnumber')    || '';
-my $frameworkcode = $input->param('frameworkcode') || '';
-my $return_json   = $input->param('return_json')   || '';
+my $biblionumber    = $input->param('biblionumber')    || '';
+my $itemnumber      = $input->param('itemnumber')      || '';
+my $frameworkcode   = $input->param('frameworkcode')   || '';
+my $return_api_json = $input->param('return_api_json') || '';
 
 my $result = PrepareItemrecordDisplay( $biblionumber, $itemnumber, undef, $frameworkcode );
 unless ($result) {
@@ -57,7 +58,16 @@ unless ($result) {
 
 $template->param(%$result);
 
-if ($return_json) {
+if ($return_api_json) {
+    my $api_mapping = Koha::Item->new->to_api_mapping;
+
+    for my $field ( @{ $result->{iteminformation} } ) {
+        my $kohafield = $field->{kohafield} // '';
+        if ( $kohafield =~ s/^items\.// ) {
+            $field->{api_name} = $api_mapping->{$kohafield} || $kohafield;
+        }
+    }
+
     output_with_http_headers $input, undef, to_json( $result, { utf8 => 1 } ), 'json';
     exit 0;
 }

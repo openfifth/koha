@@ -7,10 +7,15 @@ export class MarcFrameworkAPIClient {
 
     get frameworkMarcFields() {
         return {
-            get: (frameworkcode, headers) =>
-                this.httpClient.getAll({
-                    endpoint: "?return_json=1&frameworkcode=" + frameworkcode,
-                }),
+            get: (params, headers) => {
+                let endpoint = "?return_api_json=1";
+                Object.entries(params).forEach(([key, value]) => {
+                    endpoint += "&" + key + "=" + value;
+                });
+                return this.httpClient.get({
+                    endpoint,
+                });
+            },
         };
     }
 }

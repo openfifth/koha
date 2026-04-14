@@ -1299,7 +1299,11 @@ export default {
                 }
             );
 
-            delete orderline.items;
+            orderline.items.forEach(item => {
+                Object.keys(item).forEach(key => {
+                    if (!item[key]) delete item[key];
+                });
+            });
 
             return handleAPIFormSubmission(orderline, orderline_id);
         };

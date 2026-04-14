@@ -76,13 +76,12 @@ sub add {
     my $body           = $c->req->json;
     my %orderline_copy = %$body;
 
-    #ACQTODO: items
-
     my $extended_attributes   = delete $body->{extended_attributes}   // [];
     my $patrons_to_notify     = delete $body->{patrons_to_notify}     // [];
     my $managed_by            = delete $body->{managed_by}            // [];
     my $fund_distributions    = delete $body->{fund_distributions}    // [];
     my $biblio                = delete $body->{biblio}                // {};
+    my $items                 = delete $body->{items}                 // [];
     my $confirm_not_duplicate = delete $body->{confirm_not_duplicate} // 0;
 
     return try {
@@ -102,6 +101,8 @@ sub add {
                 $orderline->fund_distributions($fund_distributions);
                 $orderline->biblio( { biblio_data => $biblio, confirm_not_duplicate => $confirm_not_duplicate } )
                     unless $orderline->biblionumber;
+
+                $orderline->items($items) if @$items;
 
                 my @extended_attributes =
                     map { { 'id' => $_->{field_id}, 'value' => $_->{value} } } @{$extended_attributes};
