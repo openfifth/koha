@@ -861,7 +861,9 @@ export default {
                     return newProvider;
                 }
             } catch (error) {
-                // errors surfaced by the httpClient
+                // httpClient displays the alert; re-throw so
+                // ResourceFormSave knows the save failed.
+                throw error;
             }
         };
 
