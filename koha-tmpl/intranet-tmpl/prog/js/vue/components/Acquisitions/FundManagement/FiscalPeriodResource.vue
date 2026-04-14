@@ -412,15 +412,20 @@ export default {
                     resource.child_object_managing_branches.map(
                         comb => comb.branchcode
                     );
-                if (!childManagingBranches.includes(resource.managing_branch))
-                    childManagingBranches.push(resource.managing_branchs);
+                if (
+                    !childManagingBranches.includes(resource.managing_branch) &&
+                    resource.managing_branch
+                )
+                    childManagingBranches.push(resource.managing_branch);
                 const branchAttr = baseResource.resourceAttrs.find(
                     ra => ra.name === "managing_branch"
                 );
-                branchAttr.componentProps.query = {
-                    type: "object",
-                    value: { branchcode: { "-in": childManagingBranches } },
-                };
+                if (childManagingBranches.length) {
+                    branchAttr.componentProps.query = {
+                        type: "object",
+                        value: { branchcode: { "-in": childManagingBranches } },
+                    };
+                }
             }
         };
 
