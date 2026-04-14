@@ -26,6 +26,8 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
         authorisedValues: {
             av_fund_type: "FUND_TYPE",
             av_acquisition_method: "ACQUISITION_METHOD",
+            av_non_bibliographic_material_type:
+                "NON_BIBLIOGRAPHIC_MATERIAL_TYPE",
         },
         userPermissions: null,
     });

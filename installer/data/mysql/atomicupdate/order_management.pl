@@ -184,5 +184,24 @@ return {
         );
         say_success( $out, "Added new authorised values to those categories" );
 
+        $dbh->do(
+            q{
+                INSERT IGNORE INTO authorised_value_categories(  category_name, is_system  ) VALUES
+                ('NON_BIBLIOGRAPHIC_MATERIAL_TYPE', 1);
+                }
+        );
+        say_success( $out, "Added new category 'NON_BIBLIOGRAPHIC_MATERIAL_TYPE'" );
+
+        $dbh->do(
+            q{
+                INSERT IGNORE INTO authorised_values(  category, authorised_value, lib  ) VALUES
+                ('NON_BIBLIOGRAPHIC_MATERIAL_TYPE', "EQUIPMENT", "Equipment"),
+                ('NON_BIBLIOGRAPHIC_MATERIAL_TYPE', "SOFTWARE", "Software"),
+                ('NON_BIBLIOGRAPHIC_MATERIAL_TYPE', "SERVICE", "Service"),
+                ('NON_BIBLIOGRAPHIC_MATERIAL_TYPE', "OTHER", "Other");
+                }
+        );
+        say_success( $out, "Added new authorised values to 'NON_BIBLIOGRAPHIC_MATERIAL_TYPE'" );
+
     },
 };

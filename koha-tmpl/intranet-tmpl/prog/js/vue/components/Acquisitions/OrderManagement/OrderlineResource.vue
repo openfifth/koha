@@ -44,7 +44,9 @@ export default {
         const createItems = computed(() => {
             return createItemsWhen.value;
         });
-        const nonBibliographic = ref(route.query.no_biblio || false);
+        const nonBibliographic = ref(
+            route.query.no_biblio === "true" ? true : false
+        );
 
         const subComponentsReady = reactive({ biblio: false, items: false });
         const updateSubComponentReadyState = key => {
@@ -265,12 +267,22 @@ export default {
                 },
                 {
                     name: "create_items",
-                    group: $__("Catalog details"),
+                    group: nonBibliographic.value
+                        ? $__("Item creation")
+                        : $__("Catalog details"),
                     label: $__("Create items when"),
                     type: "radio",
                     options: [
-                        { description: $__("Ordering"), value: "ordering" },
-                        { description: $__("Receiving"), value: "receiving" },
+                        {
+                            description: $__("Ordering"),
+                            value: "ordering",
+                            disabled: nonBibliographic.value,
+                        },
+                        {
+                            description: $__("Receiving"),
+                            value: "receiving",
+                            disabled: nonBibliographic.value,
+                        },
                         { description: $__("Cataloging"), value: "cataloging" },
                     ],
                     defaultValue: createItemsDefault(),
@@ -280,11 +292,53 @@ export default {
                             resource.quantity_ordered = 1;
                         }
                     },
-                    toolTip: $__(
-                        "Based on the value in the AcqCreateItem system preference"
-                    ),
+                    toolTip: nonBibliographic.value
+                        ? null
+                        : $__(
+                              "Based on the value in the AcqCreateItem system preference"
+                          ),
                     hideIn: ["List", "Show", "Search"],
                 },
+                ...(nonBibliographic.value
+                    ? [
+                          {
+                              name: "material_type",
+                              type: "select",
+                              group: $__("Information (non-bibliographic)"),
+                              label: $__("Type"),
+                              avCat: "av_non_bibliographic_material_type",
+                              hideIn: ["List", "Search"],
+                          },
+                          {
+                              name: "non_bib_description",
+                              type: "text",
+                              group: $__("Information (non-bibliographic)"),
+                              label: $__("Description"),
+                              hideIn: ["List", "Search"],
+                          },
+                          {
+                              name: "non_bib_information",
+                              type: "text",
+                              group: $__("Information (non-bibliographic)"),
+                              label: $__("Information"),
+                              hideIn: ["List", "Search"],
+                          },
+                          {
+                              name: "product_number",
+                              type: "text",
+                              group: $__("Information (non-bibliographic)"),
+                              label: $__("Product no."),
+                              hideIn: ["List", "Search"],
+                          },
+                          {
+                              name: "non_bib_note",
+                              type: "text",
+                              group: $__("Information (non-bibliographic)"),
+                              label: $__("Note"),
+                              hideIn: ["List", "Search"],
+                          },
+                      ]
+                    : []),
                 ...(!nonBibliographic.value
                     ? [
                           {
@@ -394,39 +448,39 @@ export default {
                               },
                               hideIn: [],
                           },
+                          {
+                              name: "items",
+                              group: $__("Catalog details"),
+                              type: "component",
+                              componentPath:
+                                  "@koha-vue/components/Acquisitions/OrderManagement/ItemMarcFieldsCopy.vue",
+                              defaultValue: [],
+                              componentProps: {
+                                  resource: {
+                                      type: "resource",
+                                      value: null,
+                                  },
+                                  biblioNumber: {
+                                      type: "string",
+                                      value: queryParams.biblionumber,
+                                  },
+                                  orderNumber: {
+                                      type: "string",
+                                      value: queryParams.ordernumber,
+                                  },
+                                  frameworkCode: {
+                                      type: "string",
+                                      value: "ACQ",
+                                  },
+                                  createItems: {
+                                      type: "object",
+                                      value: createItems,
+                                  },
+                              },
+                              hideIn: ["List"],
+                          },
                       ]
                     : []),
-                {
-                    name: "items",
-                    group: $__("Catalog details"),
-                    type: "component",
-                    componentPath:
-                        "@koha-vue/components/Acquisitions/OrderManagement/ItemMarcFieldsCopy.vue",
-                    defaultValue: [],
-                    componentProps: {
-                        resource: {
-                            type: "resource",
-                            value: null,
-                        },
-                        biblioNumber: {
-                            type: "string",
-                            value: queryParams.biblionumber,
-                        },
-                        orderNumber: {
-                            type: "string",
-                            value: queryParams.ordernumber,
-                        },
-                        frameworkCode: {
-                            type: "string",
-                            value: "ACQ",
-                        },
-                        createItems: {
-                            type: "object",
-                            value: createItems,
-                        },
-                    },
-                    hideIn: ["List"],
-                },
                 {
                     name: "patrons_to_notify",
                     group: $__("Patrons to notify"),
