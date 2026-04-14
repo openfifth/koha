@@ -19,7 +19,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 6;
+use Test::More tests => 8;
 
 use Test::MockModule;
 use Test::MockObject;
@@ -31,6 +31,9 @@ use MIME::Base64 qw{ encode_base64url };
 
 use Koha::Auth::Client;
 use Koha::Auth::Client::OAuth;
+use Koha::Patron::Attribute;
+use Koha::Patron::Attribute::Types;
+use Koha::Patron::Attributes;
 use Koha::Patrons;
 
 use t::lib::TestBuilder;
@@ -313,4 +316,121 @@ subtest '_traverse_hash() tests' => sub {
         }
     );
     is( $third_result, 'second element', 'get the value of the second element of an array within a hash structure' );
+};
+
+subtest '_find_patron_by_matchpoint() tests' => sub {
+
+    plan tests => 7;
+
+    $schema->storage->txn_begin;
+
+    my $client = Koha::Auth::Client->new;
+    my $patron = $builder->build_object( { class => 'Koha::Patrons', value => { email => 'matchtest@example.com' } } );
+
+    # Standard borrower field matchpoint
+    my $found = $client->_find_patron_by_matchpoint( 'email', 'matchtest@example.com' );
+    is( $found->borrowernumber, $patron->borrowernumber, 'Finds patron by standard borrower field' );
+
+    # No match returns undef
+    my $not_found = $client->_find_patron_by_matchpoint( 'email', 'nonexistent@example.com' );
+    is( $not_found, undef, 'Returns undef when no patron matches standard field' );
+
+    # Empty/undef value returns undef
+    is( $client->_find_patron_by_matchpoint( 'email', '' ),    undef, 'Returns undef for empty string value' );
+    is( $client->_find_patron_by_matchpoint( 'email', undef ), undef, 'Returns undef for undef value' );
+
+    # patron_attribute: matchpoint
+    my $attr_type = $builder->build_object(
+        {
+            class => 'Koha::Patron::Attribute::Types',
+            value => { repeatable => 0, unique_id => 0 }
+        }
+    );
+    Koha::Patron::Attribute->new(
+        { borrowernumber => $patron->borrowernumber, code => $attr_type->code, attribute => 'UNIQUE123' } )->store;
+
+    my $found_by_attr = $client->_find_patron_by_matchpoint( 'patron_attribute:' . $attr_type->code, 'UNIQUE123' );
+    is(
+        $found_by_attr->borrowernumber, $patron->borrowernumber,
+        'Finds patron by patron_attribute: matchpoint'
+    );
+
+    my $not_found_by_attr = $client->_find_patron_by_matchpoint( 'patron_attribute:' . $attr_type->code, 'NOMATCH' );
+    is( $not_found_by_attr, undef, 'Returns undef when patron_attribute value does not match' );
+
+    # Duplicate matchpoint throws exception
+    my $patron2 = $builder->build_object( { class => 'Koha::Patrons' } );
+    Koha::Patron::Attribute->new(
+        { borrowernumber => $patron2->borrowernumber, code => $attr_type->code, attribute => 'UNIQUE123' } )->store;
+
+    throws_ok {
+        $client->_find_patron_by_matchpoint( 'patron_attribute:' . $attr_type->code, 'UNIQUE123' );
+    }
+    'Koha::Exceptions::Auth::DuplicateMatchpoint',
+        'Throws DuplicateMatchpoint when multiple patrons share the same attribute value';
+
+    $schema->storage->txn_rollback;
+};
+
+subtest '_update_patron_from_mapped_data() tests' => sub {
+
+    plan tests => 7;
+
+    $schema->storage->txn_begin;
+
+    my $client = Koha::Auth::Client->new;
+    my $patron =
+        $builder->build_object( { class => 'Koha::Patrons', value => { firstname => 'Original', surname => 'Name' } } );
+
+    # Core borrower fields only
+    $client->_update_patron_from_mapped_data(
+        { patron => $patron, mapped_data => { firstname => 'Updated', surname => 'Person' } } );
+    $patron->discard_changes;
+    is( $patron->firstname, 'Updated', 'Core field firstname updated' );
+    is( $patron->surname,   'Person',  'Core field surname updated' );
+
+    # patron_attribute: fields only
+    my $attr_type = $builder->build_object(
+        {
+            class => 'Koha::Patron::Attribute::Types',
+            value => { repeatable => 0, unique_id => 0 }
+        }
+    );
+
+    $client->_update_patron_from_mapped_data(
+        { patron => $patron, mapped_data => { 'patron_attribute:' . $attr_type->code => 'AttrValue1' } } );
+    my $attrs =
+        Koha::Patron::Attributes->search( { borrowernumber => $patron->borrowernumber, code => $attr_type->code } );
+    is( $attrs->count,           1,            'One patron attribute created' );
+    is( $attrs->next->attribute, 'AttrValue1', 'Patron attribute has correct value' );
+
+    # Updating replaces existing attribute
+    $client->_update_patron_from_mapped_data(
+        { patron => $patron, mapped_data => { 'patron_attribute:' . $attr_type->code => 'AttrValue2' } } );
+    $attrs =
+        Koha::Patron::Attributes->search( { borrowernumber => $patron->borrowernumber, code => $attr_type->code } );
+    is( $attrs->count,           1,            'Still one patron attribute after update (replaced, not duplicated)' );
+    is( $attrs->next->attribute, 'AttrValue2', 'Patron attribute value was replaced' );
+
+    # Mixed: core fields + patron attributes together
+    my $attr_type2 = $builder->build_object(
+        {
+            class => 'Koha::Patron::Attribute::Types',
+            value => { repeatable => 0, unique_id => 0 }
+        }
+    );
+
+    $client->_update_patron_from_mapped_data(
+        {
+            patron      => $patron,
+            mapped_data => {
+                firstname                               => 'Mixed',
+                'patron_attribute:' . $attr_type2->code => 'MixedAttr',
+            }
+        }
+    );
+    $patron->discard_changes;
+    is( $patron->firstname, 'Mixed', 'Core field updated alongside patron attribute in mixed update' );
+
+    $schema->storage->txn_rollback;
 };
