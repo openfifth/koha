@@ -20,9 +20,10 @@
 use Modern::Perl;
 
 use CGI;
-use JSON qw( from_json );
+use JSON        qw( from_json );
+use URI::Escape qw( uri_escape_utf8 );
 
-use C4::Auth qw( get_session get_template_and_user );
+use C4::Auth qw( get_template_and_user );
 use C4::Context;
 use C4::Letters qw( GetPreparedLetter EnqueueLetter SendQueuedMessages );
 use C4::Output  qw( output_html_with_http_headers );
@@ -34,9 +35,7 @@ use Koha::Charges::Sales;
 use Koha::Database;
 use Koha::Libraries;
 
-my $input     = CGI->new();
-my $sessionID = $input->cookie('CGISESSID');
-my $session   = get_session($sessionID);
+my $input = CGI->new();
 
 my ( $template, $loggedinuser, $cookie, $user_flags ) = get_template_and_user(
     {
@@ -51,6 +50,15 @@ my $logged_in_user = Koha::Patrons->find($loggedinuser) or die "Not logged in";
 my $library_id = C4::Context->userenv->{'branch'};
 my $registerid = $input->param('registerid');
 my $op     = $input->param('op') || '';
+
+# PRG flow: pick up payment details from redirect URL params
+if ( !$op && $input->param('payment_id') ) {
+    $template->param(
+        payment_id => scalar $input->param('payment_id'),
+        collected  => scalar $input->param('collected'),
+        change     => scalar $input->param('change'),
+    );
+}
 
 my $invoice_types =
   Koha::Account::DebitTypes->search_with_library_limits(
@@ -78,11 +86,24 @@ if ( $op eq 'cud-pay' ) {
 
         my $payment = $sale->purchase( { payment_type => $payment_type } );
 
-        $template->param(
-            payment_id => $payment->accountlines_id,
-            collected  => scalar $input->param('collected'),
-            change     => scalar $input->param('change')
-        );
+        my $payment_id = $payment->accountlines_id;
+        my $collected  = uri_escape_utf8( scalar $input->param('collected') );
+        my $change     = uri_escape_utf8( scalar $input->param('change') );
+
+        my $redirect_url;
+        if ( C4::Context->preference('FinePaymentAutoPopup') ) {
+            $redirect_url =
+                  "/cgi-bin/koha/pos/printreceipt.pl"
+                . "?accountlines_id=$payment_id"
+                . "&collected=$collected"
+                . "&change=$change"
+                . "&autoprint=1";
+        } else {
+            $redirect_url =
+                "/cgi-bin/koha/pos/pay.pl" . "?payment_id=$payment_id" . "&collected=$collected" . "&change=$change";
+        }
+        print $input->redirect( -uri => $redirect_url, -status => 303 );
+        exit;
     }
 }
 

@@ -62,7 +62,7 @@
         </div>
         [% END %]
 
-        <form name="payForm" id="payForm" method="post" action="/cgi-bin/koha/pos/pay.pl">
+        <form name="payForm" id="payForm" method="post" action="/cgi-bin/koha/pos/pay.pl" [% IF Koha.Preference('FinePaymentAutoPopup') %]target="_blank"[% END %]>
             [% INCLUDE 'csrf-token.inc' %]
             <input type="hidden" name="op" value="cud-pay">
             <div class="row">
@@ -238,11 +238,6 @@
     </div>
 </div>
 
-[% IF payment_id && Koha.Preference('FinePaymentAutoPopup') %]
-    <!-- Automatic Print Receipt -->
-    <a id="printReceipt" style="display: none" href="#"></a>
-[% END %]
-
 [% MACRO jsinclude BLOCK %]
     [% INCLUDE 'format_price.inc' %]
     [% INCLUDE 'datatables.inc' %]
@@ -312,9 +307,10 @@
       ).draw();
     }
 
+    var zero_formatted = "[% 0 | $Price %]";
+
     function updateChangeValues() {
         var change = $('#change')[0];
-        var zero_formatted = "[% 0 | $Price %]";
         change.innerHTML = Math.round(($('#collected')[0].value - $('#paid')[0].value) * 100) / 100;
         if (change.innerHTML <= 0) {
             var paid = $('#paid')[0];
@@ -507,17 +503,22 @@
                         value: JSON.stringify(sale)
                     }).appendTo('#payForm');
                 });
+
+                [% IF Koha.Preference('FinePaymentAutoPopup') %]
+                // Form submits to new tab; reset this page for the next transaction
+                setTimeout(function() {
+                    saleDataTable.clear().draw();
+                    $('#collected').val('');
+                    $('#paid').val(zero_formatted);
+                    $('#change').html(zero_formatted);
+                    $(':input[name="change"]').val(zero_formatted);
+                    checked = false;
+                }, 0);
+                [% END %]
+
                 return true;
             }
         });
-
-        [% IF payment_id && Koha.Preference('FinePaymentAutoPopup') %]
-            $("#printReceipt").click(function() {
-                var win = window.open('/cgi-bin/koha/pos/printreceipt.pl?action=print&accountlines_id=[% payment_id | uri %]&collected=[% collected | uri %]&change=[% change | uri %]', '_blank');
-                win.focus();
-            });
-            $("#printReceipt").click();
-        [% END %]
     });
     </script>
 [% END %]
