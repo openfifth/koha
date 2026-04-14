@@ -1,6 +1,6 @@
 /acquisitions/ledgers:
   get:
-    x-mojo-to: Acquisitions::FundManagement::Ledgers#list
+    x-mojo-to: Acquisitions::Finances::Ledgers#list
     operationId: GetLedgers
     description: Retrieves the ledgers for the acquisitions module
     tags:
@@ -60,7 +60,7 @@
       permissions:
         acquisition: budget_manage_all
   post:
-    x-mojo-to: Acquisitions::FundManagement::Ledgers#add
+    x-mojo-to: Acquisitions::Finances::Ledgers#add
     operationId: StoreLedger
     tags:
       - StoreLedger
@@ -120,7 +120,7 @@
         acquisition: budget_manage_all
 /acquisitions/ledgers/{ledger_id}:
   get:
-    x-mojo-to: Acquisitions::FundManagement::Ledgers#get
+    x-mojo-to: Acquisitions::Finances::Ledgers#get
     operationId: getLedger
     tags:
       - acquire
@@ -207,7 +207,7 @@
       permissions:
         acquisition: budget_manage_all
   put:
-    x-mojo-to: Acquisitions::FundManagement::Ledgers#update
+    x-mojo-to: Acquisitions::Finances::Ledgers#update
     operationId: updateLedger
     tags:
       - acquire
@@ -281,7 +281,7 @@
       permissions:
         acquisition: budget_manage_all
   delete:
-    x-mojo-to: Acquisitions::FundManagement::Ledgers#delete
+    x-mojo-to: Acquisitions::Finances::Ledgers#delete
     operationId: deleteLedger
     tags:
       - acquire

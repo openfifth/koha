@@ -72,7 +72,7 @@ export default {
                 acquisitionsStore
             ).then(() => {
                 const client = APIClient.acquisition;
-                client.config.get("fund_management").then(result => {
+                client.config.get("finances").then(result => {
                     userPermissions.value = result.permissions;
                     permittedUsers.value = permitted_patrons;
                     const { permission } = route.meta.self;

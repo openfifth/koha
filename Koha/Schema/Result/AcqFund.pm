@@ -343,11 +343,11 @@ __PACKAGE__->add_columns(
 );
 
 sub koha_object_class {
-    'Koha::Acquisition::FundManagement::Fund';
+    'Koha::Acquisition::Finances::Fund';
 }
 
 sub koha_objects_class {
-    'Koha::Acquisition::FundManagement::Funds';
+    'Koha::Acquisition::Finances::Funds';
 }
 
 =head2 managing_library

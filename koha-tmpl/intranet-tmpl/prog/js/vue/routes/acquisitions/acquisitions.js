@@ -1,7 +1,7 @@
 import { markRaw } from "vue";
 
 import Homepage from "../../components/Acquisitions/Homepage.vue";
-import FundManagementHome from "../../components/Acquisitions/FundManagement/FundManagementHome.vue";
+import FinancesHome from "../../components/Acquisitions/Finances/FinancesHome.vue";
 import OrderManagementHome from "../../components/Acquisitions/OrderManagement/OrderManagementHome.vue";
 
 import ResourceWrapper from "../../components/ResourceWrapper.vue";
@@ -22,15 +22,15 @@ export const routes = [
                 is_navigation_item: false,
             },
             {
-                path: "/cgi-bin/koha/acquisitions/fund_management",
+                path: "/cgi-bin/koha/acquisitions/finances",
                 moduleName: "funds",
-                title: $__("Fund management"),
+                title: $__("Finances"),
                 icon: "fa fa-money-check-dollar",
                 children: [
                     {
                         path: "",
-                        component: markRaw(FundManagementHome),
-                        name: "FundManagementHome",
+                        component: markRaw(FinancesHome),
+                        name: "FinancesHome",
                         is_navigation_item: false,
                         alternateLeftMenu: "AcqMenu",
                     },
@@ -39,7 +39,7 @@ export const routes = [
                         title: "Fiscal periods",
                         is_navigation_item: false,
                         resource:
-                            "Acquisitions/FundManagement/FiscalPeriodResource.vue",
+                            "Acquisitions/Finances/FiscalPeriodResource.vue",
                         children: [
                             {
                                 path: "",
@@ -79,8 +79,7 @@ export const routes = [
                         path: "ledger",
                         title: "Ledgers",
                         is_navigation_item: false,
-                        resource:
-                            "Acquisitions/FundManagement/LedgerResource.vue",
+                        resource: "Acquisitions/Finances/LedgerResource.vue",
                         children: [
                             {
                                 path: "",
@@ -120,8 +119,7 @@ export const routes = [
                         path: "fund",
                         title: "Funds",
                         is_navigation_item: false,
-                        resource:
-                            "Acquisitions/FundManagement/FundResource.vue",
+                        resource: "Acquisitions/Finances/FundResource.vue",
                         children: [
                             {
                                 path: "",
@@ -186,7 +184,7 @@ export const routes = [
                         title: $__("Allocate funds"),
                         is_navigation_item: false,
                         resource:
-                            "Acquisitions/FundManagement/AllocationResource.vue",
+                            "Acquisitions/Finances/AllocationResource.vue",
                         children: [
                             {
                                 path: "",

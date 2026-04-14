@@ -87,7 +87,7 @@ Acquisitions
     7267    Display account number in PDF
     7288    Add filter to invoice page to only display invoices related to
             subscriptions
-    7308    Display base-level amount ordered in fund management
+    7308    Display base-level amount ordered in finances
     9261    Allow librarians to make purchase suggestions for patrons
     9416    Add vendor note field to order line record
     9807    It is now possible to view a basket group without reopening it

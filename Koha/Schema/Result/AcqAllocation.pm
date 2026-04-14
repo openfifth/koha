@@ -199,11 +199,11 @@ __PACKAGE__->belongs_to(
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:xT/Mkk+eFCga4WE1OO1UIQ
 
 sub koha_object_class {
-    'Koha::Acquisition::FundManagement::Allocation';
+    'Koha::Acquisition::Finances::Allocation';
 }
 
 sub koha_objects_class {
-    'Koha::Acquisition::FundManagement::Allocations';
+    'Koha::Acquisition::Finances::Allocations';
 }
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration

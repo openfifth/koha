@@ -1,10 +1,10 @@
 ---
-/acquisitions/fund_management/users:
+/acquisitions/finances/users:
   get:
-    x-mojo-to: Acquisitions::FundManagement::FundManagement#list_users
+    x-mojo-to: Acquisitions::Finances::Finances#list_users
     operationId: listFMUsers
-    description: This resource returns a list of patron allowed to be users of the fund management module
-    summary: List possible users for fund management
+    description: This resource returns a list of patron allowed to be users of the finances module
+    summary: List possible users for finances
     tags:
       - fm_users
     parameters:
@@ -29,7 +29,7 @@
       - application/json
     responses:
       200:
-        description: A list of fund management users
+        description: A list of finances users
         schema:
           type: array
           items:

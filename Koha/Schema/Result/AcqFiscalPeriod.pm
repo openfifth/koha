@@ -232,11 +232,11 @@ __PACKAGE__->add_columns(
 );
 
 sub koha_object_class {
-    'Koha::Acquisition::FundManagement::FiscalPeriod';
+    'Koha::Acquisition::Finances::FiscalPeriod';
 }
 
 sub koha_objects_class {
-    'Koha::Acquisition::FundManagement::FiscalPeriods';
+    'Koha::Acquisition::Finances::FiscalPeriods';
 }
 
 =head2 managing_library

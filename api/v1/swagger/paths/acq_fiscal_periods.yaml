@@ -1,7 +1,7 @@
 ---
 /acquisitions/fiscal_periods:
   get:
-    x-mojo-to: Acquisitions::FundManagement::FiscalPeriods#list
+    x-mojo-to: Acquisitions::Finances::FiscalPeriods#list
     operationId: GetFiscalPeriods
     description: Retrieves the fiscal periods for the acquisitions module
     tags:
@@ -60,7 +60,7 @@
       permissions:
         acquisition: budget_manage_all
   post:
-    x-mojo-to: Acquisitions::FundManagement::FiscalPeriods#add
+    x-mojo-to: Acquisitions::Finances::FiscalPeriods#add
     operationId: StoreFiscalPeriod
     tags:
       - StoreFiscalPeriod
@@ -109,7 +109,7 @@
         acquisition: budget_manage_all
 /acquisitions/fiscal_periods/{fiscal_period_id}:
   get:
-    x-mojo-to: Acquisitions::FundManagement::FiscalPeriods#get
+    x-mojo-to: Acquisitions::Finances::FiscalPeriods#get
     operationId: getFiscalPeriod
     tags:
       - acquire
@@ -161,7 +161,7 @@
       permissions:
         acquisition: budget_manage_all
   put:
-    x-mojo-to: Acquisitions::FundManagement::FiscalPeriods#update
+    x-mojo-to: Acquisitions::Finances::FiscalPeriods#update
     operationId: updateFiscalPeriod
     tags:
       - acquire
@@ -209,7 +209,7 @@
       permissions:
         acquisition: budget_manage_all
   delete:
-    x-mojo-to: Acquisitions::FundManagement::FiscalPeriods#delete
+    x-mojo-to: Acquisitions::Finances::FiscalPeriods#delete
     operationId: deleteFiscalPeriod
     tags:
       - acquire

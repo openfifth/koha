@@ -1,6 +1,6 @@
 /acquisitions/funds:
   get:
-    x-mojo-to: Acquisitions::FundManagement::Funds#list
+    x-mojo-to: Acquisitions::Finances::Funds#list
     operationId: GetFunds
     description: Retrieves the funds for the acquisition module
     tags:
@@ -62,7 +62,7 @@
       permissions:
         acquisition: budget_manage_all
   post:
-    x-mojo-to: Acquisitions::FundManagement::Funds#add
+    x-mojo-to: Acquisitions::Finances::Funds#add
     operationId: StoreFund
     tags:
       - StoreFund
@@ -122,7 +122,7 @@
         acquisition: budget_manage_all
 /acquisitions/funds/{fund_id}:
   get:
-    x-mojo-to: Acquisitions::FundManagement::Funds#get
+    x-mojo-to: Acquisitions::Finances::Funds#get
     operationId: getFund
     tags:
       - acquire
@@ -211,7 +211,7 @@
       permissions:
         acquisition: budget_manage_all
   put:
-    x-mojo-to: Acquisitions::FundManagement::Funds#update
+    x-mojo-to: Acquisitions::Finances::Funds#update
     operationId: updateFund
     tags:
       - acquire
@@ -285,7 +285,7 @@
       permissions:
         acquisition: budget_manage_all
   delete:
-    x-mojo-to: Acquisitions::FundManagement::Funds#delete
+    x-mojo-to: Acquisitions::Finances::Funds#delete
     operationId: deleteFund
     tags:
       - acquire

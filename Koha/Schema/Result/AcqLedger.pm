@@ -322,11 +322,11 @@ __PACKAGE__->add_columns(
 );
 
 sub koha_object_class {
-    'Koha::Acquisition::FundManagement::Ledger';
+    'Koha::Acquisition::Finances::Ledger';
 }
 
 sub koha_objects_class {
-    'Koha::Acquisition::FundManagement::Ledgers';
+    'Koha::Acquisition::Finances::Ledgers';
 }
 
 =head2 managing_library

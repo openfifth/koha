@@ -1,7 +1,7 @@
 ---
 /acquisitions/allocations:
   get:
-    x-mojo-to: Acquisitions::FundManagement::Allocations#list
+    x-mojo-to: Acquisitions::Finances::Allocations#list
     operationId: GetAllocation
     description: Retrieves the fund allocations for the acquisitions module
     tags:
@@ -61,7 +61,7 @@
       permissions:
         acquisition: budget_manage_all
   post:
-    x-mojo-to: Acquisitions::FundManagement::Allocations#add
+    x-mojo-to: Acquisitions::Finances::Allocations#add
     operationId: StoreAllocation
     tags:
       - StoreAllocation
@@ -122,7 +122,7 @@
         acquisition: budget_manage_all
 /acquisitions/allocations/transfer:
   post:
-    x-mojo-to: Acquisitions::FundManagement::Allocations#transfer
+    x-mojo-to: Acquisitions::Finances::Allocations#transfer
     operationId: AcquireTransferFunds
     tags:
       - Acquire
@@ -154,7 +154,7 @@
         acquisition: budget_manage_all
 /acquisitions/allocations/{allocation_id}:
   get:
-    x-mojo-to: Acquisitions::FundManagement::Allocations#get
+    x-mojo-to: Acquisitions::Finances::Allocations#get
     operationId: getAllocation
     tags:
       - acquire
@@ -235,7 +235,7 @@
       permissions:
         acquisition: budget_manage_all
   put:
-    x-mojo-to: Acquisitions::FundManagement::Allocations#update
+    x-mojo-to: Acquisitions::Finances::Allocations#update
     operationId: updateAllocation
     tags:
       - acquire
@@ -309,7 +309,7 @@
       permissions:
         acquisition: budget_manage_all
   delete:
-    x-mojo-to: Acquisitions::FundManagement::Allocations#delete
+    x-mojo-to: Acquisitions::Finances::Allocations#delete
     operationId: deleteAllocation
     tags:
       - acquire

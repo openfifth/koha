@@ -6,8 +6,8 @@ definitions:
     $ref: ./definitions/account_line.yaml
   additional_content:
     $ref: ./definitions/additional_content.yaml
-  acq_fund_management_config:
-    $ref: ./definitions/acq_fund_management_config.yaml
+  acq_finances_config:
+    $ref: ./definitions/acq_finances_config.yaml
   acq_fiscal_period:
     $ref: ./definitions/acq_fiscal_period.yaml
   acq_fund:
@@ -231,8 +231,8 @@ paths:
     $ref: ./paths/acq_fiscal_periods.yaml#/~1acquisitions~1fiscal_periods
   "/acquisitions/fiscal_periods/{fiscal_period_id}":
     $ref: ./paths/acq_fiscal_periods.yaml#/~1acquisitions~1fiscal_periods~1{fiscal_period_id}
-  /acquisitions/fund_management/config:
-    $ref: ./paths/acq_fund_management_config.yaml#/~1acquisitions~1fund_management~1config
+  /acquisitions/finances/config:
+    $ref: ./paths/acq_finances_config.yaml#/~1acquisitions~1finances~1config
   /acquisitions/funds:
     $ref: ./paths/acq_funds.yaml#/~1acquisitions~1funds
   "/acquisitions/funds/{fund_id}":
@@ -247,8 +247,8 @@ paths:
     $ref: ./paths/acq_allocations.yaml#/~1acquisitions~1allocations~1transfer
   "/acquisitions/allocations/{allocation_id}":
     $ref: ./paths/acq_allocations.yaml#/~1acquisitions~1allocations~1{allocation_id}
-  /acquisitions/fund_management/users:
-    $ref: ./paths/acq_users.yaml#/~1acquisitions~1fund_management~1users
+  /acquisitions/finances/users:
+    $ref: ./paths/acq_users.yaml#/~1acquisitions~1finances~1users
   /acquisitions/ledgers:
     $ref: ./paths/acq_ledgers.yaml#/~1acquisitions~1ledgers
   "/acquisitions/ledgers/{ledger_id}":
