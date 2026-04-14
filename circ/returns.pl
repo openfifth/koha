@@ -177,9 +177,9 @@ sub process_batch_checkin_item {
     my $needs_confirm =
            C4::Context->preference("CircConfirmItemParts")
         && $item->materials
-        && !$query->param('multiple_confirm');
+        && !$args{multiple_confirmed};
     my $bundle_confirm = $item->is_bundle
-        && !$query->param('confirm_items_bundle_return');
+        && !$args{bundle_confirmed};
 
     my $waiting_holds = $item->holds->waiting->filter_by_has_cancellation_requests;
     while ( my $hold = $waiting_holds->next ) {
@@ -189,6 +189,7 @@ sub process_batch_checkin_item {
     if ( $needs_confirm || $bundle_confirm ) {
         $result{needs_confirm}  = $needs_confirm;
         $result{bundle_confirm} = $bundle_confirm;
+        $result{status}         = $needs_confirm ? 'needs_confirm' : 'bundle_confirm';
         return \%result;
     }
 
@@ -483,7 +484,11 @@ if ( $batch_barcodes && $op eq 'cud-checkin' ) {
         }
     }
 
-    $template->param( batch_results => \@batch_results );
+    $template->param(
+        batch_results            => \@batch_results,
+        confirm_hold_was_set     => scalar $query->param('confirm_hold'),
+        confirm_transfer_was_set => scalar $query->param('confirm_transfer'),
+    );
 
     if (@batch_results) {
         my @plain   = map { _batch_result_to_plain($_) } @batch_results;
@@ -503,7 +508,8 @@ if (
        $batch_confirm_barcode
     && $op eq 'cud-checkin'
     && (   $query->param('multiple_confirm')
-        || $query->param('confirm_items_bundle_return') )
+        || $query->param('confirm_items_bundle_return')
+        || $query->param('batch_skip_confirm') )
     )
 {
     my @completed;
@@ -512,19 +518,52 @@ if (
         @completed = @{$decoded} if $decoded && ref $decoded eq 'ARRAY';
     }
 
+    # The restored list still contains the placeholder row that triggered
+    # the modal. Drop any pending confirm rows so we don't re-open the
+    # modal on them after the librarian has resolved the current one.
+    @completed = grep {
+        my $s = $_->{status} // '';
+        $s ne 'needs_confirm' && $s ne 'bundle_confirm';
+    } @completed;
+
     my $return_date =
           $dropboxmode
         ? $dropboxdate
         : dt_from_string($return_date_override);
 
-    my $confirm_result = process_batch_checkin_item(
-        query       => $query,
-        barcode     => barcodedecode($batch_confirm_barcode),
-        branch      => $userenv_branch,
-        exemptfine  => $exemptfine,
-        return_date => $return_date,
-        desk_id     => $desk_id,
-    );
+    my $confirm_result;
+    if ( $query->param('batch_skip_confirm') ) {
+
+        # Librarian chose to skip the confirm-required item and continue
+        # draining the queue. Record a "skipped" placeholder in the
+        # completed list so it shows up in the results table.
+        my $skipped_barcode = barcodedecode($batch_confirm_barcode);
+        my $item            = Koha::Items->find( { barcode => $skipped_barcode } );
+        $confirm_result = {
+            barcode  => $skipped_barcode,
+            status   => 'skipped',
+            success  => 0,
+            messages => {},
+        };
+        if ($item) {
+            my $biblio = $item->biblio;
+            if ($biblio) {
+                $confirm_result->{title}        = $biblio->title;
+                $confirm_result->{biblionumber} = $biblio->biblionumber;
+            }
+        }
+    } else {
+        $confirm_result = process_batch_checkin_item(
+            query              => $query,
+            barcode            => barcodedecode($batch_confirm_barcode),
+            branch             => $userenv_branch,
+            exemptfine         => $exemptfine,
+            return_date        => $return_date,
+            desk_id            => $desk_id,
+            multiple_confirmed => scalar $query->param('multiple_confirm'),
+            bundle_confirmed   => scalar $query->param('confirm_items_bundle_return'),
+        );
+    }
     push @completed, $confirm_result;
 
     if ( $confirm_result->{success} ) {
@@ -585,7 +624,11 @@ if (
         }
     }
 
-    $template->param( batch_results => \@completed );
+    $template->param(
+        batch_results            => \@completed,
+        confirm_hold_was_set     => scalar $query->param('confirm_hold'),
+        confirm_transfer_was_set => scalar $query->param('confirm_transfer'),
+    );
 
     if (@completed) {
         my @plain   = map { _batch_result_to_plain($_) } @completed;
