@@ -1,0 +1,18 @@
+---
+type: object
+properties:
+  orderline_id:
+    type: number
+    description: Unique identifier for the orderline
+    readOnly: true
+  itemnumber:
+    type:
+      - number
+      - "null"
+    description: Foreign key referencing the items table
+  item:
+    type: object
+    description: Item linked by itemnumber
+    items:
+      $ref: "item.yaml"
+additionalProperties: false

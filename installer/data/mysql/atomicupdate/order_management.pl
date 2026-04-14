@@ -164,6 +164,24 @@ return {
             say_info( $out, "Table 'acq_orderline_managers' already exists" );
         }
 
+        unless ( TableExists('acq_orderline_items') ) {
+            $dbh->do(
+                q{
+                CREATE TABLE `acq_orderline_items` (
+                `orderline_id` INT(11) NOT NULL COMMENT 'orderline the item is linked to',
+                `itemnumber` INT(11) NOT NULL COMMENT 'the linked item',
+                PRIMARY KEY (`orderline_id`,`itemnumber`),
+                FOREIGN KEY (`orderline_id`) REFERENCES `acq_orderlines` (`orderline_id`) ON DELETE CASCADE,
+                FOREIGN KEY (`itemnumber`) REFERENCES `items` (`itemnumber`) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            }
+            );
+
+            say_success( $out, "Added new table 'acq_orderline_items'" );
+        } else {
+            say_info( $out, "Table 'acq_orderline_items' already exists" );
+        }
+
         $dbh->do(
             q{
                 INSERT IGNORE INTO authorised_value_categories(  category_name, is_system  ) VALUES

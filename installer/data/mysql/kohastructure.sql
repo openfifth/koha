@@ -245,6 +245,23 @@ FOREIGN KEY (`fund_id`) REFERENCES `funds` (`fund_id`)
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `acq_orderline_items`
+--
+
+DROP TABLE IF EXISTS `acq_orderline_items`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+
+CREATE TABLE `acq_orderline_items` (
+`orderline_id` INT(11) NOT NULL COMMENT 'orderline the item is linked to',
+`itemnumber` INT(11) NOT NULL COMMENT 'the linked item',
+PRIMARY KEY (`orderline_id`,`itemnumber`),
+FOREIGN KEY (`orderline_id`) REFERENCES `acq_orderlines` (`orderline_id`) ON DELETE CASCADE,
+FOREIGN KEY (`itemnumber`) REFERENCES `items` (`itemnumber`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `acq_orderline_managers`
 --
 
