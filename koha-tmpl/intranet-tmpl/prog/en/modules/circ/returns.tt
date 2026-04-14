@@ -1207,12 +1207,11 @@
                                 name="barcode"
                                 id="barcode"
                                 placeholder="Enter item barcode"
-                                class="barcode focus input-warning"
+                                class="barcode focus input-warning barcode-single"
                                 rows="1"
-                                style="width: 240px; height: 2.2em; resize: none; overflow: hidden; white-space: nowrap;"
                             ></textarea>
                         [% ELSE %]
-                            <textarea name="barcode" id="barcode" placeholder="Enter item barcode" class="barcode focus" rows="1" style="width: 240px; height: 2.2em; resize: none; overflow: hidden; white-space: nowrap;"></textarea>
+                            <textarea name="barcode" id="barcode" placeholder="Enter item barcode" class="barcode focus barcode-single" rows="1"></textarea>
                         [% END %]
                         <input type="hidden" name="op" value="cud-checkin" />
 
@@ -1304,18 +1303,18 @@
                     <input type="checkbox" id="batch-mode-toggle" name="batch_mode" value="batch_mode" />
                     <label for="batch-mode-toggle">Enable batch mode for multiple returns</label>
 
-                    <div id="batch-mode-more-settings" class="" style="margin-left:50px;">
+                    <div id="batch-mode-more-settings" style="display:none;">
                         <input type="checkbox" id="batch-mode-keep-selection" name="keep_selection" value="keep_selection" />
-                        <label for="batch-mode-toggle">Remember batch mode settings</label>
+                        <label for="batch-mode-keep-selection">Remember batch mode settings</label>
                         <br/>
                         <input type="checkbox" id="batch-mode-ignore-notissued" name="ignore_notissued" value="ignore_notissued" />
-                        <label for="batch-mode-toggle">Hide 'not checked out'-warnings</label>
+                        <label for="batch-mode-ignore-notissued">Hide 'not checked out'-warnings</label>
                         <br/>
                         <input type="checkbox" id="batch-mode-confirm-hold" name="confirm_hold" value="confirm_hold" />
-                        <label for="batch-mode-toggle">Confirm hold when found</label>
+                        <label for="batch-mode-confirm-hold">Confirm hold when found</label>
                         <br/>
                         <input type="checkbox" id="batch-mode-confirm-transfer" name="confirm_transfer" value="confirm_transfer" />
-                        <label for="batch-mode-toggle">Confirm transfer when found</label>
+                        <label for="batch-mode-confirm-transfer">Confirm transfer when found</label>
                     </div>
                 </div>
 
@@ -1674,7 +1673,7 @@
         [% Asset.js("js/modals/add_catalog_concern.js") | $raw %]
     [% END %]
     <script nonce="[% Koha.CSPNonce | $raw %]">
-        var debounceInterval = '[% debounceInterval %]' || 500;
+        var debounceInterval = [% debounceInterval || 500 | html %];
         function Dopop(link) {
             var newin = window.open(link, "popup", "width=600,height=400,resizable=1,toolbar=0,scrollbars=1,top");
             $("#barcode").focus();

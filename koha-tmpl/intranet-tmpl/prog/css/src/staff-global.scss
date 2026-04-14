@@ -2048,6 +2048,18 @@ i {
     width: 250px;
 }
 
+.barcode-single {
+    height: 2.2em;
+    overflow: hidden;
+    resize: none;
+    white-space: nowrap;
+    width: 240px;
+}
+
+#batch-mode-more-settings {
+    margin-left: 50px;
+}
+
 li {
     &.email {
     }
