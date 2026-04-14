@@ -121,6 +121,7 @@ INSERT INTO systempreferences ( `variable`, `value` ) VALUES
 ('Babeltheque_url_update',''),
 ('BarcodeSeparators','\\s\\r\\n'),
 ('BasketConfirmations','1'),
+('BatchCheckinDefaults',''),
 ('BatchCheckouts','0'),
 ('BatchCheckoutsValidCategories',''),
 ('BiblioDefaultView','normal'),
