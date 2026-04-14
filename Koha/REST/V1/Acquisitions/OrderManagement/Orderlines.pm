@@ -76,13 +76,13 @@ sub add {
     my $body           = $c->req->json;
     my %orderline_copy = %$body;
 
-    my $extended_attributes   = delete $body->{extended_attributes}   // [];
-    my $patrons_to_notify     = delete $body->{patrons_to_notify}     // [];
-    my $managed_by            = delete $body->{managed_by}            // [];
-    my $fund_distributions    = delete $body->{fund_distributions}    // [];
-    my $biblio                = delete $body->{biblio}                // {};
-    my $items                 = delete $body->{items}                 // [];
-    my $confirm_not_duplicate = delete $body->{confirm_not_duplicate} // 0;
+    my $extended_attributes   = delete $body->{extended_attributes}                 // [];
+    my $patrons_to_notify     = delete $body->{patrons_to_notify}                   // [];
+    my $managed_by            = delete $body->{managed_by}                          // [];
+    my $fund_distributions    = delete $body->{fund_distributions}                  // [];
+    my $biblio                = delete $body->{biblio}                              // {};
+    my $items                 = delete $body->{items}                               // [];
+    my $confirm_not_duplicate = $c->req->headers->header('x-confirm-not-duplicate') // 0;
 
     return try {
         Koha::Database->new->schema->txn_do(

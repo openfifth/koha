@@ -78,6 +78,11 @@
         required: true
         schema:
             $ref: "../swagger.yaml#/definitions/acq_orderline"
+      - name: x-confirm-not-duplicate
+        in: header
+        required: false
+        description: If set, skips duplicate biblio detection
+        type: string
     responses:
       '201':
         description: Orderline

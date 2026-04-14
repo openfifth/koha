@@ -1122,7 +1122,11 @@ export default {
             },
         };
 
-        const handleAPIFormSubmission = (orderline, orderline_id) => {
+        const handleAPIFormSubmission = (
+            orderline,
+            orderline_id,
+            headers = {}
+        ) => {
             if (orderline_id) {
                 return baseResource.apiClient
                     .update(orderline, orderline_id)
@@ -1134,7 +1138,7 @@ export default {
                         error => {}
                     );
             } else {
-                return baseResource.apiClient.create(orderline).then(
+                return baseResource.apiClient.create(orderline, headers).then(
                     orderline => {
                         baseResource.setMessage($__("Orderline created"));
                         return orderline;
@@ -1244,10 +1248,11 @@ export default {
                 create_new,
             } = inputFields;
 
-            orderline.confirm_not_duplicate = true;
             if (cancel) return;
             if (create_new) {
-                handleAPIFormSubmission(orderline, orderline.orderline_id);
+                handleAPIFormSubmission(orderline, orderline.orderline_id, {
+                    "x-confirm-not-duplicate": "1",
+                });
             }
             if (use_existing) {
                 orderline.biblionumber = duplicate_biblio.biblionumber;

@@ -301,10 +301,11 @@ export class AcquisitionAPIClient {
                 this.httpClient.delete({
                     endpoint: "orderlines/" + id,
                 }),
-            create: orderline =>
+            create: (orderline, headers) =>
                 this.httpClient.post({
                     endpoint: "orderlines",
                     body: orderline,
+                    headers,
                 }),
             update: (orderline, id) =>
                 this.httpClient.put({
