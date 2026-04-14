@@ -21,13 +21,13 @@ use Modern::Perl;
 use base qw(Koha::Object::Mixin::AdditionalFields Koha::Object);
 
 use Koha::Acquisition::OrderManagement::OrderlineItem;
-use Koha::Acquisition::OrderManagement::OrderlineItems;
 use Koha::Acquisition::OrderManagement::OrderlineUser;
 use Koha::Acquisition::OrderManagement::OrderlineUsers;
 use Koha::Acquisition::OrderManagement::OrderlineManager;
 use Koha::Acquisition::OrderManagement::OrderlineManagers;
 use Koha::Acquisition::OrderManagement::OrderlineFundDistributions;
 use Koha::Item;
+use Koha::Items;
 use Koha::Util::MARC;
 use Koha::Acquisition::Bookseller;
 use Koha::Library;
@@ -170,7 +170,7 @@ sub items {
     }
 
     my $rs = $self->_result->acq_orderline_items;
-    return Koha::Acquisition::OrderManagement::OrderlineItems->_new_from_dbic($rs);
+    return Koha::Items->_new_from_dbic( $rs->related_resultset('itemnumber') );
 }
 
 =head3 vendor
