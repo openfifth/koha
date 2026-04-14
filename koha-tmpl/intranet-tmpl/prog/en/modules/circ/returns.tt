@@ -1345,7 +1345,6 @@
                         <th>Title</th>
                         <th>Patron</th>
                         <th>Messages</th>
-                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1356,6 +1355,8 @@
                         [% ELSIF result.status == 'not_issued' %]
                             [% SET row_class = 'table-info' %]
                         [% ELSIF result.status == 'needs_confirm' OR result.status == 'bundle_confirm' %]
+                            [% SET row_class = 'table-warning' %]
+                        [% ELSIF result.status == 'skipped' %]
                             [% SET row_class = 'table-warning' %]
                         [% END %]
                         <tr class="[% row_class | html %][% IF result.status == 'not_issued' %]batch-row-notissued[% END %]">
@@ -1370,6 +1371,8 @@
                                     <span class="badge bg-warning text-dark">Needs confirmation</span>
                                 [% CASE 'bundle_confirm' %]
                                     <span class="badge bg-warning text-dark">Bundle confirmation required</span>
+                                [% CASE 'skipped' %]
+                                    <span class="badge bg-warning text-dark">Skipped</span>
                                 [% CASE 'bad_barcode' %]
                                     <span class="badge bg-danger">Invalid barcode</span>
                                 [% CASE %]
@@ -1392,29 +1395,69 @@
                                 [% END %]
                                 [% INCLUDE 'checkin-messages.inc' messages=result.messages %]
                             </td>
-                            <td>
-                                [% IF result.status == 'needs_confirm' OR result.status == 'bundle_confirm' %]
-                                    <form method="post" action="/cgi-bin/koha/circ/returns.pl" class="batch-confirm-form">
-                                        [% INCLUDE 'csrf-token.inc' %]
-                                        <input type="hidden" name="op" value="cud-checkin" />
-                                        <input type="hidden" name="batch_confirm_barcode" value="[% result.barcode | html %]" />
-                                        <input type="hidden" name="batch_remaining_barcodes" value="[% batch_remaining_barcodes | html %]" />
-                                        <input type="hidden" name="batch_completed_results" value="[% batch_completed_json | html %]" />
-                                        [% IF result.status == 'needs_confirm' %]
-                                            <input type="hidden" name="multiple_confirm" value="1" />
-                                            <button type="submit" class="btn btn-sm btn-warning">Confirm all parts present</button>
-                                        [% ELSE %]
-                                            <input type="hidden" name="confirm_items_bundle_return" value="1" />
-                                            <button type="submit" class="btn btn-sm btn-warning">Confirm bundle return</button>
-                                        [% END %]
-                                    </form>
-                                [% END %]
-                            </td>
                         </tr>
                     [% END %]
                 </tbody>
             </table>
         </div>
+
+        [%# Confirm modal: opened automatically if any batch row needs confirmation %]
+        [% SET pending_confirm_barcode = '' %]
+        [% SET pending_confirm_title   = '' %]
+        [% SET pending_confirm_kind    = '' %]
+        [% FOREACH r IN batch_results %]
+            [% IF !pending_confirm_barcode AND ( r.status == 'needs_confirm' OR r.status == 'bundle_confirm' ) %]
+                [% pending_confirm_barcode = r.barcode %]
+                [% pending_confirm_title   = r.title %]
+                [% pending_confirm_kind    = r.status %]
+            [% END %]
+        [% END %]
+        [% IF pending_confirm_barcode %]
+            [% SET remaining_count = 0 %]
+            [% IF batch_remaining_barcodes %]
+                [% FOREACH bc IN batch_remaining_barcodes.split('\n') %]
+                    [% IF bc.replace('\s+', '').length %][% remaining_count = remaining_count + 1 %][% END %]
+                [% END %]
+            [% END %]
+            <div id="batchConfirmModal" class="modal" tabindex="-1" role="dialog" data-bs-backdrop="static" data-bs-keyboard="false">
+                <div class="modal-dialog" role="document">
+                    <form method="post" action="/cgi-bin/koha/circ/returns.pl" id="batch-confirm-form">
+                        [% INCLUDE 'csrf-token.inc' %]
+                        <input type="hidden" name="op" value="cud-checkin" />
+                        <input type="hidden" name="batch_confirm_barcode" value="[% pending_confirm_barcode | html %]" />
+                        <input type="hidden" name="batch_remaining_barcodes" value="[% batch_remaining_barcodes | html %]" />
+                        <input type="hidden" name="batch_completed_results" value="[% batch_completed_json | html %]" />
+                        <input type="hidden" name="batch_confirm_action" id="batch-confirm-action" value="" data-kind="[% pending_confirm_kind | html %]" />
+                        [% IF confirm_hold_was_set %]<input type="hidden" name="confirm_hold" value="1" />[% END %]
+                        [% IF confirm_transfer_was_set %]<input type="hidden" name="confirm_transfer" value="1" />[% END %]
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h3 class="modal-title">Batch paused: confirmation required</h3>
+                            </div>
+                            <div class="modal-body">
+                                <p>
+                                    [% IF pending_confirm_kind == 'needs_confirm' %]
+                                        Item <strong>[% pending_confirm_title | html %]</strong> (barcode <code>[% pending_confirm_barcode | html %]</code>) has multiple parts. Confirm all parts are present before returning.
+                                    [% ELSE %]
+                                        Item <strong>[% pending_confirm_title | html %]</strong> (barcode <code>[% pending_confirm_barcode | html %]</code>) is a bundle. Confirm the bundle contents before returning.
+                                    [% END %]
+                                </p>
+                                <p class="text-muted"> [% remaining_count %] item[% IF remaining_count != 1 %]s[% END %] still pending in this batch after this one. </p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" id="batch-confirm-cancel">Cancel batch</button>
+                                <button type="submit" class="btn btn-default" id="batch-confirm-skip">Skip this item</button>
+                                [% IF pending_confirm_kind == 'needs_confirm' %]
+                                    <button type="submit" class="btn btn-primary" id="batch-confirm-ok">Confirm all parts present</button>
+                                [% ELSE %]
+                                    <button type="submit" class="btn btn-primary" id="batch-confirm-ok">Confirm bundle return</button>
+                                [% END %]
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        [% END %]
     [% END %]
 
     [% IF ( checkins.size ) %]
@@ -1741,6 +1784,25 @@
                 e.preventDefault();
                 $(".modal.audio-alert-action").modal("show");
             });
+
+            // Batch checkin: if the backend stopped on a row that needs librarian
+            // confirmation (parts or bundle), auto-open the modal and wire up its
+            // confirm / skip / cancel actions.
+            if ( $('#batchConfirmModal').length ) {
+                var $bcForm = $('#batch-confirm-form');
+                var bcKind  = $('#batch-confirm-action').data('kind');
+                $('#batch-confirm-ok').on('click', function () {
+                    var name = ( bcKind === 'needs_confirm' ) ? 'multiple_confirm' : 'confirm_items_bundle_return';
+                    $('<input>').attr({ type: 'hidden', name: name, value: '1' }).appendTo($bcForm);
+                });
+                $('#batch-confirm-skip').on('click', function () {
+                    $('<input>').attr({ type: 'hidden', name: 'batch_skip_confirm', value: '1' }).appendTo($bcForm);
+                });
+                $('#batch-confirm-cancel').on('click', function () {
+                    $('#batchConfirmModal').modal('hide');
+                });
+                $('#batchConfirmModal').modal('show');
+            }
             if (reserve_id) {
                 $(".print-slip").on("click", function (e) {
                     e.preventDefault();
