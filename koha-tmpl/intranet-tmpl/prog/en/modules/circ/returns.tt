@@ -420,6 +420,10 @@
             <!-- /.dialog.dialog-alert -->
         [% END #/IF errmsgloop %]
 
+        [% IF messages %]
+            [% INCLUDE 'checkin-messages.inc' messages=messages %]
+        [% END %]
+
         [% IF ( checkinmsg ) %]
             [% IF ( checkinmsgtype == 'alert' ) %]
                 [% SET div_class='warning' %]
@@ -1203,13 +1207,7 @@
                 <div class="col-sm-6">
                     <div class="form-control-group">
                         [% IF ( exemptfine || dropboxmode ) %]
-                            <textarea
-                                name="barcode"
-                                id="barcode"
-                                placeholder="Enter item barcode"
-                                class="barcode focus input-warning barcode-single"
-                                rows="1"
-                            ></textarea>
+                            <textarea name="barcode" id="barcode" placeholder="Enter item barcode" class="barcode focus input-warning barcode-single" rows="1"></textarea>
                         [% ELSE %]
                             <textarea name="barcode" id="barcode" placeholder="Enter item barcode" class="barcode focus barcode-single" rows="1"></textarea>
                         [% END %]
@@ -1306,13 +1304,13 @@
                     <div id="batch-mode-more-settings" style="display:none;">
                         <input type="checkbox" id="batch-mode-keep-selection" name="keep_selection" value="keep_selection" />
                         <label for="batch-mode-keep-selection">Remember batch mode settings</label>
-                        <br/>
+                        <br />
                         <input type="checkbox" id="batch-mode-ignore-notissued" name="ignore_notissued" value="ignore_notissued" />
                         <label for="batch-mode-ignore-notissued">Hide 'not checked out'-warnings</label>
-                        <br/>
+                        <br />
                         <input type="checkbox" id="batch-mode-confirm-hold" name="confirm_hold" value="confirm_hold" />
                         <label for="batch-mode-confirm-hold">Confirm hold when found</label>
-                        <br/>
+                        <br />
                         <input type="checkbox" id="batch-mode-confirm-transfer" name="confirm_transfer" value="confirm_transfer" />
                         <label for="batch-mode-confirm-transfer">Confirm transfer when found</label>
                     </div>
@@ -1380,44 +1378,7 @@
                                 [% IF result.checkinmsg %]
                                     <div class="alert alert-[% result.checkinmsgtype || 'info' %]">[% result.checkinmsg | html %]</div>
                                 [% END %]
-                                [% FOREACH code IN result.messages.keys %]
-                                    [% IF code == 'WasTransfered' %]
-                                        <div class="alert alert-info">Item transferred to [% result.messages.TransferTo %]</div>
-                                    [% ELSIF code == 'NeedsTransfer' %]
-                                        <div class="alert alert-warning">Item needs transfer</div>
-                                    [% ELSIF code == 'RecallNeedsTransfer' %]
-                                        <div class="alert alert-warning">Recall needs transfer</div>
-                                    [% ELSIF code == 'NotIssued' %]
-                                        <div class="alert alert-warning notissued">Item was not checked out</div>
-                                    [% ELSIF code == 'WasLost' %]
-                                        <div class="alert alert-info">Item was lost, now found</div>
-                                    [% ELSIF code == 'withdrawn' %]
-                                        <div class="alert alert-warning">Item is withdrawn</div>
-                                    [% ELSIF code.match('Debarred|ForeverDebarred|PrevDebarred') %]
-                                        <div class="alert alert-danger">Patron is restricted</div>
-                                    [% ELSIF code == 'ResFound' %]
-                                        <div class="alert alert-warning">Hold found</div>
-                                    [% ELSIF code == 'RecallFound' %]
-                                        <div class="alert alert-warning">Recall found</div>
-                                    [% ELSIF code == 'BadBarcode' %]
-                                        <div class="alert alert-warning">Bad barcode</div>
-                                    [% ELSIF code == 'TransferArrived' %]
-                                        <div class="alert alert-info">Transfer arrived from [% result.messages.TransferArrived %]</div>
-                                    [% ELSIF code == 'TransferredRecall' %]
-                                        <div class="alert alert-info">Recalled item has been transferred</div>
-                                    [% ELSIF code == 'WrongTransfer' %]
-                                        <div class="alert alert-warning">This item is still on transfer to [% result.messages.WrongTransfer %]</div>
-                                    [% ELSIF code == 'Wrongbranch'%]
-                                        <div class="alert alert-warning">This item cannot be returned to this branch</div>
-                                    [% ELSIF code == 'UpdateLastSeenError'%]
-                                        <div class="alert alert-warning">Error: Patron's last seen date could not be updated; see system logs.</div>
-                                    [% ELSIF code.match('Transfer(To|Trigger)|WrongTransferItem|WasReturned|LostItem.+|ProcessingFeeRefunded') # ignore %]
-                                    [% ELSIF code.match('ClaimAutoResolved|ReturnClaims') # ignored too for now %]
-                                    [% ELSIF code == 'InBundle' # TODO %]
-                                    [% ELSE # unexpected codes %]
-                                        <div class="alert alert-warning">Received code [% code %] from AddReturn. Contact support.</div>
-                                    [% END %]
-                                [% END %]
+                                [% INCLUDE 'checkin-messages.inc' messages=result.messages %]
                             </td>
                         </tr>
                     [% END %]

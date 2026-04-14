@@ -132,6 +132,79 @@ sub confirm_hold {
     }
 }
 
+# Process a single item for batch checkin. Returns a hashref
+# shaped for the batch_results template loop.
+sub process_batch_checkin_item {
+    my (%args)      = @_;
+    my $query       = $args{query};
+    my $barcode     = $args{barcode};
+    my $branch      = $args{branch};
+    my $exemptfine  = $args{exemptfine};
+    my $return_date = $args{return_date};
+    my $desk_id     = $args{desk_id};
+
+    my $item   = Koha::Items->find( { barcode => $barcode } );
+    my %result = (
+        barcode  => $barcode,
+        success  => 0,
+        messages => {},
+        borrower => undef,
+        item     => $item,
+    );
+
+    unless ($item) {
+        $result{messages}{BadBarcode} = $barcode;
+        return \%result;
+    }
+
+    my $itemtype = Koha::ItemTypes->find( $item->effective_itemtype );
+    if ( $itemtype && $itemtype->checkinmsg ) {
+        $result{checkinmsg}     = $itemtype->checkinmsg;
+        $result{checkinmsgtype} = $itemtype->checkinmsgtype;
+    }
+
+    my $needs_confirm =
+           C4::Context->preference("CircConfirmItemParts")
+        && $item->materials
+        && !$query->param('multiple_confirm');
+    my $bundle_confirm = $item->is_bundle
+        && !$query->param('confirm_items_bundle_return');
+
+    my $waiting_holds = $item->holds->waiting->filter_by_has_cancellation_requests;
+    while ( my $hold = $waiting_holds->next ) {
+        $hold->cancel;
+    }
+
+    if ( $needs_confirm || $bundle_confirm ) {
+        $result{needs_confirm}  = $needs_confirm;
+        $result{bundle_confirm} = $bundle_confirm;
+        return \%result;
+    }
+
+    my ( $returned, $messages, $issue, $borrower );
+    {
+        local $ENV{OVERRIDE_SYSPREF_AutomaticItemReturn} = 1
+            if $query->param('confirm_transfer');
+        ( $returned, $messages, $issue, $borrower ) = AddReturn( $barcode, $branch, $exemptfine, $return_date );
+    }
+
+    $result{success}  = $returned;
+    $result{messages} = $messages;
+    $result{issue}    = $issue;
+    $result{borrower} = $borrower;
+
+    if ( $query->param('confirm_hold') && $messages->{ResFound} ) {
+        my $resFound = $messages->{ResFound};
+        my $hold     = Koha::Holds->find( $resFound->{reserve_id} );
+        my $diffBranchSend;
+        $diffBranchSend = $resFound->{branchcode}
+            if $branch ne $resFound->{branchcode};
+        confirm_hold( $item, $hold, $diffBranchSend, $desk_id ) if $hold;
+    }
+
+    return \%result;
+}
+
 ############
 # Deal with the requests....
 my $itemnumber = $query->param('itemnumber');
@@ -297,97 +370,44 @@ if ( $batch_barcodes && $op eq 'cud-checkin' ) {
     @barcodes = grep { $_ && $_ !~ /^\s*$/ } @barcodes;    # Remove empty lines
 
     foreach my $batch_barcode (@barcodes) {
-        $batch_barcode = barcodedecode($batch_barcode) if $batch_barcode;
+        $batch_barcode = barcodedecode($batch_barcode);
         next unless $batch_barcode;
 
-        my $batch_item   = Koha::Items->find( { barcode => $batch_barcode } );
-        my %batch_result = (
-            barcode  => $batch_barcode,
-            success  => 0,
-            messages => {},
-            borrower => undef,
-            item     => $batch_item
+        my $return_date =
+              $dropboxmode
+            ? $dropboxdate
+            : dt_from_string($return_date_override);
+
+        my $result = process_batch_checkin_item(
+            query       => $query,
+            barcode     => $batch_barcode,
+            branch      => $userenv_branch,
+            exemptfine  => $exemptfine,
+            return_date => $return_date,
+            desk_id     => $desk_id,
         );
 
-        if ($batch_item) {
-            my $batch_itemnumber = $batch_item->itemnumber;
-
-            # Check if we should display a checkin message
-            my $itemtype = Koha::ItemTypes->find( $batch_item->effective_itemtype );
-            if ( $itemtype && $itemtype->checkinmsg ) {
-                $batch_result{checkinmsg}     = $itemtype->checkinmsg;
-                $batch_result{checkinmsgtype} = $itemtype->checkinmsgtype;
-            }
-
-            # Process the return date
-            my $return_date = $dropboxmode ? $dropboxdate : dt_from_string($return_date_override);
-
-            # Check for multi-part confirmation requirement
-            my $needs_confirm =
-                   C4::Context->preference("CircConfirmItemParts")
-                && $batch_item->materials
-                && !$query->param('multiple_confirm');
-
-            # Check for bundle confirmation requirement
-            my $bundle_confirm = $batch_item->is_bundle
-                && !$query->param('confirm_items_bundle_return');
-
-            # Process waiting holds cancellation requests
-            my $waiting_holds_to_be_cancelled = $batch_item->holds->waiting->filter_by_has_cancellation_requests;
-            while ( my $hold = $waiting_holds_to_be_cancelled->next ) {
-                $hold->cancel;
-            }
-
-            # Do the actual return unless confirmation needed
-            unless ( $needs_confirm || $bundle_confirm ) {
-
-                # Call AddReturn, check if we want to confirm a transfer automatically
-                my ( $batch_returned, $batch_messages, $batch_issue, $batch_borrower );
-                {
-                    local $ENV{OVERRIDE_SYSPREF_AutomaticItemReturn} = 1
-                        if $query->param('confirm_transfer');
-                    ( $batch_returned, $batch_messages, $batch_issue, $batch_borrower ) =
-                        AddReturn( $batch_barcode, $userenv_branch, $exemptfine, $return_date );
-                }
-
-                $batch_result{success}  = $batch_returned;
-                $batch_result{messages} = $batch_messages;
-                $batch_result{issue}    = $batch_issue;
-                $batch_result{borrower} = $batch_borrower;
-
-                if ($batch_returned) {
-                    unshift @checkins, {
-                        barcode        => $batch_barcode,
-                        duedate        => $batch_issue ? $batch_issue->date_due       : undef,
-                        borrowernumber => $batch_issue ? $batch_issue->borrowernumber : undef,
-                        not_returned   => 0,
-                    };
-                } elsif ( C4::Context->preference('ShowAllCheckins') && !$batch_messages->{'BadBarcode'} ) {
-                    unshift @checkins, {
-                        barcode        => $batch_barcode,
-                        duedate        => $batch_issue ? $batch_issue->date_due       : undef,
-                        borrowernumber => $batch_issue ? $batch_issue->borrowernumber : undef,
-                        not_returned   => 1,
-                    };
-                }
-
-                # Confirm a hold?
-                my $resFound = $batch_messages->{ResFound};
-                if ( $query->param('confirm_hold') && $resFound ) {
-                    my $hold = Koha::Holds->find( $resFound->{reserve_id} );    # TODO Not found
-                    my $diffBranchSend;
-                    $diffBranchSend = $resFound->{branchcode} if $userenv_branch ne $resFound->{branchcode};
-                    confirm_hold( $batch_item, $hold, $diffBranchSend, $desk_id ) if $hold;
-                }
-            } else {
-                $batch_result{needs_confirm}  = $needs_confirm;
-                $batch_result{bundle_confirm} = $bundle_confirm;
-            }
-        } else {
-            $batch_result{messages}{'BadBarcode'} = $batch_barcode;
+        if ( $result->{success} ) {
+            unshift @checkins, {
+                barcode        => $batch_barcode,
+                duedate        => $result->{issue} ? $result->{issue}->date_due       : undef,
+                borrowernumber => $result->{issue} ? $result->{issue}->borrowernumber : undef,
+                not_returned   => 0,
+            };
+        } elsif ( C4::Context->preference('ShowAllCheckins')
+            && !$result->{messages}{BadBarcode}
+            && !$result->{needs_confirm}
+            && !$result->{bundle_confirm} )
+        {
+            unshift @checkins, {
+                barcode        => $batch_barcode,
+                duedate        => $result->{issue} ? $result->{issue}->date_due       : undef,
+                borrowernumber => $result->{issue} ? $result->{issue}->borrowernumber : undef,
+                not_returned   => 1,
+            };
         }
 
-        push @batch_results, \%batch_result;
+        push @batch_results, $result;
     }
 
     $template->param( batch_results => \@batch_results );
@@ -801,6 +821,26 @@ if ( $messages->{TransferredRecall} ) {
             recalled => 1,
         );
     }
+}
+
+# Expose filtered messages to the shared checkin-messages include.
+# Approach (b): exclude codes already handled by errmsgloop below to
+# avoid duplicate alerts in the single-item result area.
+if ($messages) {
+    my %errmsgloop_codes = map { $_ => 1 } qw(
+        BadBarcode NotIssued LocalUse WasLost LostItemFeeRefunded
+        LostItemPaymentNotRefunded LostItemFeeCharged LostItemFeeRestored
+        ProcessingFeeRefunded ResFound WasReturned WasTransfered TransferTo
+        withdrawn WrongTransfer WrongTransferItem NeedsTransfer
+        TransferTrigger TransferArrived Wrongbranch Debarred PrevDebarred
+        ForeverDebarred ItemLocationUpdated NotForLoanStatusUpdated
+        DataCorrupted ReturnClaims ClaimAutoResolved RecallFound
+        RecallNeedsTransfer TransferredRecall InBundle UpdateLastSeenError
+    );
+    my %shared_messages =
+        map { $_ => $messages->{$_} }
+        grep { !$errmsgloop_codes{$_} } keys %$messages;
+    $template->param( messages => \%shared_messages );
 }
 
 # Error Messages
