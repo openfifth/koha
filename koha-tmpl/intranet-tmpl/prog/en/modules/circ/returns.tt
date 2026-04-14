@@ -1351,19 +1351,19 @@
                 </thead>
                 <tbody>
                     [% FOREACH result IN batch_results %]
-                        <tr class="[% IF result.success %]success[% ELSE %]danger[% END %]">
+                        <tr class="[% IF result.success %]table-success[% ELSE %]table-danger[% END %]">
                             <td>[% result.barcode | html %]</td>
                             <td>
                                 [% IF result.success %]
-                                    <span class="label label-success">Returned</span>
+                                    <span class="badge bg-success">Returned</span>
                                 [% ELSIF result.needs_confirm %]
-                                    <span class="label label-warning">Needs confirmation</span>
+                                    <span class="badge bg-warning text-dark">Needs confirmation</span>
                                 [% ELSIF result.bundle_confirm %]
-                                    <span class="label label-warning">Bundle confirmation required</span>
+                                    <span class="badge bg-warning text-dark">Bundle confirmation required</span>
                                 [% ELSIF result.messages.BadBarcode %]
-                                    <span class="label label-danger">Invalid barcode</span>
+                                    <span class="badge bg-danger">Invalid barcode</span>
                                 [% ELSE %]
-                                    <span class="label label-danger">Failed</span>
+                                    <span class="badge bg-danger">Failed</span>
                                 [% END %]
                             </td>
                             <td>
