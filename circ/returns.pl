@@ -333,22 +333,22 @@ if ( $batch_barcodes && $op eq 'cud-checkin' ) {
                 && !$query->param('confirm_items_bundle_return');
 
             # Process waiting holds cancellation requests
-            if ($batch_item) {
-                my $waiting_holds_to_be_cancelled = $batch_item->holds->waiting->filter_by_has_cancellation_requests;
-                while ( my $hold = $waiting_holds_to_be_cancelled->next ) {
-                    $hold->cancel;
-                }
+            my $waiting_holds_to_be_cancelled = $batch_item->holds->waiting->filter_by_has_cancellation_requests;
+            while ( my $hold = $waiting_holds_to_be_cancelled->next ) {
+                $hold->cancel;
             }
 
             # Do the actual return unless confirmation needed
             unless ( $needs_confirm || $bundle_confirm ) {
 
                 # Call AddReturn, check if we want to confirm a transfer automatically
-                my $original_override = $ENV{"OVERRIDE_SYSPREF_AutomaticItemReturn"};
-                $ENV{"OVERRIDE_SYSPREF_AutomaticItemReturn"} = 1 if $query->param('confirm_transfer');
-                my ( $batch_returned, $batch_messages, $batch_issue, $batch_borrower ) =
-                    AddReturn( $batch_barcode, $userenv_branch, $exemptfine, $return_date );
-                $ENV{"OVERRIDE_SYSPREF_AutomaticItemReturn"} = $original_override || q{};
+                my ( $batch_returned, $batch_messages, $batch_issue, $batch_borrower );
+                {
+                    local $ENV{OVERRIDE_SYSPREF_AutomaticItemReturn} = 1
+                        if $query->param('confirm_transfer');
+                    ( $batch_returned, $batch_messages, $batch_issue, $batch_borrower ) =
+                        AddReturn( $batch_barcode, $userenv_branch, $exemptfine, $return_date );
+                }
 
                 $batch_result{success}  = $batch_returned;
                 $batch_result{messages} = $batch_messages;
