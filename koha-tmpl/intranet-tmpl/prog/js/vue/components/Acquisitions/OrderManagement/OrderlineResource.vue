@@ -794,6 +794,19 @@ export default {
                         componentToDisplay === "Search"
                             ? "relationshipSelect"
                             : "relationshipWidget",
+                    defaultValue: [
+                        {
+                            fund_id: null,
+                            percentage: null,
+                            distributed_amount_oc: null,
+                            exchange_rate: null,
+                            distributed_amount: null,
+                            tax_rate: null,
+                            tax_value: null,
+                            distributed_amount_tax_excluded: null,
+                            distributed_amount_tax_included: null,
+                        },
+                    ],
                     group:
                         componentToDisplay === "Search"
                             ? $__("Order information")
