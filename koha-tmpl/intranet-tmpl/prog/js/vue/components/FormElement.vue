@@ -1,6 +1,6 @@
 <template>
     <label
-        v-if="attr.label"
+        v-if="attr.label && attr.type !== 'button'"
         :for="getElementId"
         :class="{ required }"
         :style="{ ...attr.style }"
@@ -217,6 +217,22 @@
     </template>
     <template v-else-if="attr.type == 'hidden'">
         <input type="hidden" />
+    </template>
+    <template v-else-if="attr.type == 'button'">
+        <input
+            type="button"
+            :class="[
+                'btn',
+                resource[attr.name] === attr.activeValue
+                    ? 'btn-primary'
+                    : 'btn-default',
+            ]"
+            :value="attr.label"
+            @click="
+                resource[attr.name] = attr.activeValue;
+                attr.onClick && attr.onClick(resource);
+            "
+        />
     </template>
     <template v-else>
         <span>{{

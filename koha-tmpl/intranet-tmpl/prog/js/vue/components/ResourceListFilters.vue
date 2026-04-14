@@ -7,13 +7,11 @@
             >{{ instancedResource.getTableFilterFormElementsLabel()
             }}{{ " " }}</template
         >
-        <template
-            v-for="(filter, index) in instancedResource.table.additionalFilters"
-            v-bind:key="index"
-        >
+        <template v-for="(filter, index) in wrappedFilters" v-bind:key="index">
             <FormElement :resource="filters" :attr="filter" :index="index" />
         </template>
         <input
+            v-if="!instancedResource.table.hideFilterButton"
             @click="
                 instancedResource.filterTable(
                     filters,
@@ -29,7 +27,7 @@
 </template>
 
 <script>
-import { ref } from "vue";
+import { ref, computed, nextTick } from "vue";
 import FormElement from "./FormElement.vue";
 export default {
     components: { FormElement },
@@ -45,16 +43,38 @@ export default {
                   )
                 : {}
         );
+
+        const wrappedFilters = computed(() =>
+            props.instancedResource.table.additionalFilters.map(filter =>
+                filter.immediateFilter
+                    ? {
+                          ...filter,
+                          onClick: resource => {
+                              filter.onClick?.(resource);
+                              nextTick(() =>
+                                  props.instancedResource.filterTable(
+                                      filters.value,
+                                      props.table,
+                                      props.instancedResource.embedded
+                                  )
+                              );
+                          },
+                      }
+                    : filter
+            )
+        );
+
         return {
             filters,
+            wrappedFilters,
         };
     },
 };
 </script>
 
 <style scoped>
-.filters > input[type="checkbox"],
-.filters > input[type="button"] {
+.filters > :deep(input[type="checkbox"]),
+.filters > :deep(input[type="button"]) {
     margin-left: 1rem;
 }
 </style>
