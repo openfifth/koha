@@ -10,7 +10,7 @@
     </router-link>
     <a
         v-else-if="linkData && linkData.href"
-        :href="linkData.href"
+        :href="builtHref"
         :class="{ disabled: linkData.disabled }"
     >
         <slot />
@@ -37,21 +37,30 @@ export default {
             });
         }
 
-        if (props.linkData?.href && props.linkData.params) {
-            props.linkData.href += "?";
+        let builtHref = props.linkData?.href ?? null;
+        if (builtHref && props.linkData.params) {
+            builtHref += "?";
             Object.keys(props.linkData.params).forEach(key => {
                 const paramValue =
                     formattedParams.value[key] || props.linkData.params[key];
-                props.linkData.href += `${key}=${paramValue}&`;
+                builtHref += `${key}=${paramValue}&`;
             });
-            props.linkData.href = props.linkData.href.slice(0, -1);
+            builtHref = builtHref.slice(0, -1);
         }
-        if (props.linkData?.href && props.linkData.slug) {
-            props.linkData.href += `/${props.resource[props.linkData.slug]}`;
+        if (builtHref && props.linkData.slug) {
+            builtHref += `/${props.resource[props.linkData.slug]}`;
+        }
+        if (builtHref && props.linkData.fragment) {
+            const fragment =
+                typeof props.linkData.fragment === "function"
+                    ? props.linkData.fragment(props.resource)
+                    : props.linkData.fragment;
+            builtHref += `#${fragment}`;
         }
         return {
             formattedParams,
             paramsFound,
+            builtHref,
         };
     },
 };
