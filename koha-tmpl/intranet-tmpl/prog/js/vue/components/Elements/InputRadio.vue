@@ -7,6 +7,7 @@
         :checked="checked"
         v-model="model"
         @change="changeMethod()"
+        :disabled="disabled"
     />
 </template>
 
@@ -23,6 +24,7 @@ export default {
             type: Function,
             default: () => {},
         },
+        disabled: Boolean,
     },
     emits: ["update:modelValue"],
     setup(props, { emit }) {

@@ -75,6 +75,7 @@
                     @change="
                         attr.onChange && attr.onChange.call(this, resource)
                     "
+                    :disabled="option.disabled"
                 />
             </label>
         </template>
