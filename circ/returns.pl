@@ -154,6 +154,7 @@ sub process_batch_checkin_item {
 
     unless ($item) {
         $result{messages}{BadBarcode} = $barcode;
+        $result{status} = 'bad_barcode';
         return \%result;
     }
 
@@ -200,6 +201,20 @@ sub process_batch_checkin_item {
         $diffBranchSend = $resFound->{branchcode}
             if $branch ne $resFound->{branchcode};
         confirm_hold( $item, $hold, $diffBranchSend, $desk_id ) if $hold;
+    }
+
+    if ( $messages->{BadBarcode} ) {
+        $result{status} = 'bad_barcode';
+    } elsif ( $result{needs_confirm} ) {
+        $result{status} = 'needs_confirm';
+    } elsif ( $result{bundle_confirm} ) {
+        $result{status} = 'bundle_confirm';
+    } elsif ($returned) {
+        $result{status} = 'returned';
+    } elsif ( $messages->{NotIssued} ) {
+        $result{status} = 'not_issued';
+    } else {
+        $result{status} = 'failed';
     }
 
     return \%result;
