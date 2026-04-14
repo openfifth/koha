@@ -5,6 +5,7 @@ INSERT IGNORE INTO authorised_value_categories( category_name, is_system )
     ('Asort2', 1),
     ('Bsort1', 1),
     ('Bsort2', 1),
+    ('BATCH_CHECKIN_DEFAULTS', 1),
     ('SUGGEST', 0),
     ('SUGGEST_STATUS', 0),
     ('SUGGEST_FORMAT', 0),

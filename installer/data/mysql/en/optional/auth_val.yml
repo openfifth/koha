@@ -312,6 +312,27 @@ tables:
           authorised_value: "FOUND_IN_LIB"
           lib: "Found in library"
 
+        # batch checkin defaults
+        - category: "BATCH_CHECKIN_DEFAULTS"
+          authorised_value: "BATCH_CHECKIN_ENABLED"
+          lib: "Enable batch mode for multiple returns"
+
+        - category: "BATCH_CHECKIN_DEFAULTS"
+          authorised_value: "BATCH_CHECKIN_KEEP_SELECTION"
+          lib: "Remember batch mode settings"
+
+        - category: "BATCH_CHECKIN_DEFAULTS"
+          authorised_value: "BATCH_CHECKIN_IGNORE_NOTISSUED"
+          lib: "Hide 'not checked out' warnings"
+
+        - category: "BATCH_CHECKIN_DEFAULTS"
+          authorised_value: "BATCH_CHECKIN_CONFIRM_HOLD"
+          lib: "Automatically capture holds"
+
+        - category: "BATCH_CHECKIN_DEFAULTS"
+          authorised_value: "BATCH_CHECKIN_CONFIRM_TRANSFER"
+          lib: "Automatically create transfers"
+
         # hold cancellations
         - category: "HOLD_CANCELLATION"
           authorised_value: "NOT_FOUND"
