@@ -571,7 +571,7 @@ __END_SRU_PUBLICSERVER__
  </content_security_policy>
 
  <!-- Interval currently used for batch checkin only -->
- <rfid_debounce_interval>500</rfid_debounce_interval>
+ <batch_checkin_debounce_interval>500</batch_checkin_debounce_interval>
 
 </config>
 </yazgfs>
