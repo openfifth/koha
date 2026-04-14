@@ -1656,7 +1656,6 @@
                 '[% Koha.Preference('BatchCheckinDefaults') %]';
 
             if ( batch_mode_settings.match('BATCH_CHECKIN_ENABLED') ) {
-                $("#show-circ-settings a").trigger('click');
                 $('#batch-mode-toggle').prop('checked', true).trigger('change');
             }
             if ( batch_mode_settings.match('BATCH_CHECKIN_KEEP_SELECTION') )
