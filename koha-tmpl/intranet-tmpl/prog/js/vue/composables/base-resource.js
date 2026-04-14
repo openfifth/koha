@@ -610,7 +610,7 @@ export function useBaseResource(resourceConfig) {
                     if (attr.hideIn.includes("Search")) return acc;
                 }
                 if (attr.hasOwnProperty("defaultValue")) {
-                    acc[attr.name] = attr.defaultValue;
+                    acc[attr.name] = structuredClone(attr.defaultValue);
                     return acc;
                 }
                 if (["text", "textarea", "select"].includes(attr.type)) {
