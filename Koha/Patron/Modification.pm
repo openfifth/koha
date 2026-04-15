@@ -158,7 +158,7 @@ sub approve {
     return $self->delete();
 }
 
-=head3 type
+=head3 _type
 
 =cut
 

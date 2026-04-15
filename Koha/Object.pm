@@ -423,6 +423,14 @@ sub TO_JSON {
     return $unblessed;
 }
 
+=head3 _date_or_datetime_column_type
+
+    if ( _date_or_datetime_column_type( $column_type ) ) { ... }
+
+Returns true if the given column type is a date or datetime type.
+
+=cut
+
 sub _date_or_datetime_column_type {
     my ($column_type) = @_;
 
@@ -435,6 +443,14 @@ sub _date_or_datetime_column_type {
     return ( grep { $column_type eq $_ } @dt_types ) ? 1 : 0;
 }
 
+=head3 _datetime_column_type
+
+    if ( _datetime_column_type( $column_type ) ) { ... }
+
+Returns true if the given column type is a datetime (not date-only) type.
+
+=cut
+
 sub _datetime_column_type {
     my ($column_type) = @_;
 
@@ -445,6 +461,15 @@ sub _datetime_column_type {
 
     return ( grep { $column_type eq $_ } @dt_types ) ? 1 : 0;
 }
+
+=head3 _numeric_column_type
+
+    if ( _numeric_column_type( $column_type ) ) { ... }
+
+Returns true if the given column type is an integer numeric type.
+Workaround for L<https://github.com/perl5-dbi/DBD-mysql/issues/212>.
+
+=cut
 
 sub _numeric_column_type {
 
@@ -465,6 +490,15 @@ sub _numeric_column_type {
 
     return ( grep { $column_type eq $_ } @numeric_types ) ? 1 : 0;
 }
+
+=head3 _decimal_column_type
+
+    if ( _decimal_column_type( $column_type ) ) { ... }
+
+Returns true if the given column type is a decimal/float type.
+Workaround for L<https://github.com/perl5-dbi/DBD-mysql/issues/212>.
+
+=cut
 
 sub _decimal_column_type {
 
@@ -800,6 +834,15 @@ Returns the passed params, converted from API naming into the model.
 
 =cut
 
+=head3 _recursive_fixup
+
+    my $fixed = $self->_recursive_fixup( $key, $value, $column_info );
+
+Recursively process a value for API-to-model attribute conversion,
+handling boolean coercion and nested structures.
+
+=cut
+
 sub _recursive_fixup {
     my ( $self, $key, $value, $column_info ) = @_;
 
@@ -934,6 +977,14 @@ sub _columns {
     return $self->{_columns};
 }
 
+=head3 _get_object_class
+
+    my $class = _get_object_class( $result_class );
+
+Maps a DBIC result class to its corresponding Koha object class.
+
+=cut
+
 sub _get_object_class {
     my ($type) = @_;
     return unless $type;
@@ -1049,6 +1100,12 @@ sub is_accessible {
 
     return 1;
 }
+
+=head3 DESTROY
+
+Prevent AUTOLOAD from catching DESTROY calls.
+
+=cut
 
 sub DESTROY { }
 
