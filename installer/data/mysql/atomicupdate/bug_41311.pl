@@ -11,7 +11,7 @@ return {
         if ( !column_exists( 'sip_accounts', 'patron_branchcode_in_ao' ) ) {
             $dbh->do(
                 q{
-                ALTER TABLE sip_accounts ADD COLUMN `patron_branchcode_in_ao` tinyint(1) AFTER `send_patron_home_library_in_af`;
+                ALTER TABLE sip_accounts ADD COLUMN `patron_branchcode_in_ao` tinyint(1) DEFAULT 0 AFTER `send_patron_home_library_in_af`;
             }
             );
         }
