@@ -30,28 +30,6 @@ Koha::Acquisition::Finances::Allocations object set class
 
 =head2 Class methods
 
-=head3 add_totals_to_fund_allocations
-
-=cut
-
-sub add_totals_to_fund_allocations {
-    my ( $self, $args ) = @_;
-
-    my $allocations = $args->{allocations};
-
-    # my @sorted_allocations = sort { $a->{allocation_amount} <=> $b->{allocation_amount} } @$allocations;
-
-    my $total = 0;
-    foreach my $allocation_index ( 1 .. scalar(@$allocations) ) {
-        my $allocation = @$allocations[ $allocation_index - 1 ];
-        $allocation->{allocation_index} = $allocation_index;
-        $total += $allocation->{allocation_amount};
-        $allocation->{new_fund_value} = $total;
-    }
-
-    return $allocations;
-}
-
 =head2 Internal methods
 
 =head3 _type

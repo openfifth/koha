@@ -42,9 +42,9 @@ sub store {
 
     $self->SUPER::store;
 
-    # unless ( $args->{no_cascade} ) {
-    #     $self->cascade_to_sub_funds;
-    # }
+    unless ( $args->{no_cascade} ) {
+        $self->cascade_to_sub_funds;
+    }
 
     return $self;
 }
@@ -117,32 +117,8 @@ sub has_sub_funds {
 
     my $sub_funds = $self->sub_funds( { embed_children => 0 } );
 
-    return 1 if scalar( @{$sub_funds} ) > 0;
+    return 1 if $sub_funds->count > 0;
     return 0;
-}
-
-=head3 cascade_to_fund_allocations
-
-This method cascades changes to the values of the "status" property to all fund_allocations attached to this fund
-
-=cut
-
-sub cascade_to_fund_allocations {
-    my ( $self, $args ) = @_;
-
-    my @fund_allocations = $self->fund_allocations->as_list;
-
-    foreach my $fund_allocation (@fund_allocations) {
-        my @data_to_cascade = ( 'fiscal_period_id', 'currency', 'owner_id', 'ledger_id' );
-        my $data_updated    = $self->cascade_data(
-            {
-                parent     => $self,
-                child      => $fund_allocation,
-                properties => \@data_to_cascade
-            }
-        );
-        $fund_allocation->store() if $data_updated;
-    }
 }
 
 =head3 cascade_to_sub_funds
@@ -154,25 +130,17 @@ This method cascades changes to the values of the "status" properties to all sub
 sub cascade_to_sub_funds {
     my ( $self, $args ) = @_;
 
-    my $sub_funds = $self->sub_funds;
+    my @sub_funds = $self->sub_funds->as_list;
     my $status    = $self->status;
 
-    foreach my $sub_fund (@$sub_funds) {
+    foreach my $sub_fund (@sub_funds) {
         my $status_updated = $self->cascade_status(
             {
                 parent_status => $status,
                 child         => $sub_fund
             }
         );
-        my @data_to_cascade = ( 'fiscal_period_id', 'currency', 'owner_id', 'ledger_id' );
-        my $data_updated    = $self->cascade_data(
-            {
-                parent     => $self,
-                child      => $sub_fund,
-                properties => \@data_to_cascade
-            }
-        );
-        $sub_fund->store() if $status_updated || $data_updated;
+        $sub_fund->store() if $status_updated;
     }
 }
 

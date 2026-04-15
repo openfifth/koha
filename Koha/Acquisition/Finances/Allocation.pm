@@ -41,10 +41,6 @@ Koha::Acquisition::Finances::Allocation Object class
 sub store {
     my ( $self, $args ) = @_;
 
-    if ( $self->allocation_amount < 0 ) {
-        $self->will_allocation_breach_spend_limits;
-    }
-
     $self->SUPER::store;
 
     return $self;
@@ -60,60 +56,6 @@ sub delete {
     my $deleted = $self->_result()->delete;
 
     return $self;
-}
-
-=head3 will_allocation_breach_spend_limits
-
-Checks whether the new allocation will breach any spend limits
-A I<Koha::Exceptions::Acquisition::Finances::LimitExceeded> exception is thrown if it does
-
-=cut
-
-sub will_allocation_breach_spend_limits {
-    my ($self) = @_;
-
-    my $result;
-
-    # ACQTODO - THIS WILL NEED UPDATING IN LINE WITH NEW FUND DISTRIBUTION STRUCTURE
-
-    # if ( $self->sub_fund_id ) {
-    #     my $sub_fund = $self->sub_fund;
-    #     $result = $sub_fund->is_spend_limit_breached( { new_allocation => $self } );
-    #     Koha::Exceptions::Acquisition::Finances::LimitExceeded->throw(
-    #         data_type => 'sub_fund',
-    #         amount    => $result->{breach_amount},
-    #     ) if !$result->{within_limit};
-
-    #     my $fund = $self->sub_fund->fund;
-    #     $result = $fund->is_spend_limit_breached( { new_allocation => $self } );
-    #     Koha::Exceptions::Acquisition::Finances::LimitExceeded->throw(
-    #         data_type => 'fund',
-    #         amount    => $result->{breach_amount},
-    #     ) if !$result->{within_limit};
-    # } else {
-    #     my $fund = $self->fund;
-    #     $result = $fund->is_spend_limit_breached( { new_allocation => $self } );
-    #     Koha::Exceptions::Acquisition::Finances::LimitExceeded->throw(
-    #         data_type => 'fund',
-    #         amount    => $result->{breach_amount},
-    #     ) if !$result->{within_limit};
-    # }
-
-    # my $ledger = $self->ledger;
-    # $result = $ledger->is_spend_limit_breached( { new_allocation => $self } );
-    # Koha::Exceptions::Acquisition::Finances::LimitExceeded->throw(
-    #     data_type => 'ledger',
-    #     amount    => $result->{breach_amount},
-    # ) if !$result->{within_limit};
-
-    # my $fiscal_period = $self->fiscal_period;
-    # $result = $fiscal_period->is_spend_limit_breached( { new_allocation => $self, over_spend_allowed => 0 } );
-    # Koha::Exceptions::Acquisition::Finances::LimitExceeded->throw(
-    #     data_type => 'fiscal_period',
-    #     amount    => $result->{breach_amount},
-    # ) if !$result->{within_limit};
-
-    return 0;
 }
 
 =head3 _object_hierarchy

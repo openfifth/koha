@@ -220,6 +220,8 @@ sub update_amount {
         } else {
             return $result;
         }
+    } else {
+        $self->$entity_field($new_value)->store;
     }
 }
 
