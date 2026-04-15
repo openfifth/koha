@@ -18,11 +18,12 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 2;
+use Test::More tests => 3;
 
 use Test::MockModule;
 use Test::MockObject;
 use Test::Mojo;
+use Test::Warn;
 
 use MIME::Base64 qw(encode_base64);
 use JSON         qw(encode_json);
@@ -125,10 +126,27 @@ XML
         qr{<errorValue>AuthenticationFailed</errorValue>},
         'error value is authentication failed'
     );
+    my $supplyingAgencyMessageConfirmationXml = <<'XML';
+        <supplyingAgencyMessageConfirmation xmlns="https://example.com/ill/request">
+          <confirmationHeader>
+            <timestamp>2023-01-01T00:00:00Z</timestamp>
+          </confirmationHeader>
+        </supplyingAgencyMessageConfirmation>
+XML
+
+    my $mock_ua_response = Test::MockObject->new();
+    $mock_ua_response->mock( 'is_success',      sub { return 1; } );
+    $mock_ua_response->mock( 'decoded_content', sub { return $supplyingAgencyMessageConfirmationXml; } );
+    $mock_ua_response->mock( 'status_line',     sub { return '200 OK'; } );
+
+    my $mock_ua = Test::MockModule->new('LWP::UserAgent');
+    $mock_ua->mock( 'post', sub { return $mock_ua_response; } );
+
     my $requesting_agency = $builder->build_object(
         {
             class => 'Koha::ILL::ISO18626::RequestingAgencies',
-            value => { account_id => 'asd', securityCode => 'asds' }
+            value =>
+                { account_id => 'asd', securityCode => 'asds', callback_endpoint => 'http://localhost/ill/callback' }
         }
     );
 
@@ -245,6 +263,194 @@ XML
         qr{<errorType>UnrecognizedDataValue</errorType>},
         'Cant find this supplyingAgencyRequestId'
     );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'send_message() tests' => sub {
+
+    plan tests => 18;
+
+    $schema->storage->txn_begin;
+
+    my $librarian = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { flags => 2**22 }    # 22 => ill
+        }
+    );
+    my $password = 'thePassword123';
+    $librarian->set_password( { password => $password, skip_validation => 1 } );
+    my $userid = $librarian->userid;
+
+    # Test: no callback_endpoint defined on requesting agency
+    $builder->build_object(
+        {
+            class => 'Koha::ILL::ISO18626::RequestingAgencies',
+            value => { account_id => 'no_callback_test', securityCode => 'test_secret_1', callback_endpoint => '' }
+        }
+    );
+
+    my $request_no_callback_xml = <<'XML';
+        <request xmlns="https://example.com/ill/request">
+        <header>
+          <requestingAgencyAuthentication>
+            <accountId>no_callback_test</accountId>
+            <securityCode>test_secret_1</securityCode>
+          </requestingAgencyAuthentication>
+          <requestingAgencyRequestId>XYZ</requestingAgencyRequestId>
+          <timestamp>2023-03-15 14:30:00</timestamp>
+          <requestingAgencyId>
+            <agencyIdType>ISIL</agencyIdType>
+            <agencyIdValue>req_agency_value</agencyIdValue>
+          </requestingAgencyId>
+        </header>
+        <bibliographicInfo>
+          <title>Test request - no callback</title>
+        </bibliographicInfo>
+        <serviceInfo>
+          <serviceType>Copy</serviceType>
+        </serviceInfo>
+      </request>
+XML
+
+    $t->post_ok(
+        "//$userid:$password@/api/v1/public/ill/iso18626",
+        { 'Content-Type' => 'application/xml' },
+        $request_no_callback_xml
+    )->status_is(201)->content_like(
+        qr{<messageStatus>OK</messageStatus>},
+        'request created successfully'
+    );
+
+    my $request_no_callback = Koha::ILL::ISO18626::Requests->search(
+        {},
+        { order_by => { -desc => 'iso18626_request_id' }, rows => 1 }
+    )->single;
+
+    warning_like {
+        $t->patch_ok( "//$userid:$password@/api/v1/ill/iso18626_requests/"
+                . $request_no_callback->iso18626_request_id => json => { status => 'Loaned' } )->status_is(200);
+    }
+    qr/ISO18626: Cannot send message/, 'warns when requesting agency has no callback_endpoint';
+
+    # Test: callback_endpoint defined but HTTP request fails
+    $builder->build_object(
+        {
+            class => 'Koha::ILL::ISO18626::RequestingAgencies',
+            value => {
+                account_id        => 'bad_endpoint_test',
+                securityCode      => 'test_secret_2',
+                callback_endpoint => 'http://localhost/ill/callback'
+            }
+        }
+    );
+
+    my $mock_fail_response = Test::MockObject->new();
+    $mock_fail_response->mock( 'is_success',      sub { return 0; } );
+    $mock_fail_response->mock( 'status_line',     sub { return '500 Internal Server Error'; } );
+    $mock_fail_response->mock( 'decoded_content', sub { return 'Internal Server Error'; } );
+
+    my $mock_ua_fail = Test::MockModule->new('LWP::UserAgent');
+    $mock_ua_fail->mock( 'post', sub { return $mock_fail_response; } );
+
+    my $request_bad_endpoint_xml = <<'XML';
+        <request xmlns="https://example.com/ill/request">
+        <header>
+          <requestingAgencyAuthentication>
+            <accountId>bad_endpoint_test</accountId>
+            <securityCode>test_secret_2</securityCode>
+          </requestingAgencyAuthentication>
+          <requestingAgencyRequestId>XYZ</requestingAgencyRequestId>
+          <timestamp>2023-03-15 14:30:00</timestamp>
+          <requestingAgencyId>
+            <agencyIdType>ISIL</agencyIdType>
+            <agencyIdValue>req_agency_value</agencyIdValue>
+          </requestingAgencyId>
+        </header>
+        <bibliographicInfo>
+          <title>Test request - bad endpoint</title>
+        </bibliographicInfo>
+        <serviceInfo>
+          <serviceType>Copy</serviceType>
+        </serviceInfo>
+      </request>
+XML
+
+    $t->post_ok(
+        "//$userid:$password@/api/v1/public/ill/iso18626",
+        { 'Content-Type' => 'application/xml' },
+        $request_bad_endpoint_xml
+    )->status_is(201)->content_like(
+        qr{<messageStatus>OK</messageStatus>},
+        'request created successfully'
+    );
+
+    my $request_bad_endpoint = Koha::ILL::ISO18626::Requests->search(
+        {},
+        { order_by => { -desc => 'iso18626_request_id' }, rows => 1 }
+    )->single;
+
+    warning_like {
+        $t->patch_ok( "//$userid:$password@/api/v1/ill/iso18626_requests/"
+                . $request_bad_endpoint->iso18626_request_id => json => { status => 'Loaned' } )->status_is(200);
+    }
+    qr/ISO18626: HTTP Request Failed/, 'warns when HTTP request to callback_endpoint fails';
+
+    # Test: callback_endpoint is set but is not a valid URL
+    $builder->build_object(
+        {
+            class => 'Koha::ILL::ISO18626::RequestingAgencies',
+            value => {
+                account_id        => 'invalid_url_test',
+                securityCode      => 'test_secret_3',
+                callback_endpoint => 'not-a-valid-url'
+            }
+        }
+    );
+
+    my $request_invalid_url_xml = <<'XML';
+        <request xmlns="https://example.com/ill/request">
+        <header>
+          <requestingAgencyAuthentication>
+            <accountId>invalid_url_test</accountId>
+            <securityCode>test_secret_3</securityCode>
+          </requestingAgencyAuthentication>
+          <requestingAgencyRequestId>XYZ</requestingAgencyRequestId>
+          <timestamp>2023-03-15 14:30:00</timestamp>
+          <requestingAgencyId>
+            <agencyIdType>ISIL</agencyIdType>
+            <agencyIdValue>req_agency_value</agencyIdValue>
+          </requestingAgencyId>
+        </header>
+        <bibliographicInfo>
+          <title>Test request - invalid url</title>
+        </bibliographicInfo>
+        <serviceInfo>
+          <serviceType>Copy</serviceType>
+        </serviceInfo>
+      </request>
+XML
+
+    $t->post_ok(
+        "//$userid:$password@/api/v1/public/ill/iso18626",
+        { 'Content-Type' => 'application/xml' },
+        $request_invalid_url_xml
+    )->status_is(201)->content_like(
+        qr{<messageStatus>OK</messageStatus>},
+        'request created successfully'
+    );
+
+    my $request_invalid_url = Koha::ILL::ISO18626::Requests->search(
+        {},
+        { order_by => { -desc => 'iso18626_request_id' }, rows => 1 }
+    )->single;
+
+    warning_like {
+        $t->patch_ok( "//$userid:$password@/api/v1/ill/iso18626_requests/"
+                . $request_invalid_url->iso18626_request_id => json => { status => 'Loaned' } )->status_is(200);
+    }
+    qr/ISO18626: HTTP Request Failed/, 'warns when callback_endpoint is not a valid URL';
 
     $schema->storage->txn_rollback;
 };

@@ -24,6 +24,7 @@ use Koha::REST::V1;
 use XML::LibXML;
 use JSON           qw( encode_json decode_json );
 use File::Basename qw( dirname );
+use LWP::UserAgent;
 
 use Koha::Biblios;
 use Koha::ILL::ISO18626::RequestingAgency;
@@ -103,43 +104,108 @@ sub messages {
 
 =head3 send_message
 
-Send a message to the requesting agency
-    # $message must be a valid XML string.
+Send an ISO18626 message payload to the requesting agency's callback endpoint.
+Expects C<$message> as a Perl hashref, which is converted to XML before sending.
 
 =cut
 
 sub send_message {
     my ( $self, $type, $message ) = @_;
 
-    # my $requesting_agency = $self->_result->requesting_agency;
-
-    # return unless $requesting_agency->callback_endpoint;
-
-    # my $ua = LWP::UserAgent->new( agent => 'Koha ILL' );
-    # $ua->agent( 'Koha/' . Koha::version() );
-
-    # my $response = $ua->post(
-    #     $requesting_agency->callback_endpoint,
-    #     Content_Type => 'application/xml',
-    #     Content => $message,
-    # );
-
-    # if ( $response->is_success ) {
-    #FIXME: Better way to convert this to json other than invoking Koha::REST::V1 ?
-    # my $parser = XML::LibXML->new();
-    # my $doc    = $parser->parse_string($message);
-    # my $root   = $doc->documentElement();
-    # my $json   = Koha::REST::V1::parse_xml($root);
-
-    # $json = JSON::encode_json($json);
     $self->add_message( { type => $type, message => $message } );
-    return 1;
 
-    # }
-    # else {
-    #     $self->_result->add_message( 'Request', "Failed to send message: " . $response->status_line );
-    #     return;
-    # }
+    my $requesting_agency = $self->requesting_agency;
+    if ( !$requesting_agency ) {
+        warn sprintf(
+            "ISO18626: Cannot send message. No requesting agency linked to request %s",
+            $self->iso18626_request_id
+        );
+        return 0;
+    }
+
+    if ( !$requesting_agency->callback_endpoint ) {
+        warn sprintf(
+            "ISO18626: Cannot send message. Requesting agency %s has no callback_endpoint defined.",
+            $requesting_agency->id
+        );
+        return 0;
+    }
+
+    my $xml_payload;
+    eval { $xml_payload = Koha::REST::V1::to_xml($message); };
+    if ($@) {
+        warn sprintf( "ISO18626: Failed to convert message to XML for request %s: %s", $self->iso18626_request_id, $@ );
+        return 0;
+    }
+
+    my $ua = LWP::UserAgent->new(
+        agent   => 'Koha ' . $Koha::VERSION,
+        timeout => 10,
+    );
+
+    my $response = $ua->post(
+        $requesting_agency->callback_endpoint,
+        'Content-Type' => 'application/xml',
+        Content        => $xml_payload,
+    );
+
+    if ( $response->is_success ) {
+        my $content = $response->decoded_content;
+
+        if ($content) {
+            my $parser = XML::LibXML->new();
+            my $doc;
+            eval { $doc = $parser->parse_string($content); };
+
+            if ( $@ || !$doc ) {
+                warn sprintf(
+                    "ISO18626: Could not parse XML confirmation from %s for request %s. Error: %s",
+                    $requesting_agency->callback_endpoint,
+                    $self->iso18626_request_id,
+                    $@
+                );
+            } else {
+                my $root = $doc->documentElement();
+                my $parsed_json;
+                eval {
+                    my $spec_file = dirname(__FILE__) . "/../../../api/v1/swagger/swagger_bundle.json";
+                    if ( !-f $spec_file ) {
+                        $spec_file = dirname(__FILE__) . "/../../../api/v1/swagger/swagger.yaml";
+                    }
+                    $parsed_json = Koha::REST::V1::parse_xml( $root, $spec_file );
+                };
+
+                if ($@) {
+                    warn sprintf(
+                        "ISO18626: Failed to convert XML to JSON for confirmation on request %s. Error: %s",
+                        $self->iso18626_request_id,
+                        $@
+                    );
+                } else {
+                    my $confirmation_type = $type . 'Confirmation';
+                    $self->add_message( { type => $confirmation_type, message => $parsed_json } );
+                }
+            }
+        } else {
+            warn sprintf(
+                "ISO18626: HTTP request for %s on request %s was successful but returned an empty body.",
+                $type,
+                $self->iso18626_request_id
+            );
+        }
+
+        return 1;
+    }
+
+    # If we reach this point, the HTTP request failed
+    warn sprintf(
+        "ISO18626: HTTP Request Failed. Could not send %s to %s. Status: %s. Body: %s",
+        $type,
+        $requesting_agency->callback_endpoint,
+        $response->status_line,
+        $response->decoded_content || 'No content provided'
+    );
+    return 0;
 }
 
 =head3 requesting_agency
