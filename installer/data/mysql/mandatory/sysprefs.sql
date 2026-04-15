@@ -417,6 +417,7 @@ INSERT INTO systempreferences ( `variable`, `value` ) VALUES
 ('LoadSearchHistoryToTheFirstLoggedUser', '1'),
 ('LocalCoverImages','0'),
 ('LocalHoldsPriority', 'None'),
+('LocalHoldsPriorityExclusivityPeriod', '0'),
 ('LocalHoldsPriorityItemControl', 'holdingbranch'),
 ('LocalHoldsPriorityPatronControl', 'PickupLibrary'),
 ('LockExpiredDelay',''),
