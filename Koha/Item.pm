@@ -258,6 +258,14 @@ sub store {
     return $result;
 }
 
+=head3 _add_statistic
+
+    $item->_add_statistic( $type );
+
+Record a statistics entry for this item (e.g. on store or delete).
+
+=cut
+
 sub _add_statistic {
     my ( $self, $type ) = @_;
     C4::Stats::UpdateStats(
