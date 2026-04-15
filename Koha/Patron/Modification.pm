@@ -115,38 +115,34 @@ sub approve {
     $schema->txn_do(
         sub {
             try {
-                $schema->safe_do(
-                    sub {
-                        $patron->store();
+                $patron->store();
 
-                        # Deal with attributes
-                        my @codes = uniq( map { $_->{code} } @{$extended_attributes} );
-                        foreach my $code (@codes) {
-                            map { $_->delete } Koha::Patron::Attributes->search(
-                                {
-                                    borrowernumber => $patron->borrowernumber,
-                                    code           => $code
-                                }
-                            )->as_list;
+                # Deal with attributes
+                my @codes = uniq( map { $_->{code} } @{$extended_attributes} );
+                foreach my $code (@codes) {
+                    map { $_->delete } Koha::Patron::Attributes->search(
+                        {
+                            borrowernumber => $patron->borrowernumber,
+                            code           => $code
                         }
-                        foreach my $attr ( @{$extended_attributes} ) {
-                            $attr->{attribute} = exists $attr->{attribute} ? $attr->{attribute} : $attr->{value};
-                            Koha::Patron::Attribute->new(
-                                {
-                                    borrowernumber => $patron->borrowernumber,
-                                    code           => $attr->{code},
-                                    attribute      => $attr->{attribute},
-                                }
-                                )->store
-                                if $attr->{attribute}    # there's a value
-                                or (
-                                defined $attr->{attribute}     # there's a value that is 0, and not
-                                && $attr->{attribute} ne ""    # the empty string which means delete
-                                && $attr->{attribute} == 0
-                                );
+                    )->as_list;
+                }
+                foreach my $attr ( @{$extended_attributes} ) {
+                    $attr->{attribute} = exists $attr->{attribute} ? $attr->{attribute} : $attr->{value};
+                    Koha::Patron::Attribute->new(
+                        {
+                            borrowernumber => $patron->borrowernumber,
+                            code           => $attr->{code},
+                            attribute      => $attr->{attribute},
                         }
-                    }
-                );
+                        )->store
+                        if $attr->{attribute}    # there's a value
+                        or (
+                        defined $attr->{attribute}     # there's a value that is 0, and not
+                        && $attr->{attribute} ne ""    # the empty string which means delete
+                        && $attr->{attribute} == 0
+                        );
+                }
             } catch {
 
                 # Convert any exception to domain-specific exception
