@@ -59,6 +59,14 @@ __PACKAGE__->table("hold_fill_targets");
   data_type: 'integer'
   is_nullable: 1
 
+=head2 local_holdgroup_match
+
+  data_type: 'tinyint'
+  default_value: 0
+  is_nullable: 0
+
+set when the queue targeted this item as a local hold group match for the reserve
+
 =cut
 
 __PACKAGE__->add_columns(
@@ -74,6 +82,8 @@ __PACKAGE__->add_columns(
   { data_type => "tinyint", default_value => 0, is_nullable => 0 },
   "reserve_id",
   { data_type => "integer", is_nullable => 1 },
+  "local_holdgroup_match",
+  { data_type => "tinyint", default_value => 0, is_nullable => 0 },
 );
 
 =head1 PRIMARY KEY
@@ -156,9 +166,12 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07046 @ 2020-08-25 09:54:59
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:SAi7lh09AVqlzXMLvLgkQg
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-15 15:52:33
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:sbievVTBWpIgdYnQ2Kbx/A
 
+__PACKAGE__->add_columns(
+    '+local_holdgroup_match' => { is_boolean => 1 },
+);
 
 # You can replace this text with custom content, and it will be preserved on regeneration
 1;
