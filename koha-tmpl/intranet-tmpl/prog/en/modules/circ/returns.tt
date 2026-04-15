@@ -1309,10 +1309,10 @@
                         <label for="batch-mode-ignore-notissued">Hide 'not checked out'-warnings</label>
                         <br />
                         <input type="checkbox" id="batch-mode-confirm-hold" name="confirm_hold" value="confirm_hold" />
-                        <label for="batch-mode-confirm-hold">Confirm hold when found</label>
+                        <label for="batch-mode-confirm-hold">Automatically capture holds</label>
                         <br />
                         <input type="checkbox" id="batch-mode-confirm-transfer" name="confirm_transfer" value="confirm_transfer" />
-                        <label for="batch-mode-confirm-transfer">Confirm transfer when found</label>
+                        <label for="batch-mode-confirm-transfer">Automatically create transfers</label>
                     </div>
                 </div>
 
@@ -1655,7 +1655,7 @@
                 $('div.alert.notissued').hide();
             }
 
-            // Confirm hold setting depends on HoldsAutoFill
+            // Automatic hold capture depends on HoldsAutoFill
             if ( "[% Koha.Preference('HoldsAutoFill') %]" == "1" )
                 $('#batch-mode-confirm-hold')
                     .attr('title', '[% t("Forced by preference HoldsAutoFill") %]' )
@@ -1663,7 +1663,7 @@
             else if ( batch_mode_settings.match('BATCH_CHECKIN_CONFIRM_HOLD') )
                 $('#batch-mode-confirm-hold').prop('checked', true);
 
-            // Confirm transfer setting depends on AutomaticItemReturn
+            // Automatic transfer creation depends on AutomaticItemReturn
             if ( "[% Koha.Preference('AutomaticItemReturn') %]" == "1" )
                 $('#batch-mode-confirm-transfer')
                     .attr('title', '[% t("Forced by preference AutomaticItemReturn") %]' )
