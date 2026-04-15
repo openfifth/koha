@@ -76,10 +76,14 @@ sub startup {
                 try {
                     my $xml = $c->req->body;
 
-                    my $parser = XML::LibXML->new();
-                    my $doc    = $parser->parse_string($xml);
-                    my $root   = $doc->documentElement();
-                    my $json   = $self->parse_xml($root);
+                    my $parser    = XML::LibXML->new();
+                    my $doc       = $parser->parse_string($xml);
+                    my $root      = $doc->documentElement();
+                    my $spec_file = $self->home->rel_file("api/v1/swagger/swagger_bundle.json");
+                    if ( !-f $spec_file ) {
+                        $spec_file = $self->home->rel_file("api/v1/swagger/swagger.yaml");
+                    }
+                    my $json = parse_xml( $root, $spec_file );
 
                     $c->req->body( JSON::encode_json($json) );
 
@@ -330,38 +334,33 @@ sub validate_json_payload {
 
 =head3 parse_xml
 
-    my $hashref = $self->parse_xml( $xml_node );
+    my $hashref = parse_xml( $xml_node, $spec_file );
 
 Converts an C<XML::LibXML::Node> into a Perl hashref, using the OpenAPI schema definitions to correctly identify and cast array properties.
 
 =cut
 
 sub parse_xml {
-    my ( $self, $node ) = @_;
+    my ( $node, $spec_file ) = @_;
     my $hash = {};
-
-    my $spec_file = $self->home->rel_file("api/v1/swagger/swagger_bundle.json");
-    if ( !-f $spec_file ) {
-        $spec_file = $self->home->rel_file("api/v1/swagger/swagger.yaml");
-    }
 
     my $schema = JSON::Validator::Schema::OpenAPIv2->new($spec_file);
 
-    $self->_parse_node( $node, $hash, 0, $schema->data->{definitions} );
+    _parse_node( $node, $hash, 0, $schema->data->{definitions} );
 
     return $hash;
 }
 
 =head3 _parse_node
 
-    $self->_parse_node( $node, $hash, $is_array, $schema_definitions );
+    _parse_node( $node, $hash, $is_array, $schema_definitions );
 
 Internal recursive helper for C<parse_xml> to populate a Perl hashref from XML elements.
 
 =cut
 
 sub _parse_node {
-    my ( $self, $node, $hash, $is_array, $schema_definitions ) = @_;
+    my ( $node, $hash, $is_array, $schema_definitions ) = @_;
 
     my $name       = $node->localName();
     my $properties = $schema_definitions->{$name}->{properties};
@@ -377,9 +376,9 @@ sub _parse_node {
         foreach my $child ( $node->childNodes() ) {
             if ( $child->nodeType() == 1 ) {    # 1 is the node type for elements
                 if ( grep { $_ eq $child->localName() } @array_properties ) {
-                    $self->_parse_node( $child, $child_hash, 1, $schema_definitions );
+                    _parse_node( $child, $child_hash, 1, $schema_definitions );
                 } else {
-                    $self->_parse_node( $child, $child_hash, 0, $schema_definitions );
+                    _parse_node( $child, $child_hash, 0, $schema_definitions );
                 }
             }
         }
