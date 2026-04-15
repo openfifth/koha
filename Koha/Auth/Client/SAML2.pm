@@ -162,11 +162,8 @@ sub checkpw {
 
     my $saml2_config  = $provider->get_config // {};
     my $mapping       = $provider->mappings->as_auth_mapping;
-    my $hostname_link = $provider->hostnames->search(
-        { 'hostname.hostname' => $hostname },
-        { join                => 'hostname' }
-    )->next;
-    my $matchpoint = $hostname_link ? $hostname_link->matchpoint : undef;
+    my $hostname_link = $provider->hostname_link($hostname);
+    my $matchpoint    = $hostname_link ? $hostname_link->matchpoint : undef;
 
     unless ($matchpoint) {
         carp 'SAML2: matchpoint not defined for hostname';
@@ -481,11 +478,8 @@ sub _get_shib_config {
     return 0 unless $provider;
 
     my $mapping       = $provider->mappings->as_auth_mapping;
-    my $hostname_link = $provider->hostnames->search(
-        { 'hostname.hostname' => \@h_candidates },
-        { join                => 'hostname' }
-    )->next;
-    my $matchpoint = $hostname_link ? $hostname_link->matchpoint : undef;
+    my $hostname_link = $provider->hostname_link($hostname);
+    my $matchpoint    = $hostname_link ? $hostname_link->matchpoint : undef;
 
     unless ($matchpoint) {
         carp 'shibboleth matchpoint not defined';

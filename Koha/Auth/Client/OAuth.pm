@@ -59,13 +59,8 @@ sub _get_data_and_patron {
     my $patron;
     my $mapped_data = {};
 
-    my $hostname_link = $hostname
-        ? $provider->hostnames->search(
-        { 'hostname.hostname' => $hostname },
-        { join                => 'hostname' }
-        )->next
-        : undef;
-    my $matchpoint = $hostname_link ? $hostname_link->matchpoint : undef;
+    my $hostname_link = $provider->hostname_link($hostname);
+    my $matchpoint    = $hostname_link ? $hostname_link->matchpoint : undef;
 
     if ( $data->{id_token} ) {
         my ( $header_part, $claims_part, $footer_part ) = split( /\./, $data->{id_token} );

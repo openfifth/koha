@@ -77,6 +77,33 @@ sub hostnames {
     return Koha::Auth::Identity::Provider::Hostnames->_new_from_dbic( scalar $self->_result->hostnames );
 }
 
+=head3 hostname_link
+
+    my $link = $provider->hostname_link($http_host);
+
+Returns the I<Koha::Auth::Identity::Provider::Hostname> row that applies to
+C<$http_host> for this provider. Candidates are tried in preference order -
+the full C<HTTP_HOST> value, the bare hostname with the port stripped, and
+the wildcard C<*> - and the first matching row is returned, or C<undef> if
+no candidate matches.
+
+=cut
+
+sub hostname_link {
+    my ( $self, $hostname ) = @_;
+
+    require Koha::Auth::Identity::Providers;
+
+    for my $candidate ( Koha::Auth::Identity::Providers->hostname_candidates($hostname) ) {
+        my $link = $self->hostnames->search(
+            { 'hostname.hostname' => $candidate },
+            { join                => 'hostname' }
+        )->next;
+        return $link if $link;
+    }
+    return;
+}
+
 =head3 get_config
 
     my $config = $provider->get_config;
