@@ -1,6 +1,6 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
-# This file is part of Koha
+# This file is part of Koha.
 #
 # Koha is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by
@@ -13,865 +13,344 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with Koha; if not, see <http://www.gnu.org/licenses>.
+# along with Koha; if not, see <https://www.gnu.org/licenses>.
 
 use Modern::Perl;
 
-use Test::More tests => 12;
-use Test::MockModule;
+use Test::NoWarnings;
+use Test::More tests => 9;
 
 use t::lib::TestBuilder;
-use t::lib::Mocks;
 
 use Koha::Database;
+use Koha::Acquisition::Finances::FiscalPeriods;
+use Koha::Acquisition::Finances::Ledgers;
 use Koha::Acquisition::Finances::Funds;
+use Koha::Acquisition::Finances::Allocations;
 
 my $schema  = Koha::Database->new->schema;
 my $builder = t::lib::TestBuilder->new;
 
-subtest 'cascade_lib_group_visibility' => sub {
+subtest 'cascade_status() tests' => sub {
 
-    plan tests => 2;
-
-    $schema->storage->txn_begin;
-
-    my $fiscal_period = $builder->build_object(
-        {
-            class => 'Koha::Acquisition::Finances::FiscalPeriods',
-            value => { status => 1, lib_group_visibility => '1|2' }
-        }
-    );
-    my $ledger = $builder->build_object(
-        {
-            class => 'Koha::Acquisition::Finances::Ledgers',
-            value => {
-                fiscal_period_id     => $fiscal_period->fiscal_period_id,
-                lib_group_visibility => $fiscal_period->lib_group_visibility,
-                status               => $fiscal_period->status,
-                currency             => 'GBP',
-                owner_id             => '1'
-            }
-        }
-    );
-
-    my $visibility_updated = $fiscal_period->cascade_lib_group_visibility(
-        {
-            parent_visibility => '1',
-            child             => $ledger
-        }
-    );
-
-    is( $visibility_updated, 1, 'Updated field has been cascaded to the ledger' );
-
-    $visibility_updated = $fiscal_period->cascade_lib_group_visibility(
-        {
-            parent_visibility => '1|2',
-            child             => $ledger
-        }
-    );
-
-    is( $visibility_updated, 0, 'An expanded range of library group visibility has not been automatically cascaded' );
-
-    $schema->storage->txn_rollback;
-};
-subtest 'cascade_status' => sub {
-
-    plan tests => 2;
+    plan tests => 4;
 
     $schema->storage->txn_begin;
 
-    my $fiscal_period = $builder->build_object(
-        {
-            class => 'Koha::Acquisition::Finances::FiscalPeriods',
-            value => { status => 1, lib_group_visibility => '1|2' }
-        }
-    );
-    my $ledger = $builder->build_object(
+    my $fiscal_period = $builder->build_object( { class => 'Koha::Acquisition::Finances::FiscalPeriods' } );
+    my $ledger        = $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Ledgers',
-            value => {
-                fiscal_period_id     => $fiscal_period->fiscal_period_id,
-                lib_group_visibility => $fiscal_period->lib_group_visibility,
-                status               => $fiscal_period->status,
-                currency             => 'GBP',
-                owner_id             => '1'
-            }
+            value => { status => 1 }
         }
     );
 
-    my $status_updated = $fiscal_period->cascade_status(
+    # Parent inactive -> active child: change should be detected
+    $fiscal_period->status(0);
+    my $changed = $fiscal_period->cascade_status( { parent_status => 0, child => $ledger } );
+    is( $changed,        1, 'Change detected when parent goes inactive and child is active' );
+    is( $ledger->status, 0, 'Child status updated to inactive' );
+
+    # Parent active -> already-inactive child: no change
+    my $ledger2 = $builder->build_object(
         {
-            parent_status => 0,
-            child         => $ledger
+            class => 'Koha::Acquisition::Finances::Ledgers',
+            value => { status => 0 }
         }
     );
-
-    is( $status_updated, 1, 'Updated field has been cascaded to the ledger' );
-
-    $status_updated = $fiscal_period->cascade_status(
-        {
-            parent_status => 1,
-            child         => $ledger
-        }
-    );
-
-    is( $status_updated, 0, 'Child objects have not been automatically set to active' );
+    $fiscal_period->status(1);
+    my $not_changed = $fiscal_period->cascade_status( { parent_status => 1, child => $ledger2 } );
+    is( $not_changed,     0, 'No change detected when parent is active and child is already inactive' );
+    is( $ledger2->status, 0, 'Child status unchanged' );
 
     $schema->storage->txn_rollback;
 };
 
-subtest 'cascade_data' => sub {
+subtest 'cascade_data() tests' => sub {
 
-    plan tests => 1;
+    plan tests => 4;
 
     $schema->storage->txn_begin;
 
-    my $fiscal_period = $builder->build_object(
+    my $fp1 = $builder->build_object( { class => 'Koha::Acquisition::Finances::FiscalPeriods' } );
+    my $fp2 = $builder->build_object( { class => 'Koha::Acquisition::Finances::FiscalPeriods' } );
+
+    my $parent_fund = $builder->build_object(
         {
-            class => 'Koha::Acquisition::Finances::FiscalPeriods',
-            value => { status => 1, lib_group_visibility => '1|2' }
+            class => 'Koha::Acquisition::Finances::Funds',
+            value => { fiscal_period_id => $fp1->fiscal_period_id, fund_parent_id => undef }
         }
     );
-    my $ledger = $builder->build_object(
+    my $sub_fund = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Funds',
+            value => {
+                fund_parent_id   => $parent_fund->fund_id,
+                fiscal_period_id => $fp1->fiscal_period_id,
+            }
+        }
+    );
+
+    # Change parent fund's fiscal_period_id and cascade to sub-fund
+    $parent_fund->fiscal_period_id( $fp2->fiscal_period_id );
+    my $changed = $parent_fund->cascade_data(
+        {
+            parent     => $parent_fund,
+            child      => $sub_fund,
+            properties => ['fiscal_period_id']
+        }
+    );
+    is( $changed,                    1,                      'Change detected when property differs' );
+    is( $sub_fund->fiscal_period_id, $fp2->fiscal_period_id, 'Sub-fund fiscal_period_id updated to match parent' );
+
+    # Cascade with identical value: no change
+    my $not_changed = $parent_fund->cascade_data(
+        {
+            parent     => $parent_fund,
+            child      => $sub_fund,
+            properties => ['fiscal_period_id']
+        }
+    );
+    is( $not_changed, 0, 'No change detected when property is already the same' );
+    is(
+        $sub_fund->fiscal_period_id, $fp2->fiscal_period_id,
+        'Sub-fund fiscal_period_id unchanged after no-op cascade'
+    );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'relationship embedding tests' => sub {
+
+    plan tests => 6;
+
+    $schema->storage->txn_begin;
+
+    my $fiscal_period = $builder->build_object( { class => 'Koha::Acquisition::Finances::FiscalPeriods' } );
+    my $ledger        = $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Ledgers',
-            value => {
-                fiscal_period_id     => $fiscal_period->fiscal_period_id,
-                lib_group_visibility => $fiscal_period->lib_group_visibility,
-                status               => $fiscal_period->status,
-                currency             => 'GBP',
-                owner_id             => '1'
-            }
+            value => { fiscal_period_id => $fiscal_period->fiscal_period_id }
         }
     );
     my $fund = $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Funds',
             value => {
-                fiscal_period_id     => $fiscal_period->fiscal_period_id,
-                ledger_id            => $ledger->ledger_id,
-                lib_group_visibility => $fiscal_period->lib_group_visibility,
-                status               => $fiscal_period->status,
-                currency             => $ledger->currency,
-                owner_id             => $ledger->owner_id,
+                ledger_id        => $ledger->ledger_id,
+                fiscal_period_id => $fiscal_period->fiscal_period_id,
+                fund_parent_id   => undef,
+            }
+        }
+    );
+    my $allocation = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Allocations',
+            value => { fund_id => $fund->fund_id }
+        }
+    );
+    my $patron            = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $ledger_with_owner = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Ledgers',
+            value => { owner_id => $patron->borrowernumber }
+        }
+    );
+
+    # ledger() on a fund
+    my $embedded_ledger = $fund->ledger;
+    isa_ok( $embedded_ledger, 'Koha::Acquisition::Finances::Ledger', 'ledger() returns a Ledger object' );
+    is( $embedded_ledger->ledger_id, $ledger->ledger_id, 'ledger() returns the correct ledger' );
+
+    # fiscal_period() on a fund
+    my $embedded_fp = $fund->fiscal_period;
+    isa_ok(
+        $embedded_fp, 'Koha::Acquisition::Finances::FiscalPeriod',
+        'fiscal_period() returns a FiscalPeriod object'
+    );
+    is(
+        $embedded_fp->fiscal_period_id, $fiscal_period->fiscal_period_id,
+        'fiscal_period() returns the correct fiscal period'
+    );
+
+    # funds() on a ledger
+    my $embedded_funds = $ledger->funds;
+    isa_ok( $embedded_funds, 'Koha::Acquisition::Finances::Funds', 'funds() returns a Funds collection' );
+
+    # owner() on a ledger with owner set
+    my $embedded_owner = $ledger_with_owner->owner;
+    isa_ok( $embedded_owner, 'Koha::Patron', 'owner() returns a Patron object' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'owner() returns undef when not set' => sub {
+
+    plan tests => 1;
+
+    $schema->storage->txn_begin;
+
+    my $ledger_no_owner = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Ledgers',
+            value => { owner_id => undef }
+        }
+    );
+
+    is( $ledger_no_owner->owner, undef, 'owner() returns undef when owner_id is not set' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'update_amount() tests' => sub {
+
+    plan tests => 5;
+
+    $schema->storage->txn_begin;
+
+    my $ledger = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Ledgers',
+            value => { ledger_amount => 10000 }
+        }
+    );
+
+    my $fund = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Funds',
+            value => {
+                ledger_id      => $ledger->ledger_id,
+                fund_amount    => 0,
+                fund_parent_id => undef,
             }
         }
     );
 
-    $ledger->currency('USD');
-    $ledger->owner_id('2');
-    my @data_to_cascade = ( 'fiscal_period_id', 'currency', 'owner_id' );
-    my $data_updated    = $ledger->cascade_data(
-        {
-            parent     => $ledger,
-            child      => $fund,
-            properties => \@data_to_cascade
-        }
-    );
+    # Increase within limit
+    my $result = $fund->update_amount( { type => 'increase', value => 1000 } );
+    $fund->discard_changes;
+    is( $result->{within_limit}, 1, 'Increase within limit returns within_limit => 1' );
+    cmp_ok( $fund->fund_amount, '==', 1000, 'Fund amount updated after increase' );
 
-    is( $data_updated, 1, 'Updated fields have been cascaded to the ledger' );
+    # Increase exceeding limit
+    my $breach_result = $fund->update_amount( { type => 'increase', value => 99999 } );
+    $fund->discard_changes;
+    is( $breach_result->{within_limit}, 0, 'Increase exceeding limit returns within_limit => 0' );
+    cmp_ok( $fund->fund_amount, '==', 1000, 'Fund amount NOT updated when limit exceeded' );
 
-    $schema->storage->txn_rollback;
-};
-
-subtest 'total_allocations' => sub {
-
-    plan tests => 3;
-
-    $schema->storage->txn_begin;
-
-    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
-
-    t::lib::Mocks::mock_userenv( { branchcode => $library->branchcode } );
-
-    my $fiscal_period = $builder->build_object(
-        {
-            class => 'Koha::Acquisition::Finances::FiscalPeriods',
-            value => { status => 1, lib_group_visibility => '1|2', spend_limit => 100 }
-        }
-    );
-    my $ledger = Koha::Acquisition::Finances::Ledger->new(
-        {
-            fiscal_period_id     => $fiscal_period->fiscal_period_id,
-            lib_group_visibility => $fiscal_period->lib_group_visibility,
-            status               => $fiscal_period->status,
-            currency             => 'GBP',
-            owner_id             => '1',
-            spend_limit          => 100
-        }
-    )->store();
-    my $fund = Koha::Acquisition::Finances::Fund->new(
-        {
-            fiscal_period_id     => $fiscal_period->fiscal_period_id,
-            ledger_id            => $ledger->ledger_id,
-            lib_group_visibility => $fiscal_period->lib_group_visibility,
-            status               => $fiscal_period->status,
-            currency             => $ledger->currency,
-            owner_id             => $ledger->owner_id,
-            spend_limit          => 50
-        }
-    )->store();
-
-    my $allocation = Koha::Acquisition::Finances::Allocation->new(
-        {
-            fund_id           => $fund->fund_id,
-            ledger_id         => $ledger->ledger_id,
-            fiscal_period_id  => $fiscal_period->fiscal_period_id,
-            allocation_amount => -10,
-            type              => 'spent'
-        }
-    )->store();
-
-    is( $fiscal_period->total_allocations + 0, -10, 'Total spent is -10' );
-
-    my $allocation2 = Koha::Acquisition::Finances::Allocation->new(
-        {
-            fund_id           => $fund->fund_id,
-            ledger_id         => $ledger->ledger_id,
-            fiscal_period_id  => $fiscal_period->fiscal_period_id,
-            allocation_amount => -5,
-            type              => 'spent'
-        }
-    )->store();
-
-    is( $fiscal_period->total_allocations + 0, -15, 'Total spent is -15' );
-
-    # Positive allocation to simulate a transfer from another fund or a credit note
-    my $allocation3 = Koha::Acquisition::Finances::Allocation->new(
-        {
-            fund_id           => $fund->fund_id,
-            ledger_id         => $ledger->ledger_id,
-            fiscal_period_id  => $fiscal_period->fiscal_period_id,
-            allocation_amount => 15,
-            type              => 'spent'
-        }
-    )->store();
-
-    is( $fiscal_period->total_allocations + 0, 0, 'Total spent is 0' );
+    # Decrease: no validation, no return value
+    $fund->update_amount( { type => 'decrease', value => 500 } );
+    $fund->discard_changes;
+    cmp_ok( $fund->fund_amount, '==', 500, 'Fund amount updated after decrease' );
 
     $schema->storage->txn_rollback;
 };
 
-subtest 'total_spent' => sub {
-
-    plan tests => 3;
-
-    $schema->storage->txn_begin;
-
-    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
-
-    t::lib::Mocks::mock_userenv( { branchcode => $library->branchcode } );
-
-    my $fiscal_period = $builder->build_object(
-        {
-            class => 'Koha::Acquisition::Finances::FiscalPeriods',
-            value => { status => 1, lib_group_visibility => '|' . $library->branchcode . '|', spend_limit => 100 }
-        }
-    );
-    my $ledger = Koha::Acquisition::Finances::Ledger->new(
-        {
-            fiscal_period_id     => $fiscal_period->fiscal_period_id,
-            lib_group_visibility => $fiscal_period->lib_group_visibility,
-            status               => $fiscal_period->status,
-            currency             => 'GBP',
-            owner_id             => '1',
-            spend_limit          => 100
-        }
-    )->store();
-    my $fund = Koha::Acquisition::Finances::Fund->new(
-        {
-            fiscal_period_id     => $fiscal_period->fiscal_period_id,
-            ledger_id            => $ledger->ledger_id,
-            lib_group_visibility => $fiscal_period->lib_group_visibility,
-            status               => $fiscal_period->status,
-            currency             => $ledger->currency,
-            owner_id             => $ledger->owner_id,
-            spend_limit          => 50
-        }
-    )->store();
-
-    my $allocation = Koha::Acquisition::Finances::Allocation->new(
-        {
-            fund_id           => $fund->fund_id,
-            ledger_id         => $ledger->ledger_id,
-            fiscal_period_id  => $fiscal_period->fiscal_period_id,
-            allocation_amount => -10,
-            type              => 'spent'
-        }
-    )->store();
-
-    is( $fiscal_period->total_spent + 0, -10, 'Total spent is -10' );
-
-    my $allocation2 = Koha::Acquisition::Finances::Allocation->new(
-        {
-            fund_id           => $fund->fund_id,
-            ledger_id         => $ledger->ledger_id,
-            fiscal_period_id  => $fiscal_period->fiscal_period_id,
-            allocation_amount => -5,
-            type              => 'spent'
-        }
-    )->store();
-
-    is( $fiscal_period->total_spent + 0, -15, 'Total spent is -15' );
-
-    # encumbrance rather than spend
-    my $allocation3 = Koha::Acquisition::Finances::Allocation->new(
-        {
-            fund_id           => $fund->fund_id,
-            ledger_id         => $ledger->ledger_id,
-            fiscal_period_id  => $fiscal_period->fiscal_period_id,
-            allocation_amount => -10,
-            type              => 'encumbered'
-        }
-    )->store();
-
-    is( $fiscal_period->total_spent + 0, -15, 'Total spent is still -15' );
-
-    $schema->storage->txn_rollback;
-};
-
-subtest 'total_encumbered' => sub {
-
-    plan tests => 3;
-
-    $schema->storage->txn_begin;
-
-    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
-
-    t::lib::Mocks::mock_userenv( { branchcode => $library->branchcode } );
-
-    my $fiscal_period = $builder->build_object(
-        {
-            class => 'Koha::Acquisition::Finances::FiscalPeriods',
-            value => { status => 1, lib_group_visibility => "|" . $library->branchcode . "|", spend_limit => 100 }
-        }
-    );
-    my $ledger = Koha::Acquisition::Finances::Ledger->new(
-        {
-            fiscal_period_id     => $fiscal_period->fiscal_period_id,
-            lib_group_visibility => $fiscal_period->lib_group_visibility,
-            status               => $fiscal_period->status,
-            currency             => 'GBP',
-            owner_id             => '1',
-            spend_limit          => 100
-        }
-    )->store();
-    my $fund = Koha::Acquisition::Finances::Fund->new(
-        {
-            fiscal_period_id     => $fiscal_period->fiscal_period_id,
-            ledger_id            => $ledger->ledger_id,
-            lib_group_visibility => $fiscal_period->lib_group_visibility,
-            status               => $fiscal_period->status,
-            currency             => $ledger->currency,
-            owner_id             => $ledger->owner_id,
-            spend_limit          => 50
-        }
-    )->store();
-
-    my $allocation = Koha::Acquisition::Finances::Allocation->new(
-        {
-            fund_id           => $fund->fund_id,
-            ledger_id         => $ledger->ledger_id,
-            fiscal_period_id  => $fiscal_period->fiscal_period_id,
-            allocation_amount => -10,
-            type              => 'encumbered'
-        }
-    )->store();
-
-    is( $fiscal_period->total_encumbered + 0, -10, 'Total encumbered is -10' );
-
-    my $allocation2 = Koha::Acquisition::Finances::Allocation->new(
-        {
-            fund_id           => $fund->fund_id,
-            ledger_id         => $ledger->ledger_id,
-            fiscal_period_id  => $fiscal_period->fiscal_period_id,
-            allocation_amount => -5,
-            type              => 'encumbered'
-        }
-    )->store();
-
-    is( $fiscal_period->total_encumbered + 0, -15, 'Total encumbered is -15' );
-
-    # Spend rather than encumbrance
-    my $allocation3 = Koha::Acquisition::Finances::Allocation->new(
-        {
-            fund_id           => $fund->fund_id,
-            ledger_id         => $ledger->ledger_id,
-            fiscal_period_id  => $fiscal_period->fiscal_period_id,
-            allocation_amount => -10,
-            type              => 'spent'
-        }
-    )->store();
-
-    is( $fiscal_period->total_encumbered + 0, -15, 'Total encumbered is still -15' );
-
-    $schema->storage->txn_rollback;
-};
-
-subtest 'check_spend_limits' => sub {
-
-    plan tests => 6;
-
-    $schema->storage->txn_begin;
-
-    my $fiscal_period = $builder->build_object(
-        {
-            class => 'Koha::Acquisition::Finances::FiscalPeriods',
-            value => { status => 1, lib_group_visibility => '1|2', spend_limit => 100 }
-        }
-    );
-    my $ledger = Koha::Acquisition::Finances::Ledger->new(
-        {
-            fiscal_period_id     => $fiscal_period->fiscal_period_id,
-            lib_group_visibility => $fiscal_period->lib_group_visibility,
-            status               => $fiscal_period->status,
-            currency             => 'GBP',
-            owner_id             => '1',
-            spend_limit          => 100
-        }
-    )->store();
-    my $fund = Koha::Acquisition::Finances::Fund->new(
-        {
-            fiscal_period_id     => $fiscal_period->fiscal_period_id,
-            ledger_id            => $ledger->ledger_id,
-            lib_group_visibility => $fiscal_period->lib_group_visibility,
-            status               => $fiscal_period->status,
-            currency             => $ledger->currency,
-            owner_id             => $ledger->owner_id,
-            spend_limit          => 50
-        }
-    )->store();
-
-    my $result = $ledger->check_spend_limits( { new_allocation => 0 } );
-    is( $result->{within_limit},  1, 'Within limit' );
-    is( $result->{breach_amount}, 0, 'No breach found' );
-
-    $result = $ledger->check_spend_limits( { new_allocation => 50 } );
-    is( $result->{within_limit},  1, 'Still within limit' );
-    is( $result->{breach_amount}, 0, 'No breach found' );
-
-    $result = $ledger->check_spend_limits( { new_allocation => 51 } );
-    is( $result->{within_limit},  0, 'Limit has been breached' );
-    is( $result->{breach_amount}, 1, 'Breached by 1' );
-
-    $schema->storage->txn_rollback;
-};
-
-subtest 'is_spend_limit_breached' => sub {
-
-    plan tests => 6;
-
-    $schema->storage->txn_begin;
-
-    my $fiscal_period = $builder->build_object(
-        {
-            class => 'Koha::Acquisition::Finances::FiscalPeriods',
-            value => { status => 1, lib_group_visibility => '1|2', spend_limit => 100 }
-        }
-    );
-    my $ledger = Koha::Acquisition::Finances::Ledger->new(
-        {
-            fiscal_period_id     => $fiscal_period->fiscal_period_id,
-            lib_group_visibility => $fiscal_period->lib_group_visibility,
-            status               => $fiscal_period->status,
-            currency             => 'GBP',
-            owner_id             => '1',
-            spend_limit          => 100,
-            over_spend_allowed   => 0,
-            oe_warning_percent   => 0.50,
-            oe_limit_amount      => 85,
-            os_warning_sum       => 75,
-            os_limit_sum         => 90
-        }
-    )->store();
-    my $fund = Koha::Acquisition::Finances::Fund->new(
-        {
-            fiscal_period_id     => $fiscal_period->fiscal_period_id,
-            ledger_id            => $ledger->ledger_id,
-            lib_group_visibility => $fiscal_period->lib_group_visibility,
-            status               => $fiscal_period->status,
-            currency             => $ledger->currency,
-            owner_id             => $ledger->owner_id,
-            spend_limit          => 50
-        }
-    )->store();
-
-    my $allocation = Koha::Acquisition::Finances::Allocation->new(
-        {
-            fund_id           => $fund->fund_id,
-            ledger_id         => $ledger->ledger_id,
-            fiscal_period_id  => $fiscal_period->fiscal_period_id,
-            allocation_amount => -10,
-            type              => 'spent'
-        }
-    )->store();
-
-    my $result = $ledger->is_spend_limit_breached( { new_allocation => $allocation } );
-    is( $result->{within_limit}, 1, 'Within limit' );
-
-    my $allocation2 = Koha::Acquisition::Finances::Allocation->new(
-        {
-            fund_id           => $fund->fund_id,
-            ledger_id         => $ledger->ledger_id,
-            fiscal_period_id  => $fiscal_period->fiscal_period_id,
-            allocation_amount => -91,
-            type              => 'spent'
-        }
-    );
-
-    $result = $ledger->is_spend_limit_breached( { new_allocation => $allocation2 } );
-    is( $result->{breach_amount}, 1, 'Breached by 1' );
-
-    # Warnings
-    $allocation2 = Koha::Acquisition::Finances::Allocation->new(
-        {
-            fund_id           => $fund->fund_id,
-            ledger_id         => $ledger->ledger_id,
-            fiscal_period_id  => $fiscal_period->fiscal_period_id,
-            allocation_amount => -40,
-            type              => 'encumbered'
-        }
-    );
-
-    $result = $ledger->is_spend_limit_breached( { new_allocation => $allocation2 } );
-    is( $result->{within_limit}, 1, 'No breach' );
-    is( $result->{oe_warning},   1, 'Warning for encumbrance triggered' );
-
-    $allocation2 = Koha::Acquisition::Finances::Allocation->new(
-        {
-            fund_id           => $fund->fund_id,
-            ledger_id         => $ledger->ledger_id,
-            fiscal_period_id  => $fiscal_period->fiscal_period_id,
-            allocation_amount => -65,
-            type              => 'spent'
-        }
-    );
-
-    $result = $ledger->is_spend_limit_breached( { new_allocation => $allocation2 } );
-    is( $result->{within_limit}, 1, 'No breach' );
-    is( $result->{os_warning},   1, 'Warning for spend triggered' );
-
-    $schema->storage->txn_rollback;
-};
-
-subtest 'add_accounting_values' => sub {
+subtest 'validate_child_object_amounts_against_parent_amount() tests' => sub {
 
     plan tests => 4;
 
     $schema->storage->txn_begin;
 
-    my $fiscal_period = $builder->build_object(
+    # Test against a ledger as parent (top-level fund)
+    my $ledger = $builder->build_object(
         {
-            class => 'Koha::Acquisition::Finances::FiscalPeriods',
-            value => { status => 1, lib_group_visibility => '1|2', spend_limit => 100 }
+            class => 'Koha::Acquisition::Finances::Ledgers',
+            value => { ledger_amount => 1000 }
         }
     );
-    my $ledger = Koha::Acquisition::Finances::Ledger->new(
+    my $fund = $builder->build_object(
         {
-            fiscal_period_id     => $fiscal_period->fiscal_period_id,
-            lib_group_visibility => $fiscal_period->lib_group_visibility,
-            status               => $fiscal_period->status,
-            currency             => 'GBP',
-            owner_id             => '1',
-            spend_limit          => 100,
+            class => 'Koha::Acquisition::Finances::Funds',
+            value => {
+                ledger_id      => $ledger->ledger_id,
+                fund_amount    => 0,
+                fund_parent_id => undef,
+            }
         }
-    )->store();
-    my $fund = Koha::Acquisition::Finances::Fund->new(
-        {
-            fiscal_period_id     => $fiscal_period->fiscal_period_id,
-            ledger_id            => $ledger->ledger_id,
-            lib_group_visibility => $fiscal_period->lib_group_visibility,
-            status               => $fiscal_period->status,
-            currency             => $ledger->currency,
-            owner_id             => $ledger->owner_id,
-            spend_limit          => 50
-        }
-    )->store();
-    my $fund2 = Koha::Acquisition::Finances::Fund->new(
-        {
-            fiscal_period_id     => $fiscal_period->fiscal_period_id,
-            ledger_id            => $ledger->ledger_id,
-            lib_group_visibility => $fiscal_period->lib_group_visibility,
-            status               => $fiscal_period->status,
-            currency             => $ledger->currency,
-            owner_id             => $ledger->owner_id,
-            spend_limit          => 50
-        }
-    )->store();
+    );
 
-    my $allocation1 = Koha::Acquisition::Finances::Allocation->new(
-        {
-            fund_id           => $fund->fund_id,
-            ledger_id         => $ledger->ledger_id,
-            fiscal_period_id  => $fiscal_period->fiscal_period_id,
-            allocation_amount => -15,
-            type              => 'spent'
-        }
-    )->store();
-    my $allocation2 = Koha::Acquisition::Finances::Allocation->new(
-        {
-            fund_id           => $fund->fund_id,
-            ledger_id         => $ledger->ledger_id,
-            fiscal_period_id  => $fiscal_period->fiscal_period_id,
-            allocation_amount => -5,
-            type              => 'spent'
-        }
-    )->store();
-    my $allocation3 = Koha::Acquisition::Finances::Allocation->new(
-        {
-            fund_id           => $fund2->fund_id,
-            sub_fund_id       => $sub_fund->sub_fund_id,
-            ledger_id         => $ledger->ledger_id,
-            fiscal_period_id  => $fiscal_period->fiscal_period_id,
-            allocation_amount => -10,
-            type              => 'spent'
-        }
-    )->store();
-    my $allocation4 = Koha::Acquisition::Finances::Allocation->new(
-        {
-            fund_id           => $fund2->fund_id,
-            sub_fund_id       => $sub_fund->sub_fund_id,
-            ledger_id         => $ledger->ledger_id,
-            fiscal_period_id  => $fiscal_period->fiscal_period_id,
-            allocation_amount => 10,
-            type              => 'credit'
-        }
-    )->store();
+    # Within limit
+    my $within = $fund->validate_child_object_amounts_against_parent_amount( { new_allocation => 500 } );
+    is( $within->{within_limit}, 1, 'Returns within_limit => 1 when new allocation fits within ledger amount' );
 
-    $sub_fund                     = $sub_fund->unblessed;
-    $sub_fund->{fund_allocations} = [ $allocation3->unblessed, $allocation4->unblessed ];
-    $fund                         = $fund->unblessed;
-    $fund->{fund_allocations}     = [ $allocation1->unblessed, $allocation2->unblessed ];
-    $fund2                        = $fund2->unblessed;
-    $fund2->{sub_funds}           = [$sub_fund];
-    my $data = $ledger->unblessed;
-    $data->{funds} = [ $fund, $fund2 ];
-    my $result = $ledger->add_accounting_values( { data => $data } );
+    # Exceeds limit
+    my $exceeded = $fund->validate_child_object_amounts_against_parent_amount( { new_allocation => 99999 } );
+    is( $exceeded->{within_limit},  0,     'Returns within_limit => 0 when new allocation exceeds ledger amount' );
+    is( $exceeded->{breach_amount}, 98999, 'breach_amount is correctly calculated (99999 - 1000 = 98999)' );
 
-    is( $result->{total_allocation},    -20, 'Total allocations is -20' );
-    is( $result->{allocation_decrease}, -30, 'Total decrease is -30' );
-    is( $result->{allocation_increase},  10, 'Total allocations is 10' );
-    is( $result->{net_transfers},        0,  'Total allocations is 0' );
+    # Test against a parent fund (sub-fund)
+    my $parent_fund = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Funds',
+            value => { fund_amount => 500, fund_parent_id => undef }
+        }
+    );
+    my $sub_fund = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Funds',
+            value => {
+                ledger_id      => $parent_fund->ledger_id,
+                fund_parent_id => $parent_fund->fund_id,
+                fund_amount    => 0,
+            }
+        }
+    );
+
+    my $sub_exceeded = $sub_fund->validate_child_object_amounts_against_parent_amount( { new_allocation => 9999 } );
+    is( $sub_exceeded->{within_limit}, 0, 'Returns within_limit => 0 when sub-fund exceeds parent fund amount' );
 
     $schema->storage->txn_rollback;
 };
 
-subtest 'verify_updated_fields' => sub {
-
-    plan tests => 3;
-
-    $schema->storage->txn_begin;
-
-    my $fiscal_period = $builder->build_object(
-        {
-            class => 'Koha::Acquisition::Finances::FiscalPeriods',
-            value => { status => 1, lib_group_visibility => '1|2', spend_limit => 100 }
-        }
-    );
-    my $ledger = Koha::Acquisition::Finances::Ledger->new(
-        {
-            fiscal_period_id     => $fiscal_period->fiscal_period_id,
-            lib_group_visibility => $fiscal_period->lib_group_visibility,
-            status               => $fiscal_period->status,
-            currency             => 'GBP',
-            owner_id             => '1',
-            spend_limit          => 100,
-            over_spend_allowed   => 1,
-        }
-    )->store();
-
-    # The sub methods have their own tests, here we just need to check that they are called and the error is passed back correctly
-    my $module = Test::MockModule->new('Koha::Acquisition::Finances::BaseObject');
-    $module->mock(
-        'handle_spending_block_changes',
-        sub {
-            return 'Error with spending blocks';
-        }
-    );
-
-    $module->mock(
-        'handle_spend_limit_changes',
-        sub {
-            return 'Error with spend_limit';
-        }
-    );
-
-    # If over_spend_allowed or over_spend_encumbrance are allowed, no check is needed
-    my $updated_fields = {
-        over_spend_allowed => 1,
-        spend_limit        => 100
-    };
-
-    my $error = $ledger->verify_updated_fields( { updated_fields => $updated_fields } );
-    is( $error, undef, 'No check run so no error reported' );
-
-    $updated_fields = {
-        over_spend_allowed => 0,
-        spend_limit        => 100
-    };
-
-    $error = $ledger->verify_updated_fields( { updated_fields => $updated_fields } );
-    is( $error, 'Error with spending blocks', 'Spending block check has run and returned an error' );
-
-    $updated_fields = {
-        over_spend_allowed => 1,
-        spend_limit        => 200
-    };
-
-    $error = $ledger->verify_updated_fields( { updated_fields => $updated_fields } );
-    is( $error, 'Error with spend_limit', 'Spend_limit check has run and returned an error' );
-
-    $schema->storage->txn_rollback;
-};
-
-subtest 'handle_spending_block_changes' => sub {
+subtest 'parent_object() tests' => sub {
 
     plan tests => 2;
 
     $schema->storage->txn_begin;
 
-    my $fiscal_period = $builder->build_object(
+    my $ledger = $builder->build_object( { class => 'Koha::Acquisition::Finances::Ledgers' } );
+    my $fund   = $builder->build_object(
         {
-            class => 'Koha::Acquisition::Finances::FiscalPeriods',
-            value => { status => 1, lib_group_visibility => '1|2', spend_limit => 100 }
-        }
-    );
-    my $ledger = Koha::Acquisition::Finances::Ledger->new(
-        {
-            fiscal_period_id     => $fiscal_period->fiscal_period_id,
-            lib_group_visibility => $fiscal_period->lib_group_visibility,
-            status               => $fiscal_period->status,
-            currency             => 'GBP',
-            owner_id             => '1',
-            spend_limit          => 100,
-            over_spend_allowed   => 0,
-            oe_warning_percent   => 0.50,
-            oe_limit_amount      => 85,
-            os_warning_sum       => 75,
-            os_limit_sum         => 90
-
-        }
-    )->store();
-
-    my $fund = Koha::Acquisition::Finances::Fund->new(
-        {
-            fiscal_period_id     => $fiscal_period->fiscal_period_id,
-            ledger_id            => $ledger->ledger_id,
-            lib_group_visibility => $fiscal_period->lib_group_visibility,
-            status               => $fiscal_period->status,
-            currency             => $ledger->currency,
-            owner_id             => $ledger->owner_id,
-            spend_limit          => 50,
-            over_spend_allowed   => 1,
-        }
-    )->store();
-
-    my $allocation1 = Koha::Acquisition::Finances::Allocation->new(
-        {
-            fund_id           => $fund->fund_id,
-            ledger_id         => $ledger->ledger_id,
-            fiscal_period_id  => $fiscal_period->fiscal_period_id,
-            allocation_amount => -50,
-            type              => 'spent'
-        }
-    )->store();
-
-    my $error = $ledger->handle_spending_block_changes( { spend => 0 } );
-    is( $error, undef, 'Ledger has no over spend so no check required' );
-
-    my $module = Test::MockModule->new('Koha::Acquisition::Finances::Allocation');
-    $module->mock(
-        'will_allocation_breach_spend_limits',
-        sub {
-            return 0;
+            class => 'Koha::Acquisition::Finances::Funds',
+            value => {
+                ledger_id      => $ledger->ledger_id,
+                fund_parent_id => undef,
+            }
         }
     );
 
-    my $allocation2 = Koha::Acquisition::Finances::Allocation->new(
-        {
-            fund_id           => $fund->fund_id,
-            ledger_id         => $ledger->ledger_id,
-            fiscal_period_id  => $fiscal_period->fiscal_period_id,
-            allocation_amount => -51,
-            type              => 'spent'
-        }
-    )->store();
-
-    $error = $ledger->handle_spending_block_changes( { spend => 0 } );
-    is(
-        $error, "You cannot prevent overspend on a ledger that is already overspent"
-        ,       'Overspend correctly identified so over_spend_allowed cannot be set to 0'
-    );
+    # Top-level fund: parent is the ledger
+    my $parent = $fund->parent_object;
+    isa_ok( $parent, 'Koha::Acquisition::Finances::Ledger', 'parent_object returns a Ledger for a top-level fund' );
+    is( $parent->ledger_id, $ledger->ledger_id, 'parent_object returns the correct ledger' );
 
     $schema->storage->txn_rollback;
 };
 
-subtest 'handle_spend_limit_changes' => sub {
+subtest 'parent_object() for sub-fund tests' => sub {
 
-    plan tests => 3;
+    plan tests => 2;
 
     $schema->storage->txn_begin;
 
-    my $fiscal_period = $builder->build_object(
+    my $parent_fund = $builder->build_object(
         {
-            class => 'Koha::Acquisition::Finances::FiscalPeriods',
-            value => { status => 1, lib_group_visibility => '1|2', spend_limit => 100 }
+            class => 'Koha::Acquisition::Finances::Funds',
+            value => { fund_parent_id => undef }
         }
     );
-    my $ledger = Koha::Acquisition::Finances::Ledger->new(
+    my $sub_fund = $builder->build_object(
         {
-            fiscal_period_id     => $fiscal_period->fiscal_period_id,
-            lib_group_visibility => $fiscal_period->lib_group_visibility,
-            status               => $fiscal_period->status,
-            currency             => 'GBP',
-            owner_id             => '1',
-            spend_limit          => 100,
-            over_spend_allowed   => 1,
+            class => 'Koha::Acquisition::Finances::Funds',
+            value => { fund_parent_id => $parent_fund->fund_id }
         }
-    )->store();
-
-    my $fund = Koha::Acquisition::Finances::Fund->new(
-        {
-            fiscal_period_id     => $fiscal_period->fiscal_period_id,
-            ledger_id            => $ledger->ledger_id,
-            lib_group_visibility => $fiscal_period->lib_group_visibility,
-            status               => $fiscal_period->status,
-            currency             => $ledger->currency,
-            owner_id             => $ledger->owner_id,
-            spend_limit          => 50,
-            over_spend_allowed   => 1,
-        }
-    )->store();
-
-    my $error = $ledger->handle_spend_limit_changes( { new_limit => 60, over_spend_allowed => 0 } );
-    is( $error, undef, 'Ledger spend_limit still greater than that of its funds' );
-
-    my $fund2 = Koha::Acquisition::Finances::Fund->new(
-        {
-            fiscal_period_id     => $fiscal_period->fiscal_period_id,
-            ledger_id            => $ledger->ledger_id,
-            lib_group_visibility => $fiscal_period->lib_group_visibility,
-            status               => $fiscal_period->status,
-            currency             => $ledger->currency,
-            owner_id             => $ledger->owner_id,
-            spend_limit          => 50,
-            over_spend_allowed   => 1,
-        }
-    )->store();
-
-    $error = $ledger->handle_spend_limit_changes( { new_limit => 90, over_spend_allowed => 0 } );
-    is(
-        $error,
-        "The ledger spend limit is less than the total of the spend limits for the funds below, please increase spend limit by 10 or decrease the spend limit for the funds",
-        'Correctly identifies an insufficient spend_limit on the ledger'
     );
 
-    $error = $ledger->handle_spend_limit_changes( { new_limit => 110, over_spend_allowed => 0 } );
-    is(
-        $error,
-        "Spend limit breached for the fiscal period, please reduce the spend limit on the ledger by 10 or increase the spend limit for the fiscal period",
-        'Correctly identifies that the spend_limit is now too high on the ledger'
-    );
+    # Sub-fund: parent is the parent fund
+    my $parent = $sub_fund->parent_object;
+    isa_ok( $parent, 'Koha::Acquisition::Finances::Fund', 'parent_object returns a Fund for a sub-fund' );
+    is( $parent->fund_id, $parent_fund->fund_id, 'parent_object returns the correct parent fund' );
 
     $schema->storage->txn_rollback;
 };

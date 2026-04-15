@@ -1,6 +1,6 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
-# This file is part of Koha
+# This file is part of Koha.
 #
 # Koha is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by
@@ -13,79 +13,199 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with Koha; if not, see <http://www.gnu.org/licenses>.
+# along with Koha; if not, see <https://www.gnu.org/licenses>.
 
 use Modern::Perl;
 
-use Test::More tests => 1;
+use Test::NoWarnings;
+use Test::More tests => 5;
 
 use t::lib::TestBuilder;
-use t::lib::Mocks;
 
 use Koha::Database;
+use Koha::Acquisition::Finances::Ledger;
 use Koha::Acquisition::Finances::Ledgers;
+use Koha::Acquisition::Finances::Funds;
 
 my $schema  = Koha::Database->new->schema;
 my $builder = t::lib::TestBuilder->new;
 
-subtest 'cascade_to_funds' => sub {
+subtest 'store() tests' => sub {
 
-    plan tests => 5;
+    plan tests => 3;
 
     $schema->storage->txn_begin;
 
-    my $fiscal_period = $builder->build_object(
-        {
-            class => 'Koha::Acquisition::Finances::FiscalPeriods',
-            value => { status => 1, lib_group_visibility => '1|2' }
-        }
-    );
     my $ledger = $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Ledgers',
-            value => {
-                fiscal_period_id     => $fiscal_period->fiscal_period_id,
-                lib_group_visibility => $fiscal_period->lib_group_visibility,
-                status               => $fiscal_period->status,
-                currency             => 'GBP',
-                owner_id             => '1'
-            }
+            value => { status => 1 }
         }
     );
+
+    # Attach an active fund
     my $fund = $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Funds',
             value => {
-                fiscal_period_id     => $fiscal_period->fiscal_period_id,
-                ledger_id            => $ledger->ledger_id,
-                lib_group_visibility => $fiscal_period->lib_group_visibility,
-                status               => $fiscal_period->status,
-                currency             => $ledger->currency,
-                owner_id             => $ledger->owner_id
+                ledger_id => $ledger->ledger_id,
+                status    => 1
             }
         }
     );
 
-    $fiscal_period->status(0);
-    $fiscal_period->store();
+    # Deactivate the ledger; cascade should deactivate the fund
+    $ledger->status(0)->store;
+    $fund->discard_changes;
 
-    my $updated_ledger = Koha::Acquisition::Finances::Ledgers->find( $ledger->ledger_id );
-    my $updated_fund   = Koha::Acquisition::Finances::Funds->find( $fund->fund_id );
+    is( $ledger->status, 0, 'Ledger status updated to 0' );
+    is( $fund->status,   0, 'Fund status cascaded to 0' );
 
-    is( $fiscal_period->status, $updated_ledger->status, 'Ledger has updated' );
-    is( $fiscal_period->status, $updated_fund->status,   'Fund has updated' );
+    # Re-activating the ledger should NOT re-activate the fund
+    $ledger->status(1)->store;
+    $fund->discard_changes;
 
-    $ledger->lib_group_visibility('1');
-    $ledger->currency('USD');
-    $ledger->owner_id('2');
-    $ledger->store();
-
-    $updated_fund = Koha::Acquisition::Finances::Funds->find( $fund->fund_id );
-
-    is( $ledger->lib_group_visibility, $updated_fund->lib_group_visibility, 'Fund has updated' );
-    is( $ledger->currency,             $updated_fund->currency,             'Fund has updated' );
-    is( $ledger->owner_id,             $updated_fund->owner_id,             'Fund has updated' );
+    is( $fund->status, 0, 'Re-activating ledger does not re-activate fund' );
 
     $schema->storage->txn_rollback;
 };
 
+subtest 'store() with no_cascade tests' => sub {
+
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    my $ledger = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Ledgers',
+            value => { status => 1 }
+        }
+    );
+
+    my $fund = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Funds',
+            value => {
+                ledger_id => $ledger->ledger_id,
+                status    => 1
+            }
+        }
+    );
+
+    $ledger->status(0)->store( { no_cascade => 1 } );
+    $fund->discard_changes;
+
+    is( $ledger->status, 0, 'Ledger status updated to 0' );
+    is( $fund->status,   1, 'Fund status not cascaded when no_cascade is set' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'cascade_to_funds() tests' => sub {
+
+    plan tests => 4;
+
+    $schema->storage->txn_begin;
+
+    my $ledger = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Ledgers',
+            value => { status => 1 }
+        }
+    );
+
+    my $active_fund = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Funds',
+            value => {
+                ledger_id => $ledger->ledger_id,
+                status    => 1
+            }
+        }
+    );
+
+    my $inactive_fund = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Funds',
+            value => {
+                ledger_id => $ledger->ledger_id,
+                status    => 0
+            }
+        }
+    );
+
+    $ledger->status(0);
+    $ledger->cascade_to_funds;
+
+    $active_fund->discard_changes;
+    $inactive_fund->discard_changes;
+
+    is( $active_fund->status,   0, 'Active fund status cascaded to inactive' );
+    is( $inactive_fund->status, 0, 'Already-inactive fund remains inactive' );
+
+    # Cascading an active status should not reactivate an inactive fund
+    my $ledger2 = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Ledgers',
+            value => { status => 1 }
+        }
+    );
+    my $inactive_fund2 = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Funds',
+            value => {
+                ledger_id => $ledger2->ledger_id,
+                status    => 0
+            }
+        }
+    );
+
+    $ledger2->status(1);
+    $ledger2->cascade_to_funds;
+    $inactive_fund2->discard_changes;
+
+    is( $inactive_fund2->status, 0, 'Cascading active status does not reactivate inactive fund' );
+
+    # A ledger with no funds should cascade without errors
+    my $ledger_no_funds = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Ledgers',
+            value => { status => 1 }
+        }
+    );
+    $ledger_no_funds->status(0);
+    eval { $ledger_no_funds->cascade_to_funds };
+    ok( !$@, 'Cascade on ledger with no funds does not throw an error' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'managing_library() tests' => sub {
+
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+
+    my $ledger_with_branch = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Ledgers',
+            value => { managing_branch => $library->branchcode }
+        }
+    );
+    my $ledger_no_branch = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Ledgers',
+            value => { managing_branch => undef }
+        }
+    );
+
+    my $managing_library = $ledger_with_branch->managing_library;
+    is( $managing_library->branchcode, $library->branchcode, 'managing_library returns the correct library' );
+
+    is( $ledger_no_branch->managing_library, undef, 'managing_library returns undef when no branch set' );
+
+    $schema->storage->txn_rollback;
+};
