@@ -73,8 +73,19 @@ return {
         }
 
         # ── 3. Drop matchpoint from identity_providers (moved to identity_provider_hostnames) ──
+        # Capture any existing per-provider matchpoint before dropping the column so
+        # we can re-attach it to the wildcard hostname row created later.
 
+        my %old_matchpoint;
         if ( column_exists( 'identity_providers', 'matchpoint' ) ) {
+            my $rows = $dbh->selectall_arrayref(
+                "SELECT identity_provider_id, matchpoint
+                   FROM identity_providers
+                  WHERE matchpoint IS NOT NULL AND matchpoint <> ''",
+                { Slice => {} }
+            );
+            $old_matchpoint{ $_->{identity_provider_id} } = $_->{matchpoint} for @$rows;
+
             $dbh->do("ALTER TABLE identity_providers DROP COLUMN `matchpoint`");
             say_success( $out, "Dropped column 'identity_providers.matchpoint' (moved to hostname level)" );
         }
@@ -451,16 +462,18 @@ return {
             );
 
             for my $provider ( @{$orphan_providers} ) {
+                my $matchpoint = $old_matchpoint{ $provider->{identity_provider_id} };
                 $dbh->do(
                     q{
                     INSERT IGNORE INTO identity_provider_hostnames
-                    (hostname_id, identity_provider_id, is_enabled, is_exclusive)
-                    VALUES (?, ?, 1, 0)
-                }, undef, $wildcard_id, $provider->{identity_provider_id}
+                    (hostname_id, identity_provider_id, is_enabled, is_exclusive, matchpoint)
+                    VALUES (?, ?, 1, 0, ?)
+                }, undef, $wildcard_id, $provider->{identity_provider_id}, $matchpoint
                 );
                 say_success(
                     $out,
                     "Added wildcard hostname entry for provider '$provider->{code}'"
+                        . ( $matchpoint ? " (matchpoint=$matchpoint)" : '' )
                 );
             }
         }
