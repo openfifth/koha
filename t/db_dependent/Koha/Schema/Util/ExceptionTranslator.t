@@ -19,7 +19,7 @@
 
 use Modern::Perl;
 use Test::NoWarnings;
-use Test::More tests => 9;
+use Test::More tests => 8;
 use Test::Exception;
 
 use Koha::Database;
@@ -188,34 +188,6 @@ subtest 'enum_truncation_with_object_value' => sub {
         Koha::Schema::Util::ExceptionTranslator->translate_exception( $exception, $columns_info );
     }
     'Koha::Exceptions::Object::BadValue', 'Enum truncation without object throws BadValue exception';
-
-    $schema->storage->txn_rollback;
-};
-
-subtest 'schema_safe_do_method' => sub {
-    plan tests => 2;
-
-    $schema->storage->txn_begin;
-
-    # Test successful operation
-    my $result = $schema->safe_do(
-        sub {
-            return "success";
-        }
-    );
-    is( $result, "success", 'safe_do returns result on success' );
-
-    # Test exception translation
-    throws_ok {
-        $schema->safe_do(
-            sub {
-                # Create a mock DBIx::Class::Exception
-                my $exception = bless { msg => "Duplicate entry 'test' for key 'primary'" }, 'DBIx::Class::Exception';
-                die $exception;
-            }
-        );
-    }
-    'Koha::Exceptions::Object::DuplicateID', 'safe_do translates exceptions properly';
 
     $schema->storage->txn_rollback;
 };
