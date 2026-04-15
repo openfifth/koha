@@ -1645,10 +1645,12 @@ async function load_patron_holds_table(biblio_id, split_data) {
                             ? `<div>(${__("part of")} <a href="/cgi-bin/koha/reserve/hold-group.pl?hold_group_id=${row.hold_group_id}" class="hold-group">${__("hold group")}</a>)</div>`
                             : "";
 
-                        const iso_message = create_iso18626_request_link(
-                            row.iso18626_request.iso18626_request_id,
-                            row.iso18626_request.status
-                        );
+                        const iso_message = row.iso18626_request
+                            ? create_iso18626_request_link(
+                                  row.iso18626_request.iso18626_request_id,
+                                  row.iso18626_request.status
+                              )
+                            : "";
 
                         const extras = group_hold_message + iso_message;
 
