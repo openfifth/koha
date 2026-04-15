@@ -1409,12 +1409,15 @@ sub CanBookBeIssued {
     if ( C4::Context->preference("ILLModule") ) {
 
         my $is_ill_partner = ( $patron->categorycode eq C4::Context->preference("ILLPartnerCode") );
-        my $iso18626_hold  = Koha::Holds->find(
+        my $iso18626_hold  = Koha::Holds->search(
             {
-                itemnumber     => $item_object->itemnumber,
-                borrowernumber => $patron->borrowernumber
+                borrowernumber => $patron->borrowernumber,
+                -or            => [
+                    { itemnumber   => $item_object->itemnumber },
+                    { biblionumber => $item_object->biblionumber, itemnumber => undef },
+                ],
             }
-        );
+        )->next();
 
         if ($iso18626_hold) {
             my $iso18626_request = $iso18626_hold->iso18626_request;
