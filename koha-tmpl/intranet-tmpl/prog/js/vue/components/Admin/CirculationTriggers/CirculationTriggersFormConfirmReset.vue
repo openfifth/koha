@@ -282,12 +282,17 @@ export default {
             deleteRuleSet,
             handleRestrictions,
         } = circRulesStore;
-        const { libraries, itemTypes, patronCategories } =
-            storeToRefs(circRulesStore);
+        const {
+            libraries,
+            itemTypes,
+            patronCategories,
+            lastEditedTriggerNumber,
+        } = storeToRefs(circRulesStore);
         return {
             libraries,
             itemTypes,
             patronCategories,
+            lastEditedTriggerNumber,
             handleContext,
             handleNotice,
             handleTransport,
@@ -314,11 +319,14 @@ export default {
     beforeRouteEnter(to, from, next) {
         next(async vm => {
             vm.setContext(to.query);
-            vm.currentRuleSet = await vm.getSelectedRuleSet({
-                library_id: vm.library_id,
-                patron_category_id: vm.patron_category_id,
-                item_type_id: vm.item_type_id,
-            });
+            vm.currentRuleSet = await vm.getSelectedRuleSet(
+                {
+                    library_id: vm.library_id,
+                    patron_category_id: vm.patron_category_id,
+                    item_type_id: vm.item_type_id,
+                },
+                false
+            );
             vm.effectiveRuleSet = vm.formatTriggerSpecificRuleSetForDisplay(
                 vm.currentRuleSet.context,
                 vm.triggerNumber,
@@ -342,10 +350,12 @@ export default {
                     path: "/cgi-bin/koha/admin/circulation_triggers/reset",
                     query: {
                         ...this.currentRuleSet.context,
-                        triggerNumber: triggerNumber,
+                        triggerNumber: this.triggerNumber,
                     },
                 });
+                return;
             }
+            this.lastEditedTriggerNumber = this.triggerNumber;
             await this.$router.push({
                 name: "CirculationTriggersList",
                 query: { refresh: Date.now() },
