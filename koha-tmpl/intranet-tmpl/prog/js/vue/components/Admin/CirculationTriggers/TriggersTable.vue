@@ -6,6 +6,7 @@
         <legend>
             {{ $__("Existing overdues triggers for this context") }}
         </legend>
+        <slot></slot>
         <table>
             <thead>
                 <th v-if="!modal" class="trigger_context">
