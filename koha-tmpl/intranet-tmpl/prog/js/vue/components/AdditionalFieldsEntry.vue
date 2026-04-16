@@ -1,7 +1,6 @@
 <template>
     <template v-if="available_fields.length">
         <li class="additional-fields-header">
-            <label></label>
             <h3>{{ $__("Additional fields") }}</h3>
         </li>
         <template
@@ -90,7 +89,7 @@
                         "
                         >{{ available_field.name }}:
                     </label>
-                    <span class="input-group">
+                    <span class="input-with-clear-wrapper">
                         <input
                             type="text"
                             v-model="current.value"
@@ -109,16 +108,7 @@
                             :title="$__('Clear')"
                             tabindex="-1"
                         >
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="10"
-                                height="10"
-                                viewBox="0 0 10 10"
-                            >
-                                <path
-                                    d="M6.895455 5l2.842897-2.842898c.348864-.348863.348864-.914488 0-1.263636L9.106534.261648c-.348864-.348864-.914489-.348864-1.263636 0L5 3.104545 2.157102.261648c-.348863-.348864-.914488-.348864-1.263636 0L.261648.893466c-.348864.348864-.348864.914489 0 1.263636L3.104545 5 .261648 7.842898c-.348864.348863-.348864.914488 0 1.263636l.631818.631818c.348864.348864.914773.348864 1.263636 0L5 6.895455l2.842898 2.842897c.348863.348864.914772.348864 1.263636 0l.631818-.631818c.348864-.348864.348864-.914489 0-1.263636L6.895455 5z"
-                                ></path>
-                            </svg>
+                            <i class="fa fa-xmark" aria-hidden="true"></i>
                         </button>
                     </span>
                     <template v-if="available_field.repeatable">
@@ -344,11 +334,11 @@ export default {
 </script>
 
 <style scoped>
-/* Header for additional fields section */
 .additional-fields-header {
     border-top: 1px solid #ddd;
     margin-top: 1em;
     padding-top: 1em;
+    padding-left: 10rem;
 }
 
 .additional-fields-header h3 {
@@ -358,58 +348,6 @@ export default {
     color: #696969;
 }
 
-.additional-fields-header label {
-    /* Empty label for alignment with other fields */
-    width: 10rem;
-}
-
-/* Input group container for positioning */
-.input-group {
-    position: relative;
-    display: inline;
-}
-
-/* Input with clear button gets padding for the button and matches select2 styling */
-input.input-with-clear {
-    padding: 0.375rem 2rem 0.375rem 0.75rem;
-    line-height: 1.5;
-}
-
-.clear-button {
-    position: absolute;
-    right: 0.25rem;
-    top: 50%;
-    transform: translateY(-50%);
-    background: transparent;
-    border: none;
-    color: #999;
-    cursor: pointer;
-    padding: 0.25rem 0.5rem;
-    line-height: 1;
-    transition: color 0.15s ease-in-out;
-    z-index: 10;
-    height: 1.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0;
-}
-
-.clear-button:hover {
-    color: #333;
-}
-
-.clear-button:focus {
-    outline: 2px solid #007bff;
-    outline-offset: 2px;
-    border-radius: 2px;
-}
-
-.clear-button svg {
-    fill: currentColor;
-}
-
-/* New button spacing */
 .btn.btn-sm {
     margin-left: 0.5rem;
 }
