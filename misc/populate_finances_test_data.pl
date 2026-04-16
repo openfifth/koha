@@ -343,7 +343,7 @@ for my $spec (@ledger_specs) {
                         %$sub_fund_data,
                         ledger_id        => $ledger->ledger_id,
                         fiscal_period_id => $ledger->fiscal_period_id,
-                        fund_parent_id   => $fund->fund_id,
+                        parent_fund_id   => $fund->fund_id,
                     }
                 )->store( { no_cascade => 1 } );
                 print "      Created sub-fund: " . $sub_fund->name . " (id=" . $sub_fund->fund_id . ")\n";
