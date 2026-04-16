@@ -217,24 +217,9 @@ __PACKAGE__->belongs_to(
   },
 );
 
-=head2 sub_funds
 
-Type: has_many
-
-Related object: L<Koha::Schema::Result::SubFund>
-
-=cut
-
-__PACKAGE__->has_many(
-  "sub_funds",
-  "Koha::Schema::Result::SubFund",
-  { "foreign.fiscal_period_id" => "self.fiscal_period_id" },
-  { cascade_copy => 0, cascade_delete => 0 },
-);
-
-
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-01-02 14:35:46
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:1Op3heo/QE6TiLrT9VDkNA
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-08-05 10:10:56
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:le5Kbhd8FJIT0D9GLdcypw
 
 __PACKAGE__->add_columns(
     '+status' => { is_boolean => 1 },

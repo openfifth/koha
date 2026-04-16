@@ -122,51 +122,12 @@ return {
             say_info( $out, "Table 'funds' already exists" );
         }
 
-        unless ( TableExists('sub_funds') ) {
-            $dbh->do(
-                q{
-                CREATE TABLE `sub_funds` (
-                `sub_fund_id` INT(11) NOT NULL AUTO_INCREMENT,
-                `fund_id` INT(11) DEFAULT NULL COMMENT 'parent fund for the sub fund',
-                `ledger_id` INT(11) DEFAULT NULL COMMENT 'ledger the sub_fund applies to',
-                `fiscal_period_id` INT(11) DEFAULT NULL COMMENT 'fiscal period the sub_fund applies to',
-                `name` VARCHAR(255) DEFAULT NULL COMMENT 'name for the sub_fund',
-                `description` longtext DEFAULT '' COMMENT 'description for the sub_fund',
-                `sub_fund_type` VARCHAR(255) DEFAULT NULL COMMENT 'type for the sub_fund',
-                `code` VARCHAR(255) DEFAULT NULL COMMENT 'code for the sub_fund',
-                `external_id` VARCHAR(255) DEFAULT NULL COMMENT 'external id for the sub_fund for use with external accounting systems',
-                `currency` VARCHAR(10) DEFAULT NULL COMMENT 'currency of the sub_fund',
-                `status` TINYINT(1) DEFAULT '1' COMMENT 'is the sub_fund currently active',
-                `owner_id` INT(11) DEFAULT NULL COMMENT 'owner of the sub_fund',
-                `spend_limit` decimal(28,2) DEFAULT 0.00 COMMENT 'spend limit for the sub_fund',
-                `over_spend_allowed` TINYINT(1) DEFAULT '1' COMMENT 'is an overspend allowed on the sub_fund',
-                `oe_warning_percent` decimal(5,4) DEFAULT 0.0000 COMMENT 'percentage limit for overencumbrance',
-                `oe_limit_amount` decimal(28,2) DEFAULT 0.00 COMMENT 'limit for overspend',
-                `os_warning_sum` decimal(28,2) DEFAULT 0.00 COMMENT 'amount to trigger a warning for overspend',
-                `os_limit_sum` decimal(28,2) DEFAULT 0.00 COMMENT 'amount to trigger a block on the sub_fund for overspend',
-                `last_updated` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'time of the last update to the sub_fund',
-                `lib_group_visibility` VARCHAR(255) DEFAULT NULL COMMENT 'library groups the sub_fund is visible to',
-                PRIMARY KEY (`sub_fund_id`),
-                FOREIGN KEY (`fund_id`) REFERENCES `funds` (`fund_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-                FOREIGN KEY (`ledger_id`) REFERENCES `ledgers` (`ledger_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-                FOREIGN KEY (`fiscal_period_id`) REFERENCES `fiscal_period` (`fiscal_period_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-                FOREIGN KEY (`owner_id`) REFERENCES `borrowers` (`borrowernumber`)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-            }
-            );
-
-            say_success( $out, "Added new table 'sub_funds'" );
-        } else {
-            say_info( $out, "Table 'sub_funds' already exists" );
-        }
-
         unless ( TableExists('fund_allocation') ) {
             $dbh->do(
                 q{
                 CREATE TABLE `fund_allocation` (
                 `fund_allocation_id` INT(11) NOT NULL AUTO_INCREMENT,
                 `fund_id` INT(11) DEFAULT NULL COMMENT 'fund the fund allocation applies to',
-                `sub_fund_id` INT(11) DEFAULT NULL COMMENT 'sub fund the fund allocation applies to',
                 `ledger_id` INT(11) DEFAULT NULL COMMENT 'ledger the fund allocation applies to',
                 `fiscal_period_id` INT(11) DEFAULT NULL COMMENT 'fiscal period the fund allocation applies to',
                 `allocation_amount` decimal(28,2) DEFAULT 0.00 COMMENT 'amount for the allocation',
@@ -179,7 +140,6 @@ return {
                 `last_updated` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'time of the last update to the fund allocation',
                 `lib_group_visibility` VARCHAR(255) DEFAULT NULL COMMENT 'library groups the fund allocation is visible to',
                 PRIMARY KEY (`fund_allocation_id`),
-                FOREIGN KEY (`sub_fund_id`) REFERENCES `sub_funds` (`sub_fund_id`) ON DELETE CASCADE ON UPDATE CASCADE,
                 FOREIGN KEY (`fund_id`) REFERENCES `funds` (`fund_id`) ON DELETE CASCADE ON UPDATE CASCADE,
                 FOREIGN KEY (`ledger_id`) REFERENCES `ledgers` (`ledger_id`) ON DELETE CASCADE ON UPDATE CASCADE,
                 FOREIGN KEY (`fiscal_period_id`) REFERENCES `fiscal_period` (`fiscal_period_id`) ON DELETE CASCADE ON UPDATE CASCADE,

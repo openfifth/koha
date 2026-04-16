@@ -215,7 +215,6 @@ subtest 'total_allocations' => sub {
     my $allocation = Koha::Acquisition::FundManagement::FundAllocation->new(
         {
             fund_id           => $fund->fund_id,
-            sub_fund_id       => undef,
             ledger_id         => $ledger->ledger_id,
             fiscal_period_id  => $fiscal_period->fiscal_period_id,
             allocation_amount => -10,
@@ -228,7 +227,6 @@ subtest 'total_allocations' => sub {
     my $allocation2 = Koha::Acquisition::FundManagement::FundAllocation->new(
         {
             fund_id           => $fund->fund_id,
-            sub_fund_id       => undef,
             ledger_id         => $ledger->ledger_id,
             fiscal_period_id  => $fiscal_period->fiscal_period_id,
             allocation_amount => -5,
@@ -242,7 +240,6 @@ subtest 'total_allocations' => sub {
     my $allocation3 = Koha::Acquisition::FundManagement::FundAllocation->new(
         {
             fund_id           => $fund->fund_id,
-            sub_fund_id       => undef,
             ledger_id         => $ledger->ledger_id,
             fiscal_period_id  => $fiscal_period->fiscal_period_id,
             allocation_amount => 15,
@@ -296,7 +293,6 @@ subtest 'total_spent' => sub {
     my $allocation = Koha::Acquisition::FundManagement::FundAllocation->new(
         {
             fund_id           => $fund->fund_id,
-            sub_fund_id       => undef,
             ledger_id         => $ledger->ledger_id,
             fiscal_period_id  => $fiscal_period->fiscal_period_id,
             allocation_amount => -10,
@@ -309,7 +305,6 @@ subtest 'total_spent' => sub {
     my $allocation2 = Koha::Acquisition::FundManagement::FundAllocation->new(
         {
             fund_id           => $fund->fund_id,
-            sub_fund_id       => undef,
             ledger_id         => $ledger->ledger_id,
             fiscal_period_id  => $fiscal_period->fiscal_period_id,
             allocation_amount => -5,
@@ -323,7 +318,6 @@ subtest 'total_spent' => sub {
     my $allocation3 = Koha::Acquisition::FundManagement::FundAllocation->new(
         {
             fund_id           => $fund->fund_id,
-            sub_fund_id       => undef,
             ledger_id         => $ledger->ledger_id,
             fiscal_period_id  => $fiscal_period->fiscal_period_id,
             allocation_amount => -10,
@@ -377,7 +371,6 @@ subtest 'total_encumbered' => sub {
     my $allocation = Koha::Acquisition::FundManagement::FundAllocation->new(
         {
             fund_id           => $fund->fund_id,
-            sub_fund_id       => undef,
             ledger_id         => $ledger->ledger_id,
             fiscal_period_id  => $fiscal_period->fiscal_period_id,
             allocation_amount => -10,
@@ -390,7 +383,6 @@ subtest 'total_encumbered' => sub {
     my $allocation2 = Koha::Acquisition::FundManagement::FundAllocation->new(
         {
             fund_id           => $fund->fund_id,
-            sub_fund_id       => undef,
             ledger_id         => $ledger->ledger_id,
             fiscal_period_id  => $fiscal_period->fiscal_period_id,
             allocation_amount => -5,
@@ -404,7 +396,6 @@ subtest 'total_encumbered' => sub {
     my $allocation3 = Koha::Acquisition::FundManagement::FundAllocation->new(
         {
             fund_id           => $fund->fund_id,
-            sub_fund_id       => undef,
             ledger_id         => $ledger->ledger_id,
             fiscal_period_id  => $fiscal_period->fiscal_period_id,
             allocation_amount => -10,
@@ -508,7 +499,6 @@ subtest 'is_spend_limit_breached' => sub {
     my $allocation = Koha::Acquisition::FundManagement::FundAllocation->new(
         {
             fund_id           => $fund->fund_id,
-            sub_fund_id       => undef,
             ledger_id         => $ledger->ledger_id,
             fiscal_period_id  => $fiscal_period->fiscal_period_id,
             allocation_amount => -10,
@@ -522,7 +512,6 @@ subtest 'is_spend_limit_breached' => sub {
     my $allocation2 = Koha::Acquisition::FundManagement::FundAllocation->new(
         {
             fund_id           => $fund->fund_id,
-            sub_fund_id       => undef,
             ledger_id         => $ledger->ledger_id,
             fiscal_period_id  => $fiscal_period->fiscal_period_id,
             allocation_amount => -91,
@@ -537,7 +526,6 @@ subtest 'is_spend_limit_breached' => sub {
     $allocation2 = Koha::Acquisition::FundManagement::FundAllocation->new(
         {
             fund_id           => $fund->fund_id,
-            sub_fund_id       => undef,
             ledger_id         => $ledger->ledger_id,
             fiscal_period_id  => $fiscal_period->fiscal_period_id,
             allocation_amount => -40,
@@ -552,7 +540,6 @@ subtest 'is_spend_limit_breached' => sub {
     $allocation2 = Koha::Acquisition::FundManagement::FundAllocation->new(
         {
             fund_id           => $fund->fund_id,
-            sub_fund_id       => undef,
             ledger_id         => $ledger->ledger_id,
             fiscal_period_id  => $fiscal_period->fiscal_period_id,
             allocation_amount => -65,
@@ -611,23 +598,10 @@ subtest 'add_accounting_values' => sub {
             spend_limit          => 50
         }
     )->store();
-    my $sub_fund = Koha::Acquisition::FundManagement::SubFund->new(
-        {
-            fiscal_period_id     => $fiscal_period->fiscal_period_id,
-            ledger_id            => $ledger->ledger_id,
-            fund_id              => $fund2->fund_id,
-            lib_group_visibility => $fiscal_period->lib_group_visibility,
-            status               => $fiscal_period->status,
-            currency             => $ledger->currency,
-            owner_id             => $ledger->owner_id,
-            spend_limit          => 50
-        }
-    )->store();
 
     my $allocation1 = Koha::Acquisition::FundManagement::FundAllocation->new(
         {
             fund_id           => $fund->fund_id,
-            sub_fund_id       => undef,
             ledger_id         => $ledger->ledger_id,
             fiscal_period_id  => $fiscal_period->fiscal_period_id,
             allocation_amount => -15,
@@ -637,7 +611,6 @@ subtest 'add_accounting_values' => sub {
     my $allocation2 = Koha::Acquisition::FundManagement::FundAllocation->new(
         {
             fund_id           => $fund->fund_id,
-            sub_fund_id       => undef,
             ledger_id         => $ledger->ledger_id,
             fiscal_period_id  => $fiscal_period->fiscal_period_id,
             allocation_amount => -5,
@@ -796,7 +769,6 @@ subtest 'handle_spending_block_changes' => sub {
     my $allocation1 = Koha::Acquisition::FundManagement::FundAllocation->new(
         {
             fund_id           => $fund->fund_id,
-            sub_fund_id       => undef,
             ledger_id         => $ledger->ledger_id,
             fiscal_period_id  => $fiscal_period->fiscal_period_id,
             allocation_amount => -50,
@@ -818,7 +790,6 @@ subtest 'handle_spending_block_changes' => sub {
     my $allocation2 = Koha::Acquisition::FundManagement::FundAllocation->new(
         {
             fund_id           => $fund->fund_id,
-            sub_fund_id       => undef,
             ledger_id         => $ledger->ledger_id,
             fiscal_period_id  => $fiscal_period->fiscal_period_id,
             allocation_amount => -51,

@@ -316,24 +316,9 @@ __PACKAGE__->belongs_to(
   },
 );
 
-=head2 sub_funds
 
-Type: has_many
-
-Related object: L<Koha::Schema::Result::SubFund>
-
-=cut
-
-__PACKAGE__->has_many(
-  "sub_funds",
-  "Koha::Schema::Result::SubFund",
-  { "foreign.ledger_id" => "self.ledger_id" },
-  { cascade_copy => 0, cascade_delete => 0 },
-);
-
-
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-01-08 12:27:59
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:LPDaPi+stpRPVUYrrhb66g
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-08-05 10:10:56
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:5Xn6n9orNXrxz6WV6VnUxw
 
 __PACKAGE__->add_columns(
     '+status'                   => { is_boolean => 1 },

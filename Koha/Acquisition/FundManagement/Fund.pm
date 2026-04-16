@@ -21,7 +21,6 @@ use Modern::Perl;
 use base qw(Koha::Acquisition::FundManagement::BaseObject);
 
 use Koha::Acquisition::FundManagement::FundAllocations;
-use Koha::Acquisition::FundManagement::SubFunds;
 use Koha::Acquisition::FundManagement::FiscalPeriod;
 use Koha::Acquisition::FundManagement::Ledger;
 use Koha::Acquisition::FundManagement::FundGroup;

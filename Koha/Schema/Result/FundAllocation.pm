@@ -37,14 +37,6 @@ __PACKAGE__->table("fund_allocation");
 
 fund the fund allocation applies to
 
-=head2 sub_fund_id
-
-  data_type: 'integer'
-  is_foreign_key: 1
-  is_nullable: 1
-
-sub fund the fund allocation applies to
-
 =head2 ledger_id
 
   data_type: 'integer'
@@ -141,8 +133,6 @@ __PACKAGE__->add_columns(
   "fund_allocation_id",
   { data_type => "integer", is_auto_increment => 1, is_nullable => 0 },
   "fund_id",
-  { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
-  "sub_fund_id",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
   "ledger_id",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
@@ -276,29 +266,9 @@ __PACKAGE__->belongs_to(
   },
 );
 
-=head2 sub_fund
 
-Type: belongs_to
-
-Related object: L<Koha::Schema::Result::SubFund>
-
-=cut
-
-__PACKAGE__->belongs_to(
-  "sub_fund",
-  "Koha::Schema::Result::SubFund",
-  { sub_fund_id => "sub_fund_id" },
-  {
-    is_deferrable => 1,
-    join_type     => "LEFT",
-    on_delete     => "CASCADE",
-    on_update     => "CASCADE",
-  },
-);
-
-
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-01-07 11:02:42
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:KhE/vYplvFdV01hwOO6EYQ
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-08-05 10:10:56
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:TSwkBZ2yAwLct8TJD3Iprw
 
 __PACKAGE__->add_columns(
     '+is_transfer' => { is_boolean => 1 },

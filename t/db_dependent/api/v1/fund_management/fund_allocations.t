@@ -283,7 +283,6 @@ subtest 'add() tests' => sub {
         lib_group_visibility => "|" . $lib_group->id . "|",
         currency             => "GBP",
         fund_id              => $fund->fund_id,
-        sub_fund_id          => undef,
         ledger_id            => $fund->ledger_id,
         fiscal_period_id     => $fund->fiscal_period_id
     };

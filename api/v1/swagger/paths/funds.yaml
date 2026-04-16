@@ -18,7 +18,6 @@
           enum:
           - fiscal_period
           - ledger
-          - sub_funds
           - fund_allocations
           - owner
         collectionFormat: csv
@@ -138,8 +137,6 @@
           enum:
           - fiscal_period
           - ledger
-          - sub_funds
-          - sub_funds.fund_allocations
           - fund_allocations
           - owner
           - lib_group_limits

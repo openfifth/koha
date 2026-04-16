@@ -194,7 +194,7 @@ export class AcquisitionAPIClient {
                     endpoint: "funds/" + id,
                     headers: {
                         "x-koha-embed":
-                            "owner,lib_group_limits,fiscal_period,fund_group,ledger,fund_allocations,sub_funds",
+                            "owner,lib_group_limits,fiscal_period,fund_group,ledger,fund_allocations",
                         ...headers,
                     },
                 }),
@@ -239,49 +239,6 @@ export class AcquisitionAPIClient {
                     ...(headers && {
                         headers,
                     }),
-                }),
-        };
-    }
-
-    get subFunds() {
-        return {
-            get: (id, headers) =>
-                this.httpClient.get({
-                    endpoint: "sub_funds/" + id,
-                    ...(headers && { headers }),
-                }),
-            getAll: (query, params, headers) =>
-                this.httpClient.getAll({
-                    endpoint: "sub_funds",
-                    query,
-                    params,
-                    ...(headers && {
-                        headers,
-                    }),
-                }),
-            delete: id =>
-                this.httpClient.delete({
-                    endpoint: "sub_funds/" + id,
-                }),
-            create: fund =>
-                this.httpClient.post({
-                    endpoint: "sub_funds",
-                    body: fund,
-                }),
-            update: (fund, id) =>
-                this.httpClient.put({
-                    endpoint: "sub_funds/" + id,
-                    body: fund,
-                }),
-            count: (query = {}) =>
-                this.httpClient.count({
-                    endpoint:
-                        "sub_funds?" +
-                        new URLSearchParams({
-                            _page: 1,
-                            _per_page: 1,
-                            ...(query && { q: JSON.stringify(query) }),
-                        }),
                 }),
         };
     }

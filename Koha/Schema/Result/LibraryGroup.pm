@@ -266,8 +266,9 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-04-28 16:41:47
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:CkZe+3Qm2ZlmoSmXBGChag
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-08-05 10:16:23
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:qZ7t2CuUaI+ds7dSu3WiHQ
+
 
 =head2 koha_object_class
 
@@ -298,4 +299,5 @@ __PACKAGE__->add_columns(
     '+ft_search_groups_staff' => { is_boolean => 1 },
 );
 
+# You can replace this text with custom code or comments, and it will be preserved on regeneration
 1;

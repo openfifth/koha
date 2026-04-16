@@ -200,8 +200,6 @@ definitions:
     $ref: ./definitions/smtp_server.yaml
   file_transport:
     $ref: ./definitions/file_transport.yaml
-  sub_fund:
-    $ref: ./definitions/sub_fund.yaml
   suggestion:
     $ref: ./definitions/suggestion.yaml
   ticket:
@@ -261,10 +259,6 @@ paths:
     $ref: ./paths/acquisitions_orders.yaml#/~1acquisitions~1orders
   "/acquisitions/orders/{order_id}":
     $ref: "./paths/acquisitions_orders.yaml#/~1acquisitions~1orders~1{order_id}"
-  /acquisitions/sub_funds:
-    $ref: ./paths/sub_funds.yaml#/~1acquisitions~1sub_funds
-  "/acquisitions/sub_funds/{sub_fund_id}":
-    $ref: ./paths/sub_funds.yaml#/~1acquisitions~1sub_funds~1{sub_fund_id}
   /acquisitions/vendors:
     $ref: ./paths/acquisitions_vendors.yaml#/~1acquisitions~1vendors
   /acquisitions/vendors/extended_attribute_types:
@@ -1101,12 +1095,6 @@ parameters:
     description: File transport internal identifier
     in: path
     name: file_transport_id
-    required: true
-    type: integer
-  sub_fund_id_pp:
-    description: Sub fund internal identifier
-    in: path
-    name: sub_fund_id
     required: true
     type: integer
   suggestion_id_pp:
