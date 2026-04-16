@@ -30,7 +30,15 @@ export default {
     setup() {
         const circRulesStore = inject("circRulesStore");
         circRulesStore.init(default_view, logged_in_library_id);
-        letters.sort(circRulesStore.compareLetterNames);
+
+        // format letters for display as "name (notice code)" in drop downs.
+        letters
+            .sort(circRulesStore.compareByProperty("name"))
+            .forEach(letter => {
+                letter.name =
+                    letter?.name?.concat(` (${letter.code})`) ?? letter.code;
+            });
+
         letters.unshift({
             name: "No letter",
             code: "",

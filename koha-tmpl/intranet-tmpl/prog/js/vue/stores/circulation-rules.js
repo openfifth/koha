@@ -21,6 +21,7 @@ export const useCircRulesStore = defineStore("circRules", () => {
         currentPatronCategoryId: null,
         currentItemTypeId: null,
         triggerCounts: { "*": 0 },
+        lastEditedTriggerNumber: null,
         metaInitialized: false,
         // references
         itemTypes: [],
@@ -75,14 +76,8 @@ export const useCircRulesStore = defineStore("circRules", () => {
             await this.getConfigurationOptions();
         },
         // utilities
-        compareLetterNames(a, b) {
-            if (a.name < b.name) {
-                return -1;
-            }
-            if (a.name > b.name) {
-                return 1;
-            }
-            return 0;
+        compareByProperty(property) {
+            return (a, b) => a[property].localeCompare(b[property]);
         },
         formatTriggerSpecificRuleSetForDisplay(
             context,
@@ -172,10 +167,7 @@ export const useCircRulesStore = defineStore("circRules", () => {
         async scrollToElementById(id) {
             let count = 0;
             // ensures that the relevant section is loaded before we attempt to scroll it into view
-            while (
-                !document.getElementById(id) &&
-                count < 8
-            ) {
+            while (!document.getElementById(id) && count < 8) {
                 await new Promise(resolve => setTimeout(resolve, 250));
                 count++;
             }
@@ -189,6 +181,24 @@ export const useCircRulesStore = defineStore("circRules", () => {
         // services
         formatMttForDisplay(rawMtt) {
             return rawMtt?.split(",");
+        },
+        formatRuleSetMttFields(ruleSets) {
+            let triggerNumber = 1;
+            for (const ruleSet of ruleSets) {
+                while (ruleSet[`overdue_${triggerNumber}_mtt`] !== undefined) {
+                    if (
+                        typeof ruleSet[`overdue_${triggerNumber}_mtt`] ===
+                        "string"
+                    ) {
+                        ruleSet[`overdue_${triggerNumber}_mtt`] =
+                            this.formatMttForDisplay(
+                                ruleSet[`overdue_${triggerNumber}_mtt`]
+                            );
+                    }
+                    triggerNumber++;
+                }
+                triggerNumber = 1;
+            }
         },
         findEffectiveRule(
             context,
@@ -436,6 +446,13 @@ export const useCircRulesStore = defineStore("circRules", () => {
                 ...this.allDefaultLibraryRawRuleSets,
             ];
         },
+        async setAllFormattedRuleSets() {
+            await this.setAllRawRuleSets();
+            this.formatRuleSetMttFields(this.allDefaultLibraryRawRuleSets);
+            if (this.currentLibraryId !== "*") {
+                this.formatRuleSetMttFields(this.allCurrentLibraryRawRuleSets);
+            }
+        },
         async getSelectedRuleSet(context, effective = true) {
             const rawSelectedRuleSet = await this.getRawSelectedRuleSet(
                 context,
@@ -464,8 +481,9 @@ export const useCircRulesStore = defineStore("circRules", () => {
                 return;
             }
 
-            const ruleSetInDb = await this.getRawSelectedRuleSet(
-                ruleSet.context
+            const ruleSetInDb = await this.getSelectedRuleSet(
+                ruleSet.context,
+                false
             );
 
             if (this.hasConflict(ruleSet, ruleSetInDb, triggerNumber)) {
@@ -521,7 +539,7 @@ export const useCircRulesStore = defineStore("circRules", () => {
         async getItemTypes() {
             const client = APIClient.item;
             let itemTypes = await client.item_types.getAll();
-
+            itemTypes.sort(this.compareByProperty("description"));
             itemTypes.unshift({
                 item_type_id: "*",
                 description: $__("Default rule for all item types"),
@@ -532,7 +550,7 @@ export const useCircRulesStore = defineStore("circRules", () => {
             const client = APIClient.library;
             let libraries = [];
             libraries = await client.libraries.getAll();
-
+            libraries.sort(this.compareByProperty("name"));
             libraries.unshift({
                 library_id: "*",
                 name: $__("Default rule for all libraries"),
@@ -542,7 +560,7 @@ export const useCircRulesStore = defineStore("circRules", () => {
         async getPatronCategories() {
             const client = APIClient.patron;
             let patronCategories = await client.categories.getAll();
-
+            patronCategories.sort(this.compareByProperty("name"));
             patronCategories.unshift({
                 patron_category_id: "*",
                 name: $__("Default rule for all categories"),

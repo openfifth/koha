@@ -321,7 +321,7 @@
                             >
                                 {{
                                     $__(
-                                        "Bolid italic values denote fallback values where an override has not been set for the context."
+                                        "Bold italic values denote fallback values where an override has not been set for the context."
                                     )
                                 }}
                             </div>
@@ -353,7 +353,7 @@ export default {
         const circRulesStore = inject("circRulesStore");
         const {
             updateTriggerCount,
-            setAllRawRuleSets,
+            setAllFormattedRuleSets,
             setAllEffectiveRuleSets,
             setAllExhaustiveEffectiveRuleSets,
             isLastTrigger,
@@ -371,6 +371,7 @@ export default {
             allExhaustiveEffectiveRuleSets,
             allEffectiveRuleSets,
             librariesWithRules,
+            lastEditedTriggerNumber,
             storeInitialized,
             metaInitialized,
             canManageAnyLibrary,
@@ -387,13 +388,14 @@ export default {
             patronCategories,
             updateTriggerCount,
             allExhaustiveEffectiveRuleSets,
-            setAllRawRuleSets,
+            setAllFormattedRuleSets,
             setAllEffectiveRuleSets,
             setAllExhaustiveEffectiveRuleSets,
             allEffectiveRuleSets,
             librariesWithRules,
             isLastTrigger,
             getLibrariesWithRules,
+            lastEditedTriggerNumber,
             storeInitialized,
             metaInitialized,
             from_branch,
@@ -414,7 +416,7 @@ export default {
     methods: {
         async loadRuleSets() {
             this.ruleSetInitialized = false;
-            await this.setAllRawRuleSets();
+            await this.setAllFormattedRuleSets();
             this.updateTriggerCount();
             this.setAllEffectiveRuleSets();
             this.setAllExhaustiveEffectiveRuleSets();
@@ -500,18 +502,28 @@ export default {
     watch: {
         $route: {
             immediate: true,
-            handler: function (newVal, oldVal) {
+            async handler(newVal, oldVal) {
+                const fromModal = oldVal?.meta?.showModal;
                 this.showModal = newVal.meta && newVal.meta.showModal;
+
+                // Handle toggling page scroll as modal accessed / exited
                 const overflow = this.showModal ? "hidden" : "";
-                const body = document.querySelector("body");
-                body.style.overflow = overflow;
-            },
-        },
-        "$route.query": {
-            async handler() {
+                document.querySelector("body").style.overflow = overflow;
+
+                // Handle user exiting the modal - do not reload data.
                 if (
-                    this.$route.fullPath.includes("refresh") ||
-                    this.$route.path.endsWith("circulation_triggers")
+                    fromModal &&
+                    !this.showModal &&
+                    !newVal.fullPath.includes("refresh")
+                ) {
+                    this.filtersInitialized = true;
+                    return;
+                }
+
+                // Handle initial page loads, and successful save / edit / reset actions - reload data
+                if (
+                    newVal.fullPath.includes("refresh") ||
+                    newVal.path.endsWith("circulation_triggers")
                 ) {
                     if (!this.metaInitialized) {
                         await new Promise(resolve => {
@@ -525,11 +537,14 @@ export default {
                     }
                     await this.$nextTick();
                     await this.filterRuleSetsbySearchParam();
+                    if (this.lastEditedTriggerNumber) {
+                        this.tabSelected = `Notice ${this.lastEditedTriggerNumber}`;
+                        this.lastEditedTriggerNumber = null;
+                    }
                     await this.scrollToElementById("circ-triggers-content");
                 }
                 this.filtersInitialized = true;
             },
-            immediate: true,
         },
     },
     components: { TriggersTable, Toolbar, ToolbarButton },
