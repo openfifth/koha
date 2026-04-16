@@ -125,6 +125,7 @@ export default {
             setEffectiveTriggerFilteredRuleSet,
             updateCircRuleSets,
             hasConflict,
+            compareByProperty,
             scrollToElementById,
         } = circRulesStore;
         const {
@@ -134,6 +135,7 @@ export default {
             transportTypes,
             patronCategories,
             triggerCounts,
+            lastEditedTriggerNumber,
             storeInitialized,
             canManageAnyLibrary,
             logged_in_library_id,
@@ -152,9 +154,11 @@ export default {
             setEffectiveTriggerFilteredRuleSet,
             updateCircRuleSets,
             hasConflict,
+            lastEditedTriggerNumber,
             storeInitialized,
             canManageAnyLibrary,
             logged_in_library_id,
+            compareByProperty,
             scrollToElementById,
         };
     },
@@ -335,6 +339,7 @@ export default {
             }
 
             await this.updateCircRuleSets(ruleSetToSubmit, this.triggerNumber);
+            this.lastEditedTriggerNumber = this.triggerNumber;
             await this.$router.push({
                 name: "CirculationTriggersList",
                 query: { refresh: Date.now() },
@@ -412,7 +417,7 @@ export default {
                 [`overdue_${this.triggerNumber}_delay`]: this.findEffectiveRule(
                     this.context,
                     "delay",
-                    i
+                    this.triggerNumber
                 ).value,
             };
 
