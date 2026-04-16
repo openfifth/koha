@@ -77,7 +77,12 @@ sub add {
     return try {
         Koha::Database->new->schema->txn_do(
             sub {
-                my $body = $c->req->json;
+                my $body   = $c->req->json;
+                my $ledger = Koha::Acquisition::Finances::Ledgers->find( $body->{ledger_id} );
+                return $c->render(
+                    status  => 400,
+                    openapi => { error => 'Ledger is locked' }
+                ) if $ledger->locked;
 
                 my $fund   = Koha::Acquisition::Finances::Fund->new_from_api($body);
                 my $result = $fund->validate_child_object_amounts_against_parent_amount();
@@ -116,6 +121,12 @@ sub update {
             openapi => { error => "Fund not found" }
         );
     }
+
+    my $ledger = Koha::Acquisition::Finances::Ledgers->find( $fund->ledger_id );
+    return $c->render(
+        status  => 400,
+        openapi => { error => 'Ledger is locked' }
+    ) if $ledger->locked;
 
     return try {
         Koha::Database->new->schema->txn_do(

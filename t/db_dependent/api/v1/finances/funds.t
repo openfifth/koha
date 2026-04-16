@@ -18,7 +18,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 8;
+use Test::More tests => 10;
 use Test::Mojo;
 
 use t::lib::TestBuilder;
@@ -152,11 +152,11 @@ subtest 'add() tests' => sub {
     $patron->set_password( { password => $password, skip_validation => 1 } );
     my $unauth_userid = $patron->userid;
 
-    # Create a ledger with a large amount to ensure fund amount stays within limit
+    # Create an unlocked ledger with a large amount to ensure fund amount stays within limit
     my $ledger = $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Ledgers',
-            value => { ledger_amount => 100000 }
+            value => { ledger_amount => 100000, locked => 0 }
         }
     );
     my $fiscal_period = $builder->build_object( { class => 'Koha::Acquisition::Finances::FiscalPeriods' } );
@@ -202,7 +202,7 @@ subtest 'add() with amount breach tests' => sub {
     my $ledger = $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Ledgers',
-            value => { ledger_amount => 100 }
+            value => { ledger_amount => 100, locked => 0 }
         }
     );
     my $fiscal_period = $builder->build_object( { class => 'Koha::Acquisition::Finances::FiscalPeriods' } );
@@ -241,11 +241,17 @@ subtest 'add() sub-fund with amount breach tests' => sub {
     $librarian->set_password( { password => $password, skip_validation => 1 } );
     my $userid = $librarian->userid;
 
-    # Create a parent fund with a small amount
+    # Create an unlocked ledger and a parent fund with a small amount
+    my $ledger = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Ledgers',
+            value => { locked => 0 }
+        }
+    );
     my $parent_fund = $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Funds',
-            value => { fund_amount => 200 }
+            value => { fund_amount => 200, ledger_id => $ledger->ledger_id }
         }
     );
 
@@ -265,6 +271,46 @@ subtest 'add() sub-fund with amount breach tests' => sub {
         ->json_is( '/error'                => 'Amount has been breached' )
         ->json_is( '/result/within_limit'  => 0 )
         ->json_is( '/result/breach_amount' => 99799 );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'add() with locked ledger tests' => sub {
+
+    plan tests => 3;
+
+    $schema->storage->txn_begin;
+
+    my $librarian = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { flags => 1 }     # superlibrarian
+        }
+    );
+    my $password = 'thePassword123';
+    $librarian->set_password( { password => $password, skip_validation => 1 } );
+    my $userid = $librarian->userid;
+
+    my $locked_ledger = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Ledgers',
+            value => { ledger_amount => 10000, locked => 1 }
+        }
+    );
+    my $fiscal_period = $builder->build_object( { class => 'Koha::Acquisition::Finances::FiscalPeriods' } );
+
+    my $fund = {
+        name             => 'Test Fund',
+        ledger_id        => $locked_ledger->ledger_id,
+        fiscal_period_id => $fiscal_period->fiscal_period_id,
+        fund_amount      => 1000,
+        status           => Mojo::JSON->true,
+    };
+
+    # Adding a fund to a locked ledger should return 400
+    $t->post_ok( "//$userid:$password@/api/v1/acquisitions/funds" => json => $fund )
+        ->status_is(400)
+        ->json_is( '/error' => 'Ledger is locked' );
 
     $schema->storage->txn_rollback;
 };
@@ -294,12 +340,23 @@ subtest 'update() tests' => sub {
     $patron->set_password( { password => $password, skip_validation => 1 } );
     my $unauth_userid = $patron->userid;
 
-    my $fund    = $builder->build_object( { class => 'Koha::Acquisition::Finances::Funds' } );
+    my $ledger  = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Ledgers',
+            value => { locked => 0 }
+        }
+    );
+    my $fund    = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Funds',
+            value => { ledger_id => $ledger->ledger_id }
+        }
+    );
     my $fund_id = $fund->fund_id;
 
     my $updated_fund = {
         name             => 'Updated Fund',
-        ledger_id        => $fund->ledger_id,
+        ledger_id        => $ledger->ledger_id,
         fiscal_period_id => $fund->fiscal_period_id,
         fund_amount      => 7500,
         status           => Mojo::JSON->true,
@@ -320,6 +377,52 @@ subtest 'update() tests' => sub {
 
     $t->put_ok( "//$userid:$password@/api/v1/acquisitions/funds/$non_existent_id" => json => $updated_fund )
         ->status_is(404);
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'update() with locked ledger tests' => sub {
+
+    plan tests => 3;
+
+    $schema->storage->txn_begin;
+
+    my $librarian = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { flags => 1 }     # superlibrarian
+        }
+    );
+    my $password = 'thePassword123';
+    $librarian->set_password( { password => $password, skip_validation => 1 } );
+    my $userid = $librarian->userid;
+
+    my $locked_ledger = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Ledgers',
+            value => { locked => 1 }
+        }
+    );
+    my $fund    = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Funds',
+            value => { ledger_id => $locked_ledger->ledger_id }
+        }
+    );
+    my $fund_id = $fund->fund_id;
+
+    my $updated_fund = {
+        name             => 'Updated Fund',
+        ledger_id        => $locked_ledger->ledger_id,
+        fiscal_period_id => $fund->fiscal_period_id,
+        fund_amount      => 1000,
+        status           => Mojo::JSON->true,
+    };
+
+    # Updating a fund under a locked ledger should return 400
+    $t->put_ok( "//$userid:$password@/api/v1/acquisitions/funds/$fund_id" => json => $updated_fund )
+        ->status_is(400)
+        ->json_is( '/error' => 'Ledger is locked' );
 
     $schema->storage->txn_rollback;
 };

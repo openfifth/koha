@@ -34,11 +34,13 @@ export default {
         const defaultToolbarButtons = (defaultButtons, resource, router) => {
             return {
                 list: [],
-                show: !resource.sub_funds?.length
-                    ? defaultButtons.show
-                    : defaultButtons.show.filter(
-                          button => button.action !== "delete"
-                      ),
+                show: defaultButtons.show.filter(button => {
+                    if (button.action === "delete" && resource.sub_funds?.length)
+                        return false;
+                    if (button.action === "edit" && resource.ledger_locked)
+                        return false;
+                    return true;
+                }),
             };
         };
 
@@ -79,7 +81,7 @@ export default {
             };
             return {
                 show: [
-                    ...(!isSubFund.value
+                    ...(!isSubFund.value && !resource.ledger_locked
                         ? [
                               {
                                   to: {
@@ -526,6 +528,7 @@ export default {
             delete fund.created_date;
             delete fund.child_object_managing_branches;
             delete fund.parent_status;
+            delete fund.ledger_locked;
 
             fund.fund_permission = fund.fund_permission
                 ? parseInt(fund.fund_permission)
@@ -575,6 +578,7 @@ export default {
             componentData.resource.value.fund_parent_name =
                 resource.parent_fund?.name;
             componentData.resource.value.currency = resource.ledger.currency;
+            componentData.resource.value.ledger_locked = resource.ledger?.locked;
             const parentKey = isSubFund.value ? "parent_fund" : "ledger";
             componentData.resource.value.parent_status =
                 resource[parentKey]?.status;
@@ -918,6 +922,7 @@ export default {
                         : result;
                     resource.ledger_name = resultLedger.name;
                     resource.currency = resultLedger.currency;
+                    resource.ledger_locked = resultLedger.locked;
                     resource.parent_status = result.status;
                     if (!result.status) resource.status = false;
                     const acqLibGroups =
