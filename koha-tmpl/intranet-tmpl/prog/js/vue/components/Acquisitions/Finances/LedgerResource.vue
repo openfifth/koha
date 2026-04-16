@@ -192,6 +192,7 @@ export default {
                     format: (val, resource, attr) =>
                         attr.options.find(op => op.value === val).description,
                     required: true,
+                    disabled: ledger => ledger.parent_status === false,
                 },
                 {
                     name: "locked",
@@ -418,6 +419,7 @@ export default {
             delete ledger.funds;
             delete ledger.child_object_managing_branches;
             delete ledger.allocations;
+            delete ledger.parent_status;
 
             if (ledger_id) {
                 return baseResource.apiClient.update(ledger, ledger_id).then(
@@ -443,6 +445,8 @@ export default {
                 resource.oe_warning_percent * 100;
             componentData.resource.value.fiscal_period_name =
                 resource.fiscal_period.name;
+            componentData.resource.value.parent_status =
+                resource.fiscal_period?.status;
             const { branchNames, groupNames } = getBranchnamesFromGroups(
                 resource.fiscal_period.managing_library
                     ?.acquisitions_library_groups || []
@@ -496,6 +500,8 @@ export default {
                     .get(resource.fiscal_period_id)
                     .then(fiscalPeriod => {
                         resource.fiscal_period_name = fiscalPeriod.name;
+                        resource.parent_status = fiscalPeriod.status;
+                        if (!fiscalPeriod.status) resource.status = false;
                         if (
                             fiscalPeriod.managing_library
                                 ?.acquisitions_library_groups.length

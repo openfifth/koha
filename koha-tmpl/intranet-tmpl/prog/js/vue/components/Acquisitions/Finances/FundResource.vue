@@ -247,6 +247,7 @@ export default {
                     format: (val, resource, attr) =>
                         attr.options.find(op => op.value === val).description,
                     required: true,
+                    disabled: fund => fund.parent_status === false,
                 },
                 ...(!isSubFund.value &&
                 authorisedValues.value.av_fund_type.length
@@ -524,6 +525,7 @@ export default {
             delete fund.modified_date;
             delete fund.created_date;
             delete fund.child_object_managing_branches;
+            delete fund.parent_status;
 
             fund.fund_permission = fund.fund_permission
                 ? parseInt(fund.fund_permission)
@@ -574,6 +576,8 @@ export default {
                 resource.parent_fund?.name;
             componentData.resource.value.currency = resource.ledger.currency;
             const parentKey = isSubFund.value ? "parent_fund" : "ledger";
+            componentData.resource.value.parent_status =
+                resource[parentKey]?.status;
             const { branchNames, groupNames } = getBranchnamesFromGroups(
                 resource[parentKey].managing_library
                     ?.acquisitions_library_groups || []
@@ -914,6 +918,8 @@ export default {
                         : result;
                     resource.ledger_name = resultLedger.name;
                     resource.currency = resultLedger.currency;
+                    resource.parent_status = result.status;
+                    if (!result.status) resource.status = false;
                     const acqLibGroups =
                         result.managing_library?.acquisitions_library_groups ||
                         [];
