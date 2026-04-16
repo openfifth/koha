@@ -44,7 +44,6 @@
 
 <script>
 import { computed } from "vue";
-import { $__ } from "@koha-vue/i18n";
 export default {
     props: {
         id: String,
@@ -77,7 +76,7 @@ export default {
             model.value = "";
         };
 
-        return { model, clearInput, $__ };
+        return { model, clearInput };
     },
     name: "InputNumber",
 };
