@@ -112,7 +112,7 @@ return {
                 `allocation_amount` decimal(28,2) DEFAULT 0.00 COMMENT 'amount for the allocation',
                 `is_transferred_to` INT(11) DEFAULT NULL COMMENT 'entity making the allocation',
                 `is_transferred_from` INT(11) DEFAULT NULL COMMENT 'entity receiving the allocation',
-                `type` enum('increase','decrease','transfer') NOT NULL COMMENT 'type of the allocation',
+                `type` enum('increase','decrease','transfer','initial') NOT NULL COMMENT 'type of the allocation',
                 `reference` VARCHAR(255) DEFAULT NULL COMMENT 'allocation reference',
                 `note` longtext DEFAULT '' COMMENT 'any notes associated to the allocation',
                 `created_date` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'when the allocation was made',

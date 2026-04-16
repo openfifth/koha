@@ -23,6 +23,7 @@ use Mojo::Base 'Mojolicious::Controller';
 use Mojo::JSON qw(decode_json);
 use Try::Tiny;
 
+use Koha::Acquisition::Finances::Allocation;
 use Koha::Acquisition::Finances::Ledger;
 use Koha::Acquisition::Finances::Ledgers;
 use Koha::Acquisition::Finances::FiscalPeriods;
@@ -81,6 +82,14 @@ sub add {
                 my $body = $c->req->json;
 
                 my $ledger = Koha::Acquisition::Finances::Ledger->new_from_api($body)->store->discard_changes;
+
+                Koha::Acquisition::Finances::Allocation->new(
+                    {
+                        ledger_id         => $ledger->ledger_id,
+                        allocation_amount => $ledger->ledger_amount,
+                        type              => 'initial',
+                    }
+                )->store;
 
                 $c->res->headers->location( $c->req->url->to_string . '/' . $ledger->ledger_id );
                 return $c->render(

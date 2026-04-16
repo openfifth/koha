@@ -24,6 +24,7 @@ use Test::Mojo;
 use t::lib::TestBuilder;
 use t::lib::Mocks;
 
+use Koha::Acquisition::Finances::Allocations;
 use Koha::Acquisition::Finances::Ledgers;
 use Koha::Database;
 
@@ -129,7 +130,7 @@ subtest 'get() tests' => sub {
 
 subtest 'add() tests' => sub {
 
-    plan tests => 8;
+    plan tests => 10;
 
     $schema->storage->txn_begin;
 
@@ -170,6 +171,13 @@ subtest 'add() tests' => sub {
         ->json_is( '/name'          => $ledger->{name} )
         ->json_is( '/currency'      => $ledger->{currency} )
         ->json_is( '/ledger_amount' => $ledger->{ledger_amount} );
+
+    my $created_ledger_id  = $t->tx->res->json->{ledger_id};
+    my $initial_allocation = Koha::Acquisition::Finances::Allocations->search(
+        { ledger_id => $created_ledger_id, type => 'initial' }
+    )->single;
+    ok( $initial_allocation, 'Initial allocation was created for new ledger' );
+    cmp_ok( $initial_allocation->allocation_amount, '==', $ledger->{ledger_amount}, 'Initial allocation amount matches ledger amount' );
 
     $schema->storage->txn_rollback;
 };

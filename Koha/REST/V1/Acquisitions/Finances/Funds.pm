@@ -23,6 +23,7 @@ use Mojo::Base 'Mojolicious::Controller';
 use Mojo::JSON qw(decode_json);
 use Try::Tiny;
 
+use Koha::Acquisition::Finances::Allocation;
 use Koha::Acquisition::Finances::Fund;
 use Koha::Acquisition::Finances::Funds;
 use Koha::Acquisition::Finances::Ledgers;
@@ -92,6 +93,15 @@ sub add {
                 ) unless $result->{within_limit};
 
                 $fund->store->discard_changes;
+
+                Koha::Acquisition::Finances::Allocation->new(
+                    {
+                        fund_id           => $fund->fund_id,
+                        allocation_amount => $fund->fund_amount,
+                        type              => 'initial',
+                    }
+                )->store;
+
                 $c->res->headers->location( $c->req->url->to_string . '/' . $fund->fund_id );
                 return $c->render(
                     status  => 201,

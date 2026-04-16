@@ -37,6 +37,12 @@ properties:
       - string
       - "null"
     description: Type of the allocation
+    enum:
+      - increase
+      - decrease
+      - transfer
+      - initial
+      - null
   is_transferred_to:
     type:
       - integer

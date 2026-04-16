@@ -24,6 +24,7 @@ use Test::Mojo;
 use t::lib::TestBuilder;
 use t::lib::Mocks;
 
+use Koha::Acquisition::Finances::Allocations;
 use Koha::Acquisition::Finances::Funds;
 use Koha::Database;
 
@@ -129,7 +130,7 @@ subtest 'get() tests' => sub {
 
 subtest 'add() tests' => sub {
 
-    plan tests => 8;
+    plan tests => 10;
 
     $schema->storage->txn_begin;
 
@@ -179,6 +180,13 @@ subtest 'add() tests' => sub {
         ->json_is( '/name'             => $fund->{name} )
         ->json_is( '/ledger_id'        => $fund->{ledger_id} )
         ->json_is( '/fiscal_period_id' => $fund->{fiscal_period_id} );
+
+    my $created_fund_id    = $t->tx->res->json->{fund_id};
+    my $initial_allocation = Koha::Acquisition::Finances::Allocations->search(
+        { fund_id => $created_fund_id, type => 'initial' }
+    )->single;
+    ok( $initial_allocation, 'Initial allocation was created for new fund' );
+    cmp_ok( $initial_allocation->allocation_amount, '==', $fund->{fund_amount}, 'Initial allocation amount matches fund amount' );
 
     $schema->storage->txn_rollback;
 };
