@@ -3674,13 +3674,13 @@ CREATE TABLE `file_transports` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `acq_fiscal_period`
+-- Table structure for table `acq_fiscal_periods`
 --
 
-DROP TABLE IF EXISTS `acq_fiscal_period`;
+DROP TABLE IF EXISTS `acq_fiscal_periods`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `acq_fiscal_period` (
+CREATE TABLE `acq_fiscal_periods` (
   `fiscal_period_id` INT(11) NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(80) NOT NULL COMMENT 'name for the fiscal period',
   `description` longtext DEFAULT '' COMMENT 'description for the fiscal period',
@@ -3749,7 +3749,7 @@ CREATE TABLE `acq_funds` (
   `modified_date` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'time of the last update to the fund',
   PRIMARY KEY (`fund_id`),
   FOREIGN KEY (`ledger_id`) REFERENCES `acq_ledgers` (`ledger_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  FOREIGN KEY (`fiscal_period_id`) REFERENCES `acq_fiscal_period` (`fiscal_period_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (`fiscal_period_id`) REFERENCES `acq_fiscal_periods` (`fiscal_period_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   FOREIGN KEY (`owner_id`) REFERENCES `borrowers` (`borrowernumber`),
   FOREIGN KEY (`managing_branch`) REFERENCES `branches` (`branchcode`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -4706,7 +4706,7 @@ CREATE TABLE `acq_ledgers` (
   `created_date` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'time of the creation of the ledger',
   `modified_date` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'time of the last update to the ledger',
   PRIMARY KEY (`ledger_id`),
-  FOREIGN KEY (`fiscal_period_id`) REFERENCES `acq_fiscal_period` (`fiscal_period_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (`fiscal_period_id`) REFERENCES `acq_fiscal_periods` (`fiscal_period_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   FOREIGN KEY (`owner_id`) REFERENCES `borrowers` (`borrowernumber`),
   FOREIGN KEY (`managing_branch`) REFERENCES `branches` (`branchcode`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

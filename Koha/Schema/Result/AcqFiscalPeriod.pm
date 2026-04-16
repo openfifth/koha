@@ -15,11 +15,11 @@ use warnings;
 
 use base 'DBIx::Class::Core';
 
-=head1 TABLE: C<acq_fiscal_period>
+=head1 TABLE: C<acq_fiscal_periods>
 
 =cut
 
-__PACKAGE__->table("acq_fiscal_period");
+__PACKAGE__->table("acq_fiscal_periods");
 
 =head1 ACCESSORS
 
@@ -224,8 +224,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-03-25 15:23:13
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:U658BX26MIEwsamsK7VB6Q
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-16 10:11:01
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:cQGVq1yhFO1IftNuSn7+og
 
 __PACKAGE__->add_columns(
     '+status' => { is_boolean => 1 },

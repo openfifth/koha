@@ -8,10 +8,10 @@ return {
         my ($args) = @_;
         my ( $dbh, $out ) = @$args{qw(dbh out)};
 
-        unless ( TableExists('acq_fiscal_period') ) {
+        unless ( TableExists('acq_fiscal_periods') ) {
             $dbh->do(
                 q{
-                CREATE TABLE `acq_fiscal_period` (
+                CREATE TABLE `acq_fiscal_periods` (
                 `fiscal_period_id` INT(11) NOT NULL AUTO_INCREMENT,
                 `name` VARCHAR(80) NOT NULL COMMENT 'name for the fiscal period',
                 `description` longtext DEFAULT '' COMMENT 'description for the fiscal period',
@@ -29,9 +29,9 @@ return {
             }
             );
 
-            say_success( $out, "Added new table 'acq_fiscal_period'" );
+            say_success( $out, "Added new table 'acq_fiscal_periods'" );
         } else {
-            say_info( $out, "Table 'acq_fiscal_period' already exists" );
+            say_info( $out, "Table 'acq_fiscal_periods' already exists" );
         }
 
         unless ( TableExists('acq_ledgers') ) {
@@ -54,7 +54,7 @@ return {
                 `created_date` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'time of the creation of the ledger',
                 `modified_date` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'time of the last update to the ledger',
                 PRIMARY KEY (`ledger_id`),
-                FOREIGN KEY (`fiscal_period_id`) REFERENCES `acq_fiscal_period` (`fiscal_period_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+                FOREIGN KEY (`fiscal_period_id`) REFERENCES `acq_fiscal_periods` (`fiscal_period_id`) ON DELETE CASCADE ON UPDATE CASCADE,
                 FOREIGN KEY (`owner_id`) REFERENCES `borrowers` (`borrowernumber`),
                 FOREIGN KEY (`managing_branch`) REFERENCES `branches` (`branchcode`) ON DELETE CASCADE ON UPDATE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -90,7 +90,7 @@ return {
                 `modified_date` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'time of the last update to the fund',
                 PRIMARY KEY (`fund_id`),
                 FOREIGN KEY (`ledger_id`) REFERENCES `acq_ledgers` (`ledger_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-                FOREIGN KEY (`fiscal_period_id`) REFERENCES `acq_fiscal_period` (`fiscal_period_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+                FOREIGN KEY (`fiscal_period_id`) REFERENCES `acq_fiscal_periods` (`fiscal_period_id`) ON DELETE CASCADE ON UPDATE CASCADE,
                 FOREIGN KEY (`owner_id`) REFERENCES `borrowers` (`borrowernumber`),
                 FOREIGN KEY (`managing_branch`) REFERENCES `branches` (`branchcode`) ON DELETE CASCADE ON UPDATE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
