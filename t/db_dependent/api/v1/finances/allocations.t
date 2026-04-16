@@ -216,7 +216,7 @@ subtest 'add() to fund tests' => sub {
     my $fund = $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Funds',
-            value => { ledger_id => $ledger->ledger_id, fund_amount => 0, fund_parent_id => undef }
+            value => { ledger_id => $ledger->ledger_id, fund_amount => 0, parent_fund_id => undef }
         }
     );
 
@@ -262,7 +262,7 @@ subtest 'add() transfer between funds tests' => sub {
     my $source_fund = $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Funds',
-            value => { fund_amount => 5000, fund_parent_id => undef }
+            value => { fund_amount => 5000, parent_fund_id => undef }
         }
     );
 
@@ -276,7 +276,7 @@ subtest 'add() transfer between funds tests' => sub {
     my $dest_fund = $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Funds',
-            value => { ledger_id => $dest_ledger->ledger_id, fund_amount => 0, fund_parent_id => undef }
+            value => { ledger_id => $dest_ledger->ledger_id, fund_amount => 0, parent_fund_id => undef }
         }
     );
 

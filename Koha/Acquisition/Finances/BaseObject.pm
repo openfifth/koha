@@ -222,6 +222,7 @@ sub update_amount {
         }
     } else {
         $self->$entity_field($new_value)->store;
+        return;
     }
 }
 
@@ -290,7 +291,7 @@ sub parent_object {
 
     my $parent;
     if ( $self->is_sub_fund ) {
-        $parent = Koha::Acquisition::Finances::Funds->find( $self->fund_parent_id );
+        $parent = Koha::Acquisition::Finances::Funds->find( $self->parent_fund_id );
     } else {
         $parent = Koha::Acquisition::Finances::Ledgers->find( $self->ledger_id );
     }

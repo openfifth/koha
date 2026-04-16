@@ -185,7 +185,7 @@ export default {
                         link: {
                             name: "FundShow",
                             params: {
-                                fund_id: "fund_parent_id",
+                                fund_id: "parent_fund_id",
                             },
                         },
                     },
@@ -438,11 +438,11 @@ export default {
         const tableURL = () => {
             if (props.embedded) {
                 const id = isSubFund.value
-                    ? baseResource.route.params.fund_parent_id
+                    ? baseResource.route.params.parent_fund_id
                     : baseResource.route.params.ledger_id;
                 const query = {};
                 query[
-                    "me." + (isSubFund.value ? "fund_parent_id" : "ledger_id")
+                    "me." + (isSubFund.value ? "parent_fund_id" : "ledger_id")
                 ] = id;
                 return `/api/v1/acquisitions/funds?q=` + JSON.stringify(query);
             }
@@ -505,7 +505,7 @@ export default {
                 delete fund.fund_id;
             } else {
                 delete fund.fund_id;
-                fund.fund_parent_id =
+                fund.parent_fund_id =
                     baseResource.route.query.fund_id || fund.fund_id;
             }
             delete fund.owner;
@@ -866,7 +866,7 @@ export default {
                                   filters: {
                                       type: "filter",
                                       keys: {
-                                          fund_parent_id: {
+                                          parent_fund_id: {
                                               property: "fund_id",
                                           },
                                       },
@@ -904,7 +904,7 @@ export default {
                     );
                     resource.ledger_id = parseInt(result.ledger_id);
                     if (isSubFund.value) {
-                        resource.fund_parent_id = parseInt(
+                        resource.parent_fund_id = parseInt(
                             componentData.route.query.fund_id
                         );
                     }

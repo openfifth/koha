@@ -252,7 +252,7 @@ subtest 'add() sub-fund with amount breach tests' => sub {
     my $sub_fund_exceeding_limit = {
         name             => 'Overfunded Sub Fund',
         ledger_id        => $parent_fund->ledger_id,
-        fund_parent_id   => $parent_fund->fund_id,
+        parent_fund_id   => $parent_fund->fund_id,
         fiscal_period_id => $parent_fund->fiscal_period_id,
         fund_amount      => 99999,
         status           => Mojo::JSON->true,
@@ -360,7 +360,7 @@ subtest 'delete() tests' => sub {
     $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Funds',
-            value => { fund_parent_id => $parent_fund->fund_id }
+            value => { parent_fund_id => $parent_fund->fund_id }
         }
     );
     $t->delete_ok( "//$userid:$password@/api/v1/acquisitions/funds/" . $parent_fund->fund_id )

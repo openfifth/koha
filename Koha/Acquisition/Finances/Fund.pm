@@ -72,7 +72,7 @@ sub sub_funds {
 
     my $embed_children = $args->{embed_children} || 0;
 
-    my $sub_funds = Koha::Acquisition::Finances::Funds->search( { fund_parent_id => $self->fund_id } );
+    my $sub_funds = Koha::Acquisition::Finances::Funds->search( { parent_fund_id => $self->fund_id } );
 
     if ($embed_children) {
         $sub_funds = _embed_child_funds( { sub_funds => $sub_funds } );
@@ -103,7 +103,7 @@ Checks if a fund is a sub fund
 sub is_sub_fund {
     my ( $self, $args ) = @_;
 
-    return $self->fund_parent_id ? 1 : 0;
+    return $self->parent_fund_id ? 1 : 0;
 }
 
 =head3 has_sub_funds
@@ -212,7 +212,7 @@ sub _embed_child_funds {
     my $sub_fund_list = $args->{sub_fund_list} || [];
 
     foreach my $sub_fund ( $sub_funds->as_list ) {
-        my $child_funds = Koha::Acquisition::Finances::Funds->search( { fund_parent_id => $sub_fund->fund_id } );
+        my $child_funds = Koha::Acquisition::Finances::Funds->search( { parent_fund_id => $sub_fund->fund_id } );
         push( @$sub_fund_list, $sub_fund );
         _embed_child_funds( { sub_funds => $child_funds, sub_fund_list => $sub_fund_list } );
     }

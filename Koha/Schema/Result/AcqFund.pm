@@ -29,7 +29,7 @@ __PACKAGE__->table("acq_funds");
   is_auto_increment: 1
   is_nullable: 0
 
-=head2 fund_parent_id
+=head2 parent_fund_id
 
   data_type: 'integer'
   is_nullable: 1
@@ -174,7 +174,7 @@ time of the last update to the fund
 __PACKAGE__->add_columns(
   "fund_id",
   { data_type => "integer", is_auto_increment => 1, is_nullable => 0 },
-  "fund_parent_id",
+  "parent_fund_id",
   { data_type => "integer", is_nullable => 1 },
   "ledger_id",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 0 },
@@ -335,8 +335,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-13 15:39:21
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:SGDmuQJFOnTTU7dqut9iww
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-16 14:31:14
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:Ogg7idB4i8bx/vvoJiZ8WA
 
 __PACKAGE__->add_columns(
     '+status'             => { is_boolean => 1 },
@@ -381,7 +381,7 @@ Related object: L<Koha::Schema::Result::AcqFund>
 __PACKAGE__->belongs_to(
     "parent_fund",
     "Koha::Schema::Result::AcqFund",
-    { fund_id => "fund_parent_id" },
+    { fund_id => "parent_fund_id" },
     {
         is_deferrable => 1,
         join_type     => "LEFT",

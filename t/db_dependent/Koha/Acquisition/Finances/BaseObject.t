@@ -78,14 +78,14 @@ subtest 'cascade_data() tests' => sub {
     my $parent_fund = $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Funds',
-            value => { fiscal_period_id => $fp1->fiscal_period_id, fund_parent_id => undef }
+            value => { fiscal_period_id => $fp1->fiscal_period_id, parent_fund_id => undef }
         }
     );
     my $sub_fund = $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Funds',
             value => {
-                fund_parent_id   => $parent_fund->fund_id,
+                parent_fund_id   => $parent_fund->fund_id,
                 fiscal_period_id => $fp1->fiscal_period_id,
             }
         }
@@ -139,7 +139,7 @@ subtest 'relationship embedding tests' => sub {
             value => {
                 ledger_id        => $ledger->ledger_id,
                 fiscal_period_id => $fiscal_period->fiscal_period_id,
-                fund_parent_id   => undef,
+                parent_fund_id   => undef,
             }
         }
     );
@@ -221,7 +221,7 @@ subtest 'update_amount() tests' => sub {
             value => {
                 ledger_id      => $ledger->ledger_id,
                 fund_amount    => 0,
-                fund_parent_id => undef,
+                parent_fund_id => undef,
             }
         }
     );
@@ -265,7 +265,7 @@ subtest 'validate_child_object_amounts_against_parent_amount() tests' => sub {
             value => {
                 ledger_id      => $ledger->ledger_id,
                 fund_amount    => 0,
-                fund_parent_id => undef,
+                parent_fund_id => undef,
             }
         }
     );
@@ -283,7 +283,7 @@ subtest 'validate_child_object_amounts_against_parent_amount() tests' => sub {
     my $parent_fund = $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Funds',
-            value => { fund_amount => 500, fund_parent_id => undef }
+            value => { fund_amount => 500, parent_fund_id => undef }
         }
     );
     my $sub_fund = $builder->build_object(
@@ -291,7 +291,7 @@ subtest 'validate_child_object_amounts_against_parent_amount() tests' => sub {
             class => 'Koha::Acquisition::Finances::Funds',
             value => {
                 ledger_id      => $parent_fund->ledger_id,
-                fund_parent_id => $parent_fund->fund_id,
+                parent_fund_id => $parent_fund->fund_id,
                 fund_amount    => 0,
             }
         }
@@ -315,7 +315,7 @@ subtest 'parent_object() tests' => sub {
             class => 'Koha::Acquisition::Finances::Funds',
             value => {
                 ledger_id      => $ledger->ledger_id,
-                fund_parent_id => undef,
+                parent_fund_id => undef,
             }
         }
     );
@@ -337,13 +337,13 @@ subtest 'parent_object() for sub-fund tests' => sub {
     my $parent_fund = $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Funds',
-            value => { fund_parent_id => undef }
+            value => { parent_fund_id => undef }
         }
     );
     my $sub_fund = $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Funds',
-            value => { fund_parent_id => $parent_fund->fund_id }
+            value => { parent_fund_id => $parent_fund->fund_id }
         }
     );
 

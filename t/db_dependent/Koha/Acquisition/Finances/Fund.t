@@ -59,7 +59,7 @@ subtest 'sub_funds() tests' => sub {
     my $parent_fund = $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Funds',
-            value => { fund_parent_id => undef }
+            value => { parent_fund_id => undef }
         }
     );
 
@@ -68,13 +68,13 @@ subtest 'sub_funds() tests' => sub {
     my $sub_fund1 = $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Funds',
-            value => { fund_parent_id => $parent_fund->fund_id }
+            value => { parent_fund_id => $parent_fund->fund_id }
         }
     );
     my $sub_fund2 = $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Funds',
-            value => { fund_parent_id => $parent_fund->fund_id }
+            value => { parent_fund_id => $parent_fund->fund_id }
         }
     );
 
@@ -85,7 +85,7 @@ subtest 'sub_funds() tests' => sub {
     my $nested_sub_fund = $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Funds',
-            value => { fund_parent_id => $sub_fund1->fund_id }
+            value => { parent_fund_id => $sub_fund1->fund_id }
         }
     );
 
@@ -105,13 +105,13 @@ subtest 'parent_fund() tests' => sub {
     my $parent_fund = $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Funds',
-            value => { fund_parent_id => undef }
+            value => { parent_fund_id => undef }
         }
     );
     my $sub_fund = $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Funds',
-            value => { fund_parent_id => $parent_fund->fund_id }
+            value => { parent_fund_id => $parent_fund->fund_id }
         }
     );
 
@@ -132,18 +132,18 @@ subtest 'is_sub_fund() tests' => sub {
     my $parent_fund = $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Funds',
-            value => { fund_parent_id => undef }
+            value => { parent_fund_id => undef }
         }
     );
     my $sub_fund = $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Funds',
-            value => { fund_parent_id => $parent_fund->fund_id }
+            value => { parent_fund_id => $parent_fund->fund_id }
         }
     );
 
     is( $parent_fund->is_sub_fund, 0, 'Top-level fund is not a sub-fund' );
-    is( $sub_fund->is_sub_fund,    1, 'Fund with fund_parent_id is a sub-fund' );
+    is( $sub_fund->is_sub_fund,    1, 'Fund with parent_fund_id is a sub-fund' );
 
     $schema->storage->txn_rollback;
 };
@@ -157,7 +157,7 @@ subtest 'has_sub_funds() tests' => sub {
     my $parent_fund = $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Funds',
-            value => { fund_parent_id => undef }
+            value => { parent_fund_id => undef }
         }
     );
 
@@ -166,7 +166,7 @@ subtest 'has_sub_funds() tests' => sub {
     $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Funds',
-            value => { fund_parent_id => $parent_fund->fund_id }
+            value => { parent_fund_id => $parent_fund->fund_id }
         }
     );
 
@@ -184,7 +184,7 @@ subtest 'cascade_to_sub_funds() tests' => sub {
     my $parent_fund = $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Funds',
-            value => { status => 1, fund_parent_id => undef }
+            value => { status => 1, parent_fund_id => undef }
         }
     );
 
@@ -192,7 +192,7 @@ subtest 'cascade_to_sub_funds() tests' => sub {
         {
             class => 'Koha::Acquisition::Finances::Funds',
             value => {
-                fund_parent_id => $parent_fund->fund_id,
+                parent_fund_id => $parent_fund->fund_id,
                 status         => 1
             }
         }
@@ -202,7 +202,7 @@ subtest 'cascade_to_sub_funds() tests' => sub {
         {
             class => 'Koha::Acquisition::Finances::Funds',
             value => {
-                fund_parent_id => $parent_fund->fund_id,
+                parent_fund_id => $parent_fund->fund_id,
                 status         => 0
             }
         }
@@ -221,7 +221,7 @@ subtest 'cascade_to_sub_funds() tests' => sub {
     my $fund_no_children = $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Funds',
-            value => { fund_parent_id => undef, status => 1 }
+            value => { parent_fund_id => undef, status => 1 }
         }
     );
     $fund_no_children->status(0);
