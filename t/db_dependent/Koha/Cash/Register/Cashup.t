@@ -411,6 +411,24 @@ subtest 'accountlines' => sub {
         my $register2 = $builder->build_object( { class => 'Koha::Cash::Registers' } );
         my $account2  = $patron->account;
 
+        # Seed a transaction so start_cashup validation passes
+        my $pre_fine = $account2->add_debit(
+            {
+                amount    => '1.00',
+                type      => 'OVERDUE',
+                interface => 'cron'
+            }
+        );
+        $account2->pay(
+            {
+                cash_register => $register2->id,
+                amount        => '1.00',
+                credit_type   => 'PAYMENT',
+                payment_type  => 'CASH',
+                lines         => [$pre_fine]
+            }
+        );
+
         # Start cashup first
         my $cashup_start = $register2->start_cashup( { manager_id => $manager->id } );
 
@@ -540,6 +558,24 @@ subtest 'summary_session_boundaries' => sub {
 
         my $register2 = $builder->build_object( { class => 'Koha::Cash::Registers' } );
         my $account   = $patron->account;
+
+        # Seed a transaction so start_cashup validation passes
+        my $pre_fine = $account->add_debit(
+            {
+                amount    => '1.00',
+                type      => 'OVERDUE',
+                interface => 'cron'
+            }
+        );
+        $account->pay(
+            {
+                cash_register => $register2->id,
+                amount        => '1.00',
+                credit_type   => 'PAYMENT',
+                payment_type  => 'CASH',
+                lines         => [$pre_fine]
+            }
+        );
 
         # Start two-phase cashup
         my $cashup_start = $register2->start_cashup( { manager_id => $manager->id } );

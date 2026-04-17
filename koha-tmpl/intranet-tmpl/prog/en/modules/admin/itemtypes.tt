@@ -36,7 +36,7 @@
 >
 [% INCLUDE 'doc-head-close.inc' %]
 [% FILTER collapse %]
-    <style>
+    <style nonce="[% Koha.CSPNonce | $raw %]">
         fieldset.rows div.toptabs li {
             clear: none;
             margin-right: 0.4em;
@@ -194,7 +194,7 @@
                         <label for="description" class="required">Description: </label>
                         <input type="text" id="description" name="description" size="48" value="[% itemtype.description | html %]" required="required" /> <span class="required">Required</span>
                         [% IF can_be_translated %]
-                            <a href="/cgi-bin/koha/admin/localization.pl?entity=itemtypes&code=[% itemtype.itemtype | uri %]"> <i class="fa-solid fa-pencil" aria-hidden="true"></i> Translate into other languages </a>
+                            [% INCLUDE 'localization-link.inc' source='Itemtype' object_id=itemtype.itemtype property='description' %]
                         [% END %]
                     </li>
                     <li>
@@ -307,10 +307,6 @@
                         <input type="text" id="defaultreplacecost" name="defaultreplacecost" size="10" value="[% itemtype.defaultreplacecost | $Price on_editing => 1 %]" min="0" />
                     </li>
                     <li>
-                        <label for="processfee">Processing fee (when lost): </label>
-                        <input type="text" id="processfee" name="processfee" size="10" value="[% itemtype.processfee | $Price on_editing => 1 %]" min="0" />
-                    </li>
-                    <li>
                         <label for="checkinmsg">Checkin message: </label>
                         <textarea id="checkinmsg" name="checkinmsg" cols="55" rows="5">[% itemtype.checkinmsg | html %]</textarea>
                     </li>
@@ -341,15 +337,6 @@
                                 [% END %]
                             [% END %]
                         </select>
-                    </li>
-                    <li>
-                        <label for="sip_magnetic">SIP magnetic flag: </label>
-                        [% IF itemtype.sip_magnetic %]
-                            <input type="checkbox" id="sip_magnetic" name="sip_magnetic" checked="checked" value="1" />
-                        [% ELSE %]
-                            <input type="checkbox" id="sip_magnetic" name="sip_magnetic" value="1" />
-                        [% END %]
-                        <span class="hint">If checked, items of this type are flagged as magnetic media for SIP responses.</span>
                     </li>
                     <li>
                         <label for="library_limitation">Library limitation: </label>
@@ -383,6 +370,9 @@
                                 [% END %]
                             </select>
                         </li>
+                    [% END %]
+                </ol>
+            </fieldset>
 
             <fieldset class="action">
                 <input type="submit" class="btn btn-primary" value="Save changes" />
@@ -439,7 +429,6 @@
                         <th>Daily rental charge</th>
                         <th>Hourly rental charge</th>
                         <th>Default replacement cost</th>
-                        <th>Processing fee (when lost)</th>
                         <th>Checkin message</th>
                         <th>Library limitations</th>
                         <th>Automatic check-in</th>
@@ -516,7 +505,6 @@
                             </td>
 
                             <td>[% itemtype.defaultreplacecost | $Price %]</td>
-                            <td>[% itemtype.processfee | $Price %]</td>
                             <td>[% itemtype.checkinmsg | html_line_break | $raw %]</td>
                             <td>
                                 [% SET library_limits = itemtype.library_limits %]
@@ -560,38 +548,36 @@
     [% Asset.js("js/admin-menu.js") | $raw %]
     [% INCLUDE 'datatables.inc' %]
     [% INCLUDE 'select2.inc' %]
-    <script>
-        $(document).ready(function() {
-           var table_settings = [% TablesSettings.GetTableSettings( 'admin', 'itemtypes', 'table_item_type', 'json' ) | $raw %];
-           [% IF ( Koha.Preference('noItemTypeImages') && Koha.Preference('OpacNoItemTypeImages') ) %]
-               table_settings['columns'].shift(); // Remove item type image column from configuration
-           [% END %]
+    <script nonce="[% Koha.CSPNonce | $raw %]">
+        var table_settings = [% TablesSettings.GetTableSettings( 'admin', 'itemtypes', 'table_item_type', 'json' ) | $raw %];
+        [% IF ( Koha.Preference('noItemTypeImages') && Koha.Preference('OpacNoItemTypeImages') ) %]
+            table_settings['columns'].shift(); // Remove item type image column from configuration
+        [% END %]
+    </script>
+    <script nonce="[% Koha.CSPNonce | $raw %]">
+        $(document).ready(function () {
+            $("#table_item_type").kohaTable(
+                {
+                    pagingType: "full",
+                },
+                table_settings
+            );
 
-           $(document).ready(function() {
-               $("#table_item_type").kohaTable(
-                   {
-                       pagingType: "full",
-                   },
-                   table_settings
-               );
-           });
-
-           $( "#itemtypeentry" ).validate({
-               rules: {
-                   itemtype: { required: true },
-                   description: { required: true },
-                   rentalcharge: { number: true },
-                   rentalcharge_hourly: { number: true },
-                   defaultreplacecost: { number: true },
-                   processfee: { number: true }
-               }
-           });
-           $("#itemtype").on("blur",function(){
-               toUC(this);
-           });
-           if( $("#icons .tab-pane.active").length < 1 ){
-               $("#icons a:first").tab("show");
-           }
+            $("#itemtypeentry").validate({
+                rules: {
+                    itemtype: { required: true },
+                    description: { required: true },
+                    rentalcharge: { number: true },
+                    rentalcharge_hourly: { number: true },
+                    defaultreplacecost: { number: true },
+                },
+            });
+            $("#itemtype").on("blur", function () {
+                toUC(this);
+            });
+            if ($("#icons .tab-pane.active").length < 1) {
+                $("#icons a:first").tab("show");
+            }
 
             if ($("#library_limitation").length > 0) {
                 $("#library_limitation")[0].style.minWidth = "450px";

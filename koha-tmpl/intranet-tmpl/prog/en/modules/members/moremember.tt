@@ -811,7 +811,7 @@
     [% INCLUDE 'datatables.inc' %]
     [% INCLUDE 'select2.inc' %]
     [% PROCESS 'modal-claims-js' %]
-    <script>
+    <script nonce="[% Koha.CSPNonce | $raw %]">
         /* Set some variable needed in circulation.js */
         var logged_in_user_borrowernumber = "[% logged_in_user.borrowernumber | html %]";
         var ClaimReturnedLostValue = "[% Koha.Preference('ClaimReturnedLostValue') | html %]";
@@ -826,6 +826,7 @@
         var AllowCirculate = [% (CAN_user_circulate_circulate_remaining_permissions)? 1 : 0 | html %];
         var AllowRenewalLimitOverride = [% (CAN_user_circulate_override_renewals && Koha.Preference('AllowRenewalLimitOverride') )? 1: 0 | html %];
         var AllowRenewalOnHoldOverride = [% (CAN_user_circulate_override_renewals && Koha.Preference('AllowRenewalOnHoldOverride') )? 1: 0 | html %];
+        var AllowFineOverrideRenewing = [% (CAN_user_circulate_override_renewals && Koha.Preference('AllowFineOverrideRenewing') )? 1: 0 | html %];
         var script = "moremember";
         var relatives_borrowernumbers = new Array();
         [% FOREACH b IN relatives_borrowernumbers %]
@@ -851,7 +852,7 @@
     [% Asset.js("js/recalls.js") | $raw %]
     [% Asset.js("js/throttledButton.js") | $raw %]
     [% Asset.js("js/hold-group.js") | $raw %]
-    <script>
+    <script nonce="[% Koha.CSPNonce | $raw %]">
         const LoadCheckoutsTableDelay = 0;
         const AlwaysLoadCheckoutsTable = [% Koha.Preference('AlwaysLoadCheckoutsTable') | html %];
 
@@ -861,6 +862,11 @@
         table_settings_bookings_table = [% TablesSettings.GetTableSettings( 'members', 'moremember', 'bookings-table', 'json' ) | $raw %]
         CAN_user_circulate_manage_bookings = [% CAN_user_circulate_manage_bookings | $raw %]
         patron_borrowernumber = [% patron.borrowernumber | $raw %]
+
+        var amountlimit = "[% Koha.Preference('FineNoRenewals') | html %]";
+        var fines = "[% fines | $Price %]";
+        var MSG_CONFIRM_RENEW = _("The patron has a debt of %s").format(fines);
+        MSG_CONFIRM_RENEW += _("Are you sure you want to renew checkout(s)?");
 
         function uncheck_sibling(me){
             nodename=me.getAttribute("name");

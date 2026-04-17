@@ -234,7 +234,6 @@ subtest 'copyright clearance methods tests' => sub {
     $schema->storage->txn_rollback;
 };
 
-<<<<<<< HEAD
 subtest 'add_or_update_attributes() tests' => sub {
 
     plan tests => 13;

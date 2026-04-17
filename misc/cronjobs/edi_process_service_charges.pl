@@ -224,6 +224,7 @@ sub process_invoice_service_charges {
             }
 
             if ( !$existing && !$dry_run ) {
+
                 # Use tax rate from EDI TAX segment
                 my $tax_rate_pct = $alc_data->{tax_rate} || 0;
 
@@ -249,22 +250,28 @@ sub process_invoice_service_charges {
                     }
                 );
 
-                print "  Created invoice-level adjustment ID " . $adjustment->adjustment_id . " for $adjustment_amount"
-                    . " (charge: $amount, tax: " . $alc_data->{tax_amount} . ")\n"
+                print "  Created invoice-level adjustment ID "
+                    . $adjustment->adjustment_id
+                    . " for $adjustment_amount"
+                    . " (charge: $amount, tax: "
+                    . $alc_data->{tax_amount} . ")\n"
                     if $verbose;
                 $logger->info( "EDI Service Charges:      Created invoice-level adjustment ID "
                         . $adjustment->adjustment_id
                         . " for invoice "
                         . $koha_invoice->invoicenumber
-                        . ": adjustment=$adjustment_amount (charge=$amount, tax=" . $alc_data->{tax_amount}
+                        . ": adjustment=$adjustment_amount (charge=$amount, tax="
+                        . $alc_data->{tax_amount}
                         . "), budget_id=$budget_id, service_code=$service_code" );
                 $adjustments_created++;
             } elsif ( !$existing ) {
                 print "  Would create invoice-level $type adjustment: $adjustment_amount"
-                    . " (charge: $amount, tax: " . $alc_data->{tax_amount} . ")\n";
+                    . " (charge: $amount, tax: "
+                    . $alc_data->{tax_amount} . ")\n";
                 $logger->info( "EDI Service Charges: [DRY-RUN] Would create invoice-level adjustment for invoice "
                         . $koha_invoice->invoicenumber
-                        . ": adjustment=$adjustment_amount (charge=$amount, tax=" . $alc_data->{tax_amount}
+                        . ": adjustment=$adjustment_amount (charge=$amount, tax="
+                        . $alc_data->{tax_amount}
                         . "), budget_id=$budget_id, service_code=$service_code" );
                 $adjustments_created++;
             } else {
@@ -277,7 +284,7 @@ sub process_invoice_service_charges {
         }
 
         # Then handle line-level allowances and charges
-        my $lines = $msg->lineitems();
+        my $lines            = $msg->lineitems();
         my $orders_processed = {};
 
         foreach my $line ( @{$lines} ) {
@@ -390,15 +397,20 @@ sub process_invoice_service_charges {
                         }
                     );
 
-                    print "  Created adjustment ID " . $adjustment->adjustment_id . " for $adjustment_amount"
-                        . " (charge: $amount, tax: " . $alc_data->{tax_amount} . ")\n" if $verbose;
+                    print "  Created adjustment ID "
+                        . $adjustment->adjustment_id
+                        . " for $adjustment_amount"
+                        . " (charge: $amount, tax: "
+                        . $alc_data->{tax_amount} . ")\n"
+                        if $verbose;
                     $logger->info( "EDI Service Charges:      Created line-level adjustment ID "
                             . $adjustment->adjustment_id
                             . " for line "
                             . $line->line_item_number
                             . " in invoice "
                             . $koha_invoice->invoicenumber
-                            . ": adjustment=$adjustment_amount (charge=$amount, tax=" . $alc_data->{tax_amount}
+                            . ": adjustment=$adjustment_amount (charge=$amount, tax="
+                            . $alc_data->{tax_amount}
                             . "), budget_id=$budget_id, service_code=$service_code, order="
                             . ( $actual_ordernumber || $edi_ordernumber || 'unknown' ) );
 
@@ -430,13 +442,15 @@ sub process_invoice_service_charges {
 
                     print "  Would create $type adjustment for invoice "
                         . $koha_invoice->invoiceid
-                        . ": $adjustment_amount (charge: $amount, tax: " . $alc_data->{tax_amount}
+                        . ": $adjustment_amount (charge: $amount, tax: "
+                        . $alc_data->{tax_amount}
                         . ") [Budget: $budget_id] [Order: $order_info]\n";
                     $logger->info( "EDI Service Charges: [DRY-RUN] Would create line-level adjustment for line "
                             . $line->line_item_number
                             . " in invoice "
                             . $koha_invoice->invoicenumber
-                            . ": adjustment=$adjustment_amount (charge=$amount, tax=" . $alc_data->{tax_amount}
+                            . ": adjustment=$adjustment_amount (charge=$amount, tax="
+                            . $alc_data->{tax_amount}
                             . "), budget_id=$budget_id, service_code=$service_code, order=$order_info" );
 
                     if ( $type eq 'charge' ) {
@@ -474,6 +488,7 @@ sub get_message_allowances_charges {
         last if $seg->tag eq 'LIN';    # Stop at first line item
 
         if ( $seg->tag eq 'ALC' ) {
+
             # Push any pending ALC that has an amount before starting new one
             if ( $current_alc && defined $current_alc->{amount} ) {
                 push @allowances_charges, $current_alc;
@@ -488,13 +503,14 @@ sub get_message_allowances_charges {
                 service_code => $service_code,
                 description  => $service_desc,
                 amount       => undef,
-                tax_amount   => 0,       # Default to 0 if no tax segment found
-                tax_rate     => 0        # Default to 0 if no tax segment found
+                tax_amount   => 0,                                                # Default to 0 if no tax segment found
+                tax_rate     => 0                                                 # Default to 0 if no tax segment found
             };
         } elsif ( $seg->tag eq 'TAX' && $current_alc ) {
+
             # Parse TAX segment: TAX+7+VAT+++:::20+S
             # Element 4,3 contains the tax rate percentage
-            if ( $seg->elem(0) eq '7' ) {  # Tax category
+            if ( $seg->elem(0) eq '7' ) {    # Tax category
                 my $rate = $seg->elem( 4, 3 );
                 $current_alc->{tax_rate} = $rate if defined $rate;
             }
@@ -502,6 +518,7 @@ sub get_message_allowances_charges {
             if ( $seg->elem( 0, 0 ) eq '8' ) {
                 $current_alc->{amount} = $seg->elem( 0, 1 );
             }
+
             # Check if this is MOA+124 (tax amount on charge/allowance)
             elsif ( $seg->elem( 0, 0 ) eq '124' && defined $current_alc->{amount} ) {
                 $current_alc->{tax_amount} = $seg->elem( 0, 1 );
@@ -553,6 +570,7 @@ sub get_line_allowances_charges {
     # Iterate through the line segments to find ALC + MOA+8 + MOA+124 sequences
     foreach my $seg ( @{ $line->{segs} } ) {
         if ( $seg->tag eq 'ALC' ) {
+
             # Push any pending ALC that has an amount before starting new one
             if ( $current_alc && defined $current_alc->{amount} ) {
                 push @allowances_charges, $current_alc;
@@ -568,13 +586,14 @@ sub get_line_allowances_charges {
                 service_code => $service_code,
                 description  => $service_desc,
                 amount       => undef,
-                tax_amount   => 0,       # Default to 0 if no tax segment found
-                tax_rate     => 0        # Default to 0 if no tax segment found
+                tax_amount   => 0,                                                # Default to 0 if no tax segment found
+                tax_rate     => 0                                                 # Default to 0 if no tax segment found
             };
         } elsif ( $seg->tag eq 'TAX' && $current_alc ) {
+
             # Parse TAX segment: TAX+7+VAT+++:::20+S
             # Element 4,3 contains the tax rate percentage
-            if ( $seg->elem(0) eq '7' ) {  # Tax category
+            if ( $seg->elem(0) eq '7' ) {    # Tax category
                 my $rate = $seg->elem( 4, 3 );
                 $current_alc->{tax_rate} = $rate if defined $rate;
             }
@@ -584,6 +603,7 @@ sub get_line_allowances_charges {
             if ( $seg->elem( 0, 0 ) eq '8' ) {
                 $current_alc->{amount} = $seg->elem( 0, 1 );
             }
+
             # Check if this is MOA+124 (tax amount on charge/allowance)
             elsif ( $seg->elem( 0, 0 ) eq '124' && defined $current_alc->{amount} ) {
                 $current_alc->{tax_amount} = $seg->elem( 0, 1 );
@@ -639,6 +659,7 @@ sub calculate_adjustment_amount {
     # Adjustments are added directly to budget calculations
     # Check if we should include tax based on the syspref
     if ( C4::Context->preference('CalculateFundValuesIncludingTax') ) {
+
         # Include tax in adjustment amount to match order line calculations
         return $charge_amount + $tax_amount;
     }
@@ -691,7 +712,8 @@ sub find_received_order_for_invoice {
 }
 
 sub adjust_orderline_for_service_charge {
-    my ( $order_to_adjust, $service_charge_amount, $service_charge_tax, $verbose, $original_ordernumber, $edi_line ) = @_;
+    my ( $order_to_adjust, $service_charge_amount, $service_charge_tax, $verbose, $original_ordernumber, $edi_line ) =
+        @_;
 
     unless ($order_to_adjust) {
         return;
@@ -745,7 +767,7 @@ sub adjust_orderline_for_service_charge {
     # Use exact EDI tax value instead of recalculating (HMRC "Round Last" principle)
     # Get the original line tax from EDI and subtract the service charge tax
     # Note: tax_value_on_receiving is a TOTAL for all units, not per-unit
-    my $original_line_tax = $edi_line->amt_taxoncharge() || 0;
+    my $original_line_tax  = $edi_line->amt_taxoncharge() || 0;
     my $adjusted_tax_value = $original_line_tax - $service_charge_tax;
 
     # Set the order to the correct price (base EDI price - service charges)
@@ -773,21 +795,20 @@ sub adjust_orderline_for_service_charge {
 
     # Single focused log message per EDI line segment showing adjustment and calculation
     $logger->info(
-        "EDI Service Charges: Processed EDI line with service charge - Order: $order_type, Quantity: $quantity, "
-        . "EDI base price_inc: $base_unit_price_inc, EDI base price_exc: $base_unit_price_exc, "
-        . "Service charge (excl tax): $per_unit_service_charge_excl, Service charge tax: $per_unit_service_charge_tax, "
-        . "Final price_inc: $final_unit_price_inc, Final price_exc: $final_unit_price_exc, "
-        . "EDI line tax: $original_line_tax, Adjusted tax_value: $adjusted_tax_value"
-    );
+              "EDI Service Charges: Processed EDI line with service charge - Order: $order_type, Quantity: $quantity, "
+            . "EDI base price_inc: $base_unit_price_inc, EDI base price_exc: $base_unit_price_exc, "
+            . "Service charge (excl tax): $per_unit_service_charge_excl, Service charge tax: $per_unit_service_charge_tax, "
+            . "Final price_inc: $final_unit_price_inc, Final price_exc: $final_unit_price_exc, "
+            . "EDI line tax: $original_line_tax, Adjusted tax_value: $adjusted_tax_value" );
 }
 
 =head1 SETUP INSTRUCTIONS
 
 1. Add this to your crontab after edi_cron.pl:
-   
+
    # Process EDI invoices (standard)
    0 */2 * * * /path/to/koha/misc/cronjobs/edi_cron.pl
-   
+
    # Process service charges (runs 15 minutes after)
    15 */2 * * * /path/to/koha/misc/cronjobs/edi_process_service_charges.pl
 
@@ -798,7 +819,7 @@ sub adjust_orderline_for_service_charge {
 
 3. Test with dry-run first (default behavior):
    ./edi_process_service_charges.pl --verbose
-   
+
 4. When ready to make actual changes:
    ./edi_process_service_charges.pl --confirm --verbose
 

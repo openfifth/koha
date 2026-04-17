@@ -41,6 +41,11 @@ properties:
       - number
       - "null"
     description: Enrollment fee for the patron
+  print_notice_charge:
+    type:
+      - number
+      - "null"
+    description: Charge for print notices to recover postage and processing costs (0.00 = disabled)
   overdue_notice_required:
     type:
       - boolean
@@ -97,6 +102,11 @@ properties:
       - boolean
       - "null"
     description: Set required password strength for patrons in this category
+  password_history_count:
+    type:
+      - number
+      - "null"
+    description: Number of previous passwords to check against when changing password for this patron type
   exclude_from_local_holds_priority:
     type:
       - boolean

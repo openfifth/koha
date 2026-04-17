@@ -80,7 +80,6 @@
     [% INCLUDE 'datatables.inc' %]
     [% INCLUDE 'js-date-format.inc' %]
     [% INCLUDE 'js-biblio-format.inc' %]
-    [% INCLUDE 'js-patron-format.inc' %]
     [% Asset.js("js/modals/quota.js") | $raw %]
     <script>
         var quota_url = "/api/v1/patrons/%s/quotas".format(borrowernumber);

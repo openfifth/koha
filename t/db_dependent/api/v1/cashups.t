@@ -149,31 +149,6 @@ subtest 'list() tests' => sub {
         ->status_is(200)
         ->or( sub { diag "anonymous_refund permission should allow access to cashups list" } );
 
-    # Test that anonymous_refund permission also grants access (bug fix)
-    my $refund_librarian = $builder->build_object(
-        {
-            class => 'Koha::Patrons',
-            value => { flags => 0 }
-        }
-    );
-    $refund_librarian->set_password( { password => $password, skip_validation => 1 } );
-    my $refund_userid = $refund_librarian->userid;
-
-    $builder->build(
-        {
-            source => 'UserPermission',
-            value  => {
-                borrowernumber => $refund_librarian->borrowernumber,
-                module_bit     => 25,                                  # cash_management
-                code           => 'anonymous_refund',
-            },
-        }
-    );
-
-    $t->get_ok("//$refund_userid:$password@/api/v1/cash_registers/$register_id/cashups")
-        ->status_is(200)
-        ->or( sub { diag "anonymous_refund permission should allow access to cashups list" } );
-
     $schema->storage->txn_rollback;
 };
 
@@ -215,31 +190,6 @@ subtest 'get() tests' => sub {
     $t->get_ok("//$userid:$password@/api/v1/cashups/$non_existent_id")
         ->status_is(404)
         ->json_is( '/error' => 'Cashup not found' );
-
-    # Test that anonymous_refund permission also grants access (bug fix)
-    my $refund_librarian = $builder->build_object(
-        {
-            class => 'Koha::Patrons',
-            value => { flags => 0 }
-        }
-    );
-    $refund_librarian->set_password( { password => $password, skip_validation => 1 } );
-    my $refund_userid = $refund_librarian->userid;
-
-    $builder->build(
-        {
-            source => 'UserPermission',
-            value  => {
-                borrowernumber => $refund_librarian->borrowernumber,
-                module_bit     => 25,                                  # cash_management
-                code           => 'anonymous_refund',
-            },
-        }
-    );
-
-    $t->get_ok( "//$refund_userid:$password@/api/v1/cashups/" . $cashup->id )
-        ->status_is(200)
-        ->or( sub { diag "anonymous_refund permission should allow access to get cashup" } );
 
     # Test that anonymous_refund permission also grants access (bug fix)
     my $refund_librarian = $builder->build_object(
