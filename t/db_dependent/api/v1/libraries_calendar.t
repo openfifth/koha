@@ -28,10 +28,10 @@ use t::lib::Mocks;
 use t::lib::TestBuilder;
 
 use Koha::Database;
-use Koha::Calendar::WeeklyClosures;
-use Koha::Calendar::RepeatingClosures;
-use Koha::Calendar::SingleClosures;
-use Koha::Calendar::Exceptions;
+use Koha::Library::Calendar::WeeklyClosures;
+use Koha::Library::Calendar::RepeatingClosures;
+use Koha::Library::Calendar::SingleClosures;
+use Koha::Library::Calendar::Exceptions;
 
 my $schema  = Koha::Database->new->schema;
 my $builder = t::lib::TestBuilder->new;
@@ -64,25 +64,25 @@ subtest 'list() tests' => sub {
     # Add one of each
     $builder->build_object(
         {
-            class => 'Koha::Calendar::WeeklyClosures',
+            class => 'Koha::Library::Calendar::WeeklyClosures',
             value => { library_id => $library_id, weekday => 0, title => 'Sun', description => '' }
         }
     );
     $builder->build_object(
         {
-            class => 'Koha::Calendar::RepeatingClosures',
+            class => 'Koha::Library::Calendar::RepeatingClosures',
             value => { library_id => $library_id, day => 25, month => 12, title => 'Xmas', description => '' }
         }
     );
     $builder->build_object(
         {
-            class => 'Koha::Calendar::SingleClosures',
+            class => 'Koha::Library::Calendar::SingleClosures',
             value => { library_id => $library_id, date => '2026-06-15', title => 'Staff', description => '' }
         }
     );
     $builder->build_object(
         {
-            class => 'Koha::Calendar::Exceptions',
+            class => 'Koha::Library::Calendar::Exceptions',
             value => { library_id => $library_id, date => '2026-12-25', title => 'Open', description => '' }
         }
     );
@@ -154,7 +154,7 @@ subtest 'get() tests' => sub {
 
     my $closure = $builder->build_object(
         {
-            class => 'Koha::Calendar::WeeklyClosures',
+            class => 'Koha::Library::Calendar::WeeklyClosures',
             value => {
                 library_id => $library_id, weekday => 6, title => 'Saturdays', description => '',
             }
@@ -186,7 +186,7 @@ subtest 'update() tests' => sub {
 
     my $closure = $builder->build_object(
         {
-            class => 'Koha::Calendar::SingleClosures',
+            class => 'Koha::Library::Calendar::SingleClosures',
             value => {
                 library_id => $library_id, date => '2026-06-15', title => 'Old title', description => '',
             }
@@ -217,7 +217,7 @@ subtest 'delete() tests' => sub {
 
     my $closure = $builder->build_object(
         {
-            class => 'Koha::Calendar::Exceptions',
+            class => 'Koha::Library::Calendar::Exceptions',
             value => {
                 library_id => $library_id, date => '2026-12-25', title => 'To delete', description => '',
             }
@@ -250,7 +250,7 @@ subtest 'copy() tests' => sub {
     # Add closures to source
     $builder->build_object(
         {
-            class => 'Koha::Calendar::WeeklyClosures',
+            class => 'Koha::Library::Calendar::WeeklyClosures',
             value => {
                 library_id => $source->id, weekday => 0, title => 'Sun', description => '',
             }
@@ -258,7 +258,7 @@ subtest 'copy() tests' => sub {
     );
     $builder->build_object(
         {
-            class => 'Koha::Calendar::SingleClosures',
+            class => 'Koha::Library::Calendar::SingleClosures',
             value => {
                 library_id => $source->id, date => '2027-01-01', title => 'NY', description => '',
             }
@@ -272,15 +272,15 @@ subtest 'copy() tests' => sub {
         ->status_is(201)
         ->header_like( Location => qr|\Q/libraries/$target_id/calendar\E$| );
 
-    is( Koha::Calendar::WeeklyClosures->search( { library_id => $target->id } )->count, 1, 'Weekly copied' );
-    is( Koha::Calendar::SingleClosures->search( { library_id => $target->id } )->count, 1, 'Single copied' );
+    is( Koha::Library::Calendar::WeeklyClosures->search( { library_id => $target->id } )->count, 1, 'Weekly copied' );
+    is( Koha::Library::Calendar::SingleClosures->search( { library_id => $target->id } )->count, 1, 'Single copied' );
 
     # Idempotent
     $t->post_ok( "//$userid:$password\@/api/v1/libraries/"
             . $target->id
             . "/calendar/copy" => json => { from_library_id => $source->id } )->status_is(201);
 
-    is( Koha::Calendar::WeeklyClosures->search( { library_id => $target->id } )->count, 1, 'No duplicates' );
+    is( Koha::Library::Calendar::WeeklyClosures->search( { library_id => $target->id } )->count, 1, 'No duplicates' );
 
     $schema->storage->txn_rollback;
 };

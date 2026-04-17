@@ -22,7 +22,7 @@ use Modern::Perl;
 use Mojo::Base 'Mojolicious::Controller';
 
 use Koha::Libraries;
-use Koha::Calendar::WeeklyClosures;
+use Koha::Library::Calendar::WeeklyClosures;
 
 use Scalar::Util qw( blessed );
 use Try::Tiny    qw( catch try );
@@ -47,7 +47,8 @@ sub add {
 
     return try {
         my $closure =
-            Koha::Calendar::WeeklyClosure->new_from_api( { %{ $c->req->json }, library_id => $library->branchcode } );
+            Koha::Library::Calendar::WeeklyClosure->new_from_api(
+            { %{ $c->req->json }, library_id => $library->branchcode } );
         $closure->store;
         $c->res->headers->location( $c->req->url->to_string . '/' . $closure->id );
         return $c->render( status => 201, openapi => $c->objects->to_api($closure) );
@@ -77,7 +78,7 @@ sub get {
         unless $library;
 
     return try {
-        my $closure = Koha::Calendar::WeeklyClosures->find( $c->param('weekly_closure_id') );
+        my $closure = Koha::Library::Calendar::WeeklyClosures->find( $c->param('weekly_closure_id') );
         return $c->render_resource_not_found("Weekly closure")
             unless $closure && $closure->library_id eq $library->branchcode;
         return $c->render( status => 200, openapi => $c->objects->to_api($closure) );
@@ -100,7 +101,7 @@ sub update {
     return $c->render_resource_not_found("Library")
         unless $library;
 
-    my $closure = Koha::Calendar::WeeklyClosures->find( $c->param('weekly_closure_id') );
+    my $closure = Koha::Library::Calendar::WeeklyClosures->find( $c->param('weekly_closure_id') );
 
     return $c->render_resource_not_found("Weekly closure")
         unless $closure && $closure->library_id eq $library->branchcode;
@@ -128,7 +129,7 @@ sub delete {
     return $c->render_resource_not_found("Library")
         unless $library;
 
-    my $closure = Koha::Calendar::WeeklyClosures->find( $c->param('weekly_closure_id') );
+    my $closure = Koha::Library::Calendar::WeeklyClosures->find( $c->param('weekly_closure_id') );
 
     return $c->render_resource_not_found("Weekly closure")
         unless $closure && $closure->library_id eq $library->branchcode;

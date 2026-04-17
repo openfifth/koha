@@ -22,10 +22,10 @@ use Modern::Perl;
 use Mojo::Base 'Mojolicious::Controller';
 
 use Koha::Libraries;
-use Koha::Calendar::WeeklyClosures;
-use Koha::Calendar::RepeatingClosures;
-use Koha::Calendar::SingleClosures;
-use Koha::Calendar::Exceptions;
+use Koha::Library::Calendar::WeeklyClosures;
+use Koha::Library::Calendar::RepeatingClosures;
+use Koha::Library::Calendar::SingleClosures;
+use Koha::Library::Calendar::Exceptions;
 
 use Try::Tiny qw( catch try );
 
@@ -54,12 +54,13 @@ sub list {
             status  => 200,
             openapi => {
                 weekly_closures =>
-                    $c->objects->search( Koha::Calendar::WeeklyClosures->search( { library_id => $id } ) ),
+                    $c->objects->search( Koha::Library::Calendar::WeeklyClosures->search( { library_id => $id } ) ),
                 repeating_closures =>
-                    $c->objects->search( Koha::Calendar::RepeatingClosures->search( { library_id => $id } ) ),
+                    $c->objects->search( Koha::Library::Calendar::RepeatingClosures->search( { library_id => $id } ) ),
                 single_closures =>
-                    $c->objects->search( Koha::Calendar::SingleClosures->search( { library_id => $id } ) ),
-                exceptions => $c->objects->search( Koha::Calendar::Exceptions->search( { library_id => $id } ) ),
+                    $c->objects->search( Koha::Library::Calendar::SingleClosures->search( { library_id => $id } ) ),
+                exceptions =>
+                    $c->objects->search( Koha::Library::Calendar::Exceptions->search( { library_id => $id } ) ),
             }
         );
     } catch {

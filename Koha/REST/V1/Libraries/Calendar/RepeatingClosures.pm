@@ -22,7 +22,7 @@ use Modern::Perl;
 use Mojo::Base 'Mojolicious::Controller';
 
 use Koha::Libraries;
-use Koha::Calendar::RepeatingClosures;
+use Koha::Library::Calendar::RepeatingClosures;
 
 use Scalar::Util qw( blessed );
 use Try::Tiny    qw( catch try );
@@ -46,7 +46,7 @@ sub add {
         unless $library;
 
     return try {
-        my $closure = Koha::Calendar::RepeatingClosure->new_from_api(
+        my $closure = Koha::Library::Calendar::RepeatingClosure->new_from_api(
             { %{ $c->req->json }, library_id => $library->branchcode } );
         $closure->store;
         $c->res->headers->location( $c->req->url->to_string . '/' . $closure->id );
@@ -77,7 +77,7 @@ sub get {
         unless $library;
 
     return try {
-        my $closure = Koha::Calendar::RepeatingClosures->find( $c->param('repeating_closure_id') );
+        my $closure = Koha::Library::Calendar::RepeatingClosures->find( $c->param('repeating_closure_id') );
         return $c->render_resource_not_found("Repeating closure")
             unless $closure && $closure->library_id eq $library->branchcode;
         return $c->render( status => 200, openapi => $c->objects->to_api($closure) );
@@ -100,7 +100,7 @@ sub update {
     return $c->render_resource_not_found("Library")
         unless $library;
 
-    my $closure = Koha::Calendar::RepeatingClosures->find( $c->param('repeating_closure_id') );
+    my $closure = Koha::Library::Calendar::RepeatingClosures->find( $c->param('repeating_closure_id') );
     return $c->render_resource_not_found("Repeating closure")
         unless $closure && $closure->library_id eq $library->branchcode;
 
@@ -127,7 +127,7 @@ sub delete {
     return $c->render_resource_not_found("Library")
         unless $library;
 
-    my $closure = Koha::Calendar::RepeatingClosures->find( $c->param('repeating_closure_id') );
+    my $closure = Koha::Library::Calendar::RepeatingClosures->find( $c->param('repeating_closure_id') );
     return $c->render_resource_not_found("Repeating closure")
         unless $closure && $closure->library_id eq $library->branchcode;
 

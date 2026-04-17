@@ -22,7 +22,7 @@ use Modern::Perl;
 use Mojo::Base 'Mojolicious::Controller';
 
 use Koha::Libraries;
-use Koha::Calendar::Exceptions;
+use Koha::Library::Calendar::Exceptions;
 
 use Scalar::Util qw( blessed );
 use Try::Tiny    qw( catch try );
@@ -45,7 +45,8 @@ sub add {
 
     return try {
         my $closure =
-            Koha::Calendar::Exception->new_from_api( { %{ $c->req->json }, library_id => $library->branchcode } );
+            Koha::Library::Calendar::Exception->new_from_api(
+            { %{ $c->req->json }, library_id => $library->branchcode } );
         $closure->store;
         $c->res->headers->location( $c->req->url->to_string . '/' . $closure->id );
         return $c->render( status => 201, openapi => $c->objects->to_api($closure) );
@@ -73,7 +74,7 @@ sub get {
     return $c->render_resource_not_found("Library") unless $library;
 
     return try {
-        my $closure = Koha::Calendar::Exceptions->find( $c->param('closure_exception_id') );
+        my $closure = Koha::Library::Calendar::Exceptions->find( $c->param('closure_exception_id') );
         return $c->render_resource_not_found("Closure exception")
             unless $closure && $closure->library_id eq $library->branchcode;
         return $c->render( status => 200, openapi => $c->objects->to_api($closure) );
@@ -94,7 +95,7 @@ sub update {
     my $library = Koha::Libraries->find( $c->param('library_id') );
     return $c->render_resource_not_found("Library") unless $library;
 
-    my $closure = Koha::Calendar::Exceptions->find( $c->param('closure_exception_id') );
+    my $closure = Koha::Library::Calendar::Exceptions->find( $c->param('closure_exception_id') );
     return $c->render_resource_not_found("Closure exception")
         unless $closure && $closure->library_id eq $library->branchcode;
 
@@ -121,7 +122,7 @@ sub delete {
     return $c->render_resource_not_found("Library")
         unless $library;
 
-    my $closure = Koha::Calendar::Exceptions->find( $c->param('closure_exception_id') );
+    my $closure = Koha::Library::Calendar::Exceptions->find( $c->param('closure_exception_id') );
 
     return $c->render_resource_not_found("Closure exception")
         unless $closure && $closure->library_id eq $library->branchcode;

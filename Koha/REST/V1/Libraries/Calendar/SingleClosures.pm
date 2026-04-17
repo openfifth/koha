@@ -22,7 +22,7 @@ use Modern::Perl;
 use Mojo::Base 'Mojolicious::Controller';
 
 use Koha::Libraries;
-use Koha::Calendar::SingleClosures;
+use Koha::Library::Calendar::SingleClosures;
 
 use Scalar::Util qw( blessed );
 use Try::Tiny    qw( catch try );
@@ -47,7 +47,8 @@ sub add {
 
     return try {
         my $closure =
-            Koha::Calendar::SingleClosure->new_from_api( { %{ $c->req->json }, library_id => $library->branchcode } );
+            Koha::Library::Calendar::SingleClosure->new_from_api(
+            { %{ $c->req->json }, library_id => $library->branchcode } );
         $closure->store;
         $c->res->headers->location( $c->req->url->to_string . '/' . $closure->id );
         return $c->render( status => 201, openapi => $c->objects->to_api($closure) );
@@ -77,7 +78,7 @@ sub get {
         unless $library;
 
     return try {
-        my $closure = Koha::Calendar::SingleClosures->find( $c->param('single_closure_id') );
+        my $closure = Koha::Library::Calendar::SingleClosures->find( $c->param('single_closure_id') );
         return $c->render_resource_not_found("Single closure")
             unless $closure && $closure->library_id eq $library->branchcode;
         return $c->render( status => 200, openapi => $c->objects->to_api($closure) );
@@ -100,7 +101,7 @@ sub update {
     return $c->render_resource_not_found("Library")
         unless $library;
 
-    my $closure = Koha::Calendar::SingleClosures->find( $c->param('single_closure_id') );
+    my $closure = Koha::Library::Calendar::SingleClosures->find( $c->param('single_closure_id') );
     return $c->render_resource_not_found("Single closure")
         unless $closure && $closure->library_id eq $library->branchcode;
 
@@ -127,7 +128,7 @@ sub delete {
     return $c->render_resource_not_found("Library")
         unless $library;
 
-    my $closure = Koha::Calendar::SingleClosures->find( $c->param('single_closure_id') );
+    my $closure = Koha::Library::Calendar::SingleClosures->find( $c->param('single_closure_id') );
     return $c->render_resource_not_found("Single closure")
         unless $closure && $closure->library_id eq $library->branchcode;
 
