@@ -263,9 +263,10 @@ sub validate_child_object_amounts_against_parent_amount {
     my $parent_amount_field = $parent_level . "_amount";
     my $parent              = $self->parent_object;
 
-    my $search_fields = {};
-    my $search_id     = $parent_level . "_id";
-    $search_fields->{$search_id} = $self->$search_id;
+    my $search_fields =
+        $parent_level eq 'ledger'
+        ? { ledger_id      => $self->ledger_id, parent_fund_id => undef }
+        : { parent_fund_id => $self->parent_fund_id };
     my $children = Koha::Acquisition::Finances::Funds->search($search_fields);
 
     my $children_value;

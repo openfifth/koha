@@ -193,7 +193,7 @@ subtest 'update_amount() tests' => sub {
 
 subtest 'validate_child_object_amounts_against_parent_amount() tests' => sub {
 
-    plan tests => 4;
+    plan tests => 8;
 
     $schema->storage->txn_begin;
 
@@ -244,6 +244,69 @@ subtest 'validate_child_object_amounts_against_parent_amount() tests' => sub {
 
     my $sub_exceeded = $sub_fund->validate_child_object_amounts_against_parent_amount( { new_allocation => 9999 } );
     is( $sub_exceeded->{within_limit}, 0, 'Returns within_limit => 0 when sub-fund exceeds parent fund amount' );
+
+    # Test that sub-funds are not counted against the ledger directly, and that
+    # sibling sub-funds are counted when validating against a parent fund
+    my $ledger2 = $builder->build_object(
+        { class => 'Koha::Acquisition::Finances::Ledgers', value => { ledger_amount => 1000 } } );
+    my $top_fund = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Funds',
+            value => { ledger_id => $ledger2->ledger_id, fund_amount => 600, parent_fund_id => undef }
+        }
+    );
+    my $nested_fund = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Funds',
+            value => { ledger_id => $ledger2->ledger_id, fund_amount => 200, parent_fund_id => $top_fund->fund_id }
+        }
+    );
+    my $second_fund = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Funds',
+            value => { ledger_id => $ledger2->ledger_id, fund_amount => 0, parent_fund_id => undef }
+        }
+    );
+
+    # 600 (top_fund) + 300 (new) = 900 <= 1000; nested_fund (200) must NOT be counted at ledger level
+    my $ledger_ok = $second_fund->validate_child_object_amounts_against_parent_amount( { new_allocation => 300 } );
+    is(
+        $ledger_ok->{within_limit}, 1,
+        'Sub-funds are excluded when validating a direct fund allocation against a ledger'
+    );
+
+    # 600 (top_fund) + 500 (new) = 1100 > 1000
+    my $ledger_fail = $second_fund->validate_child_object_amounts_against_parent_amount( { new_allocation => 500 } );
+    is( $ledger_fail->{within_limit}, 0, 'Exceeds ledger limit when direct-child fund amounts exceed ledger amount' );
+
+    # Sibling sub-funds are counted when validating against a parent fund
+    my $parent_fund2 = $builder->build_object(
+        { class => 'Koha::Acquisition::Finances::Funds', value => { fund_amount => 500, parent_fund_id => undef } } );
+    my $sibling1 = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Funds',
+            value =>
+                { ledger_id => $parent_fund2->ledger_id, parent_fund_id => $parent_fund2->fund_id, fund_amount => 300 }
+        }
+    );
+    my $sibling2 = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Funds',
+            value =>
+                { ledger_id => $parent_fund2->ledger_id, parent_fund_id => $parent_fund2->fund_id, fund_amount => 0 }
+        }
+    );
+
+    # 300 (sibling1) + 150 (new) = 450 <= 500
+    my $sibling_ok = $sibling2->validate_child_object_amounts_against_parent_amount( { new_allocation => 150 } );
+    is( $sibling_ok->{within_limit}, 1, 'Sibling sub-funds are counted; allocation within parent fund limit passes' );
+
+    # 300 (sibling1) + 250 (new) = 550 > 500
+    my $sibling_fail = $sibling2->validate_child_object_amounts_against_parent_amount( { new_allocation => 250 } );
+    is(
+        $sibling_fail->{within_limit}, 0,
+        'Sibling sub-funds are counted; allocation exceeding parent fund limit fails'
+    );
 
     $schema->storage->txn_rollback;
 };
