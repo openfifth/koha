@@ -565,8 +565,8 @@ sub copy_to {
                 )->store;
             }
 
-            my $exceptions = Koha::Calendar::Exceptions->search(
-                { library_id => $self->{branchcode}, date => { '>=' => $today } } );
+            my $exceptions =
+                Koha::Calendar::Exceptions->search( { library_id => $self->{branchcode}, date => { '>=' => $today } } );
             while ( my $row = $exceptions->next ) {
                 next
                     if Koha::Calendar::Exceptions->search( { library_id => $target_branchcode, date => $row->date } )

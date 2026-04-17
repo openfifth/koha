@@ -32,8 +32,8 @@ return {
             }
             );
 
-            my ($src_weekly) = $dbh->selectrow_array(
-                q{ SELECT COUNT(*) FROM repeatable_holidays WHERE weekday IS NOT NULL });
+            my ($src_weekly) =
+                $dbh->selectrow_array(q{ SELECT COUNT(*) FROM repeatable_holidays WHERE weekday IS NOT NULL });
 
             $dbh->do(
                 q{
@@ -43,8 +43,7 @@ return {
             }
             );
 
-            my ($dst_weekly) = $dbh->selectrow_array(
-                q{ SELECT COUNT(*) FROM library_weekly_closures });
+            my ($dst_weekly) = $dbh->selectrow_array(q{ SELECT COUNT(*) FROM library_weekly_closures });
 
             say_success( $out, "Added new table 'library_weekly_closures' ($dst_weekly row(s) migrated)" );
             if ( $src_weekly > $dst_weekly ) {
@@ -77,8 +76,7 @@ return {
             }
             );
 
-            my ($src_rep) = $dbh->selectrow_array(
-                q{ SELECT COUNT(*) FROM repeatable_holidays WHERE weekday IS NULL });
+            my ($src_rep) = $dbh->selectrow_array(q{ SELECT COUNT(*) FROM repeatable_holidays WHERE weekday IS NULL });
 
             $dbh->do(
                 q{
@@ -88,8 +86,7 @@ return {
             }
             );
 
-            my ($dst_rep) = $dbh->selectrow_array(
-                q{ SELECT COUNT(*) FROM library_repeating_closures });
+            my ($dst_rep) = $dbh->selectrow_array(q{ SELECT COUNT(*) FROM library_repeating_closures });
 
             say_success( $out, "Added new table 'library_repeating_closures' ($dst_rep row(s) migrated)" );
             if ( $src_rep > $dst_rep ) {
@@ -121,8 +118,7 @@ return {
             }
             );
 
-            my ($src_single) = $dbh->selectrow_array(
-                q{ SELECT COUNT(*) FROM special_holidays WHERE isexception = 0 });
+            my ($src_single) = $dbh->selectrow_array(q{ SELECT COUNT(*) FROM special_holidays WHERE isexception = 0 });
 
             $dbh->do(
                 q{
@@ -134,8 +130,7 @@ return {
             }
             );
 
-            my ($dst_single) = $dbh->selectrow_array(
-                q{ SELECT COUNT(*) FROM library_single_closures });
+            my ($dst_single) = $dbh->selectrow_array(q{ SELECT COUNT(*) FROM library_single_closures });
 
             say_success( $out, "Added new table 'library_single_closures' ($dst_single row(s) migrated)" );
             if ( $src_single > $dst_single ) {
@@ -167,8 +162,7 @@ return {
             }
             );
 
-            my ($src_exc) = $dbh->selectrow_array(
-                q{ SELECT COUNT(*) FROM special_holidays WHERE isexception = 1 });
+            my ($src_exc) = $dbh->selectrow_array(q{ SELECT COUNT(*) FROM special_holidays WHERE isexception = 1 });
 
             $dbh->do(
                 q{
@@ -180,8 +174,7 @@ return {
             }
             );
 
-            my ($dst_exc) = $dbh->selectrow_array(
-                q{ SELECT COUNT(*) FROM library_closure_exceptions });
+            my ($dst_exc) = $dbh->selectrow_array(q{ SELECT COUNT(*) FROM library_closure_exceptions });
 
             say_success( $out, "Added new table 'library_closure_exceptions' ($dst_exc row(s) migrated)" );
             if ( $src_exc > $dst_exc ) {
