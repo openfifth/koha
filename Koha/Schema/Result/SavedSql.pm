@@ -185,9 +185,26 @@ __PACKAGE__->add_columns(
 
 __PACKAGE__->set_primary_key("id");
 
+=head1 RELATIONS
 
-# Created by DBIx::Class::Schema::Loader v0.07049 @ 2021-01-21 13:39:29
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:198dNG9DGQzop+s5IHy7sw
+=head2 reports_branches
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::ReportsBranch>
+
+=cut
+
+__PACKAGE__->has_many(
+  "reports_branches",
+  "Koha::Schema::Result::ReportsBranch",
+  { "foreign.report_id" => "self.id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-17 21:11:48
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:ymkcP8HHz+zvfWoRn4nKmg
 
 __PACKAGE__->add_columns(
     '+public' => { is_boolean => 1 }
