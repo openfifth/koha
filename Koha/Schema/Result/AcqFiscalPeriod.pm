@@ -153,21 +153,6 @@ __PACKAGE__->set_primary_key("fiscal_period_id");
 
 =head1 RELATIONS
 
-=head2 acq_funds
-
-Type: has_many
-
-Related object: L<Koha::Schema::Result::AcqFund>
-
-=cut
-
-__PACKAGE__->has_many(
-  "acq_funds",
-  "Koha::Schema::Result::AcqFund",
-  { "foreign.fiscal_period_id" => "self.fiscal_period_id" },
-  { cascade_copy => 0, cascade_delete => 0 },
-);
-
 =head2 acq_ledgers
 
 Type: has_many
@@ -224,8 +209,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-16 10:11:01
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:cQGVq1yhFO1IftNuSn7+og
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-17 08:39:39
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:6n3kULNkdC5i/Jp1sJ2xwA
 
 __PACKAGE__->add_columns(
     '+status' => { is_boolean => 1 },

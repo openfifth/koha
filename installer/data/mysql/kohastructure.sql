@@ -3732,7 +3732,6 @@ CREATE TABLE `acq_funds` (
   `fund_id` INT(11) NOT NULL AUTO_INCREMENT,
   `parent_fund_id` INT(11) DEFAULT NULL COMMENT 'if this fund is a child of another the parent fund id will be stored here',
   `ledger_id` INT(11) NOT NULL COMMENT 'ledger the fund applies to',
-  `fiscal_period_id` INT(11) NOT NULL COMMENT 'fiscal period the fund applies to',
   `name` VARCHAR(80) DEFAULT NULL COMMENT 'name for the fund',
   `code` VARCHAR(30) DEFAULT NULL COMMENT 'code for the fund',
   `description` longtext DEFAULT '' COMMENT 'description for the fund',
@@ -3749,7 +3748,6 @@ CREATE TABLE `acq_funds` (
   `modified_date` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'time of the last update to the fund',
   PRIMARY KEY (`fund_id`),
   FOREIGN KEY (`ledger_id`) REFERENCES `acq_ledgers` (`ledger_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  FOREIGN KEY (`fiscal_period_id`) REFERENCES `acq_fiscal_periods` (`fiscal_period_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   FOREIGN KEY (`owner_id`) REFERENCES `borrowers` (`borrowernumber`),
   FOREIGN KEY (`managing_branch`) REFERENCES `branches` (`branchcode`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

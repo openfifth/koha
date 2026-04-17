@@ -21,7 +21,6 @@ use Modern::Perl;
 use base qw(Koha::Acquisition::Finances::BaseObject);
 
 use Koha::Acquisition::Finances::Allocations;
-use Koha::Acquisition::Finances::FiscalPeriod;
 use Koha::Acquisition::Finances::Ledger;
 use Koha::Patron;
 
@@ -166,6 +165,15 @@ sub managing_library {
     my $managing_library_rs = $self->_result->managing_branch;
     return unless $managing_library_rs;
     return Koha::Library->_new_from_dbic($managing_library_rs);
+}
+
+=head3 fiscal_period
+
+=cut
+
+sub fiscal_period {
+    my ($self) = @_;
+    return $self->ledger->fiscal_period;
 }
 
 =head3 to_api

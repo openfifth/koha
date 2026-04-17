@@ -44,14 +44,6 @@ if this fund is a child of another the parent fund id will be stored here
 
 ledger the fund applies to
 
-=head2 fiscal_period_id
-
-  data_type: 'integer'
-  is_foreign_key: 1
-  is_nullable: 0
-
-fiscal period the fund applies to
-
 =head2 name
 
   data_type: 'varchar'
@@ -178,8 +170,6 @@ __PACKAGE__->add_columns(
   { data_type => "integer", is_nullable => 1 },
   "ledger_id",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 0 },
-  "fiscal_period_id",
-  { data_type => "integer", is_foreign_key => 1, is_nullable => 0 },
   "name",
   { data_type => "varchar", is_nullable => 1, size => 80 },
   "code",
@@ -264,21 +254,6 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
-=head2 fiscal_period
-
-Type: belongs_to
-
-Related object: L<Koha::Schema::Result::AcqFiscalPeriod>
-
-=cut
-
-__PACKAGE__->belongs_to(
-  "fiscal_period",
-  "Koha::Schema::Result::AcqFiscalPeriod",
-  { fiscal_period_id => "fiscal_period_id" },
-  { is_deferrable => 1, on_delete => "CASCADE", on_update => "CASCADE" },
-);
-
 =head2 ledger
 
 Type: belongs_to
@@ -335,8 +310,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-16 14:31:14
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:Ogg7idB4i8bx/vvoJiZ8WA
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-17 08:39:39
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:jc/0SH2QI834Vbyw0OOakw
 
 __PACKAGE__->add_columns(
     '+status'             => { is_boolean => 1 },

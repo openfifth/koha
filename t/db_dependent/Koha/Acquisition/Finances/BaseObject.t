@@ -18,7 +18,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 9;
+use Test::More tests => 8;
 
 use t::lib::TestBuilder;
 
@@ -66,60 +66,6 @@ subtest 'cascade_status() tests' => sub {
     $schema->storage->txn_rollback;
 };
 
-subtest 'cascade_data() tests' => sub {
-
-    plan tests => 4;
-
-    $schema->storage->txn_begin;
-
-    my $fp1 = $builder->build_object( { class => 'Koha::Acquisition::Finances::FiscalPeriods' } );
-    my $fp2 = $builder->build_object( { class => 'Koha::Acquisition::Finances::FiscalPeriods' } );
-
-    my $parent_fund = $builder->build_object(
-        {
-            class => 'Koha::Acquisition::Finances::Funds',
-            value => { fiscal_period_id => $fp1->fiscal_period_id, parent_fund_id => undef }
-        }
-    );
-    my $sub_fund = $builder->build_object(
-        {
-            class => 'Koha::Acquisition::Finances::Funds',
-            value => {
-                parent_fund_id   => $parent_fund->fund_id,
-                fiscal_period_id => $fp1->fiscal_period_id,
-            }
-        }
-    );
-
-    # Change parent fund's fiscal_period_id and cascade to sub-fund
-    $parent_fund->fiscal_period_id( $fp2->fiscal_period_id );
-    my $changed = $parent_fund->cascade_data(
-        {
-            parent     => $parent_fund,
-            child      => $sub_fund,
-            properties => ['fiscal_period_id']
-        }
-    );
-    is( $changed,                    1,                      'Change detected when property differs' );
-    is( $sub_fund->fiscal_period_id, $fp2->fiscal_period_id, 'Sub-fund fiscal_period_id updated to match parent' );
-
-    # Cascade with identical value: no change
-    my $not_changed = $parent_fund->cascade_data(
-        {
-            parent     => $parent_fund,
-            child      => $sub_fund,
-            properties => ['fiscal_period_id']
-        }
-    );
-    is( $not_changed, 0, 'No change detected when property is already the same' );
-    is(
-        $sub_fund->fiscal_period_id, $fp2->fiscal_period_id,
-        'Sub-fund fiscal_period_id unchanged after no-op cascade'
-    );
-
-    $schema->storage->txn_rollback;
-};
-
 subtest 'relationship embedding tests' => sub {
 
     plan tests => 6;
@@ -137,9 +83,8 @@ subtest 'relationship embedding tests' => sub {
         {
             class => 'Koha::Acquisition::Finances::Funds',
             value => {
-                ledger_id        => $ledger->ledger_id,
-                fiscal_period_id => $fiscal_period->fiscal_period_id,
-                parent_fund_id   => undef,
+                ledger_id      => $ledger->ledger_id,
+                parent_fund_id => undef,
             }
         }
     );

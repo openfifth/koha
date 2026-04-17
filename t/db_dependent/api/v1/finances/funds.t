@@ -130,7 +130,7 @@ subtest 'get() tests' => sub {
 
 subtest 'add() tests' => sub {
 
-    plan tests => 10;
+    plan tests => 9;
 
     $schema->storage->txn_begin;
 
@@ -160,14 +160,11 @@ subtest 'add() tests' => sub {
             value => { ledger_amount => 100000, locked => 0 }
         }
     );
-    my $fiscal_period = $builder->build_object( { class => 'Koha::Acquisition::Finances::FiscalPeriods' } );
-
     my $fund = {
-        name             => 'Test Fund',
-        ledger_id        => $ledger->ledger_id,
-        fiscal_period_id => $fiscal_period->fiscal_period_id,
-        fund_amount      => 1000,
-        status           => Mojo::JSON->true,
+        name        => 'Test Fund',
+        ledger_id   => $ledger->ledger_id,
+        fund_amount => 1000,
+        status      => Mojo::JSON->true,
     };
 
     # Unauthorized attempt to write
@@ -177,9 +174,8 @@ subtest 'add() tests' => sub {
     $t->post_ok( "//$userid:$password@/api/v1/acquisitions/funds" => json => $fund )
         ->status_is( 201, 'REST3.2.1' )
         ->header_like( Location => qr|^\/api\/v1\/acquisitions\/funds\/\d+|, 'REST3.4.1' )
-        ->json_is( '/name'             => $fund->{name} )
-        ->json_is( '/ledger_id'        => $fund->{ledger_id} )
-        ->json_is( '/fiscal_period_id' => $fund->{fiscal_period_id} );
+        ->json_is( '/name'      => $fund->{name} )
+        ->json_is( '/ledger_id' => $fund->{ledger_id} );
 
     my $created_fund_id    = $t->tx->res->json->{fund_id};
     my $initial_allocation = Koha::Acquisition::Finances::Allocations->search(
@@ -213,14 +209,11 @@ subtest 'add() with amount breach tests' => sub {
             value => { ledger_amount => 100, locked => 0 }
         }
     );
-    my $fiscal_period = $builder->build_object( { class => 'Koha::Acquisition::Finances::FiscalPeriods' } );
-
     my $fund_exceeding_limit = {
-        name             => 'Overfunded',
-        ledger_id        => $ledger->ledger_id,
-        fiscal_period_id => $fiscal_period->fiscal_period_id,
-        fund_amount      => 99999,
-        status           => Mojo::JSON->true,
+        name        => 'Overfunded',
+        ledger_id   => $ledger->ledger_id,
+        fund_amount => 99999,
+        status      => Mojo::JSON->true,
     };
 
     # Adding a fund that exceeds the ledger amount should return 400 with breach details
@@ -264,12 +257,11 @@ subtest 'add() sub-fund with amount breach tests' => sub {
     );
 
     my $sub_fund_exceeding_limit = {
-        name             => 'Overfunded Sub Fund',
-        ledger_id        => $parent_fund->ledger_id,
-        parent_fund_id   => $parent_fund->fund_id,
-        fiscal_period_id => $parent_fund->fiscal_period_id,
-        fund_amount      => 99999,
-        status           => Mojo::JSON->true,
+        name           => 'Overfunded Sub Fund',
+        ledger_id      => $parent_fund->ledger_id,
+        parent_fund_id => $parent_fund->fund_id,
+        fund_amount    => 99999,
+        status         => Mojo::JSON->true,
     };
 
     # Adding a sub-fund that exceeds the parent fund amount should return 400 with breach details
@@ -305,14 +297,11 @@ subtest 'add() with locked ledger tests' => sub {
             value => { ledger_amount => 10000, locked => 1 }
         }
     );
-    my $fiscal_period = $builder->build_object( { class => 'Koha::Acquisition::Finances::FiscalPeriods' } );
-
     my $fund = {
-        name             => 'Test Fund',
-        ledger_id        => $locked_ledger->ledger_id,
-        fiscal_period_id => $fiscal_period->fiscal_period_id,
-        fund_amount      => 1000,
-        status           => Mojo::JSON->true,
+        name        => 'Test Fund',
+        ledger_id   => $locked_ledger->ledger_id,
+        fund_amount => 1000,
+        status      => Mojo::JSON->true,
     };
 
     # Adding a fund to a locked ledger should return 400
@@ -363,11 +352,10 @@ subtest 'update() tests' => sub {
     my $fund_id = $fund->fund_id;
 
     my $updated_fund = {
-        name             => 'Updated Fund',
-        ledger_id        => $ledger->ledger_id,
-        fiscal_period_id => $fund->fiscal_period_id,
-        fund_amount      => 7500,
-        status           => Mojo::JSON->true,
+        name        => 'Updated Fund',
+        ledger_id   => $ledger->ledger_id,
+        fund_amount => 7500,
+        status      => Mojo::JSON->true,
     };
 
     # Unauthorized attempt to update
@@ -420,11 +408,10 @@ subtest 'update() with locked ledger tests' => sub {
     my $fund_id = $fund->fund_id;
 
     my $updated_fund = {
-        name             => 'Updated Fund',
-        ledger_id        => $locked_ledger->ledger_id,
-        fiscal_period_id => $fund->fiscal_period_id,
-        fund_amount      => 1000,
-        status           => Mojo::JSON->true,
+        name        => 'Updated Fund',
+        ledger_id   => $locked_ledger->ledger_id,
+        fund_amount => 1000,
+        status      => Mojo::JSON->true,
     };
 
     # Updating a fund under a locked ledger should return 400

@@ -153,7 +153,7 @@ export default {
                         link: {
                             name: "FiscalPeriodShow",
                             params: {
-                                fiscal_period_id: "fiscal_period_id",
+                                fiscal_period_id: "fiscal_period.fiscal_period_id",
                             },
                         },
                     },
@@ -457,7 +457,6 @@ export default {
             table_settings: null,
             add_filters: true,
             options: { embed: "sub_funds,allocations,parent_fund" },
-            add_filters: true,
             ...(!props.embedded && {
                 actions: {
                     0: ["show"],
@@ -907,9 +906,6 @@ export default {
             APIClient.acquisition[clientName]
                 .get(componentData.route.query[searchKey])
                 .then(result => {
-                    resource.fiscal_period_id = parseInt(
-                        result.fiscal_period_id
-                    );
                     resource.ledger_id = parseInt(result.ledger_id);
                     if (isSubFund.value) {
                         resource.parent_fund_id = parseInt(

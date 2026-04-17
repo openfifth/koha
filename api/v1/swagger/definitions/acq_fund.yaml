@@ -17,11 +17,6 @@ properties:
       - integer
       - "null"
     description: Internal ledger identifier
-  fiscal_period_id:
-    type:
-      - integer
-      - "null"
-    description: Internal fiscal period identifier
   name:
     type:
       - string
