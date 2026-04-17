@@ -29,6 +29,22 @@
     responses:
       "201":
         description: Closure created
+        schema:
+          type: object
+          properties:
+            library_weekly_closure_id:
+              type: integer
+              description: Internally assigned identifier
+            library_id:
+              type: string
+              description: Library the closure belongs to
+            weekday:
+              type: integer
+              description: Day of week (0=Sunday..6=Saturday)
+            title:
+              type: string
+            description:
+              type: string
       "400":
         description: Bad request
         schema:
@@ -84,6 +100,22 @@
     responses:
       "200":
         description: A weekly closure
+        schema:
+          type: object
+          properties:
+            library_weekly_closure_id:
+              type: integer
+              description: Internally assigned identifier
+            library_id:
+              type: string
+              description: Library the closure belongs to
+            weekday:
+              type: integer
+              description: Day of week (0=Sunday..6=Saturday)
+            title:
+              type: string
+            description:
+              type: string
       "400":
         description: Bad request
         schema:
@@ -138,6 +170,22 @@
     responses:
       "200":
         description: Updated closure
+        schema:
+          type: object
+          properties:
+            library_weekly_closure_id:
+              type: integer
+              description: Internally assigned identifier
+            library_id:
+              type: string
+              description: Library the closure belongs to
+            weekday:
+              type: integer
+              description: Day of week (0=Sunday..6=Saturday)
+            title:
+              type: string
+            description:
+              type: string
       "400":
         description: Bad request
         schema:
