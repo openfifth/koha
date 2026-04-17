@@ -19,14 +19,14 @@ use utf8;
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with Koha; if not, see <http://www.gnu.org/licenses>.
+# along with Koha; if not, see <https://www.gnu.org/licenses>.
 
 use Carp qw( carp );
 use DateTime;
 use Readonly qw( Readonly );
 use Koha::Database;
 use Koha::DateUtils qw( dt_from_string );
-use C4::Budgets qw( GetBudget );
+use C4::Budgets     qw( GetBudget );
 
 use Koha::Acquisition::Orders;
 
@@ -50,7 +50,7 @@ sub new {
         $self->{is_response} = $parameter_hashref->{is_response};
 
         # convenient alias
-        $self->{basket} = $self->{orderlines}->[0]->basketno;
+        $self->{basket}       = $self->{orderlines}->[0]->basketno;
         $self->{message_date} = dt_from_string();
     }
 
@@ -60,13 +60,11 @@ sub new {
         return;
     }
     if ( !$self->{recipient} ) {
-        carp 'No vendor passed to order creation: basket = '
-          . $self->{basket}->basketno;
+        carp 'No vendor passed to order creation: basket = ' . $self->{basket}->basketno;
         return;
     }
     if ( !$self->{sender} ) {
-        carp 'No sender ean passed to order creation: basket = '
-          . $self->{basket}->basketno;
+        carp 'No sender ean passed to order creation: basket = ' . $self->{basket}->basketno;
         return;
     }
 
@@ -105,7 +103,7 @@ sub encode {
     $self->{transmission} .= $self->trailing_service_segments();
 
     # Guard against CR LF etc being added in data from DB
-    $self->{transmission}=~s/[\r\n\t]//g;
+    $self->{transmission} =~ s/[\r\n\t]//g;
 
     return $self->{transmission};
 }
@@ -132,13 +130,16 @@ sub interchange_header {
     my $self = shift;
 
     # syntax identifier
-    my $hdr =
-      'UNB+UNOC:3';    # controlling agency character set syntax version number
-                       # Interchange Sender
-    $hdr .= _interchange_sr_identifier( $self->{sender}->ean,
-        $self->{sender}->id_code_qualifier );    # interchange sender
-    $hdr .= _interchange_sr_identifier( $self->{recipient}->san,
-        $self->{recipient}->id_code_qualifier );    # interchange Recipient
+    my $hdr = 'UNB+UNOC:3';    # controlling agency character set syntax version number
+                               # Interchange Sender
+    $hdr .= _interchange_sr_identifier(
+        $self->{sender}->ean,
+        $self->{sender}->id_code_qualifier
+    );                         # interchange sender
+    $hdr .= _interchange_sr_identifier(
+        $self->{recipient}->san,
+        $self->{recipient}->id_code_qualifier
+    );                         # interchange Recipient
 
     $hdr .= $separator;
 
@@ -149,14 +150,14 @@ sub interchange_header {
     $hdr .= $separator;
 
     # Recipents reference password not usually used in edifact
-    $hdr .= q{+ORDERS};                             # application reference
+    $hdr .= q{+ORDERS};        # application reference
 
-#Edifact does not usually include the following
-#    $hdr .= $separator; # Processing priority  not usually used in edifact
-#    $hdr .= $separator; # Acknowledgewment request : not usually used in edifact
-#    $hdr .= q{+EANCOM} # Communications agreement id
-#    $hdr .= q{+1} # Test indicator
-#
+    #Edifact does not usually include the following
+    #    $hdr .= $separator; # Processing priority  not usually used in edifact
+    #    $hdr .= $separator; # Acknowledgewment request : not usually used in edifact
+    #    $hdr .= q{+EANCOM} # Communications agreement id
+    #    $hdr .= q{+1} # Test indicator
+    #
     $hdr .= $seg_terminator;
     return $hdr;
 }
@@ -194,9 +195,8 @@ sub message_trailer {
     $self->add_seg("CNT+2:$num_orderlines$seg_terminator");
 
     # UNT Message Trailer
-    my $segments_in_message =
-      1 + @{ $self->{segs} };    # count incl UNH & UNT (!!this one)
-    my $reference = $self->message_reference('current');
+    my $segments_in_message = 1 + @{ $self->{segs} };                # count incl UNH & UNT (!!this one)
+    my $reference           = $self->message_reference('current');
     $self->add_seg("UNT+$segments_in_message+$reference$seg_terminator");
     return;
 }
@@ -216,8 +216,7 @@ sub interchange_control_reference {
     my $self = shift;
     if ( $self->{interchange_control_reference} ) {
         return sprintf '%014d', $self->{interchange_control_reference};
-    }
-    else {
+    } else {
         carp 'calling for ref of unencoded order';
         return 'NONE ASSIGNED';
     }
@@ -261,7 +260,7 @@ sub order_msg_header {
     # UNH  see message_header
     # BGM
     push @header,
-      beginning_of_message(
+        beginning_of_message(
         $self->{basket}->basketno,
         $self->{recipient}->standard,
         $self->{is_response},
@@ -273,17 +272,17 @@ sub order_msg_header {
 
     # NAD-RFF buyer supplier ids
     push @header,
-      name_and_address(
+        name_and_address(
         'BUYER',
         $self->{sender}->ean,
         $self->{sender}->id_code_qualifier
-      );
+        );
     push @header,
-      name_and_address(
+        name_and_address(
         'SUPPLIER',
         $self->{recipient}->san,
         $self->{recipient}->id_code_qualifier
-      );
+        );
 
     # repeat for for other relevant parties
 
@@ -303,7 +302,10 @@ sub beginning_of_message {
     my $purchase_order_number = shift;
 
     # Use purchase order number if available, otherwise use basketno
-    my $document_message_no = $purchase_order_number ? $purchase_order_number : sprintf '%011d', $basketno;
+    my $document_message_no =
+        $purchase_order_number
+        ? encode_text($purchase_order_number)
+        : sprintf '%011d', $basketno;
 
     #    my $message_function = 9;    # original 7 = retransmission
     # message_code values
@@ -356,15 +358,13 @@ sub order_line {
     my $basket = Koha::Acquisition::Orders->find( $orderline->ordernumber )->basket;
 
     my $schema = $self->{schema};
-    if ( !$orderline->biblionumber )
-    {                        # cannot generate an orderline without a bib record
+    if ( !$orderline->biblionumber ) {    # cannot generate an orderline without a bib record
         return;
     }
     my $biblionumber = $orderline->biblionumber->biblionumber;
-    my @biblioitems  = $schema->resultset('Biblioitem')
-      ->search( { biblionumber => $biblionumber, } );
-    my $biblioitem = $biblioitems[0];    # makes the assumption there is 1 only
-                                         # or else all have same details
+    my @biblioitems  = $schema->resultset('Biblioitem')->search( { biblionumber => $biblionumber, } );
+    my $biblioitem   = $biblioitems[0];    # makes the assumption there is 1 only
+                                           # or else all have same details
 
     my $id_string = $orderline->line_item_id;
 
@@ -418,8 +418,7 @@ sub order_line {
                 push @items, $item_data;
             }
         }
-    }
-    else {
+    } else {
         my $item_hash = {
             itype          => $biblioitem->itemtype,
             itemcallnumber => $biblioitem->cn_class,
@@ -432,7 +431,7 @@ sub order_line {
             push @items, $item_hash;
         }
     }
-    my $budget = GetBudget( $orderline->budget_id );
+    my $budget    = GetBudget( $orderline->budget_id );
     my $ol_fields = { budget_code => $budget->{budget_code}, };
 
     my $item_fields = [];
@@ -476,6 +475,7 @@ sub order_line {
         $ftx .= $seg_terminator;
         $self->add_seg($ftx);
     }
+
     # Encode notes here
     # PRI-CUX-DTM unit price on which order is placed : optional
     # Coutts read this as 0.00 if not present
@@ -492,7 +492,7 @@ sub order_line {
     # RFF : suppliers unique quotation reference number
     if ( $orderline->suppliers_reference_number ) {
         $rff = join q{}, 'RFF+', $orderline->suppliers_reference_qualifier,
-          ':', $orderline->suppliers_reference_number, $seg_terminator;
+            ':', $orderline->suppliers_reference_number, $seg_terminator;
         $self->add_seg($rff);
     }
 
@@ -562,8 +562,7 @@ sub imd_segment {
     foreach my $c (@chunks) {
         if ($odd) {
             push @segs, "$seg_prefix$c";
-        }
-        else {
+        } else {
             $segs[-1] .= ":$c$seg_terminator";
         }
         $odd = !$odd;
@@ -583,50 +582,50 @@ sub gir_segments {
     my $budget_code = $orderfields->{budget_code};
     my @segments;
     my $sequence_no = 1;
-    my $lsq_field = C4::Context->preference('EdifactLSQ');
-    my $lsl_field = C4::Context->preference('EdifactLSL');
+    my $lsq_field   = C4::Context->preference('EdifactLSQ');
+    my $lsl_field   = C4::Context->preference('EdifactLSL');
     foreach my $item (@onorderitems) {
         my $elements_added = 0;
         my @gir_elements;
         if ($budget_code) {
             push @gir_elements,
-              { identity_number => 'LFN', data => $budget_code };
+                { identity_number => 'LFN', data => $budget_code };
         }
         if ( $item->{branchcode} ) {
             push @gir_elements,
-              { identity_number => 'LLO', data => encode_text( $item->{branchcode} ) };
+                { identity_number => 'LLO', data => encode_text( $item->{branchcode} ) };
         }
         if ( $item->{itype} ) {
             push @gir_elements,
-              { identity_number => 'LST', data => encode_text( $item->{itype} ) };
+                { identity_number => 'LST', data => encode_text( $item->{itype} ) };
         }
 
         # Handle LSQ mapping
         if ( $lsq_field && $item->{$lsq_field} ) {
             push @gir_elements,
-              { identity_number => 'LSQ', data => encode_text( $item->{$lsq_field} ) };
+                { identity_number => 'LSQ', data => encode_text( $item->{$lsq_field} ) };
         }
 
         # Handle LSL mapping
         if ( $lsl_field && $item->{$lsl_field} ) {
             push @gir_elements,
-              { identity_number => 'LSL', data => encode_text( $item->{$lsl_field} ) };
+                { identity_number => 'LSL', data => encode_text( $item->{$lsl_field} ) };
         }
 
         if ( $item->{itemcallnumber} ) {
             push @gir_elements,
-              { identity_number => 'LSM', data => encode_text( $item->{itemcallnumber} ) };
+                { identity_number => 'LSM', data => encode_text( $item->{itemcallnumber} ) };
         }
 
         # itemcallnumber -> shelfmark
         if ( $orderfields->{servicing_instruction} ) {
             push @gir_elements,
-              {
+                {
                 identity_number => 'LVT',
                 data            => encode_text( $orderfields->{servicing_instruction} )
-              };
+                };
         }
-        my $e_cnt = 0;    # count number of elements so we dont exceed 5 per segment
+        my $e_cnt   = 0;    # count number of elements so we dont exceed 5 per segment
         my $copy_no = sprintf 'GIR+%03d', $sequence_no;
         my $seg     = $copy_no;
         foreach my $e (@gir_elements) {
@@ -635,7 +634,7 @@ sub gir_segments {
                 $seg = $copy_no;
             }
             $seg .=
-              add_gir_identity_number( $e->{identity_number}, $e->{data} );
+                add_gir_identity_number( $e->{identity_number}, $e->{data} );
             ++$e_cnt;
         }
 
@@ -669,8 +668,7 @@ sub lin_segment {
 
     if ($item_number_id) {
         $item_number_id = "++${item_number_id}:EN";
-    }
-    else {
+    } else {
         $item_number_id = q||;
     }
 
@@ -683,8 +681,7 @@ sub additional_product_id {
     if ( $isbn_field =~ m/(\d{13})/ ) {
         $product_id   = $1;
         $product_code = 'EN';
-    }
-    elsif ( $isbn_field =~ m/(\d{9}[Xx\d])/ ) {
+    } elsif ( $isbn_field =~ m/(\d{9}[Xx\d])/ ) {
         $product_id   = $1;
         $product_code = 'IB';
     }

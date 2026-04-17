@@ -131,7 +131,6 @@ if ( $op eq 'add_form' ) {
     if ( C4::Context->config("enable_plugins") ) {
         my $plugins = Koha::Plugins->new();
 
-        # Use the dedicated get_valuebuilders_installed method
         my @plugin_valuebuilders = $plugins->get_valuebuilders_installed();
 
         foreach my $vb_entry (@plugin_valuebuilders) {
