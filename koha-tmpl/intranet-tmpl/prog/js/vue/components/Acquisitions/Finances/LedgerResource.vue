@@ -399,7 +399,7 @@ export default {
 
             const oe_warning_percent = ledger.oe_warning_percent;
             ledger.oe_warning_percent = oe_warning_percent / 100;
-            ledger.ledger_amount = ledger.ledger_amount || 0
+            ledger.ledger_amount = ledger.ledger_amount || 0;
 
             delete ledger.ledger_id;
             delete ledger.patron;
@@ -695,7 +695,7 @@ export default {
                                                       meta
                                                   ) {
                                                       return (
-                                                          '<a href="/cgi-bin/koha/acquisitions/finances/fund/' +
+                                                          '<a href="/cgi-bin/koha/acquisitions/finances/funds/' +
                                                           row.fund_id +
                                                           '" class="showFund">' +
                                                           escape_str(

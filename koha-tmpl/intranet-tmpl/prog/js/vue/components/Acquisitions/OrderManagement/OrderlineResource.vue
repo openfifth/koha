@@ -930,7 +930,7 @@ export default {
                             let fundList;
                             row.fund_distributions.forEach((fd, i) => {
                                 fundList +=
-                                    '<a href="/cgi-bin/koha/acquisitions/finances/fund/' +
+                                    '<a href="/cgi-bin/koha/acquisitions/finances/funds/' +
                                     fd.fund_id +
                                     '">' +
                                     escape_str(row.fund.name) +

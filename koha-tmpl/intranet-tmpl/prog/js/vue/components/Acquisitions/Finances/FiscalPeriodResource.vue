@@ -374,7 +374,7 @@ export default {
                                                       meta
                                                   ) {
                                                       return (
-                                                          '<a href="/cgi-bin/koha/acquisitions/finances/ledger/' +
+                                                          '<a href="/cgi-bin/koha/acquisitions/finances/ledgers/' +
                                                           row.ledger_id +
                                                           '" class="showLedger">' +
                                                           escape_str(

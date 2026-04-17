@@ -35,7 +35,7 @@ export const routes = [
                         alternateLeftMenu: "AcqMenu",
                     },
                     {
-                        path: "fiscal_period",
+                        path: "fiscal_periods",
                         title: $__("Fiscal periods"),
                         is_navigation_item: false,
                         resource:
@@ -76,7 +76,7 @@ export const routes = [
                         ],
                     },
                     {
-                        path: "ledger",
+                        path: "ledgers",
                         title: $__("Ledgers"),
                         is_navigation_item: false,
                         resource: "Acquisitions/Finances/LedgerResource.vue",
@@ -116,7 +116,7 @@ export const routes = [
                         ],
                     },
                     {
-                        path: "fund",
+                        path: "funds",
                         title: $__("Funds"),
                         is_navigation_item: false,
                         resource: "Acquisitions/Finances/FundResource.vue",

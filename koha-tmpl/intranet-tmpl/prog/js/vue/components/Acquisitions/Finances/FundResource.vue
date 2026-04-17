@@ -35,7 +35,10 @@ export default {
             return {
                 list: [],
                 show: defaultButtons.show.filter(button => {
-                    if (button.action === "delete" && resource.sub_funds?.length)
+                    if (
+                        button.action === "delete" &&
+                        resource.sub_funds?.length
+                    )
                         return false;
                     if (button.action === "edit" && resource.ledger_locked)
                         return false;
@@ -81,7 +84,9 @@ export default {
             };
             return {
                 show: [
-                    ...(!isSubFund.value && !resource.ledger_locked && resource.status
+                    ...(!isSubFund.value &&
+                    !resource.ledger_locked &&
+                    resource.status
                         ? [
                               {
                                   to: {
@@ -153,7 +158,8 @@ export default {
                         link: {
                             name: "FiscalPeriodShow",
                             params: {
-                                fiscal_period_id: "fiscal_period.fiscal_period_id",
+                                fiscal_period_id:
+                                    "fiscal_period.fiscal_period_id",
                             },
                         },
                     },
@@ -198,7 +204,7 @@ export default {
                         orderable: true,
                         render(data, type, row, meta) {
                             return row.parent_fund
-                                ? '<a href="/cgi-bin/koha/acquisitions/finances/fund/' +
+                                ? '<a href="/cgi-bin/koha/acquisitions/finances/funds/' +
                                       row.parent_fund.fund_id +
                                       '" class="show">' +
                                       escape_str(row.parent_fund.name) +
@@ -495,7 +501,7 @@ export default {
 
             const oe_warning_percent = fund.oe_warning_percent;
             fund.oe_warning_percent = oe_warning_percent / 100;
-            fund.fund_amount = fund.fund_amount || 0
+            fund.fund_amount = fund.fund_amount || 0;
 
             if (!isSubFund.value) {
                 delete fund.fund_id;
@@ -571,7 +577,8 @@ export default {
             componentData.resource.value.fund_parent_name =
                 resource.parent_fund?.name;
             componentData.resource.value.currency = resource.ledger.currency;
-            componentData.resource.value.ledger_locked = resource.ledger?.locked;
+            componentData.resource.value.ledger_locked =
+                resource.ledger?.locked;
             const parentKey = isSubFund.value ? "parent_fund" : "ledger";
             componentData.resource.value.parent_status =
                 resource[parentKey]?.status;
@@ -779,7 +786,7 @@ export default {
                                                       meta
                                                   ) {
                                                       return (
-                                                          '<a href="/cgi-bin/koha/acquisitions/finances/fund/' +
+                                                          '<a href="/cgi-bin/koha/acquisitions/finances/funds/' +
                                                           row.fund_id +
                                                           '" class="showFund">' +
                                                           escape_str(
