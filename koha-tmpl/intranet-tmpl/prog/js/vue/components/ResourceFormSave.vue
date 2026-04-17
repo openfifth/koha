@@ -16,6 +16,20 @@
                 ...$data,
                 resourceForm,
                 saveDropdownButtonActions,
+                cancelRoute:
+                    editMode && resourceToSave
+                        ? {
+                              name: instancedResource.components.show,
+                              params: {
+                                  [instancedResource.idAttr]:
+                                      resourceToSave[instancedResource.idAttr],
+                              },
+                          }
+                        : {
+                              name:
+                                  instancedResource.components.list ||
+                                  instancedResource.navigationOnFormSave,
+                          },
             }"
         />
         <form
@@ -105,11 +119,23 @@
                     <ButtonSubmit :title="$__('Save')" />
                 </DropdownButtons>
                 <router-link
-                    :to="{
-                        name:
-                            instancedResource.components.list ||
-                            instancedResource.navigationOnFormSave,
-                    }"
+                    :to="
+                        editMode && resourceToSave
+                            ? {
+                                  name: instancedResource.components.show,
+                                  params: {
+                                      [instancedResource.idAttr]:
+                                          resourceToSave[
+                                              instancedResource.idAttr
+                                          ],
+                                  },
+                              }
+                            : {
+                                  name:
+                                      instancedResource.components.list ||
+                                      instancedResource.navigationOnFormSave,
+                              }
+                    "
                     role="button"
                     class="cancel"
                     >{{ $__("Cancel") }}</router-link

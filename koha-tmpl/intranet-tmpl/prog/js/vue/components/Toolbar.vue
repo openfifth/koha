@@ -21,10 +21,12 @@
                     />
                 </DropdownButtons>
                 <router-link
-                    :to="{
-                        name: componentPropData.instancedResource.components
-                            .list,
-                    }"
+                    :to="
+                        componentPropData.cancelRoute || {
+                            name: componentPropData.instancedResource.components
+                                .list,
+                        }
+                    "
                     role="button"
                     class="cancel"
                     >{{ $__("Cancel") }}</router-link
