@@ -131,6 +131,7 @@ export default {
                     size: 6,
                     format: (value, resource) =>
                         formatValueWithCurrency(value, resource.currency),
+                    ...acquisitionsStore.applyNumberValidation(),
                 },
                 ...(isTransfer.value
                     ? [
