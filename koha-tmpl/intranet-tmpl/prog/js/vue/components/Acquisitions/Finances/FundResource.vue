@@ -81,7 +81,7 @@ export default {
             };
             return {
                 show: [
-                    ...(!isSubFund.value && !resource.ledger_locked
+                    ...(!isSubFund.value && !resource.ledger_locked && resource.status
                         ? [
                               {
                                   to: {
@@ -93,7 +93,7 @@ export default {
                               },
                           ]
                         : []),
-                    ...handleAllocationButtons(),
+                    ...(resource.status ? handleAllocationButtons() : []),
                 ],
             };
         };
@@ -495,6 +495,7 @@ export default {
 
             const oe_warning_percent = fund.oe_warning_percent;
             fund.oe_warning_percent = oe_warning_percent / 100;
+            fund.fund_amount = fund.fund_amount || 0
 
             if (!isSubFund.value) {
                 delete fund.fund_id;
