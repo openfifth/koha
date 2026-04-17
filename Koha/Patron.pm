@@ -1301,7 +1301,7 @@ sub has_restricting_overdues {
 
     my $calendar;
     if ( C4::Context->preference('OverdueNoticeCalendar') ) {
-        $calendar = Koha::Calendar->new( branchcode => $params->{issue_branchcode} );
+        $calendar = Koha::Library::Calendar->new( branchcode => $params->{issue_branchcode} );
     }
 
     my $dtf    = Koha::Database->new->schema->storage->datetime_parser;
