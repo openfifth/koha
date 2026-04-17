@@ -2,7 +2,7 @@
 
 use Modern::Perl;
 use Test::NoWarnings;
-use Test::More tests => 7;
+use Test::More tests => 8;
 use t::lib::TestBuilder;
 use String::Random qw(random_string);
 use Koha::Database;
@@ -423,4 +423,85 @@ subtest 'strings_map() tests' => sub {
     );
     $schema->txn_rollback;
 
+};
+
+subtest 'strings_map() quotes comma- and quote-bearing values' => sub {
+    plan tests => 3;
+
+    $schema->txn_begin;
+    Koha::AdditionalFields->search->delete;
+
+    my $license = Koha::ERM::License->new(
+        {
+            name   => "license for quoting",
+            type   => "national",
+            status => "in_negotiation",
+        }
+    )->store->discard_changes;
+
+    my $field = Koha::AdditionalField->new(
+        {
+            tablename => 'erm_licenses',
+            name      => 'quoted_field',
+        }
+    )->store->discard_changes;
+
+    $license->set_additional_fields(
+        [
+            { id => $field->id, value => 'a,b,c' },
+            { id => $field->id, value => 'b' },
+            { id => $field->id, value => 'c' },
+        ]
+    );
+
+    my $strings_map = $license->strings_map;
+    is(
+        $strings_map->{additional_field_values}->[0]->{value_str},
+        '"a,b,c", b, c',
+        'Value containing commas is wrapped in double quotes; plain values pass through'
+    );
+
+    my $field_quote = Koha::AdditionalField->new(
+        {
+            tablename => 'erm_licenses',
+            name      => 'quote_in_value',
+        }
+    )->store->discard_changes;
+
+    $license->add_additional_fields(
+        { $field_quote->id => [ 'she said "hi"', 'ok' ] },
+        'erm_licenses'
+    );
+
+    $strings_map = $license->strings_map;
+    my ($quoted_entry) =
+        grep { $_->{field_id} == $field_quote->id } @{ $strings_map->{additional_field_values} };
+    is(
+        $quoted_entry->{value_str},
+        '"she said ""hi""", ok',
+        'Internal double quotes are doubled and the value is wrapped'
+    );
+
+    my $field_plain = Koha::AdditionalField->new(
+        {
+            tablename => 'erm_licenses',
+            name      => 'plain_values',
+        }
+    )->store->discard_changes;
+
+    $license->add_additional_fields(
+        { $field_plain->id => [ 'red', 'blue', 'green' ] },
+        'erm_licenses'
+    );
+
+    $strings_map = $license->strings_map;
+    my ($plain_entry) =
+        grep { $_->{field_id} == $field_plain->id } @{ $strings_map->{additional_field_values} };
+    is(
+        $plain_entry->{value_str},
+        'red, blue, green',
+        'Values without commas or quotes pass through unquoted'
+    );
+
+    $schema->txn_rollback;
 };

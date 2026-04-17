@@ -256,6 +256,14 @@ Currently handles additional fields values mappings.
 Accepts a param hashref where the 'public' key denotes whether we want the public
 or staff interface strings.
 
+For repeatable fields, multiple values are joined into a single C<value_str>
+using a CSV-style encoding: the separator is C<", "> (comma-space), and any
+individual value containing C<,> or C<"> is wrapped in double quotes with
+internal quotes doubled (RFC 4180-ish). Values with no special characters pass
+through unchanged, so the familiar C<red, blue, green> form is preserved for
+the common case, while C<a,b,c / b / c> encodes as C<"a,b,c", b, c> and can be
+losslessly parsed by consumers.
+
 =cut
 
 sub strings_map {
@@ -289,7 +297,11 @@ sub strings_map {
             push @af_value_arr, $value_to_push if $value_to_push;
         }
 
-        $af_value_str = join( ", ", @af_value_arr );
+        my @encoded = map {
+            my $v = $_;
+            $v =~ /[,"]/ ? '"' . ( $v =~ s/"/""/gr ) . '"' : $v;
+        } @af_value_arr;
+        $af_value_str = join( ", ", @encoded );
 
         push(
             @{ $strings->{additional_field_values} },
