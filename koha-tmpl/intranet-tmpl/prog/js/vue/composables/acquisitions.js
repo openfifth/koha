@@ -11,19 +11,16 @@ const formatValueWithCurrencyHandler = (value, currency, store) => {
     if (!currency) {
         return formattedPrice;
     }
-    const { symbol } = store.currencies.find(
-        curr => curr.currency === currency
-    );
     if (!value) {
-        return `${symbol}0`;
+        return `0 ${currency}`;
     }
     if (!formattedPrice) {
-        return `${symbol}0`;
+        return `0 ${currency}`;
     }
     if (formattedPrice < 0) {
-        return `-${symbol}${-formattedPrice}`;
+        return `-${-formattedPrice} ${currency}`;
     }
-    return `${symbol}${formattedPrice}`;
+    return `${formattedPrice} ${currency}`;
 };
 
 export const acquisitionsActions = store => {
