@@ -24,6 +24,10 @@ import {
 } from "vue";
 import { useRoute } from "vue-router";
 import { $__ } from "@koha-vue/i18n";
+import {
+    escapeHtml,
+    parseValueStr,
+} from "../composables/additionalFields.js";
 
 DataTable.use(DataTablesLib);
 
@@ -115,13 +119,35 @@ export default {
                         searchable_field => {
                             var _customRender = (function (searchable_field) {
                                 var _render = function (data, type, row, meta) {
-                                    return row._strings.additional_field_values
-                                        .filter(
+                                    const matched =
+                                        row._strings.additional_field_values.filter(
                                             field =>
                                                 field.field_id ==
                                                 searchable_field.extended_attribute_type_id
-                                        )
-                                        .map(el => el.value_str);
+                                        );
+                                    if (!matched.length) return "";
+                                    const value_str = matched[0].value_str;
+
+                                    if (type !== "display") {
+                                        return value_str;
+                                    }
+
+                                    const values = parseValueStr(value_str);
+                                    if (values.length <= 1) {
+                                        return values[0] ?? "";
+                                    }
+                                    return (
+                                        '<ul class="additional-field-list">' +
+                                        values
+                                            .map(
+                                                v =>
+                                                    "<li>" +
+                                                    escapeHtml(v) +
+                                                    "</li>"
+                                            )
+                                            .join("") +
+                                        "</ul>"
+                                    );
                                 };
                                 return _render;
                             })(searchable_field);
@@ -341,3 +367,16 @@ export default {
     },
 };
 </script>
+
+<style>
+.additional-field-list {
+    margin: 0;
+    padding-left: 1.2em;
+    list-style-type: disc;
+}
+
+.additional-field-list li {
+    padding: 0.1rem 0;
+    line-height: 1.4;
+}
+</style>
