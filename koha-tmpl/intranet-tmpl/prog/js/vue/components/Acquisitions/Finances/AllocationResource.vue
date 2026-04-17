@@ -77,7 +77,16 @@ export default {
             },
             moduleStore: "acquisitionsStore",
             props,
-            navigationOnFormSave: isFund.value ? "FundList" : "LedgerList",
+            navigationOnFormSave: (resource, router) => {
+                const routeName = isFund.value ? "FundShow" : "LedgerShow";
+                const idParam = isFund.value ? "fund_id" : "ledger_id";
+                router.push({
+                    name: routeName,
+                    params: {
+                        [idParam]: resource[idParam],
+                    },
+                });
+            },
             resourceAttrs: [
                 {
                     name: "allocation_id",
