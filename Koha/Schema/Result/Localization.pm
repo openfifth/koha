@@ -100,8 +100,8 @@ __PACKAGE__->set_primary_key("localization_id");
 __PACKAGE__->add_unique_constraint("entity_code_lang", ["entity", "code", "lang"]);
 
 
-# Created by DBIx::Class::Schema::Loader v0.07049 @ 2021-01-21 13:39:29
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:Elbup2i+1JON+xa38uzd6A
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-20 06:48:51
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:zrEhl843kJuON4SEOpgIgg
 
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration

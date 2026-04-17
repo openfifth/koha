@@ -157,7 +157,7 @@ Related object: L<Koha::Schema::Result::Issue>
 __PACKAGE__->belongs_to(
     checkout => 'Koha::Schema::Result::Issue',
     'issue_id',
-    { join_type => 'left' }
+    { join_type => 'left', is_foreign_key_constraint => 0 }
 );
 
 =head2 old_checkout
@@ -171,7 +171,7 @@ Related object: L<Koha::Schema::Result::OldIssue>
 __PACKAGE__->belongs_to(
     old_checkout => 'Koha::Schema::Result::OldIssue',
     'issue_id',
-    { join_type => 'left' }
+    { join_type => 'left', is_foreign_key_constraint => 0 }
 );
 
 =head2 koha_object_class

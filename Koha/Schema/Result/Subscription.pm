@@ -586,8 +586,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2024-11-11 14:57:59
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:1Ht7Nfl870dv1NOs4vr04g
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-20 06:48:52
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:6ApdYOc1cRwkJZI+9ENLGA
 
 __PACKAGE__->has_many(
   "additional_field_values",
@@ -604,10 +604,10 @@ __PACKAGE__->has_many(
 );
 
 __PACKAGE__->add_columns(
-    '+closed'          => { is_boolean => 1 },
-    '+manualhistory'   => { is_boolean => 1 },
-    '+serialsadditems' => { is_boolean => 1 },
-    '+skip_serialseq'  => { is_boolean => 1 },
+    '+closed'                                 => { is_boolean => 1 },
+    '+manualhistory'                          => { is_boolean => 1 },
+    '+serialsadditems'                        => { is_boolean => 1 },
+    '+skip_serialseq'                         => { is_boolean => 1 },
 );
 
 1;

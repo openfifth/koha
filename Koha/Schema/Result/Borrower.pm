@@ -2257,8 +2257,8 @@ Composing rels: L</user_permissions> -> permission
 __PACKAGE__->many_to_many("permissions", "user_permissions", "permission");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-03-20 16:26:45
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:7JCcuJtA4l9ete9FE8sD0g
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-20 06:48:51
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:36yA+m2XGrQ9Dsx6bZDrqw
 
 __PACKAGE__->belongs_to(
   "library",

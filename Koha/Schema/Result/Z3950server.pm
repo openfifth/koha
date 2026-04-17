@@ -226,8 +226,8 @@ __PACKAGE__->add_columns(
 __PACKAGE__->set_primary_key("id");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07049 @ 2022-10-03 11:30:07
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:1uIZOogM1tV2M7fbpPRDwg
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-20 06:48:52
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:oYRIr4DEx/F2gAGfF9twEw
 
 =head2 koha_object_class
 

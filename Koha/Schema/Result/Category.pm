@@ -507,11 +507,6 @@ sub koha_objects_class {
 }
 
 __PACKAGE__->add_columns(
-    'print_notice_charge',
-    { data_type => 'decimal', default_value => '0.000000', is_nullable => 1, size => [28, 6] },
-);
-
-__PACKAGE__->add_columns(
     '+can_be_guarantee'                       => { is_boolean => 1 },
     '+can_place_ill_in_opac'                  => { is_boolean => 1 },
     '+change_password'                        => { is_boolean => 1 },

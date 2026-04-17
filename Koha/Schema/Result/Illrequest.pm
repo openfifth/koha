@@ -369,6 +369,26 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 status_alias
+
+Type: belongs_to
+
+Related object: L<Koha::Schema::Result::AuthorisedValue>
+
+=cut
+
+__PACKAGE__->belongs_to(
+  "status_alias",
+  "Koha::Schema::Result::AuthorisedValue",
+  { authorised_value => "status_alias" },
+  {
+    is_deferrable => 1,
+    join_type     => "LEFT",
+    on_delete     => "SET NULL",
+    on_update     => "CASCADE",
+  },
+);
+
 
 # Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-05-24 16:32:52
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:HB+SgwXuyzyRq01OslJA8w
