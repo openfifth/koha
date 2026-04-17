@@ -25,7 +25,7 @@ use Koha::Script -cron;
 use C4::Reserves;
 use C4::Log qw( cronlogaction );
 use Koha::Holds;
-use Koha::Calendar;
+use Koha::Library::Calendar;
 use Koha::Libraries;
 
 cronlogaction();

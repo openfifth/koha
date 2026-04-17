@@ -102,7 +102,7 @@ use Koha::AuthorisedValues;
 use Koha::BackgroundJob::BatchUpdateBiblioHoldsQueue;
 use Koha::Biblioitems;
 use Koha::DateUtils qw( dt_from_string );
-use Koha::Calendar;
+use Koha::Library::Calendar;
 use Koha::Checkouts;
 use Koha::ILL::Requests;
 use Koha::Items;
@@ -1561,7 +1561,7 @@ sub checkHighHolds {
                 branchcode   => $branchcode,
             }
         );
-        my $calendar = Koha::Calendar->new( branchcode => $branchcode, days_mode => $daysmode );
+        my $calendar = Koha::Library::Calendar->new( branchcode => $branchcode, days_mode => $daysmode );
 
         my $orig_due = C4::Circulation::CalcDateDue( $issuedate, $itype, $branchcode, $patron );
 
@@ -3049,7 +3049,7 @@ sub _calculate_new_debar_dt {
 
         # Use the calendar or not to calculate the debarment date
         if ( C4::Context->preference('SuspensionsCalendar') eq 'noSuspensionsWhenClosed' ) {
-            my $calendar = Koha::Calendar->new(
+            my $calendar = Koha::Library::Calendar->new(
                 branchcode => $branchcode,
                 days_mode  => 'Calendar'
             );
@@ -4341,7 +4341,7 @@ sub CalcDateDue {
         } else {    # days
             $dur = DateTime::Duration->new( days => $loanlength->{$length_key} );
         }
-        my $calendar = Koha::Calendar->new( branchcode => $branch, days_mode => $daysmode );
+        my $calendar = Koha::Library::Calendar->new( branchcode => $branch, days_mode => $daysmode );
         $datedue = $calendar->addDuration( $datedue, $dur, $loanlength->{lengthunit} ) if $dur;
         if ( $loanlength->{lengthunit} eq 'days' ) {
             $datedue->set_hour(23);
@@ -4379,7 +4379,7 @@ sub CalcDateDue {
             }
         }
         if ( $daysmode ne 'Days' ) {
-            my $calendar = Koha::Calendar->new( branchcode => $branch, days_mode => $daysmode );
+            my $calendar = Koha::Library::Calendar->new( branchcode => $branch, days_mode => $daysmode );
             if ( $calendar->is_holiday($datedue) ) {
 
                 # Don't return on a closed day

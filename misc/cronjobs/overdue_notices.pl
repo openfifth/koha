@@ -33,7 +33,7 @@ use C4::Overdues             qw( GetOverdueMessageTransportTypes parse_overdues_
 use C4::Log                  qw( cronlogaction );
 use Koha::Patron::Debarments qw( AddUniqueDebarment );
 use Koha::DateUtils          qw( dt_from_string output_pref );
-use Koha::Calendar;
+use Koha::Library::Calendar;
 use Koha::Libraries;
 use Koha::Acquisition::Currencies;
 use Koha::Patrons;
@@ -486,7 +486,7 @@ my %seen = map { $_ => 1 } @branches;
 foreach my $branchcode (@branches) {
     my $calendar;
     if ( C4::Context->preference('OverdueNoticeCalendar') ) {
-        $calendar = Koha::Calendar->new( branchcode => $branchcode );
+        $calendar = Koha::Library::Calendar->new( branchcode => $branchcode );
         if ( $calendar->is_holiday($date_to_run) ) {
             next;
         }
