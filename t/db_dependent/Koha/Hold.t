@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 25;
+use Test::More tests => 26;
 
 use Test::Exception;
 use Test::MockModule;
@@ -2339,9 +2339,9 @@ subtest 'calculate_hold_fee() tests' => sub {
             categorycode => undef,
             itemtype     => undef,
             rules        => {
-                reservesallowed => 10,
+                reservesallowed  => 10,
                 holds_per_record => 10,
-                holds_per_day => 10
+                holds_per_day    => 10
             }
         }
     );
@@ -2350,18 +2350,18 @@ subtest 'calculate_hold_fee() tests' => sub {
     # These rules don't use categorycode parameter
     Koha::CirculationRules->set_rule(
         {
-            branchcode   => $library->branchcode,
-            itemtype     => undef,
-            rule_name    => 'holdallowed',
-            rule_value   => 'from_any_library'
+            branchcode => $library->branchcode,
+            itemtype   => undef,
+            rule_name  => 'holdallowed',
+            rule_value => 'from_any_library'
         }
     );
     Koha::CirculationRules->set_rule(
         {
-            branchcode   => $library->branchcode,
-            itemtype     => undef,
-            rule_name    => 'hold_fulfillment_policy',
-            rule_value   => 'any'
+            branchcode => $library->branchcode,
+            itemtype   => undef,
+            rule_name  => 'hold_fulfillment_policy',
+            rule_value => 'any'
         }
     );
 
@@ -2370,29 +2370,29 @@ subtest 'calculate_hold_fee() tests' => sub {
     # Create multiple items with different itemtypes and fees at the pickup library
     my $item1 = $builder->build_sample_item(
         {
-            biblionumber => $biblio->biblionumber,
-            homebranch   => $library->branchcode,
+            biblionumber  => $biblio->biblionumber,
+            homebranch    => $library->branchcode,
             holdingbranch => $library->branchcode,
-            itype        => $itemtype1->{itemtype},
-            notforloan   => 0,
+            itype         => $itemtype1->{itemtype},
+            notforloan    => 0,
         }
     );
     my $item2 = $builder->build_sample_item(
         {
-            biblionumber => $biblio->biblionumber,
-            homebranch   => $library->branchcode,
+            biblionumber  => $biblio->biblionumber,
+            homebranch    => $library->branchcode,
             holdingbranch => $library->branchcode,
-            itype        => $itemtype2->{itemtype},
-            notforloan   => 0,
+            itype         => $itemtype2->{itemtype},
+            notforloan    => 0,
         }
     );
     my $item3 = $builder->build_sample_item(
         {
-            biblionumber => $biblio->biblionumber,
-            homebranch   => $library->branchcode,
+            biblionumber  => $biblio->biblionumber,
+            homebranch    => $library->branchcode,
             holdingbranch => $library->branchcode,
-            itype        => $itemtype3->{itemtype},
-            notforloan   => 0,
+            itype         => $itemtype3->{itemtype},
+            notforloan    => 0,
         }
     );
 
@@ -2443,11 +2443,11 @@ subtest 'calculate_hold_fee() tests' => sub {
     # Test 5: Add another item with same fee to test most_common properly
     my $item4 = $builder->build_sample_item(
         {
-            biblionumber => $biblio->biblionumber,
-            homebranch   => $library->branchcode,
+            biblionumber  => $biblio->biblionumber,
+            homebranch    => $library->branchcode,
             holdingbranch => $library->branchcode,
-            itype        => $itemtype1->{itemtype},
-            notforloan   => 0,
+            itype         => $itemtype1->{itemtype},
+            notforloan    => 0,
         }
     );
     $fee = $title_hold->calculate_hold_fee();
@@ -2481,7 +2481,10 @@ subtest 'calculate_hold_fee() tests' => sub {
 
     t::lib::Mocks::mock_preference( 'TitleHoldFeeStrategy', 'highest' );
     $fee = $title_hold->calculate_hold_fee();
-    is( $fee, 3.00, 'Title-level hold: items with negative notforloan (on order, holdable) included in fee calculation' );
+    is(
+        $fee, 3.00,
+        'Title-level hold: items with negative notforloan (on order, holdable) included in fee calculation'
+    );
 
     # Restore for remaining tests
     $item2->notforloan(1)->store;
@@ -2514,11 +2517,11 @@ subtest 'calculate_hold_fee() tests' => sub {
 
     my $item_free = $builder->build_sample_item(
         {
-            biblionumber => $biblio->biblionumber,
-            homebranch   => $library->branchcode,
+            biblionumber  => $biblio->biblionumber,
+            homebranch    => $library->branchcode,
             holdingbranch => $library->branchcode,
-            itype        => $itemtype_free->{itemtype},
-            notforloan   => 0,
+            itype         => $itemtype_free->{itemtype},
+            notforloan    => 0,
         }
     );
 
@@ -2811,5 +2814,4 @@ subtest '_move_to_old() account migration tests' => sub {
 
     $schema->storage->txn_rollback;
 };
-
 

@@ -17,7 +17,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 20;
+use Test::More tests => 21;
 use Test::NoWarnings;
 use Test::MockModule;
 use Test::Mojo;
