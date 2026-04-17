@@ -110,11 +110,13 @@ return {
                         q{ UPDATE vendor_edi_accounts SET file_transport_id = ? WHERE id = ? },
                         undef, $new_transport_id, $acct->{id}
                     );
-                    say_success( $out,
+                    say_success(
+                        $out,
                         "Migrated vendor_edi_account $acct->{id}: sftp_server_id=$acct->{sftp_server_id} -> file_transport_id=$new_transport_id"
                     );
                 } else {
-                    say_warning( $out,
+                    say_warning(
+                        $out,
                         "No matching file_transport found for vendor_edi_account $acct->{id} (sftp_server_id=$acct->{sftp_server_id})"
                     );
                 }
