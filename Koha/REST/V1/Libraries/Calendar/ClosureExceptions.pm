@@ -24,7 +24,8 @@ use Mojo::Base 'Mojolicious::Controller';
 use Koha::Libraries;
 use Koha::Calendar::Exceptions;
 
-use Try::Tiny qw( catch try );
+use Scalar::Util qw( blessed );
+use Try::Tiny    qw( catch try );
 
 =head1 API
 
@@ -43,7 +44,9 @@ sub add {
     return $c->render_resource_not_found("Library") unless $library;
 
     return try {
-        my $closure = $library->calendar->add_exception( $c->req->json );
+        my $closure =
+            Koha::Calendar::Exception->new_from_api( { %{ $c->req->json }, library_id => $library->branchcode } );
+        $closure->store;
         $c->res->headers->location( $c->req->url->to_string . '/' . $closure->id );
         return $c->render( status => 201, openapi => $c->objects->to_api($closure) );
     } catch {
