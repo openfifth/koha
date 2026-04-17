@@ -16,20 +16,7 @@
                 ...$data,
                 resourceForm,
                 saveDropdownButtonActions,
-                cancelRoute:
-                    editMode && resourceToSave
-                        ? {
-                              name: instancedResource.components.show,
-                              params: {
-                                  [instancedResource.idAttr]:
-                                      resourceToSave[instancedResource.idAttr],
-                              },
-                          }
-                        : {
-                              name:
-                                  instancedResource.components.list ||
-                                  instancedResource.navigationOnFormSave,
-                          },
+                cancelRoute: cancelRoute,
             }"
         />
         <form
@@ -119,27 +106,25 @@
                     <ButtonSubmit :title="$__('Save')" />
                 </DropdownButtons>
                 <router-link
-                    :to="
-                        editMode && resourceToSave
-                            ? {
-                                  name: instancedResource.components.show,
-                                  params: {
-                                      [instancedResource.idAttr]:
-                                          resourceToSave[
-                                              instancedResource.idAttr
-                                          ],
-                                  },
-                              }
-                            : {
-                                  name:
-                                      instancedResource.components.list ||
-                                      instancedResource.navigationOnFormSave,
-                              }
-                    "
+                    v-if="cancelRoute"
+                    :to="cancelRoute"
                     role="button"
                     class="cancel"
                     >{{ $__("Cancel") }}</router-link
                 >
+                <a
+                    v-else
+                    type="button"
+                    class="cancel"
+                    @click="
+                        instancedResource.navigationOnFormSave(
+                            resource,
+                            instancedResource.router
+                        )
+                    "
+                >
+                    {{ $__("Cancel") }}
+                </a>
             </fieldset>
         </form>
     </div>
@@ -277,14 +262,18 @@ export default {
             }
             onFormSave($event, resourceToSave).then(resource => {
                 if (resource) {
-                    router.push({
-                        name: navigationAction,
-                        ...(idParamRequired && {
-                            params: {
-                                [idAttr]: resource[idAttr],
-                            },
-                        }),
-                    });
+                    if (typeof navigationAction === "function") {
+                        navigationAction(resource, router);
+                    } else {
+                        router.push({
+                            name: navigationAction,
+                            ...(idParamRequired && {
+                                params: {
+                                    [idAttr]: resource[idAttr],
+                                },
+                            }),
+                        });
+                    }
                 }
             });
         };
@@ -297,6 +286,19 @@ export default {
                 formToSubmit.value.requestSubmit();
             }
         };
+        const cancelRoute = computed(() => {
+            const { components, navigationOnFormSave, idAttr } =
+                props.instancedResource;
+            if (editMode.value && resourceToSave.value) {
+                return {
+                    name: components.show,
+                    params: { [idAttr]: resourceToSave.value[idAttr] },
+                };
+            }
+            const dest = components.list || navigationOnFormSave;
+            return typeof dest === "function" ? null : { name: dest };
+        });
+
         const saveOptionSelected = ref(
             props.instancedResource.navigationOnFormSave
         );
@@ -367,6 +369,7 @@ export default {
             saveAndNavigate,
             editMode,
             saveDropdownButtonActions,
+            cancelRoute,
         };
     },
     props: {
