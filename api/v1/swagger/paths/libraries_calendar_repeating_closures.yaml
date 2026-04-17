@@ -33,6 +33,25 @@
     responses:
       "201":
         description: Closure created
+        schema:
+          type: object
+          properties:
+            library_repeating_closure_id:
+              type: integer
+              description: Internally assigned identifier
+            library_id:
+              type: string
+              description: Library the closure belongs to
+            day:
+              type: integer
+              description: Day of month
+            month:
+              type: integer
+              description: Month
+            title:
+              type: string
+            description:
+              type: string
       "401":
         description: Authentication required
         schema:
@@ -84,6 +103,25 @@
     responses:
       "200":
         description: A repeating closure
+        schema:
+          type: object
+          properties:
+            library_repeating_closure_id:
+              type: integer
+              description: Internally assigned identifier
+            library_id:
+              type: string
+              description: Library the closure belongs to
+            day:
+              type: integer
+              description: Day of month
+            month:
+              type: integer
+              description: Month
+            title:
+              type: string
+            description:
+              type: string
       "400":
         description: Bad request
         schema:
@@ -130,6 +168,25 @@
     responses:
       "200":
         description: Updated closure
+        schema:
+          type: object
+          properties:
+            library_repeating_closure_id:
+              type: integer
+              description: Internally assigned identifier
+            library_id:
+              type: string
+              description: Library the closure belongs to
+            day:
+              type: integer
+              description: Day of month
+            month:
+              type: integer
+              description: Month
+            title:
+              type: string
+            description:
+              type: string
       "400":
         description: Bad request
         schema:

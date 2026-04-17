@@ -30,6 +30,23 @@
     responses:
       "201":
         description: Exception created
+        schema:
+          type: object
+          properties:
+            library_closure_exception_id:
+              type: integer
+              description: Internally assigned identifier
+            library_id:
+              type: string
+              description: Library the exception belongs to
+            date:
+              type: string
+              format: date
+              description: Date (ISO 8601)
+            title:
+              type: string
+            description:
+              type: string
       "400":
         description: Bad request
         schema:
@@ -73,6 +90,23 @@
     responses:
       "200":
         description: An exception
+        schema:
+          type: object
+          properties:
+            library_closure_exception_id:
+              type: integer
+              description: Internally assigned identifier
+            library_id:
+              type: string
+              description: Library the exception belongs to
+            date:
+              type: string
+              format: date
+              description: Date (ISO 8601)
+            title:
+              type: string
+            description:
+              type: string
       "400":
         description: Bad request
         schema:
@@ -119,6 +153,23 @@
     responses:
       "200":
         description: Updated exception
+        schema:
+          type: object
+          properties:
+            library_closure_exception_id:
+              type: integer
+              description: Internally assigned identifier
+            library_id:
+              type: string
+              description: Library the exception belongs to
+            date:
+              type: string
+              format: date
+              description: Date (ISO 8601)
+            title:
+              type: string
+            description:
+              type: string
       "400":
         description: Bad request
         schema:
