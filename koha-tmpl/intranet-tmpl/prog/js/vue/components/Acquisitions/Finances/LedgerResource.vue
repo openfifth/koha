@@ -222,16 +222,9 @@ export default {
                     type: props.routeAction === "edit" ? "display" : "number",
                     label: $__("Ledger amount"),
                     group: $__("Financial controlling"),
-                    defaultValue: 0,
                     size: 6,
                     format: (value, resource) =>
                         formatValueWithCurrency(value, resource.currency),
-                    formatInputValue: (value, resource) => {
-                        return formatValueWithCurrency(
-                            value,
-                            resource.currency
-                        );
-                    },
                     toolTip:
                         props.routeAction === "edit"
                             ? null

@@ -232,18 +232,6 @@ export default {
                             calculateDistributedAmount(resource);
                         },
                     },
-                    formatInputValue: {
-                        type: "function",
-                        value: (value, resource) => {
-                            const isPercentage = resource.percentage;
-                            if (isPercentage) {
-                                return `${formatFloatingPoint(value)}%`;
-                            }
-                            const currency =
-                                resource.currency || getActiveCurrency.currency;
-                            return formatValueWithCurrency(value, currency);
-                        },
-                    },
                 },
                 events: [
                     {

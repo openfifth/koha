@@ -971,12 +971,6 @@ export default {
                     type: "number",
                     defaultValue: 1.0,
                     size: 6,
-                    formatInputValue: (value, resource) => {
-                        const currency =
-                            resource?.fund_distributions?.[0]?.fund?.currency ||
-                            getActiveCurrency.currency;
-                        return formatValueWithCurrency(value, currency);
-                    },
                     hideIn: ["List", "Show", "Search"],
                 },
                 {
