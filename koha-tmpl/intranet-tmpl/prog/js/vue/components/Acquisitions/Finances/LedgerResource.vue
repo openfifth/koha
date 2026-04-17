@@ -671,6 +671,133 @@ export default {
                           },
                       ]
                     : []),
+                ...(resource.funds?.length
+                    ? [
+                          {
+                              type: "component",
+                              name: $__("Funds"),
+                              componentPath:
+                                  "@koha-vue/components/RelationshipTableDisplay.vue",
+                              componentProps: {
+                                  tableOptions: {
+                                      type: "object",
+                                      value: {
+                                          columns: [
+                                              {
+                                                  title: __("Name"),
+                                                  data: "name:fund_id",
+                                                  searchable: true,
+                                                  orderable: true,
+                                                  render: function (
+                                                      data,
+                                                      type,
+                                                      row,
+                                                      meta
+                                                  ) {
+                                                      return (
+                                                          '<a href="/cgi-bin/koha/acquisitions/finances/fund/' +
+                                                          row.fund_id +
+                                                          '" class="showFund">' +
+                                                          escape_str(
+                                                              `${row.name}`
+                                                          ) +
+                                                          "</a>"
+                                                      );
+                                                  },
+                                              },
+                                              {
+                                                  title: __("Code"),
+                                                  data: "code",
+                                                  searchable: true,
+                                                  orderable: true,
+                                              },
+                                              {
+                                                  title: __("Description"),
+                                                  data: "description",
+                                                  searchable: true,
+                                                  orderable: true,
+                                              },
+                                              {
+                                                  title: __("Amount"),
+                                                  data: "fund_amount",
+                                                  searchable: true,
+                                                  orderable: true,
+                                              },
+                                              {
+                                                  title: __("Status"),
+                                                  data: "status",
+                                                  searchable: true,
+                                                  orderable: true,
+                                                  render: function (
+                                                      data,
+                                                      type,
+                                                      row,
+                                                      meta
+                                                  ) {
+                                                      return row.status
+                                                          ? __("Active")
+                                                          : __("Inactive");
+                                                  },
+                                              },
+                                          ],
+                                          url:
+                                              APIClient.acquisition.httpClient
+                                                  ._baseURL + "funds",
+                                          table_settings: null,
+                                          add_filters: true,
+                                          actions: {
+                                              0: [
+                                                  {
+                                                      showFund: {
+                                                          callback: (
+                                                              fund,
+                                                              dt,
+                                                              event
+                                                          ) => {
+                                                              event?.preventDefault();
+                                                              baseResource.router.push(
+                                                                  {
+                                                                      name: "FundShow",
+                                                                      params: {
+                                                                          fund_id:
+                                                                              fund.fund_id,
+                                                                      },
+                                                                  }
+                                                              );
+                                                          },
+                                                      },
+                                                  },
+                                              ],
+                                          },
+                                      },
+                                  },
+                                  apiClient: {
+                                      type: "object",
+                                      value: APIClient.acquisition.funds,
+                                  },
+                                  filters: {
+                                      type: "filter",
+                                      keys: {
+                                          ledger_id: {
+                                              property: "ledger_id",
+                                          },
+                                      },
+                                  },
+                                  resource: {
+                                      type: "resource",
+                                  },
+                                  resourceName: {
+                                      type: "string",
+                                      value: "fund",
+                                  },
+                                  resourceNamePlural: {
+                                      type: "string",
+                                      value: "funds",
+                                  },
+                              },
+                          },
+                      ]
+                    : []),
             ];
         };
 

@@ -198,7 +198,7 @@ export default {
                         orderable: true,
                         render(data, type, row, meta) {
                             return row.parent_fund
-                                ? '<a href="/cgi-bin/koha/acquisitions/finances/fund' +
+                                ? '<a href="/cgi-bin/koha/acquisitions/finances/fund/' +
                                       row.parent_fund.fund_id +
                                       '" class="show">' +
                                       escape_str(row.parent_fund.name) +
@@ -796,6 +796,18 @@ export default {
                                                   orderable: true,
                                               },
                                               {
+                                                  title: __("Description"),
+                                                  data: "description",
+                                                  searchable: true,
+                                                  orderable: true,
+                                              },
+                                              {
+                                                  title: __("Amount"),
+                                                  data: "fund_amount",
+                                                  searchable: true,
+                                                  orderable: true,
+                                              },
+                                              {
                                                   title: __("Status"),
                                                   data: "status",
                                                   searchable: true,
@@ -809,23 +821,6 @@ export default {
                                                       return row.status
                                                           ? __("Active")
                                                           : __("Inactive");
-                                                  },
-                                              },
-                                              {
-                                                  title: __("Fund value"),
-                                                  data: "fund_value",
-                                                  searchable: true,
-                                                  orderable: true,
-                                                  render: function (
-                                                      data,
-                                                      type,
-                                                      row,
-                                                      meta
-                                                  ) {
-                                                      return formatValueWithCurrency(
-                                                          row.fund_value,
-                                                          row.currency
-                                                      );
                                                   },
                                               },
                                           ],
