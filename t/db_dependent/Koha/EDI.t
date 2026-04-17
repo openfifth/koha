@@ -1579,6 +1579,49 @@ subtest 'create_edi_order_logging' => sub {
                 description => 'test ean',
                 branchcode  => undef,
                 ean         => '1234567890'
+            }
+        }
+    );
+
+    $result = create_edi_order(
+        {
+            basketno => $empty_basket->basketno,
+            ean      => $ean->{ean}
+        }
+    );
+    ok( !defined $result, 'create_edi_order returns undef when no orderlines for basket' );
+    $logger->warn_is(
+        "No orderlines for basket " . $empty_basket->basketno,
+        'Warning logged when no orderlines for basket'
+    );
+
+    # Test 4: Warning when no matching EAN found
+    $logger->clear();
+    my $basket_with_orders = $builder->build_object( { class => 'Koha::Acquisition::Baskets' } );
+    my $order              = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Orders',
+            value => {
+                basketno    => $basket_with_orders->basketno,
+                orderstatus => 'new'
+            }
+        }
+    );
+
+    $result = create_edi_order(
+        {
+            basketno => $basket_with_orders->basketno,
+            ean      => 'nonexistent_ean'
+        }
+    );
+    ok( !defined $result, 'create_edi_order returns undef when no matching EAN found' );
+    $logger->warn_is(
+        'No matching EAN found for nonexistent_ean',
+        'Warning logged when no matching EAN found'
+    );
+
+    $schema->storage->txn_rollback;
+};
 
 subtest 'LSL and LSQ validation functions' => sub {
     plan tests => 16;
@@ -1613,27 +1656,6 @@ subtest 'LSL and LSQ validation functions' => sub {
         }
     );
 
-    $result = create_edi_order(
-        {
-            basketno => $empty_basket->basketno,
-            ean      => $ean->{ean}
-        }
-    );
-    ok( !defined $result, 'create_edi_order returns undef when no orderlines for basket' );
-    $logger->warn_is(
-        "No orderlines for basket " . $empty_basket->basketno,
-        'Warning logged when no orderlines for basket'
-    );
-
-    # Test 4: Warning when no matching EAN found
-    $logger->clear();
-    my $basket_with_orders = $builder->build_object( { class => 'Koha::Acquisition::Baskets' } );
-    my $order              = $builder->build_object(
-        {
-            class => 'Koha::Acquisition::Orders',
-            value => {
-                basketno    => $basket_with_orders->basketno,
-                orderstatus => 'new'
     my $ccode_av = $builder->build(
         {
             source => 'AuthorisedValue',
@@ -1645,17 +1667,6 @@ subtest 'LSL and LSQ validation functions' => sub {
         }
     );
 
-    $result = create_edi_order(
-        {
-            basketno => $basket_with_orders->basketno,
-            ean      => 'nonexistent_ean'
-        }
-    );
-    ok( !defined $result, 'create_edi_order returns undef when no matching EAN found' );
-    $logger->warn_is(
-        'No matching EAN found for nonexistent_ean',
-        'Warning logged when no matching EAN found'
-    );
     my $quote_message = MockQuoteMessage->new();
 
     # Test valid location code validation
@@ -1925,9 +1936,9 @@ subtest 'duplicate_invoice_blocking' => sub {
             {
                 source => 'VendorEdiAccount',
                 value  => {
-                    description       => 'test vendor',
-                    plugin            => '',
-                    san               => '5013546027173',
+                    description => 'test vendor',
+                    plugin      => '',
+                    san         => '5013546027173',
                 }
             }
         );
@@ -2029,9 +2040,9 @@ subtest 'duplicate_invoice_blocking' => sub {
             {
                 source => 'VendorEdiAccount',
                 value  => {
-                    description       => 'test vendor',
-                    plugin            => '',
-                    san               => '5013546027173',
+                    description => 'test vendor',
+                    plugin      => '',
+                    san         => '5013546027173',
                 }
             }
         );
@@ -2144,9 +2155,9 @@ subtest 'duplicate_invoice_blocking' => sub {
             {
                 source => 'VendorEdiAccount',
                 value  => {
-                    description       => 'test vendor 1',
-                    plugin            => '',
-                    san               => '5013546027173',
+                    description => 'test vendor 1',
+                    plugin      => '',
+                    san         => '5013546027173',
                 }
             }
         );
@@ -2155,9 +2166,9 @@ subtest 'duplicate_invoice_blocking' => sub {
             {
                 source => 'VendorEdiAccount',
                 value  => {
-                    description       => 'test vendor 2',
-                    plugin            => '',
-                    san               => '5013546027999',
+                    description => 'test vendor 2',
+                    plugin      => '',
+                    san         => '5013546027999',
                 }
             }
         );
@@ -2313,9 +2324,9 @@ subtest 'duplicate_invoice_blocking' => sub {
             {
                 source => 'VendorEdiAccount',
                 value  => {
-                    description       => 'test vendor',
-                    plugin            => '',
-                    san               => '5013546027173',
+                    description => 'test vendor',
+                    plugin      => '',
+                    san         => '5013546027173',
                 }
             }
         );
@@ -2451,9 +2462,9 @@ subtest 'duplicate_invoice_blocking' => sub {
             {
                 source => 'VendorEdiAccount',
                 value  => {
-                    description       => 'test vendor',
-                    plugin            => '',
-                    san               => '5013546027173',
+                    description => 'test vendor',
+                    plugin      => '',
+                    san         => '5013546027173',
                 }
             }
         );
@@ -2589,9 +2600,9 @@ subtest 'duplicate_invoice_blocking' => sub {
             {
                 source => 'VendorEdiAccount',
                 value  => {
-                    description       => 'test vendor',
-                    plugin            => '',
-                    san               => '5013546027173',
+                    description => 'test vendor',
+                    plugin      => '',
+                    san         => '5013546027173',
                 }
             }
         );
@@ -2725,9 +2736,9 @@ subtest 'duplicate_invoice_blocking' => sub {
             {
                 source => 'VendorEdiAccount',
                 value  => {
-                    description       => 'test vendor',
-                    plugin            => '',
-                    san               => '5013546027173',
+                    description => 'test vendor',
+                    plugin      => '',
+                    san         => '5013546027173',
                 }
             }
         );
