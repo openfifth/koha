@@ -309,8 +309,7 @@ for my $spec (@ledger_specs) {
         my $fund = Koha::Acquisition::Finances::Fund->new(
             {
                 %fund_attrs,
-                ledger_id        => $ledger->ledger_id,
-                fiscal_period_id => $ledger->fiscal_period_id,
+                ledger_id => $ledger->ledger_id,
             }
         )->store( { no_cascade => 1 } );
         print "    Created fund: " . $fund->name . " (id=" . $fund->fund_id . ")\n";
@@ -341,9 +340,8 @@ for my $spec (@ledger_specs) {
                 my $sub_fund = Koha::Acquisition::Finances::Fund->new(
                     {
                         %$sub_fund_data,
-                        ledger_id        => $ledger->ledger_id,
-                        fiscal_period_id => $ledger->fiscal_period_id,
-                        parent_fund_id   => $fund->fund_id,
+                        ledger_id      => $ledger->ledger_id,
+                        parent_fund_id => $fund->fund_id,
                     }
                 )->store( { no_cascade => 1 } );
                 print "      Created sub-fund: " . $sub_fund->name . " (id=" . $sub_fund->fund_id . ")\n";
