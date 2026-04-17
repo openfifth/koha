@@ -11,10 +11,14 @@
             <label :for="`additional_field_` + additional_field_value.field_id">
                 {{ additional_field_value.field_label }}:
             </label>
-            <template v-if="isMultipleValues(additional_field_value.value_str)">
+            <template
+                v-if="
+                    parseValueStr(additional_field_value.value_str).length > 1
+                "
+            >
                 <div class="additional-field-values">
                     <div
-                        v-for="(value, index) in splitValues(
+                        v-for="(value, index) in parseValueStr(
                             additional_field_value.value_str
                         )"
                         :key="index"
@@ -24,33 +28,23 @@
                     </div>
                 </div>
             </template>
-            <span v-else> {{ additional_field_value.value_str }} </span>
+            <span v-else>
+                {{ parseValueStr(additional_field_value.value_str)[0] ?? "" }}
+            </span>
         </li>
     </template>
 </template>
 
 <script>
 import { ref } from "vue";
+import { parseValueStr } from "../composables/additionalFields.js";
 export default {
     setup() {
         const fields_to_display = ref([]);
 
-        const isMultipleValues = value_str => {
-            return value_str && value_str.includes(",");
-        };
-
-        const splitValues = value_str => {
-            if (!value_str) return [];
-            return value_str
-                .split(",")
-                .map(v => v.trim())
-                .filter(v => v);
-        };
-
         return {
             fields_to_display,
-            isMultipleValues,
-            splitValues,
+            parseValueStr,
         };
     },
     name: "AdditionalFieldsDisplay",
