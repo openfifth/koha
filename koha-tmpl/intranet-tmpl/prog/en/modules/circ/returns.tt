@@ -1419,7 +1419,7 @@
                     [% IF bc.replace('\s+', '').length %][% remaining_count = remaining_count + 1 %][% END %]
                 [% END %]
             [% END %]
-            <div id="batchConfirmModal" class="modal" tabindex="-1" role="dialog" data-bs-backdrop="static" data-bs-keyboard="false">
+            <div id="batchConfirmModal" class="modal" tabindex="-1" role="dialog" aria-labelledby="batchConfirmLabel" data-bs-backdrop="static" data-bs-keyboard="false">
                 <div class="modal-dialog" role="document">
                     <form method="post" action="/cgi-bin/koha/circ/returns.pl" id="batch-confirm-form">
                         [% INCLUDE 'csrf-token.inc' %]
@@ -1432,7 +1432,7 @@
                         [% IF confirm_transfer_was_set %]<input type="hidden" name="confirm_transfer" value="1" />[% END %]
                         <div class="modal-content">
                             <div class="modal-header">
-                                <h3 class="modal-title">Batch paused: confirmation required</h3>
+                                <h3 class="modal-title" id="batchConfirmLabel">Batch paused: confirmation required</h3>
                             </div>
                             <div class="modal-body">
                                 <p>
