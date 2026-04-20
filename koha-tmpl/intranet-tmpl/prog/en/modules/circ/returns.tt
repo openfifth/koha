@@ -1791,14 +1791,14 @@
             if ( $('#batchConfirmModal').length ) {
                 var $bcForm = $('#batch-confirm-form');
                 var bcKind  = $('#batch-confirm-action').data('kind');
-                $('#batch-confirm-ok').on('click', function () {
+                $('#batch-confirm-ok').off('click.batchConfirm').on('click.batchConfirm', function () {
                     var name = ( bcKind === 'needs_confirm' ) ? 'multiple_confirm' : 'confirm_items_bundle_return';
                     $('<input>').attr({ type: 'hidden', name: name, value: '1' }).appendTo($bcForm);
                 });
-                $('#batch-confirm-skip').on('click', function () {
+                $('#batch-confirm-skip').off('click.batchConfirm').on('click.batchConfirm', function () {
                     $('<input>').attr({ type: 'hidden', name: 'batch_skip_confirm', value: '1' }).appendTo($bcForm);
                 });
-                $('#batch-confirm-cancel').on('click', function () {
+                $('#batch-confirm-cancel').off('click.batchConfirm').on('click.batchConfirm', function () {
                     $('#batchConfirmModal').modal('hide');
                 });
                 $('#batchConfirmModal').modal('show');
