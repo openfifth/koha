@@ -194,10 +194,18 @@ sub process_batch_checkin_item {
         return \%result;
     }
 
+    # The librarian-facing "Automatically capture holds" and "Automatically
+    # create transfers" checkboxes are UI affordances; the sysprefs HoldsAutoFill
+    # and AutomaticItemReturn are authoritative. Coerce the form params so a
+    # client-side bypass cannot skip hold capture or transfer creation when the
+    # system preference requires them.
+    my $should_confirm_hold     = $query->param('confirm_hold')     || C4::Context->preference('HoldsAutoFill');
+    my $should_confirm_transfer = $query->param('confirm_transfer') || C4::Context->preference('AutomaticItemReturn');
+
     my ( $returned, $messages, $issue, $borrower );
     {
         local $ENV{OVERRIDE_SYSPREF_AutomaticItemReturn} = 1
-            if $query->param('confirm_transfer');
+            if $should_confirm_transfer;
         ( $returned, $messages, $issue, $borrower ) = AddReturn( $barcode, $branch, $exemptfine, $return_date );
     }
 
@@ -211,13 +219,18 @@ sub process_batch_checkin_item {
         $result{borrowernumber}     = $borrower->{borrowernumber};
     }
 
-    if ( $query->param('confirm_hold') && $messages->{ResFound} ) {
+    if ( $should_confirm_hold && $messages->{ResFound} ) {
         my $resFound = $messages->{ResFound};
         my $hold     = Koha::Holds->find( $resFound->{reserve_id} );
         my $diffBranchSend;
         $diffBranchSend = $resFound->{branchcode}
             if $branch ne $resFound->{branchcode};
-        confirm_hold( $item, $hold, $diffBranchSend, $desk_id ) if $hold;
+        if ($hold) {
+            confirm_hold( $item, $hold, $diffBranchSend, $desk_id );
+        } else {
+            Koha::Logger->get->warn(
+                "Hold $resFound->{reserve_id} for item " . $item->itemnumber . " not found during batch confirm" );
+        }
     }
 
     if ( $messages->{BadBarcode} ) {
@@ -1000,8 +1013,13 @@ if ( $messages->{'ResFound'} ) {
         my $biblio = $item->biblio;
 
         my $diffBranchSend = !$branchCheck ? $reserve->{branchcode} : undef;
-        my $hold           = Koha::Holds->find( $reserve->{reserve_id} );      #TODO Hold not found
-        confirm_hold( $item, $hold, $diffBranchSend, $desk_id ) if $hold;
+        my $hold           = Koha::Holds->find( $reserve->{reserve_id} );
+        if ($hold) {
+            confirm_hold( $item, $hold, $diffBranchSend, $desk_id );
+        } else {
+            Koha::Logger->get->warn(
+                "Hold $reserve->{reserve_id} for item $itemnumber not found during HoldsAutoFill confirm");
+        }
 
         $template->param(
             hold_auto_filled => 1,
