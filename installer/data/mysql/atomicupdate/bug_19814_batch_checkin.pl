@@ -32,12 +32,12 @@ return {
 
         $dbh->do(
             q{
-                INSERT IGNORE INTO authorised_values(category, authorised_value, lib) VALUES
-                ('BATCH_CHECKIN_DEFAULTS', 'BATCH_CHECKIN_ENABLED',          'Enable batch mode for multiple returns'),
-                ('BATCH_CHECKIN_DEFAULTS', 'BATCH_CHECKIN_KEEP_SELECTION',   'Remember batch mode settings'),
-                ('BATCH_CHECKIN_DEFAULTS', 'BATCH_CHECKIN_IGNORE_NOTISSUED', "Hide 'not checked out' warnings"),
-                ('BATCH_CHECKIN_DEFAULTS', 'BATCH_CHECKIN_CONFIRM_HOLD',     'Automatically capture holds'),
-                ('BATCH_CHECKIN_DEFAULTS', 'BATCH_CHECKIN_CONFIRM_TRANSFER', 'Automatically create transfers')
+                INSERT IGNORE INTO authorised_values(category, authorised_value, lib, lib_opac) VALUES
+                ('BATCH_CHECKIN_DEFAULTS', 'BATCH_CHECKIN_ENABLED',          'Enable batch mode for multiple returns', 'Enable batch mode for multiple returns'),
+                ('BATCH_CHECKIN_DEFAULTS', 'BATCH_CHECKIN_KEEP_SELECTION',   'Remember batch mode settings',           'Remember batch mode settings'),
+                ('BATCH_CHECKIN_DEFAULTS', 'BATCH_CHECKIN_IGNORE_NOTISSUED', "Hide 'not checked out' warnings",        "Hide 'not checked out' warnings"),
+                ('BATCH_CHECKIN_DEFAULTS', 'BATCH_CHECKIN_CONFIRM_HOLD',     'Automatically capture holds',            'Automatically capture holds'),
+                ('BATCH_CHECKIN_DEFAULTS', 'BATCH_CHECKIN_CONFIRM_TRANSFER', 'Automatically create transfers',         'Automatically create transfers')
             }
         );
         say_success( $out, "Added authorised values for 'BATCH_CHECKIN_DEFAULTS'" );
