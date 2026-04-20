@@ -134,6 +134,30 @@ sub confirm_hold {
     }
 }
 
+# When AddReturn flags a WrongTransfer, the existing transfer row must be
+# replaced so the audit trail records that the item arrived at an unexpected
+# branch on its way to the real destination. Shared between the single-item
+# post-processing block and the batch loop.
+sub repair_wrong_transfer {
+    my ($itemnumber) = @_;
+    return unless $itemnumber;
+
+    my $item = Koha::Items->find($itemnumber);
+    return unless $item;
+
+    my $old_transfer = $item->get_transfer;
+    return unless $old_transfer;
+
+    return $item->request_transfer(
+        {
+            to            => $old_transfer->to_library,
+            reason        => $old_transfer->reason,
+            replace       => 'WrongTransfer',
+            ignore_limits => 1,
+        }
+    );
+}
+
 # Process a single item for batch checkin. Returns a hashref
 # shaped for the batch_results template loop.
 sub process_batch_checkin_item {
@@ -217,6 +241,13 @@ sub process_batch_checkin_item {
         $result{borrower_firstname} = $borrower->{firstname};
         $result{borrower_surname}   = $borrower->{surname};
         $result{borrowernumber}     = $borrower->{borrowernumber};
+    }
+
+    # Mirror the single-item post-processing: when the item arrived at the
+    # wrong branch en route to its real destination, replace the transfer
+    # row so the audit trail records the actual holding branch.
+    if ( $messages->{WrongTransfer} && !$messages->{WasTransfered} ) {
+        repair_wrong_transfer( $messages->{WrongTransferItem} );
     }
 
     if ( $should_confirm_hold && $messages->{ResFound} ) {
@@ -971,20 +1002,8 @@ if ( $messages->{'WrongTransfer'} and not $messages->{'WasTransfered'} ) {
     );
 
     # Update the transfer to reflect the new item holdingbranch
-    my $item         = Koha::Items->find( $messages->{'WrongTransferItem'} );
-    my $old_transfer = $item->get_transfer;
-
-    # We need to ignore limits here. While we can't transfer from this branch, it is, wrongly, here right now
-    # and that fact must be recorded
-    my $new_transfer = $item->request_transfer(
-        {
-            to            => $old_transfer->to_library,
-            reason        => $old_transfer->reason,
-            replace       => 'WrongTransfer',
-            ignore_limits => 1
-        }
-    );
-    $template->param( NewTransfer => $new_transfer->id );
+    my $new_transfer = repair_wrong_transfer( $messages->{'WrongTransferItem'} );
+    $template->param( NewTransfer => $new_transfer->id ) if $new_transfer;
 
     my $reserve = $messages->{'ResFound'};
     if ($reserve) {
