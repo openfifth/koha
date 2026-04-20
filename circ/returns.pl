@@ -542,9 +542,13 @@ if ( $batch_barcodes && $op eq 'cud-checkin' ) {
     }
 
     $template->param(
-        batch_results            => \@batch_results,
-        confirm_hold_was_set     => scalar $query->param('confirm_hold'),
-        confirm_transfer_was_set => scalar $query->param('confirm_transfer'),
+        batch_results                        => \@batch_results,
+        confirm_hold_was_set                 => scalar $query->param('confirm_hold'),
+        confirm_transfer_was_set             => scalar $query->param('confirm_transfer'),
+        batch_state_exemptfine               => scalar $query->param('exemptfine'),
+        batch_state_dropboxmode              => scalar $query->param('dropboxmode'),
+        batch_state_return_date_override     => scalar $query->param('return_date_override'),
+        batch_state_forgivemanualholdsexpire => scalar $query->param('forgivemanualholdsexpire'),
     );
 
     if (@batch_results) {
@@ -696,9 +700,13 @@ if (
     }
 
     $template->param(
-        batch_results            => \@completed,
-        confirm_hold_was_set     => scalar $query->param('confirm_hold'),
-        confirm_transfer_was_set => scalar $query->param('confirm_transfer'),
+        batch_results                        => \@completed,
+        confirm_hold_was_set                 => scalar $query->param('confirm_hold'),
+        confirm_transfer_was_set             => scalar $query->param('confirm_transfer'),
+        batch_state_exemptfine               => scalar $query->param('exemptfine'),
+        batch_state_dropboxmode              => scalar $query->param('dropboxmode'),
+        batch_state_return_date_override     => scalar $query->param('return_date_override'),
+        batch_state_forgivemanualholdsexpire => scalar $query->param('forgivemanualholdsexpire'),
     );
 
     if (@completed) {

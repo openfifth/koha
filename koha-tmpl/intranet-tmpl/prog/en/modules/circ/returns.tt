@@ -1430,6 +1430,10 @@
                         <input type="hidden" name="batch_confirm_action" id="batch-confirm-action" value="" data-kind="[% pending_confirm_kind | html %]" />
                         [% IF confirm_hold_was_set %]<input type="hidden" name="confirm_hold" value="1" />[% END %]
                         [% IF confirm_transfer_was_set %]<input type="hidden" name="confirm_transfer" value="1" />[% END %]
+                        [% IF batch_state_exemptfine %]<input type="hidden" name="exemptfine" value="[% batch_state_exemptfine | html %]" />[% END %]
+                        [% IF batch_state_dropboxmode %]<input type="hidden" name="dropboxmode" value="[% batch_state_dropboxmode | html %]" />[% END %]
+                        [% IF batch_state_return_date_override %]<input type="hidden" name="return_date_override" value="[% batch_state_return_date_override | html %]" />[% END %]
+                        [% IF batch_state_forgivemanualholdsexpire %]<input type="hidden" name="forgivemanualholdsexpire" value="[% batch_state_forgivemanualholdsexpire | html %]" />[% END %]
                         <div class="modal-content">
                             <div class="modal-header">
                                 <h3 class="modal-title" id="batchConfirmLabel">Batch paused: confirmation required</h3>
