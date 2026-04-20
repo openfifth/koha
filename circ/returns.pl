@@ -506,7 +506,8 @@ if ( $batch_barcodes && $op eq 'cud-checkin' ) {
     if (@batch_results) {
         my @plain   = map { _batch_result_to_plain($_) } @batch_results;
         my $encoded = eval { encode_json( \@plain ) };
-        $template->param( batch_completed_json => $encoded ) if $encoded;
+        Koha::Logger->get->warn("Failed to encode batch_completed_results JSON: $@") if $@;
+        $template->param( batch_completed_json => $encoded )                         if $encoded;
     }
     if (@remaining_for_confirm) {
         $template->param( batch_remaining_barcodes => join( "\n", @remaining_for_confirm ) );
@@ -528,6 +529,7 @@ if (
     my @completed;
     if ( length $batch_completed_json_in ) {
         my $decoded = eval { decode_json($batch_completed_json_in) };
+        Koha::Logger->get->warn("Failed to decode batch_completed_results JSON: $@") if $@;
         @completed = @{$decoded} if $decoded && ref $decoded eq 'ARRAY';
     }
 
@@ -658,7 +660,8 @@ if (
     if (@completed) {
         my @plain   = map { _batch_result_to_plain($_) } @completed;
         my $encoded = eval { encode_json( \@plain ) };
-        $template->param( batch_completed_json => $encoded ) if $encoded;
+        Koha::Logger->get->warn("Failed to encode batch_completed_results JSON: $@") if $@;
+        $template->param( batch_completed_json => $encoded )                         if $encoded;
     }
     if (@still_remaining) {
         $template->param( batch_remaining_barcodes => join( "\n", @still_remaining ) );
