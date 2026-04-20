@@ -218,11 +218,18 @@ sub process_batch_checkin_item {
         return \%result;
     }
 
-    # The librarian-facing "Automatically capture holds" and "Automatically
-    # create transfers" checkboxes are UI affordances; the sysprefs HoldsAutoFill
-    # and AutomaticItemReturn are authoritative. Coerce the form params so a
-    # client-side bypass cannot skip hold capture or transfer creation when the
-    # system preference requires them.
+    # The confirm_hold/confirm_transfer form params originate from the batch
+    # mode checkboxes (and the hidden inputs in the batchConfirmModal form that
+    # preserves them across a modal round-trip). They only toggle the batch
+    # post-processing below — they do NOT bypass the needs_confirm /
+    # bundle_confirm prompts above, which are guarded by CircConfirmItemParts
+    # and is_bundle regardless of the batch settings.
+    #
+    # HoldsAutoFill and AutomaticItemReturn are authoritative: coerce the
+    # params so a client-side bypass cannot skip hold capture or transfer
+    # creation when the system preference already requires them. AddReturn
+    # itself also honors AutomaticItemReturn, so the env-override below is
+    # defensive for installs that might not force-return through the pref.
     my $should_confirm_hold     = $query->param('confirm_hold')     || C4::Context->preference('HoldsAutoFill');
     my $should_confirm_transfer = $query->param('confirm_transfer') || C4::Context->preference('AutomaticItemReturn');
 
