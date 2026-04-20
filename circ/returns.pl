@@ -53,6 +53,7 @@ use Koha::DateUtils qw( dt_from_string );
 use Koha::Holds;
 use Koha::Item::Transfers;
 use Koha::Items;
+use Koha::Logger;
 use Koha::Patrons;
 use Koha::Recalls;
 
@@ -448,14 +449,26 @@ if ( $batch_barcodes && $op eq 'cud-checkin' ) {
             ? $dropboxdate
             : dt_from_string($return_date_override);
 
-        my $result = process_batch_checkin_item(
-            query       => $query,
-            barcode     => $batch_barcode,
-            branch      => $userenv_branch,
-            exemptfine  => $exemptfine,
-            return_date => $return_date,
-            desk_id     => $desk_id,
-        );
+        my $result = eval {
+            process_batch_checkin_item(
+                query       => $query,
+                barcode     => $batch_barcode,
+                branch      => $userenv_branch,
+                exemptfine  => $exemptfine,
+                return_date => $return_date,
+                desk_id     => $desk_id,
+            );
+        };
+        if ( my $err = $@ ) {
+            Koha::Logger->get->warn("Batch checkin failed for barcode '$batch_barcode': $err");
+            $result = {
+                barcode  => $batch_barcode,
+                status   => 'error',
+                success  => 0,
+                messages => {},
+                error    => "$err",
+            };
+        }
 
         if ( $result->{success} ) {
             unshift @checkins, {
@@ -588,14 +601,26 @@ if (
         my $decoded_bc = barcodedecode($bc);
         next unless $decoded_bc;
 
-        my $r = process_batch_checkin_item(
-            query       => $query,
-            barcode     => $decoded_bc,
-            branch      => $userenv_branch,
-            exemptfine  => $exemptfine,
-            return_date => $return_date,
-            desk_id     => $desk_id,
-        );
+        my $r = eval {
+            process_batch_checkin_item(
+                query       => $query,
+                barcode     => $decoded_bc,
+                branch      => $userenv_branch,
+                exemptfine  => $exemptfine,
+                return_date => $return_date,
+                desk_id     => $desk_id,
+            );
+        };
+        if ( my $err = $@ ) {
+            Koha::Logger->get->warn("Batch checkin drain failed for barcode '$decoded_bc': $err");
+            $r = {
+                barcode  => $decoded_bc,
+                status   => 'error',
+                success  => 0,
+                messages => {},
+                error    => "$err",
+            };
+        }
 
         if ( $r->{success} ) {
             unshift @checkins, {
