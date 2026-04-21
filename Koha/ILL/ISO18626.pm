@@ -282,11 +282,11 @@ sub supported_action_types {
         'StatusRequest',
         'Received',
         'Cancel',
+        'ShippedReturn',
 
         # TODO: Uncomment these once implemented
         #'Renew',
         #'HoldReturn',
-        #'ShippedReturn',
         #'ShippedForward',
         #'Notification',
         #'Lost',
