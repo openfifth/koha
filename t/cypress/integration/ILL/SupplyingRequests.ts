@@ -410,6 +410,63 @@ describe("Supplying ILL Requests operations", () => {
         );
     });
 
+    it("Disables action buttons while a status change is in flight", () => {
+        let request = get_supplying_request();
+
+        cy.intercept("GET", "/api/v1/ill/iso18626_requests*", {
+            statusCode: 200,
+            body: [request],
+            headers: {
+                "X-Base-Total-Count": "1",
+                "X-Total-Count": "1",
+            },
+        }).as("getRequests");
+        cy.intercept("GET", "/api/v1/ill/iso18626_requests/*", {
+            ...request,
+            hold: null,
+            messages: [],
+        }).as("getRequest");
+
+        cy.visit("/cgi-bin/koha/ill/iso18626_requests");
+        cy.wait("@getRequests");
+        cy.get(
+            "#iso18626_requests_list table tbody tr:first td:first a"
+        ).click();
+        cy.wait("@getRequest");
+
+        // Intercept PATCH with a delay so we can assert mid-flight UI state
+        cy.intercept("PATCH", "/api/v1/ill/iso18626_requests/*", {
+            delay: 1500,
+            statusCode: 200,
+            body: { ...request, status: "Unfilled" },
+        }).as("patchRequest");
+
+        // Open the Unfilled modal, select a reason, and confirm
+        cy.get("#iso18626_requests_show").contains("Unfilled").click();
+        cy.get("#confirmation #reasonUnfilled .vs__search").type(
+            "Not held{enter}",
+            { force: true }
+        );
+        cy.get("#accept_modal").click();
+
+        // While the PATCH is in-flight, action buttons should have the disabled class
+        cy.get("#iso18626_requests_show")
+            .contains("Ask for retry")
+            .should("have.class", "disabled");
+        cy.get("#iso18626_requests_show")
+            .contains("Unfilled")
+            .should("have.class", "disabled");
+
+        // After the PATCH resolves, buttons should be enabled again
+        cy.wait("@patchRequest");
+        cy.get("#iso18626_requests_show")
+            .contains("Ask for retry")
+            .should("not.have.class", "disabled");
+        cy.get("#iso18626_requests_show")
+            .contains("Unfilled")
+            .should("not.have.class", "disabled");
+    });
+
     it("Progresses status via the Unfilled modal", () => {
         let request = get_supplying_request();
 
