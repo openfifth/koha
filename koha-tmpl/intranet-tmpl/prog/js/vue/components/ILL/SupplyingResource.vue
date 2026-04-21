@@ -26,9 +26,12 @@ export default {
             setConfirmationDialog,
             setMessage,
             updateConfirmationDialogInputs,
+            submitting,
+            submitted,
         } = inject("mainStore");
 
         const conditionalInputs = ref([]);
+        const isActionPending = ref(false);
 
         const statuses = ref([
             {
@@ -675,6 +678,8 @@ export default {
                               ? "N"
                               : undefined;
 
+                    isActionPending.value = true;
+                    submitting();
                     client
                         .patch(
                             inputFields,
@@ -682,6 +687,8 @@ export default {
                         )
                         .then(
                             success => {
+                                isActionPending.value = false;
+                                submitted();
                                 for (const key in success) {
                                     if (iso18626_request.hasOwnProperty(key)) {
                                         iso18626_request[key] = success[key];
@@ -695,7 +702,10 @@ export default {
                                 );
                                 baseResource.refreshTemplateState();
                             },
-                            error => {}
+                            error => {
+                                isActionPending.value = false;
+                                submitted();
+                            }
                         );
                 }
             );
@@ -772,7 +782,7 @@ export default {
                     }
 
                     show_buttons.push({
-                        cssClass: nextStatusDef.btn_class,
+                        cssClass: `${nextStatusDef.btn_class || "btn btn-default"}${isActionPending.value ? " disabled" : ""}`,
                         title:
                             typeof nextStatusDef.button_label === "function"
                                 ? nextStatusDef.button_label(resource)
@@ -783,8 +793,17 @@ export default {
                                 : nextStatusDef.icon,
                         index: nextStatusDef.index,
                         onClick: nextStatusDef.onClick
-                            ? () => nextStatusDef.onClick(resource)
-                            : () => progressRequest(nextStatusDef.id, resource),
+                            ? () => {
+                                  if (!isActionPending.value)
+                                      nextStatusDef.onClick(resource);
+                              }
+                            : () => {
+                                  if (!isActionPending.value)
+                                      progressRequest(
+                                          nextStatusDef.id,
+                                          resource
+                                      );
+                              },
                     });
                 });
             }
