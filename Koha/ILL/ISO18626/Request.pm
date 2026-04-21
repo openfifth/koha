@@ -351,7 +351,7 @@ sub progress_request {
                     agencyIdType  => 'ISIL',
                     agencyIdValue => 'sup_agency_value',
                 },
-                requestingAgencyRequestId => 'XYZ',
+                requestingAgencyRequestId => $self->requestingAgencyRequestId,
                 supplyingAgencyRequestId  => $self->iso18626_request_id,
                 timestamp                 => _format_iso_payload_date_param('now'),
                 requestingAgencyId        => {
