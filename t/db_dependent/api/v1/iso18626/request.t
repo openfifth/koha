@@ -146,7 +146,7 @@ XML
         {
             class => 'Koha::ILL::ISO18626::RequestingAgencies',
             value =>
-                { account_id => 'asd', securityCode => 'asds', callback_endpoint => 'http://localhost/ill/callback' }
+                { account_id => 'asd', securityCode => 'asds', callback_endpoint => 'https://localhost/ill/callback' }
         }
     );
 
@@ -341,7 +341,7 @@ XML
             value => {
                 account_id        => 'bad_endpoint_test',
                 securityCode      => 'test_secret_2',
-                callback_endpoint => 'http://localhost/ill/callback'
+                callback_endpoint => 'https://localhost/ill/callback'
             }
         }
     );
