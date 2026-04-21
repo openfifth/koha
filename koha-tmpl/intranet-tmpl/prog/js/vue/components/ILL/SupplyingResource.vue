@@ -1070,63 +1070,29 @@ export default {
         const tableOptions = {
             url: () => tableUrl(),
             options: { embed: "requesting_agency,messages" },
-            //table_settings: supplying_ill_table_settings, #FIXME: This causes error from datatables.js -> out of this scope
-            table_settings: {
-                columns: [
+            table_settings: supplying_ill_table_settings,
+            add_filters: true,
+            filters_options: {
+                status: statuses.value
+                    .map(status => ({
+                        _id: status.id,
+                        _str: $__(status.id),
+                    }))
+                    .sort((a, b) => a._str.localeCompare(b._str)),
+                service_type: [
                     {
-                        columnname: "iso18626_request_id",
-                        cannot_be_modified: 0,
-                        is_hidden: 0,
-                        cannot_be_toggled: 0,
+                        _id: "Copy",
+                        _str: $__("Copy"),
                     },
                     {
-                        columnname: "supplyingAgencyId",
-                        is_hidden: 0,
-                        cannot_be_modified: 0,
-                        cannot_be_toggled: 0,
+                        _id: "CopyOrLoan",
+                        _str: $__("CopyOrLoan"),
                     },
                     {
-                        is_hidden: 0,
-                        cannot_be_toggled: 0,
-                        cannot_be_modified: 0,
-                        columnname: "requesting_agency",
-                        render: function (data, type, row, meta) {
-                            return (
-                                '<a target="_blank" href="/cgi-bin/koha/ill/ill-requests.pl?' +
-                                "op=illview&amp;illrequest_id=" +
-                                encodeURIComponent(data) +
-                                '">' +
-                                escape_str(row.id_prefix) +
-                                escape_str(data) +
-                                "</a>"
-                            );
-                        },
-                    },
-                    {
-                        is_hidden: 0,
-                        cannot_be_toggled: 0,
-                        cannot_be_modified: 0,
-                        columnname: "status",
-                    },
-                    {
-                        is_hidden: 0,
-                        cannot_be_modified: 0,
-                        cannot_be_toggled: 0,
-                        columnname: "updated_on", //TODO: Check if these table_settings is being used at all?
-                    },
-                    {
-                        is_hidden: 0,
-                        cannot_be_toggled: 0,
-                        cannot_be_modified: 0,
-                        columnname: "requestingAgencyRequestId",
+                        _id: "Loan",
+                        _str: $__("Loan"),
                     },
                 ],
-                default_display_length: null,
-                table: "iso18626_requests",
-                module: "ill",
-                default_save_state: 1,
-                page: "ill",
-                default_save_state_search: 0,
             },
             actions: {
                 0: ["show"],
