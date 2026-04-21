@@ -1009,7 +1009,12 @@ $(document).ready(function () {
                 params.seen = renew_unseen === 1 ? 0 : 1;
             }
 
-            var dueDate = $("#newduedate").val();
+            var isOnReserve = $("input.renew[value='" + item_id + "']").is(
+                "[data-on-reserve]"
+            );
+            var dueDate = isOnReserve
+                ? $("#newonholdduedate input").val()
+                : $("#newduedate").val();
 
             if (dueDate && dueDate.length > 0) {
                 params.date_due = dueDate;
