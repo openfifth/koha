@@ -937,7 +937,7 @@ export default {
             resourceAttrs: [
                 {
                     name: "iso18626_request_id",
-                    label: $__("Supplying Agency ID"),
+                    label: $__("Supplying Agency Request ID"),
                     type: "text",
                     hideIn: ["Form"],
                     group: $__("Request details"),
@@ -980,13 +980,6 @@ export default {
                     hideIn: ["Form", "List"],
                     group: $__("Specified by the requesting agency"),
                     format: value => (value ? value : $__("N/A")),
-                },
-                {
-                    name: "pending_requesting_agency_action",
-                    label: $__("Pending RA action"),
-                    type: "text",
-                    hideIn: ["List", "Show", "Form"],
-                    group: $__("Request details"),
                 },
                 {
                     name: "created_on",
