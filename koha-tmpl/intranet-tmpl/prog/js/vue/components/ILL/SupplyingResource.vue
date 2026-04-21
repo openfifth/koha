@@ -975,7 +975,7 @@ export default {
                 },
                 {
                     name: "pending_requesting_agency_action",
-                    label: $__("Pending requesting agency action"),
+                    label: $__("Requesting agency has requested"),
                     type: "text",
                     hideIn: ["Form", "List"],
                     group: $__("Specified by the requesting agency"),
