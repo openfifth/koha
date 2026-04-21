@@ -212,8 +212,13 @@ sub confirmation_response {
     }
 
     # All good, save the message and return the response
-    sleep 1;
-    $iso18626_request->add_message( { type => $confirmation_message_type, message => JSON::encode_json($response) } );
+    $iso18626_request->add_message(
+        {
+            type      => $confirmation_message_type,
+            message   => JSON::encode_json($response),
+            timestamp => \"NOW() + INTERVAL 1 SECOND",
+        }
+    );
     return { status => 201, openapi => $response };
 
 }

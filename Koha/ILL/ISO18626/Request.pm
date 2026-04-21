@@ -79,12 +79,10 @@ sub add_message {
         $message = encode_json($message);
     }
 
-    return $self->_result->add_to_iso18626_messages(
-        {
-            type    => $type,
-            content => $message,
-        }
-    );
+    my %row = ( type => $type, content => $message );
+    $row{timestamp} = $params->{timestamp} if $params->{timestamp};
+
+    return $self->_result->add_to_iso18626_messages( \%row );
 }
 
 =head3 messages
