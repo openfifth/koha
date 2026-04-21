@@ -648,6 +648,7 @@ subtest 'add() tests' => sub {
             delete $newpatron->{restricted};
             delete $newpatron->{expired};
             delete $newpatron->{anonymized};
+            delete $newpatron->{self_renewal_available};
             $patron_to_delete->delete;
 
             # Set a date field
