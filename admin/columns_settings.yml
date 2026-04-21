@@ -1179,6 +1179,23 @@ modules:
               columnname: action
               cannot_be_toggled: 1
               cannot_be_modified: 1
+    ill-supply:
+      ill-supply:
+        columns:
+            -
+              columnname: iso18626_request_id
+            -
+              columnname: iso18626_requesting_agency_id
+            -
+              columnname: status
+            -
+              columnname: service_type
+            -
+              columnname: pending_requesting_agency_action
+            -
+              columnname: created_on
+            -
+              columnname: updated_on
 
   members:
     fines:
