@@ -119,6 +119,9 @@ export default {
                 {
                     name: "callback_endpoint",
                     label: $__("Callback endpoint"),
+                    placeholder: $__(
+                        "http://localhost:8081/api/v1/contrib/iso18626/supplying_agency_message"
+                    ),
                     type: "text",
                     hideIn: ["List"],
                     group: $__("Details"),
