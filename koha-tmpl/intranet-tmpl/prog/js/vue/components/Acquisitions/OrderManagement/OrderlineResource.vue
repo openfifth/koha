@@ -955,6 +955,15 @@ export default {
                     hint: resource => {
                         return `(${resource.vendor_price_currency || getActiveCurrency.currency} to ${resource?.fund_distributions?.[0]?.fund?.currency || getActiveCurrency.currency})`;
                     },
+                    disabled: resource => {
+                        const vendorCurrency =
+                            resource.vendor_price_currency ||
+                            getActiveCurrency.currency;
+                        const fundCurrency =
+                            resource?.fund_distributions?.[0]?.fund?.currency ||
+                            getActiveCurrency.currency;
+                        return vendorCurrency === fundCurrency;
+                    },
                     onChange: resource => {
                         resource.fund_distributions.forEach(fd => {
                             fd.exchange_rate =
