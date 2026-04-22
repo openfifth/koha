@@ -41,7 +41,11 @@ export default {
             );
         };
         const panesToDisplay = computed(() => {
-            return props.splitScreenGroupings.reduce((acc, curr) => {
+            const assignedGroupNames = new Set(
+                props.splitScreenGroupings.flatMap(g => g.groups)
+            );
+
+            const panes = props.splitScreenGroupings.reduce((acc, curr) => {
                 if (curr.pane.toString().includes("break")) {
                     acc.push({
                         pane: curr.pane.toString(),
@@ -70,6 +74,15 @@ export default {
                 }
                 return acc;
             }, []);
+
+            const remainingFields = props.fieldList.filter(
+                field => !assignedGroupNames.has(field.name)
+            );
+            if (remainingFields.length) {
+                panes.push({ pane: "remaining", fields: remainingFields });
+            }
+
+            return panes;
         });
         const columnSizeClass = pane => {
             return `col-sm-${Math.floor(12 / pane.paneGroup.length)}`;
