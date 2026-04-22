@@ -44,7 +44,7 @@ const load_authorised_values_handler = async (
                         element => element.category_name == AVCat
                     );
                     targetStore.authorisedValues[AVName] =
-                        AVMatch.authorised_values;
+                        AVMatch?.authorised_values ?? [];
                 });
             })
     );

@@ -8,6 +8,7 @@
  * @module insertData
  */
 
+const dayjs = require("dayjs");
 const { buildSampleObject, buildSampleObjects } = require("./mockData.js");
 const { query } = require("./db.js");
 
@@ -563,6 +564,26 @@ const deleteSampleObjects = async allObjects => {
             table: "erm_eholdings_titles",
             whereColumn: "title_id",
         },
+        allocation: {
+            plural: "allocations",
+            table: "acq_allocations",
+            whereColumn: "allocation_id",
+        },
+        fund: {
+            plural: "funds",
+            table: "acq_funds",
+            whereColumn: "fund_id",
+        },
+        ledger: {
+            plural: "ledgers",
+            table: "acq_ledgers",
+            whereColumn: "ledger_id",
+        },
+        fiscal_period: {
+            plural: "fiscal_periods",
+            table: "acq_fiscal_periods",
+            whereColumn: "fiscal_period_id",
+        },
     };
     // Merge by type
     const mergedObjects = {};
@@ -590,6 +611,10 @@ const deleteSampleObjects = async allObjects => {
         "patrons",
         "items",
         "biblios",
+        "allocations",
+        "funds",
+        "ledgers",
+        "fiscal_periods",
         "libraries",
         "item_types",
         "erm_agreements",
@@ -865,11 +890,226 @@ const insertObject = async ({ type, object, baseUrl, authHeader }) => {
     return true;
 };
 
+const insertSampleFiscalPeriod = async ({
+    fiscal_period: overrides = {},
+    baseUrl,
+    authHeader,
+} = {}) => {
+    const generated = await buildSampleObject({
+        object: "acq_fiscal_period",
+        values: {
+            status: true,
+            start_date: dayjs().format("YYYY-MM-DD"),
+            end_date: dayjs().add(1, "day").format("YYYY-MM-DD"),
+            managing_branch: null,
+            owner_id: null,
+            ...overrides,
+        },
+    });
+
+    const {
+        fiscal_period_id,
+        modified_date,
+        created_date,
+        ledgers,
+        funds,
+        owner,
+        managing_library,
+        child_object_managing_branches,
+        ...body
+    } = generated;
+
+    const fiscal_period = await apiPost({
+        endpoint: "/api/v1/acquisitions/fiscal_periods",
+        body,
+        baseUrl,
+        authHeader,
+    });
+
+    return { fiscal_period };
+};
+
+const insertSampleLedger = async ({
+    fiscal_period,
+    ledger: overrides = {},
+    baseUrl,
+    authHeader,
+} = {}) => {
+    let generatedFiscalPeriod;
+    if (!fiscal_period) {
+        const result = await insertSampleFiscalPeriod({ baseUrl, authHeader });
+        fiscal_period = result.fiscal_period;
+        generatedFiscalPeriod = true;
+    }
+
+    // currency is NOT NULL in DB so we must provide a valid value
+    const currencies = await query({
+        sql: "SELECT currency FROM currency WHERE active=1 LIMIT 1",
+    });
+    const currency = currencies[0]?.currency || "USD";
+
+    const generated = await buildSampleObject({
+        object: "acq_ledger",
+        values: {
+            fiscal_period_id: fiscal_period.fiscal_period_id,
+            status: true,
+            locked: false,
+            currency,
+            ledger_amount: 10000,
+            managing_branch: null,
+            owner_id: null,
+            ...overrides,
+        },
+    });
+
+    const {
+        ledger_id,
+        modified_date,
+        created_date,
+        fiscal_period: _fiscal_period,
+        funds,
+        owner,
+        managing_library,
+        allocations,
+        child_object_managing_branches,
+        ...body
+    } = generated;
+
+    const ledger = await apiPost({
+        endpoint: "/api/v1/acquisitions/ledgers",
+        body,
+        baseUrl,
+        authHeader,
+    });
+
+    return {
+        ledger,
+        ...(generatedFiscalPeriod ? { fiscal_period } : {}),
+    };
+};
+
+const insertSampleFund = async ({
+    ledger,
+    fund: overrides = {},
+    baseUrl,
+    authHeader,
+} = {}) => {
+    let generatedLedger;
+    let fiscal_period;
+    let generatedFiscalPeriod;
+    if (!ledger) {
+        const result = await insertSampleLedger({ baseUrl, authHeader });
+        ledger = result.ledger;
+        generatedLedger = true;
+        if (result.fiscal_period) {
+            fiscal_period = result.fiscal_period;
+            generatedFiscalPeriod = true;
+        }
+    }
+
+    const generated = await buildSampleObject({
+        object: "acq_fund",
+        values: {
+            ledger_id: ledger.ledger_id,
+            parent_fund_id: null,
+            status: true,
+            fund_amount: 5000,
+            managing_branch: null,
+            owner_id: null,
+            fund_permission: 0,
+            fund_type: null,
+            ...overrides,
+        },
+    });
+
+    // code column is varchar(30)
+    if (generated.code && generated.code.length > 30) {
+        generated.code = generated.code.slice(0, 30);
+    }
+
+    const {
+        fund_id,
+        modified_date,
+        created_date,
+        fiscal_period: _fiscal_period,
+        ledger: _ledger,
+        allocations,
+        sub_funds,
+        owner,
+        managing_library,
+        parent_fund,
+        child_object_managing_branches,
+        currency,
+        ...body
+    } = generated;
+
+    const fund = await apiPost({
+        endpoint: "/api/v1/acquisitions/funds",
+        body,
+        baseUrl,
+        authHeader,
+    });
+
+    return {
+        fund,
+        ...(generatedLedger ? { ledger } : {}),
+        ...(generatedFiscalPeriod ? { fiscal_period } : {}),
+    };
+};
+
+const insertSampleAllocation = async ({
+    fund,
+    ledger,
+    allocation: overrides = {},
+    baseUrl,
+    authHeader,
+} = {}) => {
+    const generated = await buildSampleObject({
+        object: "acq_allocation",
+        values: {
+            fund_id: fund?.fund_id ?? null,
+            ledger_id: ledger?.ledger_id ?? null,
+            type: "increase",
+            is_transferred_to: null,
+            is_transferred_from: null,
+            owner_id: null,
+            managing_branch: null,
+            ...overrides,
+        },
+    });
+
+    generated.allocation_amount = Math.abs(generated.allocation_amount) || 100;
+
+    const {
+        allocation_id,
+        created_date,
+        ledger: _ledger,
+        fund: _fund,
+        owner,
+        managing_branch,
+        owner_id,
+        ...body
+    } = generated;
+
+    const allocation = await apiPost({
+        endpoint: "/api/v1/acquisitions/allocations",
+        body,
+        baseUrl,
+        authHeader,
+    });
+
+    return { allocation };
+};
+
 module.exports = {
     insertSampleBiblio,
     insertSampleHold,
     insertSampleCheckout,
     insertSamplePatron,
+    insertSampleFiscalPeriod,
+    insertSampleLedger,
+    insertSampleFund,
+    insertSampleAllocation,
     insertObject,
     deleteSampleObjects,
 };

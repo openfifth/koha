@@ -438,11 +438,11 @@ export default {
             componentData.resource.value.oe_warning_percent =
                 resource.oe_warning_percent * 100;
             componentData.resource.value.fiscal_period_name =
-                resource.fiscal_period.name;
+                resource.fiscal_period?.name;
             componentData.resource.value.parent_status =
                 resource.fiscal_period?.status;
             const { branchNames, groupNames } = getBranchnamesFromGroups(
-                resource.fiscal_period.managing_library
+                resource.fiscal_period?.managing_library
                     ?.acquisitions_library_groups || []
             );
             const childManagingBranches = resource

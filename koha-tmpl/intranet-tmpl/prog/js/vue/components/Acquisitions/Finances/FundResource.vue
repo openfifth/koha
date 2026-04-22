@@ -572,18 +572,18 @@ export default {
             componentData.resource.value.oe_warning_percent =
                 resource.oe_warning_percent * 100;
             componentData.resource.value.fiscal_period_name =
-                resource.fiscal_period.name;
-            componentData.resource.value.ledger_name = resource.ledger.name;
+                resource.fiscal_period?.name;
+            componentData.resource.value.ledger_name = resource.ledger?.name;
             componentData.resource.value.fund_parent_name =
                 resource.parent_fund?.name;
-            componentData.resource.value.currency = resource.ledger.currency;
+            componentData.resource.value.currency = resource.ledger?.currency;
             componentData.resource.value.ledger_locked =
                 resource.ledger?.locked;
             const parentKey = isSubFund.value ? "parent_fund" : "ledger";
             componentData.resource.value.parent_status =
                 resource[parentKey]?.status;
             const { branchNames, groupNames } = getBranchnamesFromGroups(
-                resource[parentKey].managing_library
+                resource[parentKey]?.managing_library
                     ?.acquisitions_library_groups || []
             );
             const childManagingBranches = resource

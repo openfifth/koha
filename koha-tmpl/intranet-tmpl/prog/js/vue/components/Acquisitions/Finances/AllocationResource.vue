@@ -193,7 +193,7 @@ export default {
             initialized
         ) => {
             APIClient.acquisition[`${entity}s`].get(entity_id).then(result => {
-                resource.fiscal_period_name = result.fiscal_period.name;
+                resource.fiscal_period_name = result.fiscal_period?.name;
                 const ledger = isFund.value ? result.ledger : result;
                 resource.ledger_name = ledger.name;
                 resource.currency = ledger.currency;

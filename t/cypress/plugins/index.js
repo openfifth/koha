@@ -18,6 +18,10 @@ const {
     insertSampleHold,
     insertSampleCheckout,
     insertSamplePatron,
+    insertSampleFiscalPeriod,
+    insertSampleLedger,
+    insertSampleFund,
+    insertSampleAllocation,
     insertObject,
     deleteSampleObjects,
 } = require("./insertData.js");
@@ -98,6 +102,18 @@ module.exports = (on, config) => {
         },
         insertSamplePatron(args) {
             return insertSamplePatron({ ...args, baseUrl, authHeader });
+        },
+        insertSampleFiscalPeriod(args) {
+            return insertSampleFiscalPeriod({ ...args, baseUrl, authHeader });
+        },
+        insertSampleLedger(args) {
+            return insertSampleLedger({ ...args, baseUrl, authHeader });
+        },
+        insertSampleFund(args) {
+            return insertSampleFund({ ...args, baseUrl, authHeader });
+        },
+        insertSampleAllocation(args) {
+            return insertSampleAllocation({ ...args, baseUrl, authHeader });
         },
         insertObject(args) {
             return insertObject({ ...args, baseUrl, authHeader });
