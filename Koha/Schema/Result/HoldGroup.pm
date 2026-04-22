@@ -38,13 +38,6 @@ __PACKAGE__->table("hold_groups");
 
 foreign key, linking this to the borrowers table
 
-=head2 visual_hold_group_id
-
-  data_type: 'integer'
-  is_nullable: 1
-
-visual ID for this hold group, in the context of the related patron
-
 =cut
 
 __PACKAGE__->add_columns(
@@ -57,8 +50,6 @@ __PACKAGE__->add_columns(
   },
   "borrowernumber",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
-  "visual_hold_group_id",
-  { data_type => "integer", is_nullable => 1 },
 );
 
 =head1 PRIMARY KEY
@@ -141,8 +132,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-11-03 19:54:07
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:o9/2a3gatQnmc7nTYRpUPQ
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-22 16:00:06
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:I9NhEMijQQcaKqEzwVoBzQ
 
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration

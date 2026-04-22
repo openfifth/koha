@@ -255,8 +255,8 @@ sub move_hold {
     $self->cleanup_hold_group;
 
 Dissociates the last hold from a group if it is the only one remaining and no history exists.
-If no active holds remain, the group is deleted unless it has history.
-(Koha::Old::Holds), in which case it is archived by clearing its visual ID.
+If no active holds remain and no history exists, the group is deleted.
+Groups with history are kept to preserve the hold_group_id reference in old_reserves.
 
 =cut
 
@@ -276,12 +276,8 @@ sub cleanup_hold_group {
         $active_count = 0;
     }
 
-    if ( $active_count == 0 ) {
-        if ( $history_count > 0 ) {
-            $hold_group->set( { visual_hold_group_id => undef } )->store;
-        } else {
-            $hold_group->delete;
-        }
+    if ( $active_count == 0 && $history_count == 0 ) {
+        $hold_group->delete;
     }
 }
 

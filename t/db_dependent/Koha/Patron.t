@@ -3583,9 +3583,9 @@ subtest 'reset_2fa() tests' => sub {
     $schema->storage->txn_rollback;
 };
 
-subtest "create_hold_group, hold_groups, visual_hold_group_id tests" => sub {
+subtest "create_hold_group, hold_groups tests" => sub {
 
-    plan tests => 19;
+    plan tests => 16;
 
     $schema->storage->txn_begin;
 
@@ -3637,17 +3637,15 @@ subtest "create_hold_group, hold_groups, visual_hold_group_id tests" => sub {
     is( $patron_hold_groups->count, 1, 'Patron has one hold group' );
 
     my $hold_group = $patron->hold_groups->as_list->[0];
-    is( $hold_group->visual_hold_group_id, 1,                                       'Visual hold group id is 1' );
-    is( $hold_group->hold_group_id,        $hold1->get_from_storage->hold_group_id, 'hold1 added to hold_group' );
-    is( $hold_group->hold_group_id,        $hold2->get_from_storage->hold_group_id, 'hold2 added to hold_group' );
-    is( $hold_group->hold_group_id,        $hold3->get_from_storage->hold_group_id, 'hold3 added to hold_group' );
+    is( $hold_group->hold_group_id, $hold1->get_from_storage->hold_group_id, 'hold1 added to hold_group' );
+    is( $hold_group->hold_group_id, $hold2->get_from_storage->hold_group_id, 'hold2 added to hold_group' );
+    is( $hold_group->hold_group_id, $hold3->get_from_storage->hold_group_id, 'hold3 added to hold_group' );
 
     # Create 2nd hold group
     my $hg_to_be_kept = $patron->create_hold_group( [ $hold4->reserve_id, $hold5->reserve_id ] );
     is( $patron_hold_groups->count, 2, 'Patron has two hold groups' );
 
     my $second_hold_group = $patron->hold_groups->as_list->[1];
-    is( $second_hold_group->visual_hold_group_id, 2, 'Visual hold group id is 2' );
     is(
         $second_hold_group->hold_group_id, $hold4->get_from_storage->hold_group_id,
         'hold4 added to second hold_group'
@@ -3673,8 +3671,6 @@ subtest "create_hold_group, hold_groups, visual_hold_group_id tests" => sub {
 
     # Create 3rd hold group
     $patron->create_hold_group( [ $hold5->reserve_id, $hold6->reserve_id ], 1 );
-    my $third_hold_group = $patron->hold_groups->as_list->[0];
-    is( $third_hold_group->visual_hold_group_id, 1, 'Visual hold group id is 1' );
 
     t::lib::Mocks::mock_preference( 'HoldsLog', 1 );
     my $new_hg     = $patron->create_hold_group( [ $hold6->reserve_id, $hold5->reserve_id ], 1 );
