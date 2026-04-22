@@ -127,7 +127,6 @@ export default {
                         : isValueDecrease.value
                           ? $__("Decrease amount by")
                           : $__("Amount being transferred"),
-                    defaultValue: 0,
                     size: 6,
                     format: (value, resource) =>
                         formatValueWithCurrency(value, resource.currency),
