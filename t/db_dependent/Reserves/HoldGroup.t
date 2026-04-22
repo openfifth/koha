@@ -20,10 +20,12 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 3;
+use Test::More tests => 4;
 
 use t::lib::TestBuilder;
 use t::lib::Mocks;
+
+use Test::MockModule;
 
 use C4::Reserves    qw( AddReserve ModReserveAffect );
 use C4::Circulation qw( AddReturn );
@@ -126,6 +128,89 @@ subtest "target_hold_id tests" => sub {
     is( $hold_group->get_from_storage->target_hold_id, $hold->reserve_id, 'target_hold_id is correct' );
     $hold->fill();
     is( $hold_group->get_from_storage->hold_group_id, $hold->hold_group_id, 'hold_group is kept' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'RealTimeHoldsQueue tests' => sub {
+
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    my $patron = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $item_1 = $builder->build_sample_item;
+    my $item_2 = $builder->build_sample_item;
+
+    my $hold_1 = $builder->build_object(
+        {
+            class => 'Koha::Holds',
+            value => {
+                borrowernumber => $patron->borrowernumber,
+                biblionumber   => $item_1->biblionumber,
+                hold_group_id  => undef,
+                found          => undef,
+            }
+        }
+    );
+    my $hold_2 = $builder->build_object(
+        {
+            class => 'Koha::Holds',
+            value => {
+                borrowernumber => $patron->borrowernumber,
+                biblionumber   => $item_2->biblionumber,
+                hold_group_id  => undef,
+                found          => undef,
+            }
+        }
+    );
+
+    my $mock = Test::MockModule->new('Koha::BackgroundJob::BatchUpdateBiblioHoldsQueue');
+    $mock->mock(
+        'enqueue',
+        sub {
+            my ( $self, $args ) = @_;
+            is_deeply(
+                [ sort @{ $args->{biblio_ids} } ],
+                [ sort( $item_1->biblionumber, $item_2->biblionumber ) ],
+                'store/delete with RealTimeHoldsQueue triggers a holds queue update for the related biblios'
+            );
+        }
+    );
+
+    t::lib::Mocks::mock_preference( 'RealTimeHoldsQueue', 1 );
+
+    my $hold_group = $patron->create_hold_group( [ $hold_1->id, $hold_2->id ] );
+
+    $hold_group->delete;
+
+    t::lib::Mocks::mock_preference( 'RealTimeHoldsQueue', 0 );
+
+    my $hold_3 = $builder->build_object(
+        {
+            class => 'Koha::Holds',
+            value => {
+                borrowernumber => $patron->borrowernumber,
+                biblionumber   => $item_1->biblionumber,
+                hold_group_id  => undef,
+                found          => undef,
+            }
+        }
+    );
+    my $hold_4 = $builder->build_object(
+        {
+            class => 'Koha::Holds',
+            value => {
+                borrowernumber => $patron->borrowernumber,
+                biblionumber   => $item_2->biblionumber,
+                hold_group_id  => undef,
+                found          => undef,
+            }
+        }
+    );
+
+    my $hold_group_2 = $patron->create_hold_group( [ $hold_3->id, $hold_4->id ] );
+    $hold_group_2->delete;
 
     $schema->storage->txn_rollback;
 };

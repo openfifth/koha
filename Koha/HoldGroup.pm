@@ -22,6 +22,8 @@ use Modern::Perl;
 use C4::Context;
 use C4::Log qw( logaction );
 
+use Koha::BackgroundJob::BatchUpdateBiblioHoldsQueue;
+
 use base qw(Koha::Object);
 
 =head1 NAME
@@ -77,6 +79,11 @@ sub store {
         }
     }
 
+    if ( $result && @$associated_holds && C4::Context->preference('RealTimeHoldsQueue') ) {
+        my @biblio_ids = map { $_->biblionumber } @$associated_holds;
+        Koha::BackgroundJob::BatchUpdateBiblioHoldsQueue->new->enqueue( { biblio_ids => \@biblio_ids } );
+    }
+
     return $result;
 }
 
@@ -112,6 +119,11 @@ sub delete {
                 $hold_prior_to_delete
             );
         }
+    }
+
+    if ( $result && @associated_holds && C4::Context->preference('RealTimeHoldsQueue') ) {
+        my @biblio_ids = map { $_->biblionumber } @associated_holds;
+        Koha::BackgroundJob::BatchUpdateBiblioHoldsQueue->new->enqueue( { biblio_ids => \@biblio_ids } );
     }
 
     return $result;
