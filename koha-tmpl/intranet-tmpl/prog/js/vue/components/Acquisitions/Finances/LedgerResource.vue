@@ -234,46 +234,6 @@ export default {
                     hideIn: ["List"],
                 },
                 {
-                    name: "owner_id",
-                    type: "patronSearch",
-                    label: $__("Owner"),
-                    group: $__("Management in library"),
-                    componentProps: {
-                        name: {
-                            type: "string",
-                            value: "owner_id",
-                        },
-                        resource: {
-                            type: "resource",
-                            value: null,
-                        },
-                        label: {
-                            type: "string",
-                            value: $__("Owner"),
-                        },
-                        additionalFilters: {
-                            type: "object",
-                            value: {
-                                permission: "acquisition.budget_manage",
-                            },
-                        },
-                        fieldName: {
-                            type: "string",
-                            value: "owner",
-                        },
-                        filteredUrl: {
-                            type: "string",
-                            value: "/api/v1/acquisitions/finances/users",
-                        },
-                    },
-                    showElement: {
-                        type: "text",
-                        value: "owner",
-                        format: patron_to_html,
-                    },
-                    hideIn: ["List"],
-                },
-                {
                     name: "managing_branch",
                     label: $__("Managing library"),
                     group: $__("Management in library"),
@@ -313,6 +273,46 @@ export default {
                                 },
                             },
                         },
+                    },
+                    hideIn: ["List"],
+                },
+                {
+                    name: "owner_id",
+                    type: "patronSearch",
+                    label: $__("Owner"),
+                    group: $__("Management in library"),
+                    componentProps: {
+                        name: {
+                            type: "string",
+                            value: "owner_id",
+                        },
+                        resource: {
+                            type: "resource",
+                            value: null,
+                        },
+                        label: {
+                            type: "string",
+                            value: $__("Owner"),
+                        },
+                        additionalFilters: {
+                            type: "object",
+                            value: {
+                                permission: "acquisition.budget_manage",
+                            },
+                        },
+                        fieldName: {
+                            type: "string",
+                            value: "owner",
+                        },
+                        filteredUrl: {
+                            type: "string",
+                            value: "/api/v1/acquisitions/finances/users",
+                        },
+                    },
+                    showElement: {
+                        type: "text",
+                        value: "owner",
+                        format: patron_to_html,
                     },
                     hideIn: ["List"],
                 },
