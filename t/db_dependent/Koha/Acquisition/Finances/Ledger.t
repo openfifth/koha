@@ -61,11 +61,11 @@ subtest 'store() tests' => sub {
     is( $ledger->status, 0, 'Ledger status updated to 0' );
     is( $fund->status,   0, 'Fund status cascaded to 0' );
 
-    # Re-activating the ledger should NOT re-activate the fund
+    # Re-activating the ledger should re-activate the fund
     $ledger->status(1)->store;
     $fund->discard_changes;
 
-    is( $fund->status, 0, 'Re-activating ledger does not re-activate fund' );
+    is( $fund->status, 1, 'Re-activating ledger re-activates fund' );
 
     $schema->storage->txn_rollback;
 };
@@ -144,11 +144,11 @@ subtest 'cascade_to_funds() tests' => sub {
     is( $active_fund->status,   0, 'Active fund status cascaded to inactive' );
     is( $inactive_fund->status, 0, 'Already-inactive fund remains inactive' );
 
-    # Cascading an active status should not reactivate an inactive fund
+    # Cascading an active status should reactivate inactive funds
     my $ledger2 = $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Ledgers',
-            value => { status => 1 }
+            value => { status => 0 }
         }
     );
     my $inactive_fund2 = $builder->build_object(
@@ -165,7 +165,7 @@ subtest 'cascade_to_funds() tests' => sub {
     $ledger2->cascade_to_funds;
     $inactive_fund2->discard_changes;
 
-    is( $inactive_fund2->status, 0, 'Cascading active status does not reactivate inactive fund' );
+    is( $inactive_fund2->status, 1, 'Cascading active status reactivates inactive fund' );
 
     # A ledger with no funds should cascade without errors
     my $ledger_no_funds = $builder->build_object(

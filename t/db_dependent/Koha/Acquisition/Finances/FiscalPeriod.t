@@ -61,11 +61,11 @@ subtest 'store() tests' => sub {
     is( $fiscal_period->status, 0, 'Fiscal period status updated to 0' );
     is( $ledger->status,        0, 'Ledger status cascaded to 0' );
 
-    # Re-activating the fiscal period should NOT re-activate the ledger
+    # Re-activating the fiscal period should re-activate the ledger
     $fiscal_period->status(1)->store;
     $ledger->discard_changes;
 
-    is( $ledger->status, 0, 'Re-activating fiscal period does not re-activate ledger' );
+    is( $ledger->status, 1, 'Re-activating fiscal period re-activates ledger' );
 
     $schema->storage->txn_rollback;
 };
@@ -145,11 +145,11 @@ subtest 'cascade_to_ledgers() tests' => sub {
     is( $active_ledger->status,   0, 'Active ledger status cascaded to inactive' );
     is( $inactive_ledger->status, 0, 'Already-inactive ledger remains inactive' );
 
-    # Create a fresh active fiscal period and cascade active status (should not affect ledger)
+    # Cascading an active status should reactivate inactive ledgers
     my $fp2 = $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::FiscalPeriods',
-            value => { status => 1 }
+            value => { status => 0 }
         }
     );
     my $inactive_ledger2 = $builder->build_object(
@@ -166,7 +166,7 @@ subtest 'cascade_to_ledgers() tests' => sub {
     $fp2->cascade_to_ledgers;
     $inactive_ledger2->discard_changes;
 
-    is( $inactive_ledger2->status, 0, 'Cascading active status does not reactivate inactive ledger' );
+    is( $inactive_ledger2->status, 1, 'Cascading active status reactivates inactive ledger' );
 
     # A fiscal period with no ledgers should cascade without errors
     my $fp_no_ledgers = $builder->build_object(

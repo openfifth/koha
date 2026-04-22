@@ -33,7 +33,7 @@ my $builder = t::lib::TestBuilder->new;
 
 subtest 'cascade_status() tests' => sub {
 
-    plan tests => 4;
+    plan tests => 6;
 
     $schema->storage->txn_begin;
 
@@ -51,7 +51,7 @@ subtest 'cascade_status() tests' => sub {
     is( $changed,        1, 'Change detected when parent goes inactive and child is active' );
     is( $ledger->status, 0, 'Child status updated to inactive' );
 
-    # Parent active -> already-inactive child: no change
+    # Parent active -> inactive child: change should be detected (activation cascade)
     my $ledger2 = $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Ledgers',
@@ -59,9 +59,20 @@ subtest 'cascade_status() tests' => sub {
         }
     );
     $fiscal_period->status(1);
-    my $not_changed = $fiscal_period->cascade_status( { parent_status => 1, child => $ledger2 } );
-    is( $not_changed,     0, 'No change detected when parent is active and child is already inactive' );
-    is( $ledger2->status, 0, 'Child status unchanged' );
+    my $activated = $fiscal_period->cascade_status( { parent_status => 1, child => $ledger2 } );
+    is( $activated,       1, 'Change detected when parent goes active and child is inactive' );
+    is( $ledger2->status, 1, 'Child status updated to active' );
+
+    # Parent and child already in same state: no change
+    my $ledger3 = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Ledgers',
+            value => { status => 1 }
+        }
+    );
+    my $not_changed = $fiscal_period->cascade_status( { parent_status => 1, child => $ledger3 } );
+    is( $not_changed,     0, 'No change detected when parent and child are both active' );
+    is( $ledger3->status, 1, 'Child status unchanged' );
 
     $schema->storage->txn_rollback;
 };

@@ -177,7 +177,7 @@ subtest 'has_sub_funds() tests' => sub {
 
 subtest 'cascade_to_sub_funds() tests' => sub {
 
-    plan tests => 3;
+    plan tests => 5;
 
     $schema->storage->txn_begin;
 
@@ -216,6 +216,16 @@ subtest 'cascade_to_sub_funds() tests' => sub {
 
     is( $active_sub_fund->status,   0, 'Active sub-fund status cascaded to inactive' );
     is( $inactive_sub_fund->status, 0, 'Already-inactive sub-fund remains inactive' );
+
+    # Cascading an active status should reactivate inactive sub-funds
+    $parent_fund->status(1);
+    $parent_fund->cascade_to_sub_funds;
+
+    $active_sub_fund->discard_changes;
+    $inactive_sub_fund->discard_changes;
+
+    is( $active_sub_fund->status,   1, 'Previously-active sub-fund reactivated when parent goes active' );
+    is( $inactive_sub_fund->status, 1, 'Previously-inactive sub-fund reactivated when parent goes active' );
 
     # A fund with no sub-funds should cascade without errors
     my $fund_no_children = $builder->build_object(

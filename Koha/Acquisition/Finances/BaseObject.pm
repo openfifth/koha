@@ -42,8 +42,8 @@ This class must always be subclassed.
 
 =head3 cascade_status
 
-This method will update the status if the parent status has changed
-This only applies to a parent being set to "inactive". Activating a parent object again will not change the status of the child
+This method will update the status if the parent status has changed.
+Applies to both activation and deactivation — children always match parent status after cascade.
 
 =cut
 
@@ -54,7 +54,7 @@ sub cascade_status {
     my $child           = $args->{child};
     my $change_detected = 0;
 
-    if ( $child->status != $parent_status && $parent_status == 0 ) {
+    if ( $child->status != $parent_status ) {
         $child->status($parent_status);
         $change_detected = 1;
     }
