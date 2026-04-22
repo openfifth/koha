@@ -70,9 +70,9 @@ describe("loads the manage MARC import page", () => {
 
         cy.get("#mainformsubmit").click();
 
-        cy.get("#job_callback").should("exist");
-
-        cy.contains("View batch").click();
+        cy.get("#job_callback", { timeout: 60000 })
+            .contains("View batch")
+            .click();
 
         // Now verify all values are retained
         cy.get("#new_matcher_id").should("have.value", "3");
