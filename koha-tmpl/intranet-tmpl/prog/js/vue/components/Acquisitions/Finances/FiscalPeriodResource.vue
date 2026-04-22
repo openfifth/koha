@@ -52,17 +52,22 @@ export default {
             const { instancedResource } = componentData;
             return {
                 show: [
-                    {
-                        to: {
-                            name: "LedgerFormAdd",
-                            query: {
-                                fiscal_period_id: resource.fiscal_period_id,
-                            },
-                        },
-                        title: $__("Add ledger"),
-                        icon: "plus",
-                        index: -1,
-                    },
+                    ...(resource.status
+                        ? [
+                              {
+                                  to: {
+                                      name: "LedgerFormAdd",
+                                      query: {
+                                          fiscal_period_id:
+                                              resource.fiscal_period_id,
+                                      },
+                                  },
+                                  title: $__("Add ledger"),
+                                  icon: "plus",
+                                  index: -1,
+                              },
+                          ]
+                        : []),
                 ],
             };
         };
