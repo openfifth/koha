@@ -193,7 +193,7 @@ export default {
             }
         });
 
-        const saveAndNavigate = ($event, resourceToSave) => {
+        const saveAndNavigate = async ($event, resourceToSave) => {
             const {
                 components,
                 navigationOnFormSave,
@@ -260,22 +260,21 @@ export default {
                 setWarning(errorString);
                 return;
             }
-            onFormSave($event, resourceToSave).then(resource => {
-                if (resource) {
-                    if (typeof navigationAction === "function") {
-                        navigationAction(resource, router);
-                    } else {
-                        router.push({
-                            name: navigationAction,
-                            ...(idParamRequired && {
-                                params: {
-                                    [idAttr]: resource[idAttr],
-                                },
-                            }),
-                        });
-                    }
+            const resource = await onFormSave($event, resourceToSave);
+            if (resource) {
+                if (typeof navigationAction === "function") {
+                    navigationAction(resource, router);
+                } else {
+                    router.push({
+                        name: navigationAction,
+                        ...(idParamRequired && {
+                            params: {
+                                [idAttr]: resource[idAttr],
+                            },
+                        }),
+                    });
                 }
-            });
+            }
         };
 
         const handleStickyToolbarFormSubmission = formToSubmit => {
