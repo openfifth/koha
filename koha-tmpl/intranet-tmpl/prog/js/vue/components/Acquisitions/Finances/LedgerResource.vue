@@ -130,6 +130,12 @@ export default {
                 newLabel: $__("New ledger"),
             },
             moduleStore: "acquisitionsStore",
+            showGroupsDisplayMode: "splitScreen",
+            splitScreenGroupings: [
+                { pane: 1, groups: ["Information and status"] },
+                { pane: 2, groups: ["Financial controlling"] },
+                { pane: "break", groups: ["Management in library"] },
+            ],
             props,
             additionalToolbarButtons,
             defaultToolbarButtons,

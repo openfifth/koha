@@ -102,6 +102,11 @@ export default {
                 hideFilterButton: true,
             },
             moduleStore: "acquisitionsStore",
+            showGroupsDisplayMode: "splitScreen",
+            splitScreenGroupings: [
+                { pane: 1, groups: ["Information and status"] },
+                { pane: 2, groups: ["Management in library"] },
+            ],
             props,
             additionalToolbarButtons,
             resourceAttrs: [
