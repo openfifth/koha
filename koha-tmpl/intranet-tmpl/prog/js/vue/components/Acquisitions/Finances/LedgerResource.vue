@@ -460,12 +460,14 @@ export default {
                       [resource.managing_branch]
                   )
                 : branchNames;
-            baseResource.setMessage(
-                $__("Access restriction for group(s) %s").format(
-                    groupNames.join(", ")
-                ),
-                true
-            );
+            if (groupNames.length) {
+                baseResource.setMessage(
+                    $__("Access restriction for group(s) %s").format(
+                        groupNames.join(", ")
+                    ),
+                    true
+                );
+            }
             const branchAttr = baseResource.resourceAttrs.find(
                 ra => ra.name === "managing_branch"
             );
@@ -505,12 +507,14 @@ export default {
                                     fiscalPeriod.managing_library
                                         ?.acquisitions_library_groups
                                 );
-                            baseResource.setMessage(
-                                $__(
-                                    "Access restriction for group(s) %s"
-                                ).format(groupNames.join(", ")),
-                                true
-                            );
+                            if (groupNames.length) {
+                                baseResource.setMessage(
+                                    $__(
+                                        "Access restriction for group(s) %s"
+                                    ).format(groupNames.join(", ")),
+                                    true
+                                );
+                            }
 
                             resource.managing_branch =
                                 user.value.loggedInUser.loggedInBranch;
