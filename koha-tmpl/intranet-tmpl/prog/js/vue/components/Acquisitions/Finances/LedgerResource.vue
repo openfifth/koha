@@ -12,6 +12,7 @@ import { useBaseResource } from "../../../composables/base-resource";
 import { $__ } from "@koha-vue/i18n";
 import { inject, ref } from "vue";
 import { storeToRefs } from "pinia";
+import { useAllocationModal } from "../../../composables/useAllocationModal.js";
 
 export default {
     props: {
@@ -31,6 +32,19 @@ export default {
             getBranchnamesFromGroups,
             differentCurrenciesInLedgers,
         } = acquisitionsStore;
+
+        const { setConfirmationDialog, setWarning, setMessage } =
+            inject("mainStore");
+
+        let refetchResource;
+        const { openAllocationModal } = useAllocationModal({
+            entity: "ledger",
+            acquisitionsStore,
+            setConfirmationDialog,
+            setWarning,
+            setMessage,
+            onSuccess: () => refetchResource?.(),
+        });
 
         const additionalToolbarButtons = (resource, componentData) => {
             const handleAllocationButtons = () => {
@@ -52,16 +66,7 @@ export default {
                     },
                 ].map(({ title, action, icon }) => {
                     return {
-                        to: {
-                            name: "AllocationFormAdd",
-                            params: {
-                                entity: "ledger",
-                                entity_id: resource.ledger_id,
-                            },
-                            query: {
-                                action,
-                            },
-                        },
+                        onClick: () => openAllocationModal(resource, action),
                         title,
                         icon,
                     };
@@ -810,6 +815,8 @@ export default {
                     : []),
             ];
         };
+
+        refetchResource = baseResource.refetchResource;
 
         return {
             ...baseResource,

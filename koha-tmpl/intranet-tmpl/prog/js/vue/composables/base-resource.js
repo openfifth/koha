@@ -536,7 +536,10 @@ export function useBaseResource(resourceConfig) {
      * @param {String} caller - The name of the caller that requested the resource
      *                         (e.g. 'form', 'list', 'show').
      */
+    let cachedComponentData = null;
+
     const getResource = async (resourceId, componentData, caller) => {
+        cachedComponentData = componentData;
         resourceConfig.apiClient.get(resourceId).then(
             resource => {
                 //TODO: Rename this 'resource' to 'fetchedResource'. Needs to also be renamed in ResourceFormSave and ResourceShow
@@ -554,6 +557,21 @@ export function useBaseResource(resourceConfig) {
             },
             error => {}
         );
+    };
+
+    /**
+     * Re-fetches the current resource using the component data cached by the
+     * most recent call to getResource. Updates the resource ref in place so
+     * the view reflects the latest server state without a full page reload.
+     * Has no effect if getResource has not yet been called.
+     */
+    const refetchResource = () => {
+        if (!cachedComponentData) return;
+        const resourceId =
+            cachedComponentData.instancedResource.route.params[
+                resourceConfig.idAttr
+            ];
+        getResource(resourceId, cachedComponentData, "show");
     };
 
     /**
@@ -755,6 +773,7 @@ export function useBaseResource(resourceConfig) {
         getResourceShowURL,
         goToResourceEdit,
         getResource,
+        refetchResource,
         goToResourceShow,
         goToResourceList,
         appendToShow,

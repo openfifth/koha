@@ -73,7 +73,11 @@ export default {
 
         const formattedTableOptions = computed(() => {
             if (Object.keys(props.filters).length > 0) {
-                props.tableOptions.url += "?q=" + JSON.stringify(props.filters);
+                const url =
+                    props.tableOptions.url +
+                    "?q=" +
+                    JSON.stringify(props.filters);
+                return { ...props.tableOptions, url };
             }
             return props.tableOptions;
         });
