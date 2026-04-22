@@ -19,7 +19,7 @@
             v-if="isUserPermitted('manageFunds')"
         />
     </Toolbar>
-    <div v-if="initialized">
+    <!-- <div v-if="initialized">
         <h1>{{ $__("Funds and ledgers") }}</h1>
         <fieldset class="filters">
             <h2>{{ $__("Filters") }}</h2>
@@ -126,7 +126,7 @@
                 ></KohaTable>
             </div>
         </div>
-    </div>
+    </div> -->
 </template>
 
 <script>
@@ -145,122 +145,122 @@ export default {
         const { isUserPermitted } = acquisitionsStore;
         const { authorisedValues } = storeToRefs(acquisitionsStore);
 
-        const ledgersTable = useTemplateRef("ledgersTable");
-        const fundsTable = useTemplateRef("fundsTable");
+        // const ledgersTable = useTemplateRef("ledgersTable");
+        // const fundsTable = useTemplateRef("fundsTable");
 
-        const filters = ref({
-            status: null,
-            fund_type: null,
-            owner_id: null,
-            fiscal_period_id: null,
-            ledger_id: null,
-        });
-        const statusOptions = ref([
-            { description: $__("Active"), value: true },
-            { description: $__("Inactive"), value: false },
-        ]);
+        // const filters = ref({
+        //     status: null,
+        //     fund_type: null,
+        //     owner_id: null,
+        //     fiscal_period_id: null,
+        //     ledger_id: null,
+        // });
+        // const statusOptions = ref([
+        //     { description: $__("Active"), value: true },
+        //     { description: $__("Inactive"), value: false },
+        // ]);
         const initialized = ref(true);
 
-        const tableUrl = (type, query) => {
-            let url = `/api/v1/acquisitions/${type}`;
-            if (query) {
-                url = url + "?q=" + JSON.stringify(query);
-            }
-            return url;
-        };
-        const getTableColumns = dataType => {
-            return [
-                {
-                    title: __("Name"),
-                    data: `name:${dataType}_id`,
-                    searchable: true,
-                    orderable: true,
-                    render: function (data, type, row, meta) {
-                        const key = `${dataType}_id`;
-                        return (
-                            `<a href="/cgi-bin/koha/acquisitions/finances/${dataType}/` +
-                            row[key] +
-                            '" class="show">' +
-                            escape_str(`${row.name}`) +
-                            "</a>"
-                        );
-                    },
-                },
-                {
-                    title: __("Description"),
-                    data: "description",
-                    searchable: true,
-                    orderable: true,
-                },
-            ];
-        };
-        const filterTables = () => {
-            const tableFilters = JSON.parse(JSON.stringify(filters.value));
-            Object.keys(tableFilters).forEach(key => {
-                if (tableFilters[key] === null) {
-                    delete tableFilters[key];
-                }
-            });
-            fundsTable.value.redraw(tableUrl("funds", tableFilters));
-            if (tableFilters.hasOwnProperty("fund_type")) {
-                delete tableFilters.fund_type;
-            }
-            ledgersTable.value.redraw(tableUrl("ledgers", tableFilters));
-        };
-        const clearFilters = () => {
-            filters.value = {
-                status: null,
-                fund_type: null,
-                owner_id: null,
-                fiscal_period_id: null,
-                ledger_id: null,
-            };
-        };
+        // const tableUrl = (type, query) => {
+        //     let url = `/api/v1/acquisitions/${type}`;
+        //     if (query) {
+        //         url = url + "?q=" + JSON.stringify(query);
+        //     }
+        //     return url;
+        // };
+        // const getTableColumns = dataType => {
+        //     return [
+        //         {
+        //             title: __("Name"),
+        //             data: `name:${dataType}_id`,
+        //             searchable: true,
+        //             orderable: true,
+        //             render: function (data, type, row, meta) {
+        //                 const key = `${dataType}_id`;
+        //                 return (
+        //                     `<a href="/cgi-bin/koha/acquisitions/finances/${dataType}/` +
+        //                     row[key] +
+        //                     '" class="show">' +
+        //                     escape_str(`${row.name}`) +
+        //                     "</a>"
+        //                 );
+        //             },
+        //         },
+        //         {
+        //             title: __("Description"),
+        //             data: "description",
+        //             searchable: true,
+        //             orderable: true,
+        //         },
+        //     ];
+        // };
+        // const filterTables = () => {
+        //     const tableFilters = JSON.parse(JSON.stringify(filters.value));
+        //     Object.keys(tableFilters).forEach(key => {
+        //         if (tableFilters[key] === null) {
+        //             delete tableFilters[key];
+        //         }
+        //     });
+        //     fundsTable.value.redraw(tableUrl("funds", tableFilters));
+        //     if (tableFilters.hasOwnProperty("fund_type")) {
+        //         delete tableFilters.fund_type;
+        //     }
+        //     ledgersTable.value.redraw(tableUrl("ledgers", tableFilters));
+        // };
+        // const clearFilters = () => {
+        //     filters.value = {
+        //         status: null,
+        //         fund_type: null,
+        //         owner_id: null,
+        //         fiscal_period_id: null,
+        //         ledger_id: null,
+        //     };
+        // };
 
-        const tableOptionsLedgers = ref({
-            columns: getTableColumns("ledger"),
-            url: tableUrl("ledgers"),
-            options: {
-                dom: '<"top pager"<"table_entries"ip>>tr<"bottom pager"ip>',
-            },
-            table_settings: null,
-            add_filters: true,
-        });
-        const tableOptionsFunds = ref({
-            columns: getTableColumns("fund"),
-            url: tableUrl("funds"),
-            options: {
-                dom: '<"top pager"<"table_entries"ip>>tr<"bottom pager"ip>',
-            },
-            table_settings: null,
-            add_filters: true,
-        });
+        // const tableOptionsLedgers = ref({
+        //     columns: getTableColumns("ledger"),
+        //     url: tableUrl("ledgers"),
+        //     options: {
+        //         dom: '<"top pager"<"table_entries"ip>>tr<"bottom pager"ip>',
+        //     },
+        //     table_settings: null,
+        //     add_filters: true,
+        // });
+        // const tableOptionsFunds = ref({
+        //     columns: getTableColumns("fund"),
+        //     url: tableUrl("funds"),
+        //     options: {
+        //         dom: '<"top pager"<"table_entries"ip>>tr<"bottom pager"ip>',
+        //     },
+        //     table_settings: null,
+        //     add_filters: true,
+        // });
 
-        const filterLimitations = computed(() => {
-            const filterLimitations = {};
-            Object.keys(filters.value)
-                .filter(key => !["fund_type"].includes(key))
-                .forEach(key => {
-                    if (filters.value[key]) {
-                        filterLimitations[key] = filters.value[key];
-                    }
-                });
-            return filterLimitations;
-        });
+        // const filterLimitations = computed(() => {
+        //     const filterLimitations = {};
+        //     Object.keys(filters.value)
+        //         .filter(key => !["fund_type"].includes(key))
+        //         .forEach(key => {
+        //             if (filters.value[key]) {
+        //                 filterLimitations[key] = filters.value[key];
+        //             }
+        //         });
+        //     return filterLimitations;
+        // });
 
         return {
             isUserPermitted,
-            ledgersTable,
-            fundsTable,
+            // ledgersTable,
+            // fundsTable,
             authorisedValues,
-            tableOptionsLedgers,
-            tableOptionsFunds,
-            filters,
-            statusOptions,
+            // tableOptionsLedgers,
+            // tableOptionsFunds,
+            // filters,
+            // statusOptions,
             initialized,
-            filterLimitations,
-            filterTables,
-            clearFilters,
+            // filterLimitations,
+            // filterTables,
+            // clearFilters,
         };
     },
     components: {
