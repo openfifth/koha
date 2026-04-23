@@ -950,7 +950,6 @@ export default {
                     group: $__("Fund / fund distributions"),
                     label: $__("Exchange rate"),
                     type: "number",
-                    defaultValue: 1.0,
                     size: 6,
                     hint: resource => {
                         return `(${resource.vendor_price_currency || getActiveCurrency.currency} to ${resource?.fund_distributions?.[0]?.fund?.currency || getActiveCurrency.currency})`;
@@ -978,7 +977,6 @@ export default {
                     group: $__("Fund / fund distributions"),
                     label: $__("Item replacement cost"),
                     type: "number",
-                    defaultValue: 1.0,
                     size: 6,
                     hideIn: ["List", "Show", "Search"],
                 },

@@ -114,7 +114,7 @@ export default {
                 ),
                 currency: selectedCurrency,
             };
-            props.resource.replacement_price = itemPrice;
+            props.resource.replacement_price = itemPrice || null;
             return itemPricePoints;
         });
         return {
