@@ -671,8 +671,13 @@ export default {
                                   const vendor = options.find(
                                       option => option.id === e
                                   );
-                                  // resource.tax_rate = vendor.tax_rate;
                                   resource.vendor = vendor;
+                                  if (vendor.list_currency)
+                                      resource.vendor_price_currency =
+                                          vendor.list_currency;
+                                  if (vendor.discount != null)
+                                      resource.discount_percentage =
+                                          vendor.discount;
                                   resource.fund_distributions.forEach(fd => {
                                       fd.tax_rate = vendor.tax_rate;
                                   });
