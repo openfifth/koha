@@ -608,9 +608,17 @@ if ( @$barcodes && $op eq 'cud-checkout' ) {
 # show all reserves of this borrower, and the position of the reservation ....
 if ($patron) {
     my $holds = Koha::Holds->search( { borrowernumber => $borrowernumber } );    # FIXME must be Koha::Patron->holds
-    my $waiting_holds = $holds->waiting;
+    my $waiting_holds      = $holds->waiting;
+    my $holds_count_policy = Koha::CirculationRules->get_effective_rule(
+        {
+            branchcode => $branch,
+            rule_name  => 'hold_groups_count_policy',
+        }
+    );
     $template->param(
-        holds_count  => $holds->count_holds,
+        holds_count => ( $holds_count_policy && $holds_count_policy->rule_value eq 'count_as_group' )
+        ? $holds->count_holds()
+        : $holds->count(),
         WaitingHolds => $waiting_holds,
     );
 
