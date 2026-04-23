@@ -32,7 +32,6 @@ export default {
             getCurrencyConversionRate,
             formatValueWithCurrency,
             getActiveCurrency,
-            formatFloatingPoint,
             differentCurrenciesInLedgers,
         } = acquisitionsStore;
 

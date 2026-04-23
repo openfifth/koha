@@ -44,11 +44,8 @@ export default {
     },
     setup(props) {
         const acquisitionsStore = inject("acquisitionsStore");
-        const {
-            formatValueWithCurrency,
-            getActiveCurrency,
-            formatFloatingPoint,
-        } = acquisitionsStore;
+        const { formatValueWithCurrency, getActiveCurrency } =
+            acquisitionsStore;
 
         const remainingAmount = computed(() => {
             const calculatedAmount = new BigNumber(
@@ -66,12 +63,11 @@ export default {
                 ),
                 percentage: remainderToDistribute.isZero()
                     ? 0
-                    : formatFloatingPoint(
-                          remainderToDistribute
-                              .div(calculatedAmount)
-                              .times(100)
-                              .toNumber()
-                      ),
+                    : remainderToDistribute
+                          .div(calculatedAmount)
+                          .times(100)
+                          .decimalPlaces(2, BigNumber.ROUND_HALF_UP)
+                          .toNumber(),
             };
             return result;
         });
