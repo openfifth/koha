@@ -15,11 +15,11 @@ use warnings;
 
 use base 'DBIx::Class::Core';
 
-=head1 TABLE: C<acq_orderline_fund_distribution>
+=head1 TABLE: C<acq_orderline_fund_distributions>
 
 =cut
 
-__PACKAGE__->table("acq_orderline_fund_distribution");
+__PACKAGE__->table("acq_orderline_fund_distributions");
 
 =head1 ACCESSORS
 
@@ -166,8 +166,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-03-25 15:23:13
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:KIORoyn52T6WuaGMzdlg1w
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-23 09:49:11
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:jRr2c3AZ0qJ6NCmgI0YAWQ
 
 
 =head2 koha_object_class

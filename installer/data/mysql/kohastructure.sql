@@ -220,13 +220,13 @@ FOREIGN KEY (`vendor_id`) REFERENCES `aqbooksellers` (`id`) ON DELETE CASCADE ON
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `acq_orderline_fund_distribution`
+-- Table structure for table `acq_orderline_fund_distributions`
 --
 
-DROP TABLE IF EXISTS `acq_orderline_fund_distribution`;
+DROP TABLE IF EXISTS `acq_orderline_fund_distributions`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
-CREATE TABLE `acq_orderline_fund_distribution` (
+CREATE TABLE `acq_orderline_fund_distributions` (
 `orderline_fund_distribution_id` INT(11) NOT NULL AUTO_INCREMENT,
 `orderline_id` INT(11) NOT NULL COMMENT 'orderline the distribution was made by',
 `fund_id` INT(11) NOT NULL COMMENT 'fund the distribution was made against',

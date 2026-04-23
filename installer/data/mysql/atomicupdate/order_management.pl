@@ -101,10 +101,10 @@ return {
             say_info( $out, "Table 'acq_orderlines' already exists" );
         }
 
-        unless ( TableExists('acq_orderline_fund_distribution') ) {
+        unless ( TableExists('acq_orderline_fund_distributions') ) {
             $dbh->do(
                 q{
-                CREATE TABLE `acq_orderline_fund_distribution` (
+                CREATE TABLE `acq_orderline_fund_distributions` (
                 `orderline_fund_distribution_id` INT(11) NOT NULL AUTO_INCREMENT,
                 `orderline_id` INT(11) NOT NULL COMMENT 'orderline the distribution was made by',
                 `fund_id` INT(11) NOT NULL COMMENT 'fund the distribution was made against',
@@ -123,9 +123,9 @@ return {
             }
             );
 
-            say_success( $out, "Added new table 'acq_orderline_fund_distribution'" );
+            say_success( $out, "Added new table 'acq_orderline_fund_distributions'" );
         } else {
-            say_info( $out, "Table 'acq_orderline_fund_distribution' already exists" );
+            say_info( $out, "Table 'acq_orderline_fund_distributions' already exists" );
         }
 
         unless ( TableExists('acq_orderline_users') ) {
