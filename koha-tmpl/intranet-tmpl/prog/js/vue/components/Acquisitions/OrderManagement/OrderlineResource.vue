@@ -809,24 +809,6 @@ export default {
                     hideIn: ["List", "Show", "Search"],
                 },
                 {
-                    name: "calculated_amount_oc",
-                    type: "component",
-                    group: $__("Fund / fund distributions"),
-                    componentPath:
-                        "@koha-vue/components/Acquisitions/OrderManagement/CalculatedAmount.vue",
-                    componentProps: {
-                        resource: {
-                            type: "resource",
-                            value: null,
-                        },
-                        currency: {
-                            type: "string",
-                            value: "original",
-                        },
-                    },
-                    hideIn: ["List", "Show", "Search"],
-                },
-                {
                     name: "fund_distributions",
                     type:
                         componentToDisplay === "Search"
@@ -949,6 +931,24 @@ export default {
                         Search: 5,
                     },
                     hideIn: ["List", "Show"],
+                },
+                {
+                    name: "calculated_amount_oc",
+                    type: "component",
+                    group: $__("Fund / fund distributions"),
+                    componentPath:
+                        "@koha-vue/components/Acquisitions/OrderManagement/CalculatedAmount.vue",
+                    componentProps: {
+                        resource: {
+                            type: "resource",
+                            value: null,
+                        },
+                        currency: {
+                            type: "string",
+                            value: "original",
+                        },
+                    },
+                    hideIn: ["List", "Show", "Search"],
                 },
                 {
                     name: "distribution_exchange_rate",
