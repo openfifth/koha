@@ -27,9 +27,11 @@ use URI;
 use C4::Reserves qw( CanItemBeReserved AddReserve CanBookBeReserved );
 use C4::Auth     qw( checkauth );
 
+use Koha::CirculationRules;
+use Koha::HoldGroup;
+use Koha::Holds;
 use Koha::Items;
 use Koha::Patrons;
-use Koha::HoldGroup;
 
 my $input = CGI->new();
 
@@ -70,6 +72,19 @@ if ( $op eq 'cud-placerequest' && $patron ) {
     my %failed_holds;
     my @successful_hold_ids;
 
+    # When placing a hold group with count_as_group policy, the entire group counts as
+    # one unit. Run the count check once (first hold) and skip it for the rest.
+    my $count_policy = $hold_group_param
+        ? Koha::CirculationRules->get_effective_rule(
+        {
+            branchcode => $branch || undef,
+            rule_name  => 'hold_groups_count_policy',
+        }
+        )
+        : undef;
+    my $skip_count_for_group = $count_policy && $count_policy->rule_value eq 'count_as_group';
+    my $group_count_checked  = 0;
+
     foreach my $biblionumber ( keys %bibinfos ) {
 
         my $can_override = C4::Context->preference('AllowHoldPolicyOverride');
@@ -87,7 +102,11 @@ if ( $op eq 'cud-placerequest' && $patron ) {
                         $biblionumber = $item->biblionumber;
                     }
 
-                    my $can_item_be_reserved = CanItemBeReserved( $patron, $item, $item_pickup_location )->{status};
+                    my $check_params = {};
+                    $check_params->{ignore_group_hold_counts} = 1
+                        if $skip_count_for_group && $group_count_checked;
+                    my $can_item_be_reserved =
+                        CanItemBeReserved( $patron, $item, $item_pickup_location, $check_params )->{status};
 
                     if ( $can_item_be_reserved eq 'OK'
                         || ( $can_item_be_reserved ne 'itemAlreadyOnHold' && $can_override ) )
@@ -110,6 +129,7 @@ if ( $op eq 'cud-placerequest' && $patron ) {
                         );
 
                         push @successful_hold_ids, $reserve_id;
+                        $group_count_checked = 1;
                         $hold_priority++;
 
                     } else {
@@ -119,8 +139,13 @@ if ( $op eq 'cud-placerequest' && $patron ) {
             }
 
         } elsif ( @biblionumbers > 1 || $multi_holds ) {
-            my $bibinfo = $bibinfos{$biblionumber};
-            if ( $can_override || CanBookBeReserved( $patron->borrowernumber, $biblionumber )->{status} eq 'OK' ) {
+            my $bibinfo     = $bibinfos{$biblionumber};
+            my $book_params = {};
+            $book_params->{ignore_group_hold_counts} = 1
+                if $skip_count_for_group && $group_count_checked;
+            if ( $can_override
+                || CanBookBeReserved( $patron->borrowernumber, $biblionumber, undef, $book_params )->{status} eq 'OK' )
+            {
                 my $reserve_id = AddReserve(
                     {
                         branchcode       => $bibinfo->{pickup},
@@ -138,12 +163,19 @@ if ( $op eq 'cud-placerequest' && $patron ) {
                     }
                 );
                 push @successful_hold_ids, $reserve_id;
+                $group_count_checked = 1;
             }
         } else {
 
             # place a request on 1st available
             for ( my $i = 0 ; $i < $holds_to_place_count ; $i++ ) {
-                if ( $can_override || CanBookBeReserved( $patron->borrowernumber, $biblionumber )->{status} eq 'OK' ) {
+                my $book_params = {};
+                $book_params->{ignore_group_hold_counts} = 1
+                    if $skip_count_for_group && $group_count_checked;
+                if ( $can_override
+                    || CanBookBeReserved( $patron->borrowernumber, $biblionumber, undef, $book_params )->{status} eq
+                    'OK' )
+                {
                     my $reserve_id = AddReserve(
                         {
                             branchcode       => $branch,
@@ -162,6 +194,7 @@ if ( $op eq 'cud-placerequest' && $patron ) {
                         }
                     );
                     push @successful_hold_ids, $reserve_id;
+                    $group_count_checked = 1;
                 }
             }
         }
