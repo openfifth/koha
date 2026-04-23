@@ -33,6 +33,7 @@ export default {
             formatValueWithCurrency,
             getActiveCurrency,
             differentCurrenciesInLedgers,
+            buildFundTreeOptions,
         } = acquisitionsStore;
 
         const fundDistributions = inject("resourceRelationships");
@@ -205,6 +206,8 @@ export default {
                 label: $__("Fund"),
                 requiredKey: "fund_id",
                 selectLabel: "name",
+                treeSelect: true,
+                treeSelectOptionsHandler: buildFundTreeOptions,
                 onSelected: (e, options, resource) => {
                     const fund = props.options.find(
                         option => option.fund_id === e
