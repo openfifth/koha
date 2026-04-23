@@ -1362,6 +1362,12 @@ export default {
                 });
             });
 
+            orderline.fund_distributions.forEach(fd => {
+                delete fd.fund;
+                delete fd.currency;
+                delete fd.taxIncluded;
+            });
+
             return handleAPIFormSubmission(orderline, orderline_id);
         };
 

@@ -41,12 +41,12 @@ properties:
       - number
       - "null"
     description: The value of the tax based on the tax rate
-  distibuted_amount_tax_excluded:
+  distributed_amount_tax_excluded:
     type:
       - number
       - "null"
     description: The amount distributed with tax excluded
-  distibuted_amount_tax_included:
+  distributed_amount_tax_included:
     type:
       - number
       - "null"

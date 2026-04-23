@@ -240,7 +240,7 @@ CREATE TABLE `acq_orderline_fund_distributions` (
 `distributed_amount_tax_included` decimal(28,6) NOT NULL COMMENT 'distributed amount including tax',
 PRIMARY KEY (`orderline_fund_distribution_id`),
 FOREIGN KEY (`orderline_id`) REFERENCES `acq_orderlines` (`orderline_id`),
-FOREIGN KEY (`fund_id`) REFERENCES `funds` (`fund_id`)
+FOREIGN KEY (`fund_id`) REFERENCES `acq_funds` (`fund_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
