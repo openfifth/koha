@@ -67,22 +67,26 @@ export default {
             // Calculate the currency conversion if required (exchange rate will be 1.00 if the currencies match)
             const fxConvertedDistribution =
                 distribution.distributed_amount_oc * distribution.exchange_rate;
-            // Calculate whether to add the tax value based on listincgst
-            const withTaxAdded = taxIncluded
-                ? fxConvertedDistribution
-                : fxConvertedDistribution * (1 + distribution.tax_rate);
 
-            // Work out tax value
-            distribution.tax_value = taxIncluded
-                ? fxConvertedDistribution * distribution.tax_rate
-                : withTaxAdded - fxConvertedDistribution;
-            // Set the distributed amounts
-            distribution.distributed_amount_tax_included = taxIncluded
-                ? fxConvertedDistribution
-                : withTaxAdded;
-            distribution.distributed_amount_tax_excluded = taxIncluded
-                ? fxConvertedDistribution - distribution.tax_value
-                : fxConvertedDistribution;
+            if (taxIncluded) {
+                // Price includes tax: back-calculate the excluded amount by dividing out the tax rate
+                const taxExcluded =
+                    fxConvertedDistribution / (1 + distribution.tax_rate);
+                distribution.distributed_amount_tax_included =
+                    fxConvertedDistribution;
+                distribution.distributed_amount_tax_excluded = taxExcluded;
+                distribution.tax_value = fxConvertedDistribution - taxExcluded;
+            } else {
+                // Price excludes tax: add tax on top
+                const taxIncludedAmount =
+                    fxConvertedDistribution * (1 + distribution.tax_rate);
+                distribution.distributed_amount_tax_excluded =
+                    fxConvertedDistribution;
+                distribution.distributed_amount_tax_included =
+                    taxIncludedAmount;
+                distribution.tax_value =
+                    taxIncludedAmount - fxConvertedDistribution;
+            }
             distribution.distributed_amount = fxConvertedDistribution;
         };
         // Assign this method to the distribution to use outside this component where required

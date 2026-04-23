@@ -85,7 +85,7 @@ export default {
                 ? itemPrice
                 : itemPrice * (1 + taxRate);
             const taxExcludedPrice = isTaxIncluded
-                ? itemPrice - itemPrice * taxRate
+                ? itemPrice / (1 + taxRate)
                 : itemPrice;
             const totalTaxIncluded =
                 taxIncludedPrice * orderline.quantity_ordered;
