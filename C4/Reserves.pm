@@ -398,7 +398,7 @@ sub CanBookBeReserved {
         return { status => 'alreadypossession' };
     }
 
-    if ( $params->{itemtype} ) {
+    if ( $params->{itemtype} && !$params->{ignore_group_hold_counts} ) {
 
         # biblio-level, item type-contrained
         my $patron          = Koha::Patrons->find($borrowernumber);
@@ -413,15 +413,22 @@ sub CanBookBeReserved {
 
         $reservesallowed = ( $reservesallowed eq '' ) ? undef : $reservesallowed;
 
-        my $count = $patron->holds->count_holds(
+        my $count_policy = Koha::CirculationRules->get_effective_rule(
             {
-                '-or' => [
-                    { 'me.itemtype' => $params->{itemtype} },
-                    { 'item.itype'  => $params->{itemtype} }
-                ]
-            },
-            { join => ['item'] }
+                branchcode => $pickup_branchcode,
+                rule_name  => 'hold_groups_count_policy',
+            }
         );
+        my $hold_search_params = {
+            '-or' => [
+                { 'me.itemtype' => $params->{itemtype} },
+                { 'item.itype'  => $params->{itemtype} }
+            ]
+        };
+        my $count =
+            ( $count_policy && $count_policy->rule_value eq 'count_as_group' )
+            ? $patron->holds->count_holds( $hold_search_params, { join => ['item'] } )
+            : $patron->holds->search( $hold_search_params, { join => ['item'] } )->count();
 
         return { status => '' }
             if defined $reservesallowed and $reservesallowed < $count + 1;
