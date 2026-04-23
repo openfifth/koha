@@ -36,6 +36,7 @@
 
 <script>
 import { computed, inject, watch } from "vue";
+import BigNumber from "bignumber.js";
 import ToolTip from "../../ToolTip.vue";
 export default {
     components: { ToolTip },
@@ -49,21 +50,27 @@ export default {
 
         const { resource } = props;
         const totalPrice = computed(() => {
-            return resource.vendor_price * resource.quantity_ordered;
+            return new BigNumber(resource.vendor_price || 0)
+                .times(resource.quantity_ordered || 0)
+                .toNumber();
         });
         const totalDiscountedPrice = computed(() => {
+            const price = new BigNumber(resource.vendor_price || 0);
+            const qty = new BigNumber(resource.quantity_ordered || 0);
             if (resource.discount_percentage) {
-                return (
-                    resource.vendor_price *
-                    ((100 - resource.discount_percentage) / 100) *
-                    resource.quantity_ordered
-                );
+                return price
+                    .times(
+                        new BigNumber(100).minus(resource.discount_percentage)
+                    )
+                    .div(100)
+                    .times(qty)
+                    .toNumber();
             }
             if (resource.discount_amount_oc) {
-                return (
-                    (resource.vendor_price - resource.discount_amount_oc) *
-                    resource.quantity_ordered
-                );
+                return price
+                    .minus(resource.discount_amount_oc)
+                    .times(qty)
+                    .toNumber();
             }
             return totalPrice.value;
         });

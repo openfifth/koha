@@ -14,6 +14,7 @@
 <script>
 import { computed, inject, ref, watch } from "vue";
 import { $__ } from "@koha-vue/i18n";
+import BigNumber from "bignumber.js";
 import FormElement from "../../FormElement.vue";
 import { storeToRefs } from "pinia";
 
@@ -60,34 +61,45 @@ export default {
 
             // If the distribution is a percentage, caluculate the value based on that percentage and set the distributed_amount_oc
             if (distribution.percentage) {
-                distribution.distributed_amount_oc =
-                    totalAmount * (distribution.percentage / 100);
+                distribution.distributed_amount_oc = new BigNumber(
+                    totalAmount || 0
+                )
+                    .times(distribution.percentage)
+                    .div(100)
+                    .toNumber();
             }
 
             // Calculate the currency conversion if required (exchange rate will be 1.00 if the currencies match)
-            const fxConvertedDistribution =
-                distribution.distributed_amount_oc * distribution.exchange_rate;
+            const fxConverted = new BigNumber(
+                distribution.distributed_amount_oc || 0
+            ).times(distribution.exchange_rate || 0);
 
             if (taxIncluded) {
                 // Price includes tax: back-calculate the excluded amount by dividing out the tax rate
-                const taxExcluded =
-                    fxConvertedDistribution / (1 + distribution.tax_rate);
+                const taxExcluded = fxConverted.div(
+                    new BigNumber(1).plus(distribution.tax_rate || 0)
+                );
                 distribution.distributed_amount_tax_included =
-                    fxConvertedDistribution;
-                distribution.distributed_amount_tax_excluded = taxExcluded;
-                distribution.tax_value = fxConvertedDistribution - taxExcluded;
+                    fxConverted.toNumber();
+                distribution.distributed_amount_tax_excluded =
+                    taxExcluded.toNumber();
+                distribution.tax_value = fxConverted
+                    .minus(taxExcluded)
+                    .toNumber();
             } else {
                 // Price excludes tax: add tax on top
-                const taxIncludedAmount =
-                    fxConvertedDistribution * (1 + distribution.tax_rate);
+                const taxIncludedAmount = fxConverted.times(
+                    new BigNumber(1).plus(distribution.tax_rate || 0)
+                );
                 distribution.distributed_amount_tax_excluded =
-                    fxConvertedDistribution;
+                    fxConverted.toNumber();
                 distribution.distributed_amount_tax_included =
-                    taxIncludedAmount;
-                distribution.tax_value =
-                    taxIncludedAmount - fxConvertedDistribution;
+                    taxIncludedAmount.toNumber();
+                distribution.tax_value = taxIncludedAmount
+                    .minus(fxConverted)
+                    .toNumber();
             }
-            distribution.distributed_amount = fxConvertedDistribution;
+            distribution.distributed_amount = fxConverted.toNumber();
         };
         // Assign this method to the distribution to use outside this component where required
         props.resource.calculateDistributedAmount =
@@ -97,12 +109,18 @@ export default {
             props.resource.percentage = 100;
             calculateDistributedAmount(props.resource);
         } else {
-            const remainderToDistribute =
-                orderline.calculated_amount_oc -
-                orderline.totalDistributedAmount;
-            const remainderPercentage =
-                (remainderToDistribute / orderline.calculated_amount_oc) * 100;
-            props.resource.percentage = remainderPercentage;
+            const calculatedAmount = new BigNumber(
+                orderline.calculated_amount_oc || 0
+            );
+            const remainderToDistribute = calculatedAmount.minus(
+                orderline.totalDistributedAmount || 0
+            );
+            props.resource.percentage = calculatedAmount.isZero()
+                ? 0
+                : remainderToDistribute
+                      .div(calculatedAmount)
+                      .times(100)
+                      .toNumber();
         }
 
         watch(
@@ -158,9 +176,13 @@ export default {
 
         const distributedAmount = ref(0);
         const calculatedTotalDistributedAmount = fundDistributions => {
-            return fundDistributions.reduce((acc, fd) => {
-                return acc + parseFloat(fd.distributed_amount_oc || 0);
-            }, 0);
+            return fundDistributions
+                .reduce(
+                    (acc, fd) =>
+                        acc.plus(new BigNumber(fd.distributed_amount_oc || 0)),
+                    new BigNumber(0)
+                )
+                .toNumber();
         };
 
         watch(fundDistributions, () => {
