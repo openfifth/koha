@@ -3,7 +3,13 @@ import { BigNumber } from "bignumber.js";
 BigNumber.config({ DECIMAL_PLACES: 6 });
 
 const formatFloatingPoint = value => {
-    return new BigNumber(value).decimalPlaces(6).toNumber();
+    // Convert via String first so JS's shortest-representation algorithm recovers
+    // the intended decimal (e.g. String(17.9549999...) === "17.955"), then round
+    // to 2dp with BigNumber before converting to a plain number so that
+    // format_price's toFixed(2) always receives a pre-rounded value.
+    return new BigNumber(String(value ?? 0))
+        .decimalPlaces(2, BigNumber.ROUND_HALF_UP)
+        .toNumber();
 };
 
 const formatValueWithCurrencyHandler = (value, currency, store) => {
