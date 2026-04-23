@@ -3,6 +3,7 @@
         class="rows"
         :id="`${name + '_' + 'relationship'}`"
         style="margin-bottom: 2em"
+        v-if="initialized"
     >
         <legend v-if="relationshipTitle" style="margin-bottom: 2em">
             {{ relationshipTitle }}
