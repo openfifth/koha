@@ -39,6 +39,7 @@ use Koha::Patron::Restriction::Types;
 use Koha::Patron::Categories;
 use Koha::Patron::Messages;
 use Koha::CsvProfiles;
+use Koha::CirculationRules;
 use Koha::Holds;
 use Koha::Patrons;
 use Koha::Patron::Consents;
@@ -210,8 +211,16 @@ if ( $patron->is_expired || $patron->is_going_to_expire ) {
 
 my $holds         = Koha::Holds->search( { borrowernumber => $borrowernumber } );    # FIXME must be Koha::Patron->holds
 my $waiting_holds = $holds->waiting;
+my $holds_count_policy = Koha::CirculationRules->get_effective_rule(
+    {
+        branchcode => C4::Context->userenv ? C4::Context->userenv->{'branch'} : undef,
+        rule_name  => 'hold_groups_count_policy',
+    }
+);
 $template->param(
-    holds_count  => $holds->count_holds,
+    holds_count => ( $holds_count_policy && $holds_count_policy->rule_value eq 'count_as_group' )
+    ? $holds->count_holds()
+    : $holds->count(),
     WaitingHolds => $waiting_holds,
 );
 
@@ -293,9 +302,11 @@ my $has_modifications  = Koha::Patron::Modifications->search( { borrowernumber =
 my $patron_lists_count = $patron->get_lists_with_patron->count();
 
 $template->param(
-    patron                 => $patron,
-    issuecount             => $patron->checkouts->count,
-    holds_count            => $patron->holds->count_holds,
+    patron      => $patron,
+    issuecount  => $patron->checkouts->count,
+    holds_count => ( $holds_count_policy && $holds_count_policy->rule_value eq 'count_as_group' )
+    ? $patron->holds->count_holds()
+    : $patron->holds->count(),
     fines                  => $patron->account->balance,
     translated_language    => $translated_language,
     detailview             => 1,
