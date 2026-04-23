@@ -226,6 +226,12 @@ Foreign key to cash_registers.id
   data_type: 'tinyint'
   is_nullable: 1
 
+=head2 patron_branchcode_in_ao
+
+  data_type: 'tinyint'
+  default_value: 0
+  is_nullable: 1
+
 =head2 show_checkin_message
 
   data_type: 'tinyint'
@@ -316,6 +322,8 @@ __PACKAGE__->add_columns(
   { data_type => "varchar", is_nullable => 1, size => 255 },
   "send_patron_home_library_in_af",
   { data_type => "tinyint", is_nullable => 1 },
+  "patron_branchcode_in_ao",
+  { data_type => "tinyint", default_value => 0, is_nullable => 1 },
   "show_checkin_message",
   { data_type => "tinyint", is_nullable => 1 },
   "show_outstanding_amount",
