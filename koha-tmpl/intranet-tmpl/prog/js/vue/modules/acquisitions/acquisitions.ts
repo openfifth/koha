@@ -35,6 +35,7 @@ import { useMainStore } from "../../stores/main";
 import { useNavigationStore } from "../../stores/navigation";
 import { useAcquisitionsStore } from "../../stores/acquisitions";
 import i18n from "@koha-vue/i18n";
+import "../../../../css/vue.css";
 
 const pinia = createPinia();
 const mainStore = useMainStore(pinia);
@@ -44,7 +45,7 @@ const routes = navigationStore.setRoutes(routesDef);
 
 const router = createRouter({
     history: createWebHistory(),
-    linkActiveClass: "current",
+    linkExactActiveClass: "current",
     routes,
 });
 
@@ -103,7 +104,7 @@ const loadRouterAndMount = async () => {
         await router.isReady();
         app.mount("#acquisitions");
     } catch (err) {
-        console.log(err)
+        console.log(err);
     }
 };
 

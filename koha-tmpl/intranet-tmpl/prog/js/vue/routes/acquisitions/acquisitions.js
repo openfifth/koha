@@ -22,8 +22,89 @@ export const routes = [
                 is_navigation_item: false,
             },
             {
+                path: "/cgi-bin/koha/acquisitions/order_management",
+                title: $__("Order management"),
+                icon: "fa fa-cart-shopping",
+                children: [
+                    {
+                        is_navigation_item: false,
+                        path: "",
+                        component: markRaw(OrderManagementHome),
+                        name: "OrderManagementHome",
+                    },
+                    {
+                        path: "orderlines",
+                        title: $__("Orderlines"),
+                        resource:
+                            "Acquisitions/OrderManagement/OrderlineResource.vue",
+                        children: [
+                            {
+                                path: "",
+                                component: markRaw(ResourceWrapper),
+                                name: "OrderlineList",
+                                title: $__("List orderlines"),
+                                permission: "manageOrderlines",
+                                is_navigation_item: false,
+                            },
+                            {
+                                path: ":orderline_id",
+                                component: markRaw(ResourceWrapper),
+                                name: "OrderlineShow",
+                                title: $__("Show orderline"),
+                                permission: "manageOrderlines",
+                                is_navigation_item: false,
+                            },
+                            {
+                                path: "add",
+                                component: markRaw(ResourceWrapper),
+                                name: "OrderlineFormAdd",
+                                title: $__("Add orderline"),
+                                permission: "createOrderlines",
+                                is_navigation_item: false,
+                            },
+                            {
+                                path: "edit/:orderline_id",
+                                component: markRaw(ResourceWrapper),
+                                name: "OrderlineFormAddEdit",
+                                title: $__("Edit orderline"),
+                                permission: "createOrderlines",
+                                is_navigation_item: false,
+                            },
+                            {
+                                path: "search",
+                                component: markRaw(ResourceWrapper),
+                                name: "OrderlineSearch",
+                                title: $__("Search orderlines"),
+                                permission: "",
+                                is_navigation_item: false,
+                            },
+                        ],
+                    },
+                ],
+            },
+            {
+                path: "/cgi-bin/koha/acquisitions/suggestions",
+                title: $__("Suggestions"),
+                icon: "fa fa-cart-shopping",
+                resource: "Acquisitions/OrderManagement/SuggestionResource.vue",
+                children: [
+                    {
+                        path: "",
+                        component: markRaw(ResourceWrapper),
+                        name: "SuggestionList",
+                        title: $__("Add order from a suggestion"),
+                        permission: "manageOrderlines",
+                        is_navigation_item: false,
+                    },
+                ],
+            },
+            {
+                href: "/cgi-bin/koha/acquisition/vendors",
+                title: $__("Vendors"),
+                icon: "fa fa-cart-shopping",
+            },
+            {
                 path: "/cgi-bin/koha/acquisitions/finances",
-                moduleName: "funds",
                 title: $__("Finances"),
                 icon: "fa fa-money-check-dollar",
                 children: [
@@ -32,53 +113,50 @@ export const routes = [
                         component: markRaw(FinancesHome),
                         name: "FinancesHome",
                         is_navigation_item: false,
-                        alternateLeftMenu: "AcqMenu",
                     },
                     {
                         path: "fiscal_periods",
                         title: $__("Fiscal periods"),
-                        is_navigation_item: false,
                         resource:
                             "Acquisitions/Finances/FiscalPeriodResource.vue",
                         children: [
                             {
                                 path: "",
+                                is_navigation_item: false,
                                 component: markRaw(ResourceWrapper),
                                 name: "FiscalPeriodList",
                                 title: $__("List fiscal periods"),
                                 permission: "manageFiscalPeriods",
-                                alternateLeftMenu: "AcqMenu",
                             },
                             {
                                 path: ":fiscal_period_id",
+                                is_navigation_item: false,
                                 component: markRaw(ResourceWrapper),
                                 name: "FiscalPeriodShow",
                                 title: $__("Show fiscal period"),
                                 permission: "manageFiscalPeriods",
-                                alternateLeftMenu: "AcqMenu",
                             },
                             {
                                 path: "add",
+                                is_navigation_item: false,
                                 component: markRaw(ResourceWrapper),
                                 name: "FiscalPeriodFormAdd",
                                 title: $__("Add fiscal period"),
                                 permission: "createFiscalPeriods",
-                                alternateLeftMenu: "AcqMenu",
                             },
                             {
                                 path: "edit/:fiscal_period_id",
+                                is_navigation_item: false,
                                 component: markRaw(ResourceWrapper),
                                 name: "FiscalPeriodFormAddEdit",
                                 title: $__("Edit fiscal period"),
                                 permission: "editFiscalPeriod",
-                                alternateLeftMenu: "AcqMenu",
                             },
                         ],
                     },
                     {
                         path: "ledgers",
                         title: $__("Ledgers"),
-                        is_navigation_item: false,
                         resource: "Acquisitions/Finances/LedgerResource.vue",
                         children: [
                             {
@@ -87,7 +165,7 @@ export const routes = [
                                 name: "LedgerList",
                                 title: $__("List ledgers"),
                                 permission: "manageLedgers",
-                                alternateLeftMenu: "AcqMenu",
+                                is_navigation_item: false,
                             },
                             {
                                 path: ":ledger_id",
@@ -95,7 +173,7 @@ export const routes = [
                                 name: "LedgerShow",
                                 title: $__("Show ledger"),
                                 permission: "manageLedgers",
-                                alternateLeftMenu: "AcqMenu",
+                                is_navigation_item: false,
                             },
                             {
                                 path: "add",
@@ -103,7 +181,7 @@ export const routes = [
                                 name: "LedgerFormAdd",
                                 title: $__("Add ledger"),
                                 permission: "createLedger",
-                                alternateLeftMenu: "AcqMenu",
+                                is_navigation_item: false,
                             },
                             {
                                 path: "edit/:ledger_id",
@@ -111,14 +189,13 @@ export const routes = [
                                 name: "LedgerFormAddEdit",
                                 title: $__("Edit ledger"),
                                 permission: "editLedger",
-                                alternateLeftMenu: "AcqMenu",
+                                is_navigation_item: false,
                             },
                         ],
                     },
                     {
                         path: "funds",
                         title: $__("Funds"),
-                        is_navigation_item: false,
                         resource: "Acquisitions/Finances/FundResource.vue",
                         children: [
                             {
@@ -127,7 +204,7 @@ export const routes = [
                                 name: "FundList",
                                 title: $__("List funds"),
                                 permission: "manageFunds",
-                                alternateLeftMenu: "AcqMenu",
+                                is_navigation_item: false,
                             },
                             {
                                 path: ":fund_id",
@@ -135,7 +212,7 @@ export const routes = [
                                 name: "FundShow",
                                 title: $__("Show fund"),
                                 permission: "manageFunds",
-                                alternateLeftMenu: "AcqMenu",
+                                is_navigation_item: false,
                             },
                             {
                                 path: "add",
@@ -143,7 +220,7 @@ export const routes = [
                                 name: "FundFormAdd",
                                 title: $__("Add fund"),
                                 permission: "createFund",
-                                alternateLeftMenu: "AcqMenu",
+                                is_navigation_item: false,
                             },
                             {
                                 path: "edit/:fund_id",
@@ -151,7 +228,7 @@ export const routes = [
                                 name: "FundFormAddEdit",
                                 title: $__("Edit fund"),
                                 permission: "editFund",
-                                alternateLeftMenu: "AcqMenu",
+                                is_navigation_item: false,
                             },
                             {
                                 path: ":fund_id/sub_fund/add",
@@ -159,7 +236,7 @@ export const routes = [
                                 name: "SubFundFormAdd",
                                 title: $__("Add sub fund"),
                                 permission: "createFund",
-                                alternateLeftMenu: "AcqMenu",
+                                is_navigation_item: false,
                             },
                             {
                                 path: ":fund_id/sub_fund/edit/:sub_fund_id",
@@ -167,7 +244,7 @@ export const routes = [
                                 name: "SubFundFormAddEdit",
                                 title: $__("Edit sub fund"),
                                 permission: "editFund",
-                                alternateLeftMenu: "AcqMenu",
+                                is_navigation_item: false,
                             },
                             {
                                 path: "sub_fund/:sub_fund_id",
@@ -175,7 +252,7 @@ export const routes = [
                                 name: "SubFundShow",
                                 title: $__("Show sub fund"),
                                 permission: "manageFunds",
-                                alternateLeftMenu: "AcqMenu",
+                                is_navigation_item: false,
                             },
                         ],
                     },
@@ -191,88 +268,6 @@ export const routes = [
                                 component: markRaw(ResourceWrapper),
                                 name: "AllocationFormAdd",
                                 title: $__("List funds"),
-                                alternateLeftMenu: "AcqMenu",
-                            },
-                        ],
-                    },
-                ],
-            },
-            {
-                path: "/cgi-bin/koha/acquisitions/order_management",
-                moduleName: "ordering",
-                title: $__("Order management"),
-                icon: "fa fa-cart-shopping",
-                children: [
-                    {
-                        path: "",
-                        component: markRaw(OrderManagementHome),
-                        name: "OrderManagementHome",
-                        is_navigation_item: false,
-                        alternateLeftMenu: "AcqMenu",
-                    },
-                    {
-                        path: "suggestions",
-                        title: $__("Add order from a suggestion"),
-                        is_navigation_item: false,
-                        resource:
-                            "Acquisitions/OrderManagement/SuggestionResource.vue",
-                        children: [
-                            {
-                                path: "",
-                                component: markRaw(ResourceWrapper),
-                                name: "SuggestionList",
-                                title: $__("List suggestions"),
-                                permission: "manageOrderlines",
-                                alternateLeftMenu: "AcqMenu",
-                            },
-                        ],
-                    },
-                    {
-                        path: "orderlines",
-                        title: $__("Orderlines"),
-                        is_navigation_item: false,
-                        resource:
-                            "Acquisitions/OrderManagement/OrderlineResource.vue",
-                        children: [
-                            {
-                                path: "",
-                                component: markRaw(ResourceWrapper),
-                                name: "OrderlineList",
-                                title: $__("List orderlines"),
-                                permission: "manageOrderlines",
-                                alternateLeftMenu: "AcqMenu",
-                            },
-                            {
-                                path: ":orderline_id",
-                                component: markRaw(ResourceWrapper),
-                                name: "OrderlineShow",
-                                title: $__("Show orderline"),
-                                permission: "manageOrderlines",
-                                alternateLeftMenu: "AcqMenu",
-                            },
-                            {
-                                path: "add",
-                                component: markRaw(ResourceWrapper),
-                                name: "OrderlineFormAdd",
-                                title: $__("Add orderline"),
-                                permission: "createOrderlines",
-                                alternateLeftMenu: "AcqMenu",
-                            },
-                            {
-                                path: "edit/:orderline_id",
-                                component: markRaw(ResourceWrapper),
-                                name: "OrderlineFormAddEdit",
-                                title: $__("Edit orderline"),
-                                permission: "createOrderlines",
-                                alternateLeftMenu: "AcqMenu",
-                            },
-                            {
-                                path: "search",
-                                component: markRaw(ResourceWrapper),
-                                name: "OrderlineSearch",
-                                title: $__("Search orderlines"),
-                                permission: "",
-                                alternateLeftMenu: "AcqMenu",
                             },
                         ],
                     },

@@ -214,7 +214,11 @@ export const useNavigationStore = defineStore("navigation", () => {
 
                 return {
                     ...parent,
-                    path: builtPath ? builtPath : parent.path,
+                    path: isRoutable(parent)
+                        ? builtPath
+                            ? builtPath
+                            : parent.path
+                        : undefined,
                     children,
                 };
             }
@@ -256,11 +260,19 @@ export const useNavigationStore = defineStore("navigation", () => {
 
             function _toRoute(parent) {
                 if (!isRoutable(parent)) return _getRoutableChildren(parent);
+                if (isParent(parent)) {
+                    return {
+                        ...parent,
+                        children: _getRoutableChildren(parent),
+                    };
+                }
                 return parent;
             }
 
             function _getRoutableChildren(parent) {
+                if (!parent.children) return [];
                 return parent.children
+                    .filter(child => isRoutable(child) || isParent(child))
                     .map(child => _toRoute(child))
                     .flat(Infinity);
             }
