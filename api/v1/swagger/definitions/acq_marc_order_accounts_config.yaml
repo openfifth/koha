@@ -1,0 +1,9 @@
+---
+type: object
+properties:
+  matchers:
+    type: array
+    description: List of available record matchers
+    items:
+      type: object
+additionalProperties: false

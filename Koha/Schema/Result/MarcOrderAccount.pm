@@ -53,7 +53,7 @@ vendor id for this account
   is_foreign_key: 1
   is_nullable: 1
 
-budget id for this account
+fund id (acq_funds) for this account
 
 =head2 download_directory
 
@@ -193,18 +193,18 @@ __PACKAGE__->set_primary_key("id");
 
 Type: belongs_to
 
-Related object: L<Koha::Schema::Result::Aqbudget>
+Related object: L<Koha::Schema::Result::AcqFund>
 
 =cut
 
 __PACKAGE__->belongs_to(
   "budget",
-  "Koha::Schema::Result::Aqbudget",
-  { budget_id => "budget_id" },
+  "Koha::Schema::Result::AcqFund",
+  { fund_id => "budget_id" },
   {
     is_deferrable => 1,
     join_type     => "LEFT",
-    on_delete     => "CASCADE",
+    on_delete     => "SET NULL",
     on_update     => "CASCADE",
   },
 );
@@ -230,8 +230,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-04-24 19:44:04
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:LvRybSXMjycTWsAp2Bd4Dw
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-23 14:21:00
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:f9Dijk/LWNt3rR96KhyHmw
 
 __PACKAGE__->add_columns(
     '+parse_items' => { is_boolean => 1 },

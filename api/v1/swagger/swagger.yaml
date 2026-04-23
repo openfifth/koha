@@ -8,6 +8,10 @@ definitions:
     $ref: ./definitions/additional_content.yaml
   acq_finances_config:
     $ref: ./definitions/acq_finances_config.yaml
+  acq_marc_order_account:
+    $ref: ./definitions/acq_marc_order_account.yaml
+  acq_marc_order_accounts_config:
+    $ref: ./definitions/acq_marc_order_accounts_config.yaml
   acq_fiscal_period:
     $ref: ./definitions/acq_fiscal_period.yaml
   acq_fund:
@@ -227,6 +231,12 @@ paths:
     $ref: ./paths/acquisitions_edifiles.yaml#/~1acquisitions~1edifiles
   /acquisitions/extended_attribute_types:
     $ref: ./paths/acquisitions_extended_attribute_types.yaml#/~1acquisitions~1extended_attribute_types
+  /acquisitions/marc_order_accounts:
+    $ref: ./paths/acq_marc_order_accounts.yaml#/~1acquisitions~1marc_order_accounts
+  /acquisitions/marc_order_accounts/config:
+    $ref: ./paths/acq_marc_order_accounts.yaml#/~1acquisitions~1marc_order_accounts~1config
+  "/acquisitions/marc_order_accounts/{marc_order_account_id}":
+    $ref: "./paths/acq_marc_order_accounts.yaml#/~1acquisitions~1marc_order_accounts~1{marc_order_account_id}"
   /acquisitions/fiscal_periods:
     $ref: ./paths/acq_fiscal_periods.yaml#/~1acquisitions~1fiscal_periods
   "/acquisitions/fiscal_periods/{fiscal_period_id}":
@@ -847,6 +857,12 @@ parameters:
     name: data_type
     required: true
     type: string
+  marc_order_account_id_pp:
+    description: MARC order account identifier
+    in: path
+    name: marc_order_account_id
+    required: true
+    type: integer
   fiscal_period_id_pp:
     description: Fiscal period id
     in: path

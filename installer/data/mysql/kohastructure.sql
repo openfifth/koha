@@ -4925,7 +4925,7 @@ CREATE TABLE `marc_order_accounts` (
   `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'unique identifier and primary key',
   `description` varchar(250) NOT NULL COMMENT 'description of this account',
   `vendor_id` int(11) DEFAULT NULL COMMENT 'vendor id for this account',
-  `budget_id` int(11) DEFAULT NULL COMMENT 'budget id for this account',
+  `budget_id` int(11) DEFAULT NULL COMMENT 'fund id (acq_funds) for this account',
   `download_directory` mediumtext DEFAULT NULL COMMENT 'download directory for this account',
   `matcher_id` int(11) DEFAULT NULL COMMENT 'the id of the match rule used (matchpoints.matcher_id)',
   `overlay_action` varchar(50) DEFAULT NULL COMMENT 'how to handle duplicate records',
@@ -4941,7 +4941,7 @@ CREATE TABLE `marc_order_accounts` (
   KEY `marc_ordering_account_ibfk_1` (`vendor_id`),
   KEY `marc_ordering_account_ibfk_2` (`budget_id`),
   CONSTRAINT `marc_ordering_account_ibfk_1` FOREIGN KEY (`vendor_id`) REFERENCES `aqbooksellers` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `marc_ordering_account_ibfk_2` FOREIGN KEY (`budget_id`) REFERENCES `aqbudgets` (`budget_id`) ON DELETE CASCADE ON UPDATE CASCADE
+  CONSTRAINT `marc_ordering_account_ibfk_2` FOREIGN KEY (`budget_id`) REFERENCES `acq_funds` (`fund_id`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

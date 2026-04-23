@@ -1,0 +1,288 @@
+---
+/acquisitions/marc_order_accounts:
+  get:
+    x-mojo-to: Acquisitions::MarcOrderAccounts#list
+    operationId: listMarcOrderAccounts
+    description: Retrieves the list of MARC order accounts
+    tags:
+      - listMarcOrderAccounts
+    produces:
+      - application/json
+    parameters:
+      - name: x-koha-embed
+        in: header
+        description: Embed
+        required: false
+        type: array
+        items:
+          type: string
+          enum:
+          - vendor
+          - budget
+        collectionFormat: csv
+      - $ref: "../swagger.yaml#/parameters/match"
+      - $ref: "../swagger.yaml#/parameters/order_by"
+      - $ref: "../swagger.yaml#/parameters/page"
+      - $ref: "../swagger.yaml#/parameters/per_page"
+      - $ref: "../swagger.yaml#/parameters/q_param"
+      - $ref: "../swagger.yaml#/parameters/q_body"
+    responses:
+      '200':
+        description: MARC order account list
+        schema:
+          items:
+            $ref: "../swagger.yaml#/definitions/acq_marc_order_account"
+          type: array
+      "400":
+        description: |
+          Bad request. Possible `error_code` attribute values:
+
+            * `invalid_query`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: marc_order_manage
+  post:
+    x-mojo-to: Acquisitions::MarcOrderAccounts#add
+    operationId: addMarcOrderAccount
+    summary: Add a MARC order account
+    tags:
+      - addMarcOrderAccount
+    consumes:
+      - application/json
+    produces:
+      - application/json
+    parameters:
+      - description: A JSON object containing information about the new MARC order account
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: "../swagger.yaml#/definitions/acq_marc_order_account"
+    responses:
+      '201':
+        description: MARC order account created
+        schema:
+          $ref: "../swagger.yaml#/definitions/acq_marc_order_account"
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: marc_order_manage
+/acquisitions/marc_order_accounts/config:
+  get:
+    x-mojo-to: Acquisitions::MarcOrderAccounts#config
+    operationId: getMarcOrderAccountsConfig
+    description: Returns bootstrap data needed for the MARC order accounts form
+    summary: Get MARC order accounts config
+    tags:
+      - getMarcOrderAccountsConfig
+    produces:
+      - application/json
+    responses:
+      200:
+        description: The MARC order accounts config
+        schema:
+          $ref: "../swagger.yaml#/definitions/acq_marc_order_accounts_config"
+      400:
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      403:
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      500:
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      503:
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: marc_order_manage
+/acquisitions/marc_order_accounts/{marc_order_account_id}:
+  get:
+    x-mojo-to: Acquisitions::MarcOrderAccounts#get
+    operationId: getMarcOrderAccount
+    description: Get a single MARC order account
+    tags:
+      - getMarcOrderAccount
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/marc_order_account_id_pp"
+      - name: x-koha-embed
+        in: header
+        description: Embed
+        required: false
+        type: array
+        items:
+          type: string
+          enum:
+          - vendor
+          - budget
+        collectionFormat: csv
+    produces:
+      - application/json
+    responses:
+      "200":
+        description: A MARC order account
+        schema:
+          $ref: "../swagger.yaml#/definitions/acq_marc_order_account"
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: MARC order account not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: marc_order_manage
+  put:
+    x-mojo-to: Acquisitions::MarcOrderAccounts#update
+    operationId: updateMarcOrderAccount
+    description: Update a MARC order account
+    tags:
+      - updateMarcOrderAccount
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/marc_order_account_id_pp"
+      - name: body
+        in: body
+        description: MARC order account object to update
+        required: true
+        schema:
+          $ref: "../swagger.yaml#/definitions/acq_marc_order_account"
+    produces:
+      - application/json
+    responses:
+      '200':
+        description: MARC order account updated
+        schema:
+          $ref: "../swagger.yaml#/definitions/acq_marc_order_account"
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: MARC order account not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: Internal error
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: marc_order_manage
+  delete:
+    x-mojo-to: Acquisitions::MarcOrderAccounts#delete
+    operationId: deleteMarcOrderAccount
+    description: Delete a MARC order account
+    tags:
+      - deleteMarcOrderAccount
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/marc_order_account_id_pp"
+    produces:
+      - application/json
+    responses:
+      '204':
+        description: MARC order account deleted
+        schema:
+          type: string
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: MARC order account not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: Internal error
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: marc_order_manage

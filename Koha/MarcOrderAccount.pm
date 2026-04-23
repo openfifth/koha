@@ -18,6 +18,7 @@ package Koha::MarcOrderAccount;
 use Modern::Perl;
 
 use Koha::Database;
+use Koha::Acquisition::Finances::Fund;
 
 use base qw(Koha::Object);
 
@@ -48,8 +49,17 @@ sub vendor {
 
 sub budget {
     my ($self) = @_;
-    my $budget_rs = $self->_result->budget;
-    return Koha::Acquisition::Fund->_new_from_dbic($budget_rs);
+    my $fund_rs = $self->_result->budget;
+    return unless $fund_rs;
+    return Koha::Acquisition::Finances::Fund->_new_from_dbic($fund_rs);
+}
+
+=head3 to_api_mapping
+
+=cut
+
+sub to_api_mapping {
+    return { id => 'marc_order_account_id' };
 }
 
 =head3 _type

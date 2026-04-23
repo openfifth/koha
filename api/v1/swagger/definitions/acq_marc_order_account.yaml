@@ -1,0 +1,92 @@
+---
+type: object
+properties:
+  marc_order_account_id:
+    type:
+      - integer
+      - "null"
+    readOnly: true
+    description: Internal identifier
+  description:
+    type:
+      - string
+      - "null"
+    description: Description of this account
+  vendor_id:
+    type:
+      - integer
+      - "null"
+    description: Vendor for this account
+  budget_id:
+    type:
+      - integer
+      - "null"
+    description: Fund (acq_funds) for this account
+  download_directory:
+    type:
+      - string
+      - "null"
+    description: Directory to scan for incoming MARC files
+  matcher_id:
+    type:
+      - integer
+      - "null"
+    description: Record matching rule identifier
+  overlay_action:
+    type:
+      - string
+      - "null"
+    description: Action when a matching record is found
+  nomatch_action:
+    type:
+      - string
+      - "null"
+    description: Action when no matching record is found
+  item_action:
+    type:
+      - string
+      - "null"
+    description: How to process embedded item data
+  parse_items:
+    type:
+      - boolean
+      - "null"
+    description: Whether to parse embedded item records
+  record_type:
+    type:
+      - string
+      - "null"
+    description: Type of MARC record (biblio or auth)
+  encoding:
+    type:
+      - string
+      - "null"
+    description: Character encoding of the MARC file
+  match_field:
+    type:
+      - string
+      - "null"
+    description: MARC field used to match this account (e.g. 245$a)
+  match_value:
+    type:
+      - string
+      - "null"
+    description: Value to match against the match_field
+  basket_name_field:
+    type:
+      - string
+      - "null"
+    description: MARC field containing the basket name (e.g. 245$a)
+  vendor:
+    type:
+      - object
+      - "null"
+    readOnly: true
+    description: Embedded vendor object
+  budget:
+    type:
+      - object
+      - "null"
+    readOnly: true
+    description: Embedded fund object
+additionalProperties: false

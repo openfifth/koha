@@ -306,6 +306,56 @@ export class AcquisitionAPIClient {
         };
     }
 
+    get marcOrderAccounts() {
+        return {
+            get: id =>
+                this.httpClient.get({
+                    endpoint: "marc_order_accounts/" + id,
+                    headers: { "x-koha-embed": "vendor,budget" },
+                }),
+            getAll: (query, params, headers) =>
+                this.httpClient.getAll({
+                    endpoint: "marc_order_accounts",
+                    query,
+                    params,
+                    headers: { "x-koha-embed": "vendor,budget", ...headers },
+                }),
+            delete: id =>
+                this.httpClient.delete({
+                    endpoint: "marc_order_accounts/" + id,
+                }),
+            create: account =>
+                this.httpClient.post({
+                    endpoint: "marc_order_accounts",
+                    body: account,
+                }),
+            update: (account, id) =>
+                this.httpClient.put({
+                    endpoint: "marc_order_accounts/" + id,
+                    body: account,
+                }),
+            count: (query = {}) =>
+                this.httpClient.count({
+                    endpoint:
+                        "marc_order_accounts?" +
+                        new URLSearchParams({
+                            _page: 1,
+                            _per_page: 1,
+                            ...(query && { q: JSON.stringify(query) }),
+                        }),
+                }),
+        };
+    }
+
+    get marcOrderAccountsConfig() {
+        return {
+            get: () =>
+                this.httpClient.get({
+                    endpoint: "marc_order_accounts/config",
+                }),
+        };
+    }
+
     get orderlines() {
         return {
             get: (id, headers) =>
