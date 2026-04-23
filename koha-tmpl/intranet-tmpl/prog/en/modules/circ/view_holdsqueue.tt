@@ -222,7 +222,7 @@
                                                         <p> [% INCLUDE 'biblio-title.inc' biblio=itemsloo.biblio link = 1 %] </p>
                                                         <div class="hq-biblionumber content_hidden">[% itemsloo.biblionumber | html %]</div>
                                                         [% IF ( itemsloo.hold_group_id ) %]
-                                                            <p>(part of a <a class="hold-group" href="/cgi-bin/koha/reserve/hold-group.pl?hold_group_id=[% itemsloo.hold_group_id | html %]">hold group</a>)</p>
+                                                            <p>(<a class="hold-group" href="/cgi-bin/koha/reserve/hold-group.pl?hold_group_id=[% itemsloo.hold_group_id | html %]">Hold group [% itemsloo.hold_group_id | html %]</a>)</p>
                                                         [% END %]
                                                     </td>
                                                     <td class="hq-author">[% itemsloo.biblio.author | html %]</td>

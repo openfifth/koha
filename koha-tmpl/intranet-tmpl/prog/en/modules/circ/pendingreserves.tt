@@ -110,7 +110,7 @@
                                                     [% IF ( biblio.biblioitem.publicationyear ) %]<p>[% biblio.biblioitem.publicationyear | html %]</p>[% END %]
                                                 [% END %]
                                                 [% IF ( hold.hold_group_id ) %]
-                                                    <p>(part of a <a class="hold-group" href="/cgi-bin/koha/reserve/hold-group.pl?hold_group_id=[% hold.hold_group_id | html %]">hold group</a>)</p>
+                                                    <p>(<a class="hold-group" href="/cgi-bin/koha/reserve/hold-group.pl?hold_group_id=[% hold.hold_group_id | html %]">Hold group [% hold.hold_group_id | html %]</a>)</p>
                                                 [% END %]
                                             </td>
                                         [% ELSE %]

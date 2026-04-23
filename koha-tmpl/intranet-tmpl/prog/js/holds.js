@@ -182,12 +182,12 @@ $(document).ready(function () {
                                   {
                                       data: function (oObj) {
                                           title = "";
-                                          if (oObj.visual_hold_group_id) {
+                                          if (oObj.hold_group_id) {
                                               var link =
                                                   '<a class="hold-group" href="/cgi-bin/koha/reserve/hold-group.pl?hold_group_id=' +
                                                   oObj.hold_group_id +
                                                   '">' +
-                                                  oObj.visual_hold_group_id +
+                                                  oObj.hold_group_id +
                                                   "</a>";
 
                                               title =
@@ -1629,7 +1629,7 @@ async function load_patron_holds_table(biblio_id, split_data) {
                     searchable: false,
                     render: function (data, type, row, meta) {
                         const group_hold_message = row.hold_group_id
-                            ? `<div>(${__("part of")} <a href="/cgi-bin/koha/reserve/hold-group.pl?hold_group_id=${row.hold_group_id}" class="hold-group">${__("hold group")}</a>)</div>`
+                            ? `<div>(<a href="/cgi-bin/koha/reserve/hold-group.pl?hold_group_id=${row.hold_group_id}" class="hold-group">${__("Hold group")} ${row.hold_group_id}</a>)</div>`
                             : "";
 
                         // Handle status cases

@@ -89,11 +89,7 @@
                     [% END %]
                 </td>
                 [% IF Koha.Preference('DisplayAddHoldGroups') %]
-                    [% IF HOLD.hold_group %]
-                        <td class="visual_hold_group_id"> [% HOLD.hold_group.visual_hold_group_id | html %] </td>
-                    [% ELSE %]
-                        <td class="visual_hold_group_id"></td>
-                    [% END %]
+                    <td class="hold_group_id">[% HOLD.hold_group_id | html %]</td>
                 [% END %]
                 <td class="reservedate" data-order="[% HOLD.reservedate | html %]"> [% HOLD.reservedate | $KohaDates %] </td>
                 <td class="expirationdate" data-order="[% !HOLD.found ? HOLD.expirationdate : '0000-00-00' | html %]">
