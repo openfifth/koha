@@ -1,0 +1,288 @@
+---
+/acquisitions/edi_accounts:
+  get:
+    x-mojo-to: Acquisitions::EdiAccounts#list
+    operationId: listEdiAccounts
+    description: Retrieves the list of EDI accounts
+    tags:
+      - listEdiAccounts
+    produces:
+      - application/json
+    parameters:
+      - name: x-koha-embed
+        in: header
+        description: Embed
+        required: false
+        type: array
+        items:
+          type: string
+          enum:
+          - vendor
+          - file_transport
+        collectionFormat: csv
+      - $ref: "../swagger.yaml#/parameters/match"
+      - $ref: "../swagger.yaml#/parameters/order_by"
+      - $ref: "../swagger.yaml#/parameters/page"
+      - $ref: "../swagger.yaml#/parameters/per_page"
+      - $ref: "../swagger.yaml#/parameters/q_param"
+      - $ref: "../swagger.yaml#/parameters/q_body"
+    responses:
+      '200':
+        description: EDI account list
+        schema:
+          items:
+            $ref: "../swagger.yaml#/definitions/acq_edi_account"
+          type: array
+      "400":
+        description: |
+          Bad request. Possible `error_code` attribute values:
+
+            * `invalid_query`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: edi_manage
+  post:
+    x-mojo-to: Acquisitions::EdiAccounts#add
+    operationId: addEdiAccount
+    summary: Add an EDI account
+    tags:
+      - addEdiAccount
+    consumes:
+      - application/json
+    produces:
+      - application/json
+    parameters:
+      - description: A JSON object containing information about the new EDI account
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: "../swagger.yaml#/definitions/acq_edi_account"
+    responses:
+      '201':
+        description: EDI account created
+        schema:
+          $ref: "../swagger.yaml#/definitions/acq_edi_account"
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: edi_manage
+/acquisitions/edi_accounts/config:
+  get:
+    x-mojo-to: Acquisitions::EdiAccounts#config
+    operationId: getEdiAccountsConfig
+    description: Returns bootstrap data needed for the EDI accounts form
+    summary: Get EDI accounts config
+    tags:
+      - getEdiAccountsConfig
+    produces:
+      - application/json
+    responses:
+      200:
+        description: The EDI accounts config
+        schema:
+          $ref: "../swagger.yaml#/definitions/acq_edi_accounts_config"
+      400:
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      403:
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      500:
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      503:
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: edi_manage
+/acquisitions/edi_accounts/{vendor_edi_account_id}:
+  get:
+    x-mojo-to: Acquisitions::EdiAccounts#get
+    operationId: getEdiAccount
+    description: Get a single EDI account
+    tags:
+      - getEdiAccount
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/vendor_edi_account_id_pp"
+      - name: x-koha-embed
+        in: header
+        description: Embed
+        required: false
+        type: array
+        items:
+          type: string
+          enum:
+          - vendor
+          - file_transport
+        collectionFormat: csv
+    produces:
+      - application/json
+    responses:
+      "200":
+        description: An EDI account
+        schema:
+          $ref: "../swagger.yaml#/definitions/acq_edi_account"
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: EDI account not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: edi_manage
+  put:
+    x-mojo-to: Acquisitions::EdiAccounts#update
+    operationId: updateEdiAccount
+    description: Update an EDI account
+    tags:
+      - updateEdiAccount
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/vendor_edi_account_id_pp"
+      - name: body
+        in: body
+        description: EDI account object to update
+        required: true
+        schema:
+          $ref: "../swagger.yaml#/definitions/acq_edi_account"
+    produces:
+      - application/json
+    responses:
+      '200':
+        description: EDI account updated
+        schema:
+          $ref: "../swagger.yaml#/definitions/acq_edi_account"
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: EDI account not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: Internal error
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: edi_manage
+  delete:
+    x-mojo-to: Acquisitions::EdiAccounts#delete
+    operationId: deleteEdiAccount
+    description: Delete an EDI account
+    tags:
+      - deleteEdiAccount
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/vendor_edi_account_id_pp"
+    produces:
+      - application/json
+    responses:
+      '204':
+        description: EDI account deleted
+        schema:
+          type: string
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: EDI account not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: Internal error
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: edi_manage

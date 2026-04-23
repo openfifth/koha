@@ -8,6 +8,10 @@ definitions:
     $ref: ./definitions/additional_content.yaml
   acq_finances_config:
     $ref: ./definitions/acq_finances_config.yaml
+  acq_edi_account:
+    $ref: ./definitions/acq_edi_account.yaml
+  acq_edi_accounts_config:
+    $ref: ./definitions/acq_edi_accounts_config.yaml
   acq_marc_order_account:
     $ref: ./definitions/acq_marc_order_account.yaml
   acq_marc_order_accounts_config:
@@ -227,6 +231,12 @@ paths:
     $ref: ./paths/acquisitions_baskets.yaml#/~1acquisitions~1baskets
   /acquisitions/baskets/managers:
     $ref: ./paths/acquisitions_baskets.yaml#/~1acquisitions~1baskets~1managers
+  /acquisitions/edi_accounts:
+    $ref: ./paths/acq_edi_accounts.yaml#/~1acquisitions~1edi_accounts
+  /acquisitions/edi_accounts/config:
+    $ref: ./paths/acq_edi_accounts.yaml#/~1acquisitions~1edi_accounts~1config
+  "/acquisitions/edi_accounts/{vendor_edi_account_id}":
+    $ref: "./paths/acq_edi_accounts.yaml#/~1acquisitions~1edi_accounts~1{vendor_edi_account_id}"
   /acquisitions/edifiles:
     $ref: ./paths/acquisitions_edifiles.yaml#/~1acquisitions~1edifiles
   /acquisitions/extended_attribute_types:
@@ -857,6 +867,12 @@ parameters:
     name: data_type
     required: true
     type: string
+  vendor_edi_account_id_pp:
+    description: EDI account identifier
+    in: path
+    name: vendor_edi_account_id
+    required: true
+    type: integer
   marc_order_account_id_pp:
     description: MARC order account identifier
     in: path

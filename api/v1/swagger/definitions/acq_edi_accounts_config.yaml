@@ -1,0 +1,14 @@
+---
+type: object
+properties:
+  file_transports:
+    type: array
+    items:
+      type: object
+    description: Available file transports for selection
+  plugins:
+    type: array
+    items:
+      type: object
+    description: Available plugins with edifact method
+additionalProperties: false

@@ -1,0 +1,99 @@
+---
+type: object
+properties:
+  vendor_edi_account_id:
+    type:
+      - integer
+      - "null"
+    readOnly: true
+    description: Internal EDI account identifier
+  description:
+    type:
+      - string
+      - "null"
+    description: Description of the EDI account
+  last_activity:
+    type:
+      - string
+      - "null"
+    format: date
+    readOnly: true
+    description: Date of last EDI activity
+  vendor_id:
+    type:
+      - integer
+      - "null"
+    description: Vendor identifier
+  san:
+    type:
+      - string
+      - "null"
+    description: Standard Address Number
+  standard:
+    type:
+      - string
+      - "null"
+    description: EDI standard (BIC or EUR)
+  id_code_qualifier:
+    type:
+      - string
+      - "null"
+    description: ID code qualifier
+  quotes_enabled:
+    type:
+      - boolean
+      - "null"
+    description: Whether quotes are enabled
+  invoices_enabled:
+    type:
+      - boolean
+      - "null"
+    description: Whether invoices are enabled
+  orders_enabled:
+    type:
+      - boolean
+      - "null"
+    description: Whether orders are enabled
+  responses_enabled:
+    type:
+      - boolean
+      - "null"
+    description: Whether responses are enabled
+  auto_orders:
+    type:
+      - boolean
+      - "null"
+    description: Whether automatic ordering is enabled
+  shipment_budget:
+    type:
+      - integer
+      - "null"
+    description: Fund identifier for shipment costs
+  plugin:
+    type:
+      - string
+      - "null"
+    description: Plugin class name for EDI processing
+  file_transport_id:
+    type:
+      - integer
+      - "null"
+    description: File transport identifier
+  po_is_basketname:
+    type:
+      - boolean
+      - "null"
+    description: Whether basket names are used as purchase order numbers
+  vendor:
+    type:
+      - object
+      - "null"
+    readOnly: true
+    description: Embedded vendor object
+  file_transport:
+    type:
+      - object
+      - "null"
+    readOnly: true
+    description: Embedded file transport object
+additionalProperties: false

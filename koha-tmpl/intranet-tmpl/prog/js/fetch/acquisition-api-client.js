@@ -306,6 +306,59 @@ export class AcquisitionAPIClient {
         };
     }
 
+    get ediAccounts() {
+        return {
+            get: id =>
+                this.httpClient.get({
+                    endpoint: "edi_accounts/" + id,
+                    headers: { "x-koha-embed": "vendor,file_transport" },
+                }),
+            getAll: (query, params, headers) =>
+                this.httpClient.getAll({
+                    endpoint: "edi_accounts",
+                    query,
+                    params,
+                    headers: {
+                        "x-koha-embed": "vendor,file_transport",
+                        ...headers,
+                    },
+                }),
+            delete: id =>
+                this.httpClient.delete({
+                    endpoint: "edi_accounts/" + id,
+                }),
+            create: account =>
+                this.httpClient.post({
+                    endpoint: "edi_accounts",
+                    body: account,
+                }),
+            update: (account, id) =>
+                this.httpClient.put({
+                    endpoint: "edi_accounts/" + id,
+                    body: account,
+                }),
+            count: (query = {}) =>
+                this.httpClient.count({
+                    endpoint:
+                        "edi_accounts?" +
+                        new URLSearchParams({
+                            _page: 1,
+                            _per_page: 1,
+                            ...(query && { q: JSON.stringify(query) }),
+                        }),
+                }),
+        };
+    }
+
+    get ediAccountsConfig() {
+        return {
+            get: () =>
+                this.httpClient.get({
+                    endpoint: "edi_accounts/config",
+                }),
+        };
+    }
+
     get marcOrderAccounts() {
         return {
             get: id =>
