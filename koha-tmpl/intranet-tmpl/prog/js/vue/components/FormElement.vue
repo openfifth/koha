@@ -108,9 +108,9 @@
         <v-select
             :id="getElementId"
             v-model="resource[attr.name]"
-            :label="attr.selectLabel"
+            :label="attr.treeSelect ? '_displayName' : attr.selectLabel"
             :reduce="av => selectRequiredKey(av)"
-            :options="selectOptions"
+            :options="treeSelectOptions"
             :required="resource[attr.name] == null && required"
             :disabled="disabled"
             :multiple="attr.allowMultipleChoices"
@@ -125,6 +125,14 @@
                     v-bind="attributes"
                     v-on="events"
                 />
+            </template>
+            <template v-if="attr.treeSelect" #option="option">
+                <span :style="{ paddingLeft: option._depth * 1.5 + 'rem' }">{{
+                    option._displayName
+                }}</span>
+            </template>
+            <template v-if="attr.treeSelect" #selected-option="option">
+                {{ option[attr.selectLabel] }}
             </template>
         </v-select>
     </template>
@@ -321,6 +329,11 @@ export default {
             }
             return props.options;
         });
+        const treeSelectOptions = computed(() =>
+            props.attr.treeSelect
+                ? props.attr.treeSelectOptionsHandler(selectOptions.value)
+                : selectOptions.value
+        );
         const getPlaceholder = computed(() => {
             if (props.attr.hasOwnProperty("placeholder")) {
                 return props.attr.placeholder;
@@ -372,6 +385,7 @@ export default {
             getElementId,
             requiredComponent,
             selectOptions,
+            treeSelectOptions,
             disabled,
             fieldInputError,
             checkForInputErrorAndRunOnChangeHandler,

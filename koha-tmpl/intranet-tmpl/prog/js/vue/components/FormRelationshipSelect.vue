@@ -1,7 +1,10 @@
 <template>
     <v-select
         :getOptionLabel="
-            relatedResource => relatedResource[relationshipOptionLabelAttr]
+            relatedResource =>
+                treeSelect
+                    ? relatedResource._displayName
+                    : relatedResource[relationshipOptionLabelAttr]
         "
         :id="name"
         :reduce="relatedResource => relatedResource[relationshipRequiredKey]"
@@ -17,6 +20,16 @@
         "
     >
         <template v-slot:option="relatedResource">
+            <span
+                v-if="treeSelect"
+                :style="{ paddingLeft: relatedResource._depth * 1.5 + 'rem' }"
+                >{{ relatedResource._displayName }}</span
+            >
+            <span v-else>{{
+                relatedResource[relationshipOptionLabelAttr]
+            }}</span>
+        </template>
+        <template v-if="treeSelect" #selected-option="relatedResource">
             {{ relatedResource[relationshipOptionLabelAttr] }}
         </template>
         <template #search="{ attributes, events }">
@@ -32,6 +45,7 @@
 
 <script>
 import { computed, onBeforeMount, ref, watch } from "vue";
+
 export default {
     props: {
         relationshipOptionLabelAttr: String | null,
@@ -47,6 +61,8 @@ export default {
             type: Object,
             default: {},
         },
+        treeSelect: Boolean | false,
+        treeSelectOptionsHandler: Function | null,
     },
     setup(props, { emit }) {
         const relatedResources = ref(null);
@@ -65,10 +81,13 @@ export default {
             );
         });
         const relatedResourcesOptions = computed(() => {
-            return relatedResources.value?.map(resource => ({
+            const mapped = relatedResources.value?.map(resource => ({
                 ...resource,
                 full_search: resource[props.relationshipOptionLabelAttr],
             }));
+            return props.treeSelect
+                ? props.treeSelectOptionsHandler(mapped)
+                : mapped;
         });
         const shouldBeDisabled = computed(() => {
             return props.disabled || !relatedResourcesLoaded.value;
