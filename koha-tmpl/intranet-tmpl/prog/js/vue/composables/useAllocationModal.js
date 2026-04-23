@@ -9,8 +9,11 @@ export function useAllocationModal({
     setMessage,
     onSuccess,
 }) {
-    const { formatValueWithCurrency, applyNumberValidation } =
-        acquisitionsStore;
+    const {
+        formatValueWithCurrency,
+        applyNumberValidation,
+        buildFundTreeOptions,
+    } = acquisitionsStore;
     const isFund = entity === "fund";
     const breachAmountMessage = $__(
         "The parent amount will be breached by %s. Please reduce the amount for this allocation."
@@ -126,6 +129,9 @@ export function useAllocationModal({
                                               "!=": entityId,
                                           },
                                       },
+                                      treeSelect: isFund,
+                                      treeSelectOptionsHandler:
+                                          buildFundTreeOptions,
                                       required: true,
                                   },
                               ]
