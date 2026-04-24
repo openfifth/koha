@@ -1,5 +1,5 @@
 <template>
-    <div v-if="createItems.value === 'ordering'">
+    <div v-if="createItems.value === 'ordering' && !continuousOrder.value">
         <div v-show="items.length" id="items_list" class="page-section">
             <p>
                 <strong>{{ $__("Items list") }}</strong>
@@ -106,6 +106,7 @@ export default {
         biblioNumber: String,
         frameworkCode: String,
         createItems: Object,
+        continuousOrder: Object,
         resource: Object,
     },
     setup(props) {

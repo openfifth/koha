@@ -44,6 +44,10 @@ export default {
         const createItems = computed(() => {
             return createItemsWhen.value;
         });
+        const isContinuous = ref(false);
+        const continuousOrder = computed(() => {
+            return isContinuous.value;
+        });
         const nonBibliographic = ref(
             route.query.no_biblio === "true" ? true : false
         );
@@ -192,6 +196,9 @@ export default {
                               ),
                     displaySortOrder: {
                         Search: 11,
+                    },
+                    onChange: resource => {
+                        isContinuous.value = resource.is_continuous;
                     },
                     hideIn: ["List"],
                 },
@@ -374,10 +381,6 @@ export default {
                                       type: "string",
                                       value: queryParams.biblionumber,
                                   },
-                                  createItems: {
-                                      type: "object",
-                                      value: createItems,
-                                  },
                                   ...(componentToDisplay === "Search" && {
                                       isSearch: {
                                           type: "boolean",
@@ -508,6 +511,10 @@ export default {
                                   createItems: {
                                       type: "object",
                                       value: createItems,
+                                  },
+                                  continuousOrder: {
+                                      type: "object",
+                                      value: continuousOrder,
                                   },
                               },
                               hideIn: ["List"],

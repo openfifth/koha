@@ -102,7 +102,7 @@ sub add {
                 $orderline->biblio( { biblio_data => $biblio, confirm_not_duplicate => $confirm_not_duplicate } )
                     unless $orderline->biblionumber;
 
-                $orderline->items($items) if @$items;
+                $orderline->items($items) if @$items && !$orderline->is_continuous;
 
                 my @extended_attributes =
                     map { { 'id' => $_->{field_id}, 'value' => $_->{value} } } @{$extended_attributes};
@@ -168,7 +168,7 @@ sub update {
         $orderline->biblio( { biblio_data => $biblio, confirm_not_duplicate => $confirm_not_duplicate } )
             unless $orderline->biblionumber;
 
-        $orderline->items($items) if @$items;
+        $orderline->items($items) if @$items && !$orderline->is_continuous;
 
         my @extended_attributes =
             map { { 'id' => $_->{field_id}, 'value' => $_->{value} } } @{$extended_attributes};

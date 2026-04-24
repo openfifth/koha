@@ -1,5 +1,5 @@
 <template>
-    <div v-if="initialized && createItems.value === 'ordering'">
+    <div v-if="initialized">
         <h3 v-if="!isSearch" style="margin-top: 1em">
             {{ $__("Bibliographic information") }}
         </h3>
@@ -29,7 +29,6 @@ export default {
         useAcqFramework: { type: Boolean, default: false },
         unimarc: { type: Boolean, default: false },
         biblionumber: { type: String, default: null },
-        createItems: Object,
         isSearch: { type: Boolean, default: false },
     },
     inheritAttrs: false,
@@ -48,9 +47,7 @@ export default {
                 name: "title",
                 type: "text",
                 label: $__("Title"),
-                required: props.isSearch
-                    ? false
-                    : resource => props.createItems.value === "ordering",
+                required: !props.isSearch,
             },
             { name: "author", type: "text", label: $__("Author") },
             ...(!props.isSearch
