@@ -20,7 +20,7 @@ package Koha::Acquisition::OrderManagement::OrderlineFundDistributions;
 use Modern::Perl;
 use base qw(Koha::Objects);
 
-use Koha::Acquisition::OrderManagement::OrderlineFundDistributions;
+use Koha::Acquisition::OrderManagement::OrderlineFundDistribution;
 
 =head1 NAME
 
@@ -45,7 +45,7 @@ sub _type {
 =cut
 
 sub object_class {
-    return 'Koha::Acquisition::OrderManagement::OrderlineFundDistributions';
+    return 'Koha::Acquisition::OrderManagement::OrderlineFundDistribution';
 }
 
 1;

@@ -109,6 +109,7 @@ properties:
       - ordering
       - receiving
       - cataloging
+      - null
     description: Point at which items are created for the orderline
   managing_branch:
     type:
@@ -190,7 +191,7 @@ properties:
     type:
      - string
      - "null"
-    format: date-time
+    format: date
   edi_line_item_id:
     type:
      - string
