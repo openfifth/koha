@@ -1226,6 +1226,21 @@ __PACKAGE__->belongs_to(
   { is_deferrable => 1, on_delete => "RESTRICT", on_update => "RESTRICT" },
 );
 
+=head2 checkins
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::Checkin>
+
+=cut
+
+__PACKAGE__->has_many(
+  "checkins",
+  "Koha::Schema::Result::Checkin",
+  { "foreign.user_id" => "self.borrowernumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 checkout_renewals
 
 Type: has_many
@@ -2242,8 +2257,8 @@ Composing rels: L</user_permissions> -> permission
 __PACKAGE__->many_to_many("permissions", "user_permissions", "permission");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-14 10:19:11
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:Tptr5nUuS5haVck624FS3Q
+# Created by DBIx::Class::Schema::Loader v0.07053 @ 2026-08-24 17:15:29
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:yyXcGb2sXDCQOaxCVFrAfQ
 
 __PACKAGE__->belongs_to(
   "library",
