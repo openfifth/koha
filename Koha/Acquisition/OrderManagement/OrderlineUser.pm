@@ -20,6 +20,8 @@ package Koha::Acquisition::OrderManagement::OrderlineUser;
 use Modern::Perl;
 use base qw(Koha::Object);
 
+use Koha::Patron;
+
 use Mojo::JSON qw(decode_json);
 use JSON       qw ( encode_json );
 
