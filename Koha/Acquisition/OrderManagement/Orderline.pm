@@ -50,30 +50,40 @@ Koha::Acquisition::OrderManagement::Orderline Object class
 sub add_patron_relationships {
     my ( $self, $args ) = @_;
 
-    #ACQTODO: Need to delete existing relationships here on change?
-
     my $patrons_to_notify = $args->{patrons_to_notify};
     my $managed_by        = $args->{managed_by};
 
     if ($patrons_to_notify) {
-        foreach my $patron (@$patrons_to_notify) {
-            Koha::Acquisition::OrderManagement::OrderlineUser->new(
-                {
-                    orderline_id   => $self->orderline_id,
-                    borrowernumber => $patron->{borrowernumber}
+        my $schema = $self->_result->result_source->schema;
+        $schema->txn_do(
+            sub {
+                $self->patrons_to_notify->delete;
+                foreach my $patron (@$patrons_to_notify) {
+                    Koha::Acquisition::OrderManagement::OrderlineUser->new(
+                        {
+                            orderline_id   => $self->orderline_id,
+                            borrowernumber => $patron->{borrowernumber}
+                        }
+                    )->store;
                 }
-            )->store;
-        }
+            }
+        );
     }
     if ($managed_by) {
-        foreach my $patron (@$managed_by) {
-            Koha::Acquisition::OrderManagement::OrderlineManager->new(
-                {
-                    orderline_id   => $self->orderline_id,
-                    borrowernumber => $patron->{borrowernumber}
+        my $schema = $self->_result->result_source->schema;
+        $schema->txn_do(
+            sub {
+                $self->managed_by->delete;
+                foreach my $patron (@$managed_by) {
+                    Koha::Acquisition::OrderManagement::OrderlineManager->new(
+                        {
+                            orderline_id   => $self->orderline_id,
+                            borrowernumber => $patron->{borrowernumber}
+                        }
+                    )->store;
                 }
-            )->store;
-        }
+            }
+        );
     }
 }
 
@@ -91,9 +101,6 @@ sub fund_distributions {
                 $self->fund_distributions->delete;
 
                 for my $distribution (@$fund_distributions) {
-                    delete $distribution->{fund};
-                    delete $distribution->{currency};
-                    delete $distribution->{taxIncluded};
                     $self->_result->add_to_acq_orderline_fund_distributions($distribution);
                 }
             }
@@ -156,17 +163,26 @@ sub biblio {
 sub items {
     my ( $self, $items_data ) = @_;
 
+    #ACQTODO: How do we handle items on a PUT request?
+    #ACQTODO: Does the barcode handling from the Biblio add_item endpoint need processing here?
+
     if ($items_data) {
-        for my $item_data (@$items_data) {
-            $item_data->{biblio_id} = $self->biblionumber;
-            my $item = Koha::Item->new_from_api($item_data)->store->discard_changes;
-            Koha::Acquisition::OrderManagement::OrderlineItem->new(
-                {
-                    orderline_id => $self->orderline_id,
-                    itemnumber   => $item->itemnumber,
+        my $schema = $self->_result->result_source->schema;
+        $schema->txn_do(
+            sub {
+                $self->items->delete;
+                for my $item_data (@$items_data) {
+                    $item_data->{biblio_id} = $self->biblionumber;
+                    my $item = Koha::Item->new_from_api($item_data)->store->discard_changes;
+                    Koha::Acquisition::OrderManagement::OrderlineItem->new(
+                        {
+                            orderline_id => $self->orderline_id,
+                            itemnumber   => $item->itemnumber,
+                        }
+                    )->store;
                 }
-            )->store;
-        }
+            }
+        );
     }
 
     my $rs = $self->_result->acq_orderline_items;
