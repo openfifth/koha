@@ -254,6 +254,21 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 acq_orderline_fund_distributions
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::AcqOrderlineFundDistribution>
+
+=cut
+
+__PACKAGE__->has_many(
+  "acq_orderline_fund_distributions",
+  "Koha::Schema::Result::AcqOrderlineFundDistribution",
+  { "foreign.fund_id" => "self.fund_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 ledger
 
 Type: belongs_to
@@ -325,8 +340,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-23 14:21:00
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:oRG7bQGb6UMWnhdJ1DwieA
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-27 14:37:49
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:P895y0DTU8BCHFedivZRuA
 
 __PACKAGE__->add_columns(
     '+status'             => { is_boolean => 1 },

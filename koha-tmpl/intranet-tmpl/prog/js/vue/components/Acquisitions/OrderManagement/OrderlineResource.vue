@@ -144,7 +144,7 @@ export default {
                 search: [
                     {
                         pane: 1,
-                        groups: ["Order information", "Additional fields"],
+                        groups: ["Order information"],
                     },
                     {
                         pane: 2,
@@ -157,6 +157,8 @@ export default {
                 ],
             },
             extendedAttributesResourceType: "orderline",
+            extendedAttributesFieldGroup:
+                componentToDisplay === "Search" ? "Order information" : null,
             props,
             moduleStore: "acquisitionsStore",
             resourceAttrs: [
@@ -817,24 +819,30 @@ export default {
                     hideIn: ["List", "Show", "Search"],
                 },
                 {
-                    name: "fund_distributions",
+                    name:
+                        componentToDisplay !== "Search"
+                            ? "fund_distributions"
+                            : "fund_distributions.fund_id",
                     type:
                         componentToDisplay === "Search"
                             ? "relationshipSelect"
                             : "relationshipWidget",
-                    defaultValue: [
-                        {
-                            fund_id: null,
-                            percentage: null,
-                            distributed_amount_oc: null,
-                            exchange_rate: null,
-                            distributed_amount: null,
-                            tax_rate: null,
-                            tax_value: null,
-                            distributed_amount_tax_excluded: null,
-                            distributed_amount_tax_included: null,
-                        },
-                    ],
+                    defaultValue:
+                        componentToDisplay === "Search"
+                            ? null
+                            : [
+                                  {
+                                      fund_id: null,
+                                      percentage: null,
+                                      distributed_amount_oc: null,
+                                      exchange_rate: null,
+                                      distributed_amount: null,
+                                      tax_rate: null,
+                                      tax_value: null,
+                                      distributed_amount_tax_excluded: null,
+                                      distributed_amount_tax_included: null,
+                                  },
+                              ],
                     group:
                         componentToDisplay === "Search"
                             ? $__("Order information")
@@ -1167,7 +1175,71 @@ export default {
             table_settings: null,
             add_filters: true,
             options: {
-                embed: "vendor,biblio,managing_library",
+                embed: "vendor,biblio,managing_library,extended_attributes,+strings,fund_distributions",
+            },
+            default_filters: {
+                "-and": () => {
+                    const query = baseResource.route.query;
+                    const filter = {};
+
+                    const dateRangePairs = {
+                        created_date: [
+                            "created_date_start",
+                            "created_date_end",
+                        ],
+                        planned_cancellation_date: [
+                            "planned_cancellation_date_start",
+                            "planned_cancellation_date_end",
+                        ],
+                    };
+                    const dateRangeKeys = Object.values(dateRangePairs).flat();
+
+                    Object.keys(query).forEach(k => {
+                        if (
+                            !dateRangeKeys.includes(k) &&
+                            k !== "extended_attributes" &&
+                            query[k] !== undefined &&
+                            query[k] !== ""
+                        ) {
+                            filter[k] = query[k];
+                        }
+                    });
+
+                    Object.entries(dateRangePairs).forEach(
+                        ([field, [startKey, endKey]]) => {
+                            if (query[startKey] || query[endKey]) {
+                                filter[field] = {
+                                    ...(query[startKey] && {
+                                        ">=": query[startKey],
+                                    }),
+                                    ...(query[endKey] && {
+                                        "<=": query[endKey],
+                                    }),
+                                };
+                            }
+                        }
+                    );
+
+                    const conditions = Object.keys(filter).length
+                        ? [filter]
+                        : [];
+
+                    if (query.extended_attributes) {
+                        JSON.parse(query.extended_attributes).forEach(
+                            ({ field_id, value }) => {
+                                if (field_id && value !== "" && value != null) {
+                                    conditions.push({
+                                        "extended_attributes.field_id":
+                                            parseInt(field_id, 10),
+                                        "extended_attributes.value": value,
+                                    });
+                                }
+                            }
+                        );
+                    }
+
+                    return conditions.length ? conditions : undefined;
+                },
             },
             actions: {
                 0: ["show"],
@@ -1382,30 +1454,31 @@ export default {
         const handleResourceSearch = (e, searchParams) => {
             e.preventDefault();
 
-            const formatDateWindows = (startKey, endKey) => {
-                if (searchParams[startKey] || searchParams[endKey]) {
-                    const searchKey = startKey.replace("_start", "");
-                    searchParams[searchKey] = {
-                        ...(searchParams[startKey] && {
-                            ">=": searchParams[startKey],
-                        }),
-                        ...(searchParams[endKey] && {
-                            "<=": searchParams[endKey],
-                        }),
-                    };
+            const params = JSON.parse(JSON.stringify(searchParams));
+
+            Object.keys(params).forEach(key => {
+                if (!params[key]) delete params[key];
+                if (key === "biblio") {
+                    Object.entries(params[key]).forEach(([k, value]) => {
+                        params["biblio_" + k] = value;
+                    });
+                    delete params[key];
                 }
-                delete searchParams[startKey];
-                delete searchParams[endKey];
-            };
-            formatDateWindows("created_date_start", "created_date_end");
-            formatDateWindows(
-                "planned_cancellation_date_start",
-                "planned_cancellation_date_end"
-            );
+                if (key === "extended_attributes") {
+                    const nonEmpty = params[key].filter(
+                        attr => attr.value !== "" && attr.value != null
+                    );
+                    if (nonEmpty.length) {
+                        params[key] = JSON.stringify(nonEmpty);
+                    } else {
+                        delete params[key];
+                    }
+                }
+            });
 
             baseResource.router.push({
                 name: "OrderlineList",
-                query: searchParams,
+                query: params,
             });
         };
 

@@ -150,6 +150,21 @@ __PACKAGE__->set_primary_key("orderline_fund_distribution_id");
 
 =head1 RELATIONS
 
+=head2 fund
+
+Type: belongs_to
+
+Related object: L<Koha::Schema::Result::AcqFund>
+
+=cut
+
+__PACKAGE__->belongs_to(
+  "fund",
+  "Koha::Schema::Result::AcqFund",
+  { fund_id => "fund_id" },
+  { is_deferrable => 1, on_delete => "RESTRICT", on_update => "RESTRICT" },
+);
+
 =head2 orderline
 
 Type: belongs_to
@@ -166,8 +181,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-23 09:49:11
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:jRr2c3AZ0qJ6NCmgI0YAWQ
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-27 14:37:49
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:vXZvijac6jHDvoOflj555A
 
 
 =head2 koha_object_class

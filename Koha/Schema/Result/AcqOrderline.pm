@@ -803,5 +803,20 @@ __PACKAGE__->belongs_to(
 );
 
 
+=head2 fund_distributions
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::AcqOrderlineFundDistribution>
+
+=cut
+
+__PACKAGE__->has_many(
+    "fund_distributions",
+    "Koha::Schema::Result::AcqOrderlineFundDistribution",
+    { "foreign.orderline_id" => "self.orderline_id" },
+    { cascade_copy           => 0, cascade_delete => 0 },
+);
+
 # You can replace this text with custom code or comments, and it will be preserved on regeneration
 1;

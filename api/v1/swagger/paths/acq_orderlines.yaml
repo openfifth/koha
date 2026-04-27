@@ -29,6 +29,7 @@
             - biblio
             - managing_library
             - items
+            - fund_distributions
         collectionFormat: csv
     responses:
       '200':
