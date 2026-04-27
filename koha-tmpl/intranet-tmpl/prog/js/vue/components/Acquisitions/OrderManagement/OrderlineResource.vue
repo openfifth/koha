@@ -113,6 +113,7 @@ export default {
                 list: "OrderlineList",
                 add: "OrderlineFormAdd",
                 edit: "OrderlineFormAddEdit",
+                search: "OrderlineSearch",
             },
             apiClient: APIClient.acquisition.orderlines,
             table: {
@@ -517,7 +518,7 @@ export default {
                                       value: continuousOrder,
                                   },
                               },
-                              hideIn: ["List"],
+                              hideIn: ["List", "Search"],
                           },
                       ]
                     : []),
