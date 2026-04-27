@@ -29,7 +29,6 @@ export default {
         const {
             getCurrencyConversionRate,
             getActiveCurrency,
-            formatValueWithCurrency,
             differentCurrenciesInLedgers,
             applyNumberValidation,
         } = acquisitionsStore;
@@ -275,40 +274,6 @@ export default {
                     avCat: "av_acquisition_method",
                     hideIn: ["List", "Search"],
                 },
-                {
-                    name: "create_items",
-                    group: nonBibliographic.value
-                        ? $__("Item creation")
-                        : $__("Catalog details"),
-                    label: $__("Create items when"),
-                    type: "radio",
-                    options: [
-                        {
-                            description: $__("Ordering"),
-                            value: "ordering",
-                            disabled: nonBibliographic.value,
-                        },
-                        {
-                            description: $__("Receiving"),
-                            value: "receiving",
-                            disabled: nonBibliographic.value,
-                        },
-                        { description: $__("Cataloging"), value: "cataloging" },
-                    ],
-                    defaultValue: createItemsDefault(),
-                    onChange: resource => {
-                        createItemsWhen.value = resource.create_items;
-                        if (resource.create_items !== "ordering") {
-                            resource.quantity_ordered = 1;
-                        }
-                    },
-                    toolTip: nonBibliographic.value
-                        ? null
-                        : $__(
-                              "Based on the value in the AcqCreateItem system preference"
-                          ),
-                    hideIn: ["List", "Show", "Search"],
-                },
                 ...(nonBibliographic.value
                     ? [
                           {
@@ -454,9 +419,49 @@ export default {
                               },
                               hideIn: [],
                           },
+                      ]
+                    : []),
+                {
+                    name: "create_items",
+                    group: nonBibliographic.value
+                        ? $__("Item creation")
+                        : $__("Create items when"),
+                    label: nonBibliographic.value
+                        ? $__("Create items when")
+                        : null,
+                    type: "radio",
+                    options: [
+                        {
+                            description: $__("Ordering"),
+                            value: "ordering",
+                            disabled: nonBibliographic.value,
+                        },
+                        {
+                            description: $__("Receiving"),
+                            value: "receiving",
+                            disabled: nonBibliographic.value,
+                        },
+                        { description: $__("Cataloging"), value: "cataloging" },
+                    ],
+                    defaultValue: createItemsDefault(),
+                    onChange: resource => {
+                        createItemsWhen.value = resource.create_items;
+                        if (resource.create_items !== "ordering") {
+                            resource.quantity_ordered = 1;
+                        }
+                    },
+                    toolTip: nonBibliographic.value
+                        ? null
+                        : $__(
+                              "Based on the value in the AcqCreateItem system preference"
+                          ),
+                    hideIn: ["List", "Show", "Search"],
+                },
+                ...(!nonBibliographic.value
+                    ? [
                           {
                               name: "items",
-                              group: $__("Catalog details"),
+                              group: $__("Create items when"),
                               type: "component",
                               componentPath:
                                   "@koha-vue/components/Acquisitions/OrderManagement/ItemMarcFieldsCopy.vue",

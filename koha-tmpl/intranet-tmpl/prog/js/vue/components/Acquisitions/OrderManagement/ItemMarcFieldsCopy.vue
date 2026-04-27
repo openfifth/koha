@@ -1,5 +1,8 @@
 <template>
-    <div v-if="createItems.value === 'ordering' && !continuousOrder.value">
+    <div
+        v-if="createItems.value === 'ordering' && !continuousOrder.value"
+        style="margin-top: 2em"
+    >
         <div v-show="items.length" id="items_list" class="page-section">
             <p>
                 <strong>{{ $__("Items list") }}</strong>
