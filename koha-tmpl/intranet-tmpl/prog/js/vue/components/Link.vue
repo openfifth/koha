@@ -1,12 +1,6 @@
 <template>
-    <a v-if="action === 'add'" @click="onClick" class="btn btn-default"
-        ><font-awesome-icon icon="plus" /> {{ title }}</a
-    >
-    <a v-else-if="action === 'delete'" @click="onClick" class="btn btn-default"
-        ><font-awesome-icon icon="trash" /> {{ title }}</a
-    >
-    <a v-else-if="action === 'edit'" @click="onClick" class="btn btn-default"
-        ><font-awesome-icon icon="pencil" /> {{ title }}</a
+    <a v-if="isActionButton" @click="onClick" class="btn btn-default"
+        ><font-awesome-icon :icon="buttonIcon" /> {{ title }}</a
     >
     <a
         v-else-if="action === undefined && onClick"
@@ -28,6 +22,7 @@
 </template>
 
 <script>
+import { computed } from "vue";
 export default {
     props: {
         action: {
@@ -85,7 +80,20 @@ export default {
                     : redirectParams
             );
         };
-        return { redirect, handleQuery, formatUrl };
+        const actionList = ["add", "delete", "edit", "search"];
+        const iconList = {
+            add: "plus",
+            delete: "trash",
+            edit: "pencil",
+            search: "magnifying-glass",
+        };
+        const isActionButton = computed(() => {
+            return actionList.includes(props.action);
+        });
+        const buttonIcon = computed(() => {
+            return iconList[props.action];
+        });
+        return { redirect, handleQuery, formatUrl, isActionButton, buttonIcon };
     },
     emits: ["go-to-add-resource", "delete-resource", "go-to-edit-resource"],
     name: "Link",

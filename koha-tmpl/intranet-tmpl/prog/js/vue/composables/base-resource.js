@@ -142,6 +142,16 @@ export function useBaseResource(resourceConfig) {
                     title: i18n.newLabel,
                     index: 0,
                 },
+                ...(resourceConfig.components.hasOwnProperty("search")
+                    ? [
+                          {
+                              action: "search",
+                              onClick: () => goToResourceSearch(),
+                              title: i18n.searchLabel,
+                              index: 1,
+                          },
+                      ]
+                    : []),
             ],
             show: [
                 {
@@ -181,6 +191,17 @@ export function useBaseResource(resourceConfig) {
     const goToResourceAdd = () => {
         router.push({
             name: resourceConfig.components.add,
+        });
+    };
+
+    /**
+     * Navigates to the search page of the given resource.
+     *
+     * @return {void}
+     */
+    const goToResourceSearch = () => {
+        router.push({
+            name: resourceConfig.components.search,
         });
     };
 
@@ -767,6 +788,7 @@ export function useBaseResource(resourceConfig) {
         defaultToolbarButtons,
         additionalToolbarButtons,
         goToResourceAdd,
+        goToResourceSearch,
         getFieldGroupings,
         created,
         getResourceTableUrl,
