@@ -18,8 +18,9 @@ export const routes = [
             {
                 path: "",
                 name: "Home",
+                title: $__("Home"),
                 component: markRaw(Homepage),
-                is_navigation_item: false,
+                icon: "fa fa-home",
             },
             {
                 path: "/cgi-bin/koha/acquisitions/order_management",
