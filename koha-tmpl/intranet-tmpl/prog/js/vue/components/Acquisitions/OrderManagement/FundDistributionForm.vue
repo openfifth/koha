@@ -131,20 +131,21 @@ export default {
         );
 
         const filterFundsBasedOnPreviousSelections = () => {
+            const activeFunds = props.options.filter(fund => fund.status);
             if (fundDistributions.length > 1) {
                 const selectedFundIds = fundDistributions.map(fd => fd.fund_id);
                 let firstSelection;
                 selectedFundIds.forEach(fundId => {
                     if (!fundId) return;
-                    const fund = props.options.find(
+                    const fund = activeFunds.find(
                         fund => fund.fund_id == fundId
                     );
                     if (!firstSelection) firstSelection = fund;
                 });
                 if (!firstSelection) {
-                    return props.options;
+                    return activeFunds;
                 } else {
-                    const fundsNotYetSelected = props.options.filter(
+                    const fundsNotYetSelected = activeFunds.filter(
                         fund =>
                             !fundDistributions.some(
                                 fd => fd.fund_id == fund.fund_id
@@ -167,7 +168,7 @@ export default {
                         : fundsNotYetSelected;
                 }
             } else {
-                return props.options;
+                return activeFunds;
             }
         };
 
