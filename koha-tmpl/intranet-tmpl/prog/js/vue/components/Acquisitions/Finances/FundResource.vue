@@ -686,6 +686,8 @@ export default {
                                                       const isIncrease =
                                                           row.type ===
                                                               "increase" ||
+                                                          row.type ===
+                                                              "initial" ||
                                                           (row.type ===
                                                               "transfer" &&
                                                               row.is_transferred_from);
