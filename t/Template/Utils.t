@@ -19,7 +19,7 @@
 
 use Modern::Perl;
 use Test::NoWarnings;
-use Test::More tests => 4;
+use Test::More tests => 5;
 
 use utf8;
 
