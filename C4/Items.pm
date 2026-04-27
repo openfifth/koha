@@ -1639,6 +1639,7 @@ sub PrepareItemrecordDisplay {
                     $subfield_data{marc_value} =
                         qq(<input type="text" id="$subfield_data{id}" name="field_value" class="input_marceditor" size="50" maxlength="$maxlength" value="$defaultvalue" />);
                 }
+                $subfield_data{default_value} = $defaultvalue // q{};
                 push( @loop_data, \%subfield_data );
             }
         }

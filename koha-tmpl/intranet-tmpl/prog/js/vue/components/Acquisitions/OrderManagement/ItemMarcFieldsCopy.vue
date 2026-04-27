@@ -132,15 +132,12 @@ export default {
         const { updateSubComponentReadyState } = inject("subComponentsReady");
 
         const buildOptionsArray = (field, name) => {
-            const definedValues = field.values.filter(value => value);
             const options = Object.keys(field.labels).reduce(
                 (acc, key, index) => {
-                    if (definedValues[index]) {
-                        acc.push({
-                            label: field.labels[key],
-                            value: definedValues[index],
-                        });
-                    }
+                    acc.push({
+                        label: field.labels[key],
+                        value: key,
+                    });
                     return acc;
                 },
                 []
@@ -197,7 +194,8 @@ export default {
                     const noPopup = field.marc_value.includes("No popup");
                     fieldDefinition.noPopup = noPopup;
                 }
-                fieldValues.value[fieldDefinition.name] = null;
+                fieldValues.value[fieldDefinition.name] =
+                    field.default_value || null;
                 return [...acc, fieldDefinition];
             }, []);
             return visibleFields;
