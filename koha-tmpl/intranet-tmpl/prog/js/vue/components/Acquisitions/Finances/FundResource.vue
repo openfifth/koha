@@ -652,7 +652,7 @@ export default {
                                       value: {
                                           columns: [
                                               {
-                                                  title: __("Type"),
+                                                  title: $__("Type"),
                                                   data: "type",
                                                   searchable: true,
                                                   orderable: true,
@@ -673,7 +673,7 @@ export default {
                                                   },
                                               },
                                               {
-                                                  title: __("Amount"),
+                                                  title: $__("Amount"),
                                                   data: "allocation_amount",
                                                   searchable: true,
                                                   orderable: true,
@@ -710,19 +710,19 @@ export default {
                                                   },
                                               },
                                               {
-                                                  title: __("Reference"),
+                                                  title: $__("Reference"),
                                                   data: "reference",
                                                   searchable: true,
                                                   orderable: true,
                                               },
                                               {
-                                                  title: __("Note"),
+                                                  title: $__("Note"),
                                                   data: "note",
                                                   searchable: true,
                                                   orderable: true,
                                               },
                                               {
-                                                  title: __("Timestamp"),
+                                                  title: $__("Timestamp"),
                                                   data: "created_date",
                                                   searchable: true,
                                                   orderable: true,
@@ -790,7 +790,7 @@ export default {
                                       value: {
                                           columns: [
                                               {
-                                                  title: __("Name"),
+                                                  title: $__("Name"),
                                                   data: "name:fund_id",
                                                   searchable: true,
                                                   orderable: true,
@@ -812,25 +812,25 @@ export default {
                                                   },
                                               },
                                               {
-                                                  title: __("Code"),
+                                                  title: $__("Code"),
                                                   data: "code",
                                                   searchable: true,
                                                   orderable: true,
                                               },
                                               {
-                                                  title: __("Description"),
+                                                  title: $__("Description"),
                                                   data: "description",
                                                   searchable: true,
                                                   orderable: true,
                                               },
                                               {
-                                                  title: __("Amount"),
+                                                  title: $__("Amount"),
                                                   data: "fund_amount",
                                                   searchable: true,
                                                   orderable: true,
                                               },
                                               {
-                                                  title: __("Status"),
+                                                  title: $__("Status"),
                                                   data: "status",
                                                   searchable: true,
                                                   orderable: true,
@@ -842,7 +842,7 @@ export default {
                                                   ) {
                                                       return row.status
                                                           ? __("Active")
-                                                          : __("Inactive");
+                                                          : $__("Inactive");
                                                   },
                                               },
                                           ],

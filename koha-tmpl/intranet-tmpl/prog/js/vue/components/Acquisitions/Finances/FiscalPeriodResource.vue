@@ -373,7 +373,7 @@ export default {
                                       value: {
                                           columns: [
                                               {
-                                                  title: __("Name"),
+                                                  title: $__("Name"),
                                                   data: "name:ledger_id",
                                                   searchable: true,
                                                   orderable: true,
@@ -395,13 +395,13 @@ export default {
                                                   },
                                               },
                                               {
-                                                  title: __("Description"),
+                                                  title: $__("Description"),
                                                   data: "description",
                                                   searchable: true,
                                                   orderable: true,
                                               },
                                               {
-                                                  title: __("Status"),
+                                                  title: $__("Status"),
                                                   data: "status",
                                                   searchable: true,
                                                   orderable: true,
