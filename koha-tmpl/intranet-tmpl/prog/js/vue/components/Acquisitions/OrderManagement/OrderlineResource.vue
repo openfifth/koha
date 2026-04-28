@@ -525,7 +525,7 @@ export default {
                                       value: continuousOrder,
                                   },
                               },
-                              hideIn: ["List", "Search"],
+                              hideIn: ["List", "Search", "Show"],
                           },
                       ]
                     : []),
