@@ -57,7 +57,7 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
                         : /^[\-]?\d*(\.\d{0,2})*$/;
                     return (
                         pattern.test(value) &&
-                        (!positiveOnly || Number(value) > 0)
+                        (!positiveOnly || Number(value) >= 0)
                     );
                 },
                 formErrorMessage: positiveOnly
