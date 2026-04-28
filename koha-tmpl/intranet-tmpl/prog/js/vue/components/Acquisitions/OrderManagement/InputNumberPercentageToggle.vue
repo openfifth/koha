@@ -11,20 +11,24 @@
             :step="0.01"
             :resource="resource"
         />
-        <button
-            type="button"
-            @click="setToPercentage"
-            :style="`background-color: ${toggleValue === percentageField ? '#e2ee79' : '#fff'}`"
-        >
-            {{ $__("%") }}
-        </button>
-        <button
-            type="button"
-            @click="setToAmount"
-            :style="`background-color: ${toggleValue === amountField ? '#e2ee79' : '#fff'}`"
-        >
-            {{ $__("Amount") }}
-        </button>
+        <div class="btn-group" role="group">
+            <button
+                type="button"
+                class="btn btn-outline-secondary"
+                :class="{ active: toggleValue === percentageField }"
+                @click="setToPercentage"
+            >
+                {{ $__("%") }}
+            </button>
+            <button
+                type="button"
+                class="btn btn-outline-secondary"
+                :class="{ active: toggleValue === amountField }"
+                @click="setToAmount"
+            >
+                {{ $__("Amount") }}
+            </button>
+        </div>
         <span style="margin-left: 5px" class="error" v-if="fieldError">
             {{ fieldError }}
         </span>
@@ -99,9 +103,5 @@ export default {
 <style scoped>
 input {
     margin-right: 2em;
-}
-button {
-    width: 5em;
-    border: 1px solid #ccc;
 }
 </style>
