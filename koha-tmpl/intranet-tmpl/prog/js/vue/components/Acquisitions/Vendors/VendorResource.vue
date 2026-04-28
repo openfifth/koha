@@ -148,12 +148,17 @@ export default {
             splitScreenGroupings: [
                 {
                     pane: 1,
-                    groups: ["Details", "Aliases", "Ordering information"],
+                    groups: ["Details", "Aliases"],
                 },
                 {
                     pane: 2,
-                    groups: ["Contacts", "Interfaces", "Subscription details"],
+                    groups: [
+                        "Ordering information",
+                        "Interfaces",
+                        "Subscription details",
+                    ],
                 },
+                { pane: "break", groups: ["Contacts"] },
                 { pane: "break", groups: ["Contracts"] },
             ],
             additionalToolbarButtons,
@@ -236,6 +241,7 @@ export default {
                     label: $__("Language"),
                     avCat: "av_lang",
                     fallbackType: "text",
+                    hideIn: ["List"],
                 },
                 {
                     name: "aliases",
@@ -526,15 +532,6 @@ export default {
                         { value: false, description: $__("Don't include tax") },
                     ],
                     defaultValue: true,
-                    hideIn: ["List"],
-                },
-                {
-                    name: "payment_method",
-                    group: $__("Ordering information"),
-                    type: "select",
-                    label: $__("Payment method"),
-                    avCat: "av_vendor_payment_methods",
-                    allowMultipleChoices: true,
                     hideIn: ["List"],
                 },
                 {
