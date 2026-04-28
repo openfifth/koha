@@ -165,7 +165,7 @@ subtest 'add() to ledger tests' => sub {
     my $allocation = {
         ledger_id         => $ledger->ledger_id,
         allocation_amount => 1000,
-        type              => 'increase',
+        type              => 'INCREASE',
     };
 
     # Unauthorized attempt to write
@@ -223,7 +223,7 @@ subtest 'add() to fund tests' => sub {
     my $allocation = {
         fund_id           => $fund->fund_id,
         allocation_amount => 1000,
-        type              => 'increase',
+        type              => 'INCREASE',
     };
 
     # Unauthorized attempt to write
@@ -284,7 +284,7 @@ subtest 'add() transfer between funds tests' => sub {
         fund_id           => $source_fund->fund_id,
         is_transferred_to => $dest_fund->fund_id,
         allocation_amount => 500,
-        type              => 'transfer',
+        type              => 'TRANSFER',
     };
 
     # Transfer creates two allocations: one decreasing the source, one increasing the destination
@@ -292,7 +292,7 @@ subtest 'add() transfer between funds tests' => sub {
         ->status_is( 201, 'REST3.2.1' )
         ->header_like( Location => qr|^\/api\/v1\/acquisitions\/allocations\/\d+|, 'REST3.4.1' )
         ->json_is( '/fund_id'           => $source_fund->fund_id )
-        ->json_is( '/type'              => 'transfer' )
+        ->json_is( '/type'              => 'TRANSFER' )
         ->json_is( '/is_transferred_to' => $dest_fund->fund_id )
         ->json_is( '/allocation_amount' => 500 );
 
@@ -335,7 +335,7 @@ subtest 'update() tests' => sub {
 
     my $updated_allocation = {
         allocation_amount => 2500,
-        type              => 'increase',
+        type              => 'INCREASE',
         reference         => 'Updated reference',
     };
 

@@ -38,10 +38,11 @@ properties:
       - "null"
     description: Type of the allocation
     enum:
-      - increase
-      - decrease
-      - transfer
-      - initial
+      - INCREASE
+      - DECREASE
+      - TRANSFER
+      - INITIAL
+      - ROLLOVER_TRANSFER
       - null
   is_transferred_to:
     type:

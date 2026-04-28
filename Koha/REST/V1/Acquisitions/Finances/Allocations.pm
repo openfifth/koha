@@ -110,7 +110,7 @@ sub add {
                 my $module = $body->{fund_id} ? $entities->{funds} : $entities->{ledgers};
 
                 my $entity      = $module->{entity};
-                my $change_type = $body->{type} eq 'transfer' ? 'decrease' : $body->{type};
+                my $change_type = $body->{type} eq 'TRANSFER' ? 'DECREASE' : $body->{type};
                 $is_parent_amount_breached =
                     $entity->update_amount( { type => $change_type, value => $body->{allocation_amount} } );
                 if ($is_parent_amount_breached) {
@@ -124,10 +124,10 @@ sub add {
                 }
                 $allocation->store->discard_changes;
 
-                if ( $body->{type} eq 'transfer' && $body->{is_transferred_to} ) {
+                if ( $body->{type} eq 'TRANSFER' && $body->{is_transferred_to} ) {
                     my $recipient = $module->{recipient};
                     $is_parent_amount_breached =
-                        $recipient->update_amount( { type => 'increase', value => $body->{allocation_amount} } );
+                        $recipient->update_amount( { type => 'INCREASE', value => $body->{allocation_amount} } );
                     my $transfer = {%$body};
                     $transfer->{ $module->{id_param} } = $body->{is_transferred_to};
                     $transfer->{is_transferred_from}   = $body->{ $module->{id_param} };

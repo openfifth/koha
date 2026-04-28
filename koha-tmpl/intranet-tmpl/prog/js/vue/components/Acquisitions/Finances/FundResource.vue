@@ -685,11 +685,11 @@ export default {
                                                   ) {
                                                       const isIncrease =
                                                           row.type ===
-                                                              "increase" ||
+                                                              "INCREASE" ||
                                                           row.type ===
-                                                              "initial" ||
+                                                              "INITIAL" ||
                                                           (row.type ===
-                                                              "transfer" &&
+                                                              "TRANSFER" &&
                                                               row.is_transferred_from);
                                                       const symbol = isIncrease
                                                           ? "+"

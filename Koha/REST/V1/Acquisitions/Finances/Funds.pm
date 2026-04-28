@@ -98,7 +98,7 @@ sub add {
                     {
                         fund_id           => $fund->fund_id,
                         allocation_amount => $fund->fund_amount,
-                        type              => 'initial',
+                        type              => 'INITIAL',
                     }
                 )->store;
 

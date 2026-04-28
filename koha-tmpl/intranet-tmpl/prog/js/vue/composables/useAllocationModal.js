@@ -183,7 +183,7 @@ export function useAllocationModal({
 
                     const allocation = {
                         allocation_amount: allocated,
-                        type: action,
+                        type: action.toUpperCase(),
                         [entity + "_id"]: parseInt(entityId),
                         ...(isTransfer && inputFields.is_transferred_to
                             ? {

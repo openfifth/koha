@@ -25,9 +25,9 @@ export default {
             query: { action },
         } = props.route;
         const isFund = ref(entity === "fund" ? true : false);
-        const isValueIncrease = ref(action === "increase");
-        const isValueDecrease = ref(action === "decrease");
-        const isTransfer = ref(action === "transfer");
+        const isValueIncrease = ref(action === "INCREASE");
+        const isValueDecrease = ref(action === "DECREASE");
+        const isTransfer = ref(action === "TRANSFER");
 
         const acquisitionsStore = inject("acquisitionsStore");
         const { formatValueWithCurrency } = acquisitionsStore;

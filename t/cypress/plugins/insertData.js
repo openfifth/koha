@@ -1069,7 +1069,7 @@ const insertSampleAllocation = async ({
         values: {
             fund_id: fund?.fund_id ?? null,
             ledger_id: ledger?.ledger_id ?? null,
-            type: "increase",
+            type: "INCREASE",
             is_transferred_to: null,
             is_transferred_from: null,
             owner_id: null,

@@ -204,7 +204,7 @@ sub update_amount {
     my $entity            = $self->_object_hierarchy()->{object};
     my $value_change_type = $args->{type};
     my $value             = $args->{value};
-    my $is_increase       = $value_change_type eq 'increase' ? 1 : 0;
+    my $is_increase       = $value_change_type eq 'INCREASE' ? 1 : 0;
 
     my $entity_field = $entity . "_amount";
 

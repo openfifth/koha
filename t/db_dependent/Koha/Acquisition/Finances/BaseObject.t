@@ -183,19 +183,19 @@ subtest 'update_amount() tests' => sub {
     );
 
     # Increase within limit
-    my $result = $fund->update_amount( { type => 'increase', value => 1000 } );
+    my $result = $fund->update_amount( { type => 'INCREASE', value => 1000 } );
     $fund->discard_changes;
     is( $result->{within_limit}, 1, 'Increase within limit returns within_limit => 1' );
     cmp_ok( $fund->fund_amount, '==', 1000, 'Fund amount updated after increase' );
 
     # Increase exceeding limit
-    my $breach_result = $fund->update_amount( { type => 'increase', value => 99999 } );
+    my $breach_result = $fund->update_amount( { type => 'INCREASE', value => 99999 } );
     $fund->discard_changes;
     is( $breach_result->{within_limit}, 0, 'Increase exceeding limit returns within_limit => 0' );
     cmp_ok( $fund->fund_amount, '==', 1000, 'Fund amount NOT updated when limit exceeded' );
 
     # Decrease: no validation, no return value
-    $fund->update_amount( { type => 'decrease', value => 500 } );
+    $fund->update_amount( { type => 'DECREASE', value => 500 } );
     $fund->discard_changes;
     cmp_ok( $fund->fund_amount, '==', 500, 'Fund amount updated after decrease' );
 

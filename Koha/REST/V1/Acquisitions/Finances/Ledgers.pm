@@ -87,7 +87,7 @@ sub add {
                     {
                         ledger_id         => $ledger->ledger_id,
                         allocation_amount => $ledger->ledger_amount,
-                        type              => 'initial',
+                        type              => 'INITIAL',
                     }
                 )->store;
 
