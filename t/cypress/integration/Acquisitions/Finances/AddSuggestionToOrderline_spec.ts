@@ -46,7 +46,7 @@ describe("SuggestionResource - Add order from suggestion", () => {
 
     it("Shows error when API fails", () => {
         cy.intercept("GET", "/api/v1/suggestions*", { statusCode: 500 });
-        cy.visit("/cgi-bin/koha/acquisitions/order_management/suggestions");
+        cy.visit("/cgi-bin/koha/acquisitions/suggestions");
         cy.get("main div[class='alert alert-warning']").contains(
             "Something went wrong"
         );
@@ -62,7 +62,7 @@ describe("SuggestionResource - Add order from suggestion", () => {
             },
         }).as("get-suggestions");
 
-        cy.visit("/cgi-bin/koha/acquisitions/order_management/suggestions");
+        cy.visit("/cgi-bin/koha/acquisitions/suggestions");
         cy.wait("@get-suggestions"); // count request
         cy.wait("@get-suggestions"); // DataTable data request
 
@@ -101,7 +101,7 @@ describe("SuggestionResource - Add order from suggestion", () => {
             },
         }).as("get-suggestions");
 
-        cy.visit("/cgi-bin/koha/acquisitions/order_management/suggestions");
+        cy.visit("/cgi-bin/koha/acquisitions/suggestions");
         cy.wait("@get-suggestions"); // count request
         cy.wait("@get-suggestions"); // DataTable data request
 
@@ -138,7 +138,7 @@ describe("SuggestionResource - Add order from suggestion", () => {
             },
         }).as("get-suggestions");
 
-        cy.visit("/cgi-bin/koha/acquisitions/order_management/suggestions");
+        cy.visit("/cgi-bin/koha/acquisitions/suggestions");
         cy.wait("@get-suggestions"); // count request
         cy.wait("@get-suggestions"); // DataTable data request
 
@@ -159,7 +159,7 @@ describe("SuggestionResource - Add order from suggestion", () => {
             },
         }).as("get-suggestions");
 
-        cy.visit("/cgi-bin/koha/acquisitions/order_management/suggestions");
+        cy.visit("/cgi-bin/koha/acquisitions/suggestions");
         cy.wait("@get-suggestions"); // count request
         cy.wait("@get-suggestions"); // DataTable data request
 
@@ -189,7 +189,7 @@ describe("SuggestionResource - Add order from suggestion", () => {
             },
         }).as("get-suggestions");
 
-        cy.visit("/cgi-bin/koha/acquisitions/order_management/suggestions");
+        cy.visit("/cgi-bin/koha/acquisitions/suggestions");
         cy.wait("@get-suggestions"); // count request
         cy.wait("@get-suggestions"); // DataTable data request
 
@@ -236,7 +236,7 @@ describe("SuggestionResource - Add order from suggestion", () => {
             },
         });
 
-        cy.visit("/cgi-bin/koha/acquisitions/order_management/suggestions");
+        cy.visit("/cgi-bin/koha/acquisitions/suggestions");
         cy.wait("@get-suggestions"); // count request
         cy.wait("@get-suggestions"); // DataTable data request
 
@@ -267,7 +267,7 @@ describe("SuggestionResource - Add order from suggestion", () => {
             },
         });
 
-        cy.visit("/cgi-bin/koha/acquisitions/order_management/suggestions");
+        cy.visit("/cgi-bin/koha/acquisitions/suggestions");
         cy.wait("@get-suggestions"); // count request
         cy.wait("@get-suggestions"); // DataTable data request
 
