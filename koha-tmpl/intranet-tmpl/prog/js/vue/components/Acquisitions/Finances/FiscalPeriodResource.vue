@@ -294,6 +294,12 @@ export default {
             url: () => tableUrl(defaults),
             table_settings: null,
             add_filters: true,
+            filters_options: {
+                status: [
+                    { _id: true, _str: $__("Active") },
+                    { _id: false, _str: $__("Inactive") },
+                ],
+            },
             actions: {
                 0: ["show"],
                 "-1": [
@@ -403,6 +409,7 @@ export default {
                                               {
                                                   title: $__("Status"),
                                                   data: "status",
+                                                  dataFilter: "status",
                                                   searchable: true,
                                                   orderable: true,
                                                   render: function (
@@ -412,8 +419,8 @@ export default {
                                                       meta
                                                   ) {
                                                       return row.status
-                                                          ? __("Active")
-                                                          : __("Inactive");
+                                                          ? $__("Active")
+                                                          : $__("Inactive");
                                                   },
                                               },
                                           ],
@@ -422,6 +429,18 @@ export default {
                                                   ._baseURL + "ledgers",
                                           table_settings: null,
                                           add_filters: true,
+                                          filters_options: {
+                                              status: [
+                                                  {
+                                                      _id: true,
+                                                      _str: $__("Active"),
+                                                  },
+                                                  {
+                                                      _id: false,
+                                                      _str: $__("Inactive"),
+                                                  },
+                                              ],
+                                          },
                                           actions: {
                                               0: [
                                                   {

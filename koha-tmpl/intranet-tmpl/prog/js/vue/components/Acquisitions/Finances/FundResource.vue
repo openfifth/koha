@@ -467,6 +467,16 @@ export default {
             table_settings: null,
             add_filters: true,
             options: { embed: "sub_funds,allocations,parent_fund" },
+            filters_options: {
+                status: [
+                    { _id: true, _str: $__("Active") },
+                    { _id: false, _str: $__("Inactive") },
+                ],
+                ...(authorisedValues.value.av_fund_type.length && {
+                    fund_type: () =>
+                        baseResource.map_av_dt_filter("av_fund_type"),
+                }),
+            },
             ...(!props.embedded && {
                 actions: {
                     0: ["show"],
@@ -654,6 +664,7 @@ export default {
                                               {
                                                   title: $__("Type"),
                                                   data: "type",
+                                                  dataFilter: "type",
                                                   searchable: true,
                                                   orderable: true,
                                                   render: function (
@@ -744,6 +755,32 @@ export default {
                                                   ._baseURL + "allocations",
                                           table_settings: null,
                                           add_filters: true,
+                                          filters_options: {
+                                              type: [
+                                                  {
+                                                      _id: "INITIAL",
+                                                      _str: $__("Initial"),
+                                                  },
+                                                  {
+                                                      _id: "INCREASE",
+                                                      _str: $__("Increase"),
+                                                  },
+                                                  {
+                                                      _id: "DECREASE",
+                                                      _str: $__("Decrease"),
+                                                  },
+                                                  {
+                                                      _id: "TRANSFER",
+                                                      _str: $__("Transfer"),
+                                                  },
+                                                  {
+                                                      _id: "ROLLOVER_TRANSFER",
+                                                      _str: $__(
+                                                          "Rollover transfer"
+                                                      ),
+                                                  },
+                                              ],
+                                          },
                                           actions: {
                                               0: ["show"],
                                           },
@@ -832,6 +869,7 @@ export default {
                                               {
                                                   title: $__("Status"),
                                                   data: "status",
+                                                  dataFilter: "status",
                                                   searchable: true,
                                                   orderable: true,
                                                   render: function (
@@ -851,6 +889,18 @@ export default {
                                                   ._baseURL + "funds",
                                           table_settings: null,
                                           add_filters: true,
+                                          filters_options: {
+                                              status: [
+                                                  {
+                                                      _id: true,
+                                                      _str: $__("Active"),
+                                                  },
+                                                  {
+                                                      _id: false,
+                                                      _str: $__("Inactive"),
+                                                  },
+                                              ],
+                                          },
                                           actions: {
                                               0: [
                                                   {
