@@ -898,12 +898,11 @@ export default {
                         disabled: {
                             type: "function",
                             value: resource => {
-                                // if(!resource.fund_distributions?.length) return false
                                 if (
-                                    resource.fund_distributions?.length &&
-                                    (!resource.fund_distributions[0].fund_id ||
-                                        resource.totalDistributedAmount ===
-                                            resource.calculated_amount_oc)
+                                    !resource.fund_distributions[0]?.fund_id ||
+                                    !resource.calculated_amount_oc ||
+                                    resource.calculated_amount_oc ===
+                                        resource.totalDistributedAmount
                                 )
                                     return true;
                                 return false;
