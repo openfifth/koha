@@ -694,7 +694,7 @@ export default {
                                       resource.discount_percentage =
                                           vendor.discount;
                                   resource.fund_distributions.forEach(fd => {
-                                      fd.tax_rate = vendor.tax_rate;
+                                      fd.tax_rate = vendor.tax_rate || 0;
                                   });
                               },
                     displaySortOrder: {
@@ -748,7 +748,7 @@ export default {
                                     fd.fund?.currency
                                 );
                                 resource.distribution_exchange_rate = fxRate;
-                                fd.exchange_rate = fxRate;
+                                fd.exchange_rate = fxRate || 1;
                             });
                         } else {
                             resource.distribution_exchange_rate =
@@ -840,9 +840,9 @@ export default {
                                       fund_id: null,
                                       percentage: null,
                                       distributed_amount_oc: null,
-                                      exchange_rate: null,
+                                      exchange_rate: 1,
                                       distributed_amount: null,
-                                      tax_rate: null,
+                                      tax_rate: 0,
                                       tax_value: null,
                                       distributed_amount_tax_excluded: null,
                                       distributed_amount_tax_included: null,
@@ -879,9 +879,9 @@ export default {
                                 fund_id: null,
                                 percentage: null,
                                 distributed_amount_oc: null,
-                                exchange_rate: null,
+                                exchange_rate: 1,
                                 distributed_amount: null,
-                                tax_rate: null,
+                                tax_rate: 0,
                                 tax_value: null,
                                 distributed_amount_tax_excluded: null,
                                 distributed_amount_tax_included: null,
@@ -1003,7 +1003,7 @@ export default {
                     onChange: resource => {
                         resource.fund_distributions.forEach(fd => {
                             fd.exchange_rate =
-                                resource.distribution_exchange_rate;
+                                resource.distribution_exchange_rate || 1;
                             fd.calculateDistributedAmount(fd);
                         });
                     },

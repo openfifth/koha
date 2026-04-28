@@ -40,11 +40,11 @@ export default {
         const orderline = inject("resource");
         // Set the tax rate if a vendor has already been selected
         if (orderline.vendor) {
-            props.resource.tax_rate = orderline.vendor.tax_rate;
+            props.resource.tax_rate = orderline.vendor.tax_rate || 0;
         }
         // Set the exchange rate if one has been set for the orderline
         if (orderline.distribution_exchange_rate) {
-            props.resource.exchange_rate = orderline.distribution_exchange_rate;
+            props.resource.exchange_rate = orderline.distribution_exchange_rate || 1;
         }
         // Set the currency for the final distribution for display in the UI
         if (orderline.vendor_price_currency) {
@@ -224,7 +224,7 @@ export default {
                         fd.currency = differentCurrenciesInLedgers
                             ? fund?.currency || vendor_price_currency
                             : getActiveCurrency.currency;
-                        fd.exchange_rate = orderline.distribution_exchange_rate;
+                        fd.exchange_rate = orderline.distribution_exchange_rate || 1;
                         calculateDistributedAmount(fd);
                     });
                 },

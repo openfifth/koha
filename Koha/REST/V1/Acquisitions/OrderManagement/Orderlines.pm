@@ -116,6 +116,7 @@ sub add {
             }
         )
     } catch {
+        warn $_;
         if ( blessed $_ ) {
             if ( $_->isa('Koha::Exceptions::DuplicateObject') ) {
                 my $duplicate_biblio = Koha::Biblios->find( $_->error );
