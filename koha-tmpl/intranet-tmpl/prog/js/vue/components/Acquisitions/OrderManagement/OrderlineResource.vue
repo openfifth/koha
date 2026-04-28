@@ -1458,11 +1458,16 @@ export default {
                 });
             });
 
+            const fundDistributions = [];
             orderline.fund_distributions.forEach(fd => {
                 delete fd.fund;
                 delete fd.currency;
                 delete fd.taxIncluded;
+                if (fd.fund_id) {
+                    fundDistributions.push(fd);
+                }
             });
+            orderline.fund_distributions = fundDistributions;
 
             return handleAPIFormSubmission(orderline, orderline_id);
         };

@@ -89,6 +89,7 @@ sub add {
             sub {
 
                 $body->{status}         = $body->{vendor_id} ? "NEW" : "DRAFT";
+                $body->{status}         = 'DRAFT' if scalar(@$fund_distributions) == 0;
                 $body->{payment_status} = "PENDING";
                 my $user = $c->stash('koha.user');
                 $body->{created_by} = $user->borrowernumber;
