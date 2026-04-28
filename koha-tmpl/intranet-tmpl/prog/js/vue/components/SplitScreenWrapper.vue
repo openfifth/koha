@@ -27,17 +27,17 @@ export default {
         splitScreenGroupings: Array,
     },
     setup(props) {
-        const getPaneSortOrder = group => {
-            return props.splitScreenGroupings.findIndex(
-                grp => grp.name === group
-            );
+        const getPaneSortOrder = (group, paneGroups) => {
+            return paneGroups.findIndex(grp => grp === group);
         };
         const determineGroupsForPane = paneGroups => {
             const groups = props.fieldList.filter(group =>
                 paneGroups.includes(group.name)
             );
             return groups.sort(
-                (a, b) => getPaneSortOrder(a.name) - getPaneSortOrder(b.name)
+                (a, b) =>
+                    getPaneSortOrder(a.name, paneGroups) -
+                    getPaneSortOrder(b.name, paneGroups)
             );
         };
         const panesToDisplay = computed(() => {
