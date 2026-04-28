@@ -908,6 +908,18 @@ export default {
                                 return false;
                             },
                         },
+                        title: {
+                            type: "function",
+                            value: resource => {
+                                const currency = differentCurrenciesInLedgers
+                                    ? resource.fund_distributions?.[0].fund
+                                          ?.currency || ""
+                                    : getActiveCurrency?.currency || "";
+                                return $__("Fund currency: %s").format(
+                                    currency
+                                );
+                            },
+                        },
                     },
                     relationshipFields: [
                         {
