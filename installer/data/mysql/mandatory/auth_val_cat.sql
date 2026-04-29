@@ -80,6 +80,10 @@ INSERT IGNORE INTO authorised_value_categories( category_name ) VALUES
 INSERT IGNORE INTO authorised_value_categories( category_name ) VALUES
     ('RETURN_CLAIM_RESOLUTION');
 
+-- For Displays
+INSERT IGNORE INTO authorised_value_categories( category_name, is_system ) VALUES
+    ('DISPLAY_RETURN_OVER', 1);
+
 -- For file uploads
 INSERT IGNORE INTO authorised_value_categories(  category_name, is_system  ) VALUES
     ('UPLOAD', 1);
