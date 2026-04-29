@@ -119,6 +119,14 @@ Use this group to identify libraries as part of float group
 
 Use this group to limit report access by library group
 
+=head2 ft_display_group
+
+  data_type: 'tinyint'
+  default_value: 0
+  is_nullable: 0
+
+Use this group to identify libraries that can share display items
+
 =head2 created_on
 
   data_type: 'timestamp'
@@ -162,6 +170,8 @@ __PACKAGE__->add_columns(
   "ft_local_float_group",
   { data_type => "tinyint", default_value => 0, is_nullable => 0 },
   "ft_reports",
+  { data_type => "tinyint", default_value => 0, is_nullable => 0 },
+  "ft_display_group",
   { data_type => "tinyint", default_value => 0, is_nullable => 0 },
   "created_on",
   {
@@ -276,8 +286,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-06-10 12:26:15
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:svpZAHGLTmg9wVQFY6Ddcg
+# Created by DBIx::Class::Schema::Loader v0.07053 @ 2026-10-26 11:00:28
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:sYQBE8FZuqCUiHCYZi8+EQ
 
 =head2 koha_object_class
 
@@ -300,6 +310,7 @@ sub koha_objects_class {
 }
 
 __PACKAGE__->add_columns(
+    '+ft_display_group'       => { is_boolean => 1 },
     '+ft_hide_patron_info'    => { is_boolean => 1 },
     '+ft_limit_item_editing'  => { is_boolean => 1 },
     '+ft_local_float_group'   => { is_boolean => 1 },
