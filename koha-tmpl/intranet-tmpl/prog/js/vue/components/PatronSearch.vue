@@ -58,7 +58,17 @@ export default {
     },
     setup(props) {
         const loading = ref(false);
-        const addedPatrons = ref([]);
+        const formatExistingPatrons = () => {
+            if (!props.resource[props.fieldName]) return [];
+            return props.resource[props.fieldName].map(ep => {
+                return {
+                    borrowernumber: ep.borrowernumber,
+                    name: $patron_to_html(ep.patron),
+                };
+            });
+        };
+        const addedPatrons =
+            props.modalType === "add" ? ref([...formatExistingPatrons()]) : [];
 
         onBeforeMount(() => {
             if (props.modalType === "select") {
