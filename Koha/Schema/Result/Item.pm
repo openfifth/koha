@@ -710,6 +710,21 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 display_items
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::DisplayItem>
+
+=cut
+
+__PACKAGE__->has_many(
+  "display_items",
+  "Koha::Schema::Result::DisplayItem",
+  { "foreign.itemnumber" => "self.itemnumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 hold_fill_target
 
 Type: might_have
@@ -991,8 +1006,8 @@ __PACKAGE__->might_have(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-01-22 21:05:23
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:d/Q+Ym3pNstyDcgjVhLykQ
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-29 08:54:04
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:JceD/5BgNbh5gvyyqRUhIA
 
 __PACKAGE__->belongs_to( biblioitem => "Koha::Schema::Result::Biblioitem", "biblioitemnumber" );
 

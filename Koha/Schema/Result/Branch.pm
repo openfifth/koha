@@ -575,7 +575,7 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
-=head2 course_items
+=head2 course_items_holdingbranches
 
 Type: has_many
 
@@ -584,7 +584,7 @@ Related object: L<Koha::Schema::Result::CourseItem>
 =cut
 
 __PACKAGE__->has_many(
-  "course_items",
+  "course_items_holdingbranches",
   "Koha::Schema::Result::CourseItem",
   { "foreign.holdingbranch" => "self.branchcode" },
   { cascade_copy => 0, cascade_delete => 0 },
@@ -677,6 +677,51 @@ __PACKAGE__->has_many(
   "desks",
   "Koha::Schema::Result::Desk",
   { "foreign.branchcode" => "self.branchcode" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+=head2 displays_display_branches
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::Display>
+
+=cut
+
+__PACKAGE__->has_many(
+  "displays_display_branches",
+  "Koha::Schema::Result::Display",
+  { "foreign.display_branch" => "self.branchcode" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+=head2 displays_display_holding_branches
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::Display>
+
+=cut
+
+__PACKAGE__->has_many(
+  "displays_display_holding_branches",
+  "Koha::Schema::Result::Display",
+  { "foreign.display_holding_branch" => "self.branchcode" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+=head2 displays_display_home_branches
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::Display>
+
+=cut
+
+__PACKAGE__->has_many(
+  "displays_display_home_branches",
+  "Koha::Schema::Result::Display",
+  { "foreign.display_home_branch" => "self.branchcode" },
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
@@ -1081,8 +1126,8 @@ Composing rels: L</z3950servers_branches> -> server
 __PACKAGE__->many_to_many("servers", "z3950servers_branches", "server");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07053 @ 2026-09-15 15:48:54
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:VumHFb+eVtXjM537JoaWqg
+# Created by DBIx::Class::Schema::Loader v0.07053 @ 2026-09-18 14:08:53
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:EPxY9btSZw7R3LmBBlju5Q
 
 __PACKAGE__->has_many(
     "additional_field_values",

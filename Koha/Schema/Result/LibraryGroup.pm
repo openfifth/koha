@@ -111,6 +111,14 @@ Use this group to identify libraries as pick up location for holds
 
 Use this group to identify libraries as part of float group
 
+=head2 ft_display_group
+
+  data_type: 'tinyint'
+  default_value: 0
+  is_nullable: 0
+
+Use this group to identify libraries that can share display items
+
 =head2 created_on
 
   data_type: 'timestamp'
@@ -152,6 +160,8 @@ __PACKAGE__->add_columns(
   "ft_local_hold_group",
   { data_type => "tinyint", default_value => 0, is_nullable => 0 },
   "ft_local_float_group",
+  { data_type => "tinyint", default_value => 0, is_nullable => 0 },
+  "ft_display_group",
   { data_type => "tinyint", default_value => 0, is_nullable => 0 },
   "created_on",
   {
@@ -266,8 +276,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-04-28 16:41:47
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:CkZe+3Qm2ZlmoSmXBGChag
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-29 08:54:04
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:cSMI2069lEPvV46V+i3TEQ
 
 =head2 koha_object_class
 
@@ -290,6 +300,7 @@ sub koha_objects_class {
 }
 
 __PACKAGE__->add_columns(
+    '+ft_display_group'       => { is_boolean => 1 },
     '+ft_hide_patron_info'    => { is_boolean => 1 },
     '+ft_limit_item_editing'  => { is_boolean => 1 },
     '+ft_local_float_group'   => { is_boolean => 1 },
