@@ -312,6 +312,19 @@ tables:
           authorised_value: "FOUND_IN_LIB"
           lib: "Found in library"
 
+        # displays
+        - category: "DISPLAY_RETURN_OVER"
+          authorised_value: "any"
+          lib: "Remove from display at any library"
+
+        - category: "DISPLAY_RETURN_OVER"
+          authorised_value: "any_except_homebranch"
+          lib: "Remove from display at any library, except permenant home library"
+
+        - category: "DISPLAY_RETURN_OVER"
+          authorised_value: "no"
+          lib: "Do nothing"
+
         # hold cancellations
         - category: "HOLD_CANCELLATION"
           authorised_value: "NOT_FOUND"
