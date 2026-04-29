@@ -184,5 +184,14 @@ INSERT INTO permissions (module_bit, code, description) VALUES
    (33, 'create_item_lists', 'Create item lists'),
    (33, 'edit_item_lists', 'Edit item lists owned by others / public'),
    (33, 'delete_item_lists', 'Delete item lists owned by others / public'),
-   (33, 'manage_item_list_contents', 'Add/remove items in public or group lists')
+   (33, 'manage_item_list_contents', 'Add/remove items in public or group lists'),
+   (34, 'add_displays', 'Create displays'),
+   (34, 'add_displays_to_any_libraries', 'Create displays in any libraries'),
+   (34, 'view_displays', 'View displays'),
+   (34, 'view_displays_from_any_libraries', 'View displays from any libraries'),
+   (34, 'edit_displays', 'Edit displays'),
+   (34, 'edit_displays_from_any_libraries', 'Edit displays from any libraries'),
+   (34, 'delete_displays', 'Delete displays'),
+   (34, 'delete_displays_from_any_libraries', 'Delete displays from any libraries'),
+   (34, 'manage_display_items', 'Create, edit, and delete display items')
 ;
