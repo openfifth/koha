@@ -2915,6 +2915,65 @@ CREATE TABLE `discharges` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `displays`
+--
+
+DROP TABLE IF EXISTS `displays`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `displays` (
+  `display_id` int(11) AUTO_INCREMENT NOT NULL COMMENT 'unique id for the display',
+  `display_name` varchar(255) DEFAULT NULL COMMENT 'the name of the display',
+  `start_date` date DEFAULT NULL COMMENT 'the start date of the display (optional)',
+  `end_date` date DEFAULT NULL COMMENT 'the end date of the display (optional)',
+  `enabled` tinyint(1) DEFAULT 1 NOT NULL COMMENT 'determines whether the display is active',
+  `display_location` varchar(80) DEFAULT NULL COMMENT 'the shelving location for the display (optional)',
+  `display_code` varchar(80) DEFAULT NULL COMMENT 'the collection code for the display (optional)',
+  `display_branch` varchar(10) DEFAULT NULL COMMENT 'the branch code for the display (optional)',
+  `display_home_branch` varchar(10) DEFAULT NULL COMMENT 'a new home branch for the item to have while on display (optional)',
+  `display_holding_branch` varchar(10) DEFAULT NULL COMMENT 'a new holding branch for the item to have while on display (optional)',
+  `display_itype` varchar(10) DEFAULT NULL COMMENT 'a new itype for the item to have while on display (optional)',
+  `staff_note` mediumtext DEFAULT NULL COMMENT 'staff note for the display',
+  `public_note` mediumtext DEFAULT NULL COMMENT 'public note for the display',
+  `display_days` int(11) DEFAULT NULL COMMENT 'default number of days items will remain on display',
+  `display_return_over` enum('any','any_except_homebranch','no') NOT NULL DEFAULT 'no' COMMENT 'should the item be removed from the display when it is returned',
+  PRIMARY KEY (`display_id`),
+  KEY `display_branch` (`display_branch`),
+  KEY `display_holding_branch` (`display_holding_branch`),
+  KEY `display_itype` (`display_itype`),
+  CONSTRAINT `displays_ibfk_1` FOREIGN KEY (`display_branch`) REFERENCES `branches` (`branchcode`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `displays_ibfk_2` FOREIGN KEY (`display_home_branch`) REFERENCES `branches` (`branchcode`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `displays_ibfk_3` FOREIGN KEY (`display_holding_branch`) REFERENCES `branches` (`branchcode`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `displays_ibfk_4` FOREIGN KEY (`display_itype`) REFERENCES `itemtypes` (`itemtype`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `display_items`
+--
+
+DROP TABLE IF EXISTS `display_items`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `display_items` (
+  `display_item_id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'primary key',
+  `display_id` int(11) NOT NULL COMMENT 'foreign key to link to displays.display_id',
+  `itemnumber` int(11) DEFAULT NULL COMMENT 'items.itemnumber for the item on display',
+  `biblionumber` int(11) DEFAULT NULL COMMENT 'biblio.biblionumber for the bibliographic record on display',
+  `date_added` date DEFAULT NULL COMMENT 'the date the item was added to the display',
+  `date_remove` date DEFAULT NULL COMMENT 'the date the item should be removed from the display',
+  PRIMARY KEY (`display_item_id`),
+  UNIQUE KEY `display_items_uniq` (`display_id`,`itemnumber`),
+  KEY `display_id` (`display_id`),
+  KEY `itemnumber` (`itemnumber`),
+  KEY `biblionumber` (`biblionumber`),
+  CONSTRAINT `display_items_ibfk_1` FOREIGN KEY (`display_id`) REFERENCES `displays` (`display_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `display_items_ibfk_2` FOREIGN KEY (`itemnumber`) REFERENCES `items` (`itemnumber`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `display_items_ibfk_3` FOREIGN KEY (`biblionumber`) REFERENCES `biblio` (`biblionumber`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `edifact_ean`
 --
 
@@ -4605,6 +4664,7 @@ CREATE TABLE `library_groups` (
   `ft_search_groups_staff` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Use this group for opac side search groups',
   `ft_local_hold_group` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Use this group to identify libraries as pick up location for holds',
   `ft_local_float_group` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Use this group to identify libraries as part of float group',
+  `ft_display_group` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Use this group to identify libraries that can share display items',
   `created_on` timestamp NULL DEFAULT NULL COMMENT 'Date and time of creation',
   `updated_on` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'Date and time of last',
   PRIMARY KEY (`id`),
