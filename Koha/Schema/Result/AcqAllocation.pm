@@ -71,7 +71,7 @@ entity receiving the allocation
 =head2 type
 
   data_type: 'enum'
-  extra: {list => ["increase","decrease","transfer","initial"]}
+  extra: {list => ["INCREASE","DECREASE","TRANSFER","INITIAL","ROLLOVER_TRANSFER"]}
   is_nullable: 0
 
 type of the allocation
@@ -124,7 +124,15 @@ __PACKAGE__->add_columns(
   "type",
   {
     data_type => "enum",
-    extra => { list => ["increase", "decrease", "transfer", "initial"] },
+    extra => {
+      list => [
+        "INCREASE",
+        "DECREASE",
+        "TRANSFER",
+        "INITIAL",
+        "ROLLOVER_TRANSFER",
+      ],
+    },
     is_nullable => 0,
   },
   "reference",
@@ -195,8 +203,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-17 08:39:39
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:CFznQSPk+DN2gsqmAxvAxA
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-29 12:54:00
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:y7scNafqJglDJ0CzsWU3RA
 
 sub koha_object_class {
     'Koha::Acquisition::Finances::Allocation';

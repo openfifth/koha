@@ -177,12 +177,12 @@ __PACKAGE__->belongs_to(
   "orderline",
   "Koha::Schema::Result::AcqOrderline",
   { orderline_id => "orderline_id" },
-  { is_deferrable => 1, on_delete => "RESTRICT", on_update => "RESTRICT" },
+  { is_deferrable => 1, on_delete => "CASCADE", on_update => "RESTRICT" },
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-27 14:37:49
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:vXZvijac6jHDvoOflj555A
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-29 12:54:00
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:cKOBoEwV15dOzTBmoTk9IA
 
 
 =head2 koha_object_class

@@ -91,12 +91,12 @@ __PACKAGE__->belongs_to(
   "orderline",
   "Koha::Schema::Result::AcqOrderline",
   { orderline_id => "orderline_id" },
-  { is_deferrable => 1, on_delete => "RESTRICT", on_update => "RESTRICT" },
+  { is_deferrable => 1, on_delete => "CASCADE", on_update => "RESTRICT" },
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-11-14 12:39:42
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:aHR+NssJshyYDM1ryHhv7w
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-29 12:54:00
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:JX5iblVQb8VcAcoEYMwdLA
 
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration

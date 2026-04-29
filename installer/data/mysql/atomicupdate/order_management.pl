@@ -117,7 +117,7 @@ return {
                 `distributed_amount_tax_excluded` decimal(28,6) NOT NULL COMMENT 'distributed amount minus tax',
                 `distributed_amount_tax_included` decimal(28,6) NOT NULL COMMENT 'distributed amount including tax',
                 PRIMARY KEY (`orderline_fund_distribution_id`),
-                FOREIGN KEY (`orderline_id`) REFERENCES `acq_orderlines` (`orderline_id`),
+                FOREIGN KEY (`orderline_id`) REFERENCES `acq_orderlines` (`orderline_id`) ON DELETE CASCADE,
                 FOREIGN KEY (`fund_id`) REFERENCES `acq_funds` (`fund_id`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
             }
@@ -135,7 +135,7 @@ return {
                 `orderline_id` INT(11) NOT NULL COMMENT 'orderline the user is for',
                 `borrowernumber` INT(11) NOT NULL COMMENT 'the user',
                 PRIMARY KEY (`orderline_id`,`borrowernumber`),
-                FOREIGN KEY (`orderline_id`) REFERENCES `acq_orderlines` (`orderline_id`),
+                FOREIGN KEY (`orderline_id`) REFERENCES `acq_orderlines` (`orderline_id`) ON DELETE CASCADE,
                 FOREIGN KEY (`borrowernumber`) REFERENCES `borrowers` (`borrowernumber`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
             }
@@ -153,7 +153,7 @@ return {
                 `orderline_id` INT(11) NOT NULL COMMENT 'orderline the user is for',
                 `borrowernumber` INT(11) NOT NULL COMMENT 'the user',
                 PRIMARY KEY (`orderline_id`,`borrowernumber`),
-                FOREIGN KEY (`orderline_id`) REFERENCES `acq_orderlines` (`orderline_id`),
+                FOREIGN KEY (`orderline_id`) REFERENCES `acq_orderlines` (`orderline_id`) ON DELETE CASCADE,
                 FOREIGN KEY (`borrowernumber`) REFERENCES `borrowers` (`borrowernumber`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
             }
