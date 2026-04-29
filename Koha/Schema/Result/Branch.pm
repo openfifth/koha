@@ -680,6 +680,51 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 displays_display_branches
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::Display>
+
+=cut
+
+__PACKAGE__->has_many(
+  "displays_display_branches",
+  "Koha::Schema::Result::Display",
+  { "foreign.display_branch" => "self.branchcode" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+=head2 displays_display_holding_branches
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::Display>
+
+=cut
+
+__PACKAGE__->has_many(
+  "displays_display_holding_branches",
+  "Koha::Schema::Result::Display",
+  { "foreign.display_holding_branch" => "self.branchcode" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+=head2 displays_display_home_branches
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::Display>
+
+=cut
+
+__PACKAGE__->has_many(
+  "displays_display_home_branches",
+  "Koha::Schema::Result::Display",
+  { "foreign.display_home_branch" => "self.branchcode" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 edifact_eans
 
 Type: has_many
@@ -1051,8 +1096,8 @@ Composing rels: L</z3950servers_branches> -> server
 __PACKAGE__->many_to_many("servers", "z3950servers_branches", "server");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07053 @ 2026-07-28 12:08:20
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:zldxQFMCaqzHTVla/0ZdWQ
+# Created by DBIx::Class::Schema::Loader v0.07053 @ 2026-07-29 10:42:09
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:KYPMAx3PqOcsvb2ejKhxMQ
 
 __PACKAGE__->has_many(
     "additional_field_values",
