@@ -106,3 +106,8 @@ VALUES
 INSERT IGNORE INTO authorised_value_categories (category_name, is_system)
 VALUES
     ('BOOKING_CANCELLATION', 1);
+
+-- For course reserve types
+INSERT IGNORE INTO authorised_value_categories (category_name, is_system)
+VALUES
+    ('CR_TYPE', 1);
