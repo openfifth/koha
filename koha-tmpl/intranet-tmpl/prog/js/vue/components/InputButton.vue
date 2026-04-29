@@ -4,6 +4,7 @@
         :class="cssClass"
         type="button"
         :value="title"
+        :id="idString"
     />
 </template>
 
@@ -29,6 +30,7 @@ export default {
         callback: {
             type: Function,
         },
+        idString: String | null,
     },
 };
 </script>

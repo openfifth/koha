@@ -1,7 +1,7 @@
 <template>
     <div style="display: flex; min-width: 30%">
         <InputNumber
-            id="percentageToggleField"
+            :id="idString"
             v-model="resource[toggleValue]"
             :size="6"
             @update:modelValue="verifyFieldValue()"
@@ -47,6 +47,7 @@ export default {
         amountField: String,
         onChange: Function,
         formatInputValue: Function,
+        idString: String | null,
     },
     inheritAttrs: false,
     setup(props, { emit }) {
