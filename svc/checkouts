@@ -67,6 +67,8 @@ binmode STDOUT, ":encoding(UTF-8)";
 print $input->header( -type => 'application/json', -charset => 'UTF-8' );
 
 my @parameters;
+my $use_display_module = C4::Context->preference('UseDisplayModule');
+
 my $sql = '
     SELECT
         issues.issue_id,
@@ -89,7 +91,8 @@ my $sql = '
 
         items.itemnumber,
         items.barcode,
-        branches2.branchname AS homebranch,
+        homebranches.branchname AS homebranch,
+        holdingbranches.branchname AS holdingbranch,
         items.itemnotes,
         items.itemnotes_nonpublic,
         items.itemcallnumber,
@@ -97,7 +100,7 @@ my $sql = '
         items.replacementprice,
 
         issues.branchcode,
-        branches.branchname,
+        issuesbranches.branchname,
 
         items.itype,
         biblioitems.itemtype,
@@ -121,16 +124,67 @@ my $sql = '
         return_claims.id AS return_claim_id,
         return_claims.notes AS return_claim_notes,
         return_claims.created_on AS return_claim_created_on,
-        return_claims.updated_on AS return_claim_updated_on
+        return_claims.updated_on AS return_claim_updated_on';
 
+if ($use_display_module) {
+    $sql .= ',
+        COALESCE(active_display.display_location, items.location) AS effective_location,
+        COALESCE(active_display.display_code, items.ccode) AS effective_collection,
+        COALESCE(effective_homebranches.branchcode, issues.branchcode) AS effective_branchcode,
+        COALESCE(effective_homebranches.branchname, issuesbranches.branchname) AS effective_branchname,
+        COALESCE(effective_homebranches.branchname, homebranches.branchname) AS effective_homebranch,
+        COALESCE(effective_holdingbranches.branchname, holdingbranches.branchname) AS effective_holdingbranch,
+        COALESCE(active_display.display_itype, items.itype) AS effective_itype,
+        active_display.display_id,
+        active_display.display_name';
+} else {
+    $sql .= ',
+        items.location AS effective_location,
+        items.ccode AS effective_collection,
+        issues.branchcode AS effective_branchcode,
+        issuesbranches.branchname AS effective_branchname,
+        homebranches.branchname AS effective_homebranch,
+        holdingbranches.branchname AS effective_holdingbranch,
+        items.itype AS effective_itype,
+        NULL AS display_id,
+        NULL AS display_name';
+}
+
+$sql .= '
     FROM issues
         LEFT JOIN items USING ( itemnumber )
         LEFT JOIN biblio USING ( biblionumber )
         LEFT JOIN biblioitems USING ( biblionumber )
         LEFT JOIN borrowers USING ( borrowernumber )
-        LEFT JOIN branches ON ( issues.branchcode = branches.branchcode )
-        LEFT JOIN branches branches2 ON ( items.homebranch = branches2.branchcode )
-        LEFT JOIN return_claims USING ( issue_id )
+        LEFT JOIN branches issuesbranches ON ( issues.branchcode = issuesbranches.branchcode )
+        LEFT JOIN branches homebranches ON ( items.homebranch = homebranches.branchcode )
+        LEFT JOIN branches holdingbranches ON ( items.holdingbranch = holdingbranches.branchcode )
+        LEFT JOIN return_claims USING ( issue_id )';
+
+if ($use_display_module) {
+    $sql .= '
+        LEFT JOIN (
+          SELECT
+            di.itemnumber,
+            d.display_id,
+            d.display_location,
+            d.display_code,
+            d.display_home_branch,
+            d.display_holding_branch,
+            d.display_itype,
+            d.display_name,
+            ROW_NUMBER() OVER (PARTITION BY di.itemnumber ORDER BY di.date_added DESC) as rn
+          FROM display_items di
+          JOIN displays d ON di.display_id = d.display_id
+          WHERE d.enabled = 1
+            AND (di.date_added IS NULL OR di.date_added <= CURDATE())
+            AND (di.date_remove IS NULL OR di.date_remove >= CURDATE())
+        ) active_display ON ( items.itemnumber = active_display.itemnumber AND active_display.rn = 1 )
+        LEFT JOIN branches effective_homebranches ON ( active_display.display_home_branch = effective_homebranches.branchcode )
+        LEFT JOIN branches effective_holdingbranches ON ( active_display.display_holding_branch = effective_holdingbranches.branchcode )';
+}
+
+$sql .= '
     WHERE issues.borrowernumber
 ';
 
@@ -180,23 +234,43 @@ while ( my $c = $sth->fetchrow_hashref() ) {
         $unseen_remaining
     ) = GetRenewCount( $c->{borrowernumber}, $c->{itemnumber} );
 
-    my ( $itemtype, $recordtype, $type_for_stat );
-    $itemtype      = $itemtypes->{ $c->{itype} }    if $c->{itype};
+    my $itemtype;
+    if ( $c->{effective_itype} ) {
+        $itemtype = $itemtypes->{ $c->{effective_itype} };
+    } elsif ( $c->{itype} ) {
+        $itemtype = $itemtypes->{ $c->{itype} };
+    }
+
+    my ( $recordtype, $type_for_stat );
     $recordtype    = $itemtypes->{ $c->{itemtype} } if $c->{itemtype};
     $type_for_stat = $item_level_itypes ? $itemtype : $recordtype;
 
     my $location;
-    if ( $c->{location} ) {
+    if ( $c->{effective_location} ) {
+
+        # Use AuthorisedValues to get effective location description
+        my $av = Koha::AuthorisedValues->get_description_by_koha_field(
+            { kohafield => 'items.location', authorised_value => $c->{effective_location} } );
+        $location = $av->{lib} || '';
+    } elsif ( $c->{location} ) {
+
+        # Use AuthorisedValues to get effective location description
         my $av = Koha::AuthorisedValues->get_description_by_koha_field(
             { kohafield => 'items.location', authorised_value => $c->{location} } );
-        $location = $av->{lib} ? $av->{lib} : '';
+        $location = $av->{lib} || '';
     }
+
     my $collection;
-    if ( $c->{collection} ) {
+    if ( $c->{effective_collection} ) {
+        my $av = Koha::AuthorisedValues->get_description_by_koha_field(
+            { kohafield => 'items.ccode', authorised_value => $c->{effective_collection} } );
+        $collection = $av->{lib} ? $av->{lib} : '';
+    } elsif ( $c->{collection} ) {
         my $av = Koha::AuthorisedValues->get_description_by_koha_field(
             { kohafield => 'items.ccode', authorised_value => $c->{collection} } );
         $collection = $av->{lib} ? $av->{lib} : '';
     }
+
     my $lost;
     my $claims_returned;
     if ( $c->{itemlost} ) {
@@ -205,25 +279,28 @@ while ( my $c = $sth->fetchrow_hashref() ) {
         $lost            = $av->{lib} ? $av->{lib} : '';
         $claims_returned = $c->{itemlost} eq $claims_returned_lost_value;
     }
+
     my $damaged;
     if ( $c->{damaged} ) {
         my $av = Koha::AuthorisedValues->get_description_by_koha_field(
             { kohafield => 'items.damaged', authorised_value => $c->{damaged} } );
         $damaged = $av->{lib} ? $av->{lib} : '';
     }
+
     my $materials;
     if ( $c->{materials} && $confirm_parts_required ) {
         my $descriptions = Koha::AuthorisedValues->get_description_by_koha_field(
             { frameworkcode => '', kohafield => 'items.materials', authorised_value => $c->{materials} } );
         $materials = $descriptions->{lib} // $c->{materials};
     }
+
     my @subtitles = split( / \| /, $c->{'subtitle'} // '' );
 
     my $recalled = 0;
     if ( C4::Context->preference('UseRecalls') ) {
         my $item   = Koha::Items->find( $c->{itemnumber} );
         my $recall = undef;
-        $recall = $item->check_recalls if $item->can_be_waiting_recall;
+        $recall = $item->check_recalls if $item && $item->can_be_waiting_recall;
         if ( defined $recall ) {
             if ( $recall->item_level ) {
                 if ( $recall->item_id == $c->{itemnumber} ) {
@@ -259,13 +336,14 @@ while ( my $c = $sth->fetchrow_hashref() ) {
         recordtype_description => $recordtype    || q{},
         collection             => $collection,
         location               => $location,
-        homebranch             => $c->{homebranch},
+        homebranch             => $c->{effective_homebranch}    || $c->{homebranch},
+        holdingbranch          => $c->{effective_holdingbranch} || $c->{holdingbranch},
         itemnotes              => $c->{itemnotes},
         itemnotes_nonpublic    => $c->{itemnotes_nonpublic},
-        branchcode             => $c->{branchcode},
-        branchname             => $c->{branchname},
-        itemcallnumber         => $c->{itemcallnumber} || q{},
-        copynumber             => $c->{copynumber}     || q{},
+        branchcode             => $c->{effective_branchcode} || $c->{branchcode},
+        branchname             => $c->{effective_branchname} || $c->{branchname},
+        itemcallnumber         => $c->{itemcallnumber}       || q{},
+        copynumber             => $c->{copynumber}           || q{},
         charge                 => $charge,
         fine                   => $fine,
         price                  => $c->{replacementprice} || q{},
@@ -290,6 +368,9 @@ while ( my $c = $sth->fetchrow_hashref() ) {
         unseen_count           => $unseen_count,
         unseen_allowed         => $unseen_allowed,
         unseen_remaining       => $unseen_remaining,
+
+        display_id   => $c->{display_id},
+        display_name => $c->{display_name},
 
         return_claim_id                   => $c->{return_claim_id},
         return_claim_notes                => $c->{return_claim_notes},
