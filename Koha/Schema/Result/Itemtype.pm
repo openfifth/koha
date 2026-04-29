@@ -279,6 +279,21 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 displays
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::Display>
+
+=cut
+
+__PACKAGE__->has_many(
+  "displays",
+  "Koha::Schema::Result::Display",
+  { "foreign.display_itype" => "self.itemtype" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 itemtypes
 
 Type: has_many
@@ -390,8 +405,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07053 @ 2026-10-15 03:07:23
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:qKmpfCQGX1ytE+qGDG2vuQ
+# Created by DBIx::Class::Schema::Loader v0.07053 @ 2026-10-19 11:18:43
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:qnuDj1FSBi1uEfAem1Ji4g
 
 __PACKAGE__->add_columns(
     '+automatic_checkin'            => { is_boolean => 1 },
