@@ -2526,9 +2526,43 @@ modules:
               columnname: instructor
             -
               columnname: notes
+      thesis_tables_table:
+        columns:
+            -
+              columnname: coursename
+            -
+              columnname: course_number
+            -
+              columnname: instructor
+            -
+              columnname: notes
 
     course_items:
       course-items-table:
+        columns:
+            -
+              columnname: title
+            -
+              columnname: author
+            -
+              columnname: itemtype
+            -
+              columnname: location
+            -
+              columnname: collection
+            -
+              columnname: callnumber
+            -
+              columnname: copynumber
+            -
+              columnname: status
+            -
+              columnname: datedue
+            -
+              columnname: notes
+            -
+              columnname: link
+      thesis-table-items-table:
         columns:
             -
               columnname: title
