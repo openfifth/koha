@@ -26,12 +26,17 @@ use t::lib::Mocks;
 
 use Koha::Acquisition::Finances::Funds;
 use Koha::Acquisition::OrderManagement::OrderlineFundDistributions;
+use Koha::Acquisition::OrderManagement::OrderlineItem;
+use Koha::Acquisition::OrderManagement::OrderlineItems;
+use Koha::Acquisition::OrderManagement::OrderlineManager;
 use Koha::Acquisition::OrderManagement::OrderlineManagers;
 use Koha::Acquisition::OrderManagement::Orderlines;
+use Koha::Acquisition::OrderManagement::OrderlineUser;
 use Koha::Acquisition::OrderManagement::OrderlineUsers;
 use Koha::AdditionalFields;
 use Koha::Biblios;
 use Koha::Database;
+use Koha::Items;
 
 my $schema  = Koha::Database->new->schema;
 my $builder = t::lib::TestBuilder->new;
@@ -156,7 +161,7 @@ subtest 'get() tests' => sub {
 
 subtest 'add() tests' => sub {
 
-    plan tests => 10;
+    plan tests => 13;
 
     $schema->storage->txn_begin;
 
@@ -196,7 +201,7 @@ subtest 'add() tests' => sub {
         ->json_is( '/quantity_ordered' => $orderline->{quantity_ordered} )
         ->json_is( '/status'           => 'draft' );
 
-    # With vendor_id, status should be set to 'new'
+    # With vendor_id but no fund distributions, status should still be 'draft'
     my $vendor                = $builder->build_object( { class => 'Koha::Acquisition::Booksellers' } );
     my $biblio_2              = $builder->build_object( { class => 'Koha::Biblios' } );
     my $orderline_with_vendor = {
@@ -206,6 +211,31 @@ subtest 'add() tests' => sub {
     };
 
     $t->post_ok( "//$userid:$password@/api/v1/acquisitions/orderlines" => json => $orderline_with_vendor )
+        ->status_is(201)
+        ->json_is( '/status' => 'draft' );
+
+    # With vendor_id AND a fund distribution, status should be set to 'new'
+    my $fund                           = $builder->build_object( { class => 'Koha::Acquisition::Finances::Funds' } );
+    my $orderline_with_vendor_and_fund = {
+        quantity_ordered   => 2,
+        biblionumber       => $biblio_2->biblionumber,
+        vendor_id          => $vendor->id,
+        fund_distributions => [
+            {
+                fund_id                         => $fund->fund_id,
+                percentage                      => 100,
+                distributed_amount_oc           => 0,
+                exchange_rate                   => 1,
+                distributed_amount              => 0,
+                tax_rate                        => 0,
+                tax_value                       => 0,
+                distributed_amount_tax_excluded => 0,
+                distributed_amount_tax_included => 0,
+            }
+        ],
+    };
+
+    $t->post_ok( "//$userid:$password@/api/v1/acquisitions/orderlines" => json => $orderline_with_vendor_and_fund )
         ->status_is(201)
         ->json_is( '/status' => 'new' );
 
@@ -526,7 +556,7 @@ subtest 'update() tests' => sub {
 
 subtest 'delete() tests' => sub {
 
-    plan tests => 7;
+    plan tests => 15;
 
     $schema->storage->txn_begin;
 
@@ -549,13 +579,50 @@ subtest 'delete() tests' => sub {
     $patron->set_password( { password => $password, skip_validation => 1 } );
     my $unauth_userid = $patron->userid;
 
+    my $fund           = $builder->build_object( { class => 'Koha::Acquisition::Finances::Funds' } );
+    my $notify_patron  = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $manager_patron = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $biblio         = $builder->build_object( { class => 'Koha::Biblios' } );
+    my $item = $builder->build_object( { class => 'Koha::Items', value => { biblionumber => $biblio->biblionumber } } );
+
     my $orderline = $builder->build_object(
         {
             class => 'Koha::Acquisition::OrderManagement::Orderlines',
-            value => { quantity_ordered => 1, status => 'draft', payment_status => 'pending' }
+            value => {
+                quantity_ordered => 1, status => 'draft', payment_status => 'pending',
+                biblionumber     => $biblio->biblionumber
+            }
         }
     );
     my $orderline_id = $orderline->orderline_id;
+
+    $builder->build_object(
+        {
+            class => 'Koha::Acquisition::OrderManagement::OrderlineFundDistributions',
+            value => { orderline_id => $orderline_id, fund_id => $fund->fund_id }
+        }
+    );
+    Koha::Acquisition::OrderManagement::OrderlineUser->new(
+        { orderline_id => $orderline_id, borrowernumber => $notify_patron->borrowernumber } )->store;
+    Koha::Acquisition::OrderManagement::OrderlineManager->new(
+        { orderline_id => $orderline_id, borrowernumber => $manager_patron->borrowernumber } )->store;
+    Koha::Acquisition::OrderManagement::OrderlineItem->new(
+        { orderline_id => $orderline_id, itemnumber => $item->itemnumber } )->store;
+
+    is(
+        Koha::Acquisition::OrderManagement::OrderlineUsers->search( { orderline_id => $orderline_id } )->count, 1,
+        'One patron_to_notify exists before deletion'
+    );
+    is(
+        Koha::Acquisition::OrderManagement::OrderlineManagers->search( { orderline_id => $orderline_id } )->count, 1,
+        'One manager exists before deletion'
+    );
+    is( Koha::Acquisition::OrderManagement::OrderlineFundDistributions->search( { orderline_id => $orderline_id } )
+            ->count, 1, 'One fund distribution exists before deletion' );
+    is(
+        Koha::Acquisition::OrderManagement::OrderlineItems->search( { orderline_id => $orderline_id } )->count, 1,
+        'One item link exists before deletion'
+    );
 
     # Unauthorized attempt to delete
     $t->delete_ok("//$unauth_userid:$password@/api/v1/acquisitions/orderlines/$orderline_id")->status_is(403);
@@ -563,6 +630,21 @@ subtest 'delete() tests' => sub {
     $t->delete_ok("//$userid:$password@/api/v1/acquisitions/orderlines/$orderline_id")
         ->status_is( 204, 'REST3.2.4' )
         ->content_is( '', 'REST3.3.4' );
+
+    is(
+        Koha::Acquisition::OrderManagement::OrderlineUsers->search( { orderline_id => $orderline_id } )->count, 0,
+        'patron_to_notify records cascade-deleted with orderline'
+    );
+    is(
+        Koha::Acquisition::OrderManagement::OrderlineManagers->search( { orderline_id => $orderline_id } )->count, 0,
+        'manager records cascade-deleted with orderline'
+    );
+    is( Koha::Acquisition::OrderManagement::OrderlineFundDistributions->search( { orderline_id => $orderline_id } )
+            ->count, 0, 'fund distribution records cascade-deleted with orderline' );
+    is(
+        Koha::Acquisition::OrderManagement::OrderlineItems->search( { orderline_id => $orderline_id } )->count, 0,
+        'item link records cascade-deleted with orderline'
+    );
 
     $t->delete_ok("//$userid:$password@/api/v1/acquisitions/orderlines/$orderline_id")->status_is(404);
 
