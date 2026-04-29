@@ -31,4 +31,5 @@ INSERT INTO userflags (bit, flag, flagdesc, defaulton) VALUES
 (31, 'sip2', 'SIP2 module', 0),
 (32, 'debug', 'Show debug interface', 0),
 (33, 'item_lists', 'Manage item lists', 0)
+(34, 'displays', 'Display module', 0)
 ;
