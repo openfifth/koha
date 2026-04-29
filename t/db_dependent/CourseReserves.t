@@ -47,10 +47,10 @@ foreach ( 1 .. 10 ) {
     push @borrowers, $builder->build( { source => 'Borrower' } );
 }
 
-# Create the a record with an item
-my $record = MARC::Record->new;
-my ( $biblionumber, $biblioitemnumber ) = C4::Biblio::AddBiblio( $record, '' );
-my $itemnumber = Koha::Item->new(
+# Create a record with an item
+my $biblio       = $builder->build_sample_biblio;
+my $biblionumber = $biblio->biblionumber;
+my $itemnumber   = Koha::Item->new(
     {
         biblionumber  => $biblionumber,
         homebranch    => $branchcode,
