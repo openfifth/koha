@@ -14,7 +14,11 @@
                 </div>
 
                 <div class="col-md-2 order-sm-2 order-md-1">
-                    <OverdueFilters :patronAttrs="patronAttrs" />
+                    <OverdueFilters
+                        v-if="filtersRequired"
+                        :patronAttrs="patronAttrs"
+                    />
+                    <LeftMenu v-else />
                 </div>
             </div>
         </div>
@@ -45,6 +49,7 @@ export default {
     },
     setup(props) {
         const initialized = ref(false);
+        const filtersRequired = ref(true);
 
         const mainStore = inject("mainStore");
         const { loading, loaded } = mainStore;
@@ -88,6 +93,7 @@ export default {
         return {
             patronAttrs,
             initialized,
+            filtersRequired,
         };
     },
 };

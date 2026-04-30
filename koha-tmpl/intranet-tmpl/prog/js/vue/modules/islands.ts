@@ -89,6 +89,21 @@ export const componentRegistry: Map<string, WebComponentDynamicImport> =
             },
         ],
         [
+            "circ-nav",
+            {
+                importFn: async () => {
+                    const module = await import(
+                        /* webpackChunkName: "circ-nav" */
+                        "../components/Islands/CircNav.vue"
+                    );
+                    return module.default;
+                },
+                config: {
+                    stores: [],
+                },
+            },
+        ],
+        [
             "patron-self-renewal",
             {
                 importFn: async () => {
