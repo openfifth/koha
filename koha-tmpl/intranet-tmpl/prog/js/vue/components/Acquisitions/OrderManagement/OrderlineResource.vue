@@ -185,10 +185,8 @@ export default {
                     label: ["Form", "Search"].includes(componentToDisplay)
                         ? $__("Continuous")
                         : $__("Order type"),
-                    format: orderline =>
-                        orderline.is_continuous
-                            ? $__("Continuous")
-                            : $__("One-Time"),
+                    format: isContinuous =>
+                        isContinuous ? $__("Continuous") : $__("One-Time"),
                     defaultValue: false,
                     toolTip:
                         componentToDisplay == "Search"
