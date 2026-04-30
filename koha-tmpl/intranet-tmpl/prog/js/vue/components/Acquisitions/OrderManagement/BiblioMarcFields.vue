@@ -93,6 +93,12 @@ export default {
         ];
 
         onBeforeMount(() => {
+            if (route.fullPath.includes("search")) {
+                props.resource.biblio = {};
+                initialized.value = true;
+                updateSubComponentReadyState("biblio");
+                return;
+            }
             APIClient.item.item_types
                 .getAll()
                 .then(itemtypes => {
