@@ -120,7 +120,8 @@ export default {
             },
             apiClient: APIClient.acquisition.funds,
             table: {
-                resourceTableUrl: APIClient.acquisition._baseURL + "funds",
+                resourceTableUrl:
+                    APIClient.acquisition.httpClient._baseURL + "funds",
             },
             i18n: {
                 deleteConfirmationMessage: $__(
@@ -448,30 +449,37 @@ export default {
             ],
         });
 
-        const tableURL = () => {
+        const buildTabUrl = status => {
             if (props.embedded) {
                 const id = isSubFund.value
                     ? baseResource.route.params.parent_fund_id
                     : baseResource.route.params.ledger_id;
-                const query = {};
-                query[
-                    "me." + (isSubFund.value ? "parent_fund_id" : "ledger_id")
-                ] = id;
-                return `/api/v1/acquisitions/funds?q=` + JSON.stringify(query);
+                const key = isSubFund.value
+                    ? "me.parent_fund_id"
+                    : "me.ledger_id";
+                return (
+                    APIClient.acquisition.httpClient._baseURL +
+                    "funds?q=" +
+                    JSON.stringify({ [key]: id, "me.status": status })
+                );
             }
-            return `/api/v1/acquisitions/funds`;
+            return (
+                APIClient.acquisition.httpClient._baseURL +
+                "funds?q=" +
+                JSON.stringify({ "me.status": status })
+            );
         };
 
+        baseResource.table.listTabs = [
+            { name: $__("Active"), url: buildTabUrl(true) },
+            { name: $__("Inactive"), url: buildTabUrl(false) },
+        ];
+
         const tableOptions = {
-            url: tableURL(),
             table_settings: null,
             add_filters: true,
             options: { embed: "sub_funds,allocations,parent_fund" },
             filters_options: {
-                status: [
-                    { _id: true, _str: $__("Active") },
-                    { _id: false, _str: $__("Inactive") },
-                ],
                 ...(authorisedValues.value.av_fund_type.length && {
                     fund_type: () =>
                         baseResource.map_av_dt_filter("av_fund_type"),

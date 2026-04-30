@@ -355,30 +355,30 @@ export default {
             ],
         });
 
-        const tableURL = () => {
-            if (props.embedded) {
-                const id = baseResource.route.params.fiscal_period_id;
-                const query = {
-                    "me.fiscal_period_id": id,
-                };
-                return (
-                    "/api/v1/acquisitions/ledgers?q=" + JSON.stringify(query)
-                );
-            }
-            return "/api/v1/acquisitions/ledgers";
+        const buildTabUrl = status => {
+            const q = props.embedded
+                ? {
+                      "me.fiscal_period_id":
+                          baseResource.route.params.fiscal_period_id,
+                      "me.status": status,
+                  }
+                : { "me.status": status };
+            return (
+                APIClient.acquisition.httpClient._baseURL +
+                "ledgers?q=" +
+                JSON.stringify(q)
+            );
         };
 
+        baseResource.table.listTabs = [
+            { name: $__("Active"), url: buildTabUrl(true) },
+            { name: $__("Inactive"), url: buildTabUrl(false) },
+        ];
+
         const tableOptions = {
-            url: tableURL(),
             table_settings: null,
             add_filters: true,
             options: { embed: "funds" },
-            filters_options: {
-                status: [
-                    { _id: true, _str: $__("Active") },
-                    { _id: false, _str: $__("Inactive") },
-                ],
-            },
             ...(!props.embedded && {
                 actions: {
                     0: ["show"],

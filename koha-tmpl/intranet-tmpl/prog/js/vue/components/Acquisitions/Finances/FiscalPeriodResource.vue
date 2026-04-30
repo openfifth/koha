@@ -24,30 +24,6 @@ export default {
         const acquisitionsStore = inject("acquisitionsStore");
         const { formatValueWithCurrency } = acquisitionsStore;
 
-        const additionalFilters = [
-            {
-                name: "status_filter",
-                type: "button",
-                label: $__("Active"),
-                activeValue: "true",
-                immediateFilter: true,
-            },
-            {
-                name: "status_filter",
-                type: "button",
-                label: $__("Inactive"),
-                activeValue: "false",
-                immediateFilter: true,
-            },
-            {
-                name: "status_filter",
-                type: "button",
-                label: $__("Clear"),
-                activeValue: "",
-                immediateFilter: true,
-            },
-        ];
-
         const additionalToolbarButtons = (resource, componentData) => {
             const { instancedResource } = componentData;
             return {
@@ -97,9 +73,26 @@ export default {
                 resourceTableUrl:
                     APIClient.acquisition.httpClient._baseURL +
                     "fiscal_periods",
-                addAdditionalFilters: true,
-                additionalFilters,
-                hideFilterButton: true,
+                listTabs: [
+                    {
+                        name: $__("Active"),
+                        url:
+                            APIClient.acquisition.httpClient._baseURL +
+                            "fiscal_periods?" +
+                            new URLSearchParams({
+                                q: JSON.stringify({ "me.status": true }),
+                            }),
+                    },
+                    {
+                        name: $__("Inactive"),
+                        url:
+                            APIClient.acquisition.httpClient._baseURL +
+                            "fiscal_periods?" +
+                            new URLSearchParams({
+                                q: JSON.stringify({ "me.status": false }),
+                            }),
+                    },
+                ],
             },
             moduleStore: "acquisitionsStore",
             showGroupsDisplayMode: "splitScreen",
@@ -256,50 +249,9 @@ export default {
             ],
         });
 
-        const defaults = baseResource.getFilterValues(
-            baseResource.route.query,
-            additionalFilters
-        );
-
-        const tableUrl = filters => {
-            let url = baseResource.getResourceTableUrl();
-            if (filters.status_filter === "true") {
-                url +=
-                    "?" +
-                    new URLSearchParams({
-                        q: JSON.stringify({ "me.status": true }),
-                    });
-            } else if (filters.status_filter === "false") {
-                url +=
-                    "?" +
-                    new URLSearchParams({
-                        q: JSON.stringify({ "me.status": false }),
-                    });
-            }
-            return url;
-        };
-
-        const filterTable = async (filters, table, embedded = false) => {
-            let { href } = baseResource.router.resolve({
-                name: "FiscalPeriodList",
-            });
-            let new_route = baseResource.build_url(href, filters);
-            window.history.pushState({}, "", new_route);
-            table.redraw(tableUrl(filters));
-        };
-
-        const getTableFilterFormElementsLabel = () => $__("Filter by:");
-
         const tableOptions = {
-            url: () => tableUrl(defaults),
             table_settings: null,
             add_filters: true,
-            filters_options: {
-                status: [
-                    { _id: true, _str: $__("Active") },
-                    { _id: false, _str: $__("Inactive") },
-                ],
-            },
             actions: {
                 0: ["show"],
                 "-1": [
@@ -526,8 +478,6 @@ export default {
             onFormSave,
             appendToShow,
             afterResourceFetch,
-            filterTable,
-            getTableFilterFormElementsLabel,
         };
     },
     components: { BaseResource },
