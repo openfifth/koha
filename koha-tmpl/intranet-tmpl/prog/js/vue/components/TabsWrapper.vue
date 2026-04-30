@@ -13,6 +13,7 @@
                 role="tab"
                 :aria-controls="tab.name?.replace(/\s/g, '_')"
                 :data-content="tab.name"
+                @click="$emit('tab-click', counter)"
                 >{{ tab.name }}</a
             >
         </li>
@@ -31,7 +32,7 @@
                 { active: counter == 0 },
             ]"
         >
-            <slot name="tabContent" :tabGroup="group" />
+            <slot name="tabContent" :tabGroup="group" :tabIndex="counter" />
         </div>
     </div>
 </template>
@@ -41,6 +42,7 @@ export default {
     props: {
         tabList: Array,
     },
+    emits: ["tab-click"],
 };
 </script>
 

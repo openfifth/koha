@@ -5,15 +5,39 @@
         <template v-if="resourceCount > 0">
             <slot name="filters" :table="table" />
         </template>
-        <div v-if="resourceCount > 0" class="page-section">
-            <KohaTable
-                ref="table"
-                v-bind="tableOptionsWithColumns"
-                :searchable_additional_fields="searchable_additional_fields"
-                :searchable_av_options="searchable_av_options"
-                v-on="tableEventList"
-            ></KohaTable>
-        </div>
+        <template v-if="resourceCount > 0">
+            <template v-if="instancedResource.table.listTabs">
+                <TabsWrapper
+                    :tabList="instancedResource.table.listTabs"
+                    @tab-click="onTabClick"
+                >
+                    <template #tabContent="{ tabIndex }">
+                        <KohaTable
+                            v-if="activatedTabs.has(tabIndex)"
+                            v-bind="tabOptionsWithColumns[tabIndex]"
+                            :searchable_additional_fields="
+                                searchable_additional_fields
+                            "
+                            :searchable_av_options="searchable_av_options"
+                            v-on="tableEventList"
+                        ></KohaTable>
+                    </template>
+                </TabsWrapper>
+            </template>
+            <template v-else>
+                <div class="page-section">
+                    <KohaTable
+                        ref="table"
+                        v-bind="tableOptionsWithColumns"
+                        :searchable_additional_fields="
+                            searchable_additional_fields
+                        "
+                        :searchable_av_options="searchable_av_options"
+                        v-on="tableEventList"
+                    ></KohaTable>
+                </div>
+            </template>
+        </template>
         <div v-else class="alert alert-info">
             {{ instancedResource.i18n.emptyListMessage }}
         </div>
@@ -25,6 +49,7 @@ import Toolbar from "./Toolbar.vue";
 import { ref, onBeforeMount, computed } from "vue";
 import { APIClient } from "../fetch/api-client.js";
 import KohaTable from "./KohaTable.vue";
+import TabsWrapper from "./TabsWrapper.vue";
 import { $__ } from "@koha-vue/i18n";
 import { useBaseElement } from "../composables/base-element.js";
 
@@ -36,6 +61,11 @@ export default {
         const initialized = ref(false);
         const searchable_additional_fields = ref([]);
         const searchable_av_options = ref([]);
+        const activatedTabs = ref(new Set([0]));
+        const onTabClick = index => {
+            activatedTabs.value = new Set([...activatedTabs.value, index]);
+        };
+
         const tableEvents = ref({
             show: props.instancedResource.goToResourceShow,
             edit: props.instancedResource.goToResourceEdit,
@@ -319,6 +349,26 @@ export default {
             return props.instancedResource.tableOptions;
         });
 
+        const tabOptionsWithColumns = computed(() => {
+            const listTabs = props.instancedResource.table?.listTabs;
+            if (!listTabs) return [];
+            const columns = getTableColumns(
+                props.instancedResource.resourceAttrs
+            ).map(col => {
+                const filterOptions =
+                    props.instancedResource.tableOptions.filters_options;
+                const filterRequired =
+                    filterOptions &&
+                    Object.keys(filterOptions).includes(col.data);
+                return filterRequired ? { ...col, dataFilter: col.data } : col;
+            });
+            return listTabs.map(tab => ({
+                ...props.instancedResource.tableOptions,
+                columns,
+                url: tab.url,
+            }));
+        });
+
         const tableEventList = computed(() => {
             const actionButtons = props.instancedResource.tableOptions.actions[
                 "-1"
@@ -358,12 +408,15 @@ export default {
             tableEventList,
             getTableColumns,
             tableOptionsWithColumns,
+            tabOptionsWithColumns,
+            activatedTabs,
+            onTabClick,
         };
     },
     props: {
         instancedResource: Object,
     },
-    components: { Toolbar, KohaTable },
+    components: { Toolbar, KohaTable, TabsWrapper },
     name: "ResourcesList",
 };
 </script>
