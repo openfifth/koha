@@ -47,8 +47,7 @@ export default {
             apiClient: APIClient.circulation.checkouts,
             table: {
                 resourceTableUrl:
-                    APIClient.circulation.httpClient._baseURL +
-                    "/api/v1/checkouts",
+                    APIClient.circulation.httpClient._baseURL + "checkouts",
             },
             i18n: {
                 displayName: $__("Overdue"),
@@ -284,9 +283,9 @@ export default {
                         orderable: true,
                         render: function (data, type, row, meta) {
                             return row.item.location
-                                ? authorisedValues.value.location.find(
+                                ? (authorisedValues.value.location.find(
                                       av => av.value === row.item.location
-                                  ).description
+                                  )?.description ?? "")
                                 : "";
                         },
                     },
@@ -335,9 +334,13 @@ export default {
                         searchable: true,
                         orderable: true,
                         render: function (data, type, row, meta) {
-                            return itemTypes.value.find(
-                                it => it.item_type_id === row.item.item_type_id
-                            ).description;
+                            return (
+                                itemTypes.value.find(
+                                    it =>
+                                        it.item_type_id ===
+                                        row.item.item_type_id
+                                )?.description ?? ""
+                            );
                         },
                     },
                 },

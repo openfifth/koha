@@ -197,9 +197,18 @@ export default {
                     field.repeatable &&
                     queryParams.hasOwnProperty(field.name)
                 ) {
-                    acc[field.name] = queryParams[field.name].map(val => {
-                        return { label: field.label, [field.name]: val };
-                    });
+                    if (Array.isArray(queryParams[field.name])) {
+                        acc[field.name] = queryParams[field.name].map(val => {
+                            return { label: field.label, [field.name]: val };
+                        });
+                    } else {
+                        acc[field.name] = [
+                            {
+                                label: field.label,
+                                [field.name]: queryParams[field.name],
+                            },
+                        ];
+                    }
                 }
                 return acc;
             }, {});
