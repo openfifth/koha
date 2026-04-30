@@ -121,4 +121,9 @@ properties:
       - object
       - "null"
     description: The object representing the linked booking
+  account_lines:
+    type: array
+    description: fines attached to this checkout
+    items:
+      $ref: account_line.yaml
 additionalProperties: false

@@ -2330,6 +2330,18 @@ modules:
                 columnname: action
 
     overdues:
+      circ-branch-overdues:
+        default_display_length: 20
+        default_sort_order: 0
+        columns:
+            -
+              columnname: due_date
+            -
+              columnname: title
+            -
+              columnname: patron
+            -
+              columnname: location
       circ-overdues:
         default_display_length: 20
         default_sort_order: 0

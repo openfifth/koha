@@ -24,5 +24,19 @@ export default {
                 },
             ],
         },
+        {
+            title: $__("Branch overdues"),
+            path: "/cgi-bin/koha/circulation/overdues/branch",
+            is_end_node: true,
+            resource: "Circulation/Overdues/BranchOverduesResource.vue",
+            children: [
+                {
+                    path: "",
+                    name: "BranchOverduesList",
+                    component: markRaw(ResourceWrapper),
+                    alternateLeftMenu: "CircNav",
+                },
+            ],
+        },
     ],
 };

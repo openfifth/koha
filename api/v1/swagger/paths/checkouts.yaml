@@ -41,6 +41,7 @@
             - patron.category
             - patron.extended_attributes
             - renewals
+            - account_lines
         collectionFormat: csv
     produces:
       - application/json
