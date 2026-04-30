@@ -38,18 +38,6 @@ export default {
 
         const fundDistributions = inject("resourceRelationships");
         const orderline = inject("resource");
-        // Set the tax rate if a vendor has already been selected
-        if (orderline.vendor) {
-            props.resource.tax_rate = orderline.vendor.tax_rate || 0;
-        }
-        // Set the exchange rate if one has been set for the orderline
-        if (orderline.distribution_exchange_rate) {
-            props.resource.exchange_rate = orderline.distribution_exchange_rate || 1;
-        }
-        // Set the currency for the final distribution for display in the UI
-        if (orderline.vendor_price_currency) {
-            props.resource.currency = orderline.vendor_price_currency;
-        }
 
         const calculateDistributedAmount = (
             distribution,
@@ -104,23 +92,38 @@ export default {
         // Assign this method to the distribution to use outside this component where required
         props.resource.calculateDistributedAmount =
             calculateDistributedAmount.bind(null, props.resource, orderline);
-        // Calculate the initial distributed amount based on a default of 100% being allocated to the first fund selected
-        if (props.index === 0) {
-            props.resource.percentage = 100;
-            calculateDistributedAmount(props.resource);
-        } else {
-            const calculatedAmount = new BigNumber(
-                orderline.calculated_amount_oc || 0
-            );
-            const remainderToDistribute = calculatedAmount.minus(
-                orderline.totalDistributedAmount || 0
-            );
-            props.resource.percentage = calculatedAmount.isZero()
-                ? 0
-                : remainderToDistribute
-                      .div(calculatedAmount)
-                      .times(100)
-                      .toNumber();
+        if (!orderline.orderline_id) {
+            // Set the tax rate if a vendor has already been selected
+            if (orderline.vendor) {
+                props.resource.tax_rate = orderline.vendor.tax_rate || 0;
+            }
+            // Set the exchange rate if one has been set for the orderline
+            if (orderline.distribution_exchange_rate) {
+                props.resource.exchange_rate =
+                    orderline.distribution_exchange_rate || 1;
+            }
+            // Set the currency for the final distribution for display in the UI
+            if (orderline.vendor_price_currency) {
+                props.resource.currency = orderline.vendor_price_currency;
+            }
+            // Calculate the initial distributed amount based on a default of 100% being allocated to the first fund selected
+            if (props.index === 0) {
+                props.resource.percentage = 100;
+                calculateDistributedAmount(props.resource);
+            } else {
+                const calculatedAmount = new BigNumber(
+                    orderline.calculated_amount_oc || 0
+                );
+                const remainderToDistribute = calculatedAmount.minus(
+                    orderline.totalDistributedAmount || 0
+                );
+                props.resource.percentage = calculatedAmount.isZero()
+                    ? 0
+                    : remainderToDistribute
+                          .div(calculatedAmount)
+                          .times(100)
+                          .toNumber();
+            }
         }
 
         watch(
@@ -224,7 +227,8 @@ export default {
                         fd.currency = differentCurrenciesInLedgers
                             ? fund?.currency || vendor_price_currency
                             : getActiveCurrency.currency;
-                        fd.exchange_rate = orderline.distribution_exchange_rate || 1;
+                        fd.exchange_rate =
+                            orderline.distribution_exchange_rate || 1;
                         calculateDistributedAmount(fd);
                     });
                 },
