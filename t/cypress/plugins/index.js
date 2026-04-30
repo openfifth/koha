@@ -22,6 +22,8 @@ const {
     insertSampleLedger,
     insertSampleFund,
     insertSampleAllocation,
+    insertSampleVendor,
+    insertSampleOrderline,
     insertObject,
     deleteSampleObjects,
 } = require("./insertData.js");
@@ -114,6 +116,12 @@ module.exports = (on, config) => {
         },
         insertSampleAllocation(args) {
             return insertSampleAllocation({ ...args, baseUrl, authHeader });
+        },
+        insertSampleVendor(args) {
+            return insertSampleVendor({ ...args, baseUrl, authHeader });
+        },
+        insertSampleOrderline(args) {
+            return insertSampleOrderline({ ...args, baseUrl, authHeader });
         },
         insertObject(args) {
             return insertObject({ ...args, baseUrl, authHeader });

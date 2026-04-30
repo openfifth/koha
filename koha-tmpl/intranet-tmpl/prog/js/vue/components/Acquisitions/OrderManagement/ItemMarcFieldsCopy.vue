@@ -29,6 +29,7 @@
                         <div
                             class="subfield_line"
                             :id="`subfield${attr.subfield}`"
+                            :data-cypress-id="testingId(attr.id)"
                         >
                             <FormElement
                                 :resource="fieldValues"
@@ -69,6 +70,7 @@
                         addingMultipleItems = !addingMultipleItems;
                     }
                 "
+                idString="itemFormAddMultiple"
             />
             <template v-if="addingMultipleItems">
                 <InputNumber
@@ -80,6 +82,7 @@
                     :title="$__('Add')"
                     cssClass="btn btn-default item_form_buttons"
                     :callback="addItem"
+                    idString="addMultipleItemsButton"
                 />
                 <div class="alert alert-info" style="margin: 1em 0">
                     {{
@@ -487,6 +490,11 @@ export default {
                 },
             ],
         });
+        const testingId = id => {
+            const idParts = id.split("_");
+            idParts.pop();
+            return idParts.join("_");
+        };
         return {
             frameworkFields,
             initialized,
@@ -499,6 +507,7 @@ export default {
             addingMultipleItems,
             numberOfItemsToAdd,
             items,
+            testingId,
         };
     },
     components: {

@@ -249,6 +249,10 @@ export default {
                         type: "string",
                         value: "distributed_amount_oc",
                     },
+                    idString: {
+                        type: "string",
+                        value: "distributed_amount",
+                    },
                     onChange: {
                         type: "function",
                         value: (resource, toggleValue) => {

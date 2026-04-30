@@ -584,6 +584,29 @@ const deleteSampleObjects = async allObjects => {
             table: "acq_fiscal_periods",
             whereColumn: "fiscal_period_id",
         },
+        orderline: {
+            plural: "orderlines",
+            table: "acq_orderlines",
+            whereColumn: "orderline_id",
+        },
+        orderline_fund_distribution: {
+            plural: "orderline_fund_distributions",
+            table: "acq_orderline_fund_distributions",
+            whereColumn: "orderline_id",
+            idField: "orderline_id",
+        },
+        orderline_manager: {
+            plural: "orderline_managers",
+            table: "acq_orderline_managers",
+            whereColumn: "orderline_id",
+            idField: "orderline_id",
+        },
+        orderline_user: {
+            plural: "orderline_users",
+            table: "acq_orderline_users",
+            whereColumn: "orderline_id",
+            idField: "orderline_id",
+        },
     };
     // Merge by type
     const mergedObjects = {};
@@ -607,6 +630,10 @@ const deleteSampleObjects = async allObjects => {
         "checkouts",
         "old_checkouts",
         "baskets",
+        "orderline_fund_distributions",
+        "orderline_managers",
+        "orderline_users",
+        "orderlines",
         "vendors",
         "patrons",
         "items",
@@ -1057,6 +1084,121 @@ const insertSampleFund = async ({
     };
 };
 
+const insertSampleVendor = async ({
+    vendor: overrides = {},
+    baseUrl,
+    authHeader,
+} = {}) => {
+    const generated = await buildSampleObject({
+        object: "vendor",
+        values: { active: 1, ...overrides },
+    });
+    const vendor = await insertObject({
+        type: "vendor",
+        object: generated,
+        baseUrl,
+        authHeader,
+    });
+    return { vendor };
+};
+
+const insertSampleOrderline = async ({
+    vendor,
+    fund,
+    orderline: overrides = {},
+    baseUrl,
+    authHeader,
+} = {}) => {
+    let generatedVendor = false;
+    let fundResult = {};
+
+    if (!vendor) {
+        generatedVendor = true;
+        const result = await insertSampleVendor({ baseUrl, authHeader });
+        vendor = result.vendor;
+    }
+    if (!fund) {
+        fundResult = await insertSampleFund({ baseUrl, authHeader });
+        fund = fundResult.fund;
+    }
+
+    const biblioResult = await insertSampleBiblio({
+        item_count: 1,
+        baseUrl,
+        authHeader,
+    });
+    const managedByPatron = await insertSamplePatron({
+        library: biblioResult.libraries[0],
+        baseUrl,
+        authHeader,
+    });
+    const notifyPatron = await insertSamplePatron({
+        library: biblioResult.libraries[0],
+        baseUrl,
+        authHeader,
+    });
+
+    const orderline = await apiPost({
+        endpoint: "/api/v1/acquisitions/orderlines",
+        headers: { "x-confirm-not-duplicate": "1" },
+        body: {
+            vendor_id: vendor.id,
+            biblionumber: biblioResult.biblio.biblio_id,
+            managing_branch: biblioResult.libraries[0].library_id,
+            managed_by: [{ borrowernumber: managedByPatron.patron.patron_id }],
+            patrons_to_notify: [
+                { borrowernumber: notifyPatron.patron.patron_id },
+            ],
+            vendor_price: 25.0,
+            is_continuous: false,
+            renewal_required: false,
+            uncertain_price: true,
+            urgent_order: true,
+            create_items: "cataloging",
+            quantity_ordered: 3,
+            discount_percentage: 10,
+            replacement_price: 30.0,
+            internal_note: "Test internal note",
+            receiving_note: "Test receiving note",
+            vendor_note: "Test vendor note",
+            statistic1: "STAT1",
+            statistic2: "STAT2",
+            estimated_delivery_date: "2026-12-31",
+            fund_distributions: [
+                {
+                    fund_id: fund.fund_id,
+                    percentage: 100,
+                    exchange_rate: 1,
+                    tax_rate: 0,
+                    distributed_amount_oc: 25,
+                    distributed_amount: 25,
+                    tax_value: 0,
+                    distributed_amount_tax_excluded: 0,
+                    distributed_amount_tax_included: 0,
+                },
+            ],
+            items: [],
+            ...overrides,
+        },
+        baseUrl,
+        authHeader,
+    });
+
+    return {
+        orderline,
+        orderline_fund_distribution: orderline,
+        orderline_manager: orderline,
+        orderline_user: orderline,
+        ...(generatedVendor ? { vendor } : {}),
+        ...fundResult,
+        biblio: biblioResult.biblio,
+        items: biblioResult.items,
+        libraries: biblioResult.libraries,
+        item_type: biblioResult.item_type,
+        patrons: [managedByPatron.patron, notifyPatron.patron],
+    };
+};
+
 const insertSampleAllocation = async ({
     fund,
     ledger,
@@ -1110,6 +1252,8 @@ module.exports = {
     insertSampleLedger,
     insertSampleFund,
     insertSampleAllocation,
+    insertSampleVendor,
+    insertSampleOrderline,
     insertObject,
     deleteSampleObjects,
 };
