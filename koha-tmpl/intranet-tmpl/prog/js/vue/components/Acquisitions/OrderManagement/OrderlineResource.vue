@@ -448,6 +448,9 @@ export default {
                         createItemsWhen.value = resource.create_items;
                         if (resource.create_items !== "ordering") {
                             resource.quantity_ordered = 1;
+                        } else {
+                            resource.quantity_ordered =
+                                resource.items?.length || null;
                         }
                     },
                     toolTip: nonBibliographic.value
@@ -785,6 +788,10 @@ export default {
                         amountField: {
                             type: "string",
                             value: "discount_amount_oc",
+                        },
+                        idString: {
+                            type: "string",
+                            value: "discount",
                         },
                     },
                     hideIn: ["List", "Show", "Search"],
@@ -1437,6 +1444,8 @@ export default {
             delete orderline.modified_date;
             delete orderline.created_date;
             delete orderline.last_review_before;
+            delete orderline._strings;
+            delete orderline.managing_library;
 
             if (orderline.quantity_ordered === null) {
                 // Throw error if create_items === "ordering" and none created
@@ -1444,25 +1453,34 @@ export default {
             }
 
             orderline.managed_by = orderline.managed_by?.map(mp => {
-                return { borrowernumber: mp };
+                if (typeof mp !== "object") return { borrowernumber: mp };
+                delete mp.orderline_id;
+                return mp;
             });
             orderline.patrons_to_notify = orderline.patrons_to_notify?.map(
                 mp => {
-                    return { borrowernumber: mp };
+                    if (typeof mp !== "object") return { borrowernumber: mp };
+                    delete mp.orderline_id;
+                    return mp;
                 }
             );
 
-            orderline.items.forEach(item => {
-                Object.keys(item).forEach(key => {
-                    if (!item[key]) delete item[key];
+            if (!nonBibliographic.value) {
+                orderline.items.forEach(item => {
+                    Object.keys(item).forEach(key => {
+                        if (!item[key]) delete item[key];
+                    });
+                    delete item.effective_item_type_id;
+                    delete item.item_type;
                 });
-            });
+            }
 
             const fundDistributions = [];
             orderline.fund_distributions.forEach(fd => {
                 delete fd.fund;
                 delete fd.currency;
                 delete fd.taxIncluded;
+                delete fd.orderline_fund_distribution_id;
                 if (fd.fund_id) {
                     fundDistributions.push(fd);
                 }
