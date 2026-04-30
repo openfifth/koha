@@ -1,26 +1,24 @@
 <template>
-    <aside>
-        <form @submit="handleFilterFormSubmission($event)">
-            <fieldset class="brief">
-                <h4>{{ $__("Filter on") }}:</h4>
-                <ol>
-                    <li
-                        v-for="(field, index) in filterFormFields"
-                        v-bind:key="index"
-                    >
-                        <FormElement
-                            :resource="filters"
-                            :attr="field"
-                            :index="index"
-                        />
-                    </li>
-                </ol>
-            </fieldset>
-            <fieldset class="action">
-                <ButtonSubmit :title="$__('Apply filter')" />
-            </fieldset>
-        </form>
-    </aside>
+    <form @submit="handleFilterFormSubmission($event)">
+        <fieldset class="brief">
+            <h4>{{ $__("Filter on") }}:</h4>
+            <ol>
+                <li
+                    v-for="(field, index) in filterFormFields"
+                    v-bind:key="index"
+                >
+                    <FormElement
+                        :resource="filters"
+                        :attr="field"
+                        :index="index"
+                    />
+                </li>
+            </ol>
+        </fieldset>
+        <fieldset class="action">
+            <ButtonSubmit :title="$__('Apply filter')" />
+        </fieldset>
+    </form>
 </template>
 
 <script>
@@ -34,19 +32,17 @@ import { useRouter, useRoute } from "vue-router";
 
 export default {
     components: { FormElement, ButtonSubmit },
-    props: {
-        patronAttrs: Array,
-    },
-    setup(props) {
+    setup() {
         const overduesStore = inject("overduesStore");
-        const { authorisedValues, itemTypes, settings } = storeToRefs(overduesStore);
+        const { authorisedValues, itemTypes, patronAttrs, settings } =
+            storeToRefs(overduesStore);
 
         const router = useRouter();
         const route = useRoute();
 
         const handlePatronAttrs = () => {
-            if (!props.patronAttrs.length) return [];
-            return props.patronAttrs.map(pa => {
+            if (!patronAttrs.value.length) return [];
+            return patronAttrs.value.map(pa => {
                 return {
                     isExtendedAttribute: true,
                     type: "text",
@@ -255,20 +251,4 @@ export default {
 };
 </script>
 
-<style scoped>
-:deep(form .v-select) {
-    width: 90% !important;
-}
-:deep(.vs__dropdown-option) {
-    padding: 3px 20px;
-}
-:deep(.repeatableFieldList) {
-    height: 100% !important;
-}
-.clone_attribute {
-    margin-top: 3px;
-}
-:deep(.repeatableFieldList input) {
-    width: 80% !important;
-}
-</style>
+<style scoped></style>

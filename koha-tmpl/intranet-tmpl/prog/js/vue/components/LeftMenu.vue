@@ -1,8 +1,6 @@
 <template>
     <aside v-if="navigationTree !== 'none'">
-        <VendorMenu v-if="navigationTree === 'VendorMenu'" />
-        <AcquisitionsMenu v-else-if="navigationTree === 'AcquisitionsMenu'" />
-        <CircNav v-else-if="navigationTree === 'CircNav'" />
+        <component v-if="asyncComponent" :is="asyncComponent" />
         <div v-else class="sidebar_menu">
             <h5>{{ $__(title) }}</h5>
             <ul>
@@ -18,11 +16,8 @@
 </template>
 
 <script>
-import { computed, inject } from "vue";
+import { computed, defineAsyncComponent, inject, shallowRef, watch } from "vue";
 import NavigationItem from "./NavigationItem.vue";
-import VendorMenu from "./Islands/VendorMenu.vue";
-import AcquisitionsMenu from "./Islands/AcquisitionsMenu.vue";
-import CircNav from "./Islands/CircNav.vue";
 import { storeToRefs } from "pinia";
 
 export default {
@@ -36,9 +31,22 @@ export default {
             return leftNavigation.value;
         });
 
+        const asyncComponent = shallowRef(null);
+        watch(
+            navigationTree,
+            tree => {
+                asyncComponent.value =
+                    typeof tree === "function"
+                        ? defineAsyncComponent(tree)
+                        : null;
+            },
+            { immediate: true }
+        );
+
         return {
             leftNavigation,
             navigationTree,
+            asyncComponent,
         };
     },
     props: {
@@ -47,9 +55,6 @@ export default {
     },
     components: {
         NavigationItem,
-        VendorMenu,
-        AcquisitionsMenu,
-        CircNav,
     },
 };
 </script>

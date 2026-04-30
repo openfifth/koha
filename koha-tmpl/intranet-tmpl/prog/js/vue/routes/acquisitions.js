@@ -37,14 +37,22 @@ export const routes = [
                         path: "",
                         name: "VendorList",
                         component: markRaw(ResourceWrapper),
-                        alternateLeftMenu: "AcquisitionsMenu",
+                        alternateLeftMenu: () =>
+                            import(
+                                /* webpackChunkName: "acquisitions-menu" */
+                                "../components/Islands/AcquisitionsMenu.vue"
+                            ),
                     },
                     {
                         path: ":id",
                         name: "VendorShow",
                         component: markRaw(ResourceWrapper),
                         title: "{name}",
-                        alternateLeftMenu: "VendorMenu",
+                        alternateLeftMenu: () =>
+                            import(
+                                /* webpackChunkName: "vendor-menu" */
+                                "../components/Islands/VendorMenu.vue"
+                            ),
                     },
                     {
                         path: "add",
@@ -65,7 +73,11 @@ export const routes = [
                         additionalBreadcrumbs: [
                             { title: $__("Modify vendor"), disabled: true },
                         ],
-                        alternateLeftMenu: "VendorMenu",
+                        alternateLeftMenu: () =>
+                            import(
+                                /* webpackChunkName: "vendor-menu" */
+                                "../components/Islands/VendorMenu.vue"
+                            ),
                     },
                 ],
             },

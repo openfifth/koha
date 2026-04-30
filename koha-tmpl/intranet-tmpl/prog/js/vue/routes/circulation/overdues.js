@@ -21,6 +21,11 @@ export default {
                     path: "",
                     name: "OverduesList",
                     component: markRaw(ResourceWrapper),
+                    alternateLeftMenu: () =>
+                        import(
+                            /* webpackChunkName: "overdues-filters" */
+                            "../../components/Circulation/Overdues/OverdueFilters.vue"
+                        ),
                 },
             ],
         },
@@ -34,7 +39,11 @@ export default {
                     path: "",
                     name: "BranchOverduesList",
                     component: markRaw(ResourceWrapper),
-                    alternateLeftMenu: "CircNav",
+                    alternateLeftMenu: () =>
+                        import(
+                            /* webpackChunkName: "circ-nav" */
+                            "../../components/Islands/CircNav.vue"
+                        ),
                 },
             ],
         },

@@ -9,6 +9,7 @@ export const useOverduesStore = defineStore("overdues", () => {
         },
         settings: {},
         itemTypes: [],
+        patronAttrs: [],
     });
     const sharedActions = withAuthorisedValueActions(store);
 
