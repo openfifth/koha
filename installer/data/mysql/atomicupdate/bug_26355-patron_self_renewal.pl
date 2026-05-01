@@ -57,7 +57,7 @@ return {
                 q{
                 ALTER TABLE categories ADD COLUMN `self_renewal_failure_message` mediumtext DEFAULT NULL
                 COMMENT 'the message to display if self renewal is not successful'
-                AFTER `self_renewal_fines_block`
+                AFTER `self_renewal_if_expired`
                 }
             );
 
@@ -67,7 +67,7 @@ return {
             $dbh->do(
                 q{
                 ALTER TABLE categories ADD COLUMN `self_renewal_information_message` mediumtext DEFAULT NULL
-                COMMENT 'the message to display if self renewal is not successful'
+                COMMENT 'the message to display before the self renewal process starts'
                 AFTER `self_renewal_failure_message`
                 }
             );
