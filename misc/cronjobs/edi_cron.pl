@@ -35,6 +35,7 @@ use Koha::Database;
 use Koha::EDI qw( process_quote process_invoice process_ordrsp );
 use Koha::Edifact::Transport;
 use Koha::Logger;
+use Koha::Plugins;
 use Koha::Plugins::Handler;
 use Fcntl   qw( LOCK_EX O_CREAT O_RDWR SEEK_SET );
 use C4::Log qw( cronlogaction );
@@ -111,13 +112,16 @@ my @downloaded_quotes = $schema->resultset('EdifactMessage')->search(
     }
 )->all;
 
+my @processed_quote_ids;
 foreach my $quote_file (@downloaded_quotes) {
     my $filename = $quote_file->filename;
     $logger->trace("Processing quote $filename");
     process_quote($quote_file);
+    push @processed_quote_ids, $quote_file->id;
 }
 
 # process any downloaded invoices
+my @processed_invoice_ids;
 if ( C4::Context->preference('EdifactInvoiceImport') eq 'automatic' ) {
     my @downloaded_invoices = $schema->resultset('EdifactMessage')->search(
         {
@@ -130,6 +134,7 @@ if ( C4::Context->preference('EdifactInvoiceImport') eq 'automatic' ) {
         my $filename = $invoice->filename();
         $logger->trace("Processing invoice $filename");
         process_invoice($invoice);
+        push @processed_invoice_ids, $invoice->id;
     }
 }
 
@@ -140,13 +145,27 @@ my @downloaded_responses = $schema->resultset('EdifactMessage')->search(
     }
 )->all;
 
+my @processed_response_ids;
 foreach my $response (@downloaded_responses) {
     my $filename = $response->filename();
     $logger->trace("Processing order response $filename");
     process_ordrsp($response);
+    push @processed_response_ids, $response->id;
 }
 
 cronlogaction( { action => 'End', info => "COMPLETED" } );
+
+Koha::Plugins->call(
+    'after_edi_cron',
+    {
+        action  => 'edi_cron_completed',
+        payload => {
+            quote_ids    => \@processed_quote_ids,
+            invoice_ids  => \@processed_invoice_ids,
+            response_ids => \@processed_response_ids,
+        },
+    }
+);
 
 if ( close $pid_handle ) {
     unlink $pidfile;
