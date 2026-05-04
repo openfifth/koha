@@ -9,15 +9,17 @@ return {
         my ( $dbh, $out ) = @$args{qw(dbh out)};
 
         # Add sip_magnetic column to itemtypes table
-        $dbh->do(
-            q{
-            ALTER TABLE itemtypes
-            ADD COLUMN sip_magnetic TINYINT(1) NOT NULL DEFAULT 0
-            COMMENT 'Indicates if items of this type are magnetic media for SIP'
-            AFTER sip_media_type
-        }
-        );
+        unless ( column_exists( 'itemtypes', 'sip_magnetic' ) ) {
+            $dbh->do(
+                q{
+                ALTER TABLE itemtypes
+                ADD COLUMN sip_magnetic TINYINT(1) NOT NULL DEFAULT 0
+                COMMENT 'Indicates if items of this type are magnetic media for SIP'
+                AFTER sip_media_type
+            }
+            );
 
-        say_success( $out, "Added column 'itemtypes.sip_magnetic'" );
+            say_success( $out, "Added column 'itemtypes.sip_magnetic'" );
+        }
     },
 };
