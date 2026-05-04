@@ -225,6 +225,7 @@ sub add_credit {
     my $credit_type   = $params->{type} || 'PAYMENT';
     my $item_id       = $params->{item_id};
     my $issue_id      = $params->{issue_id};
+    my $checkin_id    = $params->{checkin_id};
 
     my $old_issue_id;
     if ($issue_id) {
@@ -272,6 +273,11 @@ sub add_credit {
                         (
                             $old_issue_id
                             ? ( old_issue_id => $old_issue_id )
+                            : ()
+                        ),
+                        (
+                            $checkin_id
+                            ? ( checkin_id => $checkin_id )
                             : ()
                         ),
                     }
@@ -493,6 +499,7 @@ sub add_debit {
     my $transaction_type = $params->{transaction_type};
     my $item_id          = $params->{item_id};
     my $issue_id         = $params->{issue_id};
+    my $checkin_id       = $params->{checkin_id};
 
     my $old_issue_id;
     if ($issue_id) {
@@ -539,6 +546,11 @@ sub add_debit {
                         (
                             $debit_type eq 'OVERDUE'
                             ? ( status => 'UNRETURNED' )
+                            : ()
+                        ),
+                        (
+                            $checkin_id
+                            ? ( checkin_id => $checkin_id )
                             : ()
                         ),
                     }
