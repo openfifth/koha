@@ -138,6 +138,7 @@ CREATE TABLE `accountlines` (
   `register_id` int(11) DEFAULT NULL,
   `interface` varchar(16) NOT NULL,
   `branchcode` varchar(10) DEFAULT NULL COMMENT 'the branchcode of the library where a payment was made, a manual invoice created, etc.',
+  `checkin_id` int(11) DEFAULT NULL COMMENT 'foreign key from the checkins table if this accountline was created during a checkin',
   PRIMARY KEY (`accountlines_id`),
   KEY `acctsborridx` (`borrowernumber`),
   KEY `timeidx` (`timestamp`),
@@ -149,6 +150,7 @@ CREATE TABLE `accountlines` (
   KEY `accountlines_ibfk_registers` (`register_id`),
   KEY `accountlines_ibfk_old_issues` (`old_issue_id`),
   KEY `accountlines_ibfk_issues` (`issue_id`),
+  KEY `accountlines_ibfk_checkins` (`checkin_id`),
   CONSTRAINT `accountlines_ibfk_borrowers` FOREIGN KEY (`borrowernumber`) REFERENCES `borrowers` (`borrowernumber`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `accountlines_ibfk_borrowers_2` FOREIGN KEY (`manager_id`) REFERENCES `borrowers` (`borrowernumber`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `accountlines_ibfk_branches` FOREIGN KEY (`branchcode`) REFERENCES `branches` (`branchcode`) ON DELETE SET NULL ON UPDATE CASCADE,
@@ -157,7 +159,8 @@ CREATE TABLE `accountlines` (
   CONSTRAINT `accountlines_ibfk_issues` FOREIGN KEY (`issue_id`) REFERENCES `issues` (`issue_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `accountlines_ibfk_items` FOREIGN KEY (`itemnumber`) REFERENCES `items` (`itemnumber`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `accountlines_ibfk_old_issues` FOREIGN KEY (`old_issue_id`) REFERENCES `old_issues` (`issue_id`) ON DELETE SET NULL ON UPDATE CASCADE,
-  CONSTRAINT `accountlines_ibfk_registers` FOREIGN KEY (`register_id`) REFERENCES `cash_registers` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+  CONSTRAINT `accountlines_ibfk_registers` FOREIGN KEY (`register_id`) REFERENCES `cash_registers` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `accountlines_ibfk_checkins` FOREIGN KEY (`checkin_id`) REFERENCES `checkins` (`checkin_id`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
