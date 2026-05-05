@@ -39,6 +39,7 @@ use Koha::Patron::Restriction::Types;
 use Koha::Patron::Categories;
 use Koha::Patron::Messages;
 use Koha::CsvProfiles;
+use Koha::CirculationRules;
 use Koha::Holds;
 use Koha::Patrons;
 use Koha::Patron::Consents;
@@ -210,8 +211,14 @@ if ( $patron->is_expired || $patron->is_going_to_expire ) {
 
 my $holds         = Koha::Holds->search( { borrowernumber => $borrowernumber } );    # FIXME must be Koha::Patron->holds
 my $waiting_holds = $holds->waiting;
+my $holds_count_policy = Koha::CirculationRules->get_effective_rule(
+    {
+        branchcode => C4::Context->userenv ? C4::Context->userenv->{'branch'} : undef,
+        rule_name  => 'hold_groups_count_policy',
+    }
+);
 $template->param(
-    holds_count  => $holds->count_holds,
+    holds_count  => $holds->count_for_group_policy($holds_count_policy),
     WaitingHolds => $waiting_holds,
 );
 
@@ -293,16 +300,16 @@ my $has_modifications  = Koha::Patron::Modifications->search( { borrowernumber =
 my $patron_lists_count = $patron->get_lists_with_patron->count();
 
 $template->param(
-    patron                 => $patron,
-    issuecount             => $patron->checkouts->count,
-    holds_count            => $patron->holds->count_holds,
-    fines                  => $patron->account->balance,
-    translated_language    => $translated_language,
-    detailview             => 1,
-    was_renewed            => scalar $input->param('was_renewed') ? 1 : 0,
-    $category_type         => 1,                                           # [% IF ( I ) %] = institutional/organisation
-    housebound_role        => scalar $patron->housebound_role,
-    relatives_issues_count => $relatives_issues_count,
+    patron                    => $patron,
+    issuecount                => $patron->checkouts->count,
+    holds_count               => $patron->holds->count_for_group_policy($holds_count_policy),
+    fines                     => $patron->account->balance,
+    translated_language       => $translated_language,
+    detailview                => 1,
+    was_renewed               => scalar $input->param('was_renewed') ? 1 : 0,
+    $category_type            => 1,                                 # [% IF ( I ) %] = institutional/organisation
+    housebound_role           => scalar $patron->housebound_role,
+    relatives_issues_count    => $relatives_issues_count,
     relatives_borrowernumbers => \@relatives,
     logged_in_user            => $logged_in_user,
     files                     => Koha::Patron::Files->new( borrowernumber => $borrowernumber )->GetFilesInfo(),
