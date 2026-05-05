@@ -398,7 +398,7 @@ sub CanBookBeReserved {
         return { status => 'alreadypossession' };
     }
 
-    if ( $params->{itemtype} ) {
+    if ( $params->{itemtype} && !$params->{hold_group_count_checked} ) {
 
         # biblio-level, item type-contrained
         my $patron          = Koha::Patrons->find($borrowernumber);
@@ -465,6 +465,8 @@ sub CanBookBeReserved {
   current params are:
   'ignore_hold_counts' - we use this routine to check if an item can fill a hold - on this case we
   should not check if there are too many holds as we only care about reservability
+  'hold_group_count_checked' - this hold is part of a group and the count limits were already checked
+  for the first hold in the group; skip numeric limit checks but still enforce per-item constraints
 
 @RETURNS { status => OK },              if the Item can be reserved.
          { status => ageRestricted },   if the Item is age restricted for this borrower.
