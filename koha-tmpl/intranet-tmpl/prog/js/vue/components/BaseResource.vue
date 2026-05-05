@@ -22,6 +22,15 @@
                     :table="table"
                 />
             </template>
+            <template
+                v-if="slotComponents.header"
+                #header="{ headerInformation }"
+            >
+                <component
+                    :is="requiredSlotComponent('header')"
+                    v-bind="headerInformation"
+                ></component>
+            </template>
         </ResourceList>
         <ResourceShow
             v-if="routeAction === 'show'"
@@ -64,6 +73,8 @@ import ResourceShow from "./ResourceShow.vue";
 import ResourceFormSave from "./ResourceFormSave.vue";
 import ResourceList from "./ResourceList.vue";
 import Toolbar from "./Toolbar.vue";
+import { loadComponent } from "@koha-vue/loaders/componentResolver";
+import { defineAsyncComponent } from "vue";
 
 export default {
     props: {
@@ -78,8 +89,17 @@ export default {
         Toolbar,
     },
     setup(props) {
+        const slotComponents = props.instancedResource.additionalSlotComponents(
+            props.routeAction
+        );
+        const requiredSlotComponent = slot => {
+            const importPath = slotComponents[slot];
+            return defineAsyncComponent(loadComponent(importPath));
+        };
         return {
             ...(typeof logged_in_user !== "undefined" && { logged_in_user }),
+            slotComponents,
+            requiredSlotComponent,
         };
     },
     name: "BaseResource",

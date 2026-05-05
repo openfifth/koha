@@ -55,6 +55,11 @@ export default {
             },
             props,
             defaultToolbarButtons,
+            additionalSlotComponents: {
+                list: {
+                    header: "@koha-vue/components/Circulation/Overdues/OverduesHeader.vue",
+                },
+            },
             resourceAttrs: [
                 {
                     type: "date",

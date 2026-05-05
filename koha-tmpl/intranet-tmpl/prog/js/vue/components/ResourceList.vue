@@ -4,6 +4,7 @@
         <slot name="toolbar" :componentPropData="{ ...$props, ...$data }" />
         <template v-if="resourceCount > 0">
             <slot name="filters" :table="table" />
+            <slot name="header" :headerInformation="{ resourceCount }" />
         </template>
         <div v-if="resourceCount > 0" class="page-section">
             <KohaTable

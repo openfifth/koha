@@ -44,6 +44,7 @@ import {
  * @param {String} resourceConfig.formGroupsDisplayMode - The display mode for the form groups if not the default. Can be one of the following: "accordion", "tabs".
  * @param {Array} resourceConfig.stickyToolbar - The names of the components with a toolbar that should be sticky.
  * @param {Array} resourceConfig.navigationOnFormSave - The name of the component that should be navigated to when saving the resource creation/edit form. Defaults to the show component
+ * @param {Object} resourceConfig.additionalSlotComponents - A list of component filepaths that should be loaded into slots provided in the template
  *
  * @return {Object} An object containing the utilities provided by this composable.
  */
@@ -710,6 +711,21 @@ export function useBaseResource(resourceConfig) {
     };
 
     /**
+     * Determines which components to load into scoped slots in the template by default
+     * For example, in ResourceList, there is the 'headers' template. If a component path is
+     * provided in the additionalSlotComponents method in a *Resource.vue component then that
+     * component will be loaded into the slot.
+     *
+     * @return {Object} the list of components and slots to be handled
+     */
+    const additionalSlotComponents = route => {
+        if (!resourceConfig.additionalSlotComponents) return {};
+        if (!resourceConfig.additionalSlotComponents.hasOwnProperty(route))
+            return {};
+        return resourceConfig.additionalSlotComponents[route];
+    };
+
+    /**
      * Initializes the component by populating resource attributes
      * with their respective authorised values. This ensures that
      * any select or relationship attributes have the correct options
@@ -761,5 +777,6 @@ export function useBaseResource(resourceConfig) {
         route,
         router,
         i18n,
+        additionalSlotComponents,
     };
 }
