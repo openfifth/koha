@@ -587,6 +587,15 @@ sub CanItemBeReserved {
         $ruleitemtype = undef;
     }
 
+    my $count_policy = Koha::CirculationRules->get_effective_rule(
+        {
+            branchcode => $reserves_control_branch,
+            rule_name  => 'hold_groups_count_policy',
+        }
+    );
+    my $count_as_group  = $count_policy && $count_policy->rule_value eq 'count_as_group';
+    my $skip_hold_count = $params->{ignore_hold_counts} || $params->{hold_group_count_checked};
+
     my $rights = Koha::CirculationRules->get_effective_rules(
         {
             categorycode => $patron->categorycode,
@@ -607,19 +616,18 @@ sub CanItemBeReserved {
                 borrowernumber => $patron->borrowernumber,
                 biblionumber   => $item->biblionumber,
             };
-            my $holds_count = Koha::Holds->count_holds($search_params);
+            my $holds_count = Koha::Holds->count_for_group_policy( $count_policy, $search_params );
             return _cache { status => "tooManyHoldsForThisRecord", limit => $holds_per_record }
                 if $holds_count >= $holds_per_record;
         }
     }
 
     if ( !$params->{ignore_hold_counts} && defined $holds_per_day && $holds_per_day ne '' ) {
-        my $today_holds_count = Koha::Holds->count_holds(
-            {
-                borrowernumber => $patron->borrowernumber,
-                reservedate    => dt_from_string->date
-            }
-        );
+        my $date_search_params = {
+            borrowernumber => $patron->borrowernumber,
+            reservedate    => dt_from_string->date
+        };
+        my $today_holds_count = Koha::Holds->count_for_group_policy( $count_policy, $date_search_params );
         return _cache { status => 'tooManyReservesToday', limit => $holds_per_day }
             if $today_holds_count >= $holds_per_day;
     }
@@ -631,44 +639,54 @@ sub CanItemBeReserved {
         }
         if ( !$params->{ignore_hold_counts} ) {
 
-            # we retrieve count
-            my $querycount = q{
-                SELECT count(*) AS count
+            # Build the base FROM/WHERE fragment shared by both counting strategies
+            my $base_query = q{
                   FROM reserves
              LEFT JOIN items USING (itemnumber)
              LEFT JOIN biblioitems ON (reserves.biblionumber=biblioitems.biblionumber)
              LEFT JOIN borrowers USING (borrowernumber)
                  WHERE borrowernumber = ?
             };
-            $querycount .= "AND ( $branchfield = ? OR $branchfield IS NULL )";
+            $base_query .= "AND ( $branchfield = ? OR $branchfield IS NULL ) ";
 
             # If using item-level itypes, fall back to the record
             # level itemtype if the hold has no associated item
             if ( defined $ruleitemtype ) {
                 if ( C4::Context->preference('item-level_itypes') ) {
-                    $querycount .= q{
+                    $base_query .= q{
                         AND ( COALESCE( items.itype, biblioitems.itemtype ) = ?
                            OR reserves.itemtype = ? )
                     };
                 } else {
-                    $querycount .= q{
+                    $base_query .= q{
                         AND ( biblioitems.itemtype = ?
                            OR reserves.itemtype = ? )
                     };
                 }
             }
 
-            my $sthcount = $dbh->prepare($querycount);
+            my @bind_params =
+                defined $ruleitemtype
+                ? ( $patron->borrowernumber, $reserves_control_branch, $ruleitemtype, $ruleitemtype )
+                : ( $patron->borrowernumber, $reserves_control_branch );
 
-            if ( defined $ruleitemtype ) {
-                $sthcount->execute( $patron->borrowernumber, $reserves_control_branch, $ruleitemtype, $ruleitemtype );
+            my $reservecount;
+            if ($count_as_group) {
+                my $sth_ungrouped =
+                    $dbh->prepare( "SELECT count(*) AS count " . $base_query . " AND hold_group_id IS NULL" );
+                $sth_ungrouped->execute(@bind_params);
+                my $ungrouped_count = ( $sth_ungrouped->fetchrow_hashref // {} )->{count} // 0;
+
+                my $sth_grouped = $dbh->prepare(
+                    "SELECT count(DISTINCT hold_group_id) AS count " . $base_query . " AND hold_group_id IS NOT NULL" );
+                $sth_grouped->execute(@bind_params);
+                my $grouped_count = ( $sth_grouped->fetchrow_hashref // {} )->{count} // 0;
+
+                $reservecount = $ungrouped_count + $grouped_count;
             } else {
-                $sthcount->execute( $patron->borrowernumber, $reserves_control_branch );
-            }
-
-            my $reservecount = "0";
-            if ( my $rowcount = $sthcount->fetchrow_hashref() ) {
-                $reservecount = $rowcount->{count};
+                my $sthcount = $dbh->prepare( "SELECT count(*) AS count " . $base_query );
+                $sthcount->execute(@bind_params);
+                $reservecount = ( $sthcount->fetchrow_hashref // {} )->{count} // 0;
             }
 
             return _cache { status => 'tooManyReserves', limit => $allowedreserves }
@@ -685,7 +703,8 @@ sub CanItemBeReserved {
         }
     );
     if ( !$params->{ignore_hold_counts} && $rule && defined( $rule->rule_value ) && $rule->rule_value ne '' ) {
-        my $total_holds_count = Koha::Holds->search( { borrowernumber => $patron->borrowernumber } )->count();
+        my $total_holds_count =
+            Koha::Holds->count_for_group_policy( $count_policy, { borrowernumber => $patron->borrowernumber } );
 
         return _cache { status => 'tooManyReserves', limit => $rule->rule_value }
             if $total_holds_count >= $rule->rule_value;
