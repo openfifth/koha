@@ -139,6 +139,10 @@ our $RULE_KINDS = {
         scope        => [ 'branchcode', 'categorycode', 'itemtype' ],
         can_be_blank => 0,
     },
+    hold_groups_count_policy => {
+        scope        => ['branchcode'],
+        can_be_blank => 0,
+    },
     holds_per_day => {
         scope => [ 'branchcode', 'categorycode', 'itemtype' ],
     },

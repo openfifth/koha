@@ -986,6 +986,54 @@
         </form>
     </div>
 
+    [% IF Koha.Preference('DisplayAddHoldGroups') %]
+        <div id="hold-groups-count-policy" class="page-section">
+            [% IF current_branch == '*' %]
+                <h2>Default hold groups count policy</h2>
+            [% ELSE %]
+                <h2>Hold groups count policy for [% Branches.GetName( current_branch ) | html %]</h2>
+            [% END %]
+            <p>Specify how patron hold counts are calculated when hold groups are in use.</p>
+            <form method="post" action="/cgi-bin/koha/admin/smart-rules.pl">
+                [% INCLUDE 'csrf-token.inc' %]
+                <input type="hidden" name="op" value="cud-mod-hold-groups-count-policy" />
+                <input type="hidden" name="branch" value="[% current_branch | html %]" />
+                <table>
+                    <tr>
+                        <th>Policy</th>
+                        <th>&nbsp;</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            <select name="hold_groups_count_policy">
+                                [% IF current_branch != '*' %]
+                                    [% IF defaultHoldGroupsCountPolicyRule && defaultHoldGroupsCountPolicyRule.rule_value == 'count_as_group' %]
+                                        <option value="*" [% UNLESS holdGroupsCountPolicyRule %]selected="selected"[% END %]>Use default (Count each hold group as one hold)</option>
+                                    [% ELSE %]
+                                        <option value="*" [% UNLESS holdGroupsCountPolicyRule %]selected="selected"[% END %]>Use default (Count each individual hold as one)</option>
+                                    [% END %]
+                                [% END %]
+                                <option
+                                    value="count_individually"
+                                    [% IF holdGroupsCountPolicyRule && holdGroupsCountPolicyRule.rule_value == 'count_individually' %]
+                                        selected="selected"
+                                    [% ELSIF !holdGroupsCountPolicyRule && current_branch == '*' %]
+                                        selected="selected"
+                                    [% END %]
+                                    >Count each individual hold as one</option
+                                >
+                                <option value="count_as_group" [% IF holdGroupsCountPolicyRule && holdGroupsCountPolicyRule.rule_value == 'count_as_group' %]selected="selected"[% END %]>Count each hold group as one hold</option>
+                            </select>
+                        </td>
+                        <td class="actions"
+                            ><button type="submit" class="btn btn-default btn-xs"><i class="fa fa-save"></i> Save</button></td
+                        >
+                    </tr>
+                </table>
+            </form>
+        </div>
+    [% END %]
+
     [% IF Koha.Preference('ArticleRequests') %]
         <div id="open-article-requests-limit-patron-category" class="page-section">
             [% IF humanbranch %]
