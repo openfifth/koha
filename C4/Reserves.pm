@@ -401,34 +401,38 @@ sub CanBookBeReserved {
     if ( $params->{itemtype} ) {
 
         # biblio-level, item type-contrained
-        my $patron          = Koha::Patrons->find($borrowernumber);
-        my $reservesallowed = Koha::CirculationRules->get_effective_rule(
-            {
-                itemtype     => $params->{itemtype},
-                categorycode => $patron->categorycode,
-                branchcode   => $pickup_branchcode,
-                rule_name    => 'reservesallowed',
-            }
-        )->rule_value;
-
-        $reservesallowed = ( $reservesallowed eq '' ) ? undef : $reservesallowed;
-
+        my $patron       = Koha::Patrons->find($borrowernumber);
         my $count_policy = Koha::CirculationRules->get_effective_rule(
             {
                 branchcode => $pickup_branchcode,
                 rule_name  => 'hold_groups_count_policy',
             }
         );
-        my $hold_search_params = {
-            '-or' => [
-                { 'me.itemtype' => $params->{itemtype} },
-                { 'item.itype'  => $params->{itemtype} }
-            ]
-        };
-        my $count = $patron->holds->count_for_group_policy( $count_policy, $hold_search_params, { join => ['item'] } );
+        my $count_individually = $count_policy && $count_policy->rule_value eq 'count_individually';
+        unless ( $params->{hold_group_count_checked} && !$count_individually ) {
+            my $reservesallowed = Koha::CirculationRules->get_effective_rule(
+                {
+                    itemtype     => $params->{itemtype},
+                    categorycode => $patron->categorycode,
+                    branchcode   => $pickup_branchcode,
+                    rule_name    => 'reservesallowed',
+                }
+            )->rule_value;
 
-        return { status => '' }
-            if defined $reservesallowed and $reservesallowed < $count + 1;
+            $reservesallowed = ( $reservesallowed eq '' ) ? undef : $reservesallowed;
+
+            my $hold_search_params = {
+                '-or' => [
+                    { 'me.itemtype' => $params->{itemtype} },
+                    { 'item.itype'  => $params->{itemtype} }
+                ]
+            };
+            my $count =
+                $patron->holds->count_for_group_policy( $count_policy, $hold_search_params, { join => ['item'] } );
+
+            return { status => '' }
+                if defined $reservesallowed and $reservesallowed < $count + 1;
+        }
     }
 
     my $items;
@@ -465,6 +469,8 @@ sub CanBookBeReserved {
   current params are:
   'ignore_hold_counts' - we use this routine to check if an item can fill a hold - on this case we
   should not check if there are too many holds as we only care about reservability
+  'hold_group_count_checked' - this hold is part of a group and the count limits were already checked
+  for the first hold in the group; skip numeric limit checks but still enforce per-item constraints
 
 @RETURNS { status => OK },              if the Item can be reserved.
          { status => ageRestricted },   if the Item is age restricted for this borrower.
