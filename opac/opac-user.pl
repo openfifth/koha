@@ -36,6 +36,7 @@ use Koha::Account::Lines;
 use Koha::Biblios;
 use Koha::Libraries;
 use Koha::DateUtils qw( output_pref );
+use Koha::CirculationRules;
 use Koha::Holds;
 use Koha::Database;
 use Koha::ItemTypes;
@@ -342,11 +343,16 @@ if ($show_barcode) {
 $template->param( show_barcode => 1 ) if $show_barcode;
 
 # now the reserved items....
-my $reserves = $patron->holds->filter_out_has_cancellation_requests;
-
+my $reserves           = $patron->holds->filter_out_has_cancellation_requests;
+my $holds_count_policy = Koha::CirculationRules->get_effective_rule(
+    {
+        branchcode => $patron->branchcode,
+        rule_name  => 'hold_groups_count_policy',
+    }
+);
 $template->param(
     RESERVES       => $reserves,
-    reserves_count => $reserves->count_holds,
+    reserves_count => $reserves->count_for_group_policy($holds_count_policy),
     showpriority   => $show_priority,
 );
 
