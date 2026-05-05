@@ -17,7 +17,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 70;
+use Test::More tests => 73;
 use Test::NoWarnings;
 use Test::MockModule;
 use Test::Warn;
@@ -40,6 +40,7 @@ use Koha::ActionLogs;
 use Koha::Biblios;
 use Koha::Caches;
 use Koha::DateUtils qw( dt_from_string output_pref );
+use Koha::HoldGroups;
 use Koha::Holds;
 use Koha::Items;
 use Koha::Libraries;
@@ -2293,6 +2294,229 @@ subtest 'FixPriority() lowestPriority tests' => sub {
     is( $moved->priority, 1, 'Non-lowestPriority hold moves to rank 1 normally' );
     my $other = Koha::Holds->find( $normal_ids[0] );
     is( $other->priority, 2, 'Other holds renumbered correctly after normal move' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'CanItemBeReserved() hold_groups_count_policy tests' => sub {
+
+    plan tests => 6;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'ReservesControlBranch', 'PatronLibrary' );
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries', value => { pickup_location => 1 } } );
+    my $patron  = $builder->build_object( { class => 'Koha::Patrons',   value => { branchcode => $library->id } } );
+    my $biblio  = $builder->build_sample_biblio();
+    my $item_1  = $builder->build_sample_item( { biblionumber => $biblio->id } );
+    my $item_2  = $builder->build_sample_item( { biblionumber => $biblio->id } );
+    my $item_3  = $builder->build_sample_item( { biblionumber => $biblio->id } );
+
+    Koha::CirculationRules->delete;
+
+    # Place 2 biblio-level holds in the same hold group
+    my $hold_group = $builder->build_object( { class => 'Koha::HoldGroups' } );
+    my $rid1 = AddReserve( { branchcode => $library->id, borrowernumber => $patron->id, biblionumber => $biblio->id } );
+    my $rid2 = AddReserve( { branchcode => $library->id, borrowernumber => $patron->id, biblionumber => $biblio->id } );
+    Koha::Holds->find($rid1)->set( { hold_group_id => $hold_group->id } )->store;
+    Koha::Holds->find($rid2)->set( { hold_group_id => $hold_group->id } )->store;
+
+    # --- reservesallowed ---
+    Koha::CirculationRules->set_rules(
+        {
+            branchcode   => undef,
+            categorycode => undef,
+            itemtype     => undef,
+            rules        => { reservesallowed => 2, holds_per_record => 100 }
+        }
+    );
+
+    # No policy set → count_individually default: 2 holds reach limit of 2
+    my $res = CanItemBeReserved( $patron, $item_3, $library->id );
+    is(
+        $res->{status}, 'tooManyReserves',
+        'count_individually (default): 2 grouped holds reach reservesallowed limit of 2'
+    );
+
+    Koha::CirculationRules->set_rules(
+        { branchcode => undef, rules => { hold_groups_count_policy => 'count_as_group' } } );
+    $res = CanItemBeReserved( $patron, $item_3, $library->id );
+    is(
+        $res->{status}, 'OK',
+        'count_as_group: 2 holds in 1 group count as 1, reservesallowed limit of 2 not reached'
+    );
+
+    # --- holds_per_record ---
+    Koha::CirculationRules->set_rules(
+        {
+            branchcode   => undef,
+            categorycode => undef,
+            itemtype     => undef,
+            rules        => { reservesallowed => 100, holds_per_record => 2 }
+        }
+    );
+
+    Koha::CirculationRules->set_rules(
+        { branchcode => undef, rules => { hold_groups_count_policy => 'count_individually' } } );
+    $res = CanItemBeReserved( $patron, $item_3, $library->id );
+    is(
+        $res->{status}, 'tooManyHoldsForThisRecord',
+        'count_individually: 2 grouped holds on same record reach holds_per_record limit of 2'
+    );
+
+    Koha::CirculationRules->set_rules(
+        { branchcode => undef, rules => { hold_groups_count_policy => 'count_as_group' } } );
+    $res = CanItemBeReserved( $patron, $item_3, $library->id );
+    is(
+        $res->{status}, 'OK',
+        'count_as_group: 2 holds in 1 group count as 1, holds_per_record limit of 2 not reached'
+    );
+
+    # --- max_holds ---
+    Koha::CirculationRules->set_rules(
+        {
+            branchcode   => undef,
+            categorycode => undef,
+            itemtype     => undef,
+            rules        => { reservesallowed => 100, holds_per_record => 100 }
+        }
+    );
+    Koha::CirculationRules->set_rules(
+        {
+            branchcode   => undef,
+            categorycode => undef,
+            rules        => { max_holds => 2 }
+        }
+    );
+
+    Koha::CirculationRules->set_rules(
+        { branchcode => undef, rules => { hold_groups_count_policy => 'count_individually' } } );
+    $res = CanItemBeReserved( $patron, $item_3, $library->id );
+    is(
+        $res->{status}, 'tooManyReserves',
+        'count_individually: 2 grouped holds reach max_holds limit of 2'
+    );
+
+    Koha::CirculationRules->set_rules(
+        { branchcode => undef, rules => { hold_groups_count_policy => 'count_as_group' } } );
+    $res = CanItemBeReserved( $patron, $item_3, $library->id );
+    is(
+        $res->{status}, 'OK',
+        'count_as_group: 2 holds in 1 group count as 1, max_holds limit of 2 not reached'
+    );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'CanBookBeReserved() hold_groups_count_policy tests' => sub {
+
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries', value => { pickup_location => 1 } } );
+    my $patron  = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $itype   = $builder->build_object( { class => 'Koha::ItemTypes' } );
+    my $biblio  = $builder->build_sample_biblio();
+    my $item_1  = $builder->build_sample_item( { biblionumber => $biblio->id, itype => $itype->id } );
+    my $item_2  = $builder->build_sample_item( { biblionumber => $biblio->id, itype => $itype->id } );
+
+    Koha::CirculationRules->delete;
+    Koha::CirculationRules->set_rules(
+        {
+            branchcode   => undef,
+            categorycode => undef,
+            itemtype     => undef,
+            rules        => { holds_per_record => 100 }
+        }
+    );
+    Koha::CirculationRules->set_rules(
+        {
+            branchcode   => undef,
+            categorycode => undef,
+            itemtype     => $itype->id,
+            rules        => { reservesallowed => 2 }
+        }
+    );
+
+    # 2 holds of the same itemtype in the same hold group
+    my $hold_group = $builder->build_object( { class => 'Koha::HoldGroups' } );
+    my $rid1       = AddReserve(
+        {
+            branchcode => $library->id, borrowernumber => $patron->id, biblionumber => $biblio->id,
+            itemnumber => $item_1->id
+        }
+    );
+    my $rid2 = AddReserve(
+        {
+            branchcode => $library->id, borrowernumber => $patron->id, biblionumber => $biblio->id,
+            itemtype   => $itype->id
+        }
+    );
+    Koha::Holds->find($rid1)->set( { hold_group_id => $hold_group->id } )->store;
+    Koha::Holds->find($rid2)->set( { hold_group_id => $hold_group->id } )->store;
+
+    # count_individually (default): 2 holds of same itemtype = limit of 2 reached
+    my $res = CanBookBeReserved( $patron->id, $biblio->id, $library->id, { itemtype => $itype->id } );
+    is_deeply(
+        $res, { status => '' },
+        'count_individually: 2 grouped holds of same itemtype reach reservesallowed limit of 2'
+    );
+
+    # count_as_group: 1 group = limit not reached
+    Koha::CirculationRules->set_rules(
+        { branchcode => undef, rules => { hold_groups_count_policy => 'count_as_group' } } );
+    $res = CanBookBeReserved( $patron->id, $biblio->id, $library->id, { itemtype => $itype->id } );
+    is_deeply(
+        $res, { status => 'OK' },
+        'count_as_group: 2 grouped holds of same itemtype count as 1, reservesallowed limit of 2 not reached'
+    );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'CanItemBeReserved() hold_group_count_checked tests' => sub {
+
+    plan tests => 3;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'ReservesControlBranch', 'PatronLibrary' );
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries', value => { pickup_location => 1 } } );
+    my $patron  = $builder->build_object( { class => 'Koha::Patrons',   value => { branchcode => $library->id } } );
+    my $biblio  = $builder->build_sample_biblio();
+    my $item_1  = $builder->build_sample_item( { biblionumber => $biblio->id } );
+    my $item_2  = $builder->build_sample_item( { biblionumber => $biblio->id } );
+
+    Koha::CirculationRules->delete;
+    Koha::CirculationRules->set_rules(
+        {
+            branchcode   => undef,
+            categorycode => undef,
+            itemtype     => undef,
+            rules        => { reservesallowed => 1, holds_per_record => 100 }
+        }
+    );
+
+    # Patron has 1 item-level hold on item_1 — at the reservesallowed limit
+    AddReserve(
+        {
+            branchcode => $library->id, borrowernumber => $patron->id, biblionumber => $biblio->id,
+            itemnumber => $item_1->id
+        }
+    );
+
+    my $res = CanItemBeReserved( $patron, $item_2, $library->id );
+    is( $res->{status}, 'tooManyReserves', 'without hold_group_count_checked: tooManyReserves at limit of 1' );
+
+    $res = CanItemBeReserved( $patron, $item_2, $library->id, { hold_group_count_checked => 1 } );
+    is( $res->{status}, 'OK', 'hold_group_count_checked => 1: numeric limit skipped, hold allowed' );
+
+    # Per-item constraint (itemAlreadyOnHold) is still enforced with hold_group_count_checked
+    $res = CanItemBeReserved( $patron, $item_1, $library->id, { hold_group_count_checked => 1 } );
+    is( $res->{status}, 'itemAlreadyOnHold', 'hold_group_count_checked does not bypass itemAlreadyOnHold' );
 
     $schema->storage->txn_rollback;
 };
