@@ -160,10 +160,20 @@ $template->param( branch => $branch );
 #
 #
 if ( $op eq 'cud-place_reserve' ) {
-    my $add_to_hold_group = $query->param('add_to_hold_group');
-    my $reserve_cnt       = 0;
+    my $add_to_hold_group  = $query->param('add_to_hold_group');
+    my $holds_count_policy = $add_to_hold_group
+        ? Koha::CirculationRules->get_effective_rule(
+        {
+            branchcode => $branch,
+            rule_name  => 'hold_groups_count_policy',
+        }
+        )
+        : undef;
+    my $skip_count_for_group = $holds_count_policy && $holds_count_policy->rule_value eq 'count_as_group';
+    my $group_count_checked  = 0;
+    my $reserve_cnt          = 0;
     if ($maxreserves) {
-        $reserve_cnt = $patron->holds->count_holds;
+        $reserve_cnt = $patron->holds->count_for_group_policy($holds_count_policy);
     }
 
     # List is composed of alternating biblio/item/branch
@@ -246,10 +256,15 @@ if ( $op eq 'cud-place_reserve' ) {
         my $itemtype = $query->param('itemtype') || undef;
         $itemtype = undef if $itemNum;
 
-        my $biblio = Koha::Biblios->find($biblioNum);
-        my $rank   = $biblio->holds->search( { found => [ { "!=" => "W" }, undef ] } )->count + 1;
+        my $biblio                   = Koha::Biblios->find($biblioNum);
+        my $rank                     = $biblio->holds->search( { found => [ { "!=" => "W" }, undef ] } )->count + 1;
+        my $is_subsequent_group_hold = $skip_count_for_group && $group_count_checked;
         if ($item) {
-            my $status = CanItemBeReserved( $patron, $item, $branch, { get_from_cache => 1 } )->{status};
+            my $item_check_params =
+                $is_subsequent_group_hold
+                ? { hold_group_count_checked => 1 }
+                : { get_from_cache           => 1 };
+            my $status = CanItemBeReserved( $patron, $item, $branch, $item_check_params )->{status};
             if ( $status eq 'OK' ) {
                 $canreserve = 1;
             } else {
@@ -257,7 +272,9 @@ if ( $op eq 'cud-place_reserve' ) {
             }
 
         } else {
-            my $status = CanBookBeReserved( $borrowernumber, $biblioNum, $branch, { itemtype => $itemtype } )->{status};
+            my $book_check_params = { itemtype => $itemtype };
+            $book_check_params->{hold_group_count_checked} = 1 if $is_subsequent_group_hold;
+            my $status = CanBookBeReserved( $borrowernumber, $biblioNum, $branch, $book_check_params )->{status};
             if ( $status eq 'OK' ) {
                 $canreserve = 1;
             } else {
@@ -271,6 +288,7 @@ if ( $op eq 'cud-place_reserve' ) {
         my $item_group_id = $query->param("item_group_id_$biblioNum") || undef;
 
         if (   $maxreserves
+            && !$is_subsequent_group_hold
             && $reserve_cnt >= $maxreserves )
         {
             push @failed_holds, 'tooManyReserves';
@@ -309,7 +327,8 @@ if ( $op eq 'cud-place_reserve' ) {
                 }
             );
             if ($reserve_id) {
-                ++$reserve_cnt;
+                ++$reserve_cnt unless $is_subsequent_group_hold;
+                $group_count_checked = 1;
                 push @successful_hold_ids, $reserve_id;
             } else {
                 push @failed_holds, 'not_placed';
