@@ -413,15 +413,19 @@ sub CanBookBeReserved {
 
         $reservesallowed = ( $reservesallowed eq '' ) ? undef : $reservesallowed;
 
-        my $count = $patron->holds->count_holds(
+        my $count_policy = Koha::CirculationRules->get_effective_rule(
             {
-                '-or' => [
-                    { 'me.itemtype' => $params->{itemtype} },
-                    { 'item.itype'  => $params->{itemtype} }
-                ]
-            },
-            { join => ['item'] }
+                branchcode => $pickup_branchcode,
+                rule_name  => 'hold_groups_count_policy',
+            }
         );
+        my $hold_search_params = {
+            '-or' => [
+                { 'me.itemtype' => $params->{itemtype} },
+                { 'item.itype'  => $params->{itemtype} }
+            ]
+        };
+        my $count = $patron->holds->count_for_group_policy( $count_policy, $hold_search_params, { join => ['item'] } );
 
         return { status => '' }
             if defined $reservesallowed and $reservesallowed < $count + 1;
