@@ -243,7 +243,13 @@ if ( $borrowernumber_hold && !$op ) {
     # we check the reserves of the user, and if they can reserve a document
     # FIXME At this time we have a simple count of reservs, but, later, we could improve the infos "title" ...
 
-    my $reserves_count = $patron->holds->count_holds;
+    my $holds_count_policy = Koha::CirculationRules->get_effective_rule(
+        {
+            branchcode => C4::Context->userenv ? C4::Context->userenv->{'branch'} : undef,
+            rule_name  => 'hold_groups_count_policy',
+        }
+    );
+    my $reserves_count = $patron->holds->count_for_group_policy($holds_count_policy);
 
     my $new_reserves_count = scalar(@biblionumbers);
 
