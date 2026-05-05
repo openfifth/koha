@@ -20,7 +20,19 @@ export default {
         const patron_to_html = $patron_to_html;
 
         const overduesStore = inject("overduesStore");
-        const { settings } = storeToRefs(overduesStore);
+        const { authorisedValues, settings } = storeToRefs(overduesStore);
+
+        const additionalFilters = [
+            {
+                name: "location",
+                type: "select",
+                label: $__("Shelving location"),
+                value: "",
+                options: authorisedValues.value.location,
+                requiredKey: "value",
+                selectLabel: "description",
+            },
+        ];
 
         const defaultToolbarButtons = () => {
             return {
@@ -39,6 +51,8 @@ export default {
             },
             apiClient: APIClient.circulation.checkouts,
             table: {
+                addAdditionalFilters: true,
+                additionalFilters,
                 resourceTableUrl:
                     APIClient.circulation.httpClient._baseURL + "checkouts",
             },
@@ -159,7 +173,12 @@ export default {
             ],
         });
 
-        const tableUrl = () => {
+        const defaults = baseResource.getFilterValues(
+            baseResource.route.query,
+            additionalFilters
+        );
+
+        const tableUrl = (filters = {}) => {
             const url = baseResource.getResourceTableUrl();
             const query = {
                 "me.library_id": settings.value.library_id,
@@ -168,8 +187,8 @@ export default {
                 "account_lines.debit_type": "OVERDUE",
                 "account_lines.status": "UNRETURNED",
             };
-            if (baseResource.route.query.location) {
-                query["item.location"] = baseResource.route.query.location;
+            if (filters.location) {
+                query["item.location"] = filters.location;
             }
             return url + `?q=${JSON.stringify(query)}`;
         };
@@ -177,15 +196,26 @@ export default {
         const tableOptions = {
             options: {
                 embed: "patron,item.biblio,item.home_library,library,account_lines",
+                pagingType: "full",
             },
-            url: tableUrl(),
+            url: () => tableUrl(defaults),
             table_settings: branch_table_settings,
+        };
+
+        const filterTable = async (filters, table) => {
+            let { href } = baseResource.router.resolve({
+                name: "BranchOverduesList",
+            });
+            let new_route = baseResource.build_url(href, filters);
+            window.history.pushState({}, "", new_route);
+            table.redraw(tableUrl(filters));
         };
 
         return {
             ...baseResource,
             tableOptions,
             tableUrl,
+            filterTable,
         };
     },
     name: "BranchOverduesResource",

@@ -57,4 +57,10 @@ export default {
 .filters > input[type="button"] {
     margin-left: 1rem;
 }
+:deep(.v-select) {
+    display: inline-block;
+    background-color: white;
+    width: 30%;
+    margin-left: 1rem;
+}
 </style>
