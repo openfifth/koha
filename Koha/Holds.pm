@@ -229,6 +229,25 @@ sub count_holds {
     return $holds_without_group_count + $hold_groups_count;
 }
 
+=head3 count_for_group_policy
+
+    $holds->count_for_group_policy( $policy );
+    $holds->count_for_group_policy( $policy, $search_params, $search_attrs );
+
+Count holds according to the given hold_groups_count_policy rule object.
+When the policy is count_as_group, delegates to count_holds();
+otherwise counts every hold row individually.
+
+=cut
+
+sub count_for_group_policy {
+    my ( $self, $policy, $search_params, $search_attrs ) = @_;
+    return
+          ( $policy && $policy->rule_value eq 'count_as_group' ) ? $self->count_holds( $search_params, $search_attrs )
+        : $search_params ? $self->search( $search_params, $search_attrs )->count()
+        :                  $self->count();
+}
+
 =head2 Internal methods
 
 =head3 _type
