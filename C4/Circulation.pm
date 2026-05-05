@@ -82,6 +82,7 @@ use Try::Tiny;
 use JSON;
 
 use C4::Context;
+use Koha::Policy::Circulation;
 use C4::Reserves
     qw( CheckReserves CanItemBeReserved MoveReserve ModReserve ModReserveMinusPriority IsAvailableForItemLevelRequest );
 use C4::Biblio qw( UpdateTotalIssues );
@@ -436,7 +437,7 @@ sub TooMany {
     my $cat_borrower           = $patron->categorycode;
 
     # Get which branchcode we need
-    my $branch = _GetCircControlBranch( $item, $patron );
+    my $branch = Koha::Policy::Circulation->circ_control_library( $item, $patron );
     my $type   = $item->effective_itemtype;
 
     my ( $type_object, $parent_type, $parent_maxissueqty_rule );
@@ -860,7 +861,7 @@ sub CanBookBeIssued {
     my $dbh                = C4::Context->dbh;
     my $patron_unblessed   = $patron->unblessed;
 
-    my $circ_library = Koha::Libraries->find( _GetCircControlBranch( $item_object, $patron ) );
+    my $circ_library = Koha::Libraries->find( Koha::Policy::Circulation->circ_control_library( $item_object, $patron ) );
 
     my $now = dt_from_string();
 
@@ -1481,7 +1482,7 @@ Missing POD for checkHighHolds.
 
 sub checkHighHolds {
     my ( $item, $patron ) = @_;
-    my $branchcode = _GetCircControlBranch( $item, $patron );
+    my $branchcode = Koha::Policy::Circulation->circ_control_library( $item, $patron );
 
     my $return_data = {
         exceeded    => 0,
@@ -1671,7 +1672,7 @@ sub AddIssue {
             or return;    # if we don't get an Item, abort.
         my $item_unblessed = $item_object->unblessed;
 
-        my $branchcode = _GetCircControlBranch( $item_object, $patron );
+        my $branchcode = Koha::Policy::Circulation->circ_control_library( $item_object, $patron );
 
         # get actual issuing if there is one
         my $actualissue = $item_object->checkout;
@@ -3042,7 +3043,7 @@ within the grace period).
 sub _calculate_new_debar_dt {
     my ( $patron, $item, $dt_due, $return_date ) = @_;
 
-    my $branchcode   = _GetCircControlBranch( $item, $patron );
+    my $branchcode   = Koha::Policy::Circulation->circ_control_library( $item, $patron );
     my $circcontrol  = C4::Context->preference('CircControl');
     my $issuing_rule = Koha::CirculationRules->get_effective_rules(
         {
@@ -3342,7 +3343,7 @@ sub CanBookBeRenewed {
     my $final_unseen_renewal = 0;
 
     # override_limit will override anything else except on_reserve
-    my $branchcode = _GetCircControlBranch( $item, $patron );
+    my $branchcode = Koha::Policy::Circulation->circ_control_library( $item, $patron );
     unless ($override_limit) {
 
         ( $auto_renew, $soonest ) = _CanBookBeAutoRenewed(
@@ -3611,7 +3612,7 @@ sub AddRenewal {
     my $patron           = Koha::Patrons->find($borrowernumber) or return;    # FIXME Should do more than just return
     my $patron_unblessed = $patron->unblessed;
 
-    my $circ_library = Koha::Libraries->find( _GetCircControlBranch( $item_object, $patron ) );
+    my $circ_library = Koha::Libraries->find( Koha::Policy::Circulation->circ_control_library( $item_object, $patron ) );
 
     my $schema = Koha::Database->schema;
     $schema->txn_do(
@@ -3856,7 +3857,7 @@ sub GetRenewCount {
     $unseencount = $data->{'unseen_renewals'} if $data->{'unseen_renewals'};
 
     # $item and $borrower should be calculated
-    my $branchcode = _GetCircControlBranch( $item, $patron );
+    my $branchcode = Koha::Policy::Circulation->circ_control_library( $item, $patron );
 
     my $rules = Koha::CirculationRules->get_effective_rules(
         {
@@ -3917,7 +3918,7 @@ sub GetSoonestRenewDate {
 
     my $dbh = C4::Context->dbh;
 
-    my $branchcode   = _GetCircControlBranch( $item, $patron );
+    my $branchcode   = Koha::Policy::Circulation->circ_control_library( $item, $patron );
     my $issuing_rule = Koha::CirculationRules->get_effective_rules(
         {
             categorycode => $patron->categorycode,
@@ -3985,7 +3986,7 @@ sub GetLatestAutoRenewDate {
     return unless $item;
 
     my $dbh        = C4::Context->dbh;
-    my $branchcode = _GetCircControlBranch( $item, $patron );
+    my $branchcode = Koha::Policy::Circulation->circ_control_library( $item, $patron );
 
     my $circulation_rules = Koha::CirculationRules->get_effective_rules(
         {
