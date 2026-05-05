@@ -398,7 +398,7 @@ sub CanBookBeReserved {
         return { status => 'alreadypossession' };
     }
 
-    if ( $params->{itemtype} ) {
+    if ( $params->{itemtype} && !$params->{hold_group_count_checked} ) {
 
         # biblio-level, item type-contrained
         my $patron          = Koha::Patrons->find($borrowernumber);
@@ -465,6 +465,8 @@ sub CanBookBeReserved {
   current params are:
   'ignore_hold_counts' - we use this routine to check if an item can fill a hold - on this case we
   should not check if there are too many holds as we only care about reservability
+  'hold_group_count_checked' - this hold is part of a group and the count limits were already checked
+  for the first hold in the group; skip numeric limit checks but still enforce per-item constraints
 
 @RETURNS { status => OK },              if the Item can be reserved.
          { status => ageRestricted },   if the Item is age restricted for this borrower.
@@ -611,7 +613,7 @@ sub CanItemBeReserved {
         if ( $holds_per_record == 0 ) {
             return _cache { status => "noReservesAllowed" };
         }
-        if ( !$params->{ignore_hold_counts} ) {
+        if ( !$skip_hold_count ) {
             my $search_params = {
                 borrowernumber => $patron->borrowernumber,
                 biblionumber   => $item->biblionumber,
@@ -622,7 +624,7 @@ sub CanItemBeReserved {
         }
     }
 
-    if ( !$params->{ignore_hold_counts} && defined $holds_per_day && $holds_per_day ne '' ) {
+    if ( !$skip_hold_count && defined $holds_per_day && $holds_per_day ne '' ) {
         my $date_search_params = {
             borrowernumber => $patron->borrowernumber,
             reservedate    => dt_from_string->date
@@ -637,7 +639,7 @@ sub CanItemBeReserved {
         if ( $allowedreserves == 0 ) {
             return _cache { status => 'noReservesAllowed' };
         }
-        if ( !$params->{ignore_hold_counts} ) {
+        if ( !$skip_hold_count ) {
 
             # Build the base FROM/WHERE fragment shared by both counting strategies
             my $base_query = q{
@@ -702,7 +704,7 @@ sub CanItemBeReserved {
             rule_name    => 'max_holds',
         }
     );
-    if ( !$params->{ignore_hold_counts} && $rule && defined( $rule->rule_value ) && $rule->rule_value ne '' ) {
+    if ( !$skip_hold_count && $rule && defined( $rule->rule_value ) && $rule->rule_value ne '' ) {
         my $total_holds_count =
             Koha::Holds->count_for_group_policy( $count_policy, { borrowernumber => $patron->borrowernumber } );
 
