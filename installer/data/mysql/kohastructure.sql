@@ -4711,6 +4711,120 @@ CREATE TABLE `acq_ledgers` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `acq_invoices`
+--
+
+DROP TABLE IF EXISTS `acq_invoices`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `acq_invoices` (
+  `invoice_id` INT(11) NOT NULL AUTO_INCREMENT,
+  `vendor_invoice_number` LONGTEXT NOT NULL COMMENT 'vendor-issued invoice number',
+  `vendor_id` INT(11) NOT NULL COMMENT 'link to the vendor',
+  `received_date` DATE DEFAULT NULL COMMENT 'date the invoice was received',
+  `billed_date` DATE DEFAULT NULL COMMENT 'date the invoice was billed',
+  `created_date` TIMESTAMP NOT NULL DEFAULT current_timestamp() COMMENT 'creation date of the invoice',
+  `modified_date` TIMESTAMP NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'last update of the invoice',
+  `closed_date` TIMESTAMP NULL DEFAULT NULL COMMENT 'date the invoice was closed',
+  `status` TINYINT(1) NOT NULL COMMENT 'status of the invoice',
+  `approved` TINYINT(1) DEFAULT NULL COMMENT 'has the invoice been approved',
+  `approved_by` INT(11) DEFAULT NULL COMMENT 'borrower who approved the invoice',
+  `currency` VARCHAR(10) DEFAULT NULL COMMENT 'currency of the invoice',
+  `invoice_total_amount` DECIMAL(28,6) DEFAULT NULL COMMENT 'total amount of the invoice',
+  `payment_due` DATE DEFAULT NULL COMMENT 'date payment is due',
+  `external_financial_system` TINYINT(1) DEFAULT NULL COMMENT 'is this managed by an external financial system',
+  `external_invoice_number` MEDIUMTEXT DEFAULT NULL COMMENT 'invoice number in the external financial system',
+  `external_accounting_id` MEDIUMTEXT DEFAULT NULL COMMENT 'accounting id in the external financial system',
+  `exported_date` TIMESTAMP NULL DEFAULT NULL COMMENT 'date the invoice was exported to an external system',
+  `edifact_message_id` INT(11) DEFAULT NULL COMMENT 'link to the edifact message',
+  PRIMARY KEY (`invoice_id`),
+  FOREIGN KEY (`vendor_id`) REFERENCES `aqbooksellers` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (`approved_by`) REFERENCES `borrowers` (`borrowernumber`),
+  FOREIGN KEY (`edifact_message_id`) REFERENCES `edifact_messages` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `acq_invoicelines`
+--
+
+DROP TABLE IF EXISTS `acq_invoicelines`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `acq_invoicelines` (
+  `invoiceline_id` INT(11) NOT NULL AUTO_INCREMENT,
+  `invoice_id` INT(11) NOT NULL COMMENT 'invoice the line belongs to',
+  `quantity_invoiced` SMALLINT(6) NOT NULL COMMENT 'quantity invoiced on this line',
+  `type` ENUM('orderline','adjustment') NOT NULL COMMENT 'type of invoice line',
+  `adjustment_reason` VARCHAR(80) DEFAULT NULL COMMENT 'reason for adjustment',
+  `adjustment_note` MEDIUMTEXT DEFAULT NULL COMMENT 'note for adjustment',
+  `invoice_unitprice_oc` DECIMAL(28,6) NOT NULL COMMENT 'unit price in the order currency',
+  `invoice_currency_oc` VARCHAR(10) NOT NULL COMMENT 'order currency code',
+  `created_date` TIMESTAMP NOT NULL DEFAULT current_timestamp() COMMENT 'creation date of the invoice line',
+  `modified_date` TIMESTAMP NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'last update of the invoice line',
+  PRIMARY KEY (`invoiceline_id`),
+  FOREIGN KEY (`invoice_id`) REFERENCES `acq_invoices` (`invoice_id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `acq_invoiceline_fund_distributions`
+--
+
+DROP TABLE IF EXISTS `acq_invoiceline_fund_distributions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `acq_invoiceline_fund_distributions` (
+  `invoiceline_fund_distribution_id` INT(11) NOT NULL AUTO_INCREMENT,
+  `invoiceline_id` INT(11) NOT NULL COMMENT 'invoice line the distribution was made against',
+  `fund_id` INT(11) NOT NULL COMMENT 'fund the distribution was made against',
+  `percentage` DECIMAL(5,2) DEFAULT NULL COMMENT 'distribution percentage',
+  `distributed_amount_oc` DECIMAL(28,6) NOT NULL COMMENT 'distribution amount in the order currency',
+  `exchange_rate` DECIMAL(20,10) NOT NULL COMMENT 'exchange rate for the distribution',
+  `distributed_amount` DECIMAL(28,6) NOT NULL COMMENT 'distribution amount in the active currency',
+  `distributed_amount_tax_excluded` DECIMAL(28,6) NOT NULL COMMENT 'distributed amount excluding tax',
+  `distributed_amount_tax_included` DECIMAL(28,6) NOT NULL COMMENT 'distributed amount including tax',
+  `tax_rate` DECIMAL(6,4) NOT NULL COMMENT 'tax rate applied',
+  `tax_value` DECIMAL(28,6) NOT NULL COMMENT 'tax value',
+  `distribution_reason` VARCHAR(80) DEFAULT NULL COMMENT 'reason for distribution',
+  `distribution_note` MEDIUMTEXT DEFAULT NULL COMMENT 'note for distribution',
+  `created_date` TIMESTAMP NOT NULL DEFAULT current_timestamp() COMMENT 'creation date of the distribution',
+  `modified_date` TIMESTAMP NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'last update of the distribution',
+  PRIMARY KEY (`invoiceline_fund_distribution_id`),
+  FOREIGN KEY (`invoiceline_id`) REFERENCES `acq_invoicelines` (`invoiceline_id`) ON DELETE CASCADE,
+  FOREIGN KEY (`fund_id`) REFERENCES `acq_funds` (`fund_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `acq_accessions`
+--
+
+DROP TABLE IF EXISTS `acq_accessions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `acq_accessions` (
+  `accession_id` INT(11) NOT NULL AUTO_INCREMENT,
+  `orderline_id` INT(11) DEFAULT NULL COMMENT 'order line the accession was made against',
+  `invoiceline_id` INT(11) DEFAULT NULL COMMENT 'invoice line the accession was made against',
+  `received_biblionumber` INT(11) DEFAULT NULL COMMENT 'bibliographic record received',
+  `received_date` DATE DEFAULT NULL COMMENT 'date item was received',
+  `quantity_received` SMALLINT(6) DEFAULT NULL COMMENT 'quantity received',
+  `type` ENUM('INVOICE_AND_RECEIVE','INVOICE_ONLY','RECEIVE_ONLY','CANCELLATION') NOT NULL COMMENT 'type of accession event',
+  `accession_description` LONGTEXT DEFAULT NULL COMMENT 'description of the accession',
+  `cancellation_date` DATE DEFAULT NULL COMMENT 'date of cancellation',
+  `cancellation_reason` MEDIUMTEXT DEFAULT NULL COMMENT 'reason for cancellation',
+  `quantity_cancelled` SMALLINT(6) DEFAULT NULL COMMENT 'quantity cancelled',
+  `created_date` TIMESTAMP NOT NULL DEFAULT current_timestamp() COMMENT 'creation date of the accession',
+  `modified_date` TIMESTAMP NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'last update of the accession',
+  PRIMARY KEY (`accession_id`),
+  FOREIGN KEY (`orderline_id`) REFERENCES `acq_orderlines` (`orderline_id`) ON DELETE CASCADE,
+  FOREIGN KEY (`invoiceline_id`) REFERENCES `acq_invoicelines` (`invoiceline_id`) ON DELETE CASCADE,
+  FOREIGN KEY (`received_biblionumber`) REFERENCES `biblio` (`biblionumber`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `letter`
 --
 
