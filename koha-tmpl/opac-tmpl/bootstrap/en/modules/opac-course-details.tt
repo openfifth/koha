@@ -140,6 +140,11 @@
     [% INCLUDE 'datatables.inc' %]
     <script>
         $(document).ready(function() {
+            [% IF ( Koha.Preference('OPACTableColExpandedByDefault') ) %]
+                var responsive_display = DataTable.Responsive.display.childRowImmediate;
+            [% ELSE %]
+                var responsive_display = DataTable.Responsive.display.childRow;
+            [% END %]
             table_settings = [% TablesSettings.GetTableSettings( 'opac', 'course_items', 'course-items-table', 'json' ) | $raw %];
             $("#course-items-table").kohaTable(
                 {
@@ -149,11 +154,6 @@
                         search: "_INPUT_",
                         searchPlaceholder: _("Search course reserves"),
                     },
-            [% IF ( Koha.Preference('OPACTableColExpandedByDefault') ) %]
-                var responsive_display = DataTable.Responsive.display.childRowImmediate;
-            [% ELSE %]
-                var responsive_display = DataTable.Responsive.display.childRow;
-            [% END %]
                     responsive: {
                         details: {
                             display: responsive_display,

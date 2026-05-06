@@ -85,6 +85,11 @@
     [% INCLUDE 'datatables.inc' %]
     <script>
         $(document).ready(function() {
+            [% IF ( Koha.Preference('OPACTableColExpandedByDefault') ) %]
+                var responsive_display = DataTable.Responsive.display.childRowImmediate;
+            [% ELSE %]
+                var responsive_display = DataTable.Responsive.display.childRow;
+            [% END %]
             table_settings = [% TablesSettings.GetTableSettings( 'opac', 'course_list', 'course_reserves_table', 'json' ) | $raw %]
             $("#course_reserves_table").kohaTable(
                 {
@@ -95,11 +100,6 @@
                         search: "<span class='visually-hidden'>" + _("Search courses") + "</span> _INPUT_",
                         searchPlaceholder: _("Search courses"),
                     },
-            [% IF ( Koha.Preference('OPACTableColExpandedByDefault') ) %]
-                var responsive_display = DataTable.Responsive.display.childRowImmediate;
-            [% ELSE %]
-                var responsive_display = DataTable.Responsive.display.childRow;
-            [% END %]
                     responsive: {
                         details: {
                             display: responsive_display,

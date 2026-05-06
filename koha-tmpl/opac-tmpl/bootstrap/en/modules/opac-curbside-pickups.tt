@@ -332,15 +332,15 @@
         });
 
         $(document).ready(function() {
-            $("#pickups-table").kohaTable({
-                searching: false,
-                paging: false,
-                info: false,
             [% IF ( Koha.Preference('OPACTableColExpandedByDefault') ) %]
                 var responsive_display = DataTable.Responsive.display.childRowImmediate;
             [% ELSE %]
                 var responsive_display = DataTable.Responsive.display.childRow;
             [% END %]
+            $("#pickups-table").kohaTable({
+                searching: false,
+                paging: false,
+                info: false,
                 responsive: {
                     details: {
                         display: responsive_display,

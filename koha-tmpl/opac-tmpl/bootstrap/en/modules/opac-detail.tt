@@ -1947,15 +1947,15 @@
                 column.cannot_be_toggled = 1;
             [% END %]
 
-            $("#holdingst").kohaTable(
-                {
-                    dom: '<"clearfix">t',
-                    bKohaColumnsUseNames: true,
             [% IF ( Koha.Preference('OPACTableColExpandedByDefault') ) %]
                 var responsive_display = DataTable.Responsive.display.childRowImmediate;
             [% ELSE %]
                 var responsive_display = DataTable.Responsive.display.childRow;
             [% END %]
+            $("#holdingst").kohaTable(
+                {
+                    dom: '<"clearfix">t',
+                    bKohaColumnsUseNames: true,
                     responsive: {
                         details: {
                             display: responsive_display,

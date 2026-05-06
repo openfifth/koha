@@ -1178,6 +1178,11 @@
                 );
             });
 
+            [% IF ( Koha.Preference('OPACTableColExpandedByDefault') ) %]
+                var responsive_display = DataTable.Responsive.display.childRowImmediate;
+            [% ELSE %]
+                var responsive_display = DataTable.Responsive.display.childRow;
+            [% END %]
             var dTables = $("#checkoutst,#holdst,#overduest,#opac-user-relative-issues-table");
             dTables.each(function(){
                 var thIndex = $(this).find("th.psort").index();
@@ -1195,11 +1200,6 @@
                         search: "_INPUT_",
                         searchPlaceholder: _("Search")
                     },
-            [% IF ( Koha.Preference('OPACTableColExpandedByDefault') ) %]
-                var responsive_display = DataTable.Responsive.display.childRowImmediate;
-            [% ELSE %]
-                var responsive_display = DataTable.Responsive.display.childRow;
-            [% END %]
                     responsive: {
                         details: {
                             display: responsive_display,

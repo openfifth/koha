@@ -235,6 +235,11 @@
                 $('#sortform').submit();
             });
 
+            [% IF ( Koha.Preference('OPACTableColExpandedByDefault') ) %]
+                var responsive_display = DataTable.Responsive.display.childRowImmediate;
+            [% ELSE %]
+                var responsive_display = DataTable.Responsive.display.childRow;
+            [% END %]
             var table = $("#readingrec").kohaTable(
                 {
                     dom: '<"top"<"table_entries"i><"table_controls"fB>>t',
@@ -242,11 +247,6 @@
                         search: "_INPUT_",
                         searchPlaceholder: _("Search"),
                     },
-            [% IF ( Koha.Preference('OPACTableColExpandedByDefault') ) %]
-                var responsive_display = DataTable.Responsive.display.childRowImmediate;
-            [% ELSE %]
-                var responsive_display = DataTable.Responsive.display.childRow;
-            [% END %]
                     responsive: {
                         details: {
                             display: responsive_display,

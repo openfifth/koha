@@ -142,12 +142,12 @@
             $(".cancel_recall").click(function () {
                 return confirmDelete(_("Are you sure you want to remove this recall?"));
             });
-            $("#recalls-table").kohaTable({
             [% IF ( Koha.Preference('OPACTableColExpandedByDefault') ) %]
                 var responsive_display = DataTable.Responsive.display.childRowImmediate;
             [% ELSE %]
                 var responsive_display = DataTable.Responsive.display.childRow;
             [% END %]
+            $("#recalls-table").kohaTable({
                 responsive: {
                     details: {
                         display: responsive_display,

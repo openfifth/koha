@@ -96,17 +96,17 @@
         return false;
     }
 
+        [% IF ( Koha.Preference('OPACTableColExpandedByDefault') ) %]
+            var responsive_display = DataTable.Responsive.display.childRowImmediate;
+        [% ELSE %]
+            var responsive_display = DataTable.Responsive.display.childRow;
+        [% END %]
         var Tables = $("#clubs-table-enrolled,#clubs-table-unenrolled");
         Tables.each(function(){
             $(this).kohaTable({
                 searching: false,
                 paging: false,
                 info: false,
-            [% IF ( Koha.Preference('OPACTableColExpandedByDefault') ) %]
-                var responsive_display = DataTable.Responsive.display.childRowImmediate;
-            [% ELSE %]
-                var responsive_display = DataTable.Responsive.display.childRow;
-            [% END %]
                 responsive: {
                     details: {
                         display: responsive_display,
