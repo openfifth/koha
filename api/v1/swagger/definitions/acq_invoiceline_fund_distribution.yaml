@@ -1,0 +1,83 @@
+---
+type: object
+properties:
+  invoiceline_fund_distribution_id:
+    type: number
+    description: Unique identifier for the invoice line fund distribution
+    readOnly: true
+  invoiceline_id:
+    type:
+      - number
+      - "null"
+    description: Foreign key referencing the acq_invoicelines table
+  fund_id:
+    type:
+      - number
+      - "null"
+    description: Foreign key referencing the acq_funds table
+  percentage:
+    type:
+      - number
+      - "null"
+    description: Distribution percentage
+  distributed_amount_oc:
+    type:
+      - number
+      - "null"
+    description: Distribution amount in the order currency
+  exchange_rate:
+    type:
+      - number
+      - "null"
+    description: Exchange rate for the distribution
+  distributed_amount:
+    type:
+      - number
+      - "null"
+    description: Distribution amount in the active currency
+  distributed_amount_tax_excluded:
+    type:
+      - number
+      - "null"
+    description: Distributed amount excluding tax
+  distributed_amount_tax_included:
+    type:
+      - number
+      - "null"
+    description: Distributed amount including tax
+  tax_rate:
+    type:
+      - number
+      - "null"
+    description: Tax rate applied
+  tax_value:
+    type:
+      - number
+      - "null"
+    description: Tax value
+  distribution_reason:
+    type:
+      - string
+      - "null"
+    description: Reason for distribution
+  distribution_note:
+    type:
+      - string
+      - "null"
+    description: Note for distribution
+  created_date:
+    type: string
+    format: date-time
+    readOnly: true
+    description: Date the distribution was created
+  modified_date:
+    type: string
+    format: date-time
+    readOnly: true
+    description: Date the distribution was last updated
+  fund:
+    description: Fund the distribution was made against
+    type:
+      - object
+      - "null"
+additionalProperties: false

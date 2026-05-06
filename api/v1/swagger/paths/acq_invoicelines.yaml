@@ -1,0 +1,258 @@
+---
+/acquisitions/invoicelines:
+  get:
+    x-mojo-to: Acquisitions::Invoicing::Invoicelines#list
+    operationId: listInvoicelines
+    description: Retrieves the invoice lines for the acquisition module
+    tags:
+      - listInvoicelines
+    produces:
+      - application/json
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/match"
+      - $ref: "../swagger.yaml#/parameters/order_by"
+      - $ref: "../swagger.yaml#/parameters/page"
+      - $ref: "../swagger.yaml#/parameters/per_page"
+      - $ref: "../swagger.yaml#/parameters/q_param"
+      - $ref: "../swagger.yaml#/parameters/q_body"
+      - name: x-koha-embed
+        in: header
+        required: false
+        description: Embed list sent as a request header
+        type: array
+        items:
+          type: string
+          enum:
+            - invoice
+            - fund_distributions
+            - accessions
+        collectionFormat: csv
+    responses:
+      '200':
+        description: Invoice line data
+        schema:
+          items:
+            $ref: "../swagger.yaml#/definitions/acq_invoiceline"
+          type: array
+      "400":
+        description: |
+          Bad request. Possible `error_code` attribute values:
+
+            * `invalid_query`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: budget_manage_all
+  post:
+    x-mojo-to: Acquisitions::Invoicing::Invoicelines#add
+    operationId: addInvoiceline
+    tags:
+      - addInvoiceline
+    summary: Add invoice line
+    consumes:
+      - application/json
+    produces:
+      - application/json
+    parameters:
+      - description: A JSON object containing information about the new invoice line
+        in: body
+        name: body
+        required: true
+        schema:
+            $ref: "../swagger.yaml#/definitions/acq_invoiceline"
+    responses:
+      '201':
+        description: Invoice line
+        schema:
+          $ref: "../swagger.yaml#/definitions/acq_invoiceline"
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Resource not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "409":
+        description: Conflict in creating resource
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: budget_manage_all
+/acquisitions/invoicelines/{invoiceline_id}:
+  get:
+    x-mojo-to: Acquisitions::Invoicing::Invoicelines#get
+    operationId: getInvoiceline
+    tags:
+      - getInvoiceline
+    description: Get a single invoice line
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/invoiceline_id_pp"
+      - name: x-koha-embed
+        in: header
+        required: false
+        description: Embed list sent as a request header
+        type: array
+        items:
+          type: string
+          enum:
+            - invoice
+            - fund_distributions
+            - accessions
+        collectionFormat: csv
+    produces:
+      - application/json
+    responses:
+      '200':
+        description: Invoice line
+        schema:
+          $ref: "../swagger.yaml#/definitions/acq_invoiceline"
+      '400':
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      '401':
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      '403':
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      '404':
+        description: Resource not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      '500':
+        description: Internal server error
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: budget_manage_all
+  put:
+    x-mojo-to: Acquisitions::Invoicing::Invoicelines#update
+    operationId: updateInvoiceline
+    tags:
+      - updateInvoiceline
+    description: Update an invoice line
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/invoiceline_id_pp"
+      - name: body
+        in: body
+        description: Invoice line object to update
+        required: true
+        schema:
+          $ref: "../swagger.yaml#/definitions/acq_invoiceline"
+    produces:
+      - application/json
+    responses:
+      '200':
+        description: Invoice line
+        schema:
+          $ref: "../swagger.yaml#/definitions/acq_invoiceline"
+      '400':
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      '401':
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      '403':
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      '404':
+        description: Resource not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      '409':
+        description: Conflict
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      '500':
+        description: Internal server error
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: budget_manage_all
+  delete:
+    x-mojo-to: Acquisitions::Invoicing::Invoicelines#delete
+    operationId: deleteInvoiceline
+    tags:
+      - deleteInvoiceline
+    description: Delete an invoice line
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/invoiceline_id_pp"
+    produces:
+      - application/json
+    responses:
+      '204':
+        description: Invoice line deleted
+        schema:
+          type: string
+      '400':
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      '401':
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      '403':
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      '404':
+        description: Resource not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      '409':
+        description: Conflict
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      '500':
+        description: Internal server error
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: budget_manage_all

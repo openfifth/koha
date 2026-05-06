@@ -6,6 +6,8 @@ definitions:
     $ref: ./definitions/account_line.yaml
   additional_content:
     $ref: ./definitions/additional_content.yaml
+  acq_accession:
+    $ref: ./definitions/acq_accession.yaml
   acq_finances_config:
     $ref: ./definitions/acq_finances_config.yaml
   acq_edi_account:
@@ -22,6 +24,12 @@ definitions:
     $ref: ./definitions/acq_fund.yaml
   acq_allocation:
     $ref: ./definitions/acq_allocation.yaml
+  acq_invoice:
+    $ref: ./definitions/acq_invoice.yaml
+  acq_invoiceline:
+    $ref: ./definitions/acq_invoiceline.yaml
+  acq_invoiceline_fund_distribution:
+    $ref: ./definitions/acq_invoiceline_fund_distribution.yaml
   acq_ledger:
     $ref: ./definitions/acq_ledger.yaml
   acq_orderline:
@@ -227,6 +235,10 @@ definitions:
   vendors_config:
     $ref: ./definitions/vendors_config.yaml
 paths:
+  /acquisitions/accessions:
+    $ref: ./paths/acq_accessions.yaml#/~1acquisitions~1accessions
+  "/acquisitions/accessions/{accession_id}":
+    $ref: "./paths/acq_accessions.yaml#/~1acquisitions~1accessions~1{accession_id}"
   /acquisitions/baskets:
     $ref: ./paths/acquisitions_baskets.yaml#/~1acquisitions~1baskets
   /acquisitions/baskets/managers:
@@ -269,6 +281,18 @@ paths:
     $ref: ./paths/acq_allocations.yaml#/~1acquisitions~1allocations~1{allocation_id}
   /acquisitions/finances/users:
     $ref: ./paths/acq_users.yaml#/~1acquisitions~1finances~1users
+  /acquisitions/invoiceline_fund_distributions:
+    $ref: ./paths/acq_invoiceline_fund_distributions.yaml#/~1acquisitions~1invoiceline_fund_distributions
+  "/acquisitions/invoiceline_fund_distributions/{invoiceline_fund_distribution_id}":
+    $ref: "./paths/acq_invoiceline_fund_distributions.yaml#/~1acquisitions~1invoiceline_fund_distributions~1{invoiceline_fund_distribution_id}"
+  /acquisitions/invoicelines:
+    $ref: ./paths/acq_invoicelines.yaml#/~1acquisitions~1invoicelines
+  "/acquisitions/invoicelines/{invoiceline_id}":
+    $ref: "./paths/acq_invoicelines.yaml#/~1acquisitions~1invoicelines~1{invoiceline_id}"
+  /acquisitions/invoices:
+    $ref: ./paths/acq_invoices.yaml#/~1acquisitions~1invoices
+  "/acquisitions/invoices/{invoice_id}":
+    $ref: "./paths/acq_invoices.yaml#/~1acquisitions~1invoices~1{invoice_id}"
   /acquisitions/ledgers:
     $ref: ./paths/acq_ledgers.yaml#/~1acquisitions~1ledgers
   "/acquisitions/ledgers/{ledger_id}":
@@ -690,6 +714,12 @@ paths:
   "/transfer_limits/{limit_id}":
     $ref: "./paths/transfer_limits.yaml#/~1transfer_limits~1{limit_id}"
 parameters:
+  accession_id_pp:
+    description: Internal accession identifier
+    in: path
+    name: accession_id
+    required: true
+    type: integer
   advancededitormacro_id_pp:
     description: Advanced editor macro internal identifier
     in: path
@@ -925,6 +955,24 @@ parameters:
     description: Internal import record identifier
     in: path
     name: import_record_id
+    required: true
+    type: integer
+  invoice_id_pp:
+    description: Internal invoice identifier
+    in: path
+    name: invoice_id
+    required: true
+    type: integer
+  invoiceline_fund_distribution_id_pp:
+    description: Internal invoice line fund distribution identifier
+    in: path
+    name: invoiceline_fund_distribution_id
+    required: true
+    type: integer
+  invoiceline_id_pp:
+    description: Internal invoice line identifier
+    in: path
+    name: invoiceline_id
     required: true
     type: integer
   record_source_id_pp:

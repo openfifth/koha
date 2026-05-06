@@ -1,0 +1,74 @@
+---
+type: object
+properties:
+  invoiceline_id:
+    type: number
+    description: Unique identifier for the invoice line
+    readOnly: true
+  invoice_id:
+    type:
+      - number
+      - "null"
+    description: Foreign key referencing the acq_invoices table
+  quantity_invoiced:
+    type:
+      - number
+      - "null"
+    description: Quantity invoiced on this line
+  type:
+    type:
+      - string
+      - "null"
+    enum:
+      - orderline
+      - adjustment
+      - null
+    description: Type of invoice line
+  adjustment_reason:
+    type:
+      - string
+      - "null"
+    description: Reason for adjustment
+  adjustment_note:
+    type:
+      - string
+      - "null"
+    description: Note for adjustment
+  invoice_unitprice_oc:
+    type:
+      - number
+      - "null"
+    description: Unit price in the order currency
+  invoice_currency_oc:
+    type:
+      - string
+      - "null"
+    description: Order currency code
+  created_date:
+    type: string
+    format: date-time
+    readOnly: true
+    description: Date the invoice line was created
+  modified_date:
+    type: string
+    format: date-time
+    readOnly: true
+    description: Date the invoice line was last updated
+  invoice:
+    description: Invoice this line belongs to
+    type:
+      - object
+      - "null"
+  fund_distributions:
+    description: Fund distributions for the invoice line
+    type:
+      - array
+    items:
+      $ref: acq_invoiceline_fund_distribution.yaml
+  accessions:
+    description: Accessions for the invoice line
+    type:
+      - array
+    items:
+      $ref: acq_accession.yaml
+additionalProperties: false

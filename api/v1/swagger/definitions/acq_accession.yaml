@@ -1,0 +1,86 @@
+---
+type: object
+properties:
+  accession_id:
+    type: number
+    description: Unique identifier for the accession
+    readOnly: true
+  orderline_id:
+    type:
+      - number
+      - "null"
+    description: Foreign key referencing the acq_orderlines table
+  invoiceline_id:
+    type:
+      - number
+      - "null"
+    description: Foreign key referencing the acq_invoicelines table
+  received_biblionumber:
+    type:
+      - number
+      - "null"
+    description: Foreign key referencing the biblio table
+  received_date:
+    type:
+      - string
+      - "null"
+    format: date
+    description: Date the item was received
+  quantity_received:
+    type:
+      - number
+      - "null"
+    description: Quantity received
+  type:
+    type:
+      - string
+      - "null"
+    enum:
+      - INVOICE_AND_RECEIVE
+      - INVOICE_ONLY
+      - RECEIVE_ONLY
+      - CANCELLATION
+      - null
+    description: Type of accession event
+  accession_description:
+    type:
+      - string
+      - "null"
+    description: Description of the accession
+  cancellation_date:
+    type:
+      - string
+      - "null"
+    format: date
+    description: Date of cancellation
+  cancellation_reason:
+    type:
+      - string
+      - "null"
+    description: Reason for cancellation
+  quantity_cancelled:
+    type:
+      - number
+      - "null"
+    description: Quantity cancelled
+  created_date:
+    type: string
+    format: date-time
+    readOnly: true
+    description: Date the accession was created
+  modified_date:
+    type: string
+    format: date-time
+    readOnly: true
+    description: Date the accession was last updated
+  orderline:
+    description: Order line the accession was made against
+    type:
+      - object
+      - "null"
+  invoiceline:
+    description: Invoice line the accession was made against
+    type:
+      - object
+      - "null"
+additionalProperties: false
