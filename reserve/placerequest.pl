@@ -82,8 +82,17 @@ if ( $op eq 'cud-placerequest' && $patron ) {
         : undef;
     my $skip_count_for_group = $count_policy && $count_policy->rule_value eq 'count_as_group';
     my $group_count_checked  = 0;
+    my $maxreserves          = C4::Context->preference('maxreserves');
 
     foreach my $biblionumber ( keys %bibinfos ) {
+
+        if ( $maxreserves && !( $skip_count_for_group && $group_count_checked ) ) {
+            my $current_count = $patron->holds->count_for_group_policy($count_policy);
+            if ( $current_count >= $maxreserves ) {
+                $failed_holds{tooManyReserves} = 1;
+                next;
+            }
+        }
 
         my $can_override = C4::Context->preference('AllowHoldPolicyOverride');
         if (@checkitems) {

@@ -263,8 +263,6 @@ if ( $borrowernumber_hold && !$op ) {
               $maxreserves - $reserves_count > 0
             ? $maxreserves - $reserves_count
             : 0;
-        $warnings             = 1;
-        $exceeded_maxreserves = 1;
         $template->param(
             new_reserves_allowed => $new_reserves_allowed,
             new_reserves_count   => $new_reserves_count,
