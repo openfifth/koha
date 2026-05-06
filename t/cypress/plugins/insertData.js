@@ -388,7 +388,7 @@ const insertSampleCheckout = async ({ patron, baseUrl, authHeader }) => {
 const insertSamplePatron = async ({
     library,
     patron_category,
-    patronValues,
+    patronValues = {},
     baseUrl,
     authHeader,
 }) => {
