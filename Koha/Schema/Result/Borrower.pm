@@ -971,6 +971,21 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 acq_invoices
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::AcqInvoice>
+
+=cut
+
+__PACKAGE__->has_many(
+  "acq_invoices",
+  "Koha::Schema::Result::AcqInvoice",
+  { "foreign.approved_by" => "self.borrowernumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 acq_ledgers
 
 Type: has_many
@@ -2322,8 +2337,8 @@ Composing rels: L</user_permissions> -> permission
 __PACKAGE__->many_to_many("permissions", "user_permissions", "permission");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-03-25 15:23:13
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:JYOMjUeNGi7BgzGI0vXHZw
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-05-06 13:10:44
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:g4K9hpek6f4akOUoJA6AbA
 
 __PACKAGE__->belongs_to(
   "library",

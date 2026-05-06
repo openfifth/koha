@@ -205,6 +205,21 @@ __PACKAGE__->set_primary_key("biblionumber");
 
 =head1 RELATIONS
 
+=head2 acq_accessions
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::AcqAccession>
+
+=cut
+
+__PACKAGE__->has_many(
+  "acq_accessions",
+  "Koha::Schema::Result::AcqAccession",
+  { "foreign.received_biblionumber" => "self.biblionumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 acq_orderlines
 
 Type: has_many
@@ -656,8 +671,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-02-05 10:35:17
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:zOWHF3z+1OOmBWAwuxLUIQ
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-05-06 13:10:44
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:/QsX0x25vZ30nzXMgz/1Aw
 
 __PACKAGE__->has_many(
     "biblioitem",

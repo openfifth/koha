@@ -119,6 +119,21 @@ __PACKAGE__->set_primary_key("id");
 
 =head1 RELATIONS
 
+=head2 acq_invoices
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::AcqInvoice>
+
+=cut
+
+__PACKAGE__->has_many(
+  "acq_invoices",
+  "Koha::Schema::Result::AcqInvoice",
+  { "foreign.edifact_message_id" => "self.id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 aqinvoices
 
 Type: has_many
@@ -210,8 +225,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-02-21 15:22:01
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:eQY+yK0Wkf01y4X30dg2aA
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-05-06 13:10:44
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:6UyziYrirAvmTHka/gta5A
 
 __PACKAGE__->add_columns(
     '+deleted' => { is_boolean => 1 },

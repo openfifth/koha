@@ -254,6 +254,21 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 acq_invoiceline_fund_distributions
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::AcqInvoicelineFundDistribution>
+
+=cut
+
+__PACKAGE__->has_many(
+  "acq_invoiceline_fund_distributions",
+  "Koha::Schema::Result::AcqInvoicelineFundDistribution",
+  { "foreign.fund_id" => "self.fund_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 acq_orderline_fund_distributions
 
 Type: has_many
@@ -340,8 +355,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-27 14:37:49
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:P895y0DTU8BCHFedivZRuA
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-05-06 13:10:44
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:Zsge2+629tWnpvOru5TLpA
 
 __PACKAGE__->add_columns(
     '+status'             => { is_boolean => 1 },

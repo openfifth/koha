@@ -476,6 +476,21 @@ __PACKAGE__->set_primary_key("orderline_id");
 
 =head1 RELATIONS
 
+=head2 acq_accessions
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::AcqAccession>
+
+=cut
+
+__PACKAGE__->has_many(
+  "acq_accessions",
+  "Koha::Schema::Result::AcqAccession",
+  { "foreign.orderline_id" => "self.orderline_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 acq_orderline_fund_distributions
 
 Type: has_many
@@ -707,8 +722,8 @@ Composing rels: L</acq_orderline_items> -> itemnumber
 __PACKAGE__->many_to_many("itemnumbers", "acq_orderline_items", "itemnumber");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-14 11:16:23
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:yWVU/W+P6ZYIImtWwpwP9A
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-05-06 13:10:44
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:u0Dfk9w6mCCwRUH8M5nNbQ
 
 
 =head2 koha_object_class

@@ -279,6 +279,21 @@ __PACKAGE__->set_primary_key("id");
 
 =head1 RELATIONS
 
+=head2 acq_invoices
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::AcqInvoice>
+
+=cut
+
+__PACKAGE__->has_many(
+  "acq_invoices",
+  "Koha::Schema::Result::AcqInvoice",
+  { "foreign.vendor_id" => "self.id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 acq_orderlines
 
 Type: has_many
@@ -590,8 +605,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-02-05 10:32:41
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:5ueA73YVdw1WfGZuNbIXng
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-05-06 13:10:44
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:KzhawErFq4g7jSQFZWiOXg
 
 __PACKAGE__->add_columns(
     '+active'        => { is_boolean => 1 },
