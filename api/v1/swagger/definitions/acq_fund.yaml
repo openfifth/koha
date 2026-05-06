@@ -127,6 +127,11 @@ properties:
     type:
       - object
       - "null"
+  summary:
+    description: Financial summary totals for the fund
+    type:
+      - object
+      - "null"
   child_object_managing_branches:
     type: array
     description: List of managing branches of any child objects

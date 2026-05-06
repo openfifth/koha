@@ -22,6 +22,7 @@
           - owner
           - sub_funds
           - parent_fund
+          - summary
         collectionFormat: csv
       - $ref: "../swagger.yaml#/parameters/match"
       - $ref: "../swagger.yaml#/parameters/order_by"
@@ -149,6 +150,7 @@
           - parent_fund
           - parent_fund.managing_library.acquisitions_library_groups
           - child_object_managing_branches
+          - summary
         collectionFormat: csv
     produces:
       - application/json

@@ -19,124 +19,17 @@
             v-if="isUserPermitted('manageFunds')"
         />
     </Toolbar>
-    <!-- <div v-if="initialized">
-        <h1>{{ $__("Funds and ledgers") }}</h1>
-        <fieldset class="filters">
-            <h2>{{ $__("Filters") }}</h2>
-            <div class="filters-grid">
-                <div class="filter-grid-cell">
-                    <label for="status" class="filter-label"
-                        >{{ $__("Status") }}:</label
-                    >
-                    <v-select
-                        id="status"
-                        v-model="filters.status"
-                        :reduce="av => av.value"
-                        :options="statusOptions"
-                        label="description"
-                    >
-                        <template #search="{ attributes, events }">
-                            <input
-                                class="vs__search"
-                                v-bind="attributes"
-                                v-on="events"
-                            />
-                        </template>
-                    </v-select>
-                </div>
-                <div class="filter-grid-cell">
-                    <label for="fund_fund_type" class="filter-label"
-                        >{{ $__("Fund type") }}:</label
-                    >
-                    <v-select
-                        id="fund_fund_type"
-                        v-model="filters.fund_type"
-                        :reduce="av => av.value"
-                        :options="authorisedValues.av_fund_type"
-                        label="description"
-                    >
-                        <template #search="{ attributes, events }">
-                            <input
-                                class="vs__search"
-                                v-bind="attributes"
-                                v-on="events"
-                            />
-                        </template>
-                    </v-select>
-                </div>
-                <div class="filter-grid-cell">
-                    <label for="fiscal_period" class="filter-label"
-                        >{{ $__("Fiscal period") }}:</label
-                    >
-                    <InfiniteScrollSelect
-                        id="fiscal_period"
-                        v-model="filters.fiscal_period_id"
-                        :selectedData="null"
-                        dataType="fiscalPeriods"
-                        dataIdentifier="fiscal_period_id"
-                        label="code"
-                        apiClient="acquisition"
-                        :filters="filterLimitations"
-                        :disabled="filters.ledger_id > 0"
-                    />
-                </div>
-                <div class="filter-grid-cell">
-                    <label for="ledger" class="filter-label"
-                        >{{ $__("Ledger") }}:</label
-                    >
-                    <InfiniteScrollSelect
-                        id="ledger"
-                        v-model="filters.ledger_id"
-                        :selectedData="null"
-                        dataType="ledgers"
-                        dataIdentifier="ledger_id"
-                        label="name"
-                        apiClient="acquisition"
-                        :filters="filterLimitations"
-                    />
-                </div>
-            </div>
-            <input
-                @click="filterTables"
-                id="filter_table"
-                type="button"
-                value="Filter"
-            />
-            <input
-                @click="clearFilters"
-                id="clear_filters"
-                type="button"
-                value="Clear"
-                style="margin-left: 0.5em"
-            />
-        </fieldset>
-        <div class="ledgers-and-funds">
-            <div class="page-section flex-table">
-                <h2>{{ $__("Ledgers") }}</h2>
-                <KohaTable
-                    ref="ledgersTable"
-                    v-bind="tableOptionsLedgers"
-                ></KohaTable>
-            </div>
-            <div class="page-section flex-table" style="margin-top: 0px">
-                <h2>{{ $__("Funds") }}</h2>
-                <KohaTable
-                    ref="fundsTable"
-                    v-bind="tableOptionsFunds"
-                ></KohaTable>
-            </div>
-        </div>
-    </div> -->
+    <div class="page-section">
+        <KohaTable ref="fundSummaryTable" v-bind="tableOptions" />
+    </div>
 </template>
 
 <script>
 import Toolbar from "../../Toolbar.vue";
 import ToolbarLink from "../../ToolbarLink.vue";
 import KohaTable from "../../KohaTable.vue";
-import InfiniteScrollSelect from "../../InfiniteScrollSelect.vue";
-import { computed, inject, onBeforeMount, ref, useTemplateRef } from "vue";
+import { inject, ref, useTemplateRef } from "vue";
 import { storeToRefs } from "pinia";
-import { APIClient } from "../../../fetch/api-client.js";
 import { $__ } from "@koha-vue/i18n";
 
 export default {
@@ -145,129 +38,85 @@ export default {
         const { isUserPermitted } = acquisitionsStore;
         const { authorisedValues } = storeToRefs(acquisitionsStore);
 
-        // const ledgersTable = useTemplateRef("ledgersTable");
-        // const fundsTable = useTemplateRef("fundsTable");
+        const fundSummaryTable = useTemplateRef("fundSummaryTable");
 
-        // const filters = ref({
-        //     status: null,
-        //     fund_type: null,
-        //     owner_id: null,
-        //     fiscal_period_id: null,
-        //     ledger_id: null,
-        // });
-        // const statusOptions = ref([
-        //     { description: $__("Active"), value: true },
-        //     { description: $__("Inactive"), value: false },
-        // ]);
-        const initialized = ref(true);
-
-        // const tableUrl = (type, query) => {
-        //     let url = `/api/v1/acquisitions/${type}`;
-        //     if (query) {
-        //         url = url + "?q=" + JSON.stringify(query);
-        //     }
-        //     return url;
-        // };
-        // const getTableColumns = dataType => {
-        //     return [
-        //         {
-        //             title: __("Name"),
-        //             data: `name:${dataType}_id`,
-        //             searchable: true,
-        //             orderable: true,
-        //             render: function (data, type, row, meta) {
-        //                 const key = `${dataType}_id`;
-        //                 return (
-        //                     `<a href="/cgi-bin/koha/acquisitions/finances/${dataType}/` +
-        //                     row[key] +
-        //                     '" class="show">' +
-        //                     escape_str(`${row.name}`) +
-        //                     "</a>"
-        //                 );
-        //             },
-        //         },
-        //         {
-        //             title: __("Description"),
-        //             data: "description",
-        //             searchable: true,
-        //             orderable: true,
-        //         },
-        //     ];
-        // };
-        // const filterTables = () => {
-        //     const tableFilters = JSON.parse(JSON.stringify(filters.value));
-        //     Object.keys(tableFilters).forEach(key => {
-        //         if (tableFilters[key] === null) {
-        //             delete tableFilters[key];
-        //         }
-        //     });
-        //     fundsTable.value.redraw(tableUrl("funds", tableFilters));
-        //     if (tableFilters.hasOwnProperty("fund_type")) {
-        //         delete tableFilters.fund_type;
-        //     }
-        //     ledgersTable.value.redraw(tableUrl("ledgers", tableFilters));
-        // };
-        // const clearFilters = () => {
-        //     filters.value = {
-        //         status: null,
-        //         fund_type: null,
-        //         owner_id: null,
-        //         fiscal_period_id: null,
-        //         ledger_id: null,
-        //     };
-        // };
-
-        // const tableOptionsLedgers = ref({
-        //     columns: getTableColumns("ledger"),
-        //     url: tableUrl("ledgers"),
-        //     options: {
-        //         dom: '<"top pager"<"table_entries"ip>>tr<"bottom pager"ip>',
-        //     },
-        //     table_settings: null,
-        //     add_filters: true,
-        // });
-        // const tableOptionsFunds = ref({
-        //     columns: getTableColumns("fund"),
-        //     url: tableUrl("funds"),
-        //     options: {
-        //         dom: '<"top pager"<"table_entries"ip>>tr<"bottom pager"ip>',
-        //     },
-        //     table_settings: null,
-        //     add_filters: true,
-        // });
-
-        // const filterLimitations = computed(() => {
-        //     const filterLimitations = {};
-        //     Object.keys(filters.value)
-        //         .filter(key => !["fund_type"].includes(key))
-        //         .forEach(key => {
-        //             if (filters.value[key]) {
-        //                 filterLimitations[key] = filters.value[key];
-        //             }
-        //         });
-        //     return filterLimitations;
-        // });
+        const tableOptions = ref({
+            columns: [
+                {
+                    title: $__("Fiscal period"),
+                    data: "summary",
+                    searchable: false,
+                    orderable: false,
+                    render: data => data?.period ?? "",
+                },
+                {
+                    title: $__("Ledger"),
+                    data: "summary",
+                    searchable: false,
+                    orderable: false,
+                    render: data => data?.ledger ?? "",
+                },
+                {
+                    title: $__("Code"),
+                    data: "code",
+                    searchable: true,
+                    orderable: true,
+                },
+                {
+                    title: $__("Name"),
+                    data: "name",
+                    searchable: true,
+                    orderable: true,
+                },
+                {
+                    title: $__("Fund amount"),
+                    data: "fund_amount",
+                    searchable: false,
+                    orderable: true,
+                },
+                {
+                    title: $__("Pre-encumbered"),
+                    data: "summary",
+                    searchable: false,
+                    orderable: false,
+                    render: data => data?.orders_status_new ?? 0,
+                },
+                {
+                    title: $__("Ordered"),
+                    data: "summary",
+                    searchable: false,
+                    orderable: false,
+                    render: data => data?.ordered ?? 0,
+                },
+                {
+                    title: $__("Spent"),
+                    data: "summary",
+                    searchable: false,
+                    orderable: false,
+                    render: data => data?.spent ?? 0,
+                },
+            ],
+            url: "/api/v1/acquisitions/funds",
+            options: {
+                embed: "summary",
+                order: [[2, "asc"]],
+                dom: '<"top pager"<"table_entries"ip>>tr<"bottom pager"ip>',
+            },
+            table_settings: null,
+            add_filters: true,
+        });
 
         return {
             isUserPermitted,
-            // ledgersTable,
-            // fundsTable,
             authorisedValues,
-            // tableOptionsLedgers,
-            // tableOptionsFunds,
-            // filters,
-            // statusOptions,
-            initialized,
-            // filterLimitations,
-            // filterTables,
-            // clearFilters,
+            fundSummaryTable,
+            tableOptions,
         };
     },
     components: {
         Toolbar,
         ToolbarLink,
         KohaTable,
-        InfiniteScrollSelect,
     },
 };
 </script>

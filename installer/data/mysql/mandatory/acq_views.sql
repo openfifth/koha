@@ -132,3 +132,68 @@ CREATE OR REPLACE VIEW `acq_spent_invoiceline_distributions` AS (
     JOIN acq_invoicelines il ON il.invoiceline_id = ifd.invoiceline_id
     JOIN acq_invoices i ON il.invoice_id = i.invoice_id
 );
+
+-- Per-fund financial summary: fund amount, estimated (NEW orders), ordered (open), spent (invoiced)
+CREATE OR REPLACE VIEW `acq_fund_summary` AS
+SELECT
+    f.fund_id,
+    fp.`name`          AS period,
+    l.`name`           AS ledger,
+    f.`code`,
+    f.`name`,
+    f.owner_id         AS owner,
+    f.managing_branch,
+    f.fund_amount,
+    COALESCE(orders_status_new.orders_status_new, 0) AS orders_status_new,
+    COALESCE(ordered.ordered,                    0) AS ordered,
+    COALESCE(spent.spent,                        0) AS spent
+FROM acq_funds f
+JOIN acq_ledgers l           ON l.ledger_id        = f.ledger_id
+JOIN acq_fiscal_periods fp   ON fp.fiscal_period_id = l.fiscal_period_id
+
+LEFT JOIN (
+    SELECT fund_id, SUM(amount_open) AS ordered
+    FROM (
+        SELECT orderline_id, amount_open, fund_id
+        FROM   acq_open_onetime_orderline_distributions
+        UNION ALL
+        SELECT orderline_id, distributed_ordered_amount AS amount_open, fund_id
+        FROM   acq_open_continuous_orderline_distributions
+    ) ofd
+    GROUP BY fund_id
+) ordered ON f.fund_id = ordered.fund_id
+
+LEFT JOIN (
+    SELECT fund_id,
+           SUM(CASE
+               WHEN (SELECT VALUE FROM systempreferences WHERE variable = 'CalculateFundValuesIncludingTax') = 0
+               THEN ofd.distributed_amount_tax_excluded
+               ELSE ofd.distributed_amount_tax_included
+           END) AS orders_status_new
+    FROM (
+        SELECT ool.orderline_id,
+               ofd.distributed_amount_tax_included / ool.quantity_ordered * ool.quantity_open AS distributed_amount_tax_included,
+               ofd.distributed_amount_tax_excluded / ool.quantity_ordered * ool.quantity_open AS distributed_amount_tax_excluded,
+               ofd.fund_id
+        FROM   acq_onetime_orderlines ool
+        JOIN   acq_orderline_fund_distributions ofd ON ool.orderline_id = ofd.orderline_id
+        WHERE  ool.status = 'NEW'
+        UNION ALL
+        SELECT ocol.orderline_id,
+               ofd.distributed_amount_tax_included,
+               ofd.distributed_amount_tax_excluded,
+               ofd.fund_id
+        FROM   acq_continuous_orderlines ocol
+        JOIN   acq_orderline_fund_distributions ofd ON ocol.orderline_id = ofd.orderline_id
+        WHERE  ocol.status = 'NEW'
+    ) ofd
+    GROUP BY fund_id
+) orders_status_new ON f.fund_id = orders_status_new.fund_id
+
+LEFT JOIN (
+    SELECT fund_id, SUM(price) AS spent
+    FROM   acq_spent_invoiceline_distributions
+    GROUP BY fund_id
+) spent ON f.fund_id = spent.fund_id
+
+WHERE l.`status` = 1;

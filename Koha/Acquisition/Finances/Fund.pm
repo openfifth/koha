@@ -21,6 +21,7 @@ use Modern::Perl;
 use base qw(Koha::Acquisition::Finances::BaseObject);
 
 use Koha::Acquisition::Finances::Allocations;
+use Koha::Acquisition::Finances::FundSummaries;
 use Koha::Acquisition::Finances::Ledger;
 use Koha::Patron;
 
@@ -195,6 +196,15 @@ sub to_api {
     my $overrides = {};
 
     return { %$response, %$overrides };
+}
+
+=head3 summary
+
+=cut
+
+sub summary {
+    my ($self) = @_;
+    return Koha::Acquisition::Finances::FundSummaries->search( { fund_id => $self->fund_id } )->single;
 }
 
 =head2 Internal methods
