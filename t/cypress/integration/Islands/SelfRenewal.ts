@@ -122,7 +122,7 @@ describe("Patron self-renewal", () => {
                     opac_patron_details: "0",
                     self_renewal_failure_message:
                         "Your self-renewal can't be processed at this time. Please visit your local branch to complete your renewal.",
-                    self_renewal_information_message: "This should be shown",
+                    self_renewal_information_messages: ["This should be shown"],
                 },
             }
         ).as("renewalConfig");
