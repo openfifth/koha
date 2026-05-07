@@ -12,7 +12,6 @@ import { useBaseResource } from "../../../composables/base-resource";
 import { $__ } from "@koha-vue/i18n";
 import { computed, inject, ref } from "vue";
 import { storeToRefs } from "pinia";
-import { useAllocationModal } from "../../../composables/useAllocationModal.js";
 
 export default {
     props: {
@@ -29,16 +28,18 @@ export default {
 
         const acquisitionsStore = inject("acquisitionsStore");
         const { user, authorisedValues } = storeToRefs(acquisitionsStore);
-        const { formatValueWithCurrency, getBranchnamesFromGroups } =
-            acquisitionsStore;
+        const {
+            formatValueWithCurrency,
+            getBranchnamesFromGroups,
+            useAllocationModal,
+        } = acquisitionsStore;
 
         const { setConfirmationDialog, setWarning, setMessage } =
             inject("mainStore");
 
         let refetchResource;
-        const { openAllocationModal } = useAllocationModal({
+        const { getAllocationToolbarButtons } = useAllocationModal({
             entity: "fund",
-            acquisitionsStore,
             setConfirmationDialog,
             setWarning,
             setMessage,
@@ -72,33 +73,6 @@ export default {
         };
 
         const additionalToolbarButtons = resource => {
-            const handleAllocationButtons = () => {
-                return [
-                    {
-                        title: $__("Increase fund amount"),
-                        action: "increase",
-                        icon: "plus",
-                    },
-                    {
-                        title: $__("Decrease fund amount"),
-                        action: "decrease",
-                        icon: "minus",
-                    },
-                    {
-                        title: $__("Transfer fund amount"),
-                        action: "transfer",
-                        icon: "arrow-right-arrow-left",
-                    },
-                ].map(({ title, action, icon }) => {
-                    return {
-                        onClick: () => openAllocationModal(resource, action),
-                        title,
-                        icon,
-                        disabled: !resource.status,
-                        hint: $__("This fund is inactive"),
-                    };
-                });
-            };
             return {
                 show: [
                     ...(!isSubFund.value
@@ -124,7 +98,7 @@ export default {
                               },
                           ]
                         : []),
-                    ...handleAllocationButtons(),
+                    ...getAllocationToolbarButtons(resource),
                 ],
             };
         };

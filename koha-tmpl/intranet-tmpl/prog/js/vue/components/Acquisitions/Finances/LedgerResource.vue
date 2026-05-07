@@ -12,7 +12,6 @@ import { useBaseResource } from "../../../composables/base-resource";
 import { $__ } from "@koha-vue/i18n";
 import { inject, ref } from "vue";
 import { storeToRefs } from "pinia";
-import { useAllocationModal } from "../../../composables/useAllocationModal.js";
 
 export default {
     props: {
@@ -31,15 +30,15 @@ export default {
             formatValueWithCurrency,
             getBranchnamesFromGroups,
             differentCurrenciesInLedgers,
+            useAllocationModal,
         } = acquisitionsStore;
 
         const { setConfirmationDialog, setWarning, setMessage } =
             inject("mainStore");
 
         let refetchResource;
-        const { openAllocationModal } = useAllocationModal({
+        const { getAllocationToolbarButtons } = useAllocationModal({
             entity: "ledger",
-            acquisitionsStore,
             setConfirmationDialog,
             setWarning,
             setMessage,
@@ -47,33 +46,6 @@ export default {
         });
 
         const additionalToolbarButtons = (resource, componentData) => {
-            const handleAllocationButtons = () => {
-                return [
-                    {
-                        title: $__("Increase ledger amount"),
-                        action: "increase",
-                        icon: "plus",
-                    },
-                    {
-                        title: $__("Decrease ledger amount"),
-                        action: "decrease",
-                        icon: "minus",
-                    },
-                    {
-                        title: $__("Transfer ledger amount"),
-                        action: "transfer",
-                        icon: "arrow-right-arrow-left",
-                    },
-                ].map(({ title, action, icon }) => {
-                    return {
-                        onClick: () => openAllocationModal(resource, action),
-                        title,
-                        icon,
-                        disabled: !resource.status,
-                        hint: $__("This ledger is inactive"),
-                    };
-                });
-            };
             return {
                 show: [
                     {
@@ -95,7 +67,7 @@ export default {
                                   ? $__("This ledger is locked")
                                   : $__("This ledger is inactive"),
                     },
-                    ...handleAllocationButtons(),
+                    ...getAllocationToolbarButtons(resource),
                 ],
             };
         };

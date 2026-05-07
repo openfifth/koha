@@ -49,24 +49,6 @@ export const useAcquisitionsStore = defineStore("acquisitionsStore", () => {
                 { branchNames: [], groupNames: [] }
             );
         },
-        applyNumberValidation({ positiveOnly = true } = {}) {
-            return {
-                formErrorHandler: value => {
-                    const pattern = positiveOnly
-                        ? /^\d*(\.\d{0,2})*$/
-                        : /^[\-]?\d*(\.\d{0,2})*$/;
-                    return (
-                        pattern.test(value) &&
-                        (!positiveOnly || Number(value) >= 0)
-                    );
-                },
-                formErrorMessage: positiveOnly
-                    ? $__(
-                          "Please enter a positive amount in valid format: 0.00"
-                      )
-                    : $__("Please add amount in valid format: 0.00"),
-            };
-        },
     };
     const getters = {
         modulesEnabled: computed(() => {
