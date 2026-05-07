@@ -5272,7 +5272,7 @@ DROP TABLE IF EXISTS `old_reserves`;
 CREATE TABLE `old_reserves` (
   `reserve_id` int(11) NOT NULL COMMENT 'primary key',
   `borrowernumber` int(11) DEFAULT NULL COMMENT 'foreign key from the borrowers table defining which patron this hold is for',
-  `reservedate` date DEFAULT NULL COMMENT 'the date the hold was places',
+  `reservedate` datetime DEFAULT NULL COMMENT 'the date the hold was places',
   `biblionumber` int(11) DEFAULT NULL COMMENT 'foreign key from the biblio table defining which bib record this hold is on',
   `deleted_biblionumber` int(11) DEFAULT NULL COMMENT 'links the hold to the deleted bibliographic record (deletedbiblio.biblionumber)',
   `item_group_id` int(11) DEFAULT NULL COMMENT 'foreign key from the item_groups table defining if this is an item group level hold',
@@ -5855,7 +5855,7 @@ DROP TABLE IF EXISTS `reserves`;
 CREATE TABLE `reserves` (
   `reserve_id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'primary key',
   `borrowernumber` int(11) NOT NULL DEFAULT 0 COMMENT 'foreign key from the borrowers table defining which patron this hold is for',
-  `reservedate` date DEFAULT NULL COMMENT 'the date the hold was placed',
+  `reservedate` datetime DEFAULT NULL COMMENT 'the date the hold was placed',
   `biblionumber` int(11) NOT NULL DEFAULT 0 COMMENT 'foreign key from the biblio table defining which bib record this hold is on',
   `deleted_biblionumber` int(11) DEFAULT NULL COMMENT 'links the hold to the deleted bibliographic record (deletedbiblio.biblionumber)',
   `item_group_id` int(11) DEFAULT NULL COMMENT 'foreign key from the item_groups table defining if this is an item group level hold',
@@ -7007,7 +7007,7 @@ CREATE TABLE `tmp_holdsqueue` (
   `phone` mediumtext DEFAULT NULL,
   `borrowernumber` int(11) NOT NULL,
   `cardnumber` varchar(32) DEFAULT NULL,
-  `reservedate` date DEFAULT NULL,
+  `reservedate` datetime DEFAULT NULL,
   `title` longtext DEFAULT NULL,
   `itemcallnumber` varchar(255) DEFAULT NULL,
   `holdingbranch` varchar(10) DEFAULT NULL,
