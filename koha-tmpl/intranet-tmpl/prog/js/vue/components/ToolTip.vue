@@ -1,6 +1,13 @@
 <template>
+    <span
+        v-if="$slots.default"
+        data-bs-toggle="tooltip"
+        :title="toolTip"
+        style="display: inline-block"
+        ><slot
+    /></span>
     <a
-        v-if="toolTip"
+        v-else-if="toolTip"
         class="tooltip_helper"
         data-bs-toggle="tooltip"
         :title="toolTip"

@@ -1,5 +1,13 @@
 <template>
-    <a v-if="isActionButton" @click="onClick" class="btn btn-default"
+    <ToolTip v-if="disabled" :toolTip="hint"
+        ><a
+            class="btn btn-default disabled"
+            aria-disabled="true"
+            style="pointer-events: none"
+            ><font-awesome-icon v-if="icon" :icon="icon" /> {{ title }}</a
+        ></ToolTip
+    >
+    <a v-else-if="isActionButton" @click="onClick" class="btn btn-default"
         ><font-awesome-icon :icon="buttonIcon" /> {{ title }}</a
     >
     <a
@@ -23,6 +31,7 @@
 
 <script>
 import { computed } from "vue";
+import ToolTip from "./ToolTip.vue";
 export default {
     props: {
         action: {
@@ -50,6 +59,8 @@ export default {
             required: false,
         },
         onClick: { type: Function, required: false },
+        disabled: { type: Boolean, default: false },
+        hint: { type: String, required: false },
     },
     setup(props) {
         const formatUrl = url => {
@@ -95,6 +106,7 @@ export default {
         });
         return { redirect, handleQuery, formatUrl, isActionButton, buttonIcon };
     },
+    components: { ToolTip },
     emits: ["go-to-add-resource", "delete-resource", "go-to-edit-resource"],
     name: "Link",
 };

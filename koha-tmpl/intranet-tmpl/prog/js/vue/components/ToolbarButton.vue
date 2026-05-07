@@ -35,6 +35,8 @@ export default {
             default: "btn btn-default",
             required: false,
         },
+        disabled: { type: Boolean, default: false },
+        hint: { type: String, required: false },
     },
     name: "Toolbar",
 };
