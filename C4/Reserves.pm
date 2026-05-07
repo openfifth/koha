@@ -627,9 +627,10 @@ sub CanItemBeReserved {
         }
         if ( !$params->{ignore_hold_counts} ) {
 
-            # we retrieve count
+            # we retrieve count, treating each hold group as a single hold
             my $querycount = q{
-                SELECT count(*) AS count
+                SELECT COUNT(CASE WHEN hold_group_id IS NULL THEN 1 END)
+                     + COUNT(DISTINCT CASE WHEN hold_group_id IS NOT NULL THEN hold_group_id END) AS count
                   FROM reserves
              LEFT JOIN items USING (itemnumber)
              LEFT JOIN biblioitems ON (reserves.biblionumber=biblioitems.biblionumber)
@@ -681,7 +682,7 @@ sub CanItemBeReserved {
         }
     );
     if ( !$params->{ignore_hold_counts} && $rule && defined( $rule->rule_value ) && $rule->rule_value ne '' ) {
-        my $total_holds_count = Koha::Holds->search( { borrowernumber => $patron->borrowernumber } )->count();
+        my $total_holds_count = Koha::Holds->count_holds( { borrowernumber => $patron->borrowernumber } );
 
         return _cache { status => 'tooManyReserves', limit => $rule->rule_value }
             if $total_holds_count >= $rule->rule_value;
