@@ -48,15 +48,25 @@ export default {
         const defaultToolbarButtons = (defaultButtons, resource, router) => {
             return {
                 list: [],
-                show: defaultButtons.show.filter(button => {
+                show: defaultButtons.show.map(button => {
                     if (
                         button.action === "delete" &&
                         resource.sub_funds?.length
                     )
-                        return false;
+                        return {
+                            ...button,
+                            disabled: true,
+                            hint: $__(
+                                "This fund has sub-funds and cannot be deleted"
+                            ),
+                        };
                     if (button.action === "edit" && resource.ledger_locked)
-                        return false;
-                    return true;
+                        return {
+                            ...button,
+                            disabled: true,
+                            hint: $__("The parent ledger is locked"),
+                        };
+                    return button;
                 }),
             };
         };
@@ -84,14 +94,14 @@ export default {
                         onClick: () => openAllocationModal(resource, action),
                         title,
                         icon,
+                        disabled: !resource.status,
+                        hint: $__("This fund is inactive"),
                     };
                 });
             };
             return {
                 show: [
-                    ...(!isSubFund.value &&
-                    !resource.ledger_locked &&
-                    resource.status
+                    ...(!isSubFund.value
                         ? [
                               {
                                   to: {
@@ -100,10 +110,21 @@ export default {
                                   },
                                   icon: "plus",
                                   title: $__("Add sub fund"),
+                                  disabled:
+                                      resource.ledger_locked ||
+                                      !resource.status,
+                                  hint:
+                                      resource.ledger_locked && !resource.status
+                                          ? $__(
+                                                "The parent ledger is locked and this fund is inactive"
+                                            )
+                                          : resource.ledger_locked
+                                            ? $__("The parent ledger is locked")
+                                            : $__("This fund is inactive"),
                               },
                           ]
                         : []),
-                    ...(resource.status ? handleAllocationButtons() : []),
+                    ...handleAllocationButtons(),
                 ],
             };
         };

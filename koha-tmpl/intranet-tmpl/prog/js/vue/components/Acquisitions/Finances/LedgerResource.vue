@@ -69,29 +69,33 @@ export default {
                         onClick: () => openAllocationModal(resource, action),
                         title,
                         icon,
+                        disabled: !resource.status,
+                        hint: $__("This ledger is inactive"),
                     };
                 });
             };
             return {
                 show: [
-                    ...(!resource.locked && resource.status
-                        ? [
-                              {
-                                  to: {
-                                      name: "FundFormAdd",
-                                      query: {
-                                          ledger_id: resource.ledger_id,
-                                          fiscal_period_id:
-                                              resource.fiscal_period_id,
-                                      },
-                                  },
-                                  title: $__("Add fund"),
-                                  icon: "plus",
-                                  index: -1,
-                              },
-                          ]
-                        : []),
-                    ...(resource.status ? handleAllocationButtons() : []),
+                    {
+                        to: {
+                            name: "FundFormAdd",
+                            query: {
+                                ledger_id: resource.ledger_id,
+                                fiscal_period_id: resource.fiscal_period_id,
+                            },
+                        },
+                        title: $__("Add fund"),
+                        icon: "plus",
+                        index: -1,
+                        disabled: resource.locked || !resource.status,
+                        hint:
+                            resource.locked && !resource.status
+                                ? $__("This ledger is locked and inactive")
+                                : resource.locked
+                                  ? $__("This ledger is locked")
+                                  : $__("This ledger is inactive"),
+                    },
+                    ...handleAllocationButtons(),
                 ],
             };
         };
