@@ -90,6 +90,7 @@ use Koha::Library;
 use Koha::Patrons;
 use Koha::Plugins;
 use Koha::Policy::Holds;
+use Koha::Biblio::Availability::Hold;
 use Koha::Item::Availability::Hold;
 
 use List::MoreUtils qw( any );
@@ -397,6 +398,14 @@ See CanItemBeReserved() for possible return values.
 sub CanBookBeReserved {
     my ( $borrowernumber, $biblionumber, $pickup_branchcode, $params ) = @_;
 
+    my $patron = Koha::Patrons->find($borrowernumber);
+    my $biblio = Koha::Biblios->find($biblionumber);
+
+    my $pickup_library = $pickup_branchcode ? Koha::Libraries->find($pickup_branchcode) : undef;
+    if ( $pickup_branchcode && !$pickup_library ) {
+        return { status => 'library_not_found' };
+    }
+
     # Check that patron have not checked out this biblio (if AllowHoldsOnPatronsPossessions set)
     if ( !C4::Context->preference('AllowHoldsOnPatronsPossessions')
         && C4::Circulation::CheckIfIssuedToPatron( $borrowernumber, $biblionumber ) )
@@ -404,59 +413,19 @@ sub CanBookBeReserved {
         return { status => 'already_possession' };
     }
 
-    if ( $params->{itemtype} ) {
+    my $result = Koha::Biblio::Availability::Hold->check(
+        {
+            biblio         => $biblio,
+            patron         => $patron,
+            pickup_library => $pickup_library,
+            ( $params->{itemtype} ? ( item_type_id => $params->{itemtype} ) : () ),
+        }
+    );
 
-        # biblio-level, item type-contrained
-        my $patron          = Koha::Patrons->find($borrowernumber);
-        my $reservesallowed = Koha::CirculationRules->get_effective_rule(
-            {
-                itemtype     => $params->{itemtype},
-                categorycode => $patron->categorycode,
-                branchcode   => $pickup_branchcode,
-                rule_name    => 'reservesallowed',
-            }
-        )->rule_value;
+    return { status => 'OK' } if $result->available;
 
-        $reservesallowed = ( $reservesallowed eq '' ) ? undef : $reservesallowed;
-
-        my $count = $patron->holds->count_holds(
-            {
-                '-or' => [
-                    { 'me.itemtype' => $params->{itemtype} },
-                    { 'item.itype'  => $params->{itemtype} }
-                ]
-            },
-            { join => ['item'] }
-        );
-
-        return { status => '' }
-            if defined $reservesallowed and $reservesallowed < $count + 1;
-    }
-
-    my $items;
-
-    #get items linked via host records
-    my @hostitemnumbers = get_hostitemnumbers_of($biblionumber);
-    if (@hostitemnumbers) {
-        $items = Koha::Items->search(
-            {
-                -or => [
-                    biblionumber => $biblionumber,
-                    itemnumber   => { -in => \@hostitemnumbers }
-                ]
-            }
-        );
-    } else {
-        $items = Koha::Items->search( { biblionumber => $biblionumber } );
-    }
-
-    my $canReserve = { status => '' };
-    my $patron     = Koha::Patrons->find($borrowernumber);
-    while ( my $item = $items->next ) {
-        $canReserve = CanItemBeReserved( $patron, $item, $pickup_branchcode, $params );
-        return { status => 'OK' } if $canReserve->{status} eq 'OK';
-    }
-    return $canReserve;
+    my ($blocker_key) = keys %{ $result->blockers };
+    return { status => $blocker_key };
 }
 
 =head2 CanItemBeReserved

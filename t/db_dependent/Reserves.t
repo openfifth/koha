@@ -629,7 +629,7 @@ $borrower->{dateofbirth} = DateTime->now->add( years => -15 );
 Koha::Patrons->find($borrowernumber)->set( { dateofbirth => $borrower->{dateofbirth} } )->store;
 
 is(
-    C4::Reserves::CanBookBeReserved( $borrowernumber, $biblionumber )->{status}, 'age_restricted',
+    C4::Reserves::CanBookBeReserved( $borrowernumber, $biblionumber )->{status}, 'no_item_available',
     "Reserving a 'PEGI 16' Biblio by a 15 year old borrower fails"
 );
 
@@ -643,8 +643,8 @@ is(
 );
 
 is(
-    C4::Reserves::CanBookBeReserved( $borrowernumber, $biblio_with_no_item->biblionumber )->{status}, '',
-    "Biblio with no item. Status is empty"
+    C4::Reserves::CanBookBeReserved( $borrowernumber, $biblio_with_no_item->biblionumber )->{status}, 'no_items',
+    "Biblio with no item. Status is no_items"
 );
 ####
 ####### EO Bug 13113 <<<
@@ -1777,7 +1777,7 @@ subtest 'CanBookBeReserved() tests' => sub {
         $patron->id, $biblio->id, $library->id,
         { itemtype => $itype->id }
     );
-    is_deeply( $res, { status => '' }, 'Holds on itemtype limit reached' );
+    is_deeply( $res, { status => 'too_many_reserves' }, 'Holds on itemtype limit reached' );
 
     $schema->storage->txn_rollback;
 };

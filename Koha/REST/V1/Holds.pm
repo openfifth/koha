@@ -178,8 +178,8 @@ sub add {
 
             my $can_hold_be_placed =
                 $item
-                ? C4::Reserves::CanItemBeReserved( $patron, $item )
-                : C4::Reserves::CanBookBeReserved( $patron_id, $biblio_id );
+                ? C4::Reserves::CanItemBeReserved( $patron, $item, undef, { overrides => $overrides } )
+                : C4::Reserves::CanBookBeReserved( $patron_id, $biblio_id, undef, { overrides => $overrides } );
 
             unless ( $can_hold_be_placed->{status} eq 'OK' ) {
                 return $c->render(
