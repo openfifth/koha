@@ -40,12 +40,19 @@
                 </div>
                 <div
                     class="modal-body"
-                    v-if="confirmation.message || confirmation.inputs"
+                    v-if="
+                        confirmation.message ||
+                        confirmation.inputs ||
+                        confirmation.groups
+                    "
                 >
                     <p v-html="confirmation.message"></p>
-                    <div class="inputs" v-if="confirmation.inputs">
+                    <div
+                        class="inputs"
+                        v-if="confirmation.inputs || confirmation.groups"
+                    >
                         <form ref="confirmationform">
-                            <fieldset class="rows">
+                            <fieldset class="rows" v-if="confirmation.inputs">
                                 <ol>
                                     <li
                                         v-for="(
@@ -61,6 +68,29 @@
                                     </li>
                                 </ol>
                             </fieldset>
+                            <fieldset
+                                class="rows"
+                                v-for="(
+                                    group, groupIndex
+                                ) in confirmation.groups"
+                                :key="`dialog-group-${groupIndex}`"
+                            >
+                                <legend v-if="group.label">
+                                    {{ group.label }}
+                                </legend>
+                                <ol>
+                                    <li
+                                        v-for="(attr, index) in group.inputs"
+                                        :key="`dialog-group-${groupIndex}-field-${index}`"
+                                    >
+                                        <FormElement
+                                            :resource="inputFields"
+                                            :attr="attr"
+                                            :index="`${groupIndex}-${index}`"
+                                        />
+                                    </li>
+                                </ol>
+                            </fieldset>
                         </form>
                     </div>
                 </div>
@@ -68,7 +98,9 @@
                     class="modal-footer"
                     :class="{
                         'border-top-0': !(
-                            confirmation.message || confirmation.inputs
+                            confirmation.message ||
+                            confirmation.inputs ||
+                            confirmation.groups
                         ),
                     }"
                 >
@@ -176,9 +208,14 @@ export default {
         const fp_config = ref(flatpickr_defaults);
 
         const inputFields = computed(() => {
-            if (!confirmation.value.inputs) return null;
+            const flat = confirmation.value.inputs || [];
+            const grouped = (confirmation.value.groups || []).flatMap(
+                g => g.inputs || []
+            );
+            const all = [...flat, ...grouped];
+            if (!all.length) return null;
             return reactive(
-                confirmation.value.inputs.reduce((acc, curr) => {
+                all.reduce((acc, curr) => {
                     acc[curr.name] = curr.value || null;
                     return acc;
                 }, {})
@@ -187,9 +224,14 @@ export default {
 
         const confirmationForm = useTemplateRef("confirmationform");
         const submit = e => {
+            const flat = confirmation.value.inputs || [];
+            const grouped = (confirmation.value.groups || []).flatMap(
+                g => g.inputs || []
+            );
+            const allInputs = [...flat, ...grouped];
+
             if (
-                confirmation.value.inputs &&
-                confirmation.value.inputs.filter(
+                allInputs.filter(
                     input =>
                         input.required &&
                         (inputFields.value[input.name] == null ||
