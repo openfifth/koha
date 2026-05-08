@@ -15,9 +15,9 @@
     [% END %]</title
 >
 [% INCLUDE 'doc-head-close.inc' %]
-</head>
+<!--</head>-->
 
-<body id="register" class="pos">
+<!--<body id="register" class="pos">-->
 [% WRAPPER 'header.inc' %]
     [% INCLUDE 'circ-search.inc' %]
 [% END %]
@@ -108,7 +108,7 @@
             </div>
         [% END %]
 
-        [% SET total_bankable = accountlines.total( payment_type => [ 'CASH', 'SIP00' ]) * -1 %]
+        [% SET total_bankable = accountlines.total( payment_type => cashup_payment_type_codes ) * -1 %]
         [% SET total_transactions = accountlines.total() * -1 %]
         [% IF ( CAN_user_cash_management_cashup ) %]
             <div id="toolbar" class="btn-toolbar">
@@ -141,10 +141,30 @@
                 >
             [% END %]
             <li>Float: [% register.starting_float | $Price %]</li>
-            <li>Total income (cash): [% accountlines.credits_total * -1 | $Price %] ([% accountlines.credits_total(payment_type => [ 'CASH', 'SIP00' ]) * -1 | $Price %])</li>
-            <li>Total outgoing (cash): [% accountlines.debits_total * -1 | $Price %] ([% accountlines.debits_total( payment_type => [ 'CASH', 'SIP00' ]) * -1 | $Price %])</li>
+            <li>Total income (cash): [% accountlines.credits_total * -1 | $Price %] ([% accountlines.credits_total(payment_type => cashup_payment_type_codes) * -1 | $Price %])</li>
+            <li>Total outgoing (cash): [% accountlines.debits_total * -1 | $Price %] ([% accountlines.debits_total( payment_type => cashup_payment_type_codes) * -1 | $Price %])</li>
             <li>Total bankable: [% total_bankable | $Price %]</li>
         </ul>
+
+        [% IF cashup_payment_types_breakdown.size > 1 %]
+            <h2>Bankable by payment type</h2>
+            <table class="cashup-breakdown" style="max-width: 30em;">
+                <thead>
+                    <tr>
+                        <th>Payment type</th>
+                        <th class="text-end">Expected</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    [% FOREACH row IN cashup_payment_types_breakdown %]
+                        <tr>
+                            <td>[% row.label | html %]</td>
+                            <td class="text-end">[% row.expected | $Price %]</td>
+                        </tr>
+                    [% END %]
+                </tbody>
+            </table>
+        [% END %]
 
         [% IF register.last_cashup %]
             <h2>Transactions since [% register.last_cashup.timestamp | $KohaDates with_hours => 1 %]</h2>
@@ -615,16 +635,28 @@
             ]
         }, null, 1);
 
+        // Per-payment-type expected amounts for the cashup modal (in CashupPaymentTypes order)
+        const cashupPaymentTypes = [
+            [% FOREACH row IN cashup_payment_types_breakdown %]
+                {
+                    payment_type: "[% row.payment_type | html %]",
+                    label: "[% row.label | html %]",
+                    expected: [% row.expected | html %]
+                }[% UNLESS loop.last %],[% END %]
+            [% END %]
+        ];
+
         // Initialize cashup modals
         initTriggerCashupModal('#triggerCashupModal', {
-            bankableAmount: [% accountlines.total( payment_type => [ 'CASH', 'SIP00' ]) * -1 | html %],
+            bankableAmount: cashupPaymentTypes.reduce(function(s, r){ return s + Number(r.expected); }, 0),
             registerFloat: [% register.starting_float | html %]
         });
 
         initConfirmCashupModal('#confirmCashupModal', {
             hasAuthorisedValues: [% reconciliation_note_avs ? 'true' : 'false' | html %],
             noteRequired: [% reconciliation_note_required ? 'true' : 'false' | html %],
-            isInProgress: [% cashup_in_progress ? 'true' : 'false' | html %]
+            isInProgress: [% cashup_in_progress ? 'true' : 'false' | html %],
+            paymentTypes: cashupPaymentTypes
         });
     </script>
 [% END %]
