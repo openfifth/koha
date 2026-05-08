@@ -164,7 +164,12 @@ sub update {
         my $to_api_mapping = Koha::ILL::ISO18626::RequestingAgency->new->to_api_mapping;
 
         if ( blessed $_ ) {
-            if ( $_->isa('Koha::Exceptions::Object::FKConstraint') ) {
+            if ( $_->isa('Koha::Exceptions::Object::DuplicateID') ) {
+                return $c->render(
+                    status  => 409,
+                    openapi => { error => $_->error, conflict => $_->duplicate_id }
+                );
+            } elsif ( $_->isa('Koha::Exceptions::Object::FKConstraint') ) {
                 return $c->render(
                     status  => 400,
                     openapi => { error => "Given " . $to_api_mapping->{ $_->broken_fk } . " does not exist" }
