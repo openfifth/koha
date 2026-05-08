@@ -146,6 +146,7 @@ INSERT INTO systempreferences ( `variable`, `value`, `options`, `explanation`, `
 ('casLogout','0','','Does a logout from Koha should also log the user out of CAS?','YesNo'),
 ('casServerUrl','https://localhost:8443/cas','','URL of the cas server','Free'),
 ('casServerVersion','2', '2|3','Version of the CAS server Koha will connect to.','Choice'),
+('CashupPaymentTypes', 'CASH,SIP00', '', 'Comma-separated, ordered list of PAYMENT_TYPE authorised value codes that participate in the cashup reconciliation workflow. Each listed type gets its own expected/actual entry in the Complete cashup modal. Order is significant.', 'Free'),
 ('CashupReconciliationNoteAuthorisedValue', '', NULL, 'Authorized value category to use for cashup reconciliation notes (leave empty for free text)', 'Free'),
 ('CashupReconciliationNoteRequired', '0', NULL, 'Require a reconciliation note when completing cashup with discrepancies between expected and actual amounts', 'YesNo'),
 ('CatalogConcerns', '0', NULL, 'Allow users to report catalog concerns', 'YesNo'),
