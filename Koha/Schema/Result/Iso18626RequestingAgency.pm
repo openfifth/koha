@@ -121,6 +121,18 @@ __PACKAGE__->set_primary_key("iso18626_requesting_agency_id");
 
 =head1 UNIQUE CONSTRAINTS
 
+=head2 C<uniq_account_id>
+
+=over 4
+
+=item * L</account_id>
+
+=back
+
+=cut
+
+__PACKAGE__->add_unique_constraint("uniq_account_id", ["account_id"]);
+
 =head2 C<uniq_borrowernumber>
 
 =over 4
@@ -168,8 +180,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-01-21 12:22:43
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:vqPIA624r/PznpUwlK2FBg
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-05-08 08:44:00
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:iett1SrSjGMacqCKl3vkiQ
 
 __PACKAGE__->belongs_to(
     "patron",
