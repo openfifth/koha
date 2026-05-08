@@ -418,6 +418,7 @@ sub CanBookBeReserved {
             biblio         => $biblio,
             patron         => $patron,
             pickup_library => $pickup_library,
+            overrides      => $params->{overrides},
             ( $params->{itemtype} ? ( item_type_id => $params->{itemtype} ) : () ),
         }
     );
@@ -496,6 +497,7 @@ sub CanItemBeReserved {
             patron             => $patron,
             pickup_library     => $pickup_library,
             skip_patron_checks => $params->{ignore_hold_counts},
+            overrides          => $params->{overrides},
         }
     );
     unless ( $item_availability->available ) {
