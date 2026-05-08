@@ -20,7 +20,17 @@
         />
     </Toolbar>
     <div class="page-section">
-        <KohaTable ref="fundSummaryTable" v-bind="tableOptions" />
+        <KohaTable
+            ref="fundSummaryTable"
+            v-bind="tableOptions"
+            @showFiscalPeriod="
+                (row, _dt, e) => navigateToResource('FiscalPeriodShow', row, e)
+            "
+            @showLedger="
+                (row, _dt, e) => navigateToResource('LedgerShow', row, e)
+            "
+            @showFund="(row, _dt, e) => navigateToResource('FundShow', row, e)"
+        />
     </div>
 </template>
 
@@ -29,16 +39,32 @@ import Toolbar from "../../Toolbar.vue";
 import ToolbarLink from "../../ToolbarLink.vue";
 import KohaTable from "../../KohaTable.vue";
 import { inject, ref, useTemplateRef } from "vue";
-import { storeToRefs } from "pinia";
+import { useRouter } from "vue-router";
 import { $__ } from "@koha-vue/i18n";
 
 export default {
     setup() {
+        const router = useRouter();
         const acquisitionsStore = inject("acquisitionsStore");
         const { isUserPermitted } = acquisitionsStore;
-        const { authorisedValues } = storeToRefs(acquisitionsStore);
 
         const fundSummaryTable = useTemplateRef("fundSummaryTable");
+
+        const routeParams = {
+            FiscalPeriodShow: row => ({
+                fiscal_period_id: row.ledger.fiscal_period_id,
+            }),
+            LedgerShow: row => ({ ledger_id: row.ledger_id }),
+            FundShow: row => ({ fund_id: row.fund_id }),
+        };
+
+        const navigateToResource = (routeName, row, event) => {
+            event?.preventDefault();
+            router.push({
+                name: routeName,
+                params: routeParams[routeName](row),
+            });
+        };
 
         const tableOptions = ref({
             columns: [
@@ -47,26 +73,40 @@ export default {
                     data: "summary",
                     searchable: false,
                     orderable: false,
-                    render: data => data?.period ?? "",
+                    render: data =>
+                        data?.period
+                            ? `<a href="#" class="showFiscalPeriod">${escape_str(data.period)}</a>`
+                            : "",
                 },
                 {
                     title: $__("Ledger"),
                     data: "summary",
                     searchable: false,
                     orderable: false,
-                    render: data => data?.ledger ?? "",
+                    render: data =>
+                        data?.ledger
+                            ? `<a href="#" class="showLedger">${escape_str(data.ledger)}</a>`
+                            : "",
                 },
                 {
                     title: $__("Code"),
                     data: "code",
                     searchable: true,
                     orderable: true,
+                    render: data =>
+                        data
+                            ? `<a href="#" class="showFund">${escape_str(data)}</a>`
+                            : "",
                 },
                 {
                     title: $__("Name"),
                     data: "name",
                     searchable: true,
                     orderable: true,
+                    render: data =>
+                        data
+                            ? `<a href="#" class="showFund">${escape_str(data)}</a>`
+                            : "",
                 },
                 {
                     title: $__("Fund amount"),
@@ -96,9 +136,15 @@ export default {
                     render: data => data?.spent ?? 0,
                 },
             ],
+            actions: {
+                0: ["showFiscalPeriod"],
+                1: ["showLedger"],
+                2: ["showFund"],
+                3: ["showFund"],
+            },
             url: "/api/v1/acquisitions/funds",
             options: {
-                embed: "summary",
+                embed: "summary,ledger",
                 order: [[2, "asc"]],
                 dom: '<"top pager"<"table_entries"ip>>tr<"bottom pager"ip>',
             },
@@ -108,9 +154,9 @@ export default {
 
         return {
             isUserPermitted,
-            authorisedValues,
             fundSummaryTable,
             tableOptions,
+            navigateToResource,
         };
     },
     components: {
@@ -120,41 +166,3 @@ export default {
     },
 };
 </script>
-
-<style scoped>
-.ledgers-and-funds {
-    display: flex;
-    gap: 1em;
-    width: 100%;
-}
-.flex-table {
-    margin-top: 0px;
-    width: 50%;
-}
-.filters-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    padding: 1em;
-    gap: 1em;
-    width: 90%;
-}
-.filter-grid-cell {
-    display: flex;
-    gap: 1em;
-    justify-content: centre;
-    width: 100%;
-}
-.filter-label {
-    min-width: 25%;
-}
-.v-select,
-input:not([type="submit"]):not([type="search"]):not([type="button"]):not(
-        [type="checkbox"]
-    ),
-textarea {
-    border-color: rgba(60, 60, 60, 0.26);
-    border-width: 1px;
-    border-radius: 4px;
-    min-width: 60%;
-}
-</style>
