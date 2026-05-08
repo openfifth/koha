@@ -15,6 +15,7 @@ import {
     faArrowRightArrowLeft,
     faCartShopping,
     faMagnifyingGlass,
+    faRotate,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 
@@ -28,7 +29,8 @@ library.add(
     faXmark,
     faArrowRightArrowLeft,
     faCartShopping,
-    faMagnifyingGlass
+    faMagnifyingGlass,
+    faRotate
 );
 
 import App from "../../components/Acquisitions/Main.vue";

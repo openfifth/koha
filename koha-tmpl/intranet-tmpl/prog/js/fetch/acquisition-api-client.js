@@ -196,6 +196,11 @@ export class AcquisitionAPIClient {
                     endpoint: "ledgers/" + id,
                     body: ledger,
                 }),
+            rollover: (id, body) =>
+                this.httpClient.post({
+                    endpoint: "ledgers/" + id + "/rollover",
+                    body,
+                }),
             count: (query = {}) =>
                 this.httpClient.count({
                     endpoint:

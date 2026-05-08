@@ -73,6 +73,21 @@ properties:
       - number
       - "null"
     description: Over encumbrance warning amount
+  adjust_by_percent:
+    type:
+      - number
+      - "null"
+    description: Adjust fund amounts by this percentage on rollover
+  round_to_multiple:
+    type:
+      - number
+      - "null"
+    description: Round adjusted fund amounts down to a multiple of this value
+  set_funds_to_zero:
+    type:
+      - boolean
+      - "null"
+    description: Set all fund amounts to zero on rollover
   fiscal_period:
     type: object
     description: Fiscal period

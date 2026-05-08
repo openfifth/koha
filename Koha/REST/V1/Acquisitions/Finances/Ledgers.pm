@@ -183,4 +183,114 @@ sub delete {
     };
 }
 
+=head3 rollover
+
+=cut
+
+sub rollover {
+    my $c = shift->openapi->valid_input or return;
+
+    my $ledger = Koha::Acquisition::Finances::Ledgers->find( $c->param('ledger_id') );
+    return $c->render_resource_not_found("Ledger") unless $ledger;
+
+    return try {
+        Koha::Database->new->schema->txn_do(
+            sub {
+                my $body = $c->req->json;
+
+                my $adjust_by_percent = delete $body->{adjust_by_percent};
+                my $round_to_multiple = delete $body->{round_to_multiple};
+                my $set_funds_to_zero = delete $body->{set_funds_to_zero};
+
+                if ($adjust_by_percent) {
+                    $body->{ledger_amount} += $body->{ledger_amount} * $adjust_by_percent / 100;
+                    if ($round_to_multiple) {
+                        $body->{ledger_amount} =
+                            int( $body->{ledger_amount} / $round_to_multiple ) * $round_to_multiple;
+                    }
+                }
+
+                $body->{currency} = $ledger->currency;
+
+                my $new_ledger = Koha::Acquisition::Finances::Ledger->new_from_api($body)->store->discard_changes;
+
+                Koha::Acquisition::Finances::Allocation->new(
+                    {
+                        ledger_id         => $new_ledger->ledger_id,
+                        allocation_amount => $new_ledger->ledger_amount,
+                        type              => 'ROLLOVER_TRANSFER',
+                    }
+                )->store;
+
+                $ledger->status(0)->store;
+
+                my @top_level_funds = Koha::Acquisition::Finances::Funds->search(
+                    { ledger_id => $ledger->ledger_id, parent_fund_id => undef } )->as_list;
+
+                for my $fund (@top_level_funds) {
+                    _copy_fund(
+                        $fund,
+                        $new_ledger,
+                        undef,
+                        {
+                            set_funds_to_zero => $set_funds_to_zero,
+                            adjust_by_percent => $adjust_by_percent,
+                            round_to_multiple => $round_to_multiple,
+                        }
+                    );
+                }
+
+                $c->res->headers->location( $c->req->url->to_string . '/' . $new_ledger->ledger_id );
+                return $c->render(
+                    status  => 201,
+                    openapi => $c->objects->to_api($new_ledger)
+                );
+            }
+        );
+    } catch {
+        $c->unhandled_exception($_);
+    };
+}
+
+sub _copy_fund {
+    my ( $original_fund, $new_ledger, $new_parent_fund_id, $options ) = @_;
+
+    my $fund_amount;
+    if ( $options->{set_funds_to_zero} ) {
+        $fund_amount = 0;
+    } elsif ( $options->{adjust_by_percent} ) {
+        $fund_amount = $original_fund->fund_amount + $original_fund->fund_amount * $options->{adjust_by_percent} / 100;
+        if ( $options->{round_to_multiple} ) {
+            $fund_amount = int( $fund_amount / $options->{round_to_multiple} ) * $options->{round_to_multiple};
+        }
+    } else {
+        $fund_amount = $original_fund->fund_amount;
+    }
+
+    my $new_fund = Koha::Acquisition::Finances::Fund->new(
+        {
+            ledger_id          => $new_ledger->ledger_id,
+            parent_fund_id     => $new_parent_fund_id,
+            name               => $original_fund->name,
+            code               => $original_fund->code,
+            description        => $original_fund->description,
+            external_id        => $original_fund->external_id,
+            status             => $new_ledger->status,
+            fund_amount        => $fund_amount,
+            managing_branch    => $original_fund->managing_branch,
+            owner_id           => $original_fund->owner_id,
+            fund_permission    => $original_fund->fund_permission,
+            oe_warning_percent => $original_fund->oe_warning_percent,
+            oe_warning_amount  => $original_fund->oe_warning_amount,
+            fund_type          => $original_fund->fund_type,
+        }
+    )->store( { no_cascade => 1 } );
+
+    for my $sub_fund ( $original_fund->sub_funds->as_list ) {
+        _copy_fund( $sub_fund, $new_ledger, $new_fund->fund_id, $options );
+    }
+
+    return $new_fund;
+}
+
 1;

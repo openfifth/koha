@@ -323,11 +323,217 @@ const useAllocationModal = ({
     return { openAllocationModal, getAllocationToolbarButtons };
 };
 
+const useRolloverModal = ({
+    setConfirmationDialog,
+    setWarning,
+    setMessage,
+    onSuccess,
+}) => {
+    const buildInputsFromAttrs = (
+        resource,
+        attrs,
+        overrides = {},
+        fieldsInOrder = null
+    ) => {
+        const attrsByName = Object.fromEntries(attrs.map(a => [a.name, a]));
+        const fields = fieldsInOrder || [
+            "name",
+            "description",
+            "external_id",
+            "status",
+            "locked",
+            "currency",
+            "ledger_amount",
+            "oe_warning_percent",
+            "oe_warning_amount",
+            "managing_branch",
+            "owner_id",
+        ];
+        return fields.reduce((acc, name) => {
+            const attr = attrsByName[name];
+            if (!attr) return acc;
+            const override = overrides[name] || {};
+            const effectiveType = override.type ?? attr.type;
+            const rawValue = resource[name];
+            const { format, ...attrWithoutFormat } = attr;
+            const value =
+                effectiveType === "display" && format
+                    ? format(rawValue, resource, attr)
+                    : rawValue;
+            acc.push({ ...attrWithoutFormat, value, ...override });
+            return acc;
+        }, []);
+    };
+
+    const openRolloverModal = (resource, resourceAttrs) => {
+        const groups = [
+            {
+                label: $__("Information and status"),
+                inputs: [
+                    {
+                        name: "rollover_warning",
+                        type: "display",
+                        label: $__("Warning"),
+                        value: $__(
+                            "The original ledger will be set to inactive on rollover"
+                        ),
+                    },
+                    {
+                        name: "fiscal_period_id",
+                        type: "relationshipSelect",
+                        label: $__("Fiscal period"),
+                        relationshipAPIClient:
+                            APIClient.acquisition.fiscalPeriods,
+                        relationshipOptionLabelAttr: "name",
+                        relationshipRequiredKey: "fiscal_period_id",
+                        required: true,
+                    },
+                    ...buildInputsFromAttrs(
+                        resource,
+                        resourceAttrs,
+                        { locked: { defaultValue: false } },
+                        [
+                            "name",
+                            "description",
+                            "external_id",
+                            "status",
+                            "locked",
+                        ]
+                    ),
+                ],
+            },
+            {
+                label: $__("Financial controlling"),
+                inputs: [
+                    ...buildInputsFromAttrs(
+                        resource,
+                        resourceAttrs,
+                        {
+                            currency: { type: "display" },
+                            ledger_amount: { type: "display", toolTip: null },
+                        },
+                        [
+                            "currency",
+                            "ledger_amount",
+                            "oe_warning_percent",
+                            "oe_warning_amount",
+                        ]
+                    ),
+                    {
+                        name: "adjust_by_percent",
+                        type: "number",
+                        label: $__("Adjust the amounts by a percentage"),
+                        ...applyNumberValidation({ positiveOnly: false }),
+                    },
+                    {
+                        name: "round_to_multiple",
+                        type: "number",
+                        label: $__("Round to a multiple of"),
+                        disabled: resource => !resource.adjust_by_percent,
+                        toolTip: $__(
+                            "If you entered a value in 'Change amounts by', Koha will calculate the amounts automatically. You can force it to round down the amounts. For example, entering '100', will round down the amounts to the hundreds (5542 will become 5500)."
+                        ),
+                        ...applyNumberValidation(),
+                    },
+                    {
+                        name: "new_ledger_amount",
+                        type: "display",
+                        label: $__("New ledger amount"),
+                        format: (value, fields) => {
+                            const base = resource.ledger_amount || 0;
+                            const percentage =
+                                parseFloat(fields.adjust_by_percent) || 0;
+                            const multiple =
+                                parseFloat(fields.round_to_multiple) || 0;
+                            let adjusted = base + (base * percentage) / 100;
+                            if (multiple > 0) {
+                                adjusted =
+                                    Math.trunc(adjusted / multiple) * multiple;
+                            }
+                            return formatValueWithCurrency(
+                                adjusted,
+                                resource.currency
+                            );
+                        },
+                    },
+                    {
+                        name: "set_funds_to_zero",
+                        type: "checkbox",
+                        label: $__("Set all funds to zero"),
+                        toolTip: $__("All fund amounts will be set to 0"),
+                    },
+                ],
+            },
+            {
+                label: $__("Management in library"),
+                inputs: buildInputsFromAttrs(resource, resourceAttrs, {}, [
+                    "managing_branch",
+                    "owner_id",
+                ]).map(attr =>
+                    attr.name === "managing_branch"
+                        ? {
+                              ...attr,
+                              componentProps: {
+                                  ...attr.componentProps,
+                                  routeAction: { type: "string", value: "add" },
+                              },
+                          }
+                        : attr
+                ),
+            },
+        ];
+
+        setConfirmationDialog(
+            {
+                title: $__("Duplicate ledger and funds"),
+                accept_label: $__("Rollover"),
+                cancel_label: $__("Cancel"),
+                size: "modal-lg",
+                groups,
+            },
+            async (confirmation, inputFields) => {
+                const body = {
+                    fiscal_period_id: inputFields.fiscal_period_id,
+                    name: inputFields.name,
+                    description: inputFields.description || null,
+                    external_id: inputFields.external_id || null,
+                    status: inputFields.status,
+                    locked: inputFields.locked ?? false,
+                    currency: resource.currency,
+                    ledger_amount: resource.ledger_amount || 0,
+                    oe_warning_percent:
+                        (inputFields.oe_warning_percent || 0) / 100,
+                    oe_warning_amount: inputFields.oe_warning_amount || null,
+                    managing_branch: inputFields.managing_branch || null,
+                    owner_id: inputFields.owner_id || null,
+                };
+
+                await APIClient.acquisition.ledgers
+                    .rollover(resource.ledger_id, body)
+                    .then(
+                        () => {
+                            setMessage($__("Ledger rolled over successfully"));
+                            onSuccess?.();
+                        },
+                        () => {
+                            setWarning(
+                                $__("An error occurred during rollover")
+                            );
+                        }
+                    );
+            }
+        );
+    };
+
+    return { openRolloverModal };
+};
+
 export const acquisitionsActions = store => {
     return {
         formatValueWithCurrency,
         buildFundTreeOptions,
         applyNumberValidation,
         useAllocationModal,
+        useRolloverModal,
     };
 };

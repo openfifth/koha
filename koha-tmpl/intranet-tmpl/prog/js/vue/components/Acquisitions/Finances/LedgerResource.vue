@@ -31,6 +31,7 @@ export default {
             getBranchnamesFromGroups,
             differentCurrenciesInLedgers,
             useAllocationModal,
+            useRolloverModal,
         } = acquisitionsStore;
 
         const { setConfirmationDialog, setWarning, setMessage } =
@@ -39,6 +40,13 @@ export default {
         let refetchResource;
         const { getAllocationToolbarButtons } = useAllocationModal({
             entity: "ledger",
+            setConfirmationDialog,
+            setWarning,
+            setMessage,
+            onSuccess: () => refetchResource?.(),
+        });
+
+        const { openRolloverModal } = useRolloverModal({
             setConfirmationDialog,
             setWarning,
             setMessage,
@@ -68,6 +76,17 @@ export default {
                                   : $__("This ledger is inactive"),
                     },
                     ...getAllocationToolbarButtons(resource),
+                    {
+                        onClick: () =>
+                            openRolloverModal(
+                                resource,
+                                baseResource.resourceAttrs
+                            ),
+                        title: $__("Rollover"),
+                        icon: "rotate",
+                        disabled: !resource.status,
+                        hint: $__("This ledger is inactive"),
+                    },
                 ],
             };
         };
@@ -365,6 +384,24 @@ export default {
                         ...(baseResource.isUserPermitted("deleteLedger")
                             ? ["delete"]
                             : []),
+                        {
+                            rollover: {
+                                icon: "fa fa-rotate",
+                                text: $__("Rollover"),
+                                should_display: row => row.status,
+                                callback: (ledger, dt, e) => {
+                                    openRolloverModal(
+                                        {
+                                            ...ledger,
+                                            oe_warning_percent:
+                                                (ledger.oe_warning_percent ||
+                                                    0) * 100,
+                                        },
+                                        baseResource.resourceAttrs
+                                    );
+                                },
+                            },
+                        },
                     ],
                 },
             }),
@@ -599,6 +636,8 @@ export default {
                                                               "INCREASE" ||
                                                           row.type ===
                                                               "INITIAL" ||
+                                                          row.type ===
+                                                              "ROLLOVER_TRANSFER" ||
                                                           (row.type ===
                                                               "TRANSFER" &&
                                                               row.is_transferred_from);

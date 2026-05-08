@@ -88,7 +88,9 @@
                 :name="attr.name"
                 :id="attr.name + '_yes'"
                 :value="true"
-                :checked="resource[attr.name] == true"
+                :checked="
+                    resource[attr.name] == true || attr.defaultValue == true
+                "
                 v-model="resource[attr.name]"
             />
         </label>
@@ -98,7 +100,9 @@
                 type="radio"
                 :name="attr.name"
                 :id="attr.name + '_no'"
-                :checked="resource[attr.name] == false"
+                :checked="
+                    resource[attr.name] == false || attr.defaultValue == false
+                "
                 :value="false"
                 v-model="resource[attr.name]"
             />

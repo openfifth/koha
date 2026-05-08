@@ -702,6 +702,8 @@ export default {
                                                               "INCREASE" ||
                                                           row.type ===
                                                               "INITIAL" ||
+                                                          row.type ===
+                                                              "ROLLOVER_TRANSFER" ||
                                                           (row.type ===
                                                               "TRANSFER" &&
                                                               row.is_transferred_from);
