@@ -193,31 +193,44 @@ sub summary {
     my $deficit_lines =
         $self->register->accountlines->search( { %{$conditions}, debit_type_code => 'CASHUP_DEFICIT' } );
 
-    my $surplus_total = $surplus_lines->count ? $surplus_lines->total : undef;
-    my $deficit_total = $deficit_lines->count ? $deficit_lines->total : undef;
-
-    # Extract notes from reconciliation lines
-    my ($surplus_record) = $surplus_lines->_resultset->search( {}, { rows => 1 } )->all;
-    my $surplus_note = $surplus_record ? $surplus_record->note : undef;
-
-    my ($deficit_record) = $deficit_lines->_resultset->search( {}, { rows => 1 } )->all;
-    my $deficit_note = $deficit_record ? $deficit_record->note : undef;
+    # Per-payment-type reconciliation breakdown, built from the surplus/deficit
+    # lines themselves. Each entry carries its own per-row note. Aggregate
+    # totals (and "any reconciliation?" boolean checks) are derived by
+    # consumers from the grouped breakdown.
+    my @reconciliations_grouped;
+    my %recon_index;
+    for my $line ( $surplus_lines->as_list ) {
+        my $pt = $line->payment_type // 'CASH';
+        $recon_index{$pt} //= {};
+        $recon_index{$pt}->{surplus_total} = ( $recon_index{$pt}->{surplus_total} // 0 ) + ( $line->amount * 1 );
+        $recon_index{$pt}->{note} //= $line->note;
+    }
+    for my $line ( $deficit_lines->as_list ) {
+        my $pt = $line->payment_type // 'CASH';
+        $recon_index{$pt} //= {};
+        $recon_index{$pt}->{deficit_total} = ( $recon_index{$pt}->{deficit_total} // 0 ) + ( $line->amount * 1 );
+        $recon_index{$pt}->{note} //= $line->note;
+    }
+    for my $pt ( sort keys %recon_index ) {
+        push @reconciliations_grouped,
+            {
+            payment_type  => $pt,
+            surplus_total => $recon_index{$pt}->{surplus_total},
+            deficit_total => $recon_index{$pt}->{deficit_total},
+            note          => $recon_index{$pt}->{note},
+            };
+    }
 
     $summary = {
-        from_date      => $session_start,
-        to_date        => $session_end,
-        income_grouped => \@income,
-        income_total   => abs($income_total),
-        payout_grouped => \@payout,
-        payout_total   => abs($payout_total),
-        total          => $total * -1,
-        total_grouped  => \@total_grouped,
-
-        # Reconciliation data for footer display
-        surplus_total => $surplus_total ? $surplus_total * 1 : undef,
-        deficit_total => $deficit_total ? $deficit_total * 1 : undef,
-        surplus_note  => $surplus_note,
-        deficit_note  => $deficit_note
+        from_date               => $session_start,
+        to_date                 => $session_end,
+        income_grouped          => \@income,
+        income_total            => abs($income_total),
+        payout_grouped          => \@payout,
+        payout_total            => abs($payout_total),
+        total                   => $total * -1,
+        total_grouped           => \@total_grouped,
+        reconciliations_grouped => \@reconciliations_grouped,
     };
 
     return $summary;

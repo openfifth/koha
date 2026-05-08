@@ -52,9 +52,12 @@ $(document).ready(function () {
                     summary_modal.find(".preview-notice").remove();
                 }
 
-                // Check for reconciliation (surplus or deficit) from dedicated fields
-                var surplus = data.summary.surplus_total;
-                var deficit = data.summary.deficit_total;
+                // The presence of any per-type entry in reconciliations_grouped
+                // tells us a CASHUP_SURPLUS / CASHUP_DEFICIT line was created
+                // for this cashup — equivalent to the old surplus_total /
+                // deficit_total scalars.
+                var grouped = data.summary.reconciliations_grouped || [];
+                var hasReconciliation = grouped.length > 0;
                 var expectedAmount = data.summary.total;
                 var actualAmount = data.amount;
 
@@ -198,66 +201,69 @@ $(document).ready(function () {
                     }
                 }
 
-                // 4. Cashup surplus OR deficit (highlighted)
-                if (surplus || deficit) {
-                    // Add separator before reconciliation
+                // 4. Per-payment-type cashup surplus / deficit rows.
+                if (hasReconciliation) {
                     tfoot.append(
                         "<tr class='reconciliation-separator'><td colspan='2'><hr></td></tr>"
                     );
 
-                    var reconciliationClass,
-                        reconciliationLabel,
-                        reconciliationAmount,
-                        reconciliationNote;
+                    grouped.forEach(function (entry) {
+                        var entrySurplus = entry.surplus_total;
+                        var entryDeficit = entry.deficit_total;
+                        var pt = entry.payment_type || "";
+                        var label;
+                        var amountText;
+                        var rowClass;
 
-                    if (surplus) {
-                        reconciliationClass =
-                            "reconciliation-result text-warning";
-                        reconciliationLabel = __("Cashup surplus");
-                        reconciliationAmount =
-                            "+" + Math.abs(surplus).format_price();
-                        reconciliationNote = data.summary.surplus_note;
-                    } else if (deficit) {
-                        reconciliationClass =
-                            "reconciliation-result text-danger";
-                        reconciliationLabel = __("Cashup deficit");
-                        reconciliationAmount =
-                            "-" + Math.abs(deficit).format_price();
-                        reconciliationNote = data.summary.deficit_note;
-                    }
-
-                    tfoot.append(
-                        "<tr class='" +
-                            reconciliationClass +
-                            "'><td><strong>" +
-                            reconciliationLabel +
-                            "</strong></td><td><strong>" +
-                            reconciliationAmount +
-                            "</strong></td></tr>"
-                    );
-
-                    // Add note if present
-                    if (reconciliationNote) {
-                        // Check if note is an authorized value code and use description if available
-                        var noteDisplay = reconciliationNote;
-                        if (
-                            typeof reconciliation_note_avs !== "undefined" &&
-                            reconciliation_note_avs[reconciliationNote]
-                        ) {
-                            noteDisplay =
-                                reconciliation_note_avs[reconciliationNote];
+                        if (entrySurplus) {
+                            rowClass = "reconciliation-result text-warning";
+                            label = __x("{payment_type} surplus", {
+                                payment_type: escape_str(pt),
+                            });
+                            amountText =
+                                "+" + Math.abs(entrySurplus).format_price();
+                        } else if (entryDeficit) {
+                            rowClass = "reconciliation-result text-danger";
+                            label = __x("{payment_type} deficit", {
+                                payment_type: escape_str(pt),
+                            });
+                            amountText =
+                                "-" + Math.abs(entryDeficit).format_price();
+                        } else {
+                            return;
                         }
 
                         tfoot.append(
                             "<tr class='" +
-                                reconciliationClass +
-                                "'><td colspan='2'><em>" +
-                                __("Note:") +
-                                " " +
-                                escape_str(noteDisplay) +
-                                "</em></td></tr>"
+                                rowClass +
+                                "'><td><strong>" +
+                                label +
+                                "</strong></td><td><strong>" +
+                                amountText +
+                                "</strong></td></tr>"
                         );
-                    }
+
+                        if (entry.note) {
+                            var noteDisplay = entry.note;
+                            if (
+                                typeof reconciliation_note_avs !==
+                                    "undefined" &&
+                                reconciliation_note_avs[entry.note]
+                            ) {
+                                noteDisplay =
+                                    reconciliation_note_avs[entry.note];
+                            }
+                            tfoot.append(
+                                "<tr class='" +
+                                    rowClass +
+                                    "'><td colspan='2'><em>" +
+                                    __("Note:") +
+                                    " " +
+                                    escape_str(noteDisplay) +
+                                    "</em></td></tr>"
+                            );
+                        }
+                    });
                 }
             },
         });
