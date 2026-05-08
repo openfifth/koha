@@ -811,7 +811,7 @@ sub HoldTitle {
 
     my $destination = Koha::Libraries->find($branch);
     return { code => 'library_not_pickup_location' } unless $destination->pickup_location;
-    return { code => 'cannot_be_transferred' }      unless $biblio->can_be_transferred( { to => $destination } );
+    return { code => 'cannot_be_transferred' }       unless $biblio->can_be_transferred( { to => $destination } );
 
     my $resdate = $cgi->param('start_date');
     my $expdate = $cgi->param('expiry_date');

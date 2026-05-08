@@ -481,7 +481,7 @@ subtest 'Holds test' => sub {
     $query->param( 'bib_id',    $item->biblionumber );
 
     my $reply = C4::ILSDI::Services::HoldTitle($query);
-    is( $reply->{code}, 'damaged', "Item damaged" );
+    is( $reply->{code}, 'no_item_available', "Item damaged" );
 
     $item->damaged(0)->store;
 
@@ -497,7 +497,7 @@ subtest 'Holds test' => sub {
     );
 
     $reply = C4::ILSDI::Services::HoldTitle($query);
-    is( $reply->{code}, 'item_already_on_hold', "Item already on hold" );
+    is( $reply->{code}, 'no_item_available', "Item already on hold" );
 
     my $biblio_with_no_item = $builder->build_sample_biblio;
 
@@ -607,7 +607,7 @@ subtest 'Holds test' => sub {
     $reply = C4::ILSDI::Services::HoldItem($query);
 
     is( $reply->{code},            'already_possession', "Patron has issued same book" );
-    is( $reply->{pickup_location}, undef,               "No reserve placed" );
+    is( $reply->{pickup_location}, undef,                "No reserve placed" );
 
     # Test Patron cannot reserve if expired and BlockExpiredPatronOpacActions
     my $category = $builder->build(
