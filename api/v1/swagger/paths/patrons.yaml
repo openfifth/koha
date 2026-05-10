@@ -374,6 +374,7 @@
             - overdues+count
             - account_balance
             - library
+            - notice_email_address
         collectionFormat: csv
     responses:
       "200":
@@ -507,6 +508,7 @@
           enum:
             - +strings
             - extended_attributes
+            - notice_email_address
         collectionFormat: csv
     produces:
       - application/json

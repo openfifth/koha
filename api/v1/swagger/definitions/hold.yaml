@@ -124,6 +124,26 @@ properties:
       - boolean
       - "null"
     description: Cancellation requests count for the hold (x-koha-embed)
+  cancellation_requests:
+    type:
+      - array
+      - "null"
+    description: Cancellation requests for the hold (x-koha-embed)
+    items:
+      type: object
+      properties:
+        hold_cancellation_request_id:
+          type: integer
+        hold_id:
+          type: integer
+        creation_date:
+          type: string
+          format: date-time
+  desk:
+    type:
+      - object
+      - "null"
+    description: The desk (x-koha-embed)
   iso18626_request:
     type:
       - object

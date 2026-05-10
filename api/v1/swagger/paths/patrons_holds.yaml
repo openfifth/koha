@@ -30,9 +30,12 @@
           enum:
             - +strings
             - cancellation_requested
+            - cancellation_requests
             - biblio
             - deleted_biblio
+            - desk
             - item
+            - item+strings
             - pickup_library
         collectionFormat: csv
     produces:

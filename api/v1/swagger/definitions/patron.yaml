@@ -412,6 +412,12 @@ properties:
     type:
       - boolean
     description: set to 1 if the patron is eligible to self renew and is within the renewal criteria
+  notice_email_address:
+    type:
+      - string
+      - "null"
+    description: The email address used for notices, determined by the EmailFieldPrimary
+      system preference (x-koha-embed)
   _strings:
     type:
       - object
