@@ -103,11 +103,18 @@
           enum:
             - +strings
             - cancellation_requested
+            - cancellation_requests
             - biblio
             - deleted_biblio
+            - desk
             - pickup_library
             - item
+            - item+strings
+            - item.holding_library
+            - item.home_library
             - patron
+            - patron.category
+            - patron.notice_email_address
             - item_group
             - item_level_holds_count
             - iso18626_request
