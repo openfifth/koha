@@ -50,15 +50,6 @@
             <span><a href="[% all_branches_link | url %]"> View all libraries</a></span>
         [% END %]
     </h2>
-    [% IF reject_result_error %]
-        <div class="error message">
-            [% IF reject_result_error.invalid_status %]
-                <p>There was a problem rejecting the cancellation request. Cannot reject an already completed cancellation request.</p>
-            [% ELSE %]
-                <p>Some error occurred while rejecting the cancellation request. Please check the logs</p>
-            [% END %]
-        </div>
-    [% END %]
     [% IF ( cancel_result ) %]
         [% FOREACH cancel_result %]
             [% IF ( messagetransfert ) %]
@@ -70,7 +61,7 @@
                         <button type="submit" class="btn btn-default approve"><i class="fa fa-fw fa-check"></i> OK</button>
                     </form>
                 </div>
-            [% END # /IF messagetransfert %]
+            [% END %]
             [% IF ( waiting ) %]
                 <div class="alert alert-info">
                     <h2>This item is on hold for pick-up at your library</h2>
@@ -80,8 +71,8 @@
                         <button type="submit" class="btn btn-default approve"><i class="fa fa-fw fa-check"></i> OK</button>
                     </form>
                 </div>
-            [% END # /IF waiting %]
-        [% END # /FOREACH cancel_result %]
+            [% END %]
+        [% END %]
     [% ELSE %]
         [% IF enqueued %]
             <div class="alert alert-info">
@@ -93,71 +84,114 @@
         [% WRAPPER tabs id= "resultlist" %]
             [% WRAPPER tabs_nav %]
                 [% WRAPPER tab_item tabname= "holdswaiting" bt_active= 1 %]
-                    <span>Holds waiting:</span> [% reservecount | html %]
+                    <span>Holds waiting</span>
                 [% END %]
                 [% WRAPPER tab_item tabname= "holdsover" %]
-                    <span>Holds waiting past their expiration date:</span> [% overcount | html %]
+                    <span>Holds waiting past their expiration date</span>
                 [% END %]
                 [% WRAPPER tab_item tabname= "holdscancelled" %]
-                    <span>Holds with cancellation requests:</span> [% cancel_reqs_count | html %]
+                    <span>Holds with cancellation requests</span>
                 [% END %]
             [% END # /WRAPPER tabs_nav %]
 
             [% WRAPPER tab_panels %]
                 [% WRAPPER tab_panel tabname="holdswaiting" bt_active= 1 %]
-                    [% IF ( reserveloop ) %]
-                        <div class="tab-toolbar">
-                            <button class="btn btn-default cancel_selected_holds" data-bulk="true"></button>
-                        </div>
-                        [% INCLUDE waiting_holds.inc table_name='holdst' reserveloop=reserveloop tab='holdwaiting' %]
-                    [% ELSE %]
-                        <div class="alert alert-info">No holds found.</div>
-                    [% END %]
+                    <div class="tab-toolbar">
+                        <button class="btn btn-default cancel_selected_holds" data-bulk="true"></button>
+                    </div>
+                    <table id="holdst" class="holds_table">
+                        <thead>
+                            <tr>
+                                <th class="no-sort"><input type="checkbox" class="select_hold_all" /></th>
+                                <th>Waiting since</th>
+                                <th>Date hold placed</th>
+                                <th>Expiration date</th>
+                                <th class="anti-the">Title</th>
+                                <th>Patron</th>
+                                <th>Home library</th>
+                                <th>Current library</th>
+                                <th>Shelving location</th>
+                                <th>Call number</th>
+                                <th>Copy number</th>
+                                <th>Enumeration</th>
+                                <th class="no-sort no-export">Actions</th>
+                            </tr>
+                        </thead>
+                    </table>
                 [% END # /tab_panel#holdswaiting %]
 
                 [% WRAPPER tab_panel tabname="holdsover" %]
-                    [% IF ( overloop ) %]
-                        <div class="tab-toolbar">
-                            <button class="btn btn-default cancel_selected_holds" data-bulk="true"></button>
-                            <div class="btn-group">
-                                <form name="cancelAllReserve" action="waitingreserves.pl" method="post">
-                                    [% INCLUDE 'csrf-token.inc' %]
-                                    <input type="hidden" name="op" value="cud-cancelall" />
-                                    <input type="hidden" name="allbranches" value="[% allbranches | html %]" />
-                                    <input type="hidden" name="tab" value="holdsover" />
-                                    [% IF TransferWhenCancelAllWaitingHolds %]
-                                        <button type="submit" class="btn btn-primary">Cancel and transfer all</button>
-                                    [% ELSE %]
-                                        <button type="submit" class="btn btn-primary">Cancel all</button>
-                                    [% END %]
-                                </form>
-                            </div>
-                        </div>
-                        [% UNLESS TransferWhenCancelAllWaitingHolds %]
-                            <div class="hint"
-                                >Only items that need not be transferred will be cancelled
-                                [% IF ( CAN_user_parameters_manage_sysprefs ) %]
-                                    (<a href="/cgi-bin/koha/admin/preferences.pl?op=search&searchfield=TransferWhenCancelAllWaitingHolds">TransferWhenCancelAllWaitingHolds</a> system preference)
+                    <div class="tab-toolbar">
+                        <button class="btn btn-default cancel_selected_holds" data-bulk="true"></button>
+                        <div class="btn-group">
+                            <form name="cancelAllReserve" action="waitingreserves.pl" method="post">
+                                [% INCLUDE 'csrf-token.inc' %]
+                                <input type="hidden" name="op" value="cud-cancelall" />
+                                <input type="hidden" name="allbranches" value="[% all_branches | html %]" />
+                                <input type="hidden" name="tab" value="holdsover" />
+                                [% IF TransferWhenCancelAllWaitingHolds %]
+                                    <button type="submit" class="btn btn-primary">Cancel and transfer all</button>
                                 [% ELSE %]
-                                    (TransferWhenCancelAllWaitingHolds system preference)
+                                    <button type="submit" class="btn btn-primary">Cancel all</button>
                                 [% END %]
-                            </div>
-                        [% END %]
-                        [% INCLUDE waiting_holds.inc table_name='holdso' reserveloop=overloop tab='holdsover' %]
-                    [% ELSE %]
-                        <div class="alert alert-info">No holds found.</div>
-                    [% END # /IF( overloop ) %]
+                            </form>
+                        </div>
+                    </div>
+                    [% UNLESS TransferWhenCancelAllWaitingHolds %]
+                        <div class="hint"
+                            >Only items that need not be transferred will be cancelled
+                            [% IF ( CAN_user_parameters_manage_sysprefs ) %]
+                                (<a href="/cgi-bin/koha/admin/preferences.pl?op=search&searchfield=TransferWhenCancelAllWaitingHolds">TransferWhenCancelAllWaitingHolds</a> system preference)
+                            [% ELSE %]
+                                (TransferWhenCancelAllWaitingHolds system preference)
+                            [% END %]
+                        </div>
+                    [% END %]
+                    <table id="holdso" class="holds_table">
+                        <thead>
+                            <tr>
+                                <th class="no-sort"><input type="checkbox" class="select_hold_all" /></th>
+                                <th>Waiting since</th>
+                                <th>Date hold placed</th>
+                                <th>Expiration date</th>
+                                <th class="anti-the">Title</th>
+                                <th>Patron</th>
+                                <th>Home library</th>
+                                <th>Current library</th>
+                                <th>Shelving location</th>
+                                <th>Call number</th>
+                                <th>Copy number</th>
+                                <th>Enumeration</th>
+                                <th class="no-sort no-export">Actions</th>
+                            </tr>
+                        </thead>
+                    </table>
                 [% END # /tab_panel#holdsover %]
 
                 [% WRAPPER tab_panel tabname="holdscancelled" %]
-                    [% IF cancel_reqs_count %]
-                        <div class="tab-toolbar">
-                            <button class="btn btn-default cancel_selected_holds" data-bulk="true"></button>
-                        </div>
-                        [% INCLUDE waiting_holds.inc select_column='1' table_name='holdscr' reserveloop=cancel_reqs tab='holdscr' %]
-                    [% ELSE %]
-                        <div class="alert alert-info">No holds found.</div>
-                    [% END %]
+                    <div class="tab-toolbar">
+                        <button class="btn btn-default cancel_selected_holds" data-bulk="true"></button>
+                    </div>
+                    <table id="holdscr" class="holds_table">
+                        <thead>
+                            <tr>
+                                <th class="no-sort"><input type="checkbox" class="select_hold_all" /></th>
+                                <th>Waiting since</th>
+                                <th>Date hold placed</th>
+                                <th>Date cancellation requested</th>
+                                <th>Expiration date</th>
+                                <th class="anti-the">Title</th>
+                                <th>Patron</th>
+                                <th>Home library</th>
+                                <th>Current library</th>
+                                <th>Shelving location</th>
+                                <th>Call number</th>
+                                <th>Copy number</th>
+                                <th>Enumeration</th>
+                                <th class="no-sort no-export">Actions</th>
+                            </tr>
+                        </thead>
+                    </table>
                 [% END # /tab_panel#holdscancelled %]
             [% END # /WRAPPER tab_panels %]
         [% END # /WRAPPER tabs %]
@@ -204,47 +238,266 @@
 
 [% MACRO jsinclude BLOCK %]
     [% INCLUDE 'datatables.inc' %]
+    [% INCLUDE 'js-date-format.inc' %]
     <script nonce="[% Koha.CSPNonce | $raw %]">
         var holdst_table_settings  = [% TablesSettings.GetTableSettings( 'circ', 'holds_awaiting_pickup', 'holdst',  'json' ) | $raw %];
         var holdso_table_settings  = [% TablesSettings.GetTableSettings( 'circ', 'holds_awaiting_pickup', 'holdso',  'json' ) | $raw %];
         var holdscr_table_settings = [% TablesSettings.GetTableSettings( 'circ', 'holds_awaiting_pickup', 'holdscr', 'json' ) | $raw %];
-    </script>
-    <script nonce="[% Koha.CSPNonce | $raw %]">
+
+        var all_branches = [% IF all_branches %]true[% ELSE %]false[% END %];
+        var logged_in_library = "[% Branches.GetLoggedInBranchcode | html %]";
         var MSG_CANCEL_SELECTED = _("Cancel selected (%s)");
+
+        var today = new Date().toISOString().split("T")[0];
+
+        function build_holds_url(tab) {
+            let q = { "me.status": "W" };
+            if (!all_branches) {
+                q["me.pickup_library_id"] = logged_in_library;
+            }
+            if (tab === "holdswaiting") {
+                q["me.expiration_date"] = { ">=": today };
+            } else if (tab === "holdsover") {
+                q["me.expiration_date"] = { "<": today };
+            } else if (tab === "holdscancelled") {
+                q["cancellation_requests.hold_cancellation_request_id"] = { "!=": null };
+            }
+            return "/api/v1/holds?q=" + encodeURIComponent(JSON.stringify(q));
+        }
+
+        function render_holds_columns(include_cancellation_date) {
+            let cols = [
+                {
+                    data: "hold_id",
+                    orderable: false,
+                    searchable: false,
+                    render: function (data, type, row) {
+                        return '<input type="checkbox" class="select_hold" data-id="' + data + '" />';
+                    },
+                },
+                {
+                    data: "waiting_date",
+                    orderable: true,
+                    searchable: false,
+                    render: function (data, type, row) {
+                        return $date(data);
+                    },
+                },
+                {
+                    data: "hold_date",
+                    orderable: true,
+                    searchable: false,
+                    render: function (data, type, row) {
+                        return $date(data);
+                    },
+                },
+            ];
+
+            if (include_cancellation_date) {
+                cols.push({
+                    data: "cancellation_requests",
+                    orderable: true,
+                    searchable: false,
+                    render: function (data, type, row) {
+                        if (data && data.length) {
+                            return $date(data[0].creation_date);
+                        }
+                        return "";
+                    },
+                });
+            }
+
+            cols.push(
+                {
+                    data: "expiration_date",
+                    orderable: true,
+                    searchable: false,
+                    render: function (data, type, row) {
+                        return $date(data);
+                    },
+                },
+                {
+                    data: "biblio.title",
+                    orderable: true,
+                    searchable: true,
+                    render: function (data, type, row) {
+                        let title = "";
+                        if (row.biblio) {
+                            title = '<a href="/cgi-bin/koha/catalogue/detail.pl?biblionumber=' + row.biblio.biblio_id + '">' + (row.biblio.title || "").escapeHtml() + "</a>";
+                            if (row.biblio.subtitle) {
+                                title += " " + row.biblio.subtitle.escapeHtml();
+                            }
+                        }
+                        if (row.item && row.item._strings && row.item._strings.item_type_id) {
+                            title += " (<strong>" + (row.item._strings.item_type_id.str || "").escapeHtml() + "</strong>)";
+                        }
+                        if (row.item) {
+                            title += "<br/>" + _("Barcode: ") + (row.item.external_id || "").escapeHtml();
+                        }
+                        return title;
+                    },
+                },
+                {
+                    data: "patron.surname",
+                    orderable: true,
+                    searchable: true,
+                    render: function (data, type, row) {
+                        if (!row.patron) return "";
+                        let patron_str = '<a href="/cgi-bin/koha/members/moremember.pl?borrowernumber=' + row.patron.patron_id + '">' + (row.patron.surname || "").escapeHtml() + ", " + (row.patron.firstname || "").escapeHtml() + "</a>";
+                        if (row.patron.phone) {
+                            patron_str += '<br/><span class="patron_phone">' + row.patron.phone.escapeHtml() + "</span>";
+                        }
+                        if (row.patron.notice_email_address) {
+                            patron_str += '<br/><span class="patron_email"><a href="mailto:' + encodeURIComponent(row.patron.notice_email_address) + '">' + row.patron.notice_email_address.escapeHtml() + "</a></span>";
+                        }
+                        if (row.patron.primary_contact_method) {
+                            let method_labels = {
+                                phone: _("Primary phone"),
+                                phonepro: _("Secondary phone"),
+                                mobile: _("Other phone"),
+                                email: _("Primary email"),
+                                emailpro: _("Secondary email"),
+                                fax: _("Fax"),
+                            };
+                            patron_str += '<div class="label main_contact_method">' + _("Main contact method: ") + (method_labels[row.patron.primary_contact_method] || row.patron.primary_contact_method) + "</div>";
+                        } else {
+                            patron_str += '<div class="main_contact_method none">' + _("Main contact method: None") + "</div>";
+                        }
+                        return patron_str;
+                    },
+                },
+                {
+                    data: "item.home_library.name",
+                    orderable: true,
+                    searchable: false,
+                    render: function (data, type, row) {
+                        if (row.item && row.item.home_library) {
+                            return (row.item.home_library.name || "").escapeHtml();
+                        }
+                        return "";
+                    },
+                },
+                {
+                    data: "item.holding_library.name",
+                    orderable: true,
+                    searchable: false,
+                    render: function (data, type, row) {
+                        let str = "";
+                        if (row.item && row.item.holding_library) {
+                            str = (row.item.holding_library.name || "").escapeHtml();
+                        }
+                        if (row.desk) {
+                            str += ", " + (row.desk.name || "").escapeHtml();
+                        }
+                        return str;
+                    },
+                },
+                {
+                    data: "item.location",
+                    orderable: false,
+                    searchable: false,
+                    render: function (data, type, row) {
+                        if (row.item && row.item._strings && row.item._strings.location) {
+                            return (row.item._strings.location.str || "").escapeHtml();
+                        }
+                        return (data || "").escapeHtml();
+                    },
+                },
+                {
+                    data: "item.callnumber",
+                    orderable: true,
+                    searchable: true,
+                    render: function (data) {
+                        return (data || "").escapeHtml();
+                    },
+                },
+                {
+                    data: "item.copy_number",
+                    orderable: true,
+                    searchable: false,
+                    render: function (data) {
+                        return (data || "").escapeHtml();
+                    },
+                },
+                {
+                    data: "item.serial_issue_number",
+                    orderable: true,
+                    searchable: false,
+                    render: function (data) {
+                        return (data || "").escapeHtml();
+                    },
+                },
+                {
+                    data: "hold_id",
+                    orderable: false,
+                    searchable: false,
+                    render: function (data, type, row) {
+                        if (!row.item) return "";
+                        let homebranch = row.item.home_library_id || "";
+                        let holdingbranch = row.item.holding_library_id || "";
+                        let form = '<form name="cancelReserve" action="waitingreserves.pl" method="post">';
+                        form += '<input type="hidden" name="csrf_token" value="' + $('meta[name="csrf-token"]').attr("content") + '" />';
+                        form += '<input type="hidden" name="op" value="cud-cancel" />';
+                        form += '<input type="hidden" name="borrowernumber" value="' + row.patron_id + '" />';
+                        form += '<input type="hidden" name="itemnumber" value="' + row.item_id + '" />';
+                        form += '<input type="hidden" name="fbr" value="' + holdingbranch + '" />';
+                        form += '<input type="hidden" name="tbr" value="' + homebranch + '" />';
+                        form += '<input type="hidden" name="tab" value="' + (row._tab || "") + '" />';
+                        if (homebranch !== holdingbranch) {
+                            let home_name = (row.item._strings && row.item._strings.home_library_id) ? row.item._strings.home_library_id.str : homebranch;
+                            form += '<button type="submit" class="btn btn-default btn-xs"><i class="fa fa-times"></i> ' + _("Cancel hold and return to: ") + home_name.escapeHtml() + "</button>";
+                        } else {
+                            form += '<button type="submit" class="btn btn-default btn-xs"><i class="fa fa-times"></i> ' + _("Cancel hold") + "</button>";
+                        }
+                        form += "</form>";
+                        return form;
+                    },
+                }
+            );
+
+            return cols;
+        }
+
+        function init_holds_table(table_id, tab, table_settings, include_cancellation_date) {
+            let embeds = ["patron", "patron.category", "patron.notice_email_address", "biblio", "item+strings", "item.holding_library", "item.home_library", "desk"];
+            if (include_cancellation_date) {
+                embeds.push("cancellation_requests");
+            }
+
+            return $("#" + table_id).kohaTable(
+                {
+                    ajax: {
+                        url: build_holds_url(tab),
+                    },
+                    embed: embeds,
+                    order: [[1, "asc"]],
+                    drawCallback: function () {
+                        // Tag rows with tab for the cancel form
+                        let dt = this.api();
+                        dt.rows().every(function () {
+                            this.data()._tab = tab === "holdsover" ? "holdsover" : "holdswaiting";
+                        });
+                    },
+                    columns: render_holds_columns(include_cancellation_date),
+                },
+                table_settings
+            );
+        }
+
         $(document).ready(function () {
-            $("#holdst").kohaTable(
-                {
-                    pagingType: "full",
-                    order: [[1, "asc"]],
-                },
-                holdst_table_settings
-            );
-
-            $("#holdso").kohaTable(
-                {
-                    pagingType: "full",
-                    order: [[1, "asc"]],
-                },
-                holdso_table_settings
-            );
-
-            $("#holdscr").kohaTable(
-                {
-                    pagingType: "full",
-                    order: [[1, "asc"]],
-                },
-                holdscr_table_settings
-            );
+            init_holds_table("holdst", "holdswaiting", holdst_table_settings, false);
+            init_holds_table("holdso", "holdsover", holdso_table_settings, false);
+            init_holds_table("holdscr", "holdscancelled", holdscr_table_settings, true);
 
             let cancel_link;
 
             $("#cancelModalConfirmBtn").on("click", function (e) {
                 var ids = cancel_link.data("ids");
-                localStorage.selectedWaitingHolds = JSON.stringify(JSON.parse(localStorage.selectedWaitingHolds).filter(id => !ids.includes(id)));
-                let link = `waitingreserves.pl?cancelBulk=1&amp;ids=${ids.join(",")}`;
+                localStorage.selectedWaitingHolds = JSON.stringify(JSON.parse(localStorage.selectedWaitingHolds || "[]").filter(id => !ids.includes(id)));
+                let link = "waitingreserves.pl?cancelBulk=1&ids=" + ids.join(",");
                 let reason = $("#modal-cancellation-reason").val();
                 if (reason) {
-                    link += "&amp;cancellation-reason=" + reason;
+                    link += "&cancellation-reason=" + reason;
                 }
                 window.location.href = link;
                 return false;
@@ -259,12 +512,6 @@
             } catch (e) {
                 localStorage.selectedWaitingHolds = "[]";
             }
-
-            $(".holds_table .select_hold").each(function () {
-                if (JSON.parse(localStorage.selectedWaitingHolds).includes($(this).data("id"))) {
-                    $(this).prop("checked", true);
-                }
-            });
 
             function get_selected_ids(dt) {
                 let selected_ids = [];
@@ -286,6 +533,7 @@
                     e.preventDefault();
                     if (get_selected_ids(this_dt).length) {
                         cancel_link = $(this);
+                        cancel_link.data("ids", get_selected_ids(this_dt));
                         $("#cancelModal").modal("show");
                     }
                     return false;
@@ -295,16 +543,14 @@
             $(".holds_table").on("click", ".select_hold_all", function () {
                 var parent = $(this).parents(".tab-pane");
                 var this_dt = $(this).closest(".holds_table").DataTable();
-
-                var all_checked = $(this).closest(".select_hold_all").prop("checked");
+                var all_checked = $(this).prop("checked");
 
                 this_dt.cells(null, 0).every(function () {
                     $(this.node()).find('input[type="checkbox"]').prop("checked", all_checked);
                 });
 
                 let selected_ids = get_selected_ids(this_dt);
-                var count = selected_ids.length;
-                parent.find(".cancel_selected_holds").data("ids", selected_ids).html(MSG_CANCEL_SELECTED.format(count));
+                parent.find(".cancel_selected_holds").html(MSG_CANCEL_SELECTED.format(selected_ids.length));
                 localStorage.selectedWaitingHolds = JSON.stringify(selected_ids);
             });
 
@@ -312,17 +558,14 @@
                 var parent = $(this).parents(".tab-pane");
                 var this_dt = $(this).closest(".holds_table").DataTable();
                 let selected_ids = get_selected_ids(this_dt);
-                var count = selected_ids.length;
-                parent.find(".cancel_selected_holds").data("ids", selected_ids).html(MSG_CANCEL_SELECTED.format(count));
+                parent.find(".cancel_selected_holds").html(MSG_CANCEL_SELECTED.format(selected_ids.length));
                 localStorage.selectedWaitingHolds = JSON.stringify(selected_ids);
             });
 
             var hash = document.location.hash;
             if (hash !== "") {
-                /* The existence of location.hash means someone clicked a link which targets a specific tab */
                 $(hash).tab("show");
             } else {
-                /* If no specific tab was linked to, use the last active tab */
                 var activeTab = localStorage.getItem("waitingreserves_activetab");
                 if (activeTab) {
                     $("div#resultlist li:eq(" + activeTab + ") a").tab("show");
@@ -330,8 +573,7 @@
             }
             $("div#resultlist a[data-bs-toggle='tab']").on("shown.bs.tab", function (e) {
                 var thisTab = $(e.target).parent();
-                var activeTab = thisTab.index();
-                localStorage.setItem("waitingreserves_activetab", activeTab);
+                localStorage.setItem("waitingreserves_activetab", thisTab.index());
             });
         });
     </script>
