@@ -21,6 +21,7 @@ use Modern::Perl;
 
 use Koha::Database;
 
+use Koha::Biblios;
 use Koha::Hold::HoldsQueueItem;
 
 use base qw(Koha::Objects);
@@ -30,6 +31,24 @@ use base qw(Koha::Objects);
 Koha::Hold::HoldsQueueItems - Koha holds queue items object set class
 
 =head1 API
+
+=head2 Class methods
+
+=head3 api_query_fixer
+
+    $query = $holds_queue_items->api_query_fixer( $query, $context, $no_quotes );
+
+Delegates to L<Koha::Biblios> to rewrite biblioitem attribute names
+(e.g. C<biblio.publisher>) into their DBIC-resolvable form
+(e.g. C<biblio.biblioitem.publishercode>).
+
+=cut
+
+sub api_query_fixer {
+    my ( $self, $query, $context, $no_quotes ) = @_;
+
+    return Koha::Biblios->new->api_query_fixer( $query, 'biblio', $no_quotes );
+}
 
 =head2 Internal methods
 

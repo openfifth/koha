@@ -307,4 +307,11 @@ sub koha_objects_class {
     'Koha::Hold::HoldsQueueItems';
 }
 
+__PACKAGE__->belongs_to(
+    "patron",
+    "Koha::Schema::Result::Borrower",
+    { borrowernumber => "borrowernumber" },
+    { is_deferrable => 1, join_type => "LEFT", on_delete => "CASCADE", on_update => "CASCADE" },
+);
+
 1;
