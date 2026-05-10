@@ -21,17 +21,15 @@
 use Modern::Perl;
 use CGI qw ( -utf8 );
 use C4::Context;
-use C4::Output      qw( output_html_with_http_headers );
-use C4::Auth        qw( get_template_and_user );
-use C4::Items       qw( ModItemTransfer );
-use Date::Calc      qw( Date_to_Days Today );
-use C4::Reserves    qw( ModReserve ModReserveCancelAll );
-use Koha::DateUtils qw( dt_from_string );
-use Koha::BiblioFrameworks;
-use Koha::Items;
-use Koha::ItemTypes;
-use Koha::Patrons;
+use C4::Output   qw( output_html_with_http_headers );
+use C4::Auth     qw( get_template_and_user );
+use C4::Reserves qw( ModReserveCancelAll );
+use C4::Items    qw( ModItemTransfer );
 use Koha::BackgroundJob::BatchCancelHold;
+use Koha::BiblioFrameworks;
+use Koha::DateUtils qw( dt_from_string );
+use Koha::Items;
+use Koha::Patrons;
 
 my $input = CGI->new;
 
@@ -89,56 +87,39 @@ if ($cancelBulk) {
     );
 }
 
-my ( @reserve_loop, @over_loop );
+if ( $op eq 'cud-cancelall' ) {
 
-# FIXME - Is priority => 0 useful? If yes it must be moved to waiting, otherwise we need to remove it from here.
-my $holds = Koha::Holds->waiting->search(
-    { priority => 0, ( $all_branches ? () : ( branchcode => $default ) ) },
-    { order_by => ['waitingdate'] }
-);
+    # Cancel all expired waiting holds
+    use Koha::Holds;
+    use Date::Calc qw( Date_to_Days Today );
 
-# get reserves for the branch we are logged into, or for all branches
+    my $holds = Koha::Holds->waiting->search(
+        { priority => 0, ( $all_branches ? () : ( branchcode => $default ) ) },
+        { order_by => ['waitingdate'] }
+    );
 
-my $today = Date_to_Days(&Today);
+    my $today = Date_to_Days(&Today);
 
-while ( my $hold = $holds->next ) {
-    next unless $hold->waitingdate;
+    while ( my $hold = $holds->next ) {
+        next unless $hold->waitingdate;
+        my ( $expire_year, $expire_month, $expire_day ) = split( /-/, $hold->expirationdate );
+        my $calcDate = Date_to_Days( $expire_year, $expire_month, $expire_day );
 
-    my ( $expire_year, $expire_month, $expire_day ) = split( /-/, $hold->expirationdate );
-    my $calcDate = Date_to_Days( $expire_year, $expire_month, $expire_day );
-
-    if ( $today > $calcDate ) {
-        if ( $op eq 'cud-cancelall' ) {
+        if ( $today > $calcDate ) {
             my $res = cancel(
                 $hold->item->itemnumber, $hold->borrowernumber, $hold->item->holdingbranch,
                 $hold->item->homebranch, !$transfer_when_cancel_all
             );
             push @cancel_result, $res if $res;
-            next;
-        } else {
-            push @over_loop, $hold;
         }
-    } else {
-        push @reserve_loop, $hold;
     }
-
 }
-
-my $holds_with_cancellation_requests =
-    Koha::Holds->waiting->search( { ( $all_branches ? () : ( branchcode => $default ) ) } )
-    ->filter_by_has_cancellation_requests;
 
 $template->param( cancel_result => \@cancel_result ) if @cancel_result;
 
 $template->param(
-    reserveloop       => \@reserve_loop,
-    reservecount      => scalar @reserve_loop,
-    overloop          => \@over_loop,
-    overcount         => scalar @over_loop,
-    cancel_reqs_count => $holds_with_cancellation_requests->count,
-    cancel_reqs       => $holds_with_cancellation_requests,
-    show_date         => dt_from_string,
-    tab               => $tab,
+    show_date => dt_from_string,
+    tab       => $tab,
 );
 
 # Checking if there is a Fast Cataloging Framework
@@ -157,7 +138,7 @@ exit;
 sub cancel {
     my ( $itemnumber, $borrowernumber, $fbr, $tbr, $skip_transfers ) = @_;
 
-    my $transfer = $fbr ne $tbr;                     # XXX && !$nextreservinfo;
+    my $transfer = $fbr ne $tbr;
     my $item     = Koha::Items->find($itemnumber);
 
     return if $transfer && $skip_transfers;
