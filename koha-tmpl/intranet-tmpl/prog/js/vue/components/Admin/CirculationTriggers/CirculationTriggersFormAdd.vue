@@ -186,6 +186,7 @@
                                 label="name"
                                 :reduce="type => type.code"
                                 :options="filteredLetters"
+                                :clearable="false"
                             >
                                 <template #search="{ attributes, events }">
                                     <input
@@ -205,6 +206,18 @@
                                     />
                                 </template>
                             </v-select>
+                            <button
+                                v-if="
+                                    newRule.notice !== null &&
+                                    newRule.notice !== undefined
+                                "
+                                type="button"
+                                class="btn btn-link"
+                                :title="$__('Undo override and reset to fallback')"
+                                @click="newRule.notice = null"
+                            >
+                                <i class="fa fa-undo"></i>
+                            </button>
                         </li>
                         <li
                             v-if="
