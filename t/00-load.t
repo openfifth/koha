@@ -87,6 +87,13 @@ sub is_testable {
         @needed_module_names = ('Search::Elasticsearch');
     } elsif ( $module_name =~ /^Koha::ExternalContent/xsm ) {
         @needed_module_names = ('WebService::ILS');
+    } elsif ( $module_name =~ /BorrowerCompletion/xsm ) {
+
+        # This single regex now catches:
+        # Koha::Completion::AddressServiceBorrowerCompletion
+        # Koha::Completion::NavetBorrowerCompletion
+        # Koha::REST::V1::BorrowerCompletion
+        @needed_module_names = ('SOAP::Lite');
     }
     foreach my $current_name (@needed_module_names) {
         my $relative_pathname = $current_name;
