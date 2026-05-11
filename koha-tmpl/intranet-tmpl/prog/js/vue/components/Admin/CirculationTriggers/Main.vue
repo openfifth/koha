@@ -29,7 +29,7 @@ import { inject } from "vue";
 export default {
     setup() {
         const circRulesStore = inject("circRulesStore");
-        circRulesStore.init(default_view, logged_in_library_id);
+        circRulesStore.init(default_view, logged_in_library_id).catch(() => {});
 
         // format letters for display as "name (notice code)" in drop downs.
         letters

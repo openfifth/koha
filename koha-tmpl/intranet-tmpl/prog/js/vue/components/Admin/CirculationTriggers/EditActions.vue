@@ -5,8 +5,7 @@
         id="trigger-edit-form-general-section"
     >
         <legend v-if="editMode === 'add'">
-            {{ $__("Add new trigger") }}
-            {{ " " + triggerNumber }}
+            {{ $__("Add new trigger") + " " + triggerNumber }}
         </legend>
         <legend v-else>
             {{ $__("Edit trigger") }} {{ " " + triggerNumber }}

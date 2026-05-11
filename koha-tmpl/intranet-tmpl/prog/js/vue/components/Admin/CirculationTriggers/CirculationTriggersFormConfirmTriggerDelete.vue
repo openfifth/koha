@@ -1,26 +1,21 @@
 <template>
     <CirculationTriggersForm
         :submitAction="deleteTrigger"
-        formTitle="Confirm circulation trigger deletion"
+        :formTitle="
+            initialized
+                ? `Confirm deletion of Trigger ${triggerNumber} for ${handleContext(library_id, libraries, 'library_id')}`
+                : 'Confirm circulation trigger deletion'
+        "
+        buttonText="Confirm deletion"
     >
-        <fieldset class="rows">
-            <h2 v-if="initialized">
-                {{
-                    $__(
-                        `Delete Trigger ${triggerNumber} for: ${handleContext(library_id, libraries, "library_id")}`
-                    )
-                }}
-            </h2>
-            <div v-else>
-                <p>{{ $__("Loading library...") }}</p>
-            </div>
-        </fieldset>
         <fieldset class="rows">
             <TriggersTable
                 :triggerNumber="triggerNumber"
                 :modal="false"
-                :actions="false"
+                :displayActions="false"
+                :enableActions="false"
                 :ruleSets="formattedEffectiveRuleSets"
+                :title="$__('Rule sets to be deleted')"
             />
         </fieldset>
         <fieldset class="rows">
@@ -35,6 +30,23 @@
             </div>
             <div class="alert alert-warning" v-if="alertMessage">
                 {{ alertMessage }}
+            </div>
+        </fieldset>
+        <fieldset
+            v-if="initialized && dependentRuleSets.length > 0"
+            class="rows"
+        >
+            <div class="page-section bg-warning overflow-hidden">
+                <TriggersTable
+                    :ruleSets="projectedDependentEffectiveRuleSets"
+                    :triggerNumber="triggerNumber"
+                    :modal="false"
+                    :displayActions="false"
+                    :enableActions="false"
+                    :title="
+                        $__('Affected rule sets preview: state after deletion')
+                    "
+                />
             </div>
         </fieldset>
     </CirculationTriggersForm>
@@ -53,17 +65,28 @@ export default {
             findEffectiveRule,
             deleteRuleSet,
             hasExplicitRulesForTrigger,
+            computeDeletionImpact,
+            setAllFormattedRuleSets,
         } = circRulesStore;
-        const { libraries, allCurrentLibraryRawRuleSets, ruleSuffixes } =
-            storeToRefs(circRulesStore);
+        const {
+            libraries,
+            itemTypes,
+            patronCategories,
+            allCurrentLibraryRawRuleSets,
+            ruleSuffixes,
+        } = storeToRefs(circRulesStore);
         return {
             libraries,
+            itemTypes,
+            patronCategories,
             handleContext,
             findEffectiveRule,
             allCurrentLibraryRawRuleSets,
             ruleSuffixes,
             deleteRuleSet,
             hasExplicitRulesForTrigger,
+            computeDeletionImpact,
+            setAllFormattedRuleSets,
         };
     },
     data() {
@@ -73,31 +96,55 @@ export default {
             library_id: "*",
             triggerNumber: null,
             formattedEffectiveRuleSets: [],
+            dependentRuleSets: [],
+            projectedDependentEffectiveRuleSets: [],
         };
     },
     beforeRouteEnter(to, from, next) {
         next(async vm => {
             vm.setContext(to.query);
-            vm.setFormattedEffectiveRuleSets();
-            vm.initialized = true;
+            await vm.loadModalData();
         });
     },
     methods: {
+        async loadModalData() {
+            await this.setAllFormattedRuleSets();
+            this.setFormattedEffectiveRuleSets();
+
+            const deletedRuleSets = this.allCurrentLibraryRawRuleSets.filter(
+                rs => this.hasExplicitRulesForTrigger(rs, this.triggerNumber)
+            );
+            const { dependentRuleSets, projectedDependentEffectiveRuleSets } =
+                await this.computeDeletionImpact(
+                    deletedRuleSets,
+                    this.triggerNumber
+                );
+            this.dependentRuleSets = dependentRuleSets;
+            this.projectedDependentEffectiveRuleSets =
+                projectedDependentEffectiveRuleSets;
+
+            if (this.dependentRuleSets.length > 0) {
+                this.alertMessage = this.$__(
+                    "Some rule sets inherit one or more fields from the default trigger being deleted. After deletion, those fields will fall through to a less specific rule set or be left empty. See the preview below."
+                );
+            }
+
+            this.initialized = true;
+        },
         async deleteTrigger(e) {
             e.preventDefault();
+            const failures = [];
             for (const ruleSet of this.allCurrentLibraryRawRuleSets) {
                 try {
                     await this.deleteRuleSet(ruleSet, this.triggerNumber);
                 } catch (e) {
-                    this.alertMessage = e;
-                    this.$router.push({
-                        path: "/cgi-bin/koha/admin/circulation_triggers/reset",
-                        query: {
-                            ...ruleSet.context,
-                            triggerNumber: this.triggerNumber,
-                        },
-                    });
+                    failures.push(e);
                 }
+            }
+            if (failures.length > 0) {
+                this.alertMessage = failures[0];
+                await this.loadModalData();
+                return;
             }
             await this.$router.push({
                 name: "CirculationTriggersList",
@@ -128,6 +175,12 @@ export default {
                         this.triggerNumber
                     );
                 });
+                effectiveRuleSet[`overdue_${this.triggerNumber}_has_rules`] =
+                    this.findEffectiveRule(
+                        ruleSet.context,
+                        "has_rules",
+                        this.triggerNumber
+                    );
                 this.formattedEffectiveRuleSets.push(effectiveRuleSet);
             });
         },
@@ -145,9 +198,13 @@ export default {
     max-height: 90vh;
 }
 
-form li {
+form ol li {
     display: flex;
     align-items: center;
+}
+
+.page-section ul li {
+    float: none;
 }
 
 .numeric-input-wrapper {
