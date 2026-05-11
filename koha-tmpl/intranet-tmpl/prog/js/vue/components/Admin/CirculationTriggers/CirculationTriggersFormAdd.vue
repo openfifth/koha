@@ -22,7 +22,12 @@
                     <div class="alert alert-warning">{{ alertMessage }}</div>
                 </fieldset>
             </div>
-            <div class="page-section">
+            <div
+                :class="{
+                    'bg-success-subtle': editMode !== 'confirmContext',
+                    'page-section': true,
+                }"
+            >
                 <ConfirmContext
                     :context="context"
                     :contextInitialized="contextInitialized"
@@ -41,13 +46,17 @@
                 <p>{{ $__("Loading rule set information...") }}</p>
             </div>
             <div
-                class="page-section"
+                :class="{
+                    'bg-success-subtle': editMode !== 'selectOrAdd',
+                    'page-section': true,
+                }"
                 v-if="ruleSetInitialized && editMode !== 'confirmContext'"
             >
                 <TriggersTable
                     :triggerNumber="triggerNumber"
                     :modal="true"
-                    :actions="true"
+                    :displayActions="true"
+                    :enableActions="editMode === 'selectOrAdd'"
                     :ruleSets="effectiveTriggerFilteredRuleSets"
                     :ruleSetBeingEdited="currentRuleSet"
                     :triggerBeingEdited="triggerBeingEdited"
@@ -402,15 +411,17 @@ export default {
                 this.context,
                 true
             );
-            // override the context as fetched from the DBto ensure it matches the selected context
-            // FIXME: consider passing the context to trigger table separately
-            this.currentRuleSet.context = this.context;
+            if (this.currentRuleSet) {
+                this.currentRuleSet.context = this.context;
+            }
         },
         setTriggerNumber(triggerNumber, library_id) {
             this.triggerNumber =
                 this.editMode === "edit"
                     ? parseInt(triggerNumber)
                     : (this.triggerCounts[library_id] ?? 0) + 1;
+            this.triggerBeingEdited =
+                this.editMode === "edit" ? parseInt(triggerNumber) : null;
         },
         setFallbackRuleSet() {
             this.fallbackRuleSet = {
@@ -626,11 +637,11 @@ export default {
 
 .dialog.alert
     fieldset:not(.bg-danger):not(.bg-warning):not(.bg-info):not(
-        .bg-success
+        .bg-success-subtle
     ):not(.bg-primary):not(.action),
 .dialog.error
     fieldset:not(.bg-danger):not(.bg-warning):not(.bg-info):not(
-        .bg-success
+        .bg-success-subtle
     ):not(.bg-primary):not(.action) {
     margin: 0;
     background-color: rgba(255, 255, 255, 1);
@@ -646,5 +657,9 @@ export default {
 
 .modal-body {
     min-height: 280px;
+}
+
+#circulation-trigger-form-add .page-section {
+    display: flow-root;
 }
 </style>

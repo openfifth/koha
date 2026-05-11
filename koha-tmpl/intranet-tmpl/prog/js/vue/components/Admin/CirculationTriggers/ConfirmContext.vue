@@ -10,12 +10,7 @@
                     : $__("Selected trigger context")
             }}
         </legend>
-        <div
-            :class="{
-                'bg-info': !isConfirming,
-                'page-section': true,
-            }"
-        >
+        <div class="page-section">
             <ol id="confirm-context-list">
                 <li>
                     <label for="library_id" :class="{ required: isConfirming }"
@@ -147,6 +142,7 @@ export default {
 <style scoped>
 #confirm-context-list {
     display: flex;
+    flex-wrap: wrap;
     gap: 20px;
     height: fit-content;
 }

@@ -21,6 +21,7 @@
                     label="name"
                     :reduce="type => type.code"
                     :options="filteredLetters"
+                    :clearable="false"
                     @update:modelValue="setAllowSubmission"
                 >
                     <template #search="{ attributes, events }">
@@ -50,6 +51,28 @@
                         />
                     </template>
                 </v-select>
+                <button
+                    v-if="
+                        ruleSetToSubmit?.[`overdue_${triggerNumber}_notice`] !==
+                            null &&
+                        ruleSetToSubmit?.[`overdue_${triggerNumber}_notice`] !==
+                            undefined &&
+                        fallbackRuleSet?.[`overdue_${triggerNumber}_notice`] !==
+                            null &&
+                        fallbackRuleSet?.[`overdue_${triggerNumber}_notice`] !==
+                            undefined
+                    "
+                    type="button"
+                    class="btn btn-link"
+                    :title="$__('Undo override and reset to fallback')"
+                    @click="
+                        ruleSetToSubmit[`overdue_${triggerNumber}_notice`] =
+                            null;
+                        setAllowSubmission();
+                    "
+                >
+                    <i class="fa fa-undo"></i>
+                </button>
             </li>
             <li
                 v-if="
