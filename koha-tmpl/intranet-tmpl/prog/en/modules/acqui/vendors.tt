@@ -31,9 +31,7 @@
     <script nonce="[% Koha.CSPNonce | $raw %]">
         const vendorTableSettings = [% TablesSettings.GetTableSettings( 'acqui', 'vendors', 'vendors', 'json' ) | $raw %];
     </script>
-    [% SET acquisitions_esm_src = Asset.js("js/vue/dist/acquisitions.esm.js").match('src="([^"]+)"').0 %]
-    <script src="[% acquisitions_esm_src | $raw %]" type="module" nonce="[% Koha.CSPNonce | $raw %]">
-</script>
+    [% Asset.js("js/vue/dist/acquisitions.esm.js", { type = "module", nonce = Koha.CSPNonce }) | $raw %]
     [% INCLUDE 'select2.inc' %]
 [% END %]
 [% INCLUDE 'intranet-bottom.inc' %]

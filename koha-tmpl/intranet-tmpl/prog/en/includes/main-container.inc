@@ -83,7 +83,7 @@
         [% END %]
     </div>
 </div>
-[% SET islands = Asset.js("js/vue/dist/islands.esm.js").match('src="([^"]+)"').0 %]
+[% SET islands = Asset.url("js/vue/dist/islands.esm.js") %]
 <script nonce="[% Koha.CSPNonce | $raw %]" type="module">
     import { hydrate } from "[% islands | $raw %]";
     hydrate();

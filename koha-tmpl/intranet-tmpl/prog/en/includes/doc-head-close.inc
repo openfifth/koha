@@ -23,9 +23,9 @@
     not move this block below any module-script tag, and do not inline
     a module-script in <head> before this point.
 -%]
-[%- SET vue_esm_src = Asset.js("js/vue/dist/vue.esm.js").match('src="([^"]+)"').0 -%]
-[%- SET jquery_shim_src = Asset.js("js/shims/jquery.esm.js").match('src="([^"]+)"').0 -%]
-[%- SET dt_shim_src = Asset.js("js/shims/datatables.esm.js").match('src="([^"]+)"').0 -%]
+[%- SET vue_esm_src = Asset.url("js/vue/dist/vue.esm.js") -%]
+[%- SET jquery_shim_src = Asset.url("js/shims/jquery.esm.js") -%]
+[%- SET dt_shim_src = Asset.url("js/shims/datatables.esm.js") -%]
 <script type="importmap" nonce="[% Koha.CSPNonce | $raw %]">
     {
         "imports": {

@@ -32,8 +32,6 @@
 
         const csrf_token = "[% Koha.GenerateCSRF | $raw %]";
     </script>
-    [% SET preservation_esm_src = Asset.js("js/vue/dist/preservation.esm.js").match('src="([^"]+)"').0 %]
-    <script src="[% preservation_esm_src | $raw %]" type="module" nonce="[% Koha.CSPNonce | $raw %]">
-</script>
+    [% Asset.js("js/vue/dist/preservation.esm.js", { type = "module", nonce = Koha.CSPNonce }) | $raw %]
 [% END %]
 [% INCLUDE 'intranet-bottom.inc' %]
