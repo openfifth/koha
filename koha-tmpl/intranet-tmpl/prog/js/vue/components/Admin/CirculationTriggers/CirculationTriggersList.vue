@@ -296,7 +296,8 @@
                     <div class="page-section">
                         <TriggersTable
                             :modal="false"
-                            :actions="true"
+                            :displayActions="true"
+                            :enableActions="true"
                             :ruleSets="ruleSets"
                             :triggerNumber="number"
                         >
@@ -304,14 +305,21 @@
                                 v-if="isLastTrigger(number)"
                                 :to="{
                                     name: 'CirculationTriggersFormConfirmTriggerDelete',
-                                    query: {
-                                        triggerNumber: number,
-                                    },
+                                    query: { triggerNumber: number },
                                 }"
-                                class="btn btn-primary"
+                                custom
+                                v-slot="{ navigate }"
                             >
-                                <i class="fa-solid fa-xmark"></i>
-                                {{ $__("Delete") }}
+                                <span :title="deleteDisabledReason">
+                                    <button
+                                        :disabled="!!deleteDisabledReason"
+                                        @click="navigate"
+                                        class="btn btn-primary"
+                                    >
+                                        <i class="fa-solid fa-xmark"></i>
+                                        {{ $__("Delete") }}
+                                    </button>
+                                </span>
                             </router-link>
                             <div
                                 :class="{
@@ -358,6 +366,8 @@ export default {
             setAllExhaustiveEffectiveRuleSets,
             isLastTrigger,
             getLibrariesWithRules,
+            getLibrariesBlockingTriggerDeletion,
+            loadAllLibrariesRuleSets,
             scrollToElementById,
         } = circRulesStore;
         const {
@@ -395,6 +405,8 @@ export default {
             librariesWithRules,
             isLastTrigger,
             getLibrariesWithRules,
+            getLibrariesBlockingTriggerDeletion,
+            loadAllLibrariesRuleSets,
             lastEditedTriggerNumber,
             storeInitialized,
             metaInitialized,
@@ -413,18 +425,53 @@ export default {
             displayAllApplicableRules: 1,
         };
     },
+    computed: {
+        deleteDisabledReason() {
+            const lastTrigger = this.triggerCounts[this.currentLibraryId] || 0;
+            return lastTrigger
+                ? this.computeDeleteDisabledReason(lastTrigger)
+                : "";
+        },
+    },
     methods: {
+        computeDeleteDisabledReason(triggerNumber) {
+            if (this.currentPatronCategoryId || this.currentItemTypeId) {
+                return this.$__(
+                    "Delete is only available when no patron category or item type filter is set, as it removes all explicit rules for this trigger across the selected library."
+                );
+            }
+            if (this.currentLibraryId !== "*") {
+                return "";
+            }
+            const blockingIds =
+                this.getLibrariesBlockingTriggerDeletion(triggerNumber);
+            if (blockingIds.length === 0) {
+                return "";
+            }
+            const blockingNames = this.libraries
+                .filter(lib => blockingIds.includes(lib.library_id))
+                .map(lib => lib.name)
+                .join(", ");
+            return this.$__(
+                "Cannot delete: the following libraries have triggers higher than %s, which would be orphaned: %s"
+            ).format(triggerNumber, blockingNames);
+        },
         async loadRuleSets() {
             this.ruleSetInitialized = false;
-            await this.setAllFormattedRuleSets();
+            try {
+                await this.setAllFormattedRuleSets();
+            } catch (e) {
+                this.ruleSetInitialized = true;
+                return;
+            }
             this.updateTriggerCount();
             this.setAllEffectiveRuleSets();
             this.setAllExhaustiveEffectiveRuleSets();
-            if (
-                this.currentLibraryId === "*" &&
-                this.triggerCounts["*"] === 0
-            ) {
-                await this.getLibrariesWithRules();
+            if (this.currentLibraryId === "*") {
+                await this.loadAllLibrariesRuleSets();
+                if (this.triggerCounts["*"] === 0) {
+                    await this.getLibrariesWithRules();
+                }
             }
             this.storeInitialized = true;
         },
