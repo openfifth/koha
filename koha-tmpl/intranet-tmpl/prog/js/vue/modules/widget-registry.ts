@@ -111,20 +111,26 @@ export function registerWidget(entry: WidgetRegistryEntry): void {
     }
     // Resolve the component once at registration time so
     // getRegisteredWidgets always returns the same object reference.
+    //
+    // The caller's input is treated as immutable. defineAsyncComponent
+    // returns a fresh wrapper for the async case, and we shallow-clone
+    // the sync case so a default name assignment and markRaw's __v_skip
+    // flag never leak back to the object the plugin passed in.
     let component: Component & { name?: string };
     if (typeof entry.component === "function") {
         component = defineAsyncComponent(
             entry.component as () => Promise<Component>
         );
     } else {
-        component = entry.component;
+        component = { ...entry.component };
     }
     if (!component.name) {
         component.name = entry.id;
     }
-    entry.component = markRaw(component);
-
-    widgetRegistry.set(entry.id, entry);
+    widgetRegistry.set(entry.id, {
+        ...entry,
+        component: markRaw(component),
+    });
     window.dispatchEvent(
         new CustomEvent("koha:widget-registered", {
             detail: { id: entry.id, module: entry.module },
