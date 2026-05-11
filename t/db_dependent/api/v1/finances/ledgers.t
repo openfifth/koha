@@ -18,13 +18,14 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 6;
+use Test::More tests => 7;
 use Test::Mojo;
 
 use t::lib::TestBuilder;
 use t::lib::Mocks;
 
 use Koha::Acquisition::Finances::Allocations;
+use Koha::Acquisition::Finances::Funds;
 use Koha::Acquisition::Finances::Ledgers;
 use Koha::Database;
 
@@ -172,12 +173,15 @@ subtest 'add() tests' => sub {
         ->json_is( '/currency'      => $ledger->{currency} )
         ->json_is( '/ledger_amount' => $ledger->{ledger_amount} );
 
-    my $created_ledger_id  = $t->tx->res->json->{ledger_id};
-    my $initial_allocation = Koha::Acquisition::Finances::Allocations->search(
-        { ledger_id => $created_ledger_id, type => 'initial' }
-    )->single;
+    my $created_ledger_id = $t->tx->res->json->{ledger_id};
+    my $initial_allocation =
+        Koha::Acquisition::Finances::Allocations->search( { ledger_id => $created_ledger_id, type => 'initial' } )
+        ->single;
     ok( $initial_allocation, 'Initial allocation was created for new ledger' );
-    cmp_ok( $initial_allocation->allocation_amount, '==', $ledger->{ledger_amount}, 'Initial allocation amount matches ledger amount' );
+    cmp_ok(
+        $initial_allocation->allocation_amount, '==', $ledger->{ledger_amount},
+        'Initial allocation amount matches ledger amount'
+    );
 
     $schema->storage->txn_rollback;
 };
@@ -272,6 +276,144 @@ subtest 'delete() tests' => sub {
         ->content_is( '', 'REST3.3.4' );
 
     $t->delete_ok("//$userid:$password@/api/v1/acquisitions/ledgers/$ledger_id")->status_is(404);
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'rollover() tests' => sub {
+
+    plan tests => 22;
+
+    $schema->storage->txn_begin;
+
+    my $librarian = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { flags => 1 }
+        }
+    );
+    my $password = 'thePassword123';
+    $librarian->set_password( { password => $password, skip_validation => 1 } );
+    my $userid = $librarian->userid;
+
+    my $patron = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { flags => 0 }
+        }
+    );
+    $patron->set_password( { password => $password, skip_validation => 1 } );
+    my $unauth_userid = $patron->userid;
+
+    my $new_fiscal_period = $builder->build_object( { class => 'Koha::Acquisition::Finances::FiscalPeriods' } );
+
+    my $base_body = {
+        fiscal_period_id => $new_fiscal_period->fiscal_period_id,
+        name             => 'Rolled Over Ledger',
+        status           => Mojo::JSON->true,
+        locked           => Mojo::JSON->false,
+    };
+
+    # Unauthorized access
+    my $ledger1 = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Ledgers',
+            value => { ledger_amount => 10000, currency => 'GBP', status => 1, locked => 0 }
+        }
+    );
+
+    $t->post_ok( "//$unauth_userid:$password@/api/v1/acquisitions/ledgers/"
+            . $ledger1->ledger_id
+            . "/rollover" => json => { %$base_body, ledger_amount => $ledger1->ledger_amount } )->status_is(403);
+
+    # Ledger not found
+    $t->post_ok( "//$userid:$password@/api/v1/acquisitions/ledgers/99999999/rollover" => json =>
+            { %$base_body, ledger_amount => 1000 } )->status_is(404)->json_is( '/error' => 'Ledger not found' );
+
+    # Basic rollover — funds copied with original amounts, original ledger deactivated
+    my $fund1 = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Funds',
+            value => { ledger_id => $ledger1->ledger_id, parent_fund_id => undef, fund_amount => 5000 }
+        }
+    );
+
+    $t->post_ok( "//$userid:$password@/api/v1/acquisitions/ledgers/"
+            . $ledger1->ledger_id
+            . "/rollover" => json => { %$base_body, ledger_amount => $ledger1->ledger_amount } )
+        ->status_is( 201, 'REST3.2.1' )
+        ->header_like( Location => qr|^\/api\/v1\/acquisitions\/ledgers\/\d+|, 'REST3.4.1' )
+        ->json_is( '/name' => $base_body->{name} );
+
+    my $new_ledger1_id = $t->tx->res->json->{ledger_id};
+    $ledger1->discard_changes;
+    ok( !$ledger1->status, 'Original ledger set inactive after rollover' );
+
+    my @copied_funds1 = Koha::Acquisition::Finances::Funds->search( { ledger_id => $new_ledger1_id } )->as_list;
+    is( scalar @copied_funds1,          1,                   'Fund copied to new ledger' );
+    is( $copied_funds1[0]->fund_amount, $fund1->fund_amount, 'Fund amount unchanged when no adjust options given' );
+
+    my $rollover_allocation = Koha::Acquisition::Finances::Allocations->search(
+        { ledger_id => $new_ledger1_id, type => 'ROLLOVER_TRANSFER' } )->single;
+    ok( $rollover_allocation, 'Rollover allocation created for new ledger' );
+    is(
+        $rollover_allocation->allocation_amount, $ledger1->ledger_amount,
+        'Rollover allocation amount matches ledger amount'
+    );
+
+    # set_funds_to_zero — all copied fund amounts set to 0
+    my $ledger2 = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Ledgers',
+            value => { ledger_amount => 8000, currency => 'GBP', status => 1, locked => 0 }
+        }
+    );
+    $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Funds',
+            value => { ledger_id => $ledger2->ledger_id, parent_fund_id => undef, fund_amount => 3000 }
+        }
+    );
+
+    $t->post_ok( "//$userid:$password@/api/v1/acquisitions/ledgers/"
+            . $ledger2->ledger_id
+            . "/rollover" => json =>
+            { %$base_body, ledger_amount => $ledger2->ledger_amount, set_funds_to_zero => Mojo::JSON->true } )
+        ->status_is(201);
+
+    my $new_ledger2_id = $t->tx->res->json->{ledger_id};
+    my @copied_funds2  = Koha::Acquisition::Finances::Funds->search( { ledger_id => $new_ledger2_id } )->as_list;
+    is( scalar @copied_funds2,              1, 'Fund copied to new ledger when set_funds_to_zero' );
+    is( $copied_funds2[0]->fund_amount + 0, 0, 'Fund amount set to zero when set_funds_to_zero is true' );
+
+    # adjust_by_percent + round_to_multiple — ledger and fund amounts adjusted then rounded down
+    # 1000 + 1000 * 15/100 = 1150 → int(1150/100) * 100 = 1100
+    #  500 +  500 * 15/100 =  575 → int(575/100)  * 100 =  500
+    my $ledger3 = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Ledgers',
+            value => { ledger_amount => 1000, currency => 'GBP', status => 1, locked => 0 }
+        }
+    );
+    $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Funds',
+            value => { ledger_id => $ledger3->ledger_id, parent_fund_id => undef, fund_amount => 500 }
+        }
+    );
+
+    $t->post_ok(
+        "//$userid:$password@/api/v1/acquisitions/ledgers/" . $ledger3->ledger_id . "/rollover" => json => {
+            %$base_body,
+            ledger_amount     => $ledger3->ledger_amount,
+            adjust_by_percent => 15,
+            round_to_multiple => 100,
+        }
+    )->status_is(201)->json_is( '/ledger_amount' => 1100 );
+
+    my $new_ledger3_id = $t->tx->res->json->{ledger_id};
+    my @copied_funds3  = Koha::Acquisition::Finances::Funds->search( { ledger_id => $new_ledger3_id } )->as_list;
+    is( $copied_funds3[0]->fund_amount + 0, 500, 'Fund amount adjusted by percent and rounded down to multiple' );
 
     $schema->storage->txn_rollback;
 };
