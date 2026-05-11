@@ -25,43 +25,46 @@
 </nav>
 -->
 
-    <div class="container-fluid">
-      <div class="row">
+<div class="container-fluid">
+    <div class="row">
         <div class="col-md-6">
-	        <h3>Fjärrlån - Senast gjorda i Libris</h3>
-          <div class="page-section">
-            <table>
-              <thead>
-                <tr>
-                  <th>Fjärrlånenummer</th>
-                  <th>Titel</th>
-                  <th>Låntagare</th>
-                  <th>Visa?</th>
-                  <!--<th>Importera?</th>-->
-                </tr>
-              </thead>
-              <tbody>
-                [% FOREACH ill_request IN decoded.ill_requests.reverse %]            
-                <tr>
-                  <td><a href="http://iller.libris.kb.se/librisfjarrlan/lf.php?action=search&search_string=[% ill_request.lf_number | uri %]" target="_blank">[% ill_request.lf_number | html %]</a></td>
-                  <td>[% ill_request.title | html %]</td>
-                  <td style="white-space:nowrap">[% IF ill_request.user_id.length > 0 %]<a href="/cgi-bin/koha/circ/circulation.pl?findborrower=[% ill_request.user_id | uri %]" target="_blank" >[% ill_request.user_id | html %]</a>[% ELSE %] (ej angivet) [% END  %]</td>
-                  <td><a href="/cgi-bin/koha/librisill-request.pl?branch=[% ill_request.requesting_library | uri %]&lfnumber=[% ill_request.lf_number | uri %]">Visa</a></td>
-                  <!-- <td><a href="" class="import" title="[% ill_request.bib_id | html %]">Importera</a></td> -->
-                </tr>
-                [% END %]
-                </tbody>
-            </table>
-          </div>
+            <h3>Fjärrlån - Senast gjorda i Libris</h3>
+            <div class="page-section">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Fjärrlånenummer</th>
+                            <th>Titel</th>
+                            <th>Låntagare</th>
+                            <th>Visa?</th>
+                            <!--<th>Importera?</th>-->
+                        </tr>
+                    </thead>
+                    <tbody>
+                        [% FOREACH ill_request IN decoded.ill_requests.reverse %]
+                            <tr>
+                                <td><a href="http://iller.libris.kb.se/librisfjarrlan/lf.php?action=search&search_string=[% ill_request.lf_number | uri %]" target="_blank">[% ill_request.lf_number | html %]</a></td>
+                                <td>[% ill_request.title | html %]</td>
+                                <td style="white-space:nowrap"
+                                    >[% IF ill_request.user_id.length > 0 %]<a href="/cgi-bin/koha/circ/circulation.pl?findborrower=[% ill_request.user_id | uri %]" target="_blank">[% ill_request.user_id | html %]</a>[% ELSE %](ej angivet)[% END %]</td
+                                >
+                                <td><a href="/cgi-bin/koha/librisill-request.pl?branch=[% ill_request.requesting_library | uri %]&lfnumber=[% ill_request.lf_number | uri %]">Visa</a></td>
+                                <!-- <td><a href="" class="import" title="[% ill_request.bib_id | html %]">Importera</a></td> -->
+                            </tr>
+                        [% END %]
+                    </tbody>
+                </table>
+            </div>
         </div>
-      </div> <!-- /.row -->
-    </div> <!-- /.container-fluid -->	    
+    </div>
+    <!-- /.row -->
+</div>
+<!-- /.container-fluid -->
 
 <!-- the main div is closed in intranet-bottom.inc -->
 [% INCLUDE 'intranet-bottom.inc' %]
-
 <script>
-/*
+    /*
   function PopupZ3950(fw, bib_id) {
     var strQuery = GetZ3950Terms(fw);
     if(strQuery){
