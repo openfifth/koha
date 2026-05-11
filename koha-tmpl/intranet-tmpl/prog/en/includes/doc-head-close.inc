@@ -11,6 +11,18 @@
 <script nonce="[% Koha.CSPNonce | $raw %]">
     window.__CSP_NONCE__ = "[% Koha.CSPNonce | $raw %]";
 </script>
+[%# Import map for bare-specifier resolution in ESM bundles.
+    Maps "vue" to the shared Vue runtime so every ESM bundle reuses the
+    same Vue instance, and "jQuery" / "DataTable" to small shims that
+    re-export the corresponding window globals.
+
+    Per the HTML spec, an import map MUST appear before any
+    <script type="module">
+ that uses bare specifiers — once a module
+    starts loading, adding or replacing the map is a no-op for it. Do
+    not move this block below any module-script tag, and do not inline
+    a module-script in <head> before this point.
+-%]
 [%- SET vue_esm_src = Asset.js("js/vue/dist/vue.esm.js").match('src="([^"]+)"').0 -%]
 [%- SET jquery_shim_src = Asset.js("js/shims/jquery.esm.js").match('src="([^"]+)"').0 -%]
 [%- SET dt_shim_src = Asset.js("js/shims/datatables.esm.js").match('src="([^"]+)"').0 -%]
