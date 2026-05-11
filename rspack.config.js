@@ -13,20 +13,6 @@ const opacVueDistPath = path.resolve(
     "koha-tmpl/opac-tmpl/bootstrap/js/vue/dist/"
 );
 
-const commonResolve = {
-    alias: {
-        "@fetch": path.resolve(
-            __dirname,
-            "koha-tmpl/intranet-tmpl/prog/js/fetch"
-        ),
-        "@koha-vue": path.resolve(
-            __dirname,
-            "koha-tmpl/intranet-tmpl/prog/js/vue"
-        ),
-        "@cypress": path.resolve(__dirname, "t/cypress"),
-    },
-};
-
 const commonModuleRules = [
     {
         test: /\.vue$/,
@@ -78,161 +64,186 @@ const esmExternals = {
     "datatables.net-buttons/js/buttons.colVis": "DataTable",
 };
 
-module.exports = [
-    // Vue runtime ESM — bundles Vue with feature flags applied by DefinePlugin.
-    // The import map resolves "vue" to this file so all other ESM bundles
-    // share the same Vue instance with correct Options API / devtools settings.
-    {
-        experiments: {
-            outputModule: true,
+module.exports = (env, argv) => {
+    const isProduction = argv.mode === "production";
+
+    // The @cypress alias is intentionally omitted from production builds so
+    // Cypress fixture components cannot be reached via componentResolver.js's
+    // dynamic require.context. The companion guard in componentResolver.js
+    // dead-codes the require.context call in production; together they ensure
+    // no test code is bundled into the staff client.
+    const commonResolve = {
+        alias: {
+            "@fetch": path.resolve(
+                __dirname,
+                "koha-tmpl/intranet-tmpl/prog/js/fetch"
+            ),
+            "@koha-vue": path.resolve(
+                __dirname,
+                "koha-tmpl/intranet-tmpl/prog/js/vue"
+            ),
+            ...(isProduction
+                ? {}
+                : { "@cypress": path.resolve(__dirname, "t/cypress") }),
         },
-        entry: {
-            vue: [
-                "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/vue-runtime.ts",
-            ],
-        },
-        output: {
-            filename: "[name].esm.js",
-            path: vueDistPath,
-            library: {
-                type: "module",
+    };
+
+    return [
+        // Vue runtime ESM — bundles Vue with feature flags applied by DefinePlugin.
+        // The import map resolves "vue" to this file so all other ESM bundles
+        // share the same Vue instance with correct Options API / devtools settings.
+        {
+            experiments: {
+                outputModule: true,
             },
-        },
-        module: {
-            rules: [
-                {
-                    test: /\.ts$/,
-                    loader: "builtin:swc-loader",
-                    options: {
-                        jsc: {
-                            parser: { syntax: "typescript" },
-                        },
-                    },
-                    type: "javascript/auto",
+            entry: {
+                vue: [
+                    "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/vue-runtime.ts",
+                ],
+            },
+            output: {
+                filename: "[name].esm.js",
+                path: vueDistPath,
+                library: {
+                    type: "module",
                 },
-            ],
-        },
-        plugins: [vueFeatureFlags],
-        // No vue external here — this IS the Vue bundle.
-    },
-
-    // ESM bundles — all share the single Vue instance via import map.
-    // Vue is externalized and resolved to vue.esm.js by the browser.
-    {
-        resolve: commonResolve,
-        experiments: {
-            outputModule: true,
-        },
-        externalsType: "module-import",
-        entry: {
-            erm: [
-                "./koha-tmpl/intranet-tmpl/prog/js/vue/csp-nonce.js",
-                "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/erm.ts",
-            ],
-            preservation: [
-                "./koha-tmpl/intranet-tmpl/prog/js/vue/csp-nonce.js",
-                "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/preservation.ts",
-            ],
-            "admin/record_sources": [
-                "./koha-tmpl/intranet-tmpl/prog/js/vue/csp-nonce.js",
-                "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/admin/record_sources.ts",
-            ],
-            acquisitions: [
-                "./koha-tmpl/intranet-tmpl/prog/js/vue/csp-nonce.js",
-                "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/acquisitions.ts",
-            ],
-            islands: [
-                "./koha-tmpl/intranet-tmpl/prog/js/vue/csp-nonce.js",
-                "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/islands.ts",
-            ],
-            sip2: [
-                "./koha-tmpl/intranet-tmpl/prog/js/vue/csp-nonce.js",
-                "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/sip2.ts",
-            ],
-            ill: [
-                "./koha-tmpl/intranet-tmpl/prog/js/vue/csp-nonce.js",
-                "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/ill.ts",
-            ],
-        },
-        output: {
-            filename: "[name].esm.js",
-            path: vueDistPath,
-            chunkFilename: "[name].[contenthash].esm.js",
-            globalObject: "window",
-            library: {
-                type: "module",
             },
-        },
-        module: { rules: commonModuleRules },
-        plugins: commonPlugins,
-        externals: esmExternals,
-    },
-
-    // OPAC islands ESM — same source as the intranet islands entry, emitted
-    // into the OPAC dist directory so opac-bootstrap templates can load it.
-    {
-        resolve: commonResolve,
-        experiments: {
-            outputModule: true,
-        },
-        externalsType: "module-import",
-        entry: {
-            islands: [
-                "./koha-tmpl/intranet-tmpl/prog/js/vue/csp-nonce.js",
-                "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/islands.ts",
-            ],
-        },
-        output: {
-            filename: "[name].esm.js",
-            path: opacVueDistPath,
-            chunkFilename: "[name].[contenthash].esm.js",
-            globalObject: "window",
-            library: {
-                type: "module",
-            },
-        },
-        module: { rules: commonModuleRules },
-        plugins: commonPlugins,
-        externals: esmExternals,
-    },
-
-    // Cypress API client — CJS for Node.js test runner
-    {
-        entry: {
-            "api-client.cjs": [
-                "./koha-tmpl/intranet-tmpl/prog/js/vue/csp-nonce.js",
-                "./koha-tmpl/intranet-tmpl/prog/js/fetch/api-client.js",
-            ],
-        },
-        devtool: false,
-        output: {
-            filename: "[name].js",
-            path: path.resolve(__dirname, "t/cypress/plugins/dist/"),
-            clean: true,
-            library: {
-                type: "commonjs",
-            },
-            globalObject: "global",
-        },
-        target: "node",
-        module: {
-            rules: [
-                {
-                    test: /\.js$/,
-                    loader: "builtin:swc-loader",
-                    options: {
-                        jsc: {
-                            parser: {
-                                syntax: "ecmascript",
+            module: {
+                rules: [
+                    {
+                        test: /\.ts$/,
+                        loader: "builtin:swc-loader",
+                        options: {
+                            jsc: {
+                                parser: { syntax: "typescript" },
                             },
                         },
+                        type: "javascript/auto",
                     },
-                    exclude: [/node_modules/],
-                    type: "javascript/auto",
-                },
-            ],
+                ],
+            },
+            plugins: [vueFeatureFlags],
+            // No vue external here — this IS the Vue bundle.
         },
-        externals: [],
-        plugins: [],
-    },
-];
+
+        // ESM bundles — all share the single Vue instance via import map.
+        // Vue is externalized and resolved to vue.esm.js by the browser.
+        {
+            resolve: commonResolve,
+            experiments: {
+                outputModule: true,
+            },
+            externalsType: "module-import",
+            entry: {
+                erm: [
+                    "./koha-tmpl/intranet-tmpl/prog/js/vue/csp-nonce.js",
+                    "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/erm.ts",
+                ],
+                preservation: [
+                    "./koha-tmpl/intranet-tmpl/prog/js/vue/csp-nonce.js",
+                    "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/preservation.ts",
+                ],
+                "admin/record_sources": [
+                    "./koha-tmpl/intranet-tmpl/prog/js/vue/csp-nonce.js",
+                    "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/admin/record_sources.ts",
+                ],
+                acquisitions: [
+                    "./koha-tmpl/intranet-tmpl/prog/js/vue/csp-nonce.js",
+                    "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/acquisitions.ts",
+                ],
+                islands: [
+                    "./koha-tmpl/intranet-tmpl/prog/js/vue/csp-nonce.js",
+                    "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/islands.ts",
+                ],
+                sip2: [
+                    "./koha-tmpl/intranet-tmpl/prog/js/vue/csp-nonce.js",
+                    "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/sip2.ts",
+                ],
+                ill: [
+                    "./koha-tmpl/intranet-tmpl/prog/js/vue/csp-nonce.js",
+                    "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/ill.ts",
+                ],
+            },
+            output: {
+                filename: "[name].esm.js",
+                path: vueDistPath,
+                chunkFilename: "[name].[contenthash].esm.js",
+                globalObject: "window",
+                library: {
+                    type: "module",
+                },
+            },
+            module: { rules: commonModuleRules },
+            plugins: commonPlugins,
+            externals: esmExternals,
+        },
+
+        // OPAC islands ESM — same source as the intranet islands entry, emitted
+        // into the OPAC dist directory so opac-bootstrap templates can load it.
+        {
+            resolve: commonResolve,
+            experiments: {
+                outputModule: true,
+            },
+            externalsType: "module-import",
+            entry: {
+                islands: [
+                    "./koha-tmpl/intranet-tmpl/prog/js/vue/csp-nonce.js",
+                    "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/islands.ts",
+                ],
+            },
+            output: {
+                filename: "[name].esm.js",
+                path: opacVueDistPath,
+                chunkFilename: "[name].[contenthash].esm.js",
+                globalObject: "window",
+                library: {
+                    type: "module",
+                },
+            },
+            module: { rules: commonModuleRules },
+            plugins: commonPlugins,
+            externals: esmExternals,
+        },
+
+        // Cypress API client — CJS for Node.js test runner
+        {
+            entry: {
+                "api-client.cjs": [
+                    "./koha-tmpl/intranet-tmpl/prog/js/vue/csp-nonce.js",
+                    "./koha-tmpl/intranet-tmpl/prog/js/fetch/api-client.js",
+                ],
+            },
+            devtool: false,
+            output: {
+                filename: "[name].js",
+                path: path.resolve(__dirname, "t/cypress/plugins/dist/"),
+                clean: true,
+                library: {
+                    type: "commonjs",
+                },
+                globalObject: "global",
+            },
+            target: "node",
+            module: {
+                rules: [
+                    {
+                        test: /\.js$/,
+                        loader: "builtin:swc-loader",
+                        options: {
+                            jsc: {
+                                parser: {
+                                    syntax: "ecmascript",
+                                },
+                            },
+                        },
+                        exclude: [/node_modules/],
+                        type: "javascript/auto",
+                    },
+                ],
+            },
+            externals: [],
+            plugins: [],
+        },
+    ];
+};
