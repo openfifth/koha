@@ -4,7 +4,7 @@
         :id="modal ? 'trigger-table-form' : 'trigger-table-main'"
     >
         <legend>
-            {{ $__("Existing overdues triggers for this context") }}
+            {{ title ?? $__("Existing overdues triggers for this context") }}
         </legend>
         <slot></slot>
         <table>
@@ -39,26 +39,23 @@
                 <th>
                     {{ $__("Restricts checkouts") }}
                 </th>
-                <th v-if="actions">
+                <th v-if="displayActions">
                     {{ $__("Actions") }}
                 </th>
             </thead>
             <tbody>
-                <template
-                    v-for="(ruleSet, i) in ruleSets"
-                    :key="'ruleSet' + i"
-                    :class="{
-                        selected_rule_set:
-                            modal &&
-                            i + 1 === parseInt(activeTriggerBeingEdited),
-                    }"
-                >
+                <template v-for="(ruleSet, i) in ruleSets" :key="'ruleSet' + i">
                     <tr
                         v-if="
                             ruleSet[
                                 `overdue_${modal ? i + 1 : triggerNumber}_has_rules`
                             ]
                         "
+                        :class="{
+                            selected_rule_set:
+                                modal &&
+                                i + 1 === parseInt(activeTriggerBeingEdited),
+                        }"
                     >
                         <td v-if="!modal" class="trigger_context">
                             {{
@@ -142,10 +139,7 @@
                                         ruleSet[
                                             `overdue_${modal ? i + 1 : triggerNumber}_mtt`
                                         ].value,
-                                        "email",
-                                        !ruleSet[
-                                            `overdue_${modal ? i + 1 : triggerNumber}_notice`
-                                        ].value
+                                        "email"
                                     )
                                 }}
                             </span>
@@ -165,10 +159,7 @@
                                         ruleSet[
                                             `overdue_${modal ? i + 1 : triggerNumber}_mtt`
                                         ].value,
-                                        "print",
-                                        !ruleSet[
-                                            `overdue_${modal ? i + 1 : triggerNumber}_notice`
-                                        ].value
+                                        "print"
                                     )
                                 }}
                             </span>
@@ -188,10 +179,7 @@
                                         ruleSet[
                                             `overdue_${modal ? i + 1 : triggerNumber}_mtt`
                                         ].value,
-                                        "sms",
-                                        !ruleSet[
-                                            `overdue_${modal ? i + 1 : triggerNumber}_notice`
-                                        ].value
+                                        "sms"
                                     )
                                 }}
                             </span>
@@ -215,77 +203,96 @@
                                 }}
                             </span>
                         </td>
-                        <td class="actions" v-if="actions">
-                            <router-link
-                                :to="{
-                                    name: 'CirculationTriggersFormEdit',
-                                    query: {
-                                        library_id: ruleSet.context.library_id,
-                                        item_type_id:
-                                            ruleSet.context.item_type_id,
-                                        patron_category_id:
-                                            ruleSet.context.patron_category_id,
-                                        triggerNumber: modal
-                                            ? i + 1
-                                            : triggerNumber,
-                                    },
-                                }"
+                        <td class="actions" v-if="displayActions">
+                            <button
+                                type="button"
                                 class="btn btn-default btn-xs"
-                                ><i class="fa-solid fa-pencil"></i>
-                                {{ $__("Edit") }}</router-link
+                                :disabled="!enableActions"
+                                @click="
+                                    $router.push({
+                                        name: 'CirculationTriggersFormEdit',
+                                        query: {
+                                            library_id:
+                                                ruleSet.context.library_id,
+                                            item_type_id:
+                                                ruleSet.context.item_type_id,
+                                            patron_category_id:
+                                                ruleSet.context
+                                                    .patron_category_id,
+                                            triggerNumber: modal
+                                                ? i + 1
+                                                : triggerNumber,
+                                        },
+                                    })
+                                "
                             >
-                            <router-link
+                                <i class="fa-solid fa-pencil"></i>
+                                {{ $__("Edit") }}
+                            </button>
+                            <button
                                 v-if="
                                     ruleSet[
                                         `overdue_${modal ? i + 1 : triggerNumber}_has_rules`
                                     ].value &&
                                     !isOnlyRuleSetForTrigger(triggerNumber)
                                 "
-                                :to="{
-                                    name: 'CirculationTriggersFormConfirmReset',
-                                    query: {
-                                        library_id: ruleSet.context.library_id,
-                                        item_type_id:
-                                            ruleSet.context.item_type_id,
-                                        patron_category_id:
-                                            ruleSet.context.patron_category_id,
-                                        triggerNumber: triggerNumber,
-                                    },
-                                }"
+                                type="button"
                                 class="btn btn-default btn-xs"
-                                ><i class="fa-solid fa-eraser"></i>
-                                {{ $__("Reset") }}</router-link
+                                :disabled="!enableActions"
+                                @click="
+                                    $router.push({
+                                        name: 'CirculationTriggersFormConfirmReset',
+                                        query: {
+                                            library_id:
+                                                ruleSet.context.library_id,
+                                            item_type_id:
+                                                ruleSet.context.item_type_id,
+                                            patron_category_id:
+                                                ruleSet.context
+                                                    .patron_category_id,
+                                            triggerNumber: triggerNumber,
+                                        },
+                                    })
+                                "
                             >
+                                <i class="fa-solid fa-eraser"></i>
+                                {{ $__("Reset") }}
+                            </button>
                         </td>
                     </tr>
                 </template>
                 <tr v-if="modal">
                     <td colspan="7"></td>
-                    <td class="actions">
-                        <router-link
-                            :to="{
-                                name: 'CirculationTriggersFormAdd',
-                                query: {
-                                    library_id:
-                                        activeRuleSetBeingEdited.context
-                                            .library_id,
-                                    item_type_id:
-                                        activeRuleSetBeingEdited.context
-                                            .item_type_id,
-                                    patron_category_id:
-                                        activeRuleSetBeingEdited.context
-                                            .patron_category_id,
-                                    triggerNumber:
-                                        triggerCounts[
-                                            activeRuleSetBeingEdited.context
-                                                .library_id
-                                        ] + 1,
-                                },
-                            }"
+                    <td class="actions" v-if="displayActions">
+                        <button
+                            type="button"
                             class="btn btn-default btn-xs"
-                            ><i class="fa-solid fa-pencil"></i>
-                            {{ $__("Add") }}</router-link
+                            :disabled="!enableActions"
+                            @click="
+                                $router.push({
+                                    name: 'CirculationTriggersFormAdd',
+                                    query: {
+                                        library_id:
+                                            activeRuleSetBeingEdited.context
+                                                .library_id,
+                                        item_type_id:
+                                            activeRuleSetBeingEdited.context
+                                                .item_type_id,
+                                        patron_category_id:
+                                            activeRuleSetBeingEdited.context
+                                                .patron_category_id,
+                                        triggerNumber:
+                                            triggerCounts[
+                                                activeRuleSetBeingEdited.context
+                                                    .library_id
+                                            ] + 1,
+                                    },
+                                })
+                            "
                         >
+                            <i class="fa-solid fa-pencil"></i>
+                            {{ $__("Add") }}
+                        </button>
                     </td>
                 </tr>
             </tbody>
@@ -301,10 +308,12 @@ export default {
     props: [
         "triggerNumber",
         "modal",
-        "actions",
+        "displayActions",
+        "enableActions",
         "ruleSetBeingEdited",
         "triggerBeingEdited",
         "ruleSets",
+        "title",
     ],
     computed: {
         activeRuleSetBeingEdited() {
@@ -351,8 +360,13 @@ export default {
     font-weight: bold;
 }
 
-.actions a {
+.actions button {
     margin-right: 5px;
+}
+
+.actions button[disabled] {
+    opacity: 0.65;
+    cursor: not-allowed;
 }
 
 td.trigger_context {

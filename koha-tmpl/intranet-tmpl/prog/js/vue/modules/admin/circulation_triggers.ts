@@ -65,7 +65,7 @@ router.beforeEach((to, from, next) => {
                     currentPermission: null,
                 });
                 removeMessages(); // This will actually flag the messages as displayed already
-                window.location.href = "/cgi-bin/koha/mainpage.pl";
+                window.location.href = "/cgi-bin/koha/admin/admin-home.pl";
                 return;
             }
             navigationStore.$patch({
@@ -76,6 +76,6 @@ router.beforeEach((to, from, next) => {
             next();
         })
         .catch(() => {
-            window.location.href = "/cgi-bin/koha/mainpage.pl";
+            window.location.href = "/cgi-bin/koha/admin/admin-home.pl";
         });
 });
