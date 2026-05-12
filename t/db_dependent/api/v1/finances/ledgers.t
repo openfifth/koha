@@ -282,7 +282,7 @@ subtest 'delete() tests' => sub {
 
 subtest 'rollover() tests' => sub {
 
-    plan tests => 22;
+    plan tests => 34;
 
     $schema->storage->txn_begin;
 
@@ -414,6 +414,72 @@ subtest 'rollover() tests' => sub {
     my $new_ledger3_id = $t->tx->res->json->{ledger_id};
     my @copied_funds3  = Koha::Acquisition::Finances::Funds->search( { ledger_id => $new_ledger3_id } )->as_list;
     is( $copied_funds3[0]->fund_amount + 0, 500, 'Fund amount adjusted by percent and rounded down to multiple' );
+
+    # dry_run — returns 200 with preview data, nothing persisted
+    my $ledger4 = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Ledgers',
+            value => { ledger_amount => 5000, currency => 'GBP', status => 1, locked => 0 }
+        }
+    );
+    $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Funds',
+            value => { ledger_id => $ledger4->ledger_id, parent_fund_id => undef, fund_amount => 2500 }
+        }
+    );
+
+    my $ledger_count_before = Koha::Acquisition::Finances::Ledgers->search->count;
+
+    $t->post_ok( "//$userid:$password@/api/v1/acquisitions/ledgers/"
+            . $ledger4->ledger_id
+            . "/rollover?dry_run=1" => json => { %$base_body, ledger_amount => $ledger4->ledger_amount } )
+        ->status_is(200)
+        ->json_is( '/name'                => $base_body->{name} )
+        ->json_is( '/funds/0/fund_amount' => 2500 );
+
+    $ledger4->discard_changes;
+    ok( $ledger4->status, 'Original ledger still active after dry run' );
+    is(
+        Koha::Acquisition::Finances::Ledgers->search->count,
+        $ledger_count_before,
+        'No new ledger persisted during dry run'
+    );
+
+    # dry_run with adjust_by_percent + round_to_multiple — amounts calculated correctly, nothing persisted
+    # 1000 + 1000 * 15/100 = 1150 → int(1150/100) * 100 = 1100
+    #  500 +  500 * 15/100 =  575 → int(575/100)  * 100 =  500
+    my $ledger5 = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Ledgers',
+            value => { ledger_amount => 1000, currency => 'GBP', status => 1, locked => 0 }
+        }
+    );
+    $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Funds',
+            value => { ledger_id => $ledger5->ledger_id, parent_fund_id => undef, fund_amount => 500 }
+        }
+    );
+
+    my $ledger5_count_before = Koha::Acquisition::Finances::Ledgers->search->count;
+
+    $t->post_ok(
+        "//$userid:$password@/api/v1/acquisitions/ledgers/" . $ledger5->ledger_id . "/rollover?dry_run=1" => json => {
+            %$base_body,
+            ledger_amount     => $ledger5->ledger_amount,
+            adjust_by_percent => 15,
+            round_to_multiple => 100,
+        }
+    )->status_is(200)->json_is( '/ledger_amount' => 1100 )->json_is( '/funds/0/fund_amount' => 500 );
+
+    $ledger5->discard_changes;
+    ok( $ledger5->status, 'Original ledger still active after dry run with adjust_by_percent' );
+    is(
+        Koha::Acquisition::Finances::Ledgers->search->count,
+        $ledger5_count_before,
+        'No new ledger persisted during dry run with adjust_by_percent'
+    );
 
     $schema->storage->txn_rollback;
 };

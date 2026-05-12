@@ -362,6 +362,11 @@
       - application/json
     parameters:
       - $ref: "../swagger.yaml#/parameters/ledger_id_pp"
+      - name: dry_run
+        in: query
+        description: If true, simulates the rollover without committing any changes
+        required: false
+        type: boolean
       - name: body
         in: body
         description: New ledger data
@@ -369,6 +374,10 @@
         schema:
           $ref: "../swagger.yaml#/definitions/acq_ledger"
     responses:
+      '200':
+        description: Dry run preview — no changes committed
+        schema:
+          $ref: "../swagger.yaml#/definitions/acq_ledger"
       '201':
         description: Ledger rolled over
         schema:

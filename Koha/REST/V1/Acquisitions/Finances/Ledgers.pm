@@ -193,59 +193,75 @@ sub rollover {
     my $ledger = Koha::Acquisition::Finances::Ledgers->find( $c->param('ledger_id') );
     return $c->render_resource_not_found("Ledger") unless $ledger;
 
+    my $dry_run = $c->param('dry_run') ? 1 : 0;
+    my ( $new_ledger, $dry_run_data );
+
     return try {
-        Koha::Database->new->schema->txn_do(
-            sub {
-                my $body = $c->req->json;
+        my $schema = Koha::Database->new->schema;
+        $schema->txn_begin;
 
-                my $adjust_by_percent = delete $body->{adjust_by_percent};
-                my $round_to_multiple = delete $body->{round_to_multiple};
-                my $set_funds_to_zero = delete $body->{set_funds_to_zero};
+        my $body = $c->req->json;
 
-                if ($adjust_by_percent) {
-                    $body->{ledger_amount} += $body->{ledger_amount} * $adjust_by_percent / 100;
-                    if ($round_to_multiple) {
-                        $body->{ledger_amount} =
-                            int( $body->{ledger_amount} / $round_to_multiple ) * $round_to_multiple;
-                    }
-                }
+        my $adjust_by_percent = delete $body->{adjust_by_percent};
+        my $round_to_multiple = delete $body->{round_to_multiple};
+        my $set_funds_to_zero = delete $body->{set_funds_to_zero};
 
-                $body->{currency} = $ledger->currency;
-
-                my $new_ledger = Koha::Acquisition::Finances::Ledger->new_from_api($body)->store->discard_changes;
-
-                Koha::Acquisition::Finances::Allocation->new(
-                    {
-                        ledger_id         => $new_ledger->ledger_id,
-                        allocation_amount => $new_ledger->ledger_amount,
-                        type              => 'ROLLOVER_TRANSFER',
-                    }
-                )->store;
-
-                $ledger->status(0)->store;
-
-                my @top_level_funds = Koha::Acquisition::Finances::Funds->search(
-                    { ledger_id => $ledger->ledger_id, parent_fund_id => undef } )->as_list;
-
-                for my $fund (@top_level_funds) {
-                    _copy_fund(
-                        $fund,
-                        $new_ledger,
-                        undef,
-                        {
-                            set_funds_to_zero => $set_funds_to_zero,
-                            adjust_by_percent => $adjust_by_percent,
-                            round_to_multiple => $round_to_multiple,
-                        }
-                    );
-                }
-
-                $c->res->headers->location( $c->req->url->to_string . '/' . $new_ledger->ledger_id );
-                return $c->render(
-                    status  => 201,
-                    openapi => $c->objects->to_api($new_ledger)
-                );
+        if ($adjust_by_percent) {
+            $body->{ledger_amount} += $body->{ledger_amount} * $adjust_by_percent / 100;
+            if ($round_to_multiple) {
+                $body->{ledger_amount} =
+                    int( $body->{ledger_amount} / $round_to_multiple ) * $round_to_multiple;
             }
+        }
+
+        $body->{currency} = $ledger->currency;
+
+        $new_ledger = Koha::Acquisition::Finances::Ledger->new_from_api($body)->store->discard_changes;
+
+        Koha::Acquisition::Finances::Allocation->new(
+            {
+                ledger_id         => $new_ledger->ledger_id,
+                allocation_amount => $new_ledger->ledger_amount,
+                type              => 'ROLLOVER_TRANSFER',
+            }
+        )->store;
+
+        $ledger->status(0)->store;
+
+        my @top_level_funds =
+            Koha::Acquisition::Finances::Funds->search( { ledger_id => $ledger->ledger_id, parent_fund_id => undef } )
+            ->as_list;
+
+        for my $fund (@top_level_funds) {
+            _copy_fund(
+                $fund,
+                $new_ledger,
+                undef,
+                {
+                    set_funds_to_zero => $set_funds_to_zero,
+                    adjust_by_percent => $adjust_by_percent,
+                    round_to_multiple => $round_to_multiple,
+                }
+            );
+        }
+
+        if ($dry_run) {
+            my @preview_funds =
+                Koha::Acquisition::Finances::Funds->search( { ledger_id => $new_ledger->ledger_id } )->as_list;
+
+            $dry_run_data = $new_ledger->to_api;
+            $dry_run_data->{funds} = [ map { $_->to_api } @preview_funds ];
+
+            $schema->txn_rollback;
+            return $c->render( status => 200, openapi => $dry_run_data );
+        }
+
+        $schema->txn_commit;
+
+        $c->res->headers->location( $c->req->url->to_string . '/' . $new_ledger->ledger_id );
+        return $c->render(
+            status  => 201,
+            openapi => $c->objects->to_api($new_ledger)
         );
     } catch {
         $c->unhandled_exception($_);

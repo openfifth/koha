@@ -356,11 +356,11 @@ const useRolloverModal = ({
             const effectiveType = override.type ?? attr.type;
             const rawValue = resource[name];
             const { format, ...attrWithoutFormat } = attr;
-            const value =
+            const defaultValue =
                 effectiveType === "display" && format
                     ? format(rawValue, resource, attr)
                     : rawValue;
-            acc.push({ ...attrWithoutFormat, value, ...override });
+            acc.push({ ...attrWithoutFormat, defaultValue, ...override });
             return acc;
         }, []);
     };
@@ -492,7 +492,7 @@ const useRolloverModal = ({
         setConfirmationDialog(
             {
                 title: $__("Duplicate ledger and funds"),
-                accept_label: $__("Rollover"),
+                accept_label: $__("Preview rollover"),
                 cancel_label: $__("Cancel"),
                 size: "modal-lg",
                 groups,
@@ -512,21 +512,83 @@ const useRolloverModal = ({
                     oe_warning_amount: inputFields.oe_warning_amount || null,
                     managing_branch: inputFields.managing_branch || null,
                     owner_id: inputFields.owner_id || null,
+                    adjust_by_percent: inputFields.adjust_by_percent || null,
+                    round_to_multiple: inputFields.round_to_multiple || null,
+                    set_funds_to_zero: inputFields.set_funds_to_zero || false,
                 };
 
-                await APIClient.acquisition.ledgers
-                    .rollover(resource.ledger_id, body)
-                    .then(
-                        () => {
-                            setMessage($__("Ledger rolled over successfully"));
-                            onSuccess?.();
-                        },
-                        () => {
-                            setWarning(
-                                $__("An error occurred during rollover")
+                const preview = await APIClient.acquisition.ledgers
+                    .rollover(resource.ledger_id, body, { dryRun: true })
+                    .catch(() => {
+                        setWarning(
+                            $__("An error occurred during rollover preview")
+                        );
+                        return null;
+                    });
+
+                if (!preview) return;
+
+                const previewGroups = [
+                    {
+                        label: $__("New ledger"),
+                        inputs: [
+                            {
+                                name: "preview_ledger_name",
+                                type: "display",
+                                label: $__("Name"),
+                                defaultValue: preview.name,
+                            },
+                            {
+                                name: "preview_ledger_amount",
+                                type: "display",
+                                label: $__("Amount"),
+                                defaultValue: formatValueWithCurrency(
+                                    preview.ledger_amount,
+                                    preview.currency
+                                ),
+                            },
+                        ],
+                    },
+                    {
+                        label: $__("Funds to be created"),
+                        inputs: (preview.funds || []).map(fund => ({
+                            name: `preview_fund_${fund.fund_id}`,
+                            type: "display",
+                            label: fund.name,
+                            defaultValue: formatValueWithCurrency(
+                                fund.fund_amount,
+                                preview.currency
+                            ),
+                        })),
+                    },
+                ];
+
+                setConfirmationDialog(
+                    {
+                        title: $__("Confirm rollover"),
+                        accept_label: $__("Confirm rollover"),
+                        cancel_label: $__("Cancel"),
+                        size: "modal-lg",
+                        groups: previewGroups,
+                    },
+                    async () => {
+                        await APIClient.acquisition.ledgers
+                            .rollover(resource.ledger_id, body)
+                            .then(
+                                () => {
+                                    setMessage(
+                                        $__("Ledger rolled over successfully")
+                                    );
+                                    onSuccess?.();
+                                },
+                                () => {
+                                    setWarning(
+                                        $__("An error occurred during rollover")
+                                    );
+                                }
                             );
-                        }
-                    );
+                    }
+                );
             }
         );
     };
