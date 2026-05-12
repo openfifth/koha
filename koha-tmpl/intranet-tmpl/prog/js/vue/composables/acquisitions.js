@@ -140,13 +140,13 @@ const useAllocationModal = ({
                             name: "fiscal_period_name",
                             type: "display",
                             label: $__("Fiscal period"),
-                            value: fiscalPeriodName,
+                            defaultValue: fiscalPeriodName,
                         },
                         {
                             name: "ledger_name",
                             type: "display",
                             label: $__("Ledger"),
-                            value: ledgerName,
+                            defaultValue: ledgerName,
                         },
                         ...(isFund
                             ? [
@@ -154,7 +154,7 @@ const useAllocationModal = ({
                                       name: "fund_name",
                                       type: "display",
                                       label: $__("Fund"),
-                                      value: fundName,
+                                      defaultValue: fundName,
                                   },
                               ]
                             : []),
@@ -162,7 +162,7 @@ const useAllocationModal = ({
                             name: "current_amount",
                             type: "display",
                             label: $__("Current amount"),
-                            value: formatValueWithCurrency(
+                            defaultValue: formatValueWithCurrency(
                                 entityAmount,
                                 currency
                             ),
@@ -374,7 +374,7 @@ const useRolloverModal = ({
                         name: "rollover_warning",
                         type: "display",
                         label: $__("Warning"),
-                        value: $__(
+                        defaultValue: $__(
                             "The original ledger will be set to inactive on rollover"
                         ),
                     },
@@ -411,6 +411,12 @@ const useRolloverModal = ({
                         {
                             currency: { type: "display" },
                             ledger_amount: { type: "display", toolTip: null },
+                            oe_warning_amount: {
+                                defaultValue: resource.oe_warning_amount,
+                            },
+                            oe_warning_percent: {
+                                defaultValue: resource.oe_warning_percent,
+                            },
                         },
                         [
                             "currency",
