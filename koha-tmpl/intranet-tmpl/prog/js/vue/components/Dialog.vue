@@ -242,7 +242,9 @@ export default {
             } else {
                 accept_callback.value(inputFields.value).then(() => {
                     nextTick(() => {
-                        $("#confirmation.modal").modal("hide");
+                        if (!confirmation.value) {
+                            $("#confirmation.modal").modal("hide");
+                        }
                     });
                 });
             }

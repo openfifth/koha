@@ -61,7 +61,9 @@ export const useMainStore = defineStore("main", () => {
             if (accept_callback) {
                 this.accept_callback = async inputFields => {
                     await accept_callback(confirmation, inputFields);
-                    this.removeConfirmationMessages();
+                    if (this.confirmation === confirmation) {
+                        this.removeConfirmationMessages();
+                    }
                 };
             }
             this.confirmation = confirmation;
