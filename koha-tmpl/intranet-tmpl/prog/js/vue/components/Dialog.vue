@@ -216,7 +216,7 @@ export default {
             if (!all.length) return null;
             return reactive(
                 all.reduce((acc, curr) => {
-                    acc[curr.name] = curr.value || null;
+                    acc[curr.name] = curr.defaultValue || null;
                     return acc;
                 }, {})
             );

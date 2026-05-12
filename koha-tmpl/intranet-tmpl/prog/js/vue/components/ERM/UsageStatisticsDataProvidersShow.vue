@@ -285,7 +285,7 @@ export default {
                         {
                             name: "begin_date",
                             type: "date",
-                            value: null,
+                            defaultValue: null,
                             label: $__("Begin date"),
                             required: true,
                             componentProps: {
@@ -298,7 +298,9 @@ export default {
                         {
                             name: "end_date",
                             type: "date",
-                            value: $date_to_rfc3339($date(date.toString())),
+                            defaultValue: $date_to_rfc3339(
+                                $date(date.toString())
+                            ),
                             label: $__("End date"),
                             required: true,
                             componentProps: {
