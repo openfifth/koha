@@ -50,7 +50,8 @@ use Koha::AdditionalField;
 use Koha::AdditionalFields;
 use Koha::Item;
 
-use C4::Biblio qw( AddBiblio TransformKohaToMarc );
+use C4::Biblio   qw( AddBiblio TransformKohaToMarc );
+use C4::Contract qw( AddContract );
 
 my $VENDOR_PREFIX = 'Sample Vendor - ';
 my $FIELD_PREFIX  = 'Sample ';
@@ -169,6 +170,88 @@ my $vendor_digital = Koha::Acquisition::Bookseller->new(
 print "  Created: " . $vendor_digital->name . " (id=" . $vendor_digital->id . ", tax-exempt)\n";
 
 # ---------------------------------------------------------------
+# Contracts
+# ---------------------------------------------------------------
+print "\nCreating contracts...\n";
+
+my @contract_specs = (
+
+    # Academic Press — 3 contracts
+    {
+        booksellerid        => $vendor_academic->id,
+        contractname        => 'Monograph Supply 2024',
+        contractdescription => 'Annual agreement for monograph supply covering science and humanities titles.',
+        contractstartdate   => '2024-01-01',
+        contractenddate     => '2024-12-31',
+    },
+    {
+        booksellerid        => $vendor_academic->id,
+        contractname        => 'Journal Packages 2025',
+        contractdescription => 'Multi-year deal covering bundled print and electronic journal packages.',
+        contractstartdate   => '2025-01-01',
+        contractenddate     => '2026-12-31',
+    },
+    {
+        booksellerid        => $vendor_academic->id,
+        contractname        => 'E-Book Licence 2025',
+        contractdescription => 'Perpetual e-book licence agreement with annual maintenance fee.',
+        contractstartdate   => '2025-03-01',
+        contractenddate     => '2026-02-28',
+    },
+
+    # Global Books — 2 contracts
+    {
+        booksellerid        => $vendor_global->id,
+        contractname        => 'General Supply 2023',
+        contractdescription => 'Standing agreement for general book supply at negotiated discount rates.',
+        contractstartdate   => '2023-06-01',
+        contractenddate     => '2025-05-31',
+    },
+    {
+        booksellerid        => $vendor_global->id,
+        contractname        => 'Foreign Language 2025',
+        contractdescription => 'Specialist agreement for foreign language and regional studies materials.',
+        contractstartdate   => '2025-01-01',
+        contractenddate     => '2025-12-31',
+    },
+
+    # Digital Subscriptions — 4 contracts
+    {
+        booksellerid        => $vendor_digital->id,
+        contractname        => 'Database Subscription',
+        contractdescription => 'Annual subscription to science and technology reference databases.',
+        contractstartdate   => '2025-01-01',
+        contractenddate     => '2025-12-31',
+    },
+    {
+        booksellerid        => $vendor_digital->id,
+        contractname        => 'E-Journal Bundle 2025',
+        contractdescription => 'Bundled electronic journal access across multiple disciplines.',
+        contractstartdate   => '2025-04-01',
+        contractenddate     => '2026-03-31',
+    },
+    {
+        booksellerid        => $vendor_digital->id,
+        contractname        => 'Streaming Media 2024',
+        contractdescription => 'Streaming video and audio content licence for academic use.',
+        contractstartdate   => '2024-09-01',
+        contractenddate     => '2025-08-31',
+    },
+    {
+        booksellerid        => $vendor_digital->id,
+        contractname        => 'E-Learning Platform',
+        contractdescription => 'Institutional licence for online learning and course materials platform.',
+        contractstartdate   => '2025-01-01',
+        contractenddate     => '2026-12-31',
+    },
+);
+
+for my $spec (@contract_specs) {
+    my $contract_id = AddContract($spec);
+    print "  Created contract: '$spec->{contractname}' (id=$contract_id, vendor=$spec->{booksellerid})\n";
+}
+
+# ---------------------------------------------------------------
 # Additional fields
 # ---------------------------------------------------------------
 print "\nCreating additional fields...\n";
@@ -263,7 +346,7 @@ my @orderline_specs = (
         orderline => {
             biblionumber          => $biblionumbers[0],
             vendor_id             => $vendor_academic->id,
-            status                => 'new',
+            status                => 'NEW',
             create_items          => 'ordering',
             quantity_ordered      => 2,
             vendor_price          => '89.99',
@@ -288,7 +371,7 @@ my @orderline_specs = (
         orderline => {
             biblionumber          => $biblionumbers[1],
             vendor_id             => $vendor_global->id,
-            status                => 'ordered',
+            status                => 'ORDERED',
             create_items          => 'ordering',
             quantity_ordered      => 1,
             vendor_price          => '55.00',
@@ -313,7 +396,7 @@ my @orderline_specs = (
         orderline => {
             biblionumber          => $biblionumbers[2],
             vendor_id             => $vendor_academic->id,
-            status                => 'ordered',
+            status                => 'ORDERED',
             create_items          => 'receiving',
             quantity_ordered      => 3,
             vendor_price          => '120.00',
@@ -335,7 +418,7 @@ my @orderline_specs = (
         orderline => {
             biblionumber          => $biblionumbers[3],
             vendor_id             => $vendor_digital->id,
-            status                => 'draft',
+            status                => 'DRAFT',
             create_items          => 'receiving',
             quantity_ordered      => 1,
             vendor_price          => '450.00',
@@ -357,7 +440,7 @@ my @orderline_specs = (
         orderline => {
             biblionumber          => $biblionumbers[4],
             vendor_id             => $vendor_global->id,
-            status                => 'new',
+            status                => 'NEW',
             create_items          => 'cataloging',
             quantity_ordered      => 1,
             vendor_price          => '280.00',
@@ -378,7 +461,7 @@ my @orderline_specs = (
         orderline => {
             biblionumber          => $biblionumbers[5],
             vendor_id             => $vendor_digital->id,
-            status                => 'draft',
+            status                => 'DRAFT',
             quantity_ordered      => 1,
             vendor_price          => '1200.00',
             vendor_price_currency => $CURRENCY,
