@@ -1327,18 +1327,19 @@ export default {
                                         {
                                             name: "duplicate_biblio",
                                             type: "hidden",
-                                            value: error.duplicate_biblio,
+                                            defaultValue:
+                                                error.duplicate_biblio,
                                         },
                                         {
                                             name: "orderline",
                                             type: "hidden",
-                                            value: error.orderline,
+                                            defaultValue: error.orderline,
                                         },
                                         {
                                             name: "use_existing",
                                             type: "checkbox",
                                             label: $__("Use existing record"),
-                                            value: true,
+                                            defaultValue: true,
                                             onChange: fields => {
                                                 handleCheckboxes(
                                                     fields,
@@ -1355,7 +1356,7 @@ export default {
                                             label: $__(
                                                 "Cancel and return to order"
                                             ),
-                                            value: false,
+                                            defaultValue: false,
                                             onChange: fields => {
                                                 handleCheckboxes(
                                                     fields,
@@ -1370,7 +1371,7 @@ export default {
                                             name: "create_new",
                                             type: "checkbox",
                                             label: $__("Create new record"),
-                                            value: false,
+                                            defaultValue: false,
                                             onChange: fields => {
                                                 handleCheckboxes(
                                                     fields,
