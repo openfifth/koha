@@ -310,7 +310,7 @@ CREATE TABLE `acq_purchase_orders` (
 `po_internal_note` LONGTEXT DEFAULT NULL COMMENT 'internal note for the purchase order',
 `po_vendor_note` LONGTEXT DEFAULT NULL COMMENT 'vendor note for the purchase order',
 `external_po_number` LONGTEXT DEFAULT NULL COMMENT 'external po number for the purchase order',
-`contract_id` int(11) NOT NULL COMMENT 'link to the contract',
+`contract_id` int(11) DEFAULT NULL COMMENT 'link to the contract',
 `created_date` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'creation date of the purchase order',
 `modified_date` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'last update of the purchase order',
 `ordered_date` timestamp NULL DEFAULT NULL COMMENT 'ordering date of the purchase order',
