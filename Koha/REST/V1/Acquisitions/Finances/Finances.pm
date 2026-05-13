@@ -56,6 +56,8 @@ sub config {
                 marcflavour                          => C4::Context->preference('marcflavour'),
                 different_currencies_in_ledgers      => C4::Context->preference('DifferentCurrenciesInLedgers'),
                 unique_item_fields                   => C4::Context->preference('UniqueItemFields'),
+                marc_ordering_automation             => C4::Context->preference('MarcOrderingAutomation'),
+                edifact                              => C4::Context->preference('EDIFACT'),
             },
         },
     );

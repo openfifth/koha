@@ -46,6 +46,7 @@ export default {
         const mainStore = inject("mainStore");
         const { loading, loaded, setError } = mainStore;
 
+        const navigationStore = inject("navigationStore");
         const acquisitionsStore = inject("acquisitionsStore");
         const { loadAuthorisedValues } = acquisitionsStore;
         const {
@@ -74,6 +75,10 @@ export default {
                 const client = APIClient.acquisition;
                 client.config.get("finances").then(result => {
                     userPermissions.value = result.permissions;
+                    navigationStore.setConfig({
+                        permissions: result.permissions,
+                        sysprefs: result.sysprefs,
+                    });
                     permittedUsers.value = permitted_patrons;
                     const { permission } = route.meta.self;
                     const permissionRequired = permission ? permission : null;

@@ -325,6 +325,8 @@ export const routes = [
                         title: $__("MARC order accounts"),
                         icon: "fa fa-file-import",
                         resource: "Acquisitions/MarcOrderAccountResource.vue",
+                        hidden: ({ sysprefs }) =>
+                            sysprefs?.marc_ordering_automation == "0",
                         children: [
                             {
                                 path: "",
@@ -365,6 +367,7 @@ export const routes = [
                         title: $__("EDI accounts"),
                         icon: "fa fa-right-left",
                         resource: "Acquisitions/EdiAccountResource.vue",
+                        hidden: ({ sysprefs }) => sysprefs?.edifact == "0",
                         children: [
                             {
                                 path: "",
