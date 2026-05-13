@@ -34,6 +34,46 @@ export const routes = [
                         name: "OrderManagementHome",
                     },
                     {
+                        path: "purchase_orders",
+                        title: $__("Purchase orders"),
+                        resource:
+                            "Acquisitions/OrderManagement/PurchaseOrderResource.vue",
+                        children: [
+                            {
+                                path: "",
+                                component: markRaw(ResourceWrapper),
+                                name: "PurchaseOrderList",
+                                title: $__("List purchase orders"),
+                                permission: "managePurchaseOrders",
+                                is_navigation_item: false,
+                            },
+                            {
+                                path: ":purchase_order_id",
+                                component: markRaw(ResourceWrapper),
+                                name: "PurchaseOrderShow",
+                                title: $__("Show purchase order"),
+                                permission: "managePurchaseOrders",
+                                is_navigation_item: false,
+                            },
+                            {
+                                path: "add",
+                                component: markRaw(ResourceWrapper),
+                                name: "PurchaseOrderFormAdd",
+                                title: $__("Add purchase order"),
+                                permission: "managePurchaseOrders",
+                                is_navigation_item: false,
+                            },
+                            {
+                                path: "edit/:purchase_order_id",
+                                component: markRaw(ResourceWrapper),
+                                name: "PurchaseOrderFormAddEdit",
+                                title: $__("Edit purchase order"),
+                                permission: "managePurchaseOrders",
+                                is_navigation_item: false,
+                            },
+                        ],
+                    },
+                    {
                         path: "orderlines",
                         title: $__("Orderlines"),
                         resource:
