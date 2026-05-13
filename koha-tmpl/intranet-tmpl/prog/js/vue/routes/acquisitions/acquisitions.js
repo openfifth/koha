@@ -25,7 +25,7 @@ export const routes = [
             {
                 path: "/cgi-bin/koha/acquisitions/order_management",
                 title: $__("Order management"),
-                icon: "fa fa-cart-shopping",
+                icon: "fa fa-basket-shopping",
                 children: [
                     {
                         is_navigation_item: false,
@@ -36,6 +36,7 @@ export const routes = [
                     {
                         path: "purchase_orders",
                         title: $__("Purchase orders"),
+                        icon: "fa fa-gift",
                         resource:
                             "Acquisitions/OrderManagement/PurchaseOrderResource.vue",
                         children: [
@@ -76,6 +77,7 @@ export const routes = [
                     {
                         path: "orderlines",
                         title: $__("Orderlines"),
+                        icon: "fa fa-cart-plus",
                         resource:
                             "Acquisitions/OrderManagement/OrderlineResource.vue",
                         children: [
@@ -126,7 +128,7 @@ export const routes = [
             {
                 path: "/cgi-bin/koha/acquisitions/suggestions",
                 title: $__("Suggestions"),
-                icon: "fa fa-cart-shopping",
+                icon: "fa fa-question",
                 resource: "Acquisitions/OrderManagement/SuggestionResource.vue",
                 children: [
                     {
@@ -147,7 +149,7 @@ export const routes = [
             {
                 path: "/cgi-bin/koha/acquisitions/finances",
                 title: $__("Finances"),
-                icon: "fa fa-money-check-dollar",
+                icon: "fa fa-piggy-bank",
                 children: [
                     {
                         path: "",
@@ -158,6 +160,7 @@ export const routes = [
                     {
                         path: "fiscal_periods",
                         title: $__("Fiscal periods"),
+                        icon: "fa fa-money-check",
                         resource:
                             "Acquisitions/Finances/FiscalPeriodResource.vue",
                         children: [
@@ -198,6 +201,7 @@ export const routes = [
                     {
                         path: "ledgers",
                         title: $__("Ledgers"),
+                        icon: "fa fa-money-bills",
                         resource: "Acquisitions/Finances/LedgerResource.vue",
                         children: [
                             {
@@ -238,6 +242,7 @@ export const routes = [
                         path: "funds",
                         title: $__("Funds"),
                         resource: "Acquisitions/Finances/FundResource.vue",
+                        icon: "fa fa-coins",
                         children: [
                             {
                                 path: "",
@@ -373,7 +378,7 @@ export const routes = [
                             {
                                 path: "edi_accounts",
                                 title: $__("EDI accounts"),
-                                icon: "fa fa-right-left",
+                                icon: "fa fa-clipboard-user",
                                 resource: "Acquisitions/EdiAccountResource.vue",
                                 children: [
                                     {
@@ -508,12 +513,12 @@ export const routes = [
                             {
                                 href: "/cgi-bin/koha/admin/additional-fields.pl?tablename=acq_orderlines",
                                 title: $__("Orderlines"),
-                                icon: "fa fa-file",
+                                icon: "fa fa-cart-plus",
                             },
                             {
                                 href: "/cgi-bin/koha/admin/additional-fields.pl?tablename=acq_purchase_orders",
                                 title: $__("Purchase orders"),
-                                icon: "fa fa-file",
+                                icon: "fa fa-gift",
                             },
                         ],
                     },
