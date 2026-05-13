@@ -38,6 +38,8 @@ definitions:
     $ref: ./definitions/acq_purchase_order.yaml
   currency:
     $ref: ./definitions/currency.yaml
+  edi_ean_account:
+    $ref: ./definitions/edi_ean_account.yaml
   advancededitormacro:
     $ref: ./definitions/advancededitormacro.yaml
   allows_renewal:
@@ -315,6 +317,10 @@ paths:
     $ref: ./paths/acquisitions_currencies.yaml#/~1acquisitions~1currencies
   "/acquisitions/currencies/{currency_id}":
     $ref: "./paths/acquisitions_currencies.yaml#/~1acquisitions~1currencies~1{currency_id}"
+  /acquisitions/edi_ean_accounts:
+    $ref: ./paths/acquisitions_edi_ean_accounts.yaml#/~1acquisitions~1edi_ean_accounts
+  "/acquisitions/edi_ean_accounts/{edi_ean_account_id}":
+    $ref: "./paths/acquisitions_edi_ean_accounts.yaml#/~1acquisitions~1edi_ean_accounts~1{edi_ean_account_id}"
   /acquisitions/orders:
     $ref: ./paths/acquisitions_orders.yaml#/~1acquisitions~1orders
   "/acquisitions/orders/{order_id}":
@@ -929,6 +935,12 @@ parameters:
     name: currency_id
     required: true
     type: string
+  edi_ean_account_id_pp:
+    description: Library EAN account internal identifier
+    in: path
+    name: edi_ean_account_id
+    required: true
+    type: integer
   fiscal_period_id_pp:
     description: Fiscal period id
     in: path

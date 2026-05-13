@@ -355,11 +355,43 @@ export class AcquisitionAPIClient {
         };
     }
 
-    get ediAccountsConfig() {
+    get ediEanAccounts() {
         return {
-            get: () =>
+            get: id =>
                 this.httpClient.get({
-                    endpoint: "edi_accounts/config",
+                    endpoint: "edi_ean_accounts/" + id,
+                    headers: { "x-koha-embed": "library" },
+                }),
+            getAll: (query, params, headers) =>
+                this.httpClient.getAll({
+                    endpoint: "edi_ean_accounts",
+                    query,
+                    params,
+                    headers: { "x-koha-embed": "library", ...headers },
+                }),
+            delete: id =>
+                this.httpClient.delete({
+                    endpoint: "edi_ean_accounts/" + id,
+                }),
+            create: account =>
+                this.httpClient.post({
+                    endpoint: "edi_ean_accounts",
+                    body: account,
+                }),
+            update: (account, id) =>
+                this.httpClient.put({
+                    endpoint: "edi_ean_accounts/" + id,
+                    body: account,
+                }),
+            count: (query = {}) =>
+                this.httpClient.count({
+                    endpoint:
+                        "edi_ean_accounts?" +
+                        new URLSearchParams({
+                            _page: 1,
+                            _per_page: 1,
+                            ...(query && { q: JSON.stringify(query) }),
+                        }),
                 }),
         };
     }
@@ -401,15 +433,6 @@ export class AcquisitionAPIClient {
                             _per_page: 1,
                             ...(query && { q: JSON.stringify(query) }),
                         }),
-                }),
-        };
-    }
-
-    get marcOrderAccountsConfig() {
-        return {
-            get: () =>
-                this.httpClient.get({
-                    endpoint: "marc_order_accounts/config",
                 }),
         };
     }

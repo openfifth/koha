@@ -25,7 +25,8 @@ export default {
         const plugins = ref([]);
 
         onBeforeMount(async () => {
-            const config = await APIClient.acquisition.ediAccountsConfig.get();
+            const config =
+                await APIClient.acquisition.config.get("edi_accounts");
             fileTransports.value = config.file_transports || [];
             plugins.value = config.plugins || [];
             configLoaded.value = true;

@@ -27,8 +27,9 @@ export default {
         const { buildFundTreeOptions } = acquisitionsStore;
 
         onBeforeMount(async () => {
-            const config =
-                await APIClient.acquisition.marcOrderAccountsConfig.get();
+            const config = await APIClient.acquisition.config.get(
+                "marc_order_accounts"
+            );
             matchers.value = config.matchers || [];
             configLoaded.value = true;
         });

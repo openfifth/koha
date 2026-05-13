@@ -108,6 +108,8 @@ __PACKAGE__->belongs_to(
 # Created by DBIx::Class::Schema::Loader v0.07042 @ 2018-10-09 11:29:27
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:9CSEvOmfmy52+QAYAgrybA
 
+sub koha_object_class  { 'Koha::EdifactEan' }
+sub koha_objects_class { 'Koha::EdifactEans' }
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration
 __PACKAGE__->belongs_to('branch',

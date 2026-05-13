@@ -1,0 +1,30 @@
+---
+type: object
+properties:
+  edi_ean_account_id:
+    type: integer
+    readOnly: true
+    description: Internal identifier
+  description:
+    type:
+      - string
+      - "null"
+    description: Description of the EAN account
+  branchcode:
+    type:
+      - string
+      - "null"
+    description: Library branch code (null means all libraries)
+  ean:
+    type: string
+    description: EAN (Electronic Article Number)
+  id_code_qualifier:
+    type: string
+    description: Code qualifier (e.g. 14 for EAN International)
+  library:
+    type:
+      - object
+      - "null"
+    readOnly: true
+    description: Embedded library object
+additionalProperties: false

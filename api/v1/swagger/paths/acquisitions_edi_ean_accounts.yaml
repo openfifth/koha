@@ -1,0 +1,249 @@
+---
+/acquisitions/edi_ean_accounts:
+  get:
+    x-mojo-to: Acquisitions::EdiEanAccounts#list
+    operationId: listEdiEanAccounts
+    description: Retrieves the list of library EAN accounts
+    tags:
+      - ediEanAccounts
+    produces:
+      - application/json
+    parameters:
+      - name: x-koha-embed
+        in: header
+        description: Embed
+        required: false
+        type: array
+        items:
+          type: string
+          enum:
+            - library
+        collectionFormat: csv
+      - $ref: "../swagger.yaml#/parameters/match"
+      - $ref: "../swagger.yaml#/parameters/order_by"
+      - $ref: "../swagger.yaml#/parameters/page"
+      - $ref: "../swagger.yaml#/parameters/per_page"
+      - $ref: "../swagger.yaml#/parameters/q_param"
+      - $ref: "../swagger.yaml#/parameters/q_body"
+    responses:
+      '200':
+        description: Library EAN account list
+        schema:
+          items:
+            $ref: "../swagger.yaml#/definitions/edi_ean_account"
+          type: array
+      "400":
+        description: |
+          Bad request. Possible `error_code` attribute values:
+
+            * `invalid_query`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: edi_manage
+  post:
+    x-mojo-to: Acquisitions::EdiEanAccounts#add
+    operationId: addEdiEanAccount
+    summary: Add a library EAN account
+    tags:
+      - ediEanAccounts
+    consumes:
+      - application/json
+    produces:
+      - application/json
+    parameters:
+      - description: A JSON object containing information about the new library EAN account
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: "../swagger.yaml#/definitions/edi_ean_account"
+    responses:
+      '201':
+        description: Library EAN account created
+        schema:
+          $ref: "../swagger.yaml#/definitions/edi_ean_account"
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: edi_manage
+/acquisitions/edi_ean_accounts/{edi_ean_account_id}:
+  get:
+    x-mojo-to: Acquisitions::EdiEanAccounts#get
+    operationId: getEdiEanAccount
+    description: Get a single library EAN account
+    tags:
+      - ediEanAccounts
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/edi_ean_account_id_pp"
+      - name: x-koha-embed
+        in: header
+        description: Embed
+        required: false
+        type: array
+        items:
+          type: string
+          enum:
+            - library
+        collectionFormat: csv
+    produces:
+      - application/json
+    responses:
+      "200":
+        description: A library EAN account
+        schema:
+          $ref: "../swagger.yaml#/definitions/edi_ean_account"
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Library EAN account not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: edi_manage
+  put:
+    x-mojo-to: Acquisitions::EdiEanAccounts#update
+    operationId: updateEdiEanAccount
+    description: Update a library EAN account
+    tags:
+      - ediEanAccounts
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/edi_ean_account_id_pp"
+      - name: body
+        in: body
+        description: Library EAN account object to update
+        required: true
+        schema:
+          $ref: "../swagger.yaml#/definitions/edi_ean_account"
+    produces:
+      - application/json
+    responses:
+      '200':
+        description: Library EAN account updated
+        schema:
+          $ref: "../swagger.yaml#/definitions/edi_ean_account"
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Library EAN account not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: Internal error
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: edi_manage
+  delete:
+    x-mojo-to: Acquisitions::EdiEanAccounts#delete
+    operationId: deleteEdiEanAccount
+    description: Delete a library EAN account
+    tags:
+      - ediEanAccounts
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/edi_ean_account_id_pp"
+    produces:
+      - application/json
+    responses:
+      '204':
+        description: Library EAN account deleted
+        schema:
+          type: string
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Library EAN account not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: Internal error
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: edi_manage
