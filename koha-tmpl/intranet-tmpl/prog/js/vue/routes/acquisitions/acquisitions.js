@@ -443,6 +443,30 @@ export const routes = [
                             },
                         ],
                     },
+                    {
+                        path: "additional_fields",
+                        title: $__("Additional fields"),
+                        disabled: true,
+                        collapsible: true,
+                        icon: "fa fa-list",
+                        children: [
+                            {
+                                href: "/cgi-bin/koha/admin/additional-fields.pl?tablename=aqbooksellers:vendor",
+                                title: $__("Vendors"),
+                                icon: "fa fa-cart-shopping",
+                            },
+                            {
+                                href: "/cgi-bin/koha/admin/additional-fields.pl?tablename=acq_orderlines",
+                                title: $__("Orderlines"),
+                                icon: "fa fa-file",
+                            },
+                            {
+                                href: "/cgi-bin/koha/admin/additional-fields.pl?tablename=acq_purchase_orders",
+                                title: $__("Purchase orders"),
+                                icon: "fa fa-file",
+                            },
+                        ],
+                    },
                 ],
             },
         ],
