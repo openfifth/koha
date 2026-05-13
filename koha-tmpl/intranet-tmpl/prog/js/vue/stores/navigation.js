@@ -15,8 +15,12 @@ export const useNavigationStore = defineStore("navigation", () => {
         from: null,
         query: {},
         breadcrumbMetadata: null,
+        config: null,
     });
     const actions = {
+        setConfig(config) {
+            store.config = config;
+        },
         setRoutes(routesDef) {
             if (!Array.isArray(routesDef)) {
                 routesDef = [routesDef];
@@ -242,6 +246,10 @@ export const useNavigationStore = defineStore("navigation", () => {
             function _buildChildNavigationElements(parent, builtPath) {
                 return parent.children
                     .filter(child => child.is_base || child.is_navigation_item)
+                    .filter(
+                        child =>
+                            !child.hidden || !child.hidden(store.config || {})
+                    )
                     .map(child => _getNavigationElements(child, builtPath));
             }
 
