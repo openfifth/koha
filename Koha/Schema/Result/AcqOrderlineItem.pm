@@ -99,5 +99,12 @@ __PACKAGE__->belongs_to(
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:zJnFiFA+eQk19b0O4rMblg
 
 
-# You can replace this text with custom code or comments, and it will be preserved on regeneration
+sub koha_object_class {
+    'Koha::Acquisition::OrderManagement::OrderlineItem';
+}
+
+sub koha_objects_class {
+    'Koha::Acquisition::OrderManagement::OrderlineItems';
+}
+
 1;
