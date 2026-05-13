@@ -21,6 +21,8 @@
             - contract
             - billing_library
             - delivery_library
+            - extended_attributes
+            - +strings
         collectionFormat: csv
       - $ref: "../swagger.yaml#/parameters/match"
       - $ref: "../swagger.yaml#/parameters/order_by"
@@ -129,6 +131,8 @@
             - contract
             - billing_library
             - delivery_library
+            - extended_attributes
+            - +strings
         collectionFormat: csv
     produces:
       - application/json

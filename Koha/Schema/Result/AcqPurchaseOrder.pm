@@ -306,4 +306,36 @@ sub koha_objects_class {
     'Koha::Acquisition::OrderManagement::PurchaseOrders';
 }
 
+__PACKAGE__->has_many(
+    "additional_field_values",
+    "Koha::Schema::Result::AdditionalFieldValue",
+    sub {
+        my ($args) = @_;
+
+        return {
+            "$args->{foreign_alias}.record_id" => { -ident => "$args->{self_alias}.purchase_order_id" },
+
+            "$args->{foreign_alias}.field_id" =>
+                { -in => \'(SELECT id FROM additional_fields WHERE tablename LIKE "acq_purchase_orders")' },
+        };
+    },
+    { cascade_copy => 0, cascade_delete => 0 },
+);
+
+__PACKAGE__->has_many(
+    "extended_attributes",
+    "Koha::Schema::Result::AdditionalFieldValue",
+    sub {
+        my ($args) = @_;
+
+        return {
+            "$args->{foreign_alias}.record_id" => { -ident => "$args->{self_alias}.purchase_order_id" },
+
+            "$args->{foreign_alias}.field_id" =>
+                { -in => \'(SELECT id FROM additional_fields WHERE tablename LIKE "acq_purchase_orders")' },
+        };
+    },
+    { cascade_copy => 0, cascade_delete => 0 },
+);
+
 1;

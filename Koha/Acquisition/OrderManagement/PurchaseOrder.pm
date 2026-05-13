@@ -18,7 +18,7 @@ package Koha::Acquisition::OrderManagement::PurchaseOrder;
 # along with Koha; if not, see <http://www.gnu.org/licenses>.
 
 use Modern::Perl;
-use base qw(Koha::Object);
+use base qw(Koha::Object::Mixin::AdditionalFields Koha::Object);
 
 use Koha::Acquisition::Bookseller;
 use Koha::Acquisition::Contract;

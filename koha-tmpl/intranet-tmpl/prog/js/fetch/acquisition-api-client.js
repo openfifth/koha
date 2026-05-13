@@ -421,7 +421,7 @@ export class AcquisitionAPIClient {
                     endpoint: "purchase_orders/" + id,
                     headers: {
                         "x-koha-embed":
-                            "vendor,contract,billing_library,delivery_library",
+                            "vendor,contract,billing_library,delivery_library,extended_attributes,+strings",
                         ...headers,
                     },
                 }),

@@ -55,7 +55,8 @@ sub _list {
         vendor           => 'aqbooksellers:vendor',
         title            => 'erm_titles',
         agreement_period => 'erm_agreement_periods',
-        orderline        => 'acq_orderlines'
+        orderline        => 'acq_orderlines',
+        purchase_order   => 'acq_purchase_orders'
     };
 
     my @tables;
@@ -125,7 +126,7 @@ sub list_acq {
     my ($self)         = @_;
     my $c              = shift->openapi->valid_input or return;
     my $resource_type  = $c->param('resource_type');
-    my @resource_types = $resource_type ? ($resource_type) : qw(vendor orderline);
+    my @resource_types = $resource_type ? ($resource_type) : qw(vendor orderline purchase_order);
 
     return try {
         my $additional_fields_set = $self->_list(@resource_types);

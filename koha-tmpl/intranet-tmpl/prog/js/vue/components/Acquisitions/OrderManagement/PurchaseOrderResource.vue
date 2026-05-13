@@ -63,6 +63,7 @@ export default {
                 edit: "PurchaseOrderFormAddEdit",
             },
             apiClient: APIClient.acquisition.purchaseOrders,
+            extendedAttributesResourceType: "purchase_order",
             i18n: {
                 deleteConfirmationMessage: $__(
                     "Are you sure you want to remove this purchase order?"
@@ -177,7 +178,7 @@ export default {
             table_settings: null,
             add_filters: true,
             options: {
-                embed: "vendor,billing_library,delivery_library",
+                embed: "vendor,billing_library,delivery_library,extended_attributes,+strings",
             },
             actions: {
                 0: ["show"],

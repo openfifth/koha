@@ -51,7 +51,7 @@ export class AdditionalFieldsAPIClientWrapper {
                 "package",
                 "title",
             ],
-            acquisition: ["vendor", "orderline"],
+            acquisition: ["vendor", "orderline", "purchase_order"],
         };
 
         for (const [module, resourceTypes] of Object.entries(moduleMappings)) {

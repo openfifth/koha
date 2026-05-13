@@ -70,9 +70,15 @@ sub add {
     my $c = shift->openapi->valid_input or return;
 
     return try {
-        my $body = $c->req->json;
+        my $body                = $c->req->json;
+        my $extended_attributes = delete $body->{extended_attributes} // [];
 
         my $purchase_order = Koha::Acquisition::OrderManagement::PurchaseOrder->new_from_api($body)->store->discard_changes;
+
+        my @extended_attributes =
+            map { { 'id' => $_->{field_id}, 'value' => $_->{value} } } @{$extended_attributes};
+        $purchase_order->extended_attributes( \@extended_attributes );
+
         $c->res->headers->location( $c->req->url->to_string . '/' . $purchase_order->purchase_order_id );
         return $c->render(
             status  => 201,
@@ -96,9 +102,14 @@ sub update {
         unless $purchase_order;
 
     return try {
-        my $body = $c->req->json;
+        my $body                = $c->req->json;
+        my $extended_attributes = delete $body->{extended_attributes} // [];
 
         $purchase_order->set_from_api($body)->store;
+
+        my @extended_attributes =
+            map { { 'id' => $_->{field_id}, 'value' => $_->{value} } } @{$extended_attributes};
+        $purchase_order->extended_attributes( \@extended_attributes );
 
         $c->res->headers->location( $c->req->url->to_string . '/' . $purchase_order->purchase_order_id );
         return $c->render(
