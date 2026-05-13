@@ -1,0 +1,47 @@
+---
+type: object
+properties:
+  currency:
+    type: string
+    description: Currency code (primary key, e.g. USD)
+  symbol:
+    type:
+      - string
+      - "null"
+    description: Currency symbol
+  isocode:
+    type:
+      - string
+      - "null"
+    description: ISO 4217 code
+  rate:
+    type:
+      - number
+      - "null"
+    description: Exchange rate
+  active:
+    type:
+      - boolean
+      - "null"
+    description: Whether this is the active currency
+  p_cs_precedes:
+    type:
+      - boolean
+      - "null"
+    description: Currency symbol precedes value
+  p_sep_by_space:
+    type:
+      - boolean
+      - "null"
+    description: Space separation between symbol and value
+  archived:
+    type:
+      - boolean
+      - "null"
+    description: Whether this currency is archived
+  timestamp:
+    type: string
+    format: date-time
+    readOnly: true
+    description: Last updated
+additionalProperties: false

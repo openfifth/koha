@@ -1,0 +1,229 @@
+---
+/acquisitions/currencies:
+  get:
+    x-mojo-to: Acquisitions::Currencies#list
+    operationId: listCurrencies
+    description: Retrieves the list of currencies
+    tags:
+      - currencies
+    produces:
+      - application/json
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/match"
+      - $ref: "../swagger.yaml#/parameters/order_by"
+      - $ref: "../swagger.yaml#/parameters/page"
+      - $ref: "../swagger.yaml#/parameters/per_page"
+      - $ref: "../swagger.yaml#/parameters/q_param"
+      - $ref: "../swagger.yaml#/parameters/q_body"
+    responses:
+      '200':
+        description: Currency list
+        schema:
+          items:
+            $ref: "../swagger.yaml#/definitions/currency"
+          type: array
+      "400":
+        description: |
+          Bad request. Possible `error_code` attribute values:
+
+            * `invalid_query`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: budget_manage_all
+  post:
+    x-mojo-to: Acquisitions::Currencies#add
+    operationId: addCurrency
+    tags:
+      - currencies
+    summary: Add currency
+    consumes:
+      - application/json
+    produces:
+      - application/json
+    parameters:
+      - description: A JSON object containing information about the new currency
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: "../swagger.yaml#/definitions/currency"
+    responses:
+      '201':
+        description: Currency created
+        schema:
+          $ref: "../swagger.yaml#/definitions/currency"
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: budget_manage_all
+/acquisitions/currencies/{currency_id}:
+  get:
+    x-mojo-to: Acquisitions::Currencies#get
+    operationId: getCurrency
+    tags:
+      - currencies
+    description: Get a single currency
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/currency_id_pp"
+    produces:
+      - application/json
+    responses:
+      "200":
+        description: A currency
+        schema:
+          $ref: "../swagger.yaml#/definitions/currency"
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Currency not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: budget_manage_all
+  put:
+    x-mojo-to: Acquisitions::Currencies#update
+    operationId: updateCurrency
+    tags:
+      - currencies
+    description: Update a currency
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/currency_id_pp"
+      - name: body
+        in: body
+        description: Currency object to update
+        required: true
+        schema:
+          $ref: "../swagger.yaml#/definitions/currency"
+    produces:
+      - application/json
+    responses:
+      '200':
+        description: Currency updated
+        schema:
+          $ref: "../swagger.yaml#/definitions/currency"
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Currency not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: Internal error
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: budget_manage_all
+  delete:
+    x-mojo-to: Acquisitions::Currencies#delete
+    operationId: deleteCurrency
+    tags:
+      - currencies
+    description: Delete a currency
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/currency_id_pp"
+    produces:
+      - application/json
+    responses:
+      '204':
+        description: Currency deleted
+        schema:
+          type: string
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Currency not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: Internal error
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: budget_manage_all

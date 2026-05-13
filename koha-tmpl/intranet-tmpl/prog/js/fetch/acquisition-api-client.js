@@ -461,6 +461,46 @@ export class AcquisitionAPIClient {
         };
     }
 
+    get currencies() {
+        return {
+            get: id =>
+                this.httpClient.get({
+                    endpoint: "currencies/" + id,
+                }),
+            getAll: (query, params, headers) =>
+                this.httpClient.getAll({
+                    endpoint: "currencies",
+                    query,
+                    params,
+                    ...(headers && { headers }),
+                }),
+            delete: id =>
+                this.httpClient.delete({
+                    endpoint: "currencies/" + id,
+                }),
+            create: currency =>
+                this.httpClient.post({
+                    endpoint: "currencies",
+                    body: currency,
+                }),
+            update: (currency, id) =>
+                this.httpClient.put({
+                    endpoint: "currencies/" + id,
+                    body: currency,
+                }),
+            count: (query = {}) =>
+                this.httpClient.count({
+                    endpoint:
+                        "currencies?" +
+                        new URLSearchParams({
+                            _page: 1,
+                            _per_page: 1,
+                            ...(query && { q: JSON.stringify(query) }),
+                        }),
+                }),
+        };
+    }
+
     get orderlines() {
         return {
             get: (id, headers) =>

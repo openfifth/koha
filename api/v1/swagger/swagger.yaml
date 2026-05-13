@@ -36,6 +36,8 @@ definitions:
     $ref: ./definitions/acq_orderline.yaml
   acq_purchase_order:
     $ref: ./definitions/acq_purchase_order.yaml
+  currency:
+    $ref: ./definitions/currency.yaml
   advancededitormacro:
     $ref: ./definitions/advancededitormacro.yaml
   allows_renewal:
@@ -309,6 +311,10 @@ paths:
     $ref: ./paths/acq_purchase_orders.yaml#/~1acquisitions~1purchase_orders
   "/acquisitions/purchase_orders/{purchase_order_id}":
     $ref: "./paths/acq_purchase_orders.yaml#/~1acquisitions~1purchase_orders~1{purchase_order_id}"
+  /acquisitions/currencies:
+    $ref: ./paths/acquisitions_currencies.yaml#/~1acquisitions~1currencies
+  "/acquisitions/currencies/{currency_id}":
+    $ref: "./paths/acquisitions_currencies.yaml#/~1acquisitions~1currencies~1{currency_id}"
   /acquisitions/orders:
     $ref: ./paths/acquisitions_orders.yaml#/~1acquisitions~1orders
   "/acquisitions/orders/{order_id}":
@@ -917,6 +923,12 @@ parameters:
     name: marc_order_account_id
     required: true
     type: integer
+  currency_id_pp:
+    description: Currency code identifier
+    in: path
+    name: currency_id
+    required: true
+    type: string
   fiscal_period_id_pp:
     description: Fiscal period id
     in: path
