@@ -59,7 +59,7 @@ export class AcquisitionAPIClient {
                     query,
                     params: { _order_by: "name", ...params },
                     headers: {
-                        "x-koha-embed": "aliases,baskets+count",
+                        "x-koha-embed": "aliases,baskets+count,contracts",
                     },
                 }),
             delete: id =>
@@ -410,6 +410,53 @@ export class AcquisitionAPIClient {
             get: () =>
                 this.httpClient.get({
                     endpoint: "marc_order_accounts/config",
+                }),
+        };
+    }
+
+    get purchaseOrders() {
+        return {
+            get: (id, headers) =>
+                this.httpClient.get({
+                    endpoint: "purchase_orders/" + id,
+                    headers: {
+                        "x-koha-embed":
+                            "vendor,contract,billing_library,delivery_library",
+                        ...headers,
+                    },
+                }),
+            getAll: (query, params, headers) =>
+                this.httpClient.getAll({
+                    endpoint: "purchase_orders",
+                    query,
+                    params,
+                    ...(headers && {
+                        headers,
+                    }),
+                }),
+            delete: id =>
+                this.httpClient.delete({
+                    endpoint: "purchase_orders/" + id,
+                }),
+            create: purchase_order =>
+                this.httpClient.post({
+                    endpoint: "purchase_orders",
+                    body: purchase_order,
+                }),
+            update: (purchase_order, id) =>
+                this.httpClient.put({
+                    endpoint: "purchase_orders/" + id,
+                    body: purchase_order,
+                }),
+            count: (query = {}) =>
+                this.httpClient.count({
+                    endpoint:
+                        "purchase_orders?" +
+                        new URLSearchParams({
+                            _page: 1,
+                            _per_page: 1,
+                            ...(query && { q: JSON.stringify(query) }),
+                        }),
                 }),
         };
     }

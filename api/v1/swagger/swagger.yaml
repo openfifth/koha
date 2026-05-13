@@ -34,6 +34,8 @@ definitions:
     $ref: ./definitions/acq_ledger.yaml
   acq_orderline:
     $ref: ./definitions/acq_orderline.yaml
+  acq_purchase_order:
+    $ref: ./definitions/acq_purchase_order.yaml
   advancededitormacro:
     $ref: ./definitions/advancededitormacro.yaml
   allows_renewal:
@@ -303,6 +305,10 @@ paths:
     $ref: ./paths/acq_orderlines.yaml#/~1acquisitions~1orderlines
   "/acquisitions/orderlines/{orderline_id}":
     $ref: "./paths/acq_orderlines.yaml#/~1acquisitions~1orderlines~1{orderline_id}"
+  /acquisitions/purchase_orders:
+    $ref: ./paths/acq_purchase_orders.yaml#/~1acquisitions~1purchase_orders
+  "/acquisitions/purchase_orders/{purchase_order_id}":
+    $ref: "./paths/acq_purchase_orders.yaml#/~1acquisitions~1purchase_orders~1{purchase_order_id}"
   /acquisitions/orders:
     $ref: ./paths/acquisitions_orders.yaml#/~1acquisitions~1orders
   "/acquisitions/orders/{order_id}":
@@ -915,6 +921,12 @@ parameters:
     description: Fiscal period id
     in: path
     name: fiscal_period_id
+    required: true
+    type: integer
+  purchase_order_id_pp:
+    description: Purchase order id
+    in: path
+    name: purchase_order_id
     required: true
     type: integer
   fund_id_pp:

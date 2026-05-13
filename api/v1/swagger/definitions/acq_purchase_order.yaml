@@ -1,0 +1,104 @@
+---
+type: object
+properties:
+  purchase_order_id:
+    type:
+      - integer
+      - "null"
+    readOnly: true
+    description: Internal purchase order identifier
+  vendor_id:
+    type: integer
+    description: Vendor for the purchase order
+  po_name:
+    type:
+      - string
+      - "null"
+    description: Name for the purchase order
+  external_po_number:
+    type:
+      - string
+      - "null"
+    description: External purchase order number
+  billing_branch:
+    type:
+      - string
+      - "null"
+    description: Branch to bill for the order
+  delivery_branch:
+    type:
+      - string
+      - "null"
+    description: Branch to deliver to
+  po_internal_note:
+    type:
+      - string
+      - "null"
+    description: Internal note for the purchase order
+  po_vendor_note:
+    type:
+      - string
+      - "null"
+    description: Vendor note for the purchase order
+  contract_id:
+    type:
+      - integer
+      - "null"
+    description: Contract for the purchase order
+  status:
+    type:
+      - string
+      - "null"
+    enum:
+      - new
+      - ordered
+      - cancelled
+      - null
+    description: Status of the purchase order
+  created_date:
+    type: string
+    format: date-time
+    readOnly: true
+    description: Creation date
+  modified_date:
+    type: string
+    format: date-time
+    readOnly: true
+    description: Last update
+  vendor:
+    type:
+      - object
+      - "null"
+    description: Vendor for the purchase order
+  contract:
+    type:
+      - object
+      - "null"
+    description: Contract for the purchase order
+  billing_library:
+    type:
+      - object
+      - "null"
+    description: Billing library details
+  delivery_library:
+    type:
+      - object
+      - "null"
+    description: Delivery library details
+  ordered_date:
+    type:
+      - string
+      - "null"
+    format: date-time
+    description: Ordering date of the purchase order
+  order_method:
+    type:
+      - string
+      - "null"
+    description: Method of purchase for the purchase order
+  created_by:
+    type:
+      - integer
+      - "null"
+    description: Borrowernumber of the creator
+additionalProperties: false
