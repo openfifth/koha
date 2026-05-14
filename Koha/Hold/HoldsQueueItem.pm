@@ -82,6 +82,21 @@ sub item {
     return Koha::Item->_new_from_dbic($rs);
 }
 
+=head3 pickup_library
+
+    my $pickup_library = $queue_item->pickup_library;
+
+Returns the related L<Koha::Library> object, or C<undef> if not found.
+
+=cut
+
+sub pickup_library {
+    my ($self) = @_;
+    my $rs = $self->_result->pickup_library;
+    return unless $rs;
+    return Koha::Library->_new_from_dbic($rs);
+}
+
 =head3 strings_map
 
     my $strings = $queue_item->strings_map;

@@ -66,6 +66,11 @@ properties:
       - object
       - "null"
     description: The patron (x-koha-embed)
+  pickup_library:
+    type:
+      - object
+      - "null"
+    description: The pickup library (x-koha-embed)
   _strings:
     type:
       - object

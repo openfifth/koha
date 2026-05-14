@@ -229,11 +229,15 @@
                         url: "/api/v1/holds/queue",
                     },
                     embed: [
-                        "+strings",
                         "biblio",
                         "item+strings",
-                        "patron+strings",
+                        "item.holding_library",
+                        "item.home_library",
+                        "patron",
+                        "patron.category",
+                        "patron.library",
                         "patron.notice_email_address",
+                        "pickup_library",
                     ],
                     order: [[0, "asc"]],
                     columnDefs: [{ defaultContent: "", targets: "_all" }],
@@ -275,32 +279,26 @@
                             },
                         },
                         {
-                            data: "item.holding_library_id",
+                            data: "item.holding_library.name",
                             orderable: true,
                             searchable: true,
                             render: function (data, type, row) {
-                                if (!row.item) return "";
-                                if (row.item._strings && row.item._strings.holding_library_id) {
-                                    return (row.item._strings.holding_library_id.str || "").escapeHtml();
-                                }
-                                return (row.item.holding_library_id || "").escapeHtml();
+                                if (!row.item || !row.item.holding_library) return "";
+                                return (row.item.holding_library.name || "").escapeHtml();
                             },
                         },
                         {
-                            data: "item.home_library_id",
+                            data: "item.home_library.name",
                             orderable: true,
                             searchable: true,
                             render: function (data, type, row) {
-                                if (!row.item) return "";
-                                if (row.item._strings && row.item._strings.home_library_id) {
-                                    return (row.item._strings.home_library_id.str || "").escapeHtml();
-                                }
-                                return (row.item.home_library_id || "").escapeHtml();
+                                if (!row.item || !row.item.home_library) return "";
+                                return (row.item.home_library.name || "").escapeHtml();
                             },
                         },
                         {
                             data: "item.collection_code",
-                            orderable: true,
+                            orderable: false,
                             searchable: true,
                             render: function (data, type, row) {
                                 if (!row.item) return "";
@@ -312,7 +310,7 @@
                         },
                         {
                             data: "item.location",
-                            orderable: true,
+                            orderable: false,
                             searchable: true,
                             render: function (data, type, row) {
                                 if (!row.item) return "";
@@ -324,7 +322,7 @@
                         },
                         {
                             data: "item.item_type_id",
-                            orderable: true,
+                            orderable: false,
                             searchable: true,
                             render: function (data, type, row) {
                                 if (!row.item) return "";
@@ -387,26 +385,22 @@
                             },
                         },
                         {
-                            data: "patron.category_id",
+                            data: "patron.category.name",
                             orderable: true,
                             searchable: true,
                             render: function (data, type, row) {
-                                if (!row.patron) return "";
-                                if (row.patron._strings && row.patron._strings.category_id) {
-                                    return (row.patron._strings.category_id.str || "").escapeHtml() + " (" + (row.patron.category_id || "").escapeHtml() + ")";
-                                }
-                                return (row.patron.category_id || "").escapeHtml();
+                                if (!row.patron || !row.patron.category) return "";
+                                return (row.patron.category.name || "").escapeHtml() + " (" + (row.patron.category_id || "").escapeHtml() + ")";
+                            },
                             },
                         },
                         {
-                            data: "pickup_library_id",
+                            data: "pickup_library.name",
                             orderable: true,
                             searchable: true,
                             render: function (data, type, row) {
-                                if (row._strings && row._strings.pickup_library_id) {
-                                    return (row._strings.pickup_library_id.str || "").escapeHtml();
-                                }
-                                return (data || "").escapeHtml();
+                                if (!row.pickup_library) return "";
+                                return (row.pickup_library.name || "").escapeHtml();
                             },
                         },
                         {
