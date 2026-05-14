@@ -302,21 +302,6 @@ export const routes = [
                             },
                         ],
                     },
-                    {
-                        path: ":entity/:entity_id/allocate",
-                        title: $__("Allocate funds"),
-                        is_navigation_item: false,
-                        resource:
-                            "Acquisitions/Finances/AllocationResource.vue",
-                        children: [
-                            {
-                                path: "",
-                                component: markRaw(ResourceWrapper),
-                                name: "AllocationFormAdd",
-                                title: $__("List funds"),
-                            },
-                        ],
-                    },
                 ],
             },
             {
