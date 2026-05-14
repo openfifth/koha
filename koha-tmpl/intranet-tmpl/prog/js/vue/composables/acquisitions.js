@@ -4,12 +4,29 @@ import { $__ } from "@koha-vue/i18n";
 
 BigNumber.config({ DECIMAL_PLACES: 6 });
 
+/**
+ * Rounds a numeric value to 2 decimal places using ROUND_HALF_UP.
+ * Converts the input via BigNumber to avoid floating-point precision issues.
+ *
+ * @param {number|string|null|undefined} value - The value to format.
+ * @returns {number} The value rounded to 2 decimal places, or 0 if value is nullish.
+ */
 const formatFloatingPoint = value => {
     return new BigNumber(String(value ?? 0))
         .decimalPlaces(2, BigNumber.ROUND_HALF_UP)
         .toNumber();
 };
 
+/**
+ * Formats a numeric value as a price string, optionally suffixed with a currency code.
+ * Uses `format_price()` (Koha browser global) for locale-aware formatting.
+ * Negative values are rendered as "-{amount} {currency}".
+ *
+ * @param {number|string|null} value    - The amount to format.
+ * @param {string|null}        currency - ISO currency code to append (e.g. "GBP"),
+ *   or null/undefined to omit.
+ * @returns {string} Formatted price string, e.g. "1,234.56 GBP" or "-50.00 USD".
+ */
 const formatValueWithCurrencyHandler = (value, currency) => {
     const formattedPrice = formatFloatingPoint(value).format_price();
     if (!currency) {
@@ -27,9 +44,28 @@ const formatValueWithCurrencyHandler = (value, currency) => {
     return `${formattedPrice} ${currency}`;
 };
 
+/**
+ * Formats a numeric value as a currency string. Thin wrapper around
+ * `formatValueWithCurrencyHandler`, exposed via `acquisitionsActions`.
+ *
+ * @param {number|string|null} value    - The amount to format.
+ * @param {string|null}        currency - ISO currency code to append, or null to omit.
+ * @returns {string} Formatted price string.
+ */
 const formatValueWithCurrency = (value, currency) =>
     formatValueWithCurrencyHandler(value, currency);
 
+/**
+ * Transforms a flat fund array into a depth-annotated list for tree-select components.
+ * Funds are ordered parents-before-children; each entry gains `_depth` and `_displayName`
+ * properties. Funds whose `parent_fund_id` is not present in the array are treated as
+ * top-level nodes.
+ *
+ * @param {Array<Object>|null|undefined} funds - Flat array of fund objects. Each must
+ *   have `fund_id` and `name`; `parent_fund_id` is optional.
+ * @returns {Array<Object>} Annotated fund objects with added `_depth` (number) and
+ *   `_displayName` (string, prefixed with "└ " for non-root nodes) properties.
+ */
 const buildFundTreeOptions = funds => {
     if (!funds) return [];
 
@@ -61,6 +97,16 @@ const buildFundTreeOptions = funds => {
     return result;
 };
 
+/**
+ * Returns a validation config object for numeric form inputs.
+ *
+ * @param {Object}  [params]
+ * @param {boolean} [params.positiveOnly=true] - When true, rejects negative values;
+ *   when false, allows a leading minus sign.
+ * @returns {{ formErrorHandler: Function, formErrorMessage: string }}
+ *   `formErrorHandler` is a predicate that returns true when the value is valid;
+ *   `formErrorMessage` is the i18n error string to display on failure.
+ */
 const applyNumberValidation = ({ positiveOnly = true } = {}) => ({
     formErrorHandler: value => {
         const pattern = positiveOnly
@@ -73,6 +119,20 @@ const applyNumberValidation = ({ positiveOnly = true } = {}) => ({
         : $__("Please add amount in valid format: 0.00"),
 });
 
+/**
+ * Composable that builds and opens an allocation modal for a fund or ledger.
+ * Handles INCREASE, DECREASE, and TRANSFER actions, including live preview of the
+ * resulting amount and server-side breach-amount validation.
+ *
+ * @param {Object}   params
+ * @param {string}   params.entity                - "fund" or "ledger".
+ * @param {Function} params.setConfirmationDialog - Store action that opens a confirmation modal.
+ * @param {Function} params.setWarning            - Store action that displays a warning banner.
+ * @param {Function} params.setMessage            - Store action that displays a success banner.
+ * @param {Function} [params.onSuccess]           - Optional callback invoked after a successful
+ *   allocation is created.
+ * @returns {{ openAllocationModal: Function, getAllocationToolbarButtons: Function }}
+ */
 const useAllocationModal = ({
     entity,
     setConfirmationDialog,
@@ -85,6 +145,13 @@ const useAllocationModal = ({
         "The parent amount will be breached by %s. Please reduce the amount for this allocation."
     );
 
+    /**
+     * Opens the allocation dialog for the given resource and action type.
+     * Fetches the latest entity data from the API before rendering the form.
+     *
+     * @param {Object} resource - The fund or ledger resource object; must contain the entity ID.
+     * @param {string} action   - One of "increase", "decrease", or "transfer".
+     */
     const openAllocationModal = (resource, action) => {
         const entityId = resource[entity + "_id"];
         const isIncrease = action === "increase";
@@ -311,6 +378,13 @@ const useAllocationModal = ({
         ? $__("This fund is inactive")
         : $__("This ledger is inactive");
 
+    /**
+     * Returns toolbar button configs for the three allocation actions (increase, decrease,
+     * transfer). Buttons are disabled and carry a hint when the entity is inactive.
+     *
+     * @param {Object} resource - The fund or ledger resource object.
+     * @returns {Array<Object>} Toolbar button config objects.
+     */
     const getAllocationToolbarButtons = resource =>
         buttonConfigs.map(({ action, icon, title }) => ({
             onClick: () => openAllocationModal(resource, action),
@@ -323,12 +397,37 @@ const useAllocationModal = ({
     return { openAllocationModal, getAllocationToolbarButtons };
 };
 
+/**
+ * Composable that builds and opens a two-step ledger rollover modal.
+ * Step 1 collects rollover parameters; step 2 shows a dry-run preview before the
+ * user confirms. Commits the rollover via `APIClient.acquisition.ledgers.rollover`.
+ *
+ * @param {Object}   params
+ * @param {Function} params.setConfirmationDialog - Store action that opens a confirmation modal.
+ * @param {Function} params.setWarning            - Store action that displays a warning banner.
+ * @param {Function} params.setMessage            - Store action that displays a success banner.
+ * @param {Function} [params.onSuccess]           - Optional callback invoked after a successful rollover.
+ * @returns {{ openRolloverModal: Function }}
+ */
 const useRolloverModal = ({
     setConfirmationDialog,
     setWarning,
     setMessage,
     onSuccess,
 }) => {
+    /**
+     * Maps a subset of a resource's attribute definitions to dialog input configs,
+     * applying optional field-level overrides and evaluating `format` functions for
+     * display-type fields.
+     *
+     * @param {Object}     resource          - Current resource object used to read field values
+     *   and run formatter functions.
+     * @param {Array}      attrs             - Full resourceAttr definitions from the resource component.
+     * @param {Object}     [overrides={}]    - Per-field config overrides merged on top of each attr.
+     * @param {Array|null} [fieldsInOrder]   - Ordered list of field names to include. Defaults to a
+     *   fixed ledger-field list when null.
+     * @returns {Array<Object>} Dialog input config objects ready for `setConfirmationDialog`.
+     */
     const buildInputsFromAttrs = (
         resource,
         attrs,
@@ -365,6 +464,14 @@ const useRolloverModal = ({
         }, []);
     };
 
+    /**
+     * Opens the rollover configuration dialog for the given ledger resource.
+     * On confirmation, performs a dry-run rollover to generate a preview, then opens
+     * a second dialog to confirm before committing via the API.
+     *
+     * @param {Object} resource      - The ledger resource object to roll over.
+     * @param {Array}  resourceAttrs - The resource's attribute definitions, used to build form inputs.
+     */
     const openRolloverModal = (resource, resourceAttrs) => {
         const groups = [
             {
@@ -890,6 +997,17 @@ const useFundTableConfig = ({
     },
 });
 
+/**
+ * Factory that returns the acquisitions store action map, injected into components
+ * via `inject("acquisitionsStore")`.
+ *
+ * Exposed members: `formatValueWithCurrency`, `buildFundTreeOptions`,
+ * `applyNumberValidation`, `useAllocationModal`, `useRolloverModal`,
+ * `useAllocationTableConfig`, `useFundTableConfig`, `calculateDistributedAmount`.
+ *
+ * @param {Object} store - The Pinia store instance (currently unused; reserved for future use).
+ * @returns {Object} Map of acquisition utility functions and composables.
+ */
 export const acquisitionsActions = store => {
     return {
         formatValueWithCurrency,
