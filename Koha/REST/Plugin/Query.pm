@@ -142,15 +142,40 @@ Generates the DBIC prefetch attribute based on embedded relations, and merges in
     $app->helper(
         'dbic_merge_prefetch' => sub {
             my ( $c, $args ) = @_;
-            my $attributes = $args->{attributes};
-            my $result_set = $args->{result_set};
-            my $embed      = $c->stash('koha.embed');
+            my $attributes      = $args->{attributes};
+            my $result_set      = $args->{result_set};
+            my $filtered_params = $args->{filtered_params};
+            my $embed           = $c->stash('koha.embed');
             return unless defined $embed;
+
+            my $singular_obj =
+                $result_set->can('object_class')
+                ? ( $result_set->{_singular_object} //= $result_set->object_class->new )
+                : $result_set;
 
             my @prefetches;
             foreach my $key ( sort keys( %{$embed} ) ) {
                 my $parsed = _parse_prefetch( $key, $embed, $result_set );
-                push @prefetches, $parsed if defined $parsed;
+                next unless defined $parsed;
+
+                # When filtered_params is provided (search context), belongs_to /
+                # has_one relationships are only prefetched when the relation is
+                # actually referenced in the query. Without that, the LEFT JOIN
+                # they add prevents MySQL from using an index for ORDER BY + LIMIT,
+                # forcing a filesort across all matching rows. Skipping prefetch
+                # lets to_api resolve them via individual accessor calls on the
+                # already-paginated result set instead.
+                if ( defined $filtered_params ) {
+                    my $rel_name = ref($parsed) eq 'HASH' ? ( keys %{$parsed} )[0] : $parsed;
+                    my $rel_info = $singular_obj->_result->result_source->relationship_info($rel_name);
+                    if ( $rel_info && ( $rel_info->{attrs}{accessor} // '' ) eq 'single' ) {
+                        next
+                            unless _params_reference_relation( $filtered_params, $rel_name )
+                            || _order_by_references_relation( $attributes->{order_by}, $rel_name );
+                    }
+                }
+
+                push @prefetches, $parsed;
             }
 
             if ( scalar(@prefetches) ) {
@@ -423,6 +448,52 @@ sub _parse_embed {
     }
 
     return $result;
+}
+
+=head3 _order_by_references_relation
+
+    my $bool = _order_by_references_relation( $order_by, $rel_name );
+
+Returns true if any element of the DBIC I<$order_by> attribute references
+a column on the relation named I<$rel_name> (i.e. starts with C<rel_name.>).
+
+=cut
+
+sub _order_by_references_relation {
+    my ( $order_by, $rel_name ) = @_;
+    return 0 unless defined $order_by;
+    my @items = ref($order_by) eq 'ARRAY' ? @{$order_by} : ($order_by);
+    for my $item (@items) {
+        my $col = ref($item) eq 'HASH' ? ( values %{$item} )[0] : "$item";
+        return 1 if $col =~ /^\Q$rel_name\E\./;
+    }
+    return 0;
+}
+
+=head3 _params_reference_relation
+
+    my $bool = _params_reference_relation( $filtered_params, $rel_name );
+
+Recursively walks the DBIC filter structure I<$filtered_params> and returns
+true if any key references a column on the relation named I<$rel_name>
+(i.e. starts with C<rel_name.>).
+
+=cut
+
+sub _params_reference_relation {
+    my ( $params, $rel_name ) = @_;
+    return 0 unless defined $params;
+    if ( ref($params) eq 'HASH' ) {
+        for my $key ( keys %{$params} ) {
+            return 1 if $key =~ /^\Q$rel_name\E\./;
+            return 1 if _params_reference_relation( $params->{$key}, $rel_name );
+        }
+    } elsif ( ref($params) eq 'ARRAY' ) {
+        for my $item ( @{$params} ) {
+            return 1 if _params_reference_relation( $item, $rel_name );
+        }
+    }
+    return 0;
 }
 
 =head3 _merge_embed

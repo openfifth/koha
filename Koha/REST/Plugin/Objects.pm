@@ -205,14 +205,6 @@ controller, and thus shouldn't be called twice in it.
                 );
             }
 
-            # Generate prefetches for embedded stuff
-            $c->dbic_merge_prefetch(
-                {
-                    attributes => $attributes,
-                    result_set => $result_set
-                }
-            );
-
             my $query_params;
 
             my $q_param = $reserved_params->{q};
@@ -276,6 +268,17 @@ controller, and thus shouldn't be called twice in it.
             }
 
             $c->dbic_validate_operators( { filtered_params => $filtered_params } );
+
+            # filtered_params may be undef when no filter params were sent, but undef
+            # is also how find_rs signals "always prefetch". Pass // {} so the helper
+            # knows this is a search context with no active filters.
+            $c->dbic_merge_prefetch(
+                {
+                    attributes      => $attributes,
+                    result_set      => $result_set,
+                    filtered_params => $filtered_params // {},
+                }
+            );
 
             # Generate the resultset
             my $objects_rs = $result_set->search( $filtered_params, $attributes );
