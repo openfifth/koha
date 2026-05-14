@@ -269,7 +269,7 @@ export default {
             e.preventDefault();
 
             if (!baseResource.isUserPermitted("createFiscalPeriods")) {
-                setWarning(
+                baseResource.setWarning(
                     $__(
                         "You do not have the required permissions to create fiscal periods."
                     )
