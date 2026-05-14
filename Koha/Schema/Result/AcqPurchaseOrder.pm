@@ -78,7 +78,7 @@ external po number for the purchase order
 
   data_type: 'integer'
   is_foreign_key: 1
-  is_nullable: 0
+  is_nullable: 1
 
 link to the contract
 
@@ -163,7 +163,7 @@ __PACKAGE__->add_columns(
   "external_po_number",
   { data_type => "longtext", is_nullable => 1 },
   "contract_id",
-  { data_type => "integer", is_foreign_key => 1, is_nullable => 0 },
+  { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
   "created_date",
   {
     data_type => "timestamp",
@@ -255,7 +255,12 @@ __PACKAGE__->belongs_to(
   "contract",
   "Koha::Schema::Result::Aqcontract",
   { contractnumber => "contract_id" },
-  { is_deferrable => 1, on_delete => "RESTRICT", on_update => "CASCADE" },
+  {
+    is_deferrable => 1,
+    join_type     => "LEFT",
+    on_delete     => "RESTRICT",
+    on_update     => "CASCADE",
+  },
 );
 
 =head2 delivery_branch
@@ -294,8 +299,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-08-18 10:28:31
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:AWQ1XUgDd9QjlOQQFmirhA
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-05-14 10:33:37
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:8DabYPjIJizLVka+BZYFsw
 
 
 sub koha_object_class {

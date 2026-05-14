@@ -72,14 +72,14 @@ export default {
         });
 
         const orderlineStatuses = {
-            draft: "DRAFT",
-            new: "NEW",
-            ordered: "ORDERED",
-            continuing: "CONTINUING",
-            complete: "COMPLETE",
-            partial: "PARTIAL",
-            unsubscribed: "UNSUBSCRIBED",
-            cancelled: "CANCELLED",
+            DRAFT: "DRAFT",
+            NEW: "NEW",
+            ORDERED: "ORDERED",
+            CONTINUING: "CONTINUING",
+            COMPLETE: "COMPLETE",
+            PARTIAL: "PARTIAL",
+            UNSUBSCRIBED: "UNSUBSCRIBED",
+            CANCELLED: "CANCELLED",
         };
 
         const createItemsDefault = () => {
@@ -1095,7 +1095,7 @@ export default {
                     label: $__("Status"),
                     format: status => orderlineStatuses[status],
                     defaultValue:
-                        componentToDisplay === "Search" ? null : "new",
+                        componentToDisplay === "Search" ? null : "NEW",
                     selectLabel: "label",
                     requiredKey: "status",
                     options: Object.keys(orderlineStatuses).map(status => {
@@ -1387,7 +1387,7 @@ export default {
             }
 
             if (
-                orderlineToSave.status !== "draft" &&
+                orderlineToSave.status !== "DRAFT" &&
                 orderlineToSave.calculated_amount_oc &&
                 (orderlineToSave.remainderToDistribute || 0) !== 0
             ) {
@@ -1495,7 +1495,7 @@ export default {
                     action: "submit",
                     cssClass: "btn btn-default",
                     callback: () => {
-                        resource.value.status = "draft";
+                        resource.value.status = "DRAFT";
                     },
                 },
             ];

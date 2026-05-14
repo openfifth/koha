@@ -98,7 +98,7 @@ ordering date of the order line
 =head2 status
 
   data_type: 'enum'
-  extra: {list => ["draft","new","ordered","continuing","complete","partial","unsubscribed","cancelled"]}
+  extra: {list => ["DRAFT","NEW","ORDERED","CONTINUING","COMPLETE","PARTIAL","UNSUBSCRIBED","CANCELLED"]}
   is_nullable: 0
 
 status of the order line
@@ -106,7 +106,7 @@ status of the order line
 =head2 payment_status
 
   data_type: 'enum'
-  extra: {list => ["pending","partial","paid","unpaid","cancelled"]}
+  extra: {list => ["PENDING","PARTIAL","PAID","UNPAID","CANCELLED"]}
   is_nullable: 1
 
 status of the order line
@@ -372,14 +372,14 @@ __PACKAGE__->add_columns(
     data_type => "enum",
     extra => {
       list => [
-        "draft",
-        "new",
-        "ordered",
-        "continuing",
-        "complete",
-        "partial",
-        "unsubscribed",
-        "cancelled",
+        "DRAFT",
+        "NEW",
+        "ORDERED",
+        "CONTINUING",
+        "COMPLETE",
+        "PARTIAL",
+        "UNSUBSCRIBED",
+        "CANCELLED",
       ],
     },
     is_nullable => 0,
@@ -387,7 +387,7 @@ __PACKAGE__->add_columns(
   "payment_status",
   {
     data_type => "enum",
-    extra => { list => ["pending", "partial", "paid", "unpaid", "cancelled"] },
+    extra => { list => ["PENDING", "PARTIAL", "PAID", "UNPAID", "CANCELLED"] },
     is_nullable => 1,
   },
   "is_continuous",
@@ -722,8 +722,8 @@ Composing rels: L</acq_orderline_items> -> itemnumber
 __PACKAGE__->many_to_many("itemnumbers", "acq_orderline_items", "itemnumber");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-05-06 13:10:44
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:u0Dfk9w6mCCwRUH8M5nNbQ
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-05-14 10:33:37
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:xCMVx6FE1KirBZvhC9Ck4A
 
 
 =head2 koha_object_class

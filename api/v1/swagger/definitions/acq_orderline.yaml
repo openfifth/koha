@@ -51,14 +51,14 @@ properties:
      - string
      - "null"
     enum:
-      - draft
-      - new
-      - ordered
-      - continuing
-      - complete
-      - partial
-      - unsubscribed
-      - cancelled
+      - DRAFT
+      - NEW
+      - ORDERED
+      - CONTINUING
+      - COMPLETE
+      - PARTIAL
+      - UNSUBSCRIBED
+      - CANCELLED
       - null
     description: Status of the orderline
   payment_status:
@@ -66,11 +66,11 @@ properties:
      - string
      - "null"
     enum:
-      - pending
-      - partial
-      - paid
-      - unpaid
-      - cancelled
+      - PENDING
+      - PARTIAL
+      - PAID
+      - UNPAID
+      - CANCELLED
       - null
     description: Payment status of the orderline
   is_continuous:

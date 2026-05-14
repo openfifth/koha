@@ -77,7 +77,7 @@ subtest 'list() tests' => sub {
     my $orderline = $builder->build_object(
         {
             class => 'Koha::Acquisition::OrderManagement::Orderlines',
-            value => { quantity_ordered => 1, status => 'draft', payment_status => 'pending' }
+            value => { quantity_ordered => 1, status => 'DRAFT', payment_status => 'PENDING' }
         }
     );
 
@@ -89,7 +89,7 @@ subtest 'list() tests' => sub {
     my $orderline_2 = $builder->build_object(
         {
             class => 'Koha::Acquisition::OrderManagement::Orderlines',
-            value => { quantity_ordered => 2, status => 'draft', payment_status => 'pending' }
+            value => { quantity_ordered => 2, status => 'DRAFT', payment_status => 'PENDING' }
         }
     );
 
@@ -132,7 +132,7 @@ subtest 'get() tests' => sub {
     my $orderline = $builder->build_object(
         {
             class => 'Koha::Acquisition::OrderManagement::Orderlines',
-            value => { quantity_ordered => 1, status => 'draft', payment_status => 'pending' }
+            value => { quantity_ordered => 1, status => 'DRAFT', payment_status => 'PENDING' }
         }
     );
 
@@ -146,7 +146,7 @@ subtest 'get() tests' => sub {
     my $orderline_to_delete = $builder->build_object(
         {
             class => 'Koha::Acquisition::OrderManagement::Orderlines',
-            value => { quantity_ordered => 1, status => 'draft', payment_status => 'pending' }
+            value => { quantity_ordered => 1, status => 'DRAFT', payment_status => 'PENDING' }
         }
     );
     my $non_existent_id = $orderline_to_delete->orderline_id;
@@ -199,7 +199,7 @@ subtest 'add() tests' => sub {
         ->status_is( 201, 'REST3.2.1' )
         ->header_like( Location => qr|^\/api\/v1\/acquisitions\/orderlines\/\d+|, 'REST3.4.1' )
         ->json_is( '/quantity_ordered' => $orderline->{quantity_ordered} )
-        ->json_is( '/status'           => 'draft' );
+        ->json_is( '/status'           => 'DRAFT' );
 
     # With vendor_id but no fund distributions, status should still be 'draft'
     my $vendor                = $builder->build_object( { class => 'Koha::Acquisition::Booksellers' } );
@@ -212,7 +212,7 @@ subtest 'add() tests' => sub {
 
     $t->post_ok( "//$userid:$password@/api/v1/acquisitions/orderlines" => json => $orderline_with_vendor )
         ->status_is(201)
-        ->json_is( '/status' => 'draft' );
+        ->json_is( '/status' => 'DRAFT' );
 
     # With vendor_id AND a fund distribution, status should be set to 'new'
     my $fund                           = $builder->build_object( { class => 'Koha::Acquisition::Finances::Funds' } );
@@ -237,7 +237,7 @@ subtest 'add() tests' => sub {
 
     $t->post_ok( "//$userid:$password@/api/v1/acquisitions/orderlines" => json => $orderline_with_vendor_and_fund )
         ->status_is(201)
-        ->json_is( '/status' => 'new' );
+        ->json_is( '/status' => 'NEW' );
 
     $schema->storage->txn_rollback;
 };
@@ -517,8 +517,8 @@ subtest 'update() tests' => sub {
             class => 'Koha::Acquisition::OrderManagement::Orderlines',
             value => {
                 quantity_ordered => 1,
-                status           => 'draft',
-                payment_status   => 'pending',
+                status           => 'DRAFT',
+                payment_status   => 'PENDING',
                 biblionumber     => $biblio->biblionumber,
             }
         }
@@ -542,7 +542,7 @@ subtest 'update() tests' => sub {
     my $orderline_to_delete = $builder->build_object(
         {
             class => 'Koha::Acquisition::OrderManagement::Orderlines',
-            value => { quantity_ordered => 1, status => 'draft', payment_status => 'pending' }
+            value => { quantity_ordered => 1, status => 'DRAFT', payment_status => 'PENDING' }
         }
     );
     my $non_existent_id = $orderline_to_delete->orderline_id;
@@ -589,7 +589,7 @@ subtest 'delete() tests' => sub {
         {
             class => 'Koha::Acquisition::OrderManagement::Orderlines',
             value => {
-                quantity_ordered => 1, status => 'draft', payment_status => 'pending',
+                quantity_ordered => 1, status => 'DRAFT', payment_status => 'PENDING',
                 biblionumber     => $biblio->biblionumber
             }
         }

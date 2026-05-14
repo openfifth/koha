@@ -560,15 +560,15 @@ describe("OrderlineResource - Save as draft", () => {
 
     it("Submits orderline with status draft when Save as draft is clicked", () => {
         cy.intercept("POST", "/api/v1/acquisitions/orderlines", req => {
-            expect(req.body.status).to.eq("draft");
+            expect(req.body.status).to.eq("DRAFT");
             req.reply({
                 statusCode: 201,
-                body: { orderline_id: 1, status: "draft" },
+                body: { orderline_id: 1, status: "DRAFT" },
             });
         }).as("create-draft");
         cy.intercept("GET", "/api/v1/acquisitions/orderlines/1*", {
             orderline_id: 1,
-            status: "draft",
+            status: "DRAFT",
         });
 
         cy.visit(
