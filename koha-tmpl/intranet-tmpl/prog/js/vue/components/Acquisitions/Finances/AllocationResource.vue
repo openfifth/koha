@@ -173,7 +173,7 @@ export default {
                     label: remainingAmountLabel(),
                     format: (value, resource) => {
                         const allocatedAmount =
-                            parseInt(resource.allocation_amount) || 0;
+                            parseFloat(resource.allocation_amount) || 0;
                         const remainder = isValueIncrease.value
                             ? resource[`${entity}_amount`] + allocatedAmount
                             : resource[`${entity}_amount`] - allocatedAmount;
