@@ -150,37 +150,41 @@ sub update {
         unless $orderline;
 
     return try {
-        my $body = $c->req->json;
+        Koha::Database->new->schema->txn_do(
+            sub {
+                my $body = $c->req->json;
 
-        my $extended_attributes   = delete $body->{extended_attributes}                 // [];
-        my $patrons_to_notify     = delete $body->{patrons_to_notify}                   // [];
-        my $managed_by            = delete $body->{managed_by}                          // [];
-        my $fund_distributions    = delete $body->{fund_distributions}                  // [];
-        my $biblio                = delete $body->{biblio}                              // {};
-        my $items                 = delete $body->{items}                               // [];
-        my $confirm_not_duplicate = $c->req->headers->header('x-confirm-not-duplicate') // 0;
+                my $extended_attributes   = delete $body->{extended_attributes}                 // [];
+                my $patrons_to_notify     = delete $body->{patrons_to_notify}                   // [];
+                my $managed_by            = delete $body->{managed_by}                          // [];
+                my $fund_distributions    = delete $body->{fund_distributions}                  // [];
+                my $biblio                = delete $body->{biblio}                              // {};
+                my $items                 = delete $body->{items}                               // [];
+                my $confirm_not_duplicate = $c->req->headers->header('x-confirm-not-duplicate') // 0;
 
-        delete $body->{modified_date} if $body->{modified_date};
-        delete $body->{created_date}  if $body->{created_date};
+                delete $body->{modified_date} if $body->{modified_date};
+                delete $body->{created_date}  if $body->{created_date};
 
-        $orderline->set_from_api($body)->store;
+                $orderline->set_from_api($body)->store;
 
-        $orderline->add_patron_relationships( { patrons_to_notify => $patrons_to_notify, managed_by => $managed_by } );
-        $orderline->fund_distributions($fund_distributions);
-        $orderline->biblio( { biblio_data => $biblio, confirm_not_duplicate => $confirm_not_duplicate } )
-            unless $orderline->biblionumber;
+                $orderline->add_patron_relationships(
+                    { patrons_to_notify => $patrons_to_notify, managed_by => $managed_by } );
+                $orderline->fund_distributions($fund_distributions);
+                $orderline->biblio( { biblio_data => $biblio, confirm_not_duplicate => $confirm_not_duplicate } )
+                    unless $orderline->biblionumber;
 
-        $orderline->items($items) if @$items && !$orderline->is_continuous;
+                $orderline->items($items) if @$items && !$orderline->is_continuous;
 
-        my @extended_attributes =
-            map { { 'id' => $_->{field_id}, 'value' => $_->{value} } } @{$extended_attributes};
-        $orderline->extended_attributes( \@extended_attributes );
+                my @extended_attributes =
+                    map { { 'id' => $_->{field_id}, 'value' => $_->{value} } } @{$extended_attributes};
+                $orderline->extended_attributes( \@extended_attributes );
 
-        $c->res->headers->location( $c->req->url->to_string . '/' . $orderline->orderline_id );
-        return $c->render(
-            status  => 200,
-            openapi => $c->objects->to_api($orderline)
-        );
+                return $c->render(
+                    status  => 200,
+                    openapi => $c->objects->to_api($orderline)
+                );
+            }
+        )
     } catch {
         $c->unhandled_exception($_);
     };
