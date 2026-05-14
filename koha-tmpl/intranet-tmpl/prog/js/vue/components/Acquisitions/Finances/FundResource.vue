@@ -527,13 +527,11 @@ export default {
             fund.oe_warning_percent = oe_warning_percent / 100;
             fund.fund_amount = fund.fund_amount || 0;
 
-            if (!isSubFund.value) {
-                delete fund.fund_id;
-            } else {
-                delete fund.fund_id;
+            if (isSubFund.value) {
                 fund.parent_fund_id =
-                    baseResource.route.query.fund_id || fund.fund_id;
+                    baseResource.route.query.fund_id || fund_id;
             }
+            delete fund.fund_id;
             delete fund.owner;
             delete fund.allocations;
             delete fund.ledger;
@@ -884,7 +882,7 @@ export default {
                                                       meta
                                                   ) {
                                                       return row.status
-                                                          ? __("Active")
+                                                          ? $__("Active")
                                                           : $__("Inactive");
                                                   },
                                               },
