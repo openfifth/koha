@@ -1,6 +1,6 @@
 package Koha::REST::V1::Acquisitions::OrderManagement::PurchaseOrders;
 
-# Copyright 2025 PTFS Europe
+# Copyright 2026 Open Fifth
 
 # This file is part of Koha.
 #

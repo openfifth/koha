@@ -1,6 +1,6 @@
 package Koha::REST::V1::Acquisitions::Finances::Finances;
 
-# Copyright 2025 Open Fifth
+# Copyright 2026 Open Fifth
 
 # This file is part of Koha.
 #

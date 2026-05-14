@@ -1,6 +1,6 @@
 package Koha::Acquisition::Finances::Allocations;
 
-# Copyright 2024 PTFS Europe
+# Copyright 2026 Open Fifth
 
 # This file is part of Koha.
 #
