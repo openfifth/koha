@@ -342,8 +342,16 @@ export default {
                                                       meta
                                                   ) {
                                                       return (
-                                                          '<a href="/cgi-bin/koha/acquisitions/finances/ledgers/' +
-                                                          row.ledger_id +
+                                                          '<a href="' +
+                                                          baseResource.router.resolve(
+                                                              {
+                                                                  name: "LedgerShow",
+                                                                  params: {
+                                                                      ledger_id:
+                                                                          row.ledger_id,
+                                                                  },
+                                                              }
+                                                          ).href +
                                                           '" class="showLedger">' +
                                                           escape_str(
                                                               `${row.name}`

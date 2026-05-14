@@ -650,6 +650,246 @@ const calculateDistributedAmount = (distribution, orderLine) => {
     distribution.distributed_amount = fxConverted.toNumber();
 };
 
+/**
+ * Returns a RelationshipTableDisplay tab config for the allocations table.
+ * Columns: Timestamp, Type, Amount, Reference, Note.
+ *
+ * @param {Object} params
+ * @param {string} params.entity - "fund" or "ledger"; determines the filter key used to scope rows.
+ * @returns {Object} Tab config object suitable for use in appendToShow.
+ */
+const useAllocationTableConfig = ({ entity }) => {
+    const filterKey = entity + "_id";
+    return {
+        type: "component",
+        name: $__("Allocations"),
+        componentPath: "@koha-vue/components/RelationshipTableDisplay.vue",
+        componentProps: {
+            tableOptions: {
+                type: "object",
+                value: {
+                    columns: [
+                        {
+                            title: $__("Timestamp"),
+                            data: "created_date",
+                            searchable: true,
+                            orderable: true,
+                            render: function (data, type, row, meta) {
+                                return $date(row.created_date, {
+                                    withtime: true,
+                                });
+                            },
+                        },
+                        {
+                            title: $__("Type"),
+                            data: "type",
+                            dataFilter: "type",
+                            searchable: true,
+                            orderable: true,
+                            render: function (data, type, row, meta) {
+                                return (
+                                    String(row.type).charAt(0).toUpperCase() +
+                                    String(row.type).slice(1)
+                                );
+                            },
+                        },
+                        {
+                            title: $__("Amount"),
+                            data: "allocation_amount",
+                            searchable: true,
+                            orderable: true,
+                            render: function (data, type, row, meta) {
+                                const isIncrease =
+                                    row.type === "INCREASE" ||
+                                    row.type === "INITIAL" ||
+                                    row.type === "ROLLOVER_TRANSFER" ||
+                                    (row.type === "TRANSFER" &&
+                                        row.is_transferred_from);
+                                const symbol = isIncrease ? "+" : "-";
+                                const colour = isIncrease ? "green" : "red";
+                                return (
+                                    '<span style="color:' +
+                                    colour +
+                                    ';">' +
+                                    symbol +
+                                    formatValueWithCurrency(
+                                        row.allocation_amount
+                                    ) +
+                                    "</span>"
+                                );
+                            },
+                        },
+                        {
+                            title: $__("Reference"),
+                            data: "reference",
+                            searchable: true,
+                            orderable: true,
+                        },
+                        {
+                            title: $__("Note"),
+                            data: "note",
+                            searchable: true,
+                            orderable: true,
+                        },
+                    ],
+                    url:
+                        APIClient.acquisition.httpClient._baseURL +
+                        "allocations",
+                    table_settings: null,
+                    add_filters: true,
+                    filters_options: {
+                        type: [
+                            { _id: "INITIAL", _str: $__("Initial") },
+                            { _id: "INCREASE", _str: $__("Increase") },
+                            { _id: "DECREASE", _str: $__("Decrease") },
+                            { _id: "TRANSFER", _str: $__("Transfer") },
+                            {
+                                _id: "ROLLOVER_TRANSFER",
+                                _str: $__("Rollover transfer"),
+                            },
+                        ],
+                    },
+                    actions: { 0: ["show"] },
+                },
+            },
+            apiClient: {
+                type: "object",
+                value: APIClient.acquisition.allocations,
+            },
+            filters: {
+                type: "filter",
+                keys: {
+                    [filterKey]: { property: filterKey },
+                },
+            },
+        },
+        resource: { type: "resource" },
+        resourceName: { type: "string", value: "allocation" },
+        resourceNamePlural: { type: "string", value: "allocations" },
+    };
+};
+
+/**
+ * Returns a RelationshipTableDisplay tab config for a funds or sub-funds table.
+ * Columns: Name (linked via Vue Router), Code, Description, Amount, Status.
+ *
+ * @param {Object}   params
+ * @param {string}   params.name               - Tab label shown in the UI.
+ * @param {Function} [params.hidden]           - Optional predicate; tab is hidden when it returns truthy.
+ * @param {string}   params.filterKey          - API filter parameter name (e.g. "ledger_id" or "parent_fund_id").
+ * @param {string}   params.filterProperty     - Resource property used as the filter value (e.g. "ledger_id" or "fund_id").
+ * @param {string}   params.resourceName       - Singular resource label (e.g. "fund" or "sub fund").
+ * @param {string}   params.resourceNamePlural - Plural resource label (e.g. "funds" or "sub funds").
+ * @param {Object}   params.router             - Vue Router instance used for navigation and href resolution.
+ * @returns {Object} Tab config object suitable for use in appendToShow.
+ */
+const useFundTableConfig = ({
+    name,
+    hidden,
+    filterKey,
+    filterProperty,
+    resourceName,
+    resourceNamePlural,
+    router,
+}) => ({
+    type: "component",
+    name,
+    ...(hidden ? { hidden } : {}),
+    componentPath: "@koha-vue/components/RelationshipTableDisplay.vue",
+    componentProps: {
+        tableOptions: {
+            type: "object",
+            value: {
+                columns: [
+                    {
+                        title: $__("Name"),
+                        data: "name:fund_id",
+                        searchable: true,
+                        orderable: true,
+                        render: function (data, type, row, meta) {
+                            return (
+                                '<a href="' +
+                                router.resolve({
+                                    name: "FundShow",
+                                    params: { fund_id: row.fund_id },
+                                }).href +
+                                '" class="showFund">' +
+                                escape_str(`${row.name}`) +
+                                "</a>"
+                            );
+                        },
+                    },
+                    {
+                        title: $__("Code"),
+                        data: "code",
+                        searchable: true,
+                        orderable: true,
+                    },
+                    {
+                        title: $__("Description"),
+                        data: "description",
+                        searchable: true,
+                        orderable: true,
+                    },
+                    {
+                        title: $__("Amount"),
+                        data: "fund_amount",
+                        searchable: true,
+                        orderable: true,
+                    },
+                    {
+                        title: $__("Status"),
+                        data: "status",
+                        dataFilter: "status",
+                        searchable: true,
+                        orderable: true,
+                        render: function (data, type, row, meta) {
+                            return row.status ? $__("Active") : $__("Inactive");
+                        },
+                    },
+                ],
+                url: APIClient.acquisition.httpClient._baseURL + "funds",
+                table_settings: null,
+                add_filters: true,
+                filters_options: {
+                    status: [
+                        { _id: true, _str: $__("Active") },
+                        { _id: false, _str: $__("Inactive") },
+                    ],
+                },
+                actions: {
+                    0: [
+                        {
+                            showFund: {
+                                callback: (fund, dt, event) => {
+                                    event?.preventDefault();
+                                    router.push({
+                                        name: "FundShow",
+                                        params: { fund_id: fund.fund_id },
+                                    });
+                                },
+                            },
+                        },
+                    ],
+                },
+            },
+        },
+        apiClient: {
+            type: "object",
+            value: APIClient.acquisition.funds,
+        },
+        filters: {
+            type: "filter",
+            keys: {
+                [filterKey]: { property: filterProperty },
+            },
+        },
+        resource: { type: "resource" },
+        resourceName: { type: "string", value: resourceName },
+        resourceNamePlural: { type: "string", value: resourceNamePlural },
+    },
+});
+
 export const acquisitionsActions = store => {
     return {
         formatValueWithCurrency,
@@ -657,6 +897,8 @@ export const acquisitionsActions = store => {
         applyNumberValidation,
         useAllocationModal,
         useRolloverModal,
+        useAllocationTableConfig,
+        useFundTableConfig,
         calculateDistributedAmount,
     };
 };

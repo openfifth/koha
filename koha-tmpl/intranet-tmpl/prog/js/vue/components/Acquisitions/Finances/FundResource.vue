@@ -32,6 +32,8 @@ export default {
             formatValueWithCurrency,
             getBranchnamesFromGroups,
             useAllocationModal,
+            useAllocationTableConfig,
+            useFundTableConfig,
         } = acquisitionsStore;
 
         const { setConfirmationDialog, setWarning, setMessage } =
@@ -211,8 +213,13 @@ export default {
                         orderable: true,
                         render(data, type, row, meta) {
                             return row.parent_fund
-                                ? '<a href="/cgi-bin/koha/acquisitions/finances/funds/' +
-                                      row.parent_fund.fund_id +
+                                ? '<a href="' +
+                                      baseResource.router.resolve({
+                                          name: "FundShow",
+                                          params: {
+                                              fund_id: row.parent_fund.fund_id,
+                                          },
+                                      }).href +
                                       '" class="show">' +
                                       escape_str(row.parent_fund.name) +
                                       "</a>"
@@ -648,313 +655,21 @@ export default {
 
         const appendToShow = componentData => {
             const { resource } = componentData;
-            let formatValueWithCurrencyHandler = formatValueWithCurrency;
             return [
                 ...(resource.allocations?.length
-                    ? [
-                          {
-                              type: "component",
-                              name: $__("Allocations"),
-                              componentPath:
-                                  "@koha-vue/components/RelationshipTableDisplay.vue",
-                              componentProps: {
-                                  tableOptions: {
-                                      type: "object",
-                                      value: {
-                                          columns: [
-                                              {
-                                                  title: $__("Type"),
-                                                  data: "type",
-                                                  dataFilter: "type",
-                                                  searchable: true,
-                                                  orderable: true,
-                                                  render: function (
-                                                      data,
-                                                      type,
-                                                      row,
-                                                      meta
-                                                  ) {
-                                                      return (
-                                                          String(row.type)
-                                                              .charAt(0)
-                                                              .toUpperCase() +
-                                                          String(
-                                                              row.type
-                                                          ).slice(1)
-                                                      );
-                                                  },
-                                              },
-                                              {
-                                                  title: $__("Amount"),
-                                                  data: "allocation_amount",
-                                                  searchable: true,
-                                                  orderable: true,
-                                                  render: function (
-                                                      data,
-                                                      type,
-                                                      row,
-                                                      meta
-                                                  ) {
-                                                      const isIncrease =
-                                                          row.type ===
-                                                              "INCREASE" ||
-                                                          row.type ===
-                                                              "INITIAL" ||
-                                                          row.type ===
-                                                              "ROLLOVER_TRANSFER" ||
-                                                          (row.type ===
-                                                              "TRANSFER" &&
-                                                              row.is_transferred_from);
-                                                      const symbol = isIncrease
-                                                          ? "+"
-                                                          : "-";
-                                                      const colour = isIncrease
-                                                          ? "green"
-                                                          : "red";
-                                                      return (
-                                                          '<span style="color:' +
-                                                          colour +
-                                                          ';">' +
-                                                          symbol +
-                                                          formatValueWithCurrency(
-                                                              row.allocation_amount
-                                                          ) +
-                                                          "</span>"
-                                                      );
-                                                  },
-                                              },
-                                              {
-                                                  title: $__("Reference"),
-                                                  data: "reference",
-                                                  searchable: true,
-                                                  orderable: true,
-                                              },
-                                              {
-                                                  title: $__("Note"),
-                                                  data: "note",
-                                                  searchable: true,
-                                                  orderable: true,
-                                              },
-                                              {
-                                                  title: $__("Timestamp"),
-                                                  data: "created_date",
-                                                  searchable: true,
-                                                  orderable: true,
-                                                  render: function (
-                                                      data,
-                                                      type,
-                                                      row,
-                                                      meta
-                                                  ) {
-                                                      return format_date(
-                                                          row.created_date,
-                                                          { withtime: true }
-                                                      );
-                                                  },
-                                              },
-                                          ],
-                                          url:
-                                              APIClient.acquisition.httpClient
-                                                  ._baseURL + "allocations",
-                                          table_settings: null,
-                                          add_filters: true,
-                                          filters_options: {
-                                              type: [
-                                                  {
-                                                      _id: "INITIAL",
-                                                      _str: $__("Initial"),
-                                                  },
-                                                  {
-                                                      _id: "INCREASE",
-                                                      _str: $__("Increase"),
-                                                  },
-                                                  {
-                                                      _id: "DECREASE",
-                                                      _str: $__("Decrease"),
-                                                  },
-                                                  {
-                                                      _id: "TRANSFER",
-                                                      _str: $__("Transfer"),
-                                                  },
-                                                  {
-                                                      _id: "ROLLOVER_TRANSFER",
-                                                      _str: $__(
-                                                          "Rollover transfer"
-                                                      ),
-                                                  },
-                                              ],
-                                          },
-                                          actions: {
-                                              0: ["show"],
-                                          },
-                                      },
-                                  },
-                                  apiClient: {
-                                      type: "object",
-                                      value: APIClient.acquisition.allocations,
-                                  },
-                                  filters: {
-                                      type: "filter",
-                                      keys: {
-                                          fund_id: {
-                                              property: "fund_id",
-                                          },
-                                      },
-                                  },
-                              },
-                              resource: {
-                                  type: "resource",
-                              },
-                              resourceName: {
-                                  type: "string",
-                                  value: "allocation",
-                              },
-                              resourceNamePlural: {
-                                  type: "string",
-                                  value: "allocations",
-                              },
-                          },
-                      ]
+                    ? [useAllocationTableConfig({ entity: "fund" })]
                     : []),
                 ...(resource.sub_funds?.length
                     ? [
-                          {
-                              type: "component",
+                          useFundTableConfig({
                               name: $__("Sub funds"),
                               hidden: fund => fund.fund_id,
-                              componentPath:
-                                  "@koha-vue/components/RelationshipTableDisplay.vue",
-                              componentProps: {
-                                  tableOptions: {
-                                      type: "object",
-                                      value: {
-                                          columns: [
-                                              {
-                                                  title: $__("Name"),
-                                                  data: "name:fund_id",
-                                                  searchable: true,
-                                                  orderable: true,
-                                                  render: function (
-                                                      data,
-                                                      type,
-                                                      row,
-                                                      meta
-                                                  ) {
-                                                      return (
-                                                          '<a href="/cgi-bin/koha/acquisitions/finances/funds/' +
-                                                          row.fund_id +
-                                                          '" class="showFund">' +
-                                                          escape_str(
-                                                              `${row.name}`
-                                                          ) +
-                                                          "</a>"
-                                                      );
-                                                  },
-                                              },
-                                              {
-                                                  title: $__("Code"),
-                                                  data: "code",
-                                                  searchable: true,
-                                                  orderable: true,
-                                              },
-                                              {
-                                                  title: $__("Description"),
-                                                  data: "description",
-                                                  searchable: true,
-                                                  orderable: true,
-                                              },
-                                              {
-                                                  title: $__("Amount"),
-                                                  data: "fund_amount",
-                                                  searchable: true,
-                                                  orderable: true,
-                                              },
-                                              {
-                                                  title: $__("Status"),
-                                                  data: "status",
-                                                  dataFilter: "status",
-                                                  searchable: true,
-                                                  orderable: true,
-                                                  render: function (
-                                                      data,
-                                                      type,
-                                                      row,
-                                                      meta
-                                                  ) {
-                                                      return row.status
-                                                          ? $__("Active")
-                                                          : $__("Inactive");
-                                                  },
-                                              },
-                                          ],
-                                          url:
-                                              APIClient.acquisition.httpClient
-                                                  ._baseURL + "funds",
-                                          table_settings: null,
-                                          add_filters: true,
-                                          filters_options: {
-                                              status: [
-                                                  {
-                                                      _id: true,
-                                                      _str: $__("Active"),
-                                                  },
-                                                  {
-                                                      _id: false,
-                                                      _str: $__("Inactive"),
-                                                  },
-                                              ],
-                                          },
-                                          actions: {
-                                              0: [
-                                                  {
-                                                      showFund: {
-                                                          callback: (
-                                                              fund,
-                                                              dt,
-                                                              event
-                                                          ) => {
-                                                              event?.preventDefault();
-                                                              baseResource.router.push(
-                                                                  {
-                                                                      name: "FundShow",
-                                                                      params: {
-                                                                          fund_id:
-                                                                              fund.fund_id,
-                                                                      },
-                                                                  }
-                                                              );
-                                                          },
-                                                      },
-                                                  },
-                                              ],
-                                          },
-                                      },
-                                  },
-                                  apiClient: {
-                                      type: "object",
-                                      value: APIClient.acquisition.funds,
-                                  },
-                                  filters: {
-                                      type: "filter",
-                                      keys: {
-                                          parent_fund_id: {
-                                              property: "fund_id",
-                                          },
-                                      },
-                                  },
-                                  resource: {
-                                      type: "resource",
-                                  },
-                                  resourceName: {
-                                      type: "string",
-                                      value: "sub fund",
-                                  },
-                                  resourceNamePlural: {
-                                      type: "string",
-                                      value: "sub funds",
-                                  },
-                              },
-                          },
+                              filterKey: "parent_fund_id",
+                              filterProperty: "fund_id",
+                              resourceName: "sub fund",
+                              resourceNamePlural: "sub funds",
+                              router: baseResource.router,
+                          }),
                       ]
                     : []),
             ];
