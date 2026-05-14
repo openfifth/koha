@@ -504,7 +504,7 @@ export default {
                 branchAttr.componentProps.query = {
                     type: "object",
                     value: {
-                        [resource.child_object_managing_branches
+                        [resource.child_object_managing_branches.length
                             ? "branchcode"
                             : "branchname"]: { "-in": childManagingBranches },
                     },
