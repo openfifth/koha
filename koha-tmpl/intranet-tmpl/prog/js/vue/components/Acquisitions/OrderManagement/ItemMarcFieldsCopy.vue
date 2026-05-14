@@ -312,14 +312,13 @@ export default {
                 });
             }
 
-            let endpoint = "/cgi-bin/koha/acqui/check_uniqueness.pl?";
+            const params = new URLSearchParams();
             Object.keys(uniqueFieldsFromForm).forEach(key => {
-                const propertyValues = uniqueFieldsFromForm[key];
-                propertyValues.forEach(pv => {
-                    endpoint += key + "[]=" + pv + "&";
-                });
+                uniqueFieldsFromForm[key].forEach(pv =>
+                    params.append(`${key}[]`, pv)
+                );
             });
-            endpoint = endpoint.substring(0, endpoint.length - 1);
+            const endpoint = `/cgi-bin/koha/acqui/check_uniqueness.pl?${params.toString()}`;
 
             const result = await APIClient.default.koha.get({ endpoint });
             if (Object.keys(result).length) {
@@ -392,10 +391,7 @@ export default {
                 ff => ff.type === "date"
             );
             dateFields.forEach(dateField => {
-                const fp = document.querySelector(
-                    "#" + dateField.id
-                )._flatpickr;
-                fp.clear();
+                document.querySelector("#" + dateField.id)?._flatpickr?.clear();
             });
         };
 
