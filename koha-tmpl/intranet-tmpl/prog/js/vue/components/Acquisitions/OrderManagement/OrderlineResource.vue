@@ -70,7 +70,7 @@ export default {
             return true;
         });
 
-        const orderlineStatuses = ref({
+        const orderlineStatuses = {
             draft: "DRAFT",
             new: "NEW",
             ordered: "ORDERED",
@@ -79,7 +79,7 @@ export default {
             partial: "PARTIAL",
             unsubscribed: "UNSUBSCRIBED",
             cancelled: "CANCELLED",
-        });
+        };
 
         const createItemsDefault = () => {
             if (nonBibliographic.value) {
@@ -1092,19 +1092,17 @@ export default {
                             ? $__("Order information")
                             : $__("General information"),
                     label: $__("Status"),
-                    format: status => orderlineStatuses.value[status],
+                    format: status => orderlineStatuses[status],
                     defaultValue:
                         componentToDisplay === "Search" ? null : "new",
                     selectLabel: "label",
                     requiredKey: "status",
-                    options: Object.keys(orderlineStatuses.value).map(
-                        status => {
-                            return {
-                                label: orderlineStatuses.value[status],
-                                status,
-                            };
-                        }
-                    ),
+                    options: Object.keys(orderlineStatuses).map(status => {
+                        return {
+                            label: orderlineStatuses[status],
+                            status,
+                        };
+                    }),
                     displaySortOrder: {
                         Search: 3.1,
                     },

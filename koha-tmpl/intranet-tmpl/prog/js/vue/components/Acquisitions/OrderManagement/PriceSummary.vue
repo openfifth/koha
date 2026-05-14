@@ -1,6 +1,5 @@
 <template>
-    <br />
-    <div style="display: flex; align-items: center">
+    <div style="display: flex; align-items: center; margin-top: 1em">
         <h4>{{ $__("Total prices (for all items) in original currency") }}</h4>
         <ToolTip
             :toolTip="
@@ -13,23 +12,19 @@
     <h5>
         {{ $__("Price") }}:
         {{
-            totalPrice
-                ? formatValueWithCurrency(
-                      totalPrice,
-                      resource.vendor_price_currency
-                  )
-                : formatValueWithCurrency(0, resource.vendor_price_currency)
+            formatValueWithCurrency(
+                totalPrice || 0,
+                resource.vendor_price_currency
+            )
         }}
     </h5>
     <h5>
         {{ $__("Discounted price") }}:
         {{
-            totalDiscountedPrice
-                ? formatValueWithCurrency(
-                      totalDiscountedPrice,
-                      resource.vendor_price_currency
-                  )
-                : formatValueWithCurrency(0, resource.vendor_price_currency)
+            formatValueWithCurrency(
+                totalDiscountedPrice || 0,
+                resource.vendor_price_currency
+            )
         }}
     </h5>
 </template>
