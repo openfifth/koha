@@ -30,8 +30,12 @@ Koha::Acquisition::Finances::FundSummary Object class
 
 =head3 _type
 
+Returns the DBIx::Class result class name for fund summaries (C<AcqFundSummary>).
+
 =cut
 
-sub _type { 'AcqFundSummary' }
+sub _type {
+    return 'AcqFundSummary';
+}
 
 1;

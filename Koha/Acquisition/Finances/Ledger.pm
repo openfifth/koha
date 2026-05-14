@@ -35,7 +35,13 @@ Koha::Acquisition::Finances::Ledger Object class
 
 =head3 store
 
-=cut 
+    $ledger->store;
+    $ledger->store({ no_cascade => 1 });
+
+Saves the ledger record. Unless C<no_cascade> is set, cascades any status change to all
+attached funds via C<cascade_to_funds>. Returns C<$self>.
+
+=cut
 
 sub store {
     my ( $self, $args ) = @_;
@@ -49,7 +55,8 @@ sub store {
 
 =head3 cascade_to_funds
 
-This method cascades changes to the values of the "status" property to all funds attached to this ledger
+Propagates this ledger's C<status> to all attached funds. Funds whose status differs are
+stored (which in turn cascades to their sub-funds). Only changed funds are written.
 
 =cut
 
@@ -72,6 +79,8 @@ sub cascade_to_funds {
 
 =head3 managing_library
 
+Returns the C<Koha::Library> that manages this ledger, or C<undef> if none is set.
+
 =cut
 
 sub managing_library {
@@ -82,6 +91,9 @@ sub managing_library {
 }
 
 =head3 _object_hierarchy
+
+Returns a hashref describing this object's position in the finance hierarchy.
+Used internally by C<BaseObject> methods to determine field names and relationships.
 
 =cut
 
@@ -97,6 +109,8 @@ sub _object_hierarchy {
 =head2 Internal methods
 
 =head3 _type
+
+Returns the DBIx::Class result class name for ledgers (C<AcqLedger>).
 
 =cut
 

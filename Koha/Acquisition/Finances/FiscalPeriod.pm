@@ -33,6 +33,12 @@ Koha::Acquisition::Finances::FiscalPeriod Object class
 
 =head3 store
 
+    $fiscal_period->store;
+    $fiscal_period->store({ no_cascade => 1 });
+
+Saves the fiscal period record. Unless C<no_cascade> is set, cascades any status change to
+all attached ledgers via C<cascade_to_ledgers>. Returns C<$self>.
+
 =cut
 
 sub store {
@@ -47,7 +53,8 @@ sub store {
 
 =head3 cascade_to_ledgers
 
-This method cascades changes to the values of the "status" property to all ledgers attached to this fiscal period
+Propagates this fiscal period's C<status> to all attached ledgers. Ledgers whose status
+differs are stored (which in turn cascades to their funds). Only changed ledgers are written.
 
 =cut
 
@@ -70,6 +77,8 @@ sub cascade_to_ledgers {
 
 =head3 managing_library
 
+Returns the C<Koha::Library> that manages this fiscal period, or C<undef> if none is set.
+
 =cut
 
 sub managing_library {
@@ -80,6 +89,9 @@ sub managing_library {
 }
 
 =head3 _object_hierarchy
+
+Returns a hashref describing this object's position in the finance hierarchy.
+Used internally by C<BaseObject> methods to determine field names and relationships.
 
 =cut
 
@@ -95,6 +107,8 @@ sub _object_hierarchy {
 =head2 Internal methods
 
 =head3 _type
+
+Returns the DBIx::Class result class name for fiscal periods (C<AcqFiscalPeriod>).
 
 =cut
 

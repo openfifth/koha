@@ -34,6 +34,8 @@ Koha::Acquisition::Finances::FiscalPeriods object set class
 
 =head3 _type
 
+Returns the DBIx::Class result class name for fiscal periods (C<AcqFiscalPeriod>).
+
 =cut
 
 sub _type {
@@ -41,6 +43,8 @@ sub _type {
 }
 
 =head3 object_class
+
+Returns the Koha object class name for a single fiscal period record.
 
 =cut
 

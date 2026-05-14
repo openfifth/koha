@@ -40,8 +40,10 @@ This class must always be subclassed.
 
 =head3 cascade_status
 
-This method will update the status if the parent status has changed.
-Applies to both activation and deactivation — children always match parent status after cascade.
+    $obj->cascade_status({ parent_status => $bool, child => $child_obj });
+
+Updates C<$child>'s status to match C<parent_status> if they differ.
+Returns 1 if a change was made, 0 otherwise.
 
 =cut
 
@@ -61,7 +63,7 @@ sub cascade_status {
 
 =head3 fiscal_period
 
-Method to embed the fiscal period to a given fund
+Returns the C<Koha::Acquisition::Finances::FiscalPeriod> associated with this object.
 
 =cut
 
@@ -73,7 +75,7 @@ sub fiscal_period {
 
 =head3 ledger
 
-Method to embed the ledger to a given fund
+Returns the C<Koha::Acquisition::Finances::Ledger> associated with this object.
 
 =cut
 
@@ -85,7 +87,7 @@ sub ledger {
 
 =head3 fund
 
-Method to embed the fund to a given sub fund
+Returns the C<Koha::Acquisition::Finances::Fund> associated with this object.
 
 =cut
 
@@ -97,7 +99,7 @@ sub fund {
 
 =head3 ledgers
 
-Method to embed ledgers to the fiscal period
+Returns a C<Koha::Acquisition::Finances::Ledgers> result set for all ledgers attached to this object.
 
 =cut
 
@@ -109,7 +111,7 @@ sub ledgers {
 
 =head3 funds
 
-Method to embed funds to the fiscal period
+Returns a C<Koha::Acquisition::Finances::Funds> result set for all funds attached to this object.
 
 =cut
 
@@ -121,7 +123,7 @@ sub funds {
 
 =head3 allocations
 
-Method to embed fund allocations to the fund
+Returns a C<Koha::Acquisition::Finances::Allocations> result set for all allocations attached to this object.
 
 =cut
 
@@ -133,7 +135,7 @@ sub allocations {
 
 =head3 owner
 
-Method to embed the owner to a given fund
+Returns the C<Koha::Patron> who owns this object, or C<undef> if no owner is set.
 
 =cut
 
@@ -146,10 +148,11 @@ sub owner {
 
 =head3 to_api
 
-    my $json = $av->to_api;
+    my $json = $obj->to_api;
+    my $json = $obj->to_api({ embed => { ... } });
 
-Overloaded method that returns a JSON representation of the object,
-suitable for API output.
+Overloaded method returning a hashref representation of the object suitable for API output.
+Delegates to C<Koha::Object::to_api> and applies finance-specific overrides.
 
 =cut
 
@@ -164,6 +167,17 @@ sub to_api {
 }
 
 =head3 update_amount
+
+    my $result = $obj->update_amount({ type => 'INCREASE', value => 50.00 });
+
+Adjusts the entity amount field (e.g. C<fund_amount> or C<ledger_amount>) by C<value>.
+
+For increases, validates the new total against the parent object's budget via
+C<validate_child_object_amounts_against_parent_amount> (skipped for ledgers, which have no
+ceiling). Returns the validation hashref C<{ within_limit => 1|0, breach_amount => $n }>
+on increase, or C<undef> on decrease.
+
+Accepted C<type> values: C<INCREASE>, C<DECREASE>.
 
 =cut
 
@@ -197,6 +211,14 @@ sub update_amount {
 
 =head3 child_object_managing_branches
 
+    my $branches = $obj->child_object_managing_branches;
+    my $branches = $obj->child_object_managing_branches({ managing_branches => \@existing });
+
+Recursively collects C<{ branchcode, branchname }> pairs for every managing library set on
+direct and indirect child objects (funds E<rarr> sub-funds, ledgers E<rarr> funds, etc.).
+
+Returns an arrayref of unique branch hashrefs; duplicates on C<branchcode> are suppressed.
+
 =cut
 
 sub child_object_managing_branches {
@@ -222,6 +244,19 @@ sub child_object_managing_branches {
 }
 
 =head3 validate_child_object_amounts_against_parent_amount
+
+    my $result = $obj->validate_child_object_amounts_against_parent_amount;
+    my $result = $obj->validate_child_object_amounts_against_parent_amount({ new_allocation => 100 });
+
+Checks whether the sum of all sibling fund amounts (plus an optional C<new_allocation>)
+fits within the parent object's allocated amount.
+
+Returns a hashref:
+
+    {
+        within_limit  => 1|0,  # 1 if the total is within budget
+        breach_amount => $n,   # how much over budget (0 if within limit)
+    }
 
 =cut
 
@@ -253,6 +288,9 @@ sub validate_child_object_amounts_against_parent_amount {
 }
 
 =head3 parent_object
+
+Returns the parent object: a C<Koha::Acquisition::Finances::Fund> if this is a sub-fund
+(C<parent_fund_id> is set), or a C<Koha::Acquisition::Finances::Ledger> otherwise.
 
 =cut
 

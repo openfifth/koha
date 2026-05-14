@@ -36,6 +36,8 @@ Koha::Acquisition::Finances::Allocation Object class
 
 =head3 store
 
+Saves the allocation record. Returns C<$self>.
+
 =cut
 
 sub store {
@@ -47,6 +49,8 @@ sub store {
 }
 
 =head3 delete
+
+Deletes the allocation record. Returns C<$self>.
 
 =cut
 
@@ -60,6 +64,9 @@ sub delete {
 
 =head3 _object_hierarchy
 
+Returns a hashref describing this object's position in the finance hierarchy.
+Used internally by C<BaseObject> methods to determine field names and relationships.
+
 =cut
 
 sub _object_hierarchy {
@@ -71,6 +78,8 @@ sub _object_hierarchy {
 =head2 Internal methods
 
 =head3 _type
+
+Returns the DBIx::Class result class name for allocations (C<AcqAllocation>).
 
 =cut
 

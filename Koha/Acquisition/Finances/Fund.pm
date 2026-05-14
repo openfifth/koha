@@ -35,7 +35,13 @@ Koha::Acquisition::Finances::Fund Object class
 
 =head3 store
 
-=cut 
+    $fund->store;
+    $fund->store({ no_cascade => 1 });
+
+Saves the fund record. Unless C<no_cascade> is set, cascades any status change to all
+attached sub-funds via C<cascade_to_sub_funds>. Returns C<$self>.
+
+=cut
 
 sub store {
     my ( $self, $args ) = @_;
@@ -51,6 +57,9 @@ sub store {
 
 =head3 delete
 
+Deletes the fund record. Attached allocations and sub-funds are removed by database cascade.
+Returns C<$self>.
+
 =cut
 
 sub delete {
@@ -63,7 +72,13 @@ sub delete {
 
 =head3 sub_funds
 
-Returns any sub funds with any further nested funds embedded
+    my $sub_funds = $fund->sub_funds;
+    my $sub_funds = $fund->sub_funds({ embed_children => 1 });
+
+Returns a C<Koha::Acquisition::Finances::Funds> result set of direct child funds.
+
+When C<embed_children> is true, returns a flattened arrayref of all nested sub-funds at
+every depth (via C<_embed_child_funds>).
 
 =cut
 
@@ -83,7 +98,8 @@ sub sub_funds {
 
 =head3 parent_fund
 
-Embeds the parent fund to a child fund
+Returns the parent C<Koha::Acquisition::Finances::Fund> for this sub-fund, or C<undef> if
+this fund has no parent.
 
 =cut
 
@@ -96,7 +112,7 @@ sub parent_fund {
 
 =head3 is_sub_fund
 
-Checks if a fund is a sub fund
+Returns 1 if this fund has a parent fund (C<parent_fund_id> is set), 0 otherwise.
 
 =cut
 
@@ -108,7 +124,7 @@ sub is_sub_fund {
 
 =head3 has_sub_funds
 
-Checks if a fund has sub funds
+Returns 1 if this fund has at least one direct sub-fund, 0 otherwise.
 
 =cut
 
@@ -123,7 +139,8 @@ sub has_sub_funds {
 
 =head3 cascade_to_sub_funds
 
-This method cascades changes to the values of the "status" properties to all sub_funds attached to this fund
+Propagates this fund's C<status> to all direct sub-funds. Sub-funds whose status actually
+changes are stored (cascading further down the hierarchy). Only changed sub-funds are written.
 
 =cut
 
@@ -146,6 +163,9 @@ sub cascade_to_sub_funds {
 
 =head3 _object_hierarchy
 
+Returns a hashref describing this object's position in the finance hierarchy.
+Used internally by C<BaseObject> methods to determine field names and relationships.
+
 =cut
 
 sub _object_hierarchy {
@@ -159,6 +179,8 @@ sub _object_hierarchy {
 
 =head3 managing_library
 
+Returns the C<Koha::Library> that manages this fund, or C<undef> if none is set.
+
 =cut
 
 sub managing_library {
@@ -170,6 +192,9 @@ sub managing_library {
 
 =head3 fiscal_period
 
+Returns the C<Koha::Acquisition::Finances::FiscalPeriod> for this fund, resolved via its
+parent ledger.
+
 =cut
 
 sub fiscal_period {
@@ -179,10 +204,11 @@ sub fiscal_period {
 
 =head3 to_api
 
-    my $json = $av->to_api;
+    my $json = $fund->to_api;
+    my $json = $fund->to_api({ embed => { ... } });
 
-Overloaded method that returns a JSON representation of the object,
-suitable for API output.
+Overloaded method returning a hashref representation of the fund suitable for API output.
+Delegates to C<BaseObject::to_api> and appends a C<currency> field sourced from the parent ledger.
 
 =cut
 
@@ -200,6 +226,9 @@ sub to_api {
 
 =head3 summary
 
+Returns the C<Koha::Acquisition::Finances::FundSummary> view row for this fund (aggregating
+ordered, spent, and pre-encumbered amounts), or C<undef> if no summary row exists.
+
 =cut
 
 sub summary {
@@ -211,6 +240,8 @@ sub summary {
 
 =head3 _type
 
+Returns the DBIx::Class result class name for funds (C<AcqFund>).
+
 =cut
 
 sub _type {
@@ -219,7 +250,11 @@ sub _type {
 
 =head3 _embed_child_funds
 
-Recursively finds child funds and adds them to an array for embedding
+    my $list = _embed_child_funds({ sub_funds => $funds_rs });
+    my $list = _embed_child_funds({ sub_funds => $funds_rs, sub_fund_list => \@existing });
+
+Recursively collects all sub-funds (and their sub-funds) into a flat arrayref. Internal
+helper used by C<sub_funds> when C<embed_children> is true. Returns the accumulated arrayref.
 
 =cut
 
