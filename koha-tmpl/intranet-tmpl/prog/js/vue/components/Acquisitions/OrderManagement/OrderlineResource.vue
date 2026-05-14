@@ -951,23 +951,24 @@ export default {
                         searchable: false,
                         orderable: false,
                         render: function (data, type, row, meta) {
-                            let fundList;
+                            let fundList = "";
                             row.fund_distributions.forEach((fd, i) => {
                                 fundList +=
                                     '<a href="/cgi-bin/koha/acquisitions/finances/funds/' +
                                     fd.fund_id +
                                     '">' +
-                                    escape_str(row.fund.name) +
+                                    escape_str(fd.fund?.name) +
                                     "</a>";
                                 if (i + 1 !== row.fund_distributions.length)
                                     fundList += "\n";
                             });
+                            return fundList;
                         },
                     },
                     displaySortOrder: {
                         Search: 5,
                     },
-                    hideIn: ["List", "Show"],
+                    hideIn: ["Show"],
                 },
                 {
                     name: "calculated_amount_oc",
@@ -1196,7 +1197,7 @@ export default {
             table_settings: null,
             add_filters: true,
             options: {
-                embed: "vendor,biblio,managing_library,extended_attributes,+strings,fund_distributions",
+                embed: "vendor,biblio,managing_library,extended_attributes,+strings,fund_distributions.fund",
             },
             default_filters: {
                 "-and": () => {
@@ -1421,7 +1422,7 @@ export default {
             // Various new prperties added to support reactivity through different components, delete here to avoid API spec conflict
 
             if (!baseResource.isUserPermitted("createOrderline")) {
-                setWarning(
+                baseResource.setWarning(
                     $__(
                         "You do not have the required permissions to create orderlines."
                     )

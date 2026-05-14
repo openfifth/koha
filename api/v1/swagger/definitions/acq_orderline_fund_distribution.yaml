@@ -51,4 +51,9 @@ properties:
       - number
       - "null"
     description: The amount distributed with tax included
+  fund:
+    description: Fund the distribution was made against
+    type:
+      - object
+      - "null"
 additionalProperties: false

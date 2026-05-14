@@ -30,6 +30,7 @@
             - managing_library
             - items
             - fund_distributions
+            - fund_distributions.fund
         collectionFormat: csv
     responses:
       '200':

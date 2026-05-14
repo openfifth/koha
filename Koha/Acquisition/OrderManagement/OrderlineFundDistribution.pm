@@ -20,16 +20,28 @@ package Koha::Acquisition::OrderManagement::OrderlineFundDistribution;
 use Modern::Perl;
 use base qw(Koha::Object);
 
-use Mojo::JSON qw(decode_json);
-use JSON       qw ( encode_json );
+use Koha::Acquisition::Finances::Fund;
 
 =head1 NAME
 
-Koha::Acquisition::OrderManagement::OrderlineFundDistribution Object class
+Koha::Acquisition::OrderManagement::OrderlineFundDistribution - Object class for acq_orderline_fund_distributions
 
 =head1 API
 
 =head2 Class methods
+
+=head3 fund
+
+Returns the fund for this distribution.
+
+=cut
+
+sub fund {
+    my ($self) = @_;
+    my $fund_rs = $self->_result->fund;
+    return unless $fund_rs;
+    return Koha::Acquisition::Finances::Fund->_new_from_dbic($fund_rs);
+}
 
 =head2 Internal methods
 
