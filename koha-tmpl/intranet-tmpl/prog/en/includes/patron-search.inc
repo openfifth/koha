@@ -632,7 +632,7 @@
                                 [% CASE 'branch' %]
                                 {
                                     name: "library",
-                                    data: "library.name:me.library_id",
+                                    data: "me.library_id",
                                     dataFilter: "libraries",
                                     searchable: true,
                                     orderable: true,
