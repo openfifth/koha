@@ -40,16 +40,8 @@ export default {
         const queryParams = route.query;
 
         const createItemsWhen = ref(sysprefs.value.acq_create_items);
-        const createItems = computed(() => {
-            return createItemsWhen.value;
-        });
         const isContinuous = ref(false);
-        const continuousOrder = computed(() => {
-            return isContinuous.value;
-        });
-        const nonBibliographic = ref(
-            route.query.no_biblio === "true" ? true : false
-        );
+        const nonBibliographic = ref(route.query.no_biblio === "true");
 
         const subComponentsReady = reactive({ biblio: false, items: false });
         const updateSubComponentReadyState = key => {
@@ -338,10 +330,8 @@ export default {
                                       type: "boolean",
                                       value:
                                           sysprefs.value
-                                              .use_acq_framework_for_biblio_records ===
-                                          "0"
-                                              ? false
-                                              : true,
+                                              .use_acq_framework_for_biblio_records !==
+                                          "0",
                                   },
                                   biblionumber: {
                                       type: "string",
@@ -519,11 +509,11 @@ export default {
                                   },
                                   createItems: {
                                       type: "object",
-                                      value: createItems,
+                                      value: createItemsWhen,
                                   },
                                   continuousOrder: {
                                       type: "object",
-                                      value: continuousOrder,
+                                      value: isContinuous,
                                   },
                               },
                               hideIn: ["List", "Search", "Show"],
@@ -557,11 +547,6 @@ export default {
                             value: "add",
                         },
                     },
-                    // showElement: {
-                    //     type: "text",
-                    //     value: "owner",
-                    //     format: patron_to_html,
-                    // },
                     hideIn: ["List", "Show", "Search"],
                 },
                 {
@@ -633,11 +618,6 @@ export default {
                             value: "add",
                         },
                     },
-                    // showElement: {
-                    //     type: "text",
-                    //     value: "owner",
-                    //     format: patron_to_html,
-                    // },
                     hideIn: ["List", "Show", "Search"],
                 },
                 {
@@ -794,26 +774,6 @@ export default {
                     },
                     hideIn: ["List", "Show", "Search"],
                 },
-                // {
-                //     name: "replacement_price",
-                //     group: $__("Accounting details"),
-                //     type: "number",
-                //     label: $__("Replacement cost"),
-                //     defaultValue: null,
-                //     size: 6,
-                //     hideIn: ["List"],
-                // },
-                // {
-                //     name: "tax_rate",
-                //     group: $__("Accounting details"),
-                //     type: "select",
-                //     label: $__("Tax rate"),
-                //     options: gstValues.value,
-                //     defaultValue: null,
-                //     selectLabel: "label",
-                //     requiredKey: "value",
-                //     hideIn: ["List"],
-                // },
                 {
                     name: "price_summary",
                     group: $__("Accounting details"),

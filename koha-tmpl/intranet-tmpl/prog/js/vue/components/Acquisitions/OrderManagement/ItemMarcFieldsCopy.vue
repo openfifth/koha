@@ -135,16 +135,13 @@ export default {
         const { updateSubComponentReadyState } = inject("subComponentsReady");
 
         const buildOptionsArray = (field, name) => {
-            const options = Object.keys(field.labels).reduce(
-                (acc, key, index) => {
-                    acc.push({
-                        label: field.labels[key],
-                        value: key,
-                    });
-                    return acc;
-                },
-                []
-            );
+            const options = Object.keys(field.labels).reduce((acc, key) => {
+                acc.push({
+                    label: field.labels[key],
+                    value: key,
+                });
+                return acc;
+            }, []);
             selectOptions.value[name] = options;
             return options;
         };
