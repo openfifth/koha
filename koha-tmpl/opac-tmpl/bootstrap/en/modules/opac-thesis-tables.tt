@@ -5,9 +5,14 @@
 [% USE TablesSettings %]
 [% PROCESS 'i18n.inc' %]
 [% PROCESS 'html_helpers.inc' %]
-
 [% INCLUDE 'doc-head-open.inc' %]
-<title>[% IF ( LibraryNameTitle ) %][% LibraryNameTitle | html %][% ELSE %]Koha online[% END %] catalog &rsaquo; [% course_type_display | html %]</title>
+[% USE HtmlScrubber %]
+<title
+    >[% FILTER collapse %]
+        [% course_type_display | html %]
+        &rsaquo; [% PROCESS 'library_name_title' %]
+    [% END %]</title
+>
 [% INCLUDE 'doc-head-close.inc' %]
 [% BLOCK cssinclude %]
 [% END %]
@@ -16,17 +21,12 @@
 [% INCLUDE 'bodytag.inc' bodyid='opac-thesis-tables' %]
 [% INCLUDE 'masthead.inc' %]
 
-<div class="main">
-    <nav aria-label="breadcrumb">
-        <ul class="breadcrumb">
-            <li class="breadcrumb-item">
-                <a href="/cgi-bin/koha/opac-main.pl">Home</a>
-            </li>
-            <li class="breadcrumb-item" aria-current="page">
-                <a href="#">[% course_type_display | html %]</a>
-            </li>
-        </ul>
-    </nav>
+<main class="main">
+    [% WRAPPER breadcrumbs %]
+        [% WRAPPER breadcrumb_item bc_active= 1 %]
+            <span>[% course_type_display | html %]</span>
+        [% END %]
+    [% END #/ WRAPPER breadcrumbs %]
 
     <div class="container-fluid">
         <div class="row">
@@ -72,7 +72,7 @@
         <!-- / .row -->
     </div>
     <!-- / .container-fluid -->
-</div>
+</main>
 <!-- / .main -->
 [% INCLUDE 'opac-bottom.inc' %]
 [% BLOCK jsinclude %]
