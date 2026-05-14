@@ -80,6 +80,7 @@ sub add {
             sub {
                 my $body   = $c->req->json;
                 my $ledger = Koha::Acquisition::Finances::Ledgers->find( $body->{ledger_id} );
+                return $c->render_resource_not_found("Ledger") unless $ledger;
                 return $c->render(
                     status  => 400,
                     openapi => { error => 'Ledger is locked' }
@@ -132,15 +133,15 @@ sub update {
         );
     }
 
-    my $ledger = Koha::Acquisition::Finances::Ledgers->find( $fund->ledger_id );
-    return $c->render(
-        status  => 400,
-        openapi => { error => 'Ledger is locked' }
-    ) if $ledger->locked;
-
     return try {
         Koha::Database->new->schema->txn_do(
             sub {
+
+                my $ledger = Koha::Acquisition::Finances::Ledgers->find( $fund->ledger_id );
+                return $c->render(
+                    status  => 400,
+                    openapi => { error => 'Ledger is locked' }
+                ) if $ledger->locked;
 
                 my $body = $c->req->json;
 
