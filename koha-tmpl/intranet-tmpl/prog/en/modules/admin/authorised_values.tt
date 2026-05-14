@@ -476,6 +476,8 @@
         <p></p>
     [% CASE 'COUNTRY' %]
         <p>Used in UNIMARC 102 $a</p>
+    [% CASE 'CR_TYPE' %]
+        <p>Course reserve type</p>
     [% CASE 'DAMAGED' %]
         <p>Descriptions for items marked as damaged (appears when cataloging and working with items)</p>
     [% CASE 'DEPARTMENT' %]
