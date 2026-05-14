@@ -47,7 +47,7 @@ export default {
         amountField: String,
         onChange: Function,
         formatInputValue: Function,
-        idString: String | null,
+        idString: { type: String, default: null },
     },
     inheritAttrs: false,
     setup(props, { emit }) {
@@ -70,7 +70,7 @@ export default {
 
         const verifyFieldValue = () => {
             if (toggleValue.value === props.percentageField) {
-                const result = /^[\-]?\d{0,3}(\.\d{0,3})*$/.test(
+                const result = /^\d{0,3}(\.\d{0,3})*$/.test(
                     props.resource[props.percentageField]
                 );
                 if (!result) {
@@ -84,7 +84,6 @@ export default {
             if (!fieldError.value && props.onChange) {
                 props.onChange(props.resource, toggleValue.value);
             }
-            return true;
         };
         return {
             toggleValue,
