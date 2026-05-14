@@ -20,8 +20,6 @@ package Koha::Acquisition::Finances::BaseObject;
 use Modern::Perl;
 use base qw(Koha::Object);
 
-use Scalar::Util qw( looks_like_number );
-
 =head1 NAME
 
 Koha::Acquisition::Finances::BaseObject - Koha Object base class for the Finances module
@@ -58,35 +56,6 @@ sub cascade_status {
         $child->status($parent_status);
         $change_detected = 1;
     }
-    return $change_detected;
-}
-
-=head3 cascade_data
-
-=cut
-
-sub cascade_data {
-    my ( $self, $args ) = @_;
-
-    my $properties      = $args->{properties};
-    my $parent          = $args->{parent};
-    my $child           = $args->{child};
-    my $change_detected = 0;
-
-    foreach my $property (@$properties) {
-        if ( looks_like_number($property) ) {
-            if ( $child->$property != $parent->$property ) {
-                $child->$property( $parent->$property );
-                $change_detected = 1;
-            }
-        } else {
-            if ( $child->$property ne $parent->$property ) {
-                $child->$property( $parent->$property );
-                $change_detected = 1;
-            }
-        }
-    }
-
     return $change_detected;
 }
 
