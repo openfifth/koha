@@ -25,6 +25,7 @@ use Koha::Cities;
 use Koha::Holds;
 use Koha::Biblios;
 use Koha::Patron::Relationship;
+use Koha::Patrons;
 
 app->log->level('error');
 
@@ -372,6 +373,36 @@ get '/dbic_extended_attributes_join_multiple_values' => sub {
     $c->render( json => { 'attributes' => $attributes, 'filtered_params' => $filtered_params }, status => 200 );
 };
 
+get '/dbic_merge_prefetch_belongs_to_skip' => sub {
+    my $c          = shift;
+    my $attributes = {};
+    my $result_set = Koha::Patrons->new;
+    $c->stash( 'koha.embed', { library => {} } );
+    $c->dbic_merge_prefetch(
+        {
+            attributes      => $attributes,
+            result_set      => $result_set,
+            filtered_params => {},            # search context, no filter referencing library
+        }
+    );
+    $c->render( json => $attributes, status => 200 );
+};
+
+get '/dbic_merge_prefetch_belongs_to_keep' => sub {
+    my $c          = shift;
+    my $attributes = {};
+    my $result_set = Koha::Patrons->new;
+    $c->stash( 'koha.embed', { library => {} } );
+    $c->dbic_merge_prefetch(
+        {
+            attributes      => $attributes,
+            result_set      => $result_set,
+            filtered_params => { 'library.branchname' => { like => '%foo%' } },
+        }
+    );
+    $c->render( json => $attributes, status => 200 );
+};
+
 sub to_model {
     my ($args) = @_;
     $args->{three} = delete $args->{tres}
@@ -382,7 +413,7 @@ sub to_model {
 # The tests
 
 use Test::NoWarnings;
-use Test::More tests => 12;
+use Test::More tests => 13;
 use Test::Mojo;
 
 subtest 'extract_reserved_params() tests' => sub {
@@ -758,4 +789,23 @@ subtest 'dbic_extended_attributes_join() tests' => sub {
             }
         ]
     );
+};
+
+subtest 'dbic_merge_prefetch - belongs_to skipped unless referenced in filter' => sub {
+
+    plan tests => 6;
+
+    my $t = Test::Mojo->new;
+
+    # library is a belongs_to on Koha::Patron; with an empty filtered_params (search
+    # context, no filter) it should be skipped to avoid the filesort-causing LEFT JOIN.
+    $t->get_ok('/dbic_merge_prefetch_belongs_to_skip')
+        ->status_is(200)
+        ->json_hasnt( '/prefetch', 'library not prefetched when not referenced in filter' );
+
+    # When filtered_params references a library column the JOIN is needed, so
+    # library should be included in prefetch.
+    $t->get_ok('/dbic_merge_prefetch_belongs_to_keep')
+        ->status_is(200)
+        ->json_is( '/prefetch/0' => 'library', 'library prefetched when referenced in filter' );
 };

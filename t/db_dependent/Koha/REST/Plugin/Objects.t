@@ -133,6 +133,25 @@ get '/my_patrons' => sub {
     );
 };
 
+get '/patrons_with_library' => sub {
+    my $c = shift;
+    $c->validation->output( $c->req->params->to_hash );
+    $c->stash_embed(
+        {
+            spec => {
+                parameters => [
+                    {
+                        name  => 'x-koha-embed',
+                        items => { enum => ['library'] }
+                    }
+                ]
+            }
+        }
+    );
+    my $patrons = $c->objects->search( Koha::Patrons->new );
+    $c->render( status => 200, json => $patrons );
+};
+
 get '/cities/:city_id/rs' => sub {
     my $c = shift;
     $c->validation->output( $c->req->params->to_hash );
@@ -145,7 +164,7 @@ get '/cities/:city_id/rs' => sub {
 
 # The tests
 use Test::NoWarnings;
-use Test::More tests => 20;
+use Test::More tests => 21;
 use Test::Mojo;
 
 use t::lib::Mocks;
@@ -1117,6 +1136,46 @@ subtest 'Regression test - search_rs should not reinstate removed query paramete
     );
     my $t = Test::Mojo->new;
     $t->get_ok('/cities/rs_regression?q={"city_name":"city1"}')->status_is(200)->json_is( '/count' => 3 );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'objects.search - belongs_to embed uses accessor fallback when not in filter' => sub {
+
+    plan tests => 7;
+
+    $schema->storage->txn_begin;
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron  = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { branchcode => $library->id }
+        }
+    );
+    my $superlibrarian =
+        $builder->build_object( { class => 'Koha::Patrons', value => { flags => 1 } } );
+    t::lib::Mocks::mock_userenv( { patron => $superlibrarian } );
+
+    my $t = Test::Mojo->new;
+
+    # No library filter: belongs_to prefetch is skipped; to_api resolves library via accessor.
+    $t->get_ok(
+        '/patrons_with_library?q=' . encode_json( { patron_id => $patron->id } ) => { 'x-koha-embed' => 'library' } )
+        ->status_is(200)
+        ->json_is(
+        '/0/library/library_id' => $library->id,
+        'Library embed data returned via accessor fallback when not prefetched'
+        );
+
+    # With a library filter: belongs_to prefetch is included so the JOIN is available for filtering.
+    $t->get_ok( '/patrons_with_library?q='
+            . encode_json( { 'library.library_id' => $library->id } ) => { 'x-koha-embed' => 'library' } )
+        ->status_is(200)
+        ->json_is(
+        '/0/library/library_id' => $library->id,
+        'Library filter works when library embed is requested'
+        )->json_hasnt( '/1', 'Only the patron from the target library is returned' );
 
     $schema->storage->txn_rollback;
 };
