@@ -279,10 +279,6 @@ export class AcquisitionAPIClient {
                         headers,
                     }),
                 }),
-            delete: id =>
-                this.httpClient.delete({
-                    endpoint: "allocations/" + id,
-                }),
             create: allocation =>
                 this.httpClient.post({
                     endpoint: "allocations",
@@ -291,11 +287,6 @@ export class AcquisitionAPIClient {
             transfer: allocation =>
                 this.httpClient.post({
                     endpoint: "allocations/transfer",
-                    body: allocation,
-                }),
-            update: (allocation, id) =>
-                this.httpClient.put({
-                    endpoint: "allocations/" + id,
                     body: allocation,
                 }),
             count: (query = {}) =>
