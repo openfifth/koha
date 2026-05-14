@@ -229,7 +229,6 @@
 [%# callback: name of the JS function that will be called when a patron is selected. Only work with action=select %]
 [%# display_search_description: boolean, default off. Display the description of the search %]
 [%# adjust_history: boolean, default off. Change the current url when a first letter is selected %]
-[%# defer_loading: boolean, default on. If true, it will not load the table until a search is triggered %]
 [%# empty_table_settings: boolean, default off. If true, it will ensure no table_settings are utilized %]
 [% BLOCK patron_search_js %]
 
@@ -320,7 +319,6 @@
             let patrons_table;
             let singleBranchMode = '[% singleBranchMode | html %]';
             let logged_in_library_id = "[% Branches.GetLoggedInBranchcode | html %]";
-            let defer_loading = Number( '[% defer_loading | html %]' || 1 );
             [% IF adjust_history %]
                 /* popstate event triggered by forward and back button. Need to refresh search */
                 window.addEventListener('popstate', (event) => {
@@ -523,7 +521,6 @@
                         [% END %]
                     },
                     [% END %]
-                    deferLoading: defer_loading,
                     columns: [
                         [% FOR column IN columns %]
                             [% IF default_sort_column == column %]
@@ -848,9 +845,7 @@
                 });
 
                 let loaded_from_state = patrons_table.data('loaded_from_state');
-                if ( !defer_loading || loaded_from_state ) {
-                    patron_search_form.submit();
-                }
+                patron_search_form.submit();
 
                 [% IF adjust_history %]
                     /* Initial page load does not trigger the popstate event, so we explicitly call this */
