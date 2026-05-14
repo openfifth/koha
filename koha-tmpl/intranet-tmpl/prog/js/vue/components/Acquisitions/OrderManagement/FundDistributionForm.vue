@@ -34,64 +34,12 @@ export default {
             getActiveCurrency,
             differentCurrenciesInLedgers,
             buildFundTreeOptions,
+            calculateDistributedAmount,
         } = acquisitionsStore;
 
         const fundDistributions = inject("resourceRelationships");
         const orderline = inject("resource");
 
-        const calculateDistributedAmount = (
-            distribution,
-            orderLine = orderline
-        ) => {
-            const taxIncluded = orderLine.vendor?.list_includes_gst;
-            distribution.taxIncluded = taxIncluded;
-            const totalAmount = orderLine.calculated_amount_oc;
-
-            // If the distribution is a percentage, caluculate the value based on that percentage and set the distributed_amount_oc
-            if (distribution.percentage) {
-                distribution.distributed_amount_oc = new BigNumber(
-                    totalAmount || 0
-                )
-                    .times(distribution.percentage)
-                    .div(100)
-                    .toNumber();
-            }
-
-            // Calculate the currency conversion if required (exchange rate will be 1.00 if the currencies match)
-            const fxConverted = new BigNumber(
-                distribution.distributed_amount_oc || 0
-            ).times(distribution.exchange_rate || 0);
-
-            if (taxIncluded) {
-                // Price includes tax: back-calculate the excluded amount by dividing out the tax rate
-                const taxExcluded = fxConverted.div(
-                    new BigNumber(1).plus(distribution.tax_rate || 0)
-                );
-                distribution.distributed_amount_tax_included =
-                    fxConverted.toNumber();
-                distribution.distributed_amount_tax_excluded =
-                    taxExcluded.toNumber();
-                distribution.tax_value = fxConverted
-                    .minus(taxExcluded)
-                    .toNumber();
-            } else {
-                // Price excludes tax: add tax on top
-                const taxIncludedAmount = fxConverted.times(
-                    new BigNumber(1).plus(distribution.tax_rate || 0)
-                );
-                distribution.distributed_amount_tax_excluded =
-                    fxConverted.toNumber();
-                distribution.distributed_amount_tax_included =
-                    taxIncludedAmount.toNumber();
-                distribution.tax_value = taxIncludedAmount
-                    .minus(fxConverted)
-                    .toNumber();
-            }
-            distribution.distributed_amount = fxConverted.toNumber();
-        };
-        // Assign this method to the distribution to use outside this component where required
-        props.resource.calculateDistributedAmount =
-            calculateDistributedAmount.bind(null, props.resource, orderline);
         if (!orderline.orderline_id) {
             // Set the tax rate if a vendor has already been selected
             if (orderline.vendor) {
@@ -109,7 +57,7 @@ export default {
             // Calculate the initial distributed amount based on a default of 100% being allocated to the first fund selected
             if (props.index === 0) {
                 props.resource.percentage = 100;
-                calculateDistributedAmount(props.resource);
+                calculateDistributedAmount(props.resource, orderline);
             } else {
                 const calculatedAmount = new BigNumber(
                     orderline.calculated_amount_oc || 0
@@ -129,7 +77,7 @@ export default {
         watch(
             () => orderline.calculated_amount_oc,
             () => {
-                calculateDistributedAmount(props.resource);
+                calculateDistributedAmount(props.resource, orderline);
             }
         );
 
@@ -228,7 +176,7 @@ export default {
                             : getActiveCurrency.currency;
                         fd.exchange_rate =
                             orderline.distribution_exchange_rate || 1;
-                        calculateDistributedAmount(fd);
+                        calculateDistributedAmount(fd, orderline);
                     });
                 },
                 indexRequired: true,
@@ -265,7 +213,7 @@ export default {
                             ) {
                                 resource.distributed_amount_oc = 0;
                             }
-                            calculateDistributedAmount(resource);
+                            calculateDistributedAmount(resource, orderline);
                         },
                     },
                 },
@@ -286,7 +234,7 @@ export default {
                 selectLabel: "label",
                 requiredKey: "value",
                 onSelected: (e, options, resource) => {
-                    calculateDistributedAmount(resource);
+                    calculateDistributedAmount(resource, orderline);
                 },
                 hideIn: ["List"],
             },

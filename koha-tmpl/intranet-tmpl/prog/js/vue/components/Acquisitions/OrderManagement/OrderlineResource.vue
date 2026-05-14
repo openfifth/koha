@@ -31,6 +31,7 @@ export default {
             getActiveCurrency,
             differentCurrenciesInLedgers,
             applyNumberValidation,
+            calculateDistributedAmount,
         } = acquisitionsStore;
         const mainStore = inject("mainStore");
         const { loading, loaded } = mainStore;
@@ -970,7 +971,7 @@ export default {
                         resource.fund_distributions.forEach(fd => {
                             fd.exchange_rate =
                                 resource.distribution_exchange_rate || 1;
-                            fd.calculateDistributedAmount(fd);
+                            calculateDistributedAmount(fd, resource);
                         });
                     },
                     hideIn: ["List", "Show", "Search"],

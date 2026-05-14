@@ -596,6 +596,60 @@ const useRolloverModal = ({
     return { openRolloverModal };
 };
 
+/**
+ * Calculates and mutates all amount fields on a fund distribution object.
+ *
+ * If `distribution.percentage` is set, `distributed_amount_oc` is derived from
+ * the orderline's `calculated_amount_oc` before any further calculations.
+ * The FX-converted amount is then split into tax-included and tax-excluded
+ * figures based on whether the vendor's list price already includes GST:
+ *   - list_includes_gst=true:  tax is removed by dividing through (1 + tax_rate)
+ *   - list_includes_gst=false: tax is added on top by multiplying by (1 + tax_rate)
+ *
+ * Mutated fields: `taxIncluded`, `distributed_amount_oc` (if percentage-driven),
+ * `distributed_amount`, `distributed_amount_tax_included`,
+ * `distributed_amount_tax_excluded`, `tax_value`.
+ *
+ * @param {Object} distribution - Fund distribution record to update in place.
+ * @param {Object} orderLine    - Parent orderline providing price, vendor, and exchange rate context.
+ */
+const calculateDistributedAmount = (distribution, orderLine) => {
+    const taxIncluded = orderLine.vendor?.list_includes_gst;
+    distribution.taxIncluded = taxIncluded;
+    const totalAmount = orderLine.calculated_amount_oc;
+
+    if (distribution.percentage) {
+        distribution.distributed_amount_oc = new BigNumber(totalAmount || 0)
+            .times(distribution.percentage)
+            .div(100)
+            .toNumber();
+    }
+
+    const fxConverted = new BigNumber(
+        distribution.distributed_amount_oc || 0
+    ).times(distribution.exchange_rate || 0);
+
+    if (taxIncluded) {
+        const taxExcluded = fxConverted.div(
+            new BigNumber(1).plus(distribution.tax_rate || 0)
+        );
+        distribution.distributed_amount_tax_included = fxConverted.toNumber();
+        distribution.distributed_amount_tax_excluded = taxExcluded.toNumber();
+        distribution.tax_value = fxConverted.minus(taxExcluded).toNumber();
+    } else {
+        const taxIncludedAmount = fxConverted.times(
+            new BigNumber(1).plus(distribution.tax_rate || 0)
+        );
+        distribution.distributed_amount_tax_excluded = fxConverted.toNumber();
+        distribution.distributed_amount_tax_included =
+            taxIncludedAmount.toNumber();
+        distribution.tax_value = taxIncludedAmount
+            .minus(fxConverted)
+            .toNumber();
+    }
+    distribution.distributed_amount = fxConverted.toNumber();
+};
+
 export const acquisitionsActions = store => {
     return {
         formatValueWithCurrency,
@@ -603,5 +657,6 @@ export const acquisitionsActions = store => {
         applyNumberValidation,
         useAllocationModal,
         useRolloverModal,
+        calculateDistributedAmount,
     };
 };
