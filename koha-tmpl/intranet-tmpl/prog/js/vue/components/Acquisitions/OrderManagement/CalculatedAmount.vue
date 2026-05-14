@@ -1,9 +1,7 @@
 <template>
     <h3 v-if="currency === 'original'">
         {{ $__("Remaining amount in original currency to be distributed") }}:
-        {{ remainingAmount.amount }} ({{
-            !remainingAmount ? 0 : remainingAmount.percentage
-        }}%)
+        {{ remainingAmount.amount }} ({{ remainingAmount.percentage }}%)
     </h3>
     <template v-if="currency !== 'original'">
         <h5>
@@ -30,7 +28,7 @@
 </template>
 
 <script>
-import { computed, inject } from "vue";
+import { computed, inject, watch } from "vue";
 import BigNumber from "bignumber.js";
 
 export default {
@@ -54,9 +52,8 @@ export default {
             const remainderToDistribute = calculatedAmount.minus(
                 props.resource.totalDistributedAmount || 0
             );
-            props.resource.remainderToDistribute =
-                remainderToDistribute.toNumber();
-            const result = {
+            return {
+                remainder: remainderToDistribute.toNumber(),
                 amount: formatValueWithCurrency(
                     remainderToDistribute.toNumber(),
                     props.resource.vendor_price_currency
@@ -69,13 +66,12 @@ export default {
                           .decimalPlaces(2, BigNumber.ROUND_HALF_UP)
                           .toNumber(),
             };
-            return result;
         });
 
         const calculatedItemAmounts = computed(() => {
             const orderline = props.resource;
             const itemPrice = new BigNumber(orderline.calculated_amount_oc || 0)
-                .times(orderline.distribution_exchange_rate || 0)
+                .times(orderline.distribution_exchange_rate || 1)
                 .div(orderline.quantity_ordered || 1);
             const selectedCurrency = Array.isArray(orderline.fund_distributions)
                 ? orderline.fund_distributions[0]?.currency
@@ -96,6 +92,9 @@ export default {
                 : totalTaxExcluded;
 
             const itemPricePoints = {
+                replacementItemPrice: itemPrice.isZero()
+                    ? null
+                    : itemPrice.toNumber(),
                 totalTaxIncluded: formatValueWithCurrency(
                     totalTaxIncluded.toNumber(),
                     selectedCurrency
@@ -114,11 +113,24 @@ export default {
                 ),
                 currency: selectedCurrency,
             };
-            props.resource.replacement_price = itemPrice.isZero()
-                ? null
-                : itemPrice.toNumber();
             return itemPricePoints;
         });
+        watch(
+            remainingAmount,
+            val => {
+                props.resource.remainderToDistribute = val.remainder;
+            },
+            { immediate: true }
+        );
+
+        watch(
+            calculatedItemAmounts,
+            val => {
+                props.resource.replacement_price = val.replacementItemPrice;
+            },
+            { immediate: true }
+        );
+
         return {
             remainingAmount,
             calculatedItemAmounts,
