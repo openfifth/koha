@@ -32,7 +32,7 @@ Koha::Acquisition::OrderManagement::OrderlineManager Object class
 
 =head3 patron
 
-Returns the related patron as a Koha::Patron object
+Returns the C<Koha::Patron> assigned as a manager for this orderline.
 
 =cut
 
@@ -45,6 +45,9 @@ sub patron {
 =head2 Internal methods
 
 =head3 _type
+
+Returns the DBIx::Class result class name for orderline manager links
+(C<AcqOrderlineManager>).
 
 =cut
 

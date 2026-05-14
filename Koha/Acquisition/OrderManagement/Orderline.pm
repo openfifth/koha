@@ -45,6 +45,16 @@ Koha::Acquisition::OrderManagement::Orderline Object class
 
 =head3 add_patron_relationships
 
+    $orderline->add_patron_relationships({
+        patrons_to_notify => \@patron_hashrefs,
+        managed_by        => \@patron_hashrefs,
+    });
+
+Replaces the patron notification list and/or the manager list for this orderline.
+Each argument is an arrayref of hashrefs containing a C<borrowernumber> key. If a
+key is omitted, that relationship type is left unchanged. Each replacement is
+performed atomically in its own database transaction (delete-then-insert).
+
 =cut
 
 sub add_patron_relationships {
@@ -89,6 +99,18 @@ sub add_patron_relationships {
 
 =head3 fund_distributions
 
+    my $distributions = $orderline->fund_distributions;
+    $orderline->fund_distributions(\@distribution_hashrefs);
+
+Getter/setter for the fund distributions associated with this orderline.
+
+When called with an arrayref, replaces all existing distributions in a single
+database transaction. Each hashref is passed directly to
+C<add_to_acq_orderline_fund_distributions>.
+
+Always returns a C<Koha::Acquisition::OrderManagement::OrderlineFundDistributions>
+result set.
+
 =cut
 
 sub fund_distributions {
@@ -111,6 +133,23 @@ sub fund_distributions {
 }
 
 =head3 biblio
+
+    my $biblio = $orderline->biblio;
+    my $biblio = $orderline->biblio({
+        biblio_data           => { title => ..., author => ..., ... },
+        confirm_not_duplicate => 1,
+    });
+
+Getter/setter for the bibliographic record linked to this orderline.
+
+When C<biblio_data> is supplied, builds a MARC record from the provided fields
+(C<title>, C<author>, C<series_title>, C<isbn>, C<ean>, C<publisher>,
+C<publication_year>, C<item_type>, C<edition_statement>) and creates a new biblio
+via C<C4::Biblio::AddBiblio>. Unless C<confirm_not_duplicate> is true, a duplicate
+check is performed first; if a match is found,
+C<Koha::Exceptions::DuplicateObject> is thrown with the existing biblionumber.
+
+Always returns the associated C<Koha::Biblio>, or C<undef> if none is linked.
 
 =cut
 
@@ -158,6 +197,18 @@ sub biblio {
 
 =head3 items
 
+    my $items = $orderline->items;
+    $orderline->items(\@item_data_hashrefs);
+
+Getter/setter for the items associated with this orderline.
+
+When called with an arrayref, removes all existing item links and creates new
+C<Koha::Item> records from the supplied data (via C<new_from_api>), linking each
+to this orderline via C<OrderlineItem>. The C<biblio_id> field is populated
+automatically from the orderline's C<biblionumber>.
+
+Always returns a C<Koha::Items> collection.
+
 =cut
 
 sub items {
@@ -191,7 +242,8 @@ sub items {
 
 =head3 vendor
 
-Return the vendor for this orderline
+Returns the C<Koha::Acquisition::Bookseller> for this orderline, or C<undef> if
+none is set.
 
 =cut
 
@@ -204,6 +256,8 @@ sub vendor {
 
 =head3 managing_library
 
+Returns the C<Koha::Library> that manages this orderline, or C<undef> if none is set.
+
 =cut
 
 sub managing_library {
@@ -215,6 +269,9 @@ sub managing_library {
 
 =head3 managed_by
 
+Returns a C<Koha::Acquisition::OrderManagement::OrderlineManagers> collection of
+managers assigned to this orderline, or C<undef> if none are assigned.
+
 =cut
 
 sub managed_by {
@@ -225,6 +282,9 @@ sub managed_by {
 }
 
 =head3 patrons_to_notify
+
+Returns a C<Koha::Acquisition::OrderManagement::OrderlineUsers> collection of
+patrons to be notified about this orderline, or C<undef> if none are assigned.
 
 =cut
 
@@ -238,6 +298,8 @@ sub patrons_to_notify {
 =head2 Internal methods
 
 =head3 _type
+
+Returns the DBIx::Class result class name for orderlines (C<AcqOrderline>).
 
 =cut
 

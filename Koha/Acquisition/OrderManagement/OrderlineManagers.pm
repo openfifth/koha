@@ -34,6 +34,9 @@ Koha::Acquisition::OrderManagement::OrderlineManagers object set class
 
 =head3 _type
 
+Returns the DBIx::Class result class name for orderline manager links
+(C<AcqOrderlineManager>).
+
 =cut
 
 sub _type {
@@ -41,6 +44,8 @@ sub _type {
 }
 
 =head3 object_class
+
+Returns the Koha object class name for a single orderline manager link record.
 
 =cut
 

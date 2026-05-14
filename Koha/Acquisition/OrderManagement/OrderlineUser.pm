@@ -32,7 +32,7 @@ Koha::Acquisition::OrderManagement::OrderlineUser Object class
 
 =head3 patron
 
-Returns the related patron as a Koha::Patron object
+Returns the C<Koha::Patron> set to be notified about this orderline.
 
 =cut
 
@@ -45,6 +45,9 @@ sub patron {
 =head2 Internal methods
 
 =head3 _type
+
+Returns the DBIx::Class result class name for orderline user notification links
+(C<AcqOrderlineUser>).
 
 =cut
 

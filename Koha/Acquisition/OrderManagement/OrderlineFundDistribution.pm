@@ -32,7 +32,8 @@ Koha::Acquisition::OrderManagement::OrderlineFundDistribution - Object class for
 
 =head3 fund
 
-Returns the fund for this distribution.
+Returns the C<Koha::Acquisition::Finances::Fund> for this distribution, or C<undef>
+if the fund record no longer exists.
 
 =cut
 
@@ -46,6 +47,9 @@ sub fund {
 =head2 Internal methods
 
 =head3 _type
+
+Returns the DBIx::Class result class name for orderline fund distributions
+(C<AcqOrderlineFundDistribution>).
 
 =cut
 

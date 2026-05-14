@@ -30,6 +30,8 @@ Koha::Acquisition::OrderManagement::OrderlineItem Object class
 
 =head3 _type
 
+Returns the DBIx::Class result class name for orderline item links (C<AcqOrderlineItem>).
+
 =cut
 
 sub _type {

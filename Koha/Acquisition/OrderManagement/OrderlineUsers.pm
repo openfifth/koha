@@ -34,6 +34,9 @@ Koha::Acquisition::OrderManagement::OrderlineUsers object set class
 
 =head3 _type
 
+Returns the DBIx::Class result class name for orderline user notification links
+(C<AcqOrderlineUser>).
+
 =cut
 
 sub _type {
@@ -41,6 +44,8 @@ sub _type {
 }
 
 =head3 object_class
+
+Returns the Koha object class name for a single orderline user notification link record.
 
 =cut
 

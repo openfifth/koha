@@ -34,6 +34,9 @@ Koha::Acquisition::OrderManagement::OrderlineFundDistributions object set class
 
 =head3 _type
 
+Returns the DBIx::Class result class name for orderline fund distributions
+(C<AcqOrderlineFundDistribution>).
+
 =cut
 
 sub _type {
@@ -41,6 +44,8 @@ sub _type {
 }
 
 =head3 object_class
+
+Returns the Koha object class name for a single orderline fund distribution record.
 
 =cut
 
