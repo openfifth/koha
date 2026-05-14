@@ -1377,15 +1377,23 @@ export default {
 
         const onFormSave = (e, orderlineToSave) => {
             e.preventDefault();
-            // TODOs:
-            // Need to check all costs distributed (resource.remainderToDistribute)
-            // Various new prperties added to support reactivity through different components, delete here to avoid API spec conflict
 
             if (!baseResource.isUserPermitted("createOrderline")) {
                 baseResource.setWarning(
                     $__(
                         "You do not have the required permissions to create orderlines."
                     )
+                );
+                return;
+            }
+
+            if (
+                orderlineToSave.status !== "draft" &&
+                orderlineToSave.calculated_amount_oc &&
+                (orderlineToSave.remainderToDistribute || 0) !== 0
+            ) {
+                baseResource.setWarning(
+                    $__("All costs must be fully distributed before saving")
                 );
                 return;
             }
