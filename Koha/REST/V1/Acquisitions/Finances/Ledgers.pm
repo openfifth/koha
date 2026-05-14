@@ -302,6 +302,14 @@ sub _copy_fund {
         }
     )->store( { no_cascade => 1 } );
 
+    Koha::Acquisition::Finances::Allocation->new(
+        {
+            fund_id           => $new_fund->fund_id,
+            allocation_amount => $fund_amount,
+            type              => 'ROLLOVER_TRANSFER',
+        }
+    )->store;
+
     for my $sub_fund ( $original_fund->sub_funds->as_list ) {
         _copy_fund( $sub_fund, $new_ledger, $new_fund->fund_id, $options );
     }
