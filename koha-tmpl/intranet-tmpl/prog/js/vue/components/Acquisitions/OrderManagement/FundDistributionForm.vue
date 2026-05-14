@@ -178,7 +178,6 @@ export default {
         const fundList = ref(filterFundsBasedOnPreviousSelections());
         const fundOptions = computed(() => fundList.value);
 
-        const distributedAmount = ref(0);
         const calculatedTotalDistributedAmount = fundDistributions => {
             return fundDistributions
                 .reduce(
@@ -203,7 +202,7 @@ export default {
             }
         });
 
-        const distributionFields = ref([
+        const distributionFields = [
             {
                 name: "fund_id",
                 type: "select",
@@ -308,32 +307,12 @@ export default {
                 },
                 hideIn: ["List"],
             },
-        ]);
+        ];
 
         return {
             distributionFields,
-            distributedAmount,
             fundOptions,
         };
     },
 };
 </script>
-
-<style scoped>
-/* :deep(form .v-select) {
-    display: inline-block;
-    background-color: white;
-    width: 60%;
-}
-
-:deep(.v-select,
-input:not([type="submit"]):not([type="search"]):not([type="button"]):not(
-        [type="checkbox"]
-    ):not([type="radio"]),
-textarea) {
-    border-color: rgba(60, 60, 60, 0.26);
-    border-width: 1px;
-    border-radius: 4px;
-    min-width: 60%;
-} */
-</style>
