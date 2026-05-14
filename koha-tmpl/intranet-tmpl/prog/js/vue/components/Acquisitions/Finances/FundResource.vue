@@ -461,14 +461,18 @@ export default {
                     : "me.ledger_id";
                 return (
                     APIClient.acquisition.httpClient._baseURL +
-                    "funds?q=" +
-                    JSON.stringify({ [key]: id, "me.status": status })
+                    "funds?" +
+                    new URLSearchParams({
+                        q: JSON.stringify({ [key]: id, "me.status": status }),
+                    })
                 );
             }
             return (
                 APIClient.acquisition.httpClient._baseURL +
-                "funds?q=" +
-                JSON.stringify({ "me.status": status })
+                "funds?" +
+                new URLSearchParams({
+                    q: JSON.stringify({ "me.status": status }),
+                })
             );
         };
 

@@ -362,8 +362,8 @@ export default {
                 : { "me.status": status };
             return (
                 APIClient.acquisition.httpClient._baseURL +
-                "ledgers?q=" +
-                JSON.stringify(q)
+                "ledgers?" +
+                new URLSearchParams({ q: JSON.stringify(q) })
             );
         };
 
