@@ -22,9 +22,6 @@ use base qw(Koha::Object);
 
 use Koha::Patron;
 
-use Mojo::JSON qw(decode_json);
-use JSON       qw ( encode_json );
-
 =head1 NAME
 
 Koha::Acquisition::OrderManagement::OrderlineUser Object class
@@ -35,7 +32,7 @@ Koha::Acquisition::OrderManagement::OrderlineUser Object class
 
 =head3 patron
 
-Method to embed the patron to a given fund
+Returns the related patron as a Koha::Patron object
 
 =cut
 

@@ -20,13 +20,10 @@ package Koha::REST::V1::Acquisitions::OrderManagement::Orderlines;
 use Modern::Perl;
 
 use Mojo::Base 'Mojolicious::Controller';
-use Mojo::JSON qw(decode_json);
 use Try::Tiny;
 
 use Koha::Acquisition::OrderManagement::Orderline;
 use Koha::Acquisition::OrderManagement::Orderlines;
-
-use C4::Context;
 
 =head1 API
 
@@ -117,7 +114,6 @@ sub add {
             }
         )
     } catch {
-        warn $_;
         if ( blessed $_ ) {
             if ( $_->isa('Koha::Exceptions::DuplicateObject') ) {
                 my $duplicate_biblio = Koha::Biblios->find( $_->error );
