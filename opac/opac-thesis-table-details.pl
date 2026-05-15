@@ -32,9 +32,10 @@ my $cgi = CGI->new;
 
 my ( $template, $borrowernumber, $cookie ) = get_template_and_user(
     {
-        template_name => "opac-thesis-table-details.tt",
-        query         => $cgi,
-        type          => "opac",
+        template_name   => "opac-thesis-table-details.tt",
+        query           => $cgi,
+        type            => "opac",
+        authnotrequired => 1,
     }
 );
 
