@@ -235,6 +235,19 @@
                     }
                 },
                 {
+                    data: "item.item_type_id",
+                    title: _("Item type"),
+                    searchable: false,
+                    orderable: false,
+                    render: function (data, type, row, meta) {
+                        if (row?.item?._strings?.item_type_id?.str) {
+                            return row.item._strings.item_type_id.str;
+                        } else {
+                            return row.item.item_type_id;
+                        }
+                    },
+                },
+                {
                     data: "item.location",
                     title: _("Location"),
                     searchable: false,
@@ -250,6 +263,19 @@
                                 return null;
                         }
                     }
+                },
+                {
+                    data: "item.collection_code",
+                    title: _("Collection"),
+                    searchable: false,
+                    orderable: false,
+                    render: function (data, type, row, meta) {
+                        if (row?.item?._strings?.collection_code?.str) {
+                            return row.item._strings.collection_code.str;
+                        } else {
+                            return row.item.collection_code;
+                        }
+                    },
                 },
                 {
                     data: "patron.firstname:patron.surname",
