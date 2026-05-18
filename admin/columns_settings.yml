@@ -2139,7 +2139,7 @@ modules:
 
     bookings:
         bookings-to-collect:
-            default_sort_order: 7
+            default_sort_order: 9
             columns:
                 -
                     columnname: booking_id
@@ -2155,7 +2155,11 @@ modules:
                 -
                     columnname: item_callnumber
                 -
+                    columnname: item_item_type_id
+                -
                     columnname: item_location
+                -
+                    columnname: item_collection
                 -
                     columnname: patron
                 -
