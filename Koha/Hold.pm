@@ -1622,6 +1622,26 @@ sub _move_to_old {
     return Koha::Old::Hold->new($hold_infos)->store;
 }
 
+=head3 to_api
+
+    my $hold_api = $hold->to_api;
+
+Overloaded to_api method to ensure hold date is returned as date, not datetime.
+
+=cut
+
+sub to_api {
+    my ( $self, $params ) = @_;
+
+    my $response = $self->SUPER::to_api($params);
+
+    if ( defined $response->{hold_date} ) {
+        $response->{hold_date} = dt_from_string( $response->{hold_date} )->ymd;
+    }
+
+    return $response;
+}
+
 =head3 to_api_mapping
 
 This method returns the mapping for representing a Koha::Hold object
