@@ -70,7 +70,7 @@ __PACKAGE__->table("tmp_holdsqueue");
 
 =head2 reservedate
 
-  data_type: 'date'
+  data_type: 'datetime'
   datetime_undef_if_invalid: 1
   is_nullable: 1
 
@@ -151,7 +151,11 @@ __PACKAGE__->add_columns(
   "cardnumber",
   { data_type => "varchar", is_nullable => 1, size => 32 },
   "reservedate",
-  { data_type => "date", datetime_undef_if_invalid => 1, is_nullable => 1 },
+  {
+    data_type => "datetime",
+    datetime_undef_if_invalid => 1,
+    is_nullable => 1,
+  },
   "title",
   { data_type => "longtext", is_nullable => 1 },
   "itemcallnumber",
@@ -242,8 +246,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07053 @ 2026-07-29 15:48:55
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:wvYdiCgLY1Ssu8dCA8yc7Q
+# Created by DBIx::Class::Schema::Loader v0.07053 @ 2026-09-25 14:47:49
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:YJ/NprA1k8fN97+IfcmfhQ
 
 __PACKAGE__->add_columns(
     '+item_level_request'    => { is_boolean => 1 },

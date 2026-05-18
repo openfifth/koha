@@ -42,7 +42,7 @@ foreign key from the borrowers table defining which patron this hold is for
 
 =head2 reservedate
 
-  data_type: 'date'
+  data_type: 'datetime'
   datetime_undef_if_invalid: 1
   is_nullable: 1
 
@@ -251,7 +251,11 @@ __PACKAGE__->add_columns(
     is_nullable    => 0,
   },
   "reservedate",
-  { data_type => "date", datetime_undef_if_invalid => 1, is_nullable => 1 },
+  {
+    data_type => "datetime",
+    datetime_undef_if_invalid => 1,
+    is_nullable => 1,
+  },
   "biblionumber",
   {
     data_type      => "integer",
@@ -531,8 +535,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-02-23 17:05:32
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:WQrlG+Rl+BYHA7poiEiwmA
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-05-18 18:45:53
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:zKN6fER2+GIihz26FEeHbA
 
 __PACKAGE__->belongs_to(
   "item",
