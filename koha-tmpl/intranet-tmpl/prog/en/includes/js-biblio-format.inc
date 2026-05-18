@@ -5,7 +5,8 @@
          * Format the biblio response from a Koha RESTful API request.
          * @param  {Object}  biblio  The biblio json object as returned from the Koha RESTful API
          * @param  {Object}  config  A configuration object
-         *                           Valid keys are: `link`
+         *                           Valid keys are: `biblio_id_only`,`link`, `hideAuthor`,
+         *                           `hidePubDate`
          * @return {string}          The formatted HTML string
          */
         window.$biblio_to_html = function (biblio, config) {
@@ -13,13 +14,16 @@
                 return ""; // empty string for no biblio
             }
 
+            var nodes = "";
             var title = "";
+            var author = "";
+            var pubDate = "";
 
-            if (config && config.biblio_id_only) {
+            if (config?.biblio_id_only) {
                 title = escape_str(biblio.biblio_id);
             } else {
                 title = '<span class="biblio-title">';
-                if (config && config.deleted) {
+                if (config?.deleted) {
                     title += _("(Bibliographic record deleted) ");
                 }
                 if (biblio.title != null && biblio.title != "") {
@@ -36,7 +40,7 @@
             }
 
             // set title as link
-            if (config && config.link) {
+            if (config?.link) {
                 if (config.link === "marcdetail") {
                     title = '<a href="/cgi-bin/koha/catalogue/MARCdetail.pl?biblionumber=' + encodeURIComponent(biblio.biblio_id) + '" class="title">' + title + "</a>";
                 } else if (config.link === "labeled_marc") {
@@ -50,7 +54,7 @@
                 }
             }
 
-            if (!config || !config.biblio_id_only) {
+            if (!config?.biblio_id_only) {
                 // add medium
                 if (biblio.medium != null && biblio.medium != "") {
                     title += ' <span class="biblio-medium">' + escape_str(biblio.medium) + "</span>";
@@ -71,7 +75,31 @@
                 }
             }
 
-            return title;
+            // format title
+            nodes = "<p>" + title + "</p>";
+
+            // display author
+            if (!config?.hideAuthor && biblio.author) {
+                author = '<span class="biblio-author">';
+                author += _("by") + " ";
+                author += biblio.author;
+                author += "</span>";
+
+                // format author
+                nodes += "<p>" + author + "</p>";
+            }
+
+            // display publication year
+            if (!config?.hidePubDate && biblio.copyright_date) {
+                pubDate = '<span class="biblio-publication-date">';
+                pubDate += biblio.copyright_date;
+                pubDate += "</span>";
+
+                // format publication year
+                nodes += "<p>" + pubDate + "</p>";
+            }
+
+            return nodes;
         };
     })();
 </script>
