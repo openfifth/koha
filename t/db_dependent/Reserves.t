@@ -1874,7 +1874,7 @@ subtest 'DefaultHoldExpiration tests' => sub {
     my $today = dt_from_string();
     my $hold  = Koha::Holds->find($reserve_id);
 
-    is( $hold->reservedate,    $today->ymd,                     "Hold created today" );
+    is( dt_from_string( $hold->reservedate )->ymd, $today->ymd, "Hold created today" );
     is( $hold->expirationdate, $today->add( days => 365 )->ymd, "Reserve date set 1 year from today" );
 
     $schema->txn_rollback;

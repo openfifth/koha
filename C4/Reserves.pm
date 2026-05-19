@@ -2430,7 +2430,7 @@ sub CalculatePriority {
     if ($resdate) {
         $sql .= ' AND ( reservedate <= ? )';
     } else {
-        $sql .= ' AND ( reservedate < NOW() )';
+        $sql .= ' AND ( reservedate <= NOW() )';
     }
     my $dbh = C4::Context->dbh();
     my @row = $dbh->selectrow_array(

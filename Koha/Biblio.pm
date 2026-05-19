@@ -839,7 +839,8 @@ sub current_holds {
     my ($self) = @_;
     my $dtf    = Koha::Database->new->schema->storage->datetime_parser;
     my $dt     = dt_from_string()->add( days => C4::Context->preference('ConfirmFutureHolds') || 0 );
-    return $self->holds( { reservedate => { '<=' => $dtf->format_date($dt) } } );
+    return $self->holds(
+        { reservedate => { '<=' => $dtf->format_datetime( $dt->set( hour => 23, minute => 59, second => 0 ) ) } } );
 }
 
 =head3 biblioitem
