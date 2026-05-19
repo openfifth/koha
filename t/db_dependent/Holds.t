@@ -112,7 +112,7 @@ my $borrowernumber = $first_hold->borrowernumber;
 my $branch_1code   = $first_hold->branchcode;
 my $reserve_id     = $first_hold->reserve_id;
 is(
-    $reservedate, output_pref( { dt => dt_from_string, dateformat => 'iso', dateonly => 1 } ),
+    dt_from_string($reservedate)->ymd, output_pref( { dt => dt_from_string, dateformat => 'iso', dateonly => 1 } ),
     "holds_placed_today should return a valid reserve date"
 );
 is( $borrowernumber, $borrowernumbers[0], "holds_placed_today should return a valid borrowernumber" );
