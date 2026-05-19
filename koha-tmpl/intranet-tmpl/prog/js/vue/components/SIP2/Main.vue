@@ -21,7 +21,8 @@
 </template>
 
 <script>
-import { inject, nextTick, onBeforeMount, ref } from "vue";
+import { inject, onBeforeMount } from "vue";
+import { useVueModule } from "../../composables/vueModule.js";
 import Breadcrumbs from "../Breadcrumbs.vue";
 import { storeToRefs } from "pinia";
 import Help from "../Help.vue";
@@ -36,11 +37,8 @@ export default {
         const { sysprefs, authorisedValues } = storeToRefs(SIP2Store);
         const { loadAuthorisedValues } = SIP2Store;
 
-        const mainStore = inject("mainStore");
-
-        const { loading, loaded, setError } = mainStore;
-
-        const initialized = ref(false);
+        const { loading, loaded, setError, initialized, onModuleReady } =
+            useVueModule("sip2");
 
         onBeforeMount(() => {
             loading();
@@ -48,17 +46,7 @@ export default {
                 return loadAuthorisedValues(
                     authorisedValues.value,
                     SIP2Store
-                ).then(() => {
-                    loaded();
-                    initialized.value = true;
-                    nextTick(() => {
-                        document.dispatchEvent(
-                            new CustomEvent("koha:vue-loaded", {
-                                detail: { module: "sip2" },
-                            })
-                        );
-                    });
-                });
+                ).then(onModuleReady);
             };
 
             const client = APIClient.sysprefs;
