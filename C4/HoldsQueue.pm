@@ -255,7 +255,7 @@ sub GetBibsWithPendingHoldRequests {
                      FROM reserves
                      WHERE found IS NULL
                      AND priority > 0
-                     AND reservedate <= CURRENT_DATE()
+                     AND DATE(reservedate) <= CURRENT_DATE()
                      AND suspend = 0
                      AND reserve_id NOT IN (SELECT reserve_id FROM hold_fill_targets)
                      $skip_non_target_holds_query_sql
@@ -305,7 +305,7 @@ sub GetPendingHoldRequestsForBib {
                          WHERE biblionumber = ?
                          AND found IS NULL
                          AND priority > 0
-                         AND reservedate <= CURRENT_DATE()
+                         AND DATE(reservedate) <= CURRENT_DATE()
                          AND suspend = 0 ";
     $request_query .= "AND reserve_id NOT IN (SELECT reserve_id FROM hold_fill_targets) " if $unallocated;
     $request_query .= $skip_non_target_holds_query_sql;

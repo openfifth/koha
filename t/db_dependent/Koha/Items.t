@@ -1933,7 +1933,7 @@ subtest 'holds' => sub {
     );
     is( $item->holds->count, 0,     "Nothing returned if no holds" );
     is( $item->first_hold,   undef, 'No hold yet' );
-    my $yesterday = dt_from_string->subtract( days => 1 )->ymd;
+    my $yesterday = dt_from_string->subtract( days => 1 )->ymd . ' 00:00:00';
     my $hold1     = $builder->build(
         {
             source => 'Reserve',
