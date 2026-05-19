@@ -784,18 +784,18 @@ subtest 'Holds test with start_date and end_date' => sub {
     my $reply = C4::ILSDI::Services::HoldItem($query);
     is( $reply->{pickup_location}, $pickup_library->branchname, "Item hold with date parameters was placed" );
     my $hold = Koha::Holds->search( { biblionumber => $item->biblionumber } )->next();
-    is( $hold->biblionumber,   $item->biblionumber, "correct biblionumber" );
-    is( $hold->reservedate,    '2020-03-20',        "Item hold has correct start date" );
-    is( $hold->expirationdate, '2020-04-22',        "Item hold has correct end date" );
+    is( $hold->biblionumber,                       $item->biblionumber, "correct biblionumber" );
+    is( dt_from_string( $hold->reservedate )->ymd, '2020-03-20',        "Item hold has correct start date" );
+    is( $hold->expirationdate,                     '2020-04-22',        "Item hold has correct end date" );
 
     $hold->delete();
 
     $reply = C4::ILSDI::Services::HoldTitle($query);
     is( $reply->{pickup_location}, $pickup_library->branchname, "Record hold with date parameters was placed" );
     $hold = Koha::Holds->search( { biblionumber => $item->biblionumber } )->next();
-    is( $hold->biblionumber,   $item->biblionumber, "correct biblionumber" );
-    is( $hold->reservedate,    '2020-03-20',        "Record hold has correct start date" );
-    is( $hold->expirationdate, '2020-04-22',        "Record hold has correct end date" );
+    is( $hold->biblionumber,                       $item->biblionumber, "correct biblionumber" );
+    is( dt_from_string( $hold->reservedate )->ymd, '2020-03-20',        "Record hold has correct start date" );
+    is( $hold->expirationdate,                     '2020-04-22',        "Record hold has correct end date" );
 
     $schema->storage->txn_rollback;
 };
