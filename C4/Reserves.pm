@@ -618,10 +618,11 @@ sub CanItemBeReserved {
     }
 
     if ( !$params->{ignore_hold_counts} && defined $holds_per_day && $holds_per_day ne '' ) {
+        my $today             = dt_from_string->ymd;
         my $today_holds_count = Koha::Holds->count_holds(
             {
                 borrowernumber => $patron->borrowernumber,
-                reservedate    => dt_from_string->date
+                reservedate    => { -between => [ "$today 00:00:00", "$today 23:59:59" ] },
             }
         );
         return _cache { status => 'tooManyReservesToday', limit => $holds_per_day }
