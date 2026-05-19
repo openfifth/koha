@@ -1355,8 +1355,8 @@ subtest 'edit() tests' => sub {
         ->status_is(200);
 
     $biblio_hold->discard_changes;
-    is( $biblio_hold->reservedate,    '2022-01-02', 'Hold date changed correctly' );
-    is( $biblio_hold->expirationdate, '2022-03-02', 'Expiration date changed correctly' );
+    is( dt_from_string( $biblio_hold->reservedate )->ymd, '2022-01-02', 'Hold date changed correctly' );
+    is( $biblio_hold->expirationdate,                     '2022-03-02', 'Expiration date changed correctly' );
 
     # Test item-level holds
     my $item_hold = $builder->build_object(
@@ -1422,8 +1422,8 @@ subtest 'edit() tests' => sub {
     $t->patch_ok( "//$userid:$password@/api/v1/holds/" . $item_hold->id => json => $item_hold_data )->status_is(200);
 
     $item_hold->discard_changes;
-    is( $item_hold->reservedate,    '2022-01-02', 'Hold date changed correctly' );
-    is( $item_hold->expirationdate, '2022-03-02', 'Expiration date changed correctly' );
+    is( dt_from_string( $item_hold->reservedate )->ymd, '2022-01-02', 'Hold date changed correctly' );
+    is( $item_hold->expirationdate,                     '2022-03-02', 'Expiration date changed correctly' );
 
     # Test item_level and item_id parameters
     my $item_2 = $builder->build_sample_item( { biblionumber => $biblio->biblionumber } );
