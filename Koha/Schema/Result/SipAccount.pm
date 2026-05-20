@@ -518,79 +518,27 @@ __PACKAGE__->belongs_to(
 
 
 __PACKAGE__->add_columns(
-    '+allow_additional_materials_checkout' => { is_boolean => 1 }
-);
-
-__PACKAGE__->add_columns(
-    "+allow_empty_passwords" => { is_boolean => 1 }
-);
-
-__PACKAGE__->add_columns(
-    "+checked_in_ok" => { is_boolean => 1 }
-);
-
-__PACKAGE__->add_columns(
-    "+ct_always_send" => { is_boolean => 1 }
-);
-
-__PACKAGE__->add_columns(
-    "+cv_send_00_on_success" => { is_boolean => 1 }
-);
-
-__PACKAGE__->add_columns(
-    "+cv_triggers_alert" => { is_boolean => 1 }
-);
-
-__PACKAGE__->add_columns(
-    "+disallow_overpayment" => { is_boolean => 1 }
-);
-
-__PACKAGE__->add_columns(
-    "+error_detect" => { is_boolean => 1 }
-);
-
-__PACKAGE__->add_columns(
-    "+format_due_date" => { is_boolean => 1 }
-);
-
-__PACKAGE__->add_columns(
-    "+holds_block_checkin" => { is_boolean => 1 }
-);
-
-__PACKAGE__->add_columns(
-    "+holds_get_captured" => { is_boolean => 1 }
-);
-
-__PACKAGE__->add_columns(
-    "+lost_block_checkout" => { is_boolean => 0 }
-);
-
-__PACKAGE__->add_columns(
-    "+lost_block_checkout_value" => { is_boolean => 0 }
-);
-
-__PACKAGE__->add_columns(
-    "+lost_status_for_missing" => { is_boolean => 0 }
-);
-
-__PACKAGE__->add_columns(
-    "+overdues_block_checkout" => { is_boolean => 1 }
-);
-
-__PACKAGE__->add_columns(
-    "+prevcheckout_block_checkout" => { is_boolean => 1 }
-);
-
-__PACKAGE__->add_columns(
-    "+send_patron_home_library_in_af" => { is_boolean => 1 }
-);
-
-__PACKAGE__->add_columns(
-    "+show_checkin_message" => { is_boolean => 1 }
-);
-
-__PACKAGE__->add_columns(
-    "+show_outstanding_amount" => { is_boolean => 1 }
+    "+allow_additional_materials_checkout" => { is_boolean => 1 },
+    "+allow_empty_passwords"               => { is_boolean => 1 },
+    "+checked_in_ok"                       => { is_boolean => 1 },
+    "+ct_always_send"                      => { is_boolean => 1 },
+    "+cv_send_00_on_success"               => { is_boolean => 1 },
+    "+cv_triggers_alert"                   => { is_boolean => 1 },
+    "+disallow_overpayment"                => { is_boolean => 1 },
+    "+error_detect"                        => { is_boolean => 1 },
+    "+format_due_date"                     => { is_boolean => 1 },
+    "+holds_block_checkin"                 => { is_boolean => 1 },
+    "+holds_get_captured"                  => { is_boolean => 1 },
+    "+lost_block_checkout"                 => { is_boolean => 0 },
+    "+lost_block_checkout_value"           => { is_boolean => 0 },
+    "+lost_status_for_missing"             => { is_boolean => 0 },
+    "+overdues_block_checkout"             => { is_boolean => 1 },
+    "+patron_branchcode_in_ao"             => { is_boolean => 1 },
+    "+patron_restriction_blocks_inet"      => { is_boolean => 1 },
+    "+prevcheckout_block_checkout"         => { is_boolean => 1 },
+    "+send_patron_home_library_in_af"      => { is_boolean => 1 },
+    "+show_checkin_message"                => { is_boolean => 1 },
+    "+show_outstanding_amount"             => { is_boolean => 1 },
 );
 
 =head2 koha_objects_class
