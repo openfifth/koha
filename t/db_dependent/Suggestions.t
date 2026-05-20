@@ -19,7 +19,7 @@ use Modern::Perl;
 
 use DateTime::Duration;
 use Test::NoWarnings;
-use Test::More tests => 56;
+use Test::More tests => 99;
 use Test::Warn;
 
 use t::lib::Mocks;
@@ -69,9 +69,6 @@ $dbh->do(q|DELETE FROM letter|);
 $dbh->do(q|DELETE FROM message_queue|);
 $dbh->do(q|INSERT INTO letter(module, code, content) VALUES ('suggestions', 'CHECKED', 'my content')|);
 $dbh->do(q|INSERT INTO letter(module, code, content) VALUES ('suggestions', 'ORDERED', 'my content')|);
-$dbh->do(
-    q|INSERT INTO letter(module, code, content) VALUES ('suggestions', 'NEW_SUGGESTION', 'Content for new suggestion')|
-);
 $dbh->do(
     q|INSERT INTO letter(module, code, content) VALUES ('suggestions', 'NEW_SUGGESTION', 'Content for new suggestion')|
 );
@@ -363,6 +360,7 @@ is( @$messages, 3, 'ModSuggestions does send a message if the status has been ch
 {
     # Hiding the expected warning displayed by DBI
     # DBD::mysql::st execute failed: Incorrect date value: 'invalid date!' for column 'manageddate'
+    local $SIG{__WARN__} = sub {};
     local *STDERR;
     open STDERR, '>', '/dev/null';
 
