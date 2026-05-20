@@ -9,7 +9,12 @@
 [% PROCESS 'i18n.inc' %]
 [% PROCESS 'html_helpers.inc' %]
 [% INCLUDE 'doc-head-open.inc' %]
-<title>[% IF ( LibraryNameTitle ) %][% LibraryNameTitle | html %][% ELSE %]Koha online[% END %] catalog &rsaquo; Reserves for [% course.course_name | html %][%- IF course.section -%]- [% course.section | html %][%- END -%]</title>
+<title
+    >[% FILTER collapse %]
+        [%- IF course.section -%][% tx("Reserves for '{course_name}' - {section}", { course_name = course.course_name, section = course.section }) | html %][%- ELSE -%][% tx("Reserves for '{course_name}'", { course_name = course.course_name }) | html %][%- END -%]
+        &rsaquo; [% PROCESS 'library_name_title' %]
+    [% END %]</title
+>
 [% INCLUDE 'doc-head-close.inc' %]
 [% BLOCK cssinclude %]
 [% END %]
@@ -18,24 +23,21 @@
 [% INCLUDE 'bodytag.inc' bodyid='opac-course-details' %]
 [% INCLUDE 'masthead.inc' %]
 
-<div class="main">
-    <nav aria-label="breadcrumb">
-        <ul class="breadcrumb">
-            <li class="breadcrumb-item">
-                <a href="/cgi-bin/koha/opac-main.pl">Home</a>
-            </li>
-            <li class="breadcrumb-item">
-                <a href="/cgi-bin/koha/opac-thesis-tables.pl">[% course_type_display | html %]</a>
-            </li>
-            <li class="breadcrumb-item" aria-current="page"> Reserves for &nbsp;<em>[% course.course_name | html %][%- IF course.section -%]- [% course.section | html %][%- END -%]</em> </li>
-        </ul>
-    </nav>
+<main class="main">
+    [% WRAPPER breadcrumbs %]
+        [% WRAPPER breadcrumb_item %]
+            <a href="/cgi-bin/koha/opac-thesis-tables.pl">[% course_type_display | html %]</a>
+        [% END %]
+        [% WRAPPER breadcrumb_item bc_active= 1 %]
+            [%- IF course.section -%][% tx("Reserves for '{course_name}' - {section}", { course_name = course.course_name, section = course.section }) | html %][%- ELSE -%][% tx("Reserves for '{course_name}'", { course_name = course.course_name }) | html %][%- END -%]
+        [% END %]
+    [% END #/ WRAPPER breadcrumbs %]
 
     <div class="container-fluid">
         <div class="row">
             <div class="col">
                 <div id="thesis_tables" class="maincontent">
-                    <h2>Reserves for <em>[% course.course_name | html %][%- IF course.section -%]- [% course.section | html %][%- END -%]</em></h2>
+                    <h1>[%- IF course.section -%][% tx("Reserves for '{course_name}' - {section}", { course_name = course.course_name, section = course.section }) | html %][%- ELSE -%][% tx("Reserves for '{course_name}'", { course_name = course.course_name }) | html %][%- END -%]</h1>
                     <div class="rows">
                         <ol>
                             [% IF ( course.instructors ) %]
@@ -120,7 +122,7 @@
         <!-- / .row -->
     </div>
     <!-- / .container-fluid -->
-</div>
+</main>
 <!-- / .main -->
 [% INCLUDE 'opac-bottom.inc' %]
 [% BLOCK jsinclude %]
