@@ -4116,12 +4116,12 @@ sub identify_updated_extended_attributes {
     my @patron_attributes = grep { $_->type->opac_editable ? $_ : () }
         Koha::Patron::Attributes->search( { borrowernumber => $self->borrowernumber } )->as_list;
 
-    my $patron_attribute_types;
+    my $patron_attribute_types = {};
     foreach my $attr (@patron_attributes) {
         $patron_attribute_types->{ $attr->code } += 1;
     }
 
-    my $passed_attribute_types;
+    my $passed_attribute_types = {};
     foreach my $attr ( @{$entered_attributes} ) {
         $passed_attribute_types->{ $attr->{code} } += 1;
     }
@@ -4144,7 +4144,8 @@ sub identify_updated_extended_attributes {
             my $changes = 0;
             foreach my $attr ( grep { $_->code eq $attribute_type } @patron_attributes ) {
                 $changes = 1
-                    unless any { $_->{attribute} eq $attr->attribute } @{$entered_attributes};
+                    unless any { $_->{code} eq $attribute_type && $_->{attribute} eq $attr->attribute }
+                    @{$entered_attributes};
                 last if $changes;
             }
 
