@@ -5,7 +5,7 @@
 
 use Modern::Perl;
 use Test::NoWarnings;
-use Test::More tests => 12;
+use Test::More tests => 13;
 
 use t::lib::Mocks;
 use t::lib::TestBuilder;
@@ -13,7 +13,8 @@ use t::lib::TestBuilder;
 use C4::SIP::ILS::Patron;
 use Koha::Account::Lines;
 use Koha::Database;
-use Koha::DateUtils qw( dt_from_string output_pref );
+use Koha::Patron::Debarments qw( AddDebarment );
+use Koha::DateUtils          qw( dt_from_string output_pref );
 use Koha::Patron::Attributes;
 use Koha::Patrons;
 
@@ -554,6 +555,84 @@ subtest "Patron messages tests" => sub {
         $sip_patron->screen_msg, qr/Messages for you: $today: my message 1 \/ $today: my message 2/,
         "Screen message includes patron messages"
     );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest "inet_privileges tests" => sub {
+    plan tests => 9;
+
+    $schema->storage->txn_begin;
+
+    my $restricted_patron = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { dateexpiry => '3000-01-01' },
+        }
+    );
+    AddDebarment(
+        {
+            borrowernumber => $restricted_patron->borrowernumber,
+            type           => 'MANUAL',
+        }
+    );
+
+    my $expired_patron = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { dateexpiry => '1900-01-01' },
+        }
+    );
+
+    my $normal_patron = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { dateexpiry => '3000-01-01' },
+        }
+    );
+
+    t::lib::Mocks::mock_preference( 'noissuescharge', 5 );
+    my $fined_category =
+        $builder->build_object( { class => 'Koha::Patron::Categories', value => { noissuescharge => 0 } } );
+    my $fined_patron = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { dateexpiry => '3000-01-01', categorycode => $fined_category->categorycode },
+        }
+    );
+    my $blocking_debit_type =
+        $builder->build_object( { class => 'Koha::Account::DebitTypes', value => { restricts_checkouts => 1 } } );
+    $builder->build_object(
+        {
+            class => 'Koha::Account::Lines',
+            value => {
+                borrowernumber    => $fined_patron->borrowernumber,
+                amountoutstanding => 10,
+                debit_type_code   => $blocking_debit_type->code,
+            },
+        }
+    );
+
+    my $sip_restricted = C4::SIP::ILS::Patron->new( $restricted_patron->cardnumber );
+    my $sip_expired    = C4::SIP::ILS::Patron->new( $expired_patron->cardnumber );
+    my $sip_normal     = C4::SIP::ILS::Patron->new( $normal_patron->cardnumber );
+    my $sip_fined      = C4::SIP::ILS::Patron->new( $fined_patron->cardnumber );
+
+    my $server_allow = { account => { patron_restriction_blocks_inet => 0 } };
+    my $server_block = { account => { patron_restriction_blocks_inet => 1 } };
+
+    is( $sip_restricted->inet_privileges,       'N', 'Restricted patron: inet blocked by default' );
+    is( $sip_restricted->inet_privileges( {} ), 'N', 'Restricted patron: inet blocked when flag not set' );
+    is(
+        $sip_restricted->inet_privileges($server_block), 'N',
+        'Restricted patron: inet blocked when flag explicitly on'
+    );
+    is( $sip_restricted->inet_privileges($server_allow), 'Y', 'Restricted patron: inet allowed when flag off' );
+    is( $sip_expired->inet_privileges($server_allow),    'N', 'Expired patron: inet still blocked even when flag off' );
+    is( $sip_normal->inet_privileges($server_allow),     'Y', 'Normal patron: inet allowed regardless of flag' );
+    ok( !$sip_restricted->charge_ok, 'Restricted patron: checkouts still blocked when inet flag off' );
+    ok( !$sip_fined->charge_ok,      'Fine-blocked patron: checkouts blocked' );
+    is( $sip_fined->inet_privileges($server_allow), 'N', 'Fine-blocked patron: inet not bypassed when flag off' );
 
     $schema->storage->txn_rollback;
 };
