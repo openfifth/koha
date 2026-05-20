@@ -595,12 +595,27 @@ sub enable {
 
 =head2 inet_privileges
 
-Missing POD for inet_privileges.
+Return Y/N for the SIP inet_profile field.
+
+By default a debarred patron has inet blocked (same as checkout). If the
+account config C<patron_restriction_blocks_inet> is explicitly set to 0,
+debarment no longer blocks inet, allowing restricted patrons to
+authenticate to online services. Expiry and other noissues blocks
+(fines, GNA, lost card) are unaffected by this flag.
 
 =cut
 
 sub inet_privileges {
-    my $self = shift;
+    my ( $self, $server ) = @_;
+    if (   $server
+        && defined $server->{account}{patron_restriction_blocks_inet}
+        && !$server->{account}{patron_restriction_blocks_inet} )
+    {
+        # Bypass the debarment block only; expiry and noissues blocks remain.
+        # $self->{inet} covers all non-debarment reasons inet may be denied;
+        # $self->{debarred} re-grants access for the restriction-only case.
+        return ( !$self->{expired} && ( $self->{inet} || $self->{debarred} ) ) ? 'Y' : 'N';
+    }
     return $self->{inet} ? 'Y' : 'N';
 }
 
