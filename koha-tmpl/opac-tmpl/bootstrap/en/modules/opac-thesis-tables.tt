@@ -42,7 +42,7 @@
                                 <th>Table #</th>
                                 <th>Researcher</th>
                                 <th>Topic</th>
-                                <th class="dtr-control-col">[% t('Expand') | html %]</th>
+                                <th class="dtr-control-col"></th>
                             </tr>
                         </thead>
 
