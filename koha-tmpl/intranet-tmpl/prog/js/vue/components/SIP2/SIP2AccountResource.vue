@@ -474,6 +474,16 @@ export default {
                 ),
             },
             {
+                name: "patron_restriction_blocks_inet",
+                type: "boolean",
+                label: __("Restrictions block internet access"),
+                hideIn: ["List"],
+                group: "Details",
+                toolTip: __(
+                    "When enabled (the default), patrons with account restrictions will also have SIP internet (inet) access blocked. Disable to allow restricted patrons to authenticate to online services via SIP while checkouts remain blocked."
+                ),
+            },
+            {
                 name: "show_checkin_message",
                 type: "boolean",
                 label: __("Show checkin message"),
