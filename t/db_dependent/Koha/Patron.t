@@ -3835,7 +3835,7 @@ subtest "create_expiry_notice_parameters" => sub {
 };
 
 subtest "identify_updated_extended_attributes" => sub {
-    plan tests => 2;
+    plan tests => 4;
 
     $schema->storage->txn_begin;
 
@@ -3955,6 +3955,52 @@ subtest "identify_updated_extended_attributes" => sub {
 
     $updated_attributes = $patron->identify_updated_extended_attributes($changed_attributes);
     is( scalar(@$updated_attributes), 3, "Two have now been updated, one of which is repeatable and has two values" );
+
+    # Bug 42161 - patron has zero existing attributes (no rows in borrower_attributes)
+    my $patron2 = $builder->build_object( { class => 'Koha::Patrons' } );
+
+    $changed_attributes = [
+        {
+            attribute => 'brand new value',
+            code      => $normal_attribute_type->code(),
+        }
+    ];
+    $updated_attributes = $patron2->identify_updated_extended_attributes($changed_attributes);
+    is(
+        scalar(@$updated_attributes), 1,
+        "New attribute for patron with no existing attributes is detected as a change"
+    );
+
+    # Bug 42161 - two attributes both have empty string values; changing one must be detected
+    my $patron3       = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $attr_type_a   = $builder->build_object(
+        {
+            class => 'Koha::Patron::Attribute::Types',
+            value => { unique_id => 0, repeatable => 0, is_date => 0, opac_editable => 1 }
+        }
+    );
+    my $attr_type_b = $builder->build_object(
+        {
+            class => 'Koha::Patron::Attribute::Types',
+            value => { unique_id => 0, repeatable => 0, is_date => 0, opac_editable => 1 }
+        }
+    );
+    $patron3->extended_attributes(
+        [
+            { code => $attr_type_a->code(), attribute => '' },
+            { code => $attr_type_b->code(), attribute => '' },
+        ]
+    );
+
+    $changed_attributes = [
+        { code => $attr_type_a->code(), attribute => 'new value' },
+        { code => $attr_type_b->code(), attribute => '' },
+    ];
+    $updated_attributes = $patron3->identify_updated_extended_attributes($changed_attributes);
+    is(
+        scalar(@$updated_attributes), 1,
+        "Change to one empty attribute is detected even when another attribute also has an empty value"
+    );
 
     $schema->storage->txn_rollback;
 };
