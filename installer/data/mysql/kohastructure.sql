@@ -6247,6 +6247,8 @@ CREATE TABLE `sip_accounts` (
   `register_id` int(11) DEFAULT NULL COMMENT 'Foreign key to cash_registers.id',
   `seen_on_item_information` varchar(255) DEFAULT NULL,
   `send_patron_home_library_in_af` tinyint(1) DEFAULT NULL,
+  `patron_branchcode_in_ao` tinyint(1) DEFAULT 0,
+  `patron_restriction_blocks_inet` tinyint(1) DEFAULT NULL,
   `show_checkin_message` tinyint(1) DEFAULT NULL,
   `show_outstanding_amount` tinyint(1) DEFAULT NULL,
   `terminator` enum('CR','CRLF') NOT NULL DEFAULT 'CRLF',
