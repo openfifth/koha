@@ -51,7 +51,7 @@ my $dbh         = C4::Context->dbh;
 my $course_type = $course->{course_type} || 'RESEARCH_TABLE';
 my $sth = $dbh->prepare("SELECT lib_opac FROM authorised_values WHERE category='CR_TYPE' AND authorised_value=?");
 $sth->execute($course_type);
-my $display_name = $sth->fetchrow_array() || 'Research table';
+my $display_name = $sth->fetchrow_array() || 'Research tables';
 
 $template->param(
     course              => $course,
