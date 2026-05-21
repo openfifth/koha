@@ -84,13 +84,13 @@
         [% WRAPPER tabs id= "resultlist" %]
             [% WRAPPER tabs_nav %]
                 [% WRAPPER tab_item tabname= "holdswaiting" bt_active= 1 %]
-                    <span>Holds waiting</span>
+                    <span>Holds waiting</span> <span class="tab-count" id="holdswaiting-count"></span>
                 [% END %]
                 [% WRAPPER tab_item tabname= "holdsover" %]
-                    <span>Holds waiting past their expiration date</span>
+                    <span>Holds waiting past their expiration date</span> <span class="tab-count" id="holdsover-count"></span>
                 [% END %]
                 [% WRAPPER tab_item tabname= "holdscancelled" %]
-                    <span>Holds with cancellation requests</span>
+                    <span>Holds with cancellation requests</span> <span class="tab-count" id="holdscancelled-count"></span>
                 [% END %]
             [% END # /WRAPPER tabs_nav %]
 
@@ -246,6 +246,7 @@
 
         var all_branches = [% IF all_branches %]true[% ELSE %]false[% END %];
         var logged_in_library = "[% Branches.GetLoggedInBranchcode | html %]";
+        var item_level_itypes = [% Koha.Preference('item-level_itypes') ? 'true' : 'false' %];
         var MSG_CANCEL_SELECTED = _("Cancel selected (%s)");
 
         var today = new Date().toISOString().split("T")[0];
@@ -328,8 +329,8 @@
                                 title += " " + row.biblio.subtitle.escapeHtml();
                             }
                         }
-                        if (row.item && row.item._strings && row.item._strings.item_type_id) {
-                            title += " (<strong>" + (row.item._strings.item_type_id.str || "").escapeHtml() + "</strong>)";
+                        if (!item_level_itypes && row.item && row.item.effective_item_type_id) {
+                            title += " (<strong>" + row.item.effective_item_type_id.escapeHtml() + "</strong>)";
                         }
                         if (row.item) {
                             title += "<br/>" + _("Barcode: ") + (row.item.external_id || "").escapeHtml();
@@ -343,12 +344,13 @@
                     searchable: true,
                     render: function (data, type, row) {
                         if (!row.patron) return "";
-                        let patron_str = '<a href="/cgi-bin/koha/members/moremember.pl?borrowernumber=' + row.patron.patron_id + '">' + (row.patron.surname || "").escapeHtml() + ", " + (row.patron.firstname || "").escapeHtml() + "</a>";
+                        let patron_str = '<a href="/cgi-bin/koha/members/moremember.pl?borrowernumber=' + row.patron.patron_id + '">' + (row.patron.surname || "").escapeHtml() + ", " + (row.patron.firstname || "").escapeHtml() + " (" + (row.patron.cardnumber || "").escapeHtml() + ")" + "</a>";
                         if (row.patron.phone) {
                             patron_str += '<br/><span class="patron_phone">' + row.patron.phone.escapeHtml() + "</span>";
                         }
                         if (row.patron.notice_email_address) {
-                            patron_str += '<br/><span class="patron_email"><a href="mailto:' + encodeURIComponent(row.patron.notice_email_address) + '">' + row.patron.notice_email_address.escapeHtml() + "</a></span>";
+                            let subject = encodeURIComponent(_("Hold waiting: %s").format(row.biblio ? row.biblio.title || "" : ""));
+                            patron_str += '<br/><span class="patron_email"><a href="mailto:' + row.patron.notice_email_address.escapeHtml() + '?subject=' + subject + '">' + row.patron.notice_email_address.escapeHtml() + "</a></span>";
                         }
                         if (row.patron.primary_contact_method) {
                             let method_labels = {
@@ -472,8 +474,11 @@
                     embed: embeds,
                     order: [[1, "asc"]],
                     drawCallback: function () {
-                        // Tag rows with tab for the cancel form
+                        // Update tab count from API total
                         let dt = this.api();
+                        let total = dt.page.info().recordsTotal;
+                        $("#" + tab + "-count").text("(" + total + ")");
+                        // Tag rows with tab for the cancel form
                         dt.rows().every(function () {
                             this.data()._tab = tab === "holdsover" ? "holdsover" : "holdswaiting";
                         });
