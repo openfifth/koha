@@ -197,8 +197,10 @@ export const APIClient = {
     claim: createClientProxy(() => import("./claim-api-client.js")),
     club: createClientProxy(() => import("./club-api-client.js")),
     cover_image: createClientProxy(() => import("./cover-image-api-client.js")),
+    display: createClientProxy(() => import("./display-api-client.js")),
     ill: createClientProxy(() => import("./ill-api-client.js")),
     item: createClientProxy(() => import("./item-api-client.js")),
+    item_types: createClientProxy(() => import("./item-types-api-client.js")),
     library: createClientProxy(() => import("./library-api-client.js")),
     localization: createClientProxy(
         () => import("./localization-api-client.js")
