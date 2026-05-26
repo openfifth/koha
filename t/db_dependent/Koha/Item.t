@@ -47,6 +47,9 @@ use t::lib::Dates;
 my $schema  = Koha::Database->new->schema;
 my $builder = t::lib::TestBuilder->new;
 
+my $mock_search = Test::MockModule->new('Koha::SearchEngine::Elasticsearch::Search');
+$mock_search->mock( '_items_index_ready', sub { return 1 } );
+
 subtest '_status() tests' => sub {
 
     plan tests => 15;
@@ -2761,7 +2764,7 @@ subtest 'strings_map() tests' => sub {
 
 subtest 'store() tests' => sub {
 
-    plan tests => 3;
+    plan tests => 4;
 
     subtest 'dateaccessioned handling' => sub {
 
@@ -2958,6 +2961,46 @@ subtest 'store() tests' => sub {
 
         # updated item
         $item->set( { reserves => 0 } )->store;
+
+        $schema->storage->txn_rollback;
+    };
+
+    subtest 'skip biblio re-index for circ-only field changes' => sub {
+
+        plan tests => 4;
+
+        $schema->storage->txn_begin;
+
+        t::lib::Mocks::mock_preference( 'SearchEngine', 'Elasticsearch' );
+
+        my $item = $builder->build_sample_item;
+
+        my $mock_indexer = Test::MockModule->new('Koha::SearchEngine::Elasticsearch::Indexer');
+        my $index_calls  = 0;
+        $mock_indexer->mock( 'index_records', sub { $index_calls++ } );
+
+        # Items index ready: circ-only change skips biblio re-index
+        $mock_search->mock( '_items_index_ready', sub { return 1 } );
+        $index_calls = 0;
+        $item->set( { onloan => '2026-06-11' } )->store;
+        is( $index_calls, 0, 'biblio not re-indexed when items index ready and only circ fields changed' );
+
+        # Items index not ready: run real _items_index_ready with ES unavailable
+        $mock_search->unmock('_items_index_ready');
+        $mock_search->mock( 'get_elasticsearch', sub { die "connection refused\n" } );
+        Koha::Caches->get_instance()->clear_from_cache('elasticsearch_items_index_ready');
+        $index_calls = 0;
+        warning_like { $item->set( { onloan => undef } )->store }
+        qr/rebuild_elasticsearch/,
+            'warns when items index not ready during circ-only field change';
+        is( $index_calls, 1, 'biblio re-indexed when items index not ready' );
+
+        # Non-circ field change always re-indexes regardless of items index readiness
+        $mock_search->mock( '_items_index_ready', sub { return 1 } );
+        $mock_search->unmock('get_elasticsearch');
+        $index_calls = 0;
+        $item->set( { notforloan => 1 } )->store;
+        is( $index_calls, 1, 'biblio re-indexed when non-circ field changed even when items index ready' );
 
         $schema->storage->txn_rollback;
     };
