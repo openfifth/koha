@@ -179,6 +179,7 @@ properties:
       * `in_bundle` - Item belongs to a bundle (payload: host_item_id, host_biblio_id, host_external_id)
       * `bundle_missing_items` - Bundle items not verified, now marked lost (payload: items)
       * `bundle_unexpected_items` - Verified items not in the bundle, now removed from it (payload: items)
+      * `removed_from_display` - Displays that item has been removed from (payload: display_id, display_name)
     items:
       type: object
       properties:

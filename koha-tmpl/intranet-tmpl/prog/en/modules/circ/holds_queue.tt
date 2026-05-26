@@ -69,6 +69,7 @@
                         <th class="hq-collection">Collection</th>
                         <th class="hq-location">Shelving location</th>
                         <th class="hq-itemtype">Item type</th>
+                        <th class="hq-displays">Displays</th>
                         <th class="hq-callnumber">Call number</th>
                         <th class="hq-copynumber">Copy number</th>
                         <th class="hq-enumchron">Enumeration</th>
@@ -190,6 +191,10 @@
                         "+strings",
                         "biblio",
                         "item",
+                        "item+strings",
+                        "item.active_display",
+                        "item.effective_holding_library",
+                        "item.effective_home_library",
                         "item.holding_library",
                         "item.home_library",
                         "item.item_group",
@@ -261,7 +266,7 @@
                             searchable: true,
                             render: function (data, type, row) {
                                 if (!row.item || !row.item.holding_library) return "";
-                                return (row.item.holding_library.name || "").escapeHtml();
+                                return (row.item.effective_holding_library.name || row.item.holding_library || "").escapeHtml();
                             },
                         },
                         {
@@ -270,7 +275,7 @@
                             searchable: true,
                             render: function (data, type, row) {
                                 if (!row.item || !row.item.home_library) return "";
-                                return (row.item.home_library.name || "").escapeHtml();
+                                return (row.item.effective_home_library.name || row.item.home_library.name || "").escapeHtml();
                             },
                         },
                         {
@@ -278,7 +283,16 @@
                             orderable: true,
                             searchable: true,
                             render: function (data, type, row) {
-                                return (data || "").escapeHtml();
+                                if (row.item) {
+                                    let effective_str =
+                                        row.item &&
+                                        row.item._strings &&
+                                        row.item._strings.effective_collection_code &&
+                                        row.item._strings.effective_collection_code.str;
+                                    return (effective_str || data || "").escapeHtml();
+                                } else {
+                                    return (data || "").escapeHtml();
+                                }
                             },
                         },
                         {
@@ -286,7 +300,16 @@
                             orderable: true,
                             searchable: true,
                             render: function (data, type, row) {
-                                return (data || "").escapeHtml();
+                                if (row.item) {
+                                    let effective_str =
+                                        row.item &&
+                                        row.item._strings &&
+                                        row.item._strings.effective_location &&
+                                        row.item._strings.effective_location.str;
+                                    return (effective_str || data || "").escapeHtml();
+                                } else {
+                                    return (data || "").escapeHtml();
+                                }
                             },
                         },
                         {
@@ -302,7 +325,33 @@
                                     row._strings &&
                                     row._strings.item_type_id &&
                                     row._strings.item_type_id.str;
-                                return (str || row.itype_description || "").escapeHtml();
+
+                                if (row.item) {
+                                    let effective_str =
+                                        row.item &&
+                                        row.item._strings &&
+                                        row.item._strings.effective_item_type_id &&
+                                        row.item._strings.effective_item_type_id.str;
+                                    return (effective_str || str || row.itype_description || "").escapeHtml();
+                                } else {
+                                    return (str || row.itype_description || "").escapeHtml();
+                                }
+                            },
+                        },
+                        {
+                            data: "item.active_display",
+                            orderable: false,
+                            searchable: false,
+                            render: function (data, type, row) {
+                                let nodes = "";
+                                if (!row.item || !row.item.active_display) return nodes;
+
+                                if (row.item.active_display.display_name) {
+                                    nodes = '<li><a href="/cgi-bin/koha/display/displays/%s">%s</a></li>'.format(row.item.active_display.display_id, row.item.active_display.display_name);
+                                }
+
+                                if (nodes != "") nodes = "<ul>" + nodes + "</ul>";
+                                return nodes;
                             },
                         },
                         {

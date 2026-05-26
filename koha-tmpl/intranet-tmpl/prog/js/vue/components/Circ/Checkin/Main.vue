@@ -307,6 +307,8 @@ export default {
             const messages = entry.messages || [];
             const transferred = messages.find(m => m.message === "transferred");
             const toLibrary = transferred?.payload?.to_library;
+            const removedFromDisplay = messages.find(m => m.message === "removed_from_display");
+            const displayName = removedFromDisplay?.payload?.display_name;
             switch (entry._outcome) {
                 case "confirm_hold": {
                     const hold = messages.find(m => m.message === "hold_found");
@@ -341,6 +343,13 @@ export default {
                     return $__("Recall confirmed.");
                 case "resolve_claim":
                     return $__("The return claim was resolved.");
+                case "removed_from_display":
+                    return displayName
+                        ? $__("The item has been removed from display: %s").replace(
+                              "%s",
+                              () => displayName
+                          )
+                        : $__("Item removed from display.");
                 default:
                     return "";
             }
