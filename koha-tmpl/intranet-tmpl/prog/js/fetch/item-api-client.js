@@ -18,7 +18,22 @@ export class ItemAPIClient {
                 this.httpClient.get({
                     endpoint: "items/" + id,
                     headers: {
-                        "x-koha-embed": "+strings",
+                        "x-koha-embed":
+                            "+strings,active_display,biblio,effective_bookable",
+                    },
+                }),
+            getByExternalId: external_id =>
+                this.httpClient.get({
+                    endpoint:
+                        "items?" +
+                        new URLSearchParams({
+                            _match: "starts_with",
+                            _order_by: "me.barcode",
+                            external_id: external_id,
+                        }),
+                    headers: {
+                        "x-koha-embed":
+                            "+strings,active_display,biblio,effective_bookable",
                     },
                 }),
         };
