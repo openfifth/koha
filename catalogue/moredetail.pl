@@ -147,10 +147,10 @@ foreach my $item (@items) {
 
     my $item_info = $item->unblessed;
     $item_info->{object} = $item;
-    $item_info->{itype}  = $itemtypes->{ $item->itype }->{'translated_description'}
-        if exists $itemtypes->{ $item->itype };
-    $item_info->{effective_itemtype} = $itemtypes->{ $item->effective_itemtype };
-    $item_info->{'ccode'} = $ccodes->{ $item->ccode } if $ccodes && $item->ccode && exists $ccodes->{ $item->ccode };
+    $item_info->{itype}  = $itemtypes->{ $item->effective_itemtype }->{'translated_description'}
+        if exists $itemtypes->{ $item->effective_itemtype };
+    $item_info->{'ccode'} = $ccodes->{ $item->effective_collection_code }
+        if $ccodes && $item->effective_collection_code && exists $ccodes->{ $item->effective_collection_code };
     if ( defined $item->copynumber ) {
         $item_info->{'displaycopy'} = 1;
         if ( defined $copynumbers->{ $item_info->{'copynumber'} } ) {
@@ -244,6 +244,36 @@ foreach my $item (@items) {
     );
 
     $item_info->{nomod} = !$patron->can_edit_items_from( $item->homebranch );
+
+    if ( C4::Context->preference('UseDisplayModule') ) {
+        my $display_items = Koha::Display::Items->search(
+            { itemnumber => $item->itemnumber },
+            {
+                order_by => { '-desc' => 'date_added' },
+            }
+        );
+        my @display_items;
+        my @displays;
+
+        while ( my $display_item = $display_items->next ) {
+            my $display = $display_item->display;
+
+            push @display_items, $display_item
+                if defined $display_item->active and $display_item->active == 1;
+
+            push @displays, $display
+                if defined $display_item->active
+                and $display_item->active == 1
+                and defined $display->active
+                and $display->active == 1;
+        }
+
+        $item_info->{display_items} = \@display_items if @display_items;
+        $item_info->{displays}      = \@displays      if @displays;
+    }
+
+    $item_info->{homebranch}    = $item->effective_homebranch;
+    $item_info->{holdingbranch} = $item->effective_holdingbranch;
 
     push @item_data, $item_info;
 }

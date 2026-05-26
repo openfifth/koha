@@ -398,8 +398,8 @@
                                         [% FOREACH item IN itemsloo.ITEM_RESULTS %]
                                             <li>
                                                 [% Branches.GetName(item.holdingbranch) | html %]
-                                                [% IF ( item.location ) %]
-                                                    <span class="shelvingloc"> [% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.location', authorised_value => item.location ) | html %] </span>
+                                                [% IF ( item.effective_location ) %]
+                                                    <span class="shelvingloc"> [% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.location', authorised_value => item.effective_location ) | html %] </span>
                                                 [% END %]
                                                 [% IF ( item.itemcallnumber ) %]
                                                     [<a href="/cgi-bin/koha/catalogue/search.pl?idx=callnum&amp;q=%22[% item.itemcallnumber | uri %]%22">[% item.itemcallnumber | html %]</a>]
