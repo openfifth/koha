@@ -7,6 +7,7 @@
         APIKEYS: _("API keys"),
         AUTH: _("Authentication"),
         CATALOGUING: _("Cataloging"),
+        DISPLAYS: _("Displays"),
         AUTHORITIES: _("Authorities"),
         MEMBERS: _("Patrons"),
         ACQUISITIONS: _("Acquisitions"),
@@ -84,6 +85,11 @@
         EXPIRE: _("Expire"),
         MODIFY_CARDNUMBER: _("Modify card number"),
         "RESET 2FA": _("Reset 2FA"),
+        ADD_ITEM: _("Add item"),
+        MODIFY_ITEM: _("Modify item"),
+        REMOVE_ITEM: _("Remove item"),
+        ENABLED: _("Enabled"),
+        DISABLED: _("Disabled"),
     };
 
     var interface_labels = {
