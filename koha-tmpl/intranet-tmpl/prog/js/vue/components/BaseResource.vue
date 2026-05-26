@@ -91,4 +91,13 @@ fieldset.rows ol table {
     display: table;
     font-size: 100%;
 }
+
+/* enable wrapping in Select2 dropdowns */
+/* TODO: is there a better way to do this? */
+.vs__dropdown-option {
+    white-space: wrap;
+}
+.vs__selected-options {
+    flex-wrap: nowrap;
+}
 </style>
