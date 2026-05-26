@@ -31,6 +31,7 @@ use Koha::BackgroundJob::UpdateElasticIndex;
 use C4::AuthoritiesMarc qw//;
 use C4::Context;
 use Koha::Biblios;
+use Koha::Items;
 
 =head1 NAME
 
@@ -435,6 +436,115 @@ sub index_exists {
     return $elasticsearch->indices->exists(
         index => $self->index_name,
     );
+}
+
+=head2 index_items($itemnumbers)
+
+    $indexer->index_items(\@itemnumbers);
+
+Indexes or re-indexes the items identified by C<$itemnumbers> into the items
+Elasticsearch index. Documents are built from C<Koha::Items> data, bypassing
+MARC record extraction entirely.
+
+=cut
+
+sub index_items {
+    my ( $self, $itemnumbers ) = @_;
+
+    return unless @{$itemnumbers};
+
+    my @body;
+    my $items = Koha::Items->search( { itemnumber => { -in => $itemnumbers } } );
+    while ( my $item = $items->next ) {
+        push @body, { index => { _id => $item->itemnumber . '' } };
+        push @body, _item_to_document($item);
+    }
+
+    return unless @body;
+
+    try {
+        my $elasticsearch = $self->get_elasticsearch();
+        my $response      = $elasticsearch->bulk(
+            index => $self->index_name,
+            body  => \@body,
+        );
+        if ( $response->{errors} ) {
+            carp "One or more Elasticsearch errors occurred when indexing items";
+        }
+    } catch {
+        Koha::Exceptions::Elasticsearch::BadResponse->throw(
+            type    => $_->{type},
+            details => $_->{text},
+        );
+    };
+}
+
+=head2 delete_items($itemnumbers)
+
+    $indexer->delete_items(\@itemnumbers);
+
+Removes items identified by C<$itemnumbers> from the items Elasticsearch index.
+
+=cut
+
+sub delete_items {
+    my ( $self, $itemnumbers ) = @_;
+
+    my @body = map { { delete => { _id => "$_" } } } @{$itemnumbers};
+    return unless @body;
+
+    my $elasticsearch = $self->get_elasticsearch();
+    my $result        = $elasticsearch->bulk(
+        index => $self->index_name,
+        body  => \@body,
+    );
+    if ( $result->{errors} ) {
+        croak "An Elasticsearch error occurred during bulk item delete";
+    }
+}
+
+sub _item_to_document {
+    my ($item) = @_;
+
+    my $notforloan = $item->notforloan // 0;
+    my $damaged    = $item->damaged    // 0;
+    my $itemlost   = $item->itemlost   // 0;
+    my $withdrawn  = $item->withdrawn  // 0;
+    my $onloan     = $item->onloan;
+
+    my $not_for_loan =
+        $item->itype
+        ? ( $item->effective_not_for_loan_status // 0 )
+        : $notforloan;
+
+    my $available =
+        ( !$not_for_loan && $damaged == 0 && $itemlost == 0 && $withdrawn == 0 && !defined $onloan ) ? \1 : \0;
+
+    return {
+        itemnumber     => $item->itemnumber + 0,
+        biblionumber   => $item->biblionumber + 0,
+        barcode        => $item->barcode,
+        homebranch     => $item->homebranch,
+        holdingbranch  => $item->holdingbranch,
+        location       => $item->location,
+        itype          => $item->itype,
+        ccode          => $item->ccode,
+        notforloan     => $notforloan + 0,
+        damaged        => $damaged + 0,
+        itemlost       => $itemlost + 0,
+        withdrawn      => $withdrawn + 0,
+        restricted     => defined $item->restricted ? $item->restricted + 0 : undef,
+        onloan         => $onloan,
+        issues         => defined $item->issues   ? $item->issues + 0   : 0,
+        renewals       => defined $item->renewals ? $item->renewals + 0 : 0,
+        cn_sort        => $item->cn_sort,
+        itemcallnumber => $item->itemcallnumber,
+        available      => $available,
+        copynumber     => $item->copynumber,
+        enumchron      => $item->enumchron,
+        stocknumber    => $item->stocknumber,
+        itemnotes      => $item->itemnotes,
+    };
 }
 
 1;
