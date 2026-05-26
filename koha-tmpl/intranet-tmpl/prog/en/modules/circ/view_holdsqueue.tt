@@ -117,6 +117,9 @@
                                                 <th class="hq-collection">Collection</th>
                                                 <th class="hq-location">Shelving location</th>
                                                 <th class="hq-itemtype">Item type</th>
+                                                [% IF Koha.Preference('UseDisplayModule') %]
+                                                    <th class="hq-displays">Displays</th>
+                                                [% END %]
                                                 <th class="hq-callnumber">Call number</th>
                                                 <th class="hq-copynumber">Copy number</th>
                                                 <th class="hq-enumchron">Enumeration</th>
@@ -168,6 +171,13 @@
                                                         <input type="text" placeholder="Item type" />
                                                     </span>
                                                 </td>
+                                                [% IF Koha.Preference('UseDisplayModule') %]
+                                                    <td class="hq-displays">
+                                                        <span class="filter_column filter_text">
+                                                            <input type="text" placeholder="Displays" />
+                                                        </span>
+                                                    </td>
+                                                [% END %]
                                                 <td class="hq-callnumber">
                                                     <span class="filter_column filter_text">
                                                         <input type="text" placeholder="Call number" />
@@ -215,8 +225,11 @@
                                                 </td>
                                             </tr>
                                         </thead>
-                                        <tbody
-                                            >[% FOREACH itemsloo IN itemsloop %]
+                                        <tbody>
+                                            [% FOREACH itemsloo IN itemsloop %]
+                                                [% SET displays = itemsloo.displays %]
+                                                [% SET display_items = itemsloo.display_items %]
+                                                [% SET itemsloo = itemsloo.object %]
                                                 <tr>
                                                     <td class="hq-title">
                                                         <p> [% INCLUDE 'biblio-title.inc' biblio=itemsloo.biblio link = 1 %] </p>
@@ -244,11 +257,20 @@
                                                             [% IF ( itemsloo.biblio.biblioitem.isbn ) %]<span>ISBN: [% itemsloo.biblio.biblioitem.isbn | html %]</span>[% END %]
                                                         </div>
                                                     </td>
-                                                    <td class="hq-holdingbranch">[% Branches.GetName( itemsloo.holdingbranch ) | html %]</td>
-                                                    <td class="hq-homebranch">[% Branches.GetName( itemsloo.item.homebranch ) | html %]</td>
-                                                    <td class="hq-collection">[% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.ccode', authorised_value => itemsloo.item.ccode ) | html %]</td>
-                                                    <td class="hq-location">[% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.location', authorised_value => itemsloo.item.location ) | html %]</td>
+                                                    <td class="hq-holdingbranch">[% itemsloo.item.effective_holdingbranch | html %]</td>
+                                                    <td class="hq-homebranch">[% itemsloo.item.effective_homebranch | html %]</td>
+                                                    <td class="hq-collection">[% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.ccode', authorised_value => itemsloo.item.effective_collection_code ) | html %]</td>
+                                                    <td class="hq-location"> [% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.location', authorised_value => itemsloo.item.effective_location ) | html %] </td>
                                                     <td class="hq-itemtype">[% ItemTypes.GetDescription( itemsloo.item.effective_itemtype ) | html %]</td>
+                                                    [% IF Koha.Preference('UseDisplayModule') %]
+                                                        <td class="hq-displays">
+                                                            <ul>
+                                                                [% FOREACH display IN displays %]
+                                                                    <li><a href="/cgi-bin/koha/display/displays/[% display.display_id | url %]" target="_blank">[% display.display_name | html %]</a></li>
+                                                                [% END %]
+                                                            </ul>
+                                                        </td>
+                                                    [% END %]
                                                     <td class="hq-callnumber"><span class="itemcallnumber">[% itemsloo.item.itemcallnumber | html %]</span></td>
                                                     <td class="hq-copynumber">[% itemsloo.item.copynumber | html %]</td>
                                                     <td class="hq-enumchron">[% itemsloo.item.enumchron | html %]</td>

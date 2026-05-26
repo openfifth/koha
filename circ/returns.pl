@@ -761,6 +761,8 @@ foreach my $code ( keys %$messages ) {
         ;
     } elsif ( $code eq 'InBundle' ) {
         $template->param( InBundle => $messages->{InBundle} );
+    } elsif ( $code eq 'RemovedFromDisplay' ) {
+        $template->param( RemovedFromDisplay => $messages->{RemovedFromDisplay} );
     } elsif ( $code eq 'UpdateLastSeenError' ) {
         $err{UpdateLastSeenError} = $messages->{UpdateLastSeenError};
     } else {

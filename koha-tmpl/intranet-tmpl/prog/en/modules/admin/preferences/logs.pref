@@ -91,6 +91,12 @@ Logging:
                   0: "Don't log"
             - information from cron jobs.
         -
+            - pref: DisplayItemsLog
+              choices:
+                  1: Log
+                  0: "Don't log"
+            - when displays are created, edited, deleted, or when items are added to or removed from displays.
+        -
             - pref: ScriptLog
               choices:
                   1: Log

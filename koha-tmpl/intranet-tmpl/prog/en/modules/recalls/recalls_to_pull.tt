@@ -111,8 +111,8 @@
                                 </td>
                                 <td class="recall-locations">
                                     <ul>
-                                        [% FOREACH loc IN recall.locations %]
-                                            <li>[% AuthorisedValues.GetByCode('LOC', loc) | html %]</li>
+                                        [% FOREACH location IN recall.locations %]
+                                            <li>[% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.location', authorised_value => location ) | html %]</li>
                                         [% END %]
                                     </ul>
                                 </td>

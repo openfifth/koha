@@ -1049,6 +1049,27 @@
     <!-- /#elasticPreview.modal -->
 [% END %]
 
+<div class="modal" id="permanent_location_modal" tabindex="-1" aria-labelledby="permanent_location_modal_label" aria-modal="true" role="dialog">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title" id="permanent_location_modal_label"></h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <ul>
+                    <li><span id="permanent_location_modal_body"></span></li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+
 <div class="modal" id="modal-item-group-create" tabindex="-1" role="dialog" aria-labelledby="modal-item-group-create-label">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -1190,6 +1211,27 @@
     <!-- /.modal-dialog -->
 </div>
 <!-- /#.modal -->
+
+<!-- Permanent Location Modal -->
+<div class="modal" id="permanant_location_modal" tabindex="-1" aria-labelledby="permanant_location_modal_label" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title" id="permanant_location_modal_label"></h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="permanant_location_modal_body"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<!-- /.modal -->
 
 [% IF bundlesEnabled %]
     <div class="modal" id="addToBundleModal" tabindex="-1" role="dialog" aria-labelledby="addToBundleLabel">
@@ -2490,7 +2532,333 @@
         });
 
         specific_dt_errors = _("Have a look at the 'Audit' button in the toolbar");
+
+        [% IF Koha.Preference('UseDisplayModule') && CAN_user_displays %]
+            // Display functionality
+            let availableDisplays = [];
+            let displayItemsTable = null;
+            let selectedDisplayItems = [];
+
+            // Load displays on page load
+            $(document).ready(function() {
+                // Load available displays for dropdown
+                $.ajax({
+                    url: '/api/v1/displays',
+                    method: 'GET',
+                    headers: { 'x-koha-embed': 'display_items' },
+                    success: function(displays) {
+                        availableDisplays = displays.filter(display => display.enabled);
+                        updateDisplayDropdown();
+                        updateDisplaySelect();
+                    },
+                    error: function() {
+                        $('#display-dropdown').html('<li class="text-center text-muted">Failed to load displays</li>');
+                    }
+                });
+            });
+
+            function updateDisplayDropdown() {
+                const dropdown = $('#display-dropdown');
+                if (availableDisplays.length === 0) {
+                    dropdown.html('<li class="dropdown-item text-muted">No active displays available</li>');
+                    return;
+                }
+
+                let html = '';
+                availableDisplays.forEach(display => {
+                    html += `<li><a class="dropdown-item" href="#" data-display-id="${display.display_id}" onclick="openDisplayModal(${display.display_id})">${display.display_name}</a></li>`;
+                });
+                dropdown.html(html);
+            }
+
+            function updateDisplaySelect() {
+                // Update display select
+                const displaySelect = $('#display-select');
+                let selectHtml = '<option value="">Select a display</option>';
+                availableDisplays.forEach(display => {
+                    selectHtml += `<option value="${display.display_id}">${display.display_name}</option>`;
+                });
+                displaySelect.html(selectHtml);
+            }
+
+            function initializeDisplayItemsTable() {
+                if (displayItemsTable && displayItemsTable.DataTable) {
+                    displayItemsTable.DataTable().destroy();
+                    displayItemsTable = null;
+                }
+
+                selectedDisplayItems = [];
+
+                // Use the same API endpoint and embed options as the main items table
+                let item_table_url = "/api/v1/biblios/[% biblionumber | uri %]/items?";
+                let embed = ["+strings,_status,effective_home_library,effective_holding_library,home_library,holding_library"];
+
+                displayItemsTable = $("#display-items-table").kohaTable({
+                    ajax: { url: item_table_url },
+                    embed: embed,
+                    order: [[1, 'asc']], // Sort by barcode
+                    autoWidth: false,
+                    paging: false,
+                    searching: true,
+                    info: false,
+                    columns: [
+                        {
+                            data: "me.item_id",
+                            searchable: false,
+                            orderable: false,
+                            render: function (data, type, row, meta) {
+                                return `<input type="checkbox" class="display-item-checkbox" value="${row.item_id}" data-item-id="${row.item_id}">`;
+                            }
+                        },
+                        {
+                            data: "me.external_id",
+                            searchable: true,
+                            orderable: true,
+                            render: function (data, type, row, meta) {
+                                return escape_str(row.external_id || 'No barcode');
+                            }
+                        },
+                        {
+                            data: "me.effective_holding_library_id",
+                            searchable: false,
+                            orderable: false,
+                            render: function (data, type, row, meta) {
+                                let effective_holding_library_id_str = row._strings.effective_holding_library_id ? row._strings.effective_holding_library_id.str : row.effective_holding_library_id;
+                                return escape_str(effective_holding_library_id_str || '');
+                            }
+                        },
+                        {
+                            data: "me.effective_home_library_id",
+                            searchable: false,
+                            orderable: false,
+                            render: function (data, type, row, meta) {
+                                let effective_home_library_id_str = row._strings.effective_home_library_id ? row._strings.effective_home_library_id.str : row.effective_home_library_id;
+                                return escape_str(effective_home_library_id_str || '');
+                            }
+                        },
+                        {
+                            data: "me.effective_location",
+                            searchable: false,
+                            orderable: false,
+                            render: function (data, type, row, meta) {
+                                let effective_loc_str = row._strings.effective_location ? row._strings.effective_location.str : row.effective_location;
+                                return escape_str(effective_loc_str || '');
+                            }
+                        },
+                        {
+                            data: "me.effective_collection_code",
+                            searchable: false,
+                            orderable: false,
+                            render: function (data, type, row, meta) {
+                                let effective_ccode_str = row._strings.effective_collection_code ? row._strings.effective_collection_code.str : row.effective_collection_code;
+                                return escape_str(effective_ccode_str || '');
+                            }
+                        },
+                        {
+                            data: "me.callnumber",
+                            searchable: true,
+                            orderable: true,
+                            render: function (data, type, row, meta) {
+                                return escape_str(row.callnumber || '');
+                            }
+                        },
+                        {
+                            data: "",
+                            searchable: false,
+                            orderable: false,
+                            render: function (data, type, row, meta) {
+                                let status = '';
+                                if (row._status && row._status.length > 0) {
+                                    status = row._status.map(s => s.replace(/_/g, ' ')).join(', ');
+                                } else {
+                                    status = 'Available';
+                                }
+                                return escape_str(status);
+                            }
+                        }
+                    ],
+                    [% IF Koha.Preference('UseDisplayModule') %]
+                    rowCallback: function(row, data) {
+                        // Hide items that are already on displays (effective_location starts with "DISPLAY:")
+                        if (data.effective_location && data.effective_location.startsWith && data.effective_location.startsWith('DISPLAY:')) {
+                            $(row).hide();
+                            return;
+                        }
+                        $(row).show();
+                    },
+                    [% END %]
+                    drawCallback: function(settings) {
+                        // Handle individual checkbox changes
+                        $('.display-item-checkbox').off('change').on('change', function() {
+                            const itemId = parseInt($(this).val());
+                            if ($(this).is(':checked')) {
+                                if (!selectedDisplayItems.includes(itemId)) {
+                                    selectedDisplayItems.push(itemId);
+                                }
+                            } else {
+                                selectedDisplayItems = selectedDisplayItems.filter(id => id !== itemId);
+                            }
+                            updateSelectAllState();
+                        });
+
+                        // Handle select all checkbox
+                        $('#select-all-display-items').off('change').on('change', function() {
+                            const isChecked = $(this).is(':checked');
+                            $('.display-item-checkbox').prop('checked', isChecked);
+
+                            if (isChecked) {
+                                selectedDisplayItems = [];
+                                $('.display-item-checkbox').each(function() {
+                                    selectedDisplayItems.push(parseInt($(this).val()));
+                                });
+                            } else {
+                                selectedDisplayItems = [];
+                            }
+                        });
+                    }
+                });
+            }
+
+            function updateSelectAllState() {
+                const totalCheckboxes = $('.display-item-checkbox').length;
+                const checkedCheckboxes = $('.display-item-checkbox:checked').length;
+
+                if (checkedCheckboxes === 0) {
+                    $('#select-all-display-items').prop('indeterminate', false).prop('checked', false);
+                } else if (checkedCheckboxes === totalCheckboxes) {
+                    $('#select-all-display-items').prop('indeterminate', false).prop('checked', true);
+                } else {
+                    $('#select-all-display-items').prop('indeterminate', true);
+                }
+            }
+
+            function openDisplayModal(displayId = null) {
+                if (displayId) {
+                    $('#display-select').val(displayId);
+                }
+                // Initialize the DataTable when the modal is opened
+                initializeDisplayItemsTable();
+                $('#addToDisplayModal').modal('show');
+            }
+
+            // Clear date button functionality
+            $('#clear-date').on('click', function() {
+                $('#date-remove').val('');
+            });
+
+            // Form submission
+            $('#addToDisplayForm').on('submit', function(e) {
+                e.preventDefault();
+
+                const displayId = $('#display-select').val();
+                const removeDate = $('#date-remove').val();
+
+                if (!displayId) {
+                    alert('Please select a display');
+                    return;
+                }
+
+                if (selectedDisplayItems.length === 0) {
+                    alert('Please select at least one item');
+                    return;
+                }
+
+                $('#add-to-display-btn').prop('disabled', true).text('Adding...');
+
+                // Add each item to the display
+                let promises = selectedDisplayItems.map(itemId => {
+                    const data = {
+                        display_id: parseInt(displayId),
+                        itemnumber: parseInt(itemId),
+                        biblionumber: [% biblionumber | html %],
+                        date_added: new Date().toISOString().split('T')[0]
+                    };
+                    if (removeDate) {
+                        data.date_remove = removeDate;
+                    }
+
+                    return $.ajax({
+                        url: '/api/v1/display/items',
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(data)
+                    });
+                });
+
+                Promise.all(promises).then(() => {
+                    alert(`Successfully added ${selectedDisplayItems.length} item(s) to display`);
+                    $('#addToDisplayModal').modal('hide');
+                    $('#addToDisplayForm')[0].reset();
+                    selectedDisplayItems = [];
+
+                    // Safely refresh modal table
+                    try {
+                        if (displayItemsTable && displayItemsTable.DataTable) {
+                            displayItemsTable.DataTable().draw();
+                        }
+                    } catch (e) {
+                        // Modal table refresh failed - not critical
+                    }
+
+                    // Safely refresh the main items table to show updated locations
+                    try {
+                        if (typeof build_items_table === 'function') {
+                            $('.items_table').each(function() {
+                                let table_id = $(this).attr('id').replace('_table', '');
+                                build_items_table(table_id, false, { destroy: true });
+                            });
+                        }
+                    } catch (e) {
+                        // Main table refresh failed - reload page as fallback
+                        window.location.reload();
+                    }
+                }).catch((error) => {
+                    console.error('Error adding items to display:', error);
+                    alert('Failed to add some items to display. Please try again.');
+                }).finally(() => {
+                    $('#add-to-display-btn').prop('disabled', false).text('Add to display');
+                });
+            });
+
+            // Clean up when modal is hidden
+            $('#addToDisplayModal').on('hidden.bs.modal', function() {
+                if (displayItemsTable && displayItemsTable.DataTable) {
+                    displayItemsTable.DataTable().destroy();
+                    displayItemsTable = null;
+                }
+                selectedDisplayItems = [];
+                $('#addToDisplayForm')[0].reset();
+            });
+
+            // Clean up when modal is hidden
+            $('#addToDisplayModal').on('hidden.bs.modal', function() {
+                if (displayItemsTable && displayItemsTable.DataTable) {
+                    displayItemsTable.DataTable().destroy();
+                    displayItemsTable = null;
+                }
+                selectedDisplayItems = [];
+                $('#addToDisplayForm')[0].reset();
+            });
+        [% END %]
     </script>
     [% CoverImagePlugins | $raw %]
 [% END # /jsinclude %]
+
+[% BLOCK cssinclude %]
+    <style nonce="[% Koha.CSPNonce | $raw %]">
+        .display-location {
+            font-weight: bold;
+            color: #d9534f;
+        }
+        .display-location::before {
+            content: "\1F4FA ";
+            font-size: 0.8em;
+        }
+        .original-location {
+            font-size: 0.9em;
+            font-style: italic;
+        }
+    </style>
+[% END # /cssinclude %]
+
 [% INCLUDE 'intranet-bottom.inc' %]

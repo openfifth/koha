@@ -871,6 +871,16 @@
                                                                         [% END %]
                                                                         <span class="item_count">[% items_loo.count | html %]</span>
                                                                     </div>
+                                                                    [% IF ( items_loo.displays ) %]
+                                                                        <span class="displays"
+                                                                            >In display(s):
+                                                                            <ul>
+                                                                                [% FOR display IN items_loo.displays %]
+                                                                                    <li><a href="/cgi-bin/koha/display/displays/[% display.display_id | url %]">[% display.display_name | html %]</a></li>
+                                                                                [% END %]
+                                                                            </ul>
+                                                                        </span>
+                                                                    [% END %]
                                                                     <!-- /.result_item_details -->
 
                                                                     [% IF status_count == "onloancount" %]

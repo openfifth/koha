@@ -463,6 +463,11 @@ if (   ( $findborrower && $borrowernumber_hold || $findclub && $club_hold )
                 my $do_check;
                 my $item = $item_object->unblessed;
                 $item->{object} = $item_object;
+
+                $item->{ccode}         = $item_object->effective_collection_code;
+                $item->{holdingbranch} = $item_object->effective_holdingbranch;
+                $item->{homebranch}    = $item_object->effective_homebranch;
+
                 if ($patron) {
                     $do_check = $patron->do_check_for_previous_checkout($item) if $wants_check;
                     if ( $do_check && $wants_check ) {

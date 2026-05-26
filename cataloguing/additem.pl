@@ -165,6 +165,14 @@ if ( $op eq 'edititem' || $op eq 'dupeitem' ) {
     if ( !$item ) {
         $template->param( biblio => $biblio, item_doesnt_exist => 1 );
         output_and_exit( $input, $cookie, $template, 'unknown_item' );
+    } else {
+        my $ondisplay = $item->active_display ? 1 : undef;
+        my $nomod     = $ondisplay;
+
+        $template->param(
+            ondisplay => $ondisplay,
+            nomod     => $nomod
+        );
     }
 }
 
@@ -694,10 +702,26 @@ if ($op) {
 
 # now, build existiing item list
 
+my $bib_has_nomod;
+my $bib_has_ondisplay;
+
 my @items;
 for my $item ( $biblio->items->as_list, $biblio->host_items->as_list ) {
     my $i = $item->columns_to_str;
     $i->{nomod} = 1 unless $patron->can_edit_items_from( $item->homebranch );
+
+    if ( C4::Context->preference('UseDisplayModule') ) {
+        if ( $item->active_display ) {
+            $i->{active_display_id}   = $item->active_display->display_id;
+            $i->{active_display_name} = $item->active_display->display_name;
+            $i->{ondisplay}           = 1;
+            $i->{nomod}               = 1;
+        }
+    }
+
+    $bib_has_nomod     = 1 if $i->{nomod};
+    $bib_has_ondisplay = 1 if $i->{ondisplay};
+
     push @items, $i;
 }
 
@@ -822,6 +846,10 @@ $template->param(
     barcode          => $current_item->{barcode},
     op               => $nextop,
     popup            => scalar $input->param('popup') ? 1 : 0,
+    can_mod          => {
+        nomod     => scalar $bib_has_nomod     ? 1 : 0,
+        ondisplay => scalar $bib_has_ondisplay ? 1 : 0,
+    },
     C4::Search::enabled_staff_search_views,
 );
 $template->{'VARS'}->{'searchid'} = $searchid;

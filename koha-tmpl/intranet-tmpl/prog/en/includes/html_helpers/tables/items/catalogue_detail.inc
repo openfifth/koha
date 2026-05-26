@@ -25,6 +25,7 @@
                 <th id="[% tab | html %]_itemcallnumber" data-colname="itemcallnumber">Call number</th>
                 <th id="[% tab | html %]_enumchron" data-colname="enumchron">Serial enumeration / chronology</th>
                 <th id="[% tab | html %]_status" data-colname="status">Status</th>
+                <th id="[% tab | html %]_displays" data-colname="displays">Displays</th>
                 <th id="[% tab | html %]_lastseen" data-colname="lastseen">Last seen</th>
                 <th id="[% tab | html %]_issues" data-colname="issues">Checkouts</th>
                 <th id="[% tab | html %]_renewals" data-colname="renewals">Renewals</th>
@@ -149,6 +150,7 @@
             canreservefromotherbranches: [% Koha.Preference('canreservefromotherbranches') ? 1 : 0 | html %],
         });
         Koha.addPermissions({
+            CAN_user_displays: [% (CAN_user_displays) ? 1 : 0 | html %],
             CAN_user_editcatalogue_edit_items: [% (CAN_user_editcatalogue_edit_items || CAN_user_editcatalogue_fast_cataloging && is_fast_add) ? 1 : 0 | html %],
         });
         const logged_in_branchcode = '[% Branches.GetLoggedInBranchcode() | html %]';
@@ -308,7 +310,7 @@
         // FIXME The X-Base-Total-Count will be the number of items of the biblios
         // In case or SeparateHoldings we may need to display the number of biblios in each tab
         // Do we need separate/new endpoints or do we hack the somewhere client-side?
-        let embed = ["+strings,_status,home_library,holding_library,checkout,checkout.patron,transfer,transfer+strings,first_hold,first_hold+strings,first_hold.patron,first_hold.desk"];
+        let embed = ["+strings,_status,effective_home_library,effective_holding_library,home_library,holding_library,checkout,checkout.patron,transfer,transfer+strings,first_hold,first_hold+strings,first_hold.patron,first_hold.desk"];
         if (Koha.prefs.LocalCoverImages) {
             embed.push("cover_image_ids");
         }
@@ -392,6 +394,20 @@
                 return $("#" + tab_id + "_status select").val();
             };
 
+            const displays = [];
+            if (Koha.prefs.UseDisplayModule) {
+                const displaysFetch = $.ajax({
+                    url: "/api/v1/displays",
+                    async: false,
+                    method: "GET",
+                    headers: { "x-koha-embed": "display_items" },
+                    error: error => {
+                        console.error(error);
+                    },
+                });
+                displays = displaysFetch.responseJSON || [];
+            }
+
             let group_by_status = function () {
                 if (group_by_status_values[tab_id]) {
                     return "group_by_status=1";
@@ -458,14 +474,35 @@
                               searchable: true,
                               orderable: true,
                               render: function (data, type, row, meta) {
-                                  let node = "";
+                                  let nodes = "";
+
+                                  // If effective or permanent holding branch is defined, show description or
+                                  // code and display current location in modal accessible via hyperlink.
                                   let item_type_description = row._strings.item_type_id ? row._strings.item_type_id.str : row.item_type_id;
-                                  if (!Koha.prefs.noItemTypeImages) {
-                                      let image_location = item_type_image_locations[row.item_type_id];
-                                      node += image_location ? '<img class="itemtype-image" src="%s" alt="" /> '.format(escape_str(image_location), escape_str(item_type_description), escape_str(item_type_description)) : "";
+                                  if (row.effective_item_type_id && row.effective_item_type_id != row.item_type_id) {
+                                      let effective_item_type_description = row._strings.effective_item_type_id ? row._strings.effective_item_type_id.str : row.effective_item_type_id;
+
+                                      if (!Koha.prefs.noItemTypeImages) {
+                                          let effective_image_location = item_type_image_locations[row.effective_item_type_id];
+                                          nodes += effective_image_location
+                                              ? '<img class="itemtype-image" src="%s" alt="" /> '.format(escape_str(effective_image_location), escape_str(effective_item_type_description), escape_str(effective_item_type_description))
+                                              : "";
+                                      }
+
+                                      nodes += '<span class="itypedesc itypetext descriptor" tabindex="0" data-bs-toggle="tooltip" data-bs-title="%s">%s</span>'.format(
+                                          _("Usual item type: %s").format(escape_str(item_type_description)),
+                                          escape_str(effective_item_type_description)
+                                      );
+                                  } else {
+                                      if (!Koha.prefs.noItemTypeImages) {
+                                          let image_location = item_type_image_locations[row.item_type_id];
+                                          nodes += image_location ? '<img class="itemtype-image" src="%s" alt="" /> '.format(escape_str(image_location), escape_str(item_type_description), escape_str(item_type_description)) : "";
+                                      }
+
+                                      nodes += '<span class="itypedesc itypetext">%s</span>'.format(escape_str(item_type_description));
                                   }
-                                  node += '<span class="itypedesc itypetext">%s</span>'.format(escape_str(item_type_description));
-                                  return node;
+
+                                  return nodes;
                               },
                           },
                       ]
@@ -478,7 +515,23 @@
                     searchable: true,
                     orderable: true,
                     render: function (data, type, row, meta) {
-                        return escape_str(row._strings.holding_library_id ? row._strings.holding_library_id.str : row.holding_library_id);
+                        let nodes = "";
+
+                        // If effective or permanent holding branch is defined, show description or
+                        // code and display current location in modal accessible via hyperlink.
+                        let holding_library_id_str = row._strings.holding_library_id ? row._strings.holding_library_id.str : row.holding_library_id;
+                        if (row.effective_holding_library_id && row.effective_holding_library_id != row.holding_library_id) {
+                            let effective_holding_library_id_str = row._strings.effective_holding_library_id ? row._strings.effective_holding_library_id.str : row.effective_holding_library_id;
+
+                            nodes += '<span class="descriptor" tabindex="0" data-bs-toggle="tooltip" data-bs-title="%s">%s</span>'.format(
+                                _("Usual holding library: %s").format(escape_str(holding_library_id_str)),
+                                escape_str(effective_holding_library_id_str)
+                            );
+                        } else {
+                            nodes += "<span>%s</span>".format(escape_str(holding_library_id_str));
+                        }
+
+                        return nodes;
                     },
                 },
                 {
@@ -489,7 +542,23 @@
                     searchable: true,
                     orderable: true,
                     render: function (data, type, row, meta) {
-                        return escape_str(row._strings.home_library_id ? row._strings.home_library_id.str : row.home_library_id);
+                        let nodes = "<span>";
+
+                        // If effective or permanent home branch is defined, show description or
+                        // code and display current location in modal accessible via hyperlink.
+                        let home_library_id_str = row._strings.home_library_id ? row._strings.home_library_id.str : row.home_library_id;
+                        if (row.effective_home_library_id && row.effective_home_library_id != row.home_library_id) {
+                            let effective_home_library_id_str = row._strings.effective_home_library_id ? row._strings.effective_home_library_id.str : row.effective_home_library_id;
+
+                            nodes += '<span class="descriptor" tabindex="0" data-bs-toggle="tooltip" data-bs-title="%s">%s</span>'.format(
+                                _("Usual home library: %s").format(escape_str(home_library_id_str)),
+                                escape_str(effective_home_library_id_str)
+                            );
+                        } else {
+                            nodes += "<span>%s</span>".format(escape_str(home_library_id_str));
+                        }
+
+                        return nodes;
                     },
                 },
                 {
@@ -498,18 +567,30 @@
                     searchable: true,
                     orderable: true,
                     render: function (data, type, row, meta) {
-                        let nodes = '<span class="shelvingloc">';
-                        // If permanent location is defined, show description or code and
-                        // display current location in parentheses. If not, display current location.
+                        let nodes = "";
+
+                        // If effective or permanent location is defined, show description or code and
+                        // display current location in modal accessible via hyperlink.
                         // Note that permanent location is a code, and location may be an authval.
                         let loc_str = row._strings.location ? row._strings.location.str : row.location;
-                        if (row.permanent_location && row.permanent_location != row.location) {
+                        if (row.effective_location && row.effective_location != row.location) {
+                            let effective_loc_str = row._strings.effective_location ? row._strings.effective_location.str : row.effective_location;
+
+                            nodes += '<span class="shelvingloc descriptor" tabindex="0" data-bs-toggle="tooltip" data-bs-title="%s">%s</span>'.format(
+                                _("Usual shelving location: %s").format(escape_str(loc_str)),
+                                escape_str(effective_loc_str)
+                            );
+                        } else if (row.permanent_location && row.permanent_location != row.location) {
                             let permanent_loc_str = av_loc.get(row.permanent_location);
-                            nodes += "%s<br/>(%s)".format(escape_str(permanent_loc_str), escape_str(loc_str));
+
+                            nodes += '<span class="shelvingloc descriptor" tabindex="0" data-bs-toggle="tooltip" data-bs-title="%s">%s</span>'.format(
+                                _("Usual shelving location: %s").format(escape_str(loc_str)),
+                                escape_str(permanent_loc_str)
+                            );
                         } else {
-                            nodes += escape_str(loc_str);
+                            nodes += '<span class="shelvingloc">%s</span>'.format(escape_str(loc_str));
                         }
-                        nodes += "</span>";
+
                         return nodes;
                     },
                 },
@@ -520,7 +601,21 @@
                     searchable: true,
                     orderable: true,
                     render: function (data, type, row, meta) {
-                        return escape_str(row._strings.collection_code ? row._strings.collection_code.str : row.collection_code);
+                        let nodes = "<span>";
+
+                        // If effective ccode is defined, show description or code and display current
+                        // ccode in modal accessible via hyperlink.
+                        let ccode_str = row._strings.collection_code ? row._strings.collection_code.str : row.collection_code;
+                        if (row.effective_collection_code && row.effective_collection_code != row.collection_code) {
+                            let effective_ccode_str = row._strings.effective_collection_code ? row._strings.effective_collection_code.str : row.effective_collection_code;
+
+                            nodes += '<span class="descriptor" tabindex="0" data-bs-toggle="tooltip" data-bs-title="%s">%s</span>'.format(_("Usual collection: %s").format(escape_str(ccode_str)), escape_str(effective_ccode_str));
+                        } else {
+                            nodes += "<span>%s</span>".format(escape_str(ccode_str));
+                        }
+
+                        nodes += "</span>";
+                        return nodes;
                     },
                 },
                 ...(Koha.prefs.EnableItemGroups
@@ -693,6 +788,31 @@
                     },
                 },
                 {
+                    data: "me.displays",
+                    searchable: false,
+                    orderable: false,
+                    render: function (data, type, row, meta) {
+                        let nodes = "";
+
+                        if (Koha.prefs.UseDisplayModule && Koha.permissions.CAN_user_displays) {
+                            displays.forEach(display => {
+                                display.display_items.forEach(display_item => {
+                                    if (display_item.itemnumber === row.item_id) {
+                                        const link = $("<a>")
+                                            .attr("href", "/cgi-bin/koha/display/displays/" + display.display_id)
+                                            .text(display.display_name);
+                                        nodes += $("<li>").append($('<span class="on_display">').append(link)).prop("outerHTML");
+                                    }
+                                });
+                            });
+
+                            if (nodes != "") nodes = "<ul>" + nodes + "</ul>";
+                        }
+
+                        return nodes;
+                    },
+                },
+                {
                     data: "me.last_seen_date",
                     type: "date",
                     className: "datelastseen",
@@ -824,7 +944,19 @@
                     searchable: true,
                     orderable: true,
                     render: function (data, type, row, meta) {
-                        return row.public_notes ? escape_str(row.public_notes).replaceAll("\n", "<br />") : "";
+                        let nodes = "";
+
+                        nodes = row.public_notes ? escape_str(row.public_notes).replaceAll("\n", "<br />") : "";
+
+                        if (Koha.permissions.CAN_user_displays) {
+                            displays.forEach(display => {
+                                display.display_items.forEach(display_item => {
+                                    if (display_item.itemnumber === row.item_id && display.public_note) nodes += '<p><span class="public_note on_display">%s</span></p>'.format(display.public_note).replaceAll("\n", "<br />");
+                                });
+                            });
+                        }
+
+                        return nodes;
                     },
                 },
                 {
@@ -833,7 +965,19 @@
                     searchable: true,
                     orderable: true,
                     render: function (data, type, row, meta) {
-                        return escape_str(row.internal_notes);
+                        let nodes = "";
+
+                        nodes = row.internal_notes ? escape_str(row.internal_notes).replaceAll("\n", "<br />") : "";
+
+                        if (Koha.permissions.CAN_user_displays) {
+                            displays.forEach(display => {
+                                display.display_items.forEach(display_item => {
+                                    if (display_item.itemnumber === row.item_id && display.staff_note) nodes += '<p><span class="internal_note on_display">%s</span></p>'.format(display.staff_note).replaceAll("\n", "<br />");
+                                });
+                            });
+                        }
+
+                        return nodes;
                     },
                 },
                 ...(Koha.prefs.EasyAnalyticalRecords
@@ -960,6 +1104,7 @@
                     columns,
                     initComplete: function (settings, json) {
                         itemSelectionBuildActionLinks(tab_id);
+                        $('[data-bs-toggle="tooltip"]').tooltip();
                     },
                     drawCallback: function (settings) {
                         let api = this.api();
@@ -1020,6 +1165,18 @@
             });
             return items_table;
         }
+
+        const handlePermanentLocation = element => {
+            const header = $(element).attr("data-header");
+            const body = $(element).attr("data-body");
+
+            $("#permanant_location_modal_label").text(header);
+            $("#permanant_location_modal_body").html("<ul><li>" + body + "</li></ul>");
+            $("#permanant_location_modal").modal("show");
+
+            return false;
+        };
+
         function safe_link(uri, link_text) {
             let node = document.createElement("a");
             let url_str = "#";

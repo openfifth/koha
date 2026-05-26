@@ -316,10 +316,80 @@
         [% END %]
     [% END %]
 
+    [% IF Koha.Preference('UseDisplayModule') && CAN_user_displays %]
+        <div class="btn-group">
+            <button type="button" class="btn btn-default dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="fa fa-tv"></i> Add to display</button>
+            <ul class="dropdown-menu" id="display-dropdown">
+                <li class="text-center"><i class="fa fa-spinner fa-spin"></i> Loading displays...</li>
+            </ul>
+        </div>
+    [% END %]
+
     [% FOREACH p IN plugins %]
         [% p.intranet_catalog_biblio_enhancements_toolbar_button({ biblionumber => biblionumber }) | $raw %]
     [% END %]
 </div>
+
+<!-- Modal for Add to Display -->
+[% IF Koha.Preference('UseDisplayModule') && CAN_user_displays %]
+    <div class="modal fade" id="addToDisplayModal" tabindex="-1" role="dialog" aria-labelledby="addToDisplayModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title" id="addToDisplayModalLabel">Add items to display</h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="addToDisplayForm">
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="display-select" class="form-label">Select display:</label>
+                                <select id="display-select" class="form-select" required>
+                                    <option value="">Loading displays...</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="date-remove" class="form-label">Remove date (optional):</label>
+                                <div class="input-group">
+                                    <input type="date" id="date-remove" class="form-control" />
+                                    <button class="btn btn-outline-secondary" type="button" id="clear-date" title="Clear date">
+                                        <i class="fa fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <label class="form-label">Select items to add:</label>
+                                <div class="table-responsive">
+                                    <table id="display-items-table" class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th><input type="checkbox" id="select-all-display-items" /></th>
+                                                <th>Barcode</th>
+                                                <th>Current library</th>
+                                                <th>Home library</th>
+                                                <th>Location</th>
+                                                <th>Collection</th>
+                                                <th>Call number</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody> </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="add-to-display-btn">Add to display</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+[% END %]
 
 <!--Modal for Dublin Core-->
 <div class="modal" id="exportModal_" tabindex="-1" role="dialog" aria-labelledby="exportLabelexportModal_" aria-hidden="true">

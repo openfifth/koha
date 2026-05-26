@@ -5,6 +5,7 @@
 [% USE KohaDates %]
 [% USE Price %]
 [% USE Item %]
+[% USE AuthorisedValues %]
 [% USE TablesSettings %]
 [% PROCESS 'i18n.inc' %]
 [% INCLUDE 'doc-head-open.inc' %]
@@ -80,6 +81,23 @@
             <a href="/cgi-bin/koha/catalogue/detail.pl?biblionumber=[% biblio.biblionumber | uri %]#holdings">go to the records holdings</a>.
         </div>
     [% END %]
+    [% IF ( items ) %]
+        [% IF ( can_mod.nomod ) %]
+            [% IF ( can_mod.ondisplay ) %]
+                <div class="alert alert-warning">
+                    <p> <strong>Item(s) on display:</strong> The following item(s) are currently on display, and cannot be modified: </p>
+                    <ul>
+                        [% FOREACH item IN items %]
+                            [% IF item.ondisplay %]
+                                <li><a href="/cgi-bin/koha/display/displays/[% item.active_display_id | url %]">[% item.barcode | html %]</a></li>
+                            [% END %]
+                        [% END %]
+                    </ul>
+                    <p> The permanent location for these item(s) is found below. To modify these details, edit the display, or remove the item from the display. </p>
+                </div>
+            [% END %]
+        [% END %]
+    [% END %]
     <h1>Items for [% biblio.title | html %] [% IF ( biblio.author ) %]by [% biblio.author | html %][% END %] (Record #[% biblio.biblionumber | html %])</h1>
     <a id="newitem_jump" href="#f"><i class="fa fa-arrow-down"></i> Jump to form</a>
 
@@ -98,7 +116,7 @@
     [% IF item_not_found %]<div class="alert alert-warning"><strong>Cannot delete</strong>: Item not found.</div>[% END %]
 
     <div id="cataloguing_additem_itemlist">
-        [% IF items %]
+        [% IF ( items ) %]
             [% SET date_fields = [ 'dateaccessioned', 'onloan', 'datelastseen', 'datelastborrowed', 'replacementpricedate' ] %]
             <div class="page-section">
                 <table id="itemst">
@@ -112,7 +130,7 @@
                     </thead>
                     <tbody>
                         [% FOREACH item IN items %]
-                            [% SET can_be_edited = ! ( Koha.Preference('IndependentBranches') && ! logged_in_user.is_superlibrarian && item.homebranch != Branches.GetLoggedInBranchname() ) %]
+                            [% SET can_be_edited = ! ( ( Koha.Preference('IndependentBranches') && ! logged_in_user.is_superlibrarian && item.homebranch != Branches.GetLoggedInBranchname() ) || ( item.nomod ) ) %]
                             [% SET tr_class = [] %]
                             [% SET tr_title = "" %]
                             [% IF item.itemnumber == itemnumber %]
@@ -129,7 +147,18 @@
                             [% END %]
                             <tr id="row[% item.itemnumber | html %]" class="[% tr_class.join(' ') | html %]" title="[% tr_title | html %]">
                                 [% UNLESS can_be_edited %]
-                                    <td>&nbsp;</td>
+                                    [% IF ( item.ondisplay ) %]
+                                        <td>
+                                            <em>Item on display:</em>
+                                            <ul>
+                                                <li>
+                                                    <em><a href="/cgi-bin/koha/display/displays/[% item.active_display_id | url %]">[% item.active_display_name | html %]</a></em>
+                                                </li>
+                                            </ul>
+                                        </td>
+                                    [% ELSE %]
+                                        <td>&nbsp;</td>
+                                    [% END %]
                                 [% ELSE %]
                                     <td>
                                         <div class="btn-group dropup">
@@ -212,6 +241,8 @@
                                         <td class="[% can_mod | html %]" data-order="[% item.$attribute | html %]">[% item.$attribute | $Price %]</td>
                                     [% ELSIF item.$attribute && attribute == 'itemcallnumber' %]
                                         <td class="[% can_mod | html %]" data-order="[% item.cn_sort | html %]">[% item.$attribute | html %]</td>
+                                    [% ELSIF attribute == 'location' %]
+                                        <td class="[% can_mod | html %]"> [% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.location', authorised_value => item.location ) | html %] </td>
                                     [% ELSE %]
                                         <td class="[% can_mod | html %]">[% item.$attribute | html %]</td>
                                     [% END %]
@@ -289,128 +320,138 @@
                             </div>
                         [% END %]
 
-                        <fieldset class="rows"> [% PROCESS subfields_for_item subfields => subfields %] </fieldset>
-                        [% IF op != 'cud-additem' %]
-                            <input type="hidden" name="itemnumber" value="[% itemnumber | html %]" />
-                        [% END %]
+                        [% UNLESS ( nomod ) %]
+                            <fieldset class="rows"> [% PROCESS subfields_for_item subfields => subfields %] </fieldset>
+                            [% IF op != 'cud-additem' %]
+                                <input type="hidden" name="itemnumber" value="[% itemnumber | html %]" />
+                            [% END %]
 
-                        [% IF item_groups.size && op != 'cud-saveitem' && CAN_user_editcatalogue_manage_item_groups %]
-                            <fieldset class="rows">
-                                <legend><i class="fa fa-plus"></i> Add to item group</legend>
-                                [% FOREACH ig IN item_groups %]
-                                    <input type="hidden" id="item-group-[% ig.id | html %]" value="[% ig.description | html %]" />
-                                [% END %]
-                                <ol>
-                                    <li>
-                                        <label for="select_item_group">Options: </label>
-                                        <select name="item_group" id="item-group-add-or-create-form-select">
-                                            <optgroup label="Use existing item group">
-                                                [% FOREACH ig IN biblio.item_groups.search({}, {order_by => 'display_order'}) %]
-                                                    <option value="[% ig.id | html %]">[% ig.description | html %]</option>
-                                                [% END %]
-                                            </optgroup>
-                                            <optgroup label="Other options">
-                                                <option id="item-group-add-or-create-form-no-add" value="">Do not add to item group</option>
-                                                <option value="create">Create new item group</option>
-                                            </optgroup>
-                                        </select>
-                                    </li>
-                                    <div id="item-group-add-or-create-form-description-block">
+                            [% IF item_groups.size && op != 'cud-saveitem' && CAN_user_editcatalogue_manage_item_groups %]
+                                <fieldset class="rows">
+                                    <legend><i class="fa fa-plus"></i> Add to item group</legend>
+                                    [% FOREACH ig IN item_groups %]
+                                        <input type="hidden" id="item-group-[% ig.id | html %]" value="[% ig.description | html %]" />
+                                    [% END %]
+                                    <ol>
                                         <li>
-                                            <label for="item_group_description" class="required">Name: </label>
-                                            <input name="item_group_description" id="item-group-add-or-create-form-description" type="text" size="30" class="required" />
-                                            <span class="required">Required</span>
+                                            <label for="select_item_group">Options: </label>
+                                            <select name="item_group" id="item-group-add-or-create-form-select">
+                                                <optgroup label="Use existing item group">
+                                                    [% FOREACH ig IN biblio.item_groups.search({}, {order_by => 'display_order'}) %]
+                                                        <option value="[% ig.id | html %]">[% ig.description | html %]</option>
+                                                    [% END %]
+                                                </optgroup>
+                                                <optgroup label="Other options">
+                                                    <option id="item-group-add-or-create-form-no-add" value="">Do not add to item group</option>
+                                                    <option value="create">Create new item group</option>
+                                                </optgroup>
+                                            </select>
                                         </li>
-                                        <li>
-                                            <label for="item_group_display_order">Display order: </label>
-                                            <input name="item_group_display_order" id="item_group_display_order" type="text" pattern="\d*" size="30" />
-                                            <div class="hint">Display order must be numerical</div>
-                                        </li>
-                                    </div>
-                                </ol>
-                            </fieldset>
-                        [% END %]
-
-                        <fieldset class="action">
-                            [% IF op != 'cud-saveitem' %]
-                                <input type="submit" name="phony_submit" value="phony_submit" id="phony_submit" style="display:none;" onclick="return false;" />
-                                <!-- Note:
-                                    We use here a false submit button because we have several submit buttons and we do not want the user to believe they validated the adding of multiple items
-                                    when pressing the enter key, while in fact it is the first submit button that is validated, in our case the "add (single) item" button.
-                                    It is a bit tricky, but necessary in the sake of UI correctness.
-                                -->
-                                <span id="addsingle">
-                                    <input type="submit" name="add_submit" value="Add item" onclick="return Check(this.form)" />
-                                    <input type="submit" name="add_duplicate_submit" value="Add and duplicate" onclick="return Check(this.form)" />
-                                </span>
-                                <span id="addmultiple">
-                                    <input type="button" name="add_multiple_copies" id="add_multiple_copies" value="Add multiple copies of this item" />
-                                </span>
-                                <fieldset id="add_multiple_copies_span">
-                                    <label for="number_of_copies">Number of copies of this item to add: </label>
-                                    <input type="text" id="number_of_copies" name="number_of_copies" value="" size="2" maxlength="3" />
-                                    <input type="submit" id="add_multiple_copies_submit" name="add_multiple_copies_submit" value="Add" onclick="javascript:return Check(this.form) && CheckMultipleAdd(this.form.number_of_copies.value);" />
-                                    <a href="#" id="cancel_add_multiple" class="cancel">Cancel</a>
-                                    <div class="hint"><p>Maximum currently set to 1000. The barcode you enter will be incremented for each additional item.</p></div>
+                                        <div id="item-group-add-or-create-form-description-block">
+                                            <li>
+                                                <label for="item_group_description" class="required">Name: </label>
+                                                <input name="item_group_description" id="item-group-add-or-create-form-description" type="text" size="30" class="required" />
+                                                <span class="required">Required</span>
+                                            </li>
+                                            <li>
+                                                <label for="item_group_display_order">Display order: </label>
+                                                <input name="item_group_display_order" id="item_group_display_order" type="text" pattern="\d*" size="30" />
+                                                <div class="hint">Display order must be numerical</div>
+                                            </li>
+                                        </div>
+                                    </ol>
                                 </fieldset>
+                            [% END %]
 
-                                <span id="savetemplate">
-                                    <input type="button" name="save_as_template" id="save_as_template" value="Save as template" />
-                                </span>
-                                <fieldset id="save_as_template_span">
-                                    <legend>Save template</legend>
-                                    <div class="btn-group">
-                                        <select name="replace_template_id" id="replace_template_id" class="select2" style="width: 20em">
-                                            <option value="0" selected="selected">Save as new template</option>
-                                            <optgroup label="Update existing template">
-                                                [% FOREACH t IN item_templates.owned %]
-                                                    <option data-editor="1" data-shared="[% t.is_shared | html %]" value="[% t.id | html %]">[% t.name | html %][% IF t.is_shared %](shared)[% END %]</option>
-                                                [% END %]
-                                                [% IF CAN_user_editcatalogue_manage_item_editor_templates && item_templates.shared.count %]
-                                                    <optgroup label="Update shared template">
-                                                        [% FOREACH t IN item_templates.shared %]
-                                                            <option data-editor="1" data-shared="1" value="[% t.id | html %]">[% t.name | html %][% IF t.is_shared %](shared)[% END %]</option>
-                                                        [% END %]
-                                                    </optgroup>
-                                                [% END %]
-                                            </optgroup>
-                                        </select>
-                                    </div>
+                            <fieldset class="action">
+                                [% IF op != 'cud-saveitem' %]
+                                    <input type="submit" name="phony_submit" value="phony_submit" id="phony_submit" style="display:none;" onclick="return false;" />
+                                    <!-- Note:
+                                        We use here a false submit button because we have several submit buttons and we do not want the user to believe they validated the adding of multiple items
+                                        when pressing the enter key, while in fact it is the first submit button that is validated, in our case the "add (single) item" button.
+                                        It is a bit tricky, but necessary in the sake of UI correctness.
+                                    -->
+                                    <span id="addsingle">
+                                        <input type="submit" name="add_submit" value="Add item" onclick="return Check(this.form)" />
+                                        <input type="submit" name="add_duplicate_submit" value="Add and duplicate" onclick="return Check(this.form)" />
+                                    </span>
+                                    <span id="addmultiple">
+                                        <input type="button" name="add_multiple_copies" id="add_multiple_copies" value="Add multiple copies of this item" />
+                                    </span>
+                                    <fieldset id="add_multiple_copies_span">
+                                        <label for="number_of_copies">Number of copies of this item to add: </label>
+                                        <input type="text" id="number_of_copies" name="number_of_copies" value="" size="2" maxlength="3" />
+                                        <input
+                                            type="submit"
+                                            id="add_multiple_copies_submit"
+                                            name="add_multiple_copies_submit"
+                                            value="Add"
+                                            onclick="javascript:return Check(this.form) && CheckMultipleAdd(this.form.number_of_copies.value);"
+                                        />
+                                        <a href="#" id="cancel_add_multiple" class="cancel">Cancel</a>
+                                        <div class="hint"><p>Maximum currently set to 1000. The barcode you enter will be incremented for each additional item.</p></div>
+                                    </fieldset>
 
-                                    <div class="btn-group">
-                                        <span id="template_name_block">
-                                            <label for="template_name" class="required">Template name: </label>
-                                            <input type="text" id="template_name" name="template_name" class="required" />
-                                            <span class="required">Required</span>
-                                        </span>
-                                    </div>
+                                    <span id="savetemplate">
+                                        <input type="button" name="save_as_template" id="save_as_template" value="Save as template" />
+                                    </span>
+                                    <fieldset id="save_as_template_span">
+                                        <legend>Save template</legend>
+                                        <div class="btn-group">
+                                            <select name="replace_template_id" id="replace_template_id" class="select2" style="width: 20em">
+                                                <option value="0" selected="selected">Save as new template</option>
+                                                <optgroup label="Update existing template">
+                                                    [% FOREACH t IN item_templates.owned %]
+                                                        <option data-editor="1" data-shared="[% t.is_shared | html %]" value="[% t.id | html %]">[% t.name | html %][% IF t.is_shared %](shared)[% END %]</option>
+                                                    [% END %]
+                                                    [% IF CAN_user_editcatalogue_manage_item_editor_templates && item_templates.shared.count %]
+                                                        <optgroup label="Update shared template">
+                                                            [% FOREACH t IN item_templates.shared %]
+                                                                <option data-editor="1" data-shared="1" value="[% t.id | html %]">[% t.name | html %][% IF t.is_shared %](shared)[% END %]</option>
+                                                            [% END %]
+                                                        </optgroup>
+                                                    [% END %]
+                                                </optgroup>
+                                            </select>
+                                        </div>
 
-                                    <div class="btn-group">
-                                        <label for="template_is_shared">
-                                            <input type="checkbox" id="template_is_shared" name="template_is_shared" />
-                                            Share template
-                                        </label>
-                                    </div>
+                                        <div class="btn-group">
+                                            <span id="template_name_block">
+                                                <label for="template_name" class="required">Template name: </label>
+                                                <input type="text" id="template_name" name="template_name" class="required" />
+                                                <span class="required">Required</span>
+                                            </span>
+                                        </div>
 
-                                    <div class="btn-group">
-                                        <input type="submit" id="save_as_template_submit" name="save_as_template_submit" value="Save" onclick="javascript:return CheckTemplateForm(this.form);" />
-                                        <a href="#" id="cancel_save_as_template" class="cancel">Cancel</a>
-                                    </div>
-                                </fieldset>
-                            [% ELSE %]
-                                [% IF op != 'add_item' %]
-                                    <input type="hidden" name="itemnumber" value="[% itemnumber | html %]" />
-                                [% END %]
-                                [% IF Item.HasSerialItem(itemnumber) == 0 %]
-                                    <input type="submit" value="Save changes" onclick="return Check(this.form)" />
+                                        <div class="btn-group">
+                                            <label for="template_is_shared">
+                                                <input type="checkbox" id="template_is_shared" name="template_is_shared" />
+                                                Share template
+                                            </label>
+                                        </div>
+
+                                        <div class="btn-group">
+                                            <input type="submit" id="save_as_template_submit" name="save_as_template_submit" value="Save" onclick="javascript:return CheckTemplateForm(this.form);" />
+                                            <a href="#" id="cancel_save_as_template" class="cancel">Cancel</a>
+                                        </div>
+                                    </fieldset>
                                 [% ELSE %]
-                                    <input type="button" class="submit" value="Save changes" onclick="return ShowSerialEditingConfirmation(this.form)" />
-                                    <input type="hidden" name="edit-serial-issue" id="edit-serial-issue" value />
+                                    [% IF op != 'add_item' %]
+                                        <input type="hidden" name="itemnumber" value="[% itemnumber | html %]" />
+                                    [% END %]
+                                    [% IF Item.HasSerialItem(itemnumber) == 0 %]
+                                        <input type="submit" value="Save changes" onclick="return Check(this.form)" />
+                                    [% ELSE %]
+                                        <input type="button" class="submit" value="Save changes" onclick="return ShowSerialEditingConfirmation(this.form)" />
+                                        <input type="hidden" name="edit-serial-issue" id="edit-serial-issue" value />
+                                    [% END %]
+                                    <input type="button" id="addnewitem" value="Add a new item" />
+                                    <a href="/cgi-bin/koha/catalogue/detail.pl?biblionumber=[% biblio.biblionumber | uri %]">Cancel</a>
                                 [% END %]
-                                <input type="button" id="addnewitem" value="Add a new item" />
-                                <a href="/cgi-bin/koha/catalogue/detail.pl?biblionumber=[% biblio.biblionumber | uri %]">Cancel</a>
-                            [% END %]</fieldset
-                        >
+                            </fieldset>
+                        [% ELSE %]
+                            <em>This item is not presently editable. Please check the alert dialog above for details.</em>
+                        [% END %]
 
                         [%# Fields for fast cataloging %]
                         <input type="hidden" name="circborrowernumber" value="[% circborrowernumber | html %]" />

@@ -276,6 +276,13 @@
             </div>
         [% END %]
 
+        [% IF RemovedFromDisplay %]
+            <div id="removed_from_display" class="alert alert-info">
+                <h3>Item removed from display</h3>
+                <p>This item has been removed from the display: <strong>[% RemovedFromDisplay.display_name | html %]</strong></p>
+            </div>
+        [% END %]
+
         [% IF ( errmsgloop ) %]
             <div class="alert alert-warning audio-alert-warning">
                 <h3>Check in message</h3>
@@ -1405,7 +1412,7 @@
                             [%- END -%]
                         </td>
                         <td class="ci-shelvinglocation">
-                            <span class="shelvingloc">[% checkin.item_location | html %]</span>
+                            <span class="shelvingloc"> [% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.location', authorised_value => checkin.item.effective_location ) | html %] </span>
                         </td>
                         <td class="ci-callnumber"> [% checkin.item.itemcallnumber | html %] </td>
                         <td class="ci-dateaccessioned"> [% checkin.item.dateaccessioned | $KohaDates %] </td>

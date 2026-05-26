@@ -234,7 +234,7 @@
                             },
                         },
                         {
-                            data: "item.location",
+                            data: "item.effective_location",
                             title: _("Location"),
                             searchable: false,
                             orderable: false,
@@ -243,7 +243,7 @@
                                     if (row.item.checked_out_date) {
                                         return _("On loan, due: ") + $date(row.item.checked_out_date);
                                     } else {
-                                        return row.item._strings.location.str;
+                                        return row.item._strings.effective_location.str;
                                     }
                                 } else {
                                     return null;

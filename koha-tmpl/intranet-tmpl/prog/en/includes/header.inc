@@ -70,6 +70,9 @@
                         [% IF Koha.Preference('PreservationModule') && CAN_user_preservation %]
                             <li><a class="dropdown-item" href="/cgi-bin/koha/preservation/home.pl">Preservation</a></li>
                         [% END %]
+                        [% IF Koha.Preference('UseDisplayModule') && CAN_user_displays %]
+                            <li><a class="dropdown-item" href="/cgi-bin/koha/display/display-home.pl">Displays</a></li>
+                        [% END %]
                         [% IF ( CAN_user_reports ) %]
                             <li><a class="dropdown-item" href="/cgi-bin/koha/reports/reports-home.pl">Reports</a></li>
                         [% END %]

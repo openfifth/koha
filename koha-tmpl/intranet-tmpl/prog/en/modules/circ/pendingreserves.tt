@@ -80,6 +80,7 @@
                                     <th class="string-sort">Available item types</th>
                                     <th class="string-sort">Available locations</th>
                                     <th class="string-sort">Available collections</th>
+                                    <th class="string-sort">Displays</th>
                                     <th>Earliest hold date</th>
                                     <th>Hold notes</th>
                                     <th class="string-sort">Pickup location</th>
@@ -196,6 +197,15 @@
                                                 [% END %]
                                             </ul>
                                         </td>
+                                        <td>
+                                            [% IF ( hold_info.displays.size ) %]
+                                                <ul>
+                                                    [% FOREACH display IN hold_info.displays %]
+                                                        <li><a href="/cgi-bin/koha/display/displays/[% display.display_id | url %]">[% display.display_name | html %]</a></li>
+                                                    [% END %]
+                                                </ul>
+                                            [% END %]
+                                        </td>
                                         <td data-order="[% hold.reservedate | html %]"> [% hold.reservedate | $KohaDates %] in [% Branches.GetName ( hold.branchcode ) | html %] </td>
                                         <td>[% hold.reservenotes | html %]</td>
                                         <td> [% Branches.GetName ( hold.branchcode ) | html %] </td>
@@ -300,6 +310,15 @@
     [% Asset.js("js/hold-group.js") | $raw %]
     <script nonce="[% Koha.CSPNonce | $raw %]" data-tt-allowed="true">
         var table_settings = [% TablesSettings.GetTableSettings('circ', 'holds', 'holds-to-pull', 'json') | $raw %];
+
+        [% UNLESS Koha.Preference('UseDisplayModule') %]
+            table_settings.columns = table_settings.columns.map((element, idx) => {
+                if(element.columnname == "displays")
+                    element.is_hidden = 1;
+
+                return element;
+            });
+        [% END %]
     </script>
     <script nonce="[% Koha.CSPNonce | $raw %]">
         function get_options(column) {
@@ -352,6 +371,7 @@
                         { name: "itemtypes", dataFilter: "item_types" },
                         { name: "locations", dataFilter: "locations" },
                         { name: "collection" },
+                        { name: "displays" },
                         { name: "hold_date" },
                         { name: "reserve_nodes" },
                         { name: "pickup_location", dataFilter: "pickup_locations" },

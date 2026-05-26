@@ -1425,6 +1425,13 @@ Circulation:
                   1: Use
                   0: "Don't use"
             - "course reserves."
+    Display module:
+        -
+            - pref: UseDisplayModule
+              choices:
+                  1: Use
+                  0: "Don't use"
+            - "the display module for managing item displays."
     Batch checkout:
         -
             - pref: BatchCheckouts

@@ -36,6 +36,7 @@
                     <th data-colname="checkout_from" scope="col">Checked out from</th>
                     <th data-colname="callno" scope="col">Call number</th>
                     <th data-colname="copynumber" scope="col">Copy number</th>
+                    <th data-colname="active_display" scope="col">Active display</th>
                     <th data-colname="charge" scope="col">Charge</th>
                     <th data-colname="fine" scope="col">Fine</th>
                     <th data-colname="price" scope="col">Price</th>
