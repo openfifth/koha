@@ -9,11 +9,6 @@ body {
 	display: block;
 }
 
-/* Line break after each space in the itemcallnumber field */
-#itemcallnumber .space {
-	display: block;
-}
-
 /* Put the copynumber on the bottom of the label */
 #copynumber {
 	position: absolute;
