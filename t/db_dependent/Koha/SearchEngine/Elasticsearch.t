@@ -1251,7 +1251,7 @@ subtest 'marc_records_to_documents should set the "available" field' => sub {
 
     $item->notforloan(1)->store();
     $docs = $see->marc_records_to_documents( [$marc_record_1] );
-    is_deeply( $docs->[0]->{available}, \1, 'a biblio with one item that is "notforloan" is available' );
+    is_deeply( $docs->[0]->{available}, \0, 'a biblio with one item that is "notforloan" is not available' );
 
     $item->set( { notforloan => 0, onloan => '2022-03-03' } )->store();
     $docs = $see->marc_records_to_documents( [$marc_record_1] );
@@ -1259,7 +1259,7 @@ subtest 'marc_records_to_documents should set the "available" field' => sub {
 
     $item->set( { onloan => undef, withdrawn => 1 } )->store();
     $docs = $see->marc_records_to_documents( [$marc_record_1] );
-    is_deeply( $docs->[0]->{available}, \1, 'a biblio with one item that is withdrawn is available' );
+    is_deeply( $docs->[0]->{available}, \0, 'a biblio with one item that is withdrawn is not available' );
 
     $item->set( { withdrawn => 0, itemlost => 1 } )->store();
     $docs = $see->marc_records_to_documents( [$marc_record_1] );
@@ -1267,7 +1267,7 @@ subtest 'marc_records_to_documents should set the "available" field' => sub {
 
     $item->set( { itemlost => 0, damaged => 1 } )->store();
     $docs = $see->marc_records_to_documents( [$marc_record_1] );
-    is_deeply( $docs->[0]->{available}, \1, 'a biblio with one item that is damaged is available' );
+    is_deeply( $docs->[0]->{available}, \0, 'a biblio with one item that is damaged is not available' );
 
     my $item2 = $builder->build_sample_item(
         {
