@@ -19,7 +19,7 @@ package Koha::Item;
 
 use Modern::Perl;
 
-use List::MoreUtils qw( any );
+use List::MoreUtils qw( all any );
 
 use Koha::Database;
 use Koha::DateUtils qw( dt_from_string output_pref );
@@ -61,6 +61,20 @@ use Koha::Policy::Holds;
 use Try::Tiny qw( catch try );
 
 use base qw(Koha::Object);
+
+# Fields that are purely circulation state and do not affect the biblio-level
+# available field or any other biblio search/facet data. When a store() modifies
+# only these fields, the expensive biblio MARC re-index is skipped - the items
+# index is authoritative for this data.
+# Intentionally excludes notforloan, damaged, itemlost and withdrawn: those
+# affect the available field in the biblios index and must trigger a re-index.
+# holdingbranch is included because AddIssue always sets it alongside onloan.
+my %ITEM_CIRC_FIELDS = map { $_ => 1 } qw(
+    holdingbranch
+    onloan issues renewals localuse reserves
+    datelastborrowed datelastseen
+    timestamp
+);
 
 =head1 NAME
 
@@ -114,6 +128,7 @@ sub store {
 
     my $today  = dt_from_string;
     my $action = 'create';
+    my %updated_columns;    # populated in the modify path, used for index skip logic
 
     unless ( $self->in_storage ) {    #AddItem
 
@@ -160,7 +175,7 @@ sub store {
             $self->_set_found_trigger( $self->get_from_storage );
         }
 
-        my %updated_columns = $self->_result->get_dirty_columns;
+        %updated_columns = $self->_result->get_dirty_columns;
         return $self->SUPER::store unless %updated_columns;
 
         # Retrieve the item for comparison if we need to
@@ -255,9 +270,23 @@ sub store {
             ? logaction( "CATALOGUING", "ADD",    $self->itemnumber, 'item', undef, $self )
             : logaction( "CATALOGUING", "MODIFY", $self->itemnumber, $self,  undef, $original );
     }
+    my $skip_biblio_index = $params->{skip_record_index};
+    if (  !$skip_biblio_index
+        && $action eq 'modify'
+        && C4::Context->preference("SearchEngine") eq 'Elasticsearch'
+        && %updated_columns )
+    {
+        if ( all { exists $ITEM_CIRC_FIELDS{$_} } keys %updated_columns ) {
+            require Koha::SearchEngine::Elasticsearch::Search;
+            my $searcher =
+                Koha::SearchEngine::Elasticsearch::Search->new( { index => $Koha::SearchEngine::BIBLIOS_INDEX } );
+            $skip_biblio_index = 1 if $searcher->_items_index_ready;
+        }
+    }
+
     my $indexer = Koha::SearchEngine::Indexer->new( { index => $Koha::SearchEngine::BIBLIOS_INDEX } );
     $indexer->index_records( $self->biblionumber, "specialUpdate", "biblioserver" )
-        unless $params->{skip_record_index};
+        unless $skip_biblio_index;
     $self->_update_es_index( 'update', $params->{skip_items_index} );
     $self->_after_item_action_hooks( { action => $action } );
 
