@@ -26,6 +26,8 @@
         <span>Circulation</span>[% UNLESS Koha.Preference('IssueLog') %]<i class="log-disabled fa-solid fa-triangle-exclamation" title="Log not enabled" data-log="IssueLog"></i>[% END %]
     [% CASE 'CLAIMS' %]
         <span>Claims</span>[% UNLESS Koha.Preference('ClaimsLog') %]<i class="log-disabled fa-solid fa-triangle-exclamation" title="Log not enabled" data-log="ClaimsLog"></i>[% END %]
+    [% CASE 'DISPLAYS' %]
+        <span>Displays</span>[% UNLESS Koha.Preference('DisplayItemsLog') %]<i class="log-disabled fa-solid fa-triangle-exclamation" title="Log not enabled" data-log="DisplayItemsLog"></i>[% END %]
     [% CASE 'FINES' %]
         <span>Fines</span>[% UNLESS Koha.Preference('FinesLog') %]<i class="log-disabled fa-solid fa-triangle-exclamation" title="Log not enabled" data-log="FinesLog"></i>[% END %]
     [% CASE 'SYSTEMPREFERENCE' %]
@@ -165,6 +167,14 @@
         <span>Modify card number</span>
     [% CASE 'RESET 2FA' %]
         <span>Reset 2FA</span>
+    [% CASE 'ENABLE' %]
+        <span>Enable</span>
+    [% CASE 'DISABLE' %]
+        <span>Disable</span>
+    [% CASE 'ADD_ITEM' %]
+        <span>Add item</span>
+    [% CASE 'REMOVE_ITEM' %]
+        <span>Remove item</span>
     [% CASE %]
         [% action | html %]
     [% END %]

@@ -57,6 +57,16 @@ function LoadIssuesTable() {
     );
     export_column.visibility_condition = !!exports_enabled;
 
+    let active_display_column = table_settings_issues_table.columns.find(
+        c => c.columnname == "active_display"
+    );
+    if (!displays_enabled) {
+        active_display_column.is_hidden = 1;
+    } else {
+        active_display_column.is_hidden = 0;
+    }
+    active_display_column.force_visibility = 1;
+
     issuesTable = $("#issues-table").kohaTable(
         {
             language: {
@@ -329,6 +339,18 @@ function LoadIssuesTable() {
                 },
                 {
                     data: function (oObj) {
+                        return oObj.display_id
+                            ? '<a href="/cgi-bin/koha/display/displays/%s">%s</a>'.format(
+                                  oObj.display_id.escapeHtml(),
+                                  oObj.display_name.escapeHtml()
+                              )
+                            : "";
+                    },
+                    orderData: [1, 15],
+                    className: "nowrap",
+                },
+                {
+                    data: function (oObj) {
                         if (!oObj.charge) oObj.charge = 0;
                         return (
                             '<span style="text-align: right; display: block;">' +
@@ -336,7 +358,7 @@ function LoadIssuesTable() {
                             "<span>"
                         );
                     },
-                    orderData: [1, 15],
+                    orderData: [1, 16],
                     className: "nowrap",
                 },
                 {
@@ -348,7 +370,7 @@ function LoadIssuesTable() {
                             "<span>"
                         );
                     },
-                    orderData: [1, 16],
+                    orderData: [1, 17],
                     className: "nowrap",
                 },
                 {
@@ -360,7 +382,7 @@ function LoadIssuesTable() {
                             "<span>"
                         );
                     },
-                    orderData: [1, 17],
+                    orderData: [1, 18],
                     className: "nowrap",
                 },
                 {

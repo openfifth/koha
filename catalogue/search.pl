@@ -698,6 +698,7 @@ if ($hits) {
             sort_by           => \@sort_by
         }
         );
+
     $template->param( hits_to_paginate => $hits_to_paginate );
     $template->param( SEARCH_RESULTS   => \@newresults );
     $template->param( SCORES           => $results_hashref->{$server}->{"scores"} );

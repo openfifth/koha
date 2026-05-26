@@ -105,6 +105,7 @@
                         <th class="string-sort">Available item types</th>
                         <th class="string-sort">Available locations</th>
                         <th class="string-sort">Available collections</th>
+                        <th class="string-sort">Displays</th>
                         <th>Earliest hold date</th>
                         <th>Hold notes</th>
                         <th class="string-sort">Pickup location</th>
@@ -220,6 +221,15 @@
                                         <li>[% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.ccode', authorised_value => ccode ) | html %]</li>
                                     [% END %]
                                 </ul>
+                            </td>
+                            <td>
+                                [% IF ( hold_info.displays.size ) %]
+                                    <ul>
+                                        [% FOREACH display IN hold_info.displays %]
+                                            <li><a href="/cgi-bin/koha/display/displays/[% display.display_id | url %]">[% display.display_name | html %]</a></li>
+                                        [% END %]
+                                    </ul>
+                                [% END %]
                             </td>
                             <td data-order="[% hold.reservedate | html %]"> [% hold.reservedate | $KohaDates %] in [% Branches.GetName ( hold.branchcode ) | html %] </td>
                             <td>[% hold.reservenotes | html %]</td>

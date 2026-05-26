@@ -30,6 +30,7 @@ use C4::Koha        qw( GetAuthorisedValues );
 use Koha::AuthorisedValues;
 use Koha::Biblios;
 use Koha::Item::Search::Field qw(GetItemSearchFields);
+use Koha::Items;
 use Koha::ItemTypes;
 use Koha::Libraries;
 
@@ -292,6 +293,12 @@ if ( defined $format and $format ne 'shareable' ) {
             $item->{biblioitem} = $biblio->biblioitem->unblessed;
             my $checkout = Koha::Checkouts->find( { itemnumber => $item->{itemnumber} } );
             $item->{checkout} = $checkout;
+
+            # Add effective_location for display module support
+            if ( C4::Context->preference('UseDisplayModule') ) {
+                my $item_obj = Koha::Items->find( $item->{itemnumber} );
+                $item->{effective_location} = $item_obj ? $item_obj->effective_location : $item->{location};
+            }
         }
     }
 
