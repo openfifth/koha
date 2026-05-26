@@ -17,14 +17,23 @@
 
 use Modern::Perl;
 
-use Test::More tests => 15;
+use Test::More tests => 18;
 use Test::NoWarnings;
+use Test::MockModule;
 use t::lib::Mocks;
 use t::lib::TestBuilder;
 
+use Koha::SearchEngine;
 use Koha::SearchEngine::Elasticsearch::QueryBuilder;
 use Koha::SearchEngine::Elasticsearch::Indexer;
 use Koha::SearchFields;
+
+{
+
+    package MockESSearchClient;
+    sub new    { bless { response => {} }, shift }
+    sub search { my ( $self, %args ) = @_; return $self->{response} }
+}
 
 my $schema = Koha::Database->new()->schema();
 $schema->storage->txn_begin;
@@ -79,11 +88,46 @@ is( $searcher->index, 'mydb', 'Testing basic accessor' );
 
 ok( my $query = $builder->build_query('easy'), 'Build a search query' );
 
+subtest '_apply_available_filter() tests' => sub {
+    plan tests => 4;
+
+    my $mock_search = Test::MockModule->new('Koha::SearchEngine::Elasticsearch::Search');
+    $mock_search->mock( '_get_available_biblionumbers', sub { return ( 1, 2, 3 ) } );
+
+    my $searcher = Koha::SearchEngine::Elasticsearch::Search->new(
+        { nodes => ['localhost:9200'], index => $Koha::SearchEngine::BIBLIOS_INDEX } );
+
+    my $query = { query => { bool => { must => [ { query_string => { query => 'title:foo' } } ] } } };
+    $searcher->_apply_available_filter($query);
+    is(
+        $query->{query}{bool}{must}[0]{query_string}{query},
+        'title:foo', 'query without available:true is not modified'
+    );
+
+    $query = { query => { bool => { must => [ { query_string => { query => 'available:true' } } ] } } };
+    $searcher->_apply_available_filter($query);
+    ok( exists $query->{query}{bool}{filter}, 'available:true rewrite adds a filter' );
+    is( $query->{query}{bool}{must}[0]{query_string}{query}, '*', 'available:true stripped from query string' );
+
+    $query = {
+        query => {
+            bool => {
+                must => [
+                    { query_string => { query => 'title:foo' } },
+                    { query_string => { query => 'available:true' } },
+                ]
+            }
+        }
+    };
+    $searcher->_apply_available_filter($query);
+    ok( exists $query->{query}{bool}{filter}, 'available:true found and rewritten when not at must[0]' );
+};
+
 SKIP: {
 
     eval { $builder->get_elasticsearch_params; };
 
-    skip 'Elasticsearch configuration not available', 9
+    skip 'Elasticsearch configuration not available', 12
         if $@;
 
     Koha::SearchEngine::Elasticsearch::Indexer->new( { index => 'mydb' } )->drop_index;
@@ -125,7 +169,7 @@ SKIP: {
     is( $searcher->max_result_window, 12000, 'max_result_window returns the correct value' );
 
     subtest "_convert_facets" => sub {
-        plan tests => 5;
+        plan tests => 7;
 
         $schema->storage->txn_begin;
         my $builder = t::lib::TestBuilder->new;
@@ -170,7 +214,79 @@ SKIP: {
             "Value of the facet replaced with AV's description"
         );
 
+        # biblio_count present: use biblio_count{value} not doc_count
+        my $es_facets_bc = {
+            'itype' => {
+                'sum_other_doc_count'         => 0,
+                'doc_count_error_upper_bound' => 0,
+                'buckets'                     => [
+                    { 'key' => 'BK', 'doc_count' => 10, 'biblio_count' => { 'value' => 3 } },
+                ],
+            }
+        };
+        my $koha_facets_bc = $searcher->_convert_facets($es_facets_bc);
+        is(
+            $koha_facets_bc->[0]->{facets}->[0]->{facet_count}, 3,
+            'biblio_count present: facet_count uses biblio_count{value}'
+        );
+
+        # biblio_count absent: fall back to doc_count
+        my $es_facets_dc = {
+            'itype' => {
+                'sum_other_doc_count'         => 0,
+                'doc_count_error_upper_bound' => 0,
+                'buckets'                     => [
+                    { 'key' => 'BK', 'doc_count' => 10 },
+                ],
+            }
+        };
+        my $koha_facets_dc = $searcher->_convert_facets($es_facets_dc);
+        is(
+            $koha_facets_dc->[0]->{facets}->[0]->{facet_count}, 10,
+            'biblio_count absent: facet_count falls back to doc_count'
+        );
+
         $schema->storage->txn_rollback;
 
+    };
+
+    subtest '_get_available_biblionumbers() tests' => sub {
+        plan tests => 2;
+
+        my $mock_es     = Test::MockModule->new('Koha::SearchEngine::Elasticsearch');
+        my $mock_client = MockESSearchClient->new;
+        $mock_es->mock( 'get_elasticsearch', sub { $mock_client } );
+
+        $mock_client->{response} = {
+            aggregations => {
+                by_biblio => { buckets => [ { key => { biblionumber => 10 } }, { key => { biblionumber => 20 } } ] }
+            }
+        };
+
+        my @bns = $searcher->_get_available_biblionumbers();
+        is( scalar @bns, 2, '_get_available_biblionumbers returns one entry per bucket' );
+        is_deeply( [ sort { $a <=> $b } @bns ], [ 10, 20 ], 'correct biblionumbers returned' );
+    };
+
+    subtest '_get_item_facets() tests' => sub {
+        plan tests => 3;
+
+        my $mock_es     = Test::MockModule->new('Koha::SearchEngine::Elasticsearch');
+        my $mock_client = MockESSearchClient->new;
+        $mock_es->mock( 'get_elasticsearch', sub { $mock_client } );
+
+        my $result = $searcher->_get_item_facets( [] );
+        is_deeply( $result, {}, '_get_item_facets with empty list returns empty hashref' );
+
+        $mock_client->{response} = {
+            aggregations => {
+                itype    => { buckets => [ { key => 'BK', doc_count => 5 } ] },
+                location => { buckets => [] },
+            }
+        };
+
+        $result = $searcher->_get_item_facets( [ 1, 2, 3 ] );
+        ok( exists $result->{itype},    '_get_item_facets returns itype aggregation' );
+        ok( exists $result->{location}, '_get_item_facets returns location aggregation' );
     };
 }
