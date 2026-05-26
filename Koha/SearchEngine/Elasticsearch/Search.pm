@@ -345,6 +345,48 @@ sub _get_item_facets {
     return $result->{aggregations} // {};
 }
 
+=head2 get_items_for_biblionumbers
+
+    my $items_by_biblio = $searcher->get_items_for_biblionumbers(\@biblionumbers);
+
+Queries the items Elasticsearch index for the given C<$biblionumbers> and
+returns a hashref keyed by biblionumber. Each value is an arrayref of item
+document hashrefs containing all fields indexed by C<_item_to_document>
+(itemnumber, barcode, homebranch, holdingbranch, location, itype, ccode,
+notforloan, damaged, itemlost, withdrawn, onloan, available, etc.).
+
+Returns an empty hashref if the items index is unreachable or no
+biblionumbers are provided.
+
+=cut
+
+sub get_items_for_biblionumbers {
+    my ( $self, $biblionumbers ) = @_;
+
+    return {} unless @$biblionumbers;
+
+    my $items_searcher =
+        Koha::SearchEngine::Elasticsearch::Search->new( { index => $Koha::SearchEngine::ITEMS_INDEX } );
+    my $elasticsearch = $items_searcher->get_elasticsearch();
+    my $result        = eval {
+        $elasticsearch->search(
+            index => $items_searcher->index_name,
+            body  => {
+                query => { terms => { biblionumber => [ map { $_ + 0 } @$biblionumbers ] } },
+                size  => 10_000,
+            }
+        );
+    };
+    return {} if $@;
+
+    my %items_by_biblio;
+    for my $hit ( @{ $result->{hits}{hits} // [] } ) {
+        my $src = $hit->{_source};
+        push @{ $items_by_biblio{ $src->{biblionumber} } }, $src;
+    }
+    return \%items_by_biblio;
+}
+
 =head2 search_auth_compat
 
     my ( $results, $total ) =
