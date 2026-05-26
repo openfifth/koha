@@ -213,6 +213,12 @@ export default {
                                             text: action[action_name].text,
                                         });
                                     }
+                                } else if (action == "show") {
+                                    content.push(
+                                        '<a class="show btn btn-default btn-xs" role="button"><i class="fa fa-eye"></i> ' +
+                                            $__("Show") +
+                                            "</a>"
+                                    );
                                 } else if (action == "edit") {
                                     content.push({
                                         action_name: "edit",
