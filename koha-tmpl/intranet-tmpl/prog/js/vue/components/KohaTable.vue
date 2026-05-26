@@ -197,6 +197,12 @@ export default {
                                             `<a class="${action_name} btn btn-default btn-xs" role="button"><i class="${action[action_name].icon}"></i> ${action[action_name].text}</a>`
                                         );
                                     }
+                                } else if (action == "show") {
+                                    content.push(
+                                        '<a class="show btn btn-default btn-xs" role="button"><i class="fa fa-eye"></i> ' +
+                                            $__("Show") +
+                                            "</a>"
+                                    );
                                 } else if (action == "edit") {
                                     content.push(
                                         '<a class="edit btn btn-default btn-xs" role="button"><i class="fa fa-pencil"></i> ' +
