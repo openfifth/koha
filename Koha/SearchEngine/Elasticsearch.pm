@@ -27,6 +27,7 @@ use Koha::Exceptions::Elasticsearch;
 use Koha::Filter::MARC::EmbedSeeFromHeadings;
 use Koha::I18N qw(__);
 use Koha::SearchEngine;
+use Koha::ItemTypes;
 use Koha::SearchFields;
 use Koha::SearchMarcMaps;
 use Koha::Caches;
@@ -75,6 +76,7 @@ __PACKAGE__->mk_accessors(qw( sort_fields ));
 # Constants to refer to the standard index names
 Readonly our $BIBLIOS_INDEX     => 'biblios';
 Readonly our $AUTHORITIES_INDEX => 'authorities';
+Readonly our $ITEMS_INDEX       => 'items';
 
 =head1 NAME
 
@@ -216,7 +218,7 @@ sub get_elasticsearch_mappings {
     if ( !defined $all_mappings{ $self->index } ) {
         $sort_fields{ $self->index } = {};
 
-        if ( $self->index eq $Koha::SearchEngine::ITEMS_INDEX ) {
+        if ( $self->index eq $ITEMS_INDEX ) {
             $all_mappings{ $self->index } = $self->_get_items_elasticsearch_mappings();
             $self->sort_fields( \%{ $sort_fields{ $self->index } } );
             return $all_mappings{ $self->index };
@@ -289,6 +291,9 @@ sub get_elasticsearch_mappings {
         $mappings->{date_detection}    = JSON::PP::false;
         $mappings->{numeric_detection} = JSON::PP::false;
 
+        if ( $self->index eq $BIBLIOS_INDEX ) {
+            $mappings->{properties}{biblionumber} = { type => 'integer' };
+        }
         $all_mappings{ $self->index } = $mappings;
     }
     $self->sort_fields( \%{ $sort_fields{ $self->index } } );
@@ -720,6 +725,11 @@ sub marc_records_to_documents {
         %auth_match_headings = map { $_->authtypecode => $_->auth_tag_to_report } @auth_types;
     }
 
+    my @nfl_itype_codes;
+    if ( $self->index eq $BIBLIOS_INDEX ) {
+        @nfl_itype_codes = map { $_->itemtype } Koha::ItemTypes->search( { notforloan => { '>' => 0 } } )->as_list;
+    }
+
     foreach my $record ( @{$records} ) {
         my $record_document = {};
 
@@ -949,7 +959,11 @@ sub marc_records_to_documents {
                     {
                         biblionumber => $biblionumber,
                         onloan       => undef,
+                        notforloan   => 0,
+                        damaged      => 0,
                         itemlost     => 0,
+                        withdrawn    => 0,
+                        ( @nfl_itype_codes ? ( itype => { '-not_in' => \@nfl_itype_codes } ) : () ),
                     }
                 )->count;
 

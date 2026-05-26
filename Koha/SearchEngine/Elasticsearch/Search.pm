@@ -46,6 +46,7 @@ use C4::AuthoritiesMarc;
 use Koha::ItemTypes;
 use Koha::AuthorisedValues;
 use Koha::AuthorisedValueCategories;
+use Koha::SearchEngine;
 use Koha::SearchEngine::QueryBuilder;
 use Koha::SearchEngine::Search;
 use Koha::Exceptions::Elasticsearch;
@@ -165,6 +166,11 @@ sub search_compat {
         return $self->_aggregation_scan( $query, $results_per_page, $offset );
     }
 
+    if ( $self->index eq $Koha::SearchEngine::BIBLIOS_INDEX ) {
+        $self->_apply_available_filter($query);
+        $query->{aggregations}{_biblionumbers} = { terms => { field => 'biblionumber', size => 9_000 } };
+    }
+
     my %options;
     if ( !defined $offset or $offset < 0 ) {
         $offset = 0;
@@ -192,12 +198,167 @@ sub search_compat {
     $result{biblioserver}{RECORDS} = \@records;
     $result{biblioserver}{scores}  = \@scores;
 
-    my $facets = $self->_convert_facets( $results->{aggregations} );
+    my $aggregations = $results->{aggregations} // {};
+    if ( $self->index eq $Koha::SearchEngine::BIBLIOS_INDEX ) {
+        my $bn_agg            = delete $aggregations->{_biblionumbers};
+        my @all_biblionumbers = $bn_agg ? map { $_->{key} } @{ $bn_agg->{buckets} // [] } : ();
+        my $item_facets       = eval { $self->_get_item_facets( \@all_biblionumbers ) } // {};
+        $aggregations->{$_} = $item_facets->{$_} for keys %$item_facets;
+    }
+    my $facets = $self->_convert_facets($aggregations);
     if ( C4::Context->interface eq 'opac' ) {
         my $rules = C4::Context->yaml_preference('OpacHiddenItems');
         $facets = Koha::SearchEngine::Search->post_filter_opac_facets( { facets => $facets, rules => $rules } );
     }
     return ( undef, \%result, $facets );
+}
+
+=head2 _apply_available_filter
+
+    $self->_apply_available_filter($query);
+
+Rewrites a biblio Elasticsearch query that contains C<available:true> so
+that availability is resolved against the items index rather than the
+biblios index. The items index is updated on every circulation event, so
+it reflects the current availability immediately; the biblios index may lag
+when only circulation fields changed.
+
+If the items index is unreachable the query is left unchanged, falling back
+to the C<available:true> field in the biblios index.
+
+=cut
+
+sub _apply_available_filter {
+    my ( $self, $query ) = @_;
+
+    my $must = eval { $query->{query}{bool}{must} };
+    return unless ref $must eq 'ARRAY';
+
+    my ($qs_container) = grep {
+               ref $_ eq 'HASH'
+            && exists $_->{query_string}
+            && ( $_->{query_string}{query} // '' ) =~ /\(?available:true\)?/
+    } @$must;
+    return unless $qs_container;
+    my $qs_node = $qs_container->{query_string};
+
+    my @biblionumbers;
+    eval { @biblionumbers = $self->_get_available_biblionumbers(); 1 } or return;
+
+    my $available_re = qr/\(?available:true\)?/;
+    my $qs           = $qs_node->{query};
+    $qs =~ s/\s+AND\s+$available_re//i;
+    $qs =~ s/${available_re}\s+AND\s+//i;
+    $qs =~ s/$available_re//i;
+    $qs =~ s/^\s+|\s+$//g;
+    $qs_node->{query} = $qs || '*';
+
+    if (@biblionumbers) {
+        push @{ $query->{query}{bool}{filter} },
+            { ids => { values => [ map { "$_" } @biblionumbers ] } };
+    } else {
+        $query->{query} = { match_none => {} };
+    }
+}
+
+=head2 _get_available_biblionumbers
+
+    my @biblionumbers = $self->_get_available_biblionumbers();
+
+Queries the items Elasticsearch index and returns a list of all biblionumbers
+that have at least one available item.
+
+=cut
+
+sub _get_available_biblionumbers {
+    my ($self) = @_;
+
+    my $items_searcher =
+        Koha::SearchEngine::Elasticsearch::Search->new( { index => $Koha::SearchEngine::ITEMS_INDEX } );
+    my $elasticsearch = $items_searcher->get_elasticsearch();
+
+    my @biblionumbers;
+    my $after_key;
+    do {
+        my $composite = {
+            size    => 1000,
+            sources => [ { biblionumber => { terms => { field => 'biblionumber' } } } ],
+        };
+        $composite->{after} = $after_key if defined $after_key;
+
+        my $result = $elasticsearch->search(
+            index => $items_searcher->index_name,
+            body  => {
+                query => { term => { available => \1 } },
+                size  => 0,
+                aggs  => { by_biblio => { composite => $composite } },
+            }
+        );
+
+        my $buckets = $result->{aggregations}{by_biblio}{buckets} // [];
+        push @biblionumbers, map { $_->{key}{biblionumber} } @$buckets;
+        $after_key = $result->{aggregations}{by_biblio}{after_key};
+    } while ( defined $after_key );
+
+    return @biblionumbers;
+}
+
+=head2 _get_item_facets
+
+    my $item_facets = $self->_get_item_facets(\@biblionumbers);
+
+Queries the items Elasticsearch index for the given biblionumbers and returns
+aggregation buckets for item-level facet fields (itype, location, ccode,
+homebranch, holdingbranch). The returned hashref is in the same format as
+ES aggregation results so it can be merged directly into the biblio
+aggregations and processed by C<_convert_facets>.
+
+Returns an empty hashref if the items index is unreachable or no
+biblionumbers are provided.
+
+=cut
+
+sub _get_item_facets {
+    my ( $self, $biblionumbers ) = @_;
+
+    return {} unless @$biblionumbers;
+
+    my $limit = C4::Context->preference('FacetMaxCount') || 20;
+
+    my $items_searcher =
+        Koha::SearchEngine::Elasticsearch::Search->new( { index => $Koha::SearchEngine::ITEMS_INDEX } );
+    my $elasticsearch = $items_searcher->get_elasticsearch();
+    my $result        = $elasticsearch->search(
+        index => $items_searcher->index_name,
+        body  => {
+            query => { terms => { biblionumber => [ map { $_ + 0 } @$biblionumbers ] } },
+            size  => 0,
+            aggs  => {
+                itype => {
+                    terms => { field        => 'itype', size => $limit },
+                    aggs  => { biblio_count => { cardinality => { field => 'biblionumber' } } }
+                },
+                location => {
+                    terms => { field        => 'location', size => $limit },
+                    aggs  => { biblio_count => { cardinality => { field => 'biblionumber' } } }
+                },
+                ccode => {
+                    terms => { field        => 'ccode', size => $limit },
+                    aggs  => { biblio_count => { cardinality => { field => 'biblionumber' } } }
+                },
+                homebranch => {
+                    terms => { field        => 'homebranch', size => $limit },
+                    aggs  => { biblio_count => { cardinality => { field => 'biblionumber' } } }
+                },
+                holdingbranch => {
+                    terms => { field        => 'holdingbranch', size => $limit },
+                    aggs  => { biblio_count => { cardinality => { field => 'biblionumber' } } }
+                },
+            }
+        }
+    );
+
+    return $result->{aggregations} // {};
 }
 
 =head2 search_auth_compat
@@ -555,7 +716,7 @@ sub _convert_facets {
             next
                 unless length($t)
                 ; # FIXME Currently we cannot search for an empty faceted field i.e. ln:"" to find records missing languages, though ES does count them correctly
-            my $c = $term->{doc_count};
+            my $c = exists $term->{biblio_count} ? $term->{biblio_count}{value} : $term->{doc_count};
             my $label;
             if ( exists( $special{$type} ) ) {
                 $label = $special{$type}->{$t} // $t;
