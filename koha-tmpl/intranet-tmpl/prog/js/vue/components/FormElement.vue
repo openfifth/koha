@@ -206,6 +206,9 @@
     <span style="margin-left: 5px" class="error" v-if="fieldInputError">
         {{ attr.formErrorMessage }}
     </span>
+    <div v-if="attr.breakAfter" class="clear">
+        <br />
+    </div>
 </template>
 
 <script>
