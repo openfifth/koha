@@ -46,6 +46,7 @@ use C4::AuthoritiesMarc;
 use Koha::ItemTypes;
 use Koha::AuthorisedValues;
 use Koha::AuthorisedValueCategories;
+use Koha::SearchEngine;
 use Koha::SearchEngine::QueryBuilder;
 use Koha::SearchEngine::Search;
 use Koha::Exceptions::Elasticsearch;
@@ -165,6 +166,9 @@ sub search_compat {
         return $self->_aggregation_scan( $query, $results_per_page, $offset );
     }
 
+    $self->_apply_available_filter($query)
+        if $self->index eq $Koha::SearchEngine::BIBLIOS_INDEX;
+
     my %options;
     if ( !defined $offset or $offset < 0 ) {
         $offset = 0;
@@ -198,6 +202,80 @@ sub search_compat {
         $facets = Koha::SearchEngine::Search->post_filter_opac_facets( { facets => $facets, rules => $rules } );
     }
     return ( undef, \%result, $facets );
+}
+
+=head2 _apply_available_filter
+
+    $self->_apply_available_filter($query);
+
+Rewrites a biblio Elasticsearch query that contains C<available:true> so
+that availability is resolved against the items index rather than the
+biblios index. The items index is updated on every circulation event, so
+it reflects the current availability immediately; the biblios index may lag
+when only circulation fields changed.
+
+If the items index is unreachable the query is left unchanged, falling back
+to the C<available:true> field in the biblios index.
+
+=cut
+
+sub _apply_available_filter {
+    my ( $self, $query ) = @_;
+
+    my $qs_node = eval { $query->{query}{bool}{must}[0]{query_string} };
+    return unless $qs_node && ( $qs_node->{query} // '' ) =~ /\(?available:true\)?/;
+
+    my @biblionumbers;
+    eval { @biblionumbers = $self->_get_available_biblionumbers(); 1 } or return;
+
+    my $available_re = qr/\(?available:true\)?/;
+    my $qs           = $qs_node->{query};
+    $qs =~ s/\s+AND\s+$available_re//i;
+    $qs =~ s/${available_re}\s+AND\s+//i;
+    $qs =~ s/$available_re//i;
+    $qs =~ s/^\s+|\s+$//g;
+    $qs_node->{query} = $qs || '*';
+
+    if (@biblionumbers) {
+        push @{ $query->{query}{bool}{filter} },
+            { ids => { values => [ map { "$_" } @biblionumbers ] } };
+    } else {
+        $query->{query} = { match_none => {} };
+    }
+}
+
+=head2 _get_available_biblionumbers
+
+    my @biblionumbers = $self->_get_available_biblionumbers();
+
+Queries the items Elasticsearch index and returns a list of all biblionumbers
+that have at least one available item.
+
+=cut
+
+sub _get_available_biblionumbers {
+    my ($self) = @_;
+
+    my $items_searcher =
+        Koha::SearchEngine::Elasticsearch::Search->new( { index => $Koha::SearchEngine::ITEMS_INDEX } );
+    my $elasticsearch = $items_searcher->get_elasticsearch();
+    my $result        = $elasticsearch->search(
+        index => $items_searcher->index_name,
+        body  => {
+            query => { term => { available => \1 } },
+            size  => 0,
+            aggs  => {
+                by_biblio => {
+                    terms => {
+                        field => 'biblionumber',
+                        size  => 1_000_000,
+                    }
+                }
+            }
+        }
+    );
+
+    return map { $_->{key} } @{ $result->{aggregations}{by_biblio}{buckets} };
 }
 
 =head2 search_auth_compat
