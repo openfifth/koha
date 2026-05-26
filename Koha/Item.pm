@@ -52,6 +52,7 @@ use Koha::Patrons;
 use Koha::Plugins;
 use Koha::Recalls;
 use Koha::Result::Boolean;
+use Koha::SearchEngine;
 use Koha::SearchEngine::Indexer;
 use Koha::Serial::Items;
 use Koha::StockRotationItem;
@@ -75,9 +76,17 @@ Koha::Item - Koha Item object class
 
     $item->store;
 
-$params can take an optional 'skip_record_index' parameter.
-If set, the reindexation process will not happen (index_records not called)
-You should not turn it on if you do not understand what it is doing exactly.
+C<$params> accepts two optional indexing flags:
+
+=over 4
+
+=item C<skip_record_index> — skip the biblio (MARC) re-index. Use when you
+will batch-reindex later. Does not affect the items index.
+
+=item C<skip_items_index> — skip the items ES index update. Only needed for
+bulk operations that will re-index items separately (e.g. a full rebuild).
+
+=back
 
 =cut
 
@@ -249,6 +258,18 @@ sub store {
     my $indexer = Koha::SearchEngine::Indexer->new( { index => $Koha::SearchEngine::BIBLIOS_INDEX } );
     $indexer->index_records( $self->biblionumber, "specialUpdate", "biblioserver" )
         unless $params->{skip_record_index};
+    if ( C4::Context->preference("SearchEngine") eq 'Elasticsearch' ) {
+        require Koha::SearchEngine::Elasticsearch::Indexer;
+        my $items_indexer =
+            Koha::SearchEngine::Elasticsearch::Indexer->new( { index => $Koha::SearchEngine::ITEMS_INDEX } );
+        unless ( $params->{skip_items_index} ) {
+            try {
+                $items_indexer->index_items( [ $self->itemnumber ] );
+            } catch {
+                warn "Could not update items Elasticsearch index: $_";
+            };
+        }
+    }
     $self->_after_item_action_hooks( { action => $action } );
 
     Koha::BackgroundJob::BatchUpdateBiblioHoldsQueue->new->enqueue( { biblio_ids => [ $self->biblionumber ] } )
@@ -314,6 +335,18 @@ sub delete {
     my $indexer = Koha::SearchEngine::Indexer->new( { index => $Koha::SearchEngine::BIBLIOS_INDEX } );
     $indexer->index_records( $self->biblionumber, "specialUpdate", "biblioserver" )
         unless $params->{skip_record_index};
+    if ( C4::Context->preference("SearchEngine") eq 'Elasticsearch' ) {
+        require Koha::SearchEngine::Elasticsearch::Indexer;
+        my $items_indexer =
+            Koha::SearchEngine::Elasticsearch::Indexer->new( { index => $Koha::SearchEngine::ITEMS_INDEX } );
+        unless ( $params->{skip_items_index} ) {
+            try {
+                $items_indexer->delete_items( [ $self->itemnumber ] );
+            } catch {
+                warn "Could not update items Elasticsearch index: $_";
+            };
+        }
+    }
 
     $self->_after_item_action_hooks( { action => 'delete' } );
 

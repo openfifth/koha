@@ -26,10 +26,12 @@ use Koha::Exceptions::Config;
 use Koha::Exceptions::Elasticsearch;
 use Koha::Filter::MARC::EmbedSeeFromHeadings;
 use Koha::I18N qw(__);
+use Koha::SearchEngine;
 use Koha::SearchFields;
 use Koha::SearchMarcMaps;
 use Koha::Caches;
 use Koha::AuthorisedValueCategories;
+use Koha::ItemTypes;
 use C4::Heading;
 use C4::AuthoritiesMarc qw( GuessAuthTypeCode );
 use C4::Biblio;
@@ -214,6 +216,12 @@ sub get_elasticsearch_mappings {
     if ( !defined $all_mappings{ $self->index } ) {
         $sort_fields{ $self->index } = {};
 
+        if ( $self->index eq $Koha::SearchEngine::ITEMS_INDEX ) {
+            $all_mappings{ $self->index } = $self->_get_items_elasticsearch_mappings();
+            $self->sort_fields( \%{ $sort_fields{ $self->index } } );
+            return $all_mappings{ $self->index };
+        }
+
         # Clone the general mapping to break ties with the original hash
         my $mappings    = clone( _get_elasticsearch_field_config( 'general', '' ) );
         my $marcflavour = lc C4::Context->preference('marcflavour');
@@ -276,6 +284,49 @@ sub get_elasticsearch_mappings {
     }
     $self->sort_fields( \%{ $sort_fields{ $self->index } } );
     return $all_mappings{ $self->index };
+}
+
+=head2 _get_items_elasticsearch_mappings
+
+Returns the Elasticsearch index mapping for the items index. Items are indexed
+directly from the database rather than from MARC records, so this mapping is
+defined in code rather than derived from mappings.yaml.
+
+=cut
+
+sub _get_items_elasticsearch_mappings {
+    my ($self) = @_;
+
+    return {
+        properties => {
+            itemnumber    => { type => 'integer' },
+            biblionumber  => { type => 'integer' },
+            barcode       => { type => 'keyword' },
+            homebranch    => { type => 'keyword' },
+            holdingbranch => { type => 'keyword' },
+            location      => { type => 'keyword' },
+            itype         => { type => 'keyword' },
+            ccode         => { type => 'keyword' },
+            notforloan    => { type => 'integer' },
+            damaged       => { type => 'integer' },
+            itemlost      => { type => 'integer' },
+            withdrawn     => { type => 'integer' },
+            restricted    => { type => 'integer' },
+            onloan        => { type => 'keyword' },
+            issues        => { type => 'integer' },
+            renewals      => { type => 'integer' },
+            cn_sort       => { type => 'keyword' },
+            itemcallnumber => {
+                type   => 'text',
+                fields => { raw => { type => 'keyword' } }
+            },
+            available    => { type => 'boolean' },
+            copynumber   => { type => 'keyword' },
+            enumchron    => { type => 'text' },
+            stocknumber  => { type => 'keyword' },
+            itemnotes    => { type => 'text' },
+        }
+    };
 }
 
 =head2 raw_elasticsearch_mappings
@@ -660,6 +711,12 @@ sub marc_records_to_documents {
         %auth_match_headings = map { $_->authtypecode => $_->auth_tag_to_report } @auth_types;
     }
 
+    my @nfl_itype_codes;
+    if ( $self->index eq $BIBLIOS_INDEX ) {
+        @nfl_itype_codes = map { $_->itemtype }
+            Koha::ItemTypes->search( { notforloan => { '>' => 0 } } )->as_list;
+    }
+
     foreach my $record ( @{$records} ) {
         my $record_document = {};
 
@@ -889,7 +946,11 @@ sub marc_records_to_documents {
                     {
                         biblionumber => $biblionumber,
                         onloan       => undef,
+                        notforloan   => 0,
+                        damaged      => 0,
                         itemlost     => 0,
+                        withdrawn    => 0,
+                        ( @nfl_itype_codes ? ( itype => { '-not_in' => \@nfl_itype_codes } ) : () ),
                     }
                 )->count;
 
