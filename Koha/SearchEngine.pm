@@ -38,6 +38,11 @@ to indicate that you want to be working with the biblio index.
 Use this constant when creating a new L<Koha::SearchEngine::Search> instance to
 indicate that you want to be working with the authorities index.
 
+=head2 ITEMS_INDEX
+
+Use this constant when creating a new L<Koha::SearchEngine::Elasticsearch::Indexer> instance
+to indicate that you want to be working with the items index.
+
 =cut
 
 # Search engine implementations should compare against these to determine
@@ -45,5 +50,6 @@ indicate that you want to be working with the authorities index.
 # may be used for, e.g., directory names.
 Readonly our $BIBLIOS_INDEX     => 'biblios';
 Readonly our $AUTHORITIES_INDEX => 'authorities';
+Readonly our $ITEMS_INDEX       => 'items';
 
 1;
