@@ -180,17 +180,30 @@
                                 [% IF ( item_level_itypes ) %]
                                     <li class="itype"><span class="label">Item type:</span> [% ITEM_DAT.itype | html %]&nbsp;</li>
                                 [% END %]
-                                [% IF ( ITEM_DAT.ccode) %]
+                                [% IF ( ITEM_DAT.ccode ) %]
                                     <li class="ccode"><span class="label">Collection:</span> [% ITEM_DAT.ccode | html %]</li>
                                 [% END %]
                                 <li class="itemcallnumber"><span class="label">Item call number:</span> [% ITEM_DAT.itemcallnumber | html %]</li>
                                 [% IF ( ITEM_DAT.displaycopy ) %]
                                     <li class="copynumber"><span class="label">Copy number:</span> [% ITEM_DAT.copyvol | html %]&nbsp;</li>
                                 [% END %]
-                                [% IF ( ITEM_DAT.location ) %]
+                                [% IF ( ITEM_DAT.effective_location ) %]
                                     <li class="location">
                                         <span class="label">Shelving location:</span>
-                                        [% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.location', authorised_value => ITEM_DAT.location ) | html %]
+                                        [% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.location', authorised_value => ITEM_DAT.effective_location ) | html %]
+                                    </li>
+                                [% END %]
+                                [% IF ( ITEM_DAT.displays ) %]
+                                    <li class="displays" class="nowrap">
+                                        [% IF ITEM_DAT.displays.size > 1 %]
+                                            <span class="label">In displays:</span>
+                                        [% ELSE %]
+                                            <span class="label">In display:</span>
+                                        [% END %]
+                                        [% FOR display IN ITEM_DAT.displays %]
+                                            <a href="/cgi-bin/koha/display/displays/[% display.display_id | url %]">[% display.display_name | html %]</a>
+                                            [% UNLESS loop.last %],[% END %]
+                                        [% END %]
                                     </li>
                                 [% END %]
                                 [% IF ( ITEM_DAT.replacementprice ) %]

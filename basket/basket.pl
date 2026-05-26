@@ -17,6 +17,7 @@
 
 use Modern::Perl;
 use CGI qw ( -utf8 );
+use C4::Context;
 use C4::Koha;
 use C4::Biblio qw(
     GetMarcSeries
@@ -29,6 +30,7 @@ use C4::Output qw( output_html_with_http_headers );
 use Koha::AuthorisedValues;
 use Koha::Biblios;
 use Koha::CsvProfiles;
+use Koha::Items;
 
 my $query = CGI->new;
 
@@ -87,7 +89,15 @@ foreach my $biblionumber (@bibs) {
 
     $num++;
     $dat->{biblionumber} = $biblionumber;
-    $dat->{ITEM_RESULTS} = $biblio->items->search_ordered;
+    my $items = $biblio->items->search_ordered;
+
+    # Add effective_location for display module support
+    if ( C4::Context->preference('UseDisplayModule') ) {
+        foreach my $item ( $items->as_list ) {
+            $item->{effective_location} = $item->effective_location;
+        }
+    }
+    $dat->{ITEM_RESULTS} = $items;
     $dat->{MARCNOTES}    = $marcnotesarray;
     $dat->{MARCSUBJCTS}  = $marcsubjctsarray;
     $dat->{MARCAUTHORS}  = $marcauthorsarray;
@@ -107,9 +117,10 @@ my $resultsarray = \@results;
 # my $itemsarray=\@items;
 
 $template->param(
-    BIBLIO_RESULTS => $resultsarray,
-    csv_profiles   => Koha::CsvProfiles->search( { type => 'marc', used_for => 'export_records' } ),
-    bib_list       => $bib_list,
+    BIBLIO_RESULTS   => $resultsarray,
+    csv_profiles     => Koha::CsvProfiles->search( { type => 'marc', used_for => 'export_records' } ),
+    bib_list         => $bib_list,
+    UseDisplayModule => C4::Context->preference('UseDisplayModule'),
 );
 
 output_html_with_http_headers $query, $cookie, $template->output;

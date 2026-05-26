@@ -260,7 +260,7 @@ foreach my $bibnum (@biblionumbers) {
     # get available item types for each biblio
     my @res_itemtypes;
     if ( C4::Context->preference('item-level_itypes') ) {
-        @res_itemtypes = uniq map { defined $_->itype ? $_->itype : () } @$items;
+        @res_itemtypes = uniq map { defined $_->effective_itemtype ? $_->effective_itemtype : () } @$items;
     } else {
         @res_itemtypes = Koha::Biblioitems->search(
             { biblionumber => $bibnum, itemtype => { '!=', undef } },
@@ -270,19 +270,20 @@ foreach my $bibnum (@biblionumbers) {
             }
         )->get_column('itemtype');
     }
+
     $hold_info->{itemtypes} = \@res_itemtypes;
 
     my $res_info = $all_holds->{$bibnum};
 
     # get available values for each biblio
     my $fields = {
-        collections     => 'ccode',
-        locations       => 'location',
+        collections     => 'effective_collection_code',
+        locations       => 'effective_location',
         callnumbers     => 'itemcallnumber',
         enumchrons      => 'enumchron',
         copynumbers     => 'copynumber',
         barcodes        => 'barcode',
-        holdingbranches => 'holdingbranch'
+        holdingbranches => 'effective_holdingbranch'
     };
 
     while ( my ( $key, $field ) = each %$fields ) {
@@ -315,6 +316,23 @@ foreach my $bibnum (@biblionumbers) {
     $hold_info->{biblio}     = $res_info->biblio;
     $hold_info->{hold}       = $res_info;
     $hold_info->{item_group} = $res_info->item_group;
+
+    if ( C4::Context->preference('UseDisplayModule') ) {
+        my @displays;
+        my @display_items = Koha::DisplayItems->search(
+            { itemnumber => $hold_info->{item}->{itemnumber} },
+            {
+                order_by => { '-desc' => 'date_added' },
+            }
+        )->as_list;
+
+        foreach my $display_item (@display_items) {
+            push @displays, $display_item->display;
+        }
+
+        $hold_info->{display_items} = \@display_items if @display_items;
+        $hold_info->{displays}      = \@displays      if @displays;
+    }
 
     push @holds_info, $hold_info;
 }
