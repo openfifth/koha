@@ -16,9 +16,11 @@
 # along with Koha; if not, see <https://www.gnu.org/licenses>.
 
 use Modern::Perl;
-use CGI        qw ( -utf8 );
-use C4::Auth   qw( get_template_and_user );
-use C4::Output qw( output_html_with_http_headers );
+use CGI            qw ( -utf8 );
+use HTML::Entities qw( encode_entities );
+use C4::Auth       qw( get_template_and_user );
+use C4::Output     qw( output_html_with_http_headers );
+use C4::ClassSplitRoutine::ETF;
 
 my $scheme = C4::Context->preference('SpineLabelFormat');
 my $query  = CGI->new;
@@ -55,9 +57,19 @@ my $body;
 
 my $data;
 while ( my ( $key, $value ) = each(%$item) ) {
+    $value = '' unless defined $value;
+
+    if ( $key eq 'itemcallnumber' ) {
+        my @lines = C4::ClassSplitRoutine::ETF::split_callnumber($value);
+        @lines = ($value) unless @lines;
+        $data->{$key} = "<span class='field' id='$key'>"
+            . join( '<br>', map { encode_entities($_) } @lines )
+            . "</span>";
+        next;
+    }
+
     $data->{$key} .= "<span class='field' id='$key'>";
 
-    $value = '' unless defined $value;
     my @characters   = split( //, $value );
     my $charnum      = 1;
     my $wordernumber = 1;
