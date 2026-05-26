@@ -12,6 +12,7 @@ import AcquisitionAPIClient from "@fetch/acquisition-api-client";
 import AdditionalFieldsAPIClient from "@fetch/additional-fields-api-client";
 import AVAPIClient from "@fetch/authorised-values-api-client";
 import CashAPIClient from "@fetch/cash-api-client";
+import DisplayAPIClient from "@fetch/display-api-client";
 import ItemAPIClient from "@fetch/item-api-client";
 import RecordSourcesAPIClient from "@fetch/record-sources-api-client";
 import SysprefAPIClient from "@fetch/system-preferences-api-client";
@@ -35,6 +36,7 @@ export const APIClient = {
     authorised_values: new AVAPIClient(HttpClient),
     cash: new CashAPIClient(HttpClient),
     circulation_rules: new CircRuleAPIClient(HttpClient),
+    display: new DisplayAPIClient(HttpClient),
     item: new ItemAPIClient(HttpClient),
     sysprefs: new SysprefAPIClient(HttpClient),
     sip2: new SIP2APIClient(HttpClient),
