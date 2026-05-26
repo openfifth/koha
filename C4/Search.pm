@@ -1737,6 +1737,33 @@ sub searchResults {
         : undef;
     my $patron_category_hide_lost_items = ($logged_in_user) ? $logged_in_user->category->hidelostitems : 0;
 
+    # Pre-compute OPAC item visibility for the whole result page in a single DB call
+    # instead of one Koha::Items->search per item inside the loop.
+    my %opac_visible_itemnumbers;
+    my $opac_visibility_prefetched = 0;
+    if ($is_opac) {
+        my @all_itemnumbers;
+        for ( my $i = $offset ; $i <= $times - 1 ; $i++ ) {
+            next unless $marcresults->[$i];
+            my $mr;
+            if ($scan) {
+                eval { $mr = MARC::Record->new_from_usmarc( $marcresults->[$i] ) };
+            } else {
+                $mr = new_record_from_zebra( 'biblioserver', $marcresults->[$i] );
+            }
+            next unless $mr;
+            push @all_itemnumbers,
+                grep { defined }
+                map { $_->subfield( $subfieldstosearch{itemnumber} ) } $mr->field($itemtag);
+        }
+        if (@all_itemnumbers) {
+            my $visible = Koha::Items->search( { itemnumber => { -in => \@all_itemnumbers } } )
+                ->filter_by_visible_in_opac( { patron => $search_context->{patron} } );
+            %opac_visible_itemnumbers   = map { $_->itemnumber => 1 } $visible->as_list;
+            $opac_visibility_prefetched = 1;
+        }
+    }
+
     # loop through all of the records we've retrieved
     for ( my $i = $offset ; $i <= $times - 1 ; $i++ ) {
 
@@ -1868,11 +1895,16 @@ sub searchResults {
 
             # OPAC hidden items
             if ($is_opac) {
-
-                # hidden based on OpacHiddenItems syspref or because lost
-                my $hi = Koha::Items->search( { itemnumber => $item->{itemnumber} } )
-                    ->filter_by_visible_in_opac( { patron => $search_context->{patron} } );
-                unless ( $hi->count ) {
+                my $visible;
+                if ($opac_visibility_prefetched) {
+                    $visible = $opac_visible_itemnumbers{ $item->{itemnumber} };
+                } else {
+                    $visible =
+                        Koha::Items->search( { itemnumber => $item->{itemnumber} } )
+                        ->filter_by_visible_in_opac( { patron => $search_context->{patron} } )
+                        ->count;
+                }
+                unless ($visible) {
                     push @hiddenitems, $item->{itemnumber};
                     $hideatopac_count++;
                     next;
