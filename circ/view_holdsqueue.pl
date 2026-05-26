@@ -27,6 +27,7 @@ use C4::Auth       qw( get_template_and_user );
 use C4::Output     qw( output_html_with_http_headers );
 use C4::HoldsQueue qw( GetHoldsQueueItems );
 use Koha::BiblioFrameworks;
+use Koha::Items;
 use Koha::ItemTypes;
 
 my $query = CGI->new;
@@ -59,13 +60,38 @@ if ($run_report) {
         }
     );
 
+    my @itemsloop;
+    foreach my $item ( $items->as_list ) {
+        my $itemsloo = $item->unblessed;
+        $itemsloo->{object} = $item;
+
+        if ( C4::Context->preference('UseDisplayModule') ) {
+            my @displays;
+            my @display_items = Koha::DisplayItems->search(
+                { itemnumber => $item->itemnumber },
+                {
+                    order_by => { '-desc' => 'date_added' },
+                }
+            )->as_list;
+
+            foreach my $display_item (@display_items) {
+                push @displays, $display_item->display;
+            }
+
+            $itemsloo->{display_items} = \@display_items if @display_items;
+            $itemsloo->{displays}      = \@displays      if @displays;
+        }
+
+        push @itemsloop, $itemsloo;
+    }
+
     $template->param(
         branchlimit    => $branchlimit,
         itemtypeslimit => $itemtypeslimit,
         ccodeslimit    => $ccodeslimit,
         locationslimit => $locationslimit,
         total          => $items->count,
-        itemsloop      => $items,
+        itemsloop      => \@itemsloop,
         run_report     => $run_report,
     );
 }

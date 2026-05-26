@@ -20,7 +20,16 @@
     <a href="/cgi-bin/koha/catalogue/moredetail.pl?biblionumber=[% biblio.biblionumber | uri %]#item[% item.itemnumber | uri %]" title="Go to item details">[% item.barcode | html | $To %]</a>
 [%~ END %]",
 "[% item.itemnumber | html %]", "[% item.enumchron | html | $To %]", "[% item.itemcallnumber | html | $To %]", "[% Branches.GetName(item.homebranch) | html %]", "[% Branches.GetName(item.holdingbranch) | html %]",
-"[% AuthorisedValues.GetDescriptionByKohaField( frameworkcode => biblio.frameworkcode, kohafield => 'items.location', authorised_value => item.location) | html %]", "[% ItemTypes.GetDescription(item.itype) | html %]",
+[% IF Koha.Preference('UseDisplayModule') && item.effective_location %]
+    [% SET effective_loc = item.effective_location %]
+    [% IF effective_loc.match('^DISPLAY:') %]
+        "[% effective_loc | html %]", "[% ItemTypes.GetDescription(item.itype) | html %]",
+    [% ELSE %]
+        "[% AuthorisedValues.GetDescriptionByKohaField( frameworkcode => biblio.frameworkcode, kohafield => 'items.location', authorised_value => effective_loc) | html %]", "[% ItemTypes.GetDescription(item.itype) | html %]",
+    [% END %]
+[% ELSE %]
+    "[% AuthorisedValues.GetDescriptionByKohaField( frameworkcode => biblio.frameworkcode, kohafield => 'items.location', authorised_value => item.location) | html %]", "[% ItemTypes.GetDescription(item.itype) | html %]",
+[% END %]
 "[% item.stocknumber | html | $To %]", "[% AuthorisedValues.GetDescriptionByKohaField( frameworkcode => biblio.frameworkcode, kohafield => 'items.notforloan', authorised_value => item.notforloan) | html %]",
 "[% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.itemlost', authorised_value => item.itemlost ) || "" | html %]",
 "[% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.withdrawn', authorised_value => item.withdrawn ) || "" | html %]",

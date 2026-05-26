@@ -28,6 +28,7 @@ use Koha::DateUtils qw( dt_from_string );
 use Koha::Patron::Attribute::Types;
 use DateTime;
 use DateTime::Format::MySQL;
+use Koha::Items;
 
 my $input               = CGI->new;
 my $showall             = $input->param('showall');
@@ -382,7 +383,6 @@ if ($noreport) {
             author                  => $data->{author},
             homebranchcode          => $data->{homebranch},
             holdingbranchcode       => $data->{holdingbranch},
-            location                => $data->{location},
             itemcallnumber          => $data->{itemcallnumber},
             replacementprice        => $data->{replacementprice},
             itemnotes_nonpublic     => $data->{itemnotes_nonpublic},
@@ -390,7 +390,12 @@ if ($noreport) {
             return_claim_id         => $data->{return_claim_id},
             enumchron               => $data->{enumchron},
             itemtype                => $data->{itype},
-            overdue                 => $data->{overdue}
+            overdue                 => $data->{overdue},
+            location                => $data->{location},
+            effective_location      => do {
+                my $item = Koha::Items->find( $data->{itemnumber} );
+                $item ? $item->effective_location : '';
+            },
         };
     }
 

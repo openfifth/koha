@@ -1049,6 +1049,27 @@
     <!-- /#elasticPreview.modal -->
 [% END %]
 
+<div class="modal" id="permanent_location_modal" tabindex="-1" aria-labelledby="permanent_location_modal_label" aria-modal="true" role="dialog">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title" id="permanent_location_modal_label"></h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <ul>
+                    <li><span id="permanent_location_modal_body"></span></li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+
 <div class="modal" id="modal-item-group-create" tabindex="-1" role="dialog" aria-labelledby="modal-item-group-create-label">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -1191,6 +1212,27 @@
 </div>
 <!-- /#.modal -->
 
+<!-- Permanent Location Modal -->
+<div class="modal" id="permanant_location_modal" tabindex="-1" aria-labelledby="permanant_location_modal_label" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title" id="permanant_location_modal_label"></h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="permanant_location_modal_body"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<!-- /.modal -->
+
 [% IF bundlesEnabled %]
     <div class="modal" id="addToBundleModal" tabindex="-1" role="dialog" aria-labelledby="addToBundleLabel">
         <div class="modal-dialog">
@@ -1331,9 +1373,11 @@
             NovelistSelectStaffProfile: "[% Koha.Preference('NovelistSelectStaffProfile') | html %]",
             NovelistSelectPassword: "[% Koha.Preference('NovelistSelectPassword') | html %]",
             SearchEngine: "[% Koha.Preference('SearchEngine') | html %]",
+            UseDisplayModule: [% Koha.Preference('UseDisplayModule') ? 1 : 0 | html %],
         });
 
         Koha.addPermissions({
+            CAN_user_displays: [% (CAN_user_displays) ? 1 : 0 | html %],
             CAN_user_editcatalogue_manage_item_groups: [% CAN_user_editcatalogue_manage_item_groups ? 1 : 0 | html %],
             CAN_user_tools_upload_local_cover_images: [% CAN_user_tools_upload_local_cover_images ? 1 : 0 | html %],
         });
@@ -2490,7 +2534,353 @@
         });
 
         specific_dt_errors = _("Have a look at the 'Audit' button in the toolbar");
+
+        // Display functionality
+        let availableDisplays = [];
+        let displayItemsTable = null;
+        let selectedDisplayItems = [];
+
+        if (Koha.prefs.UseDisplayModule && Koha.permissions.CAN_user_displays) {
+            // Load displays on page load
+            document.addEventListener('DOMContentLoaded', async () => {
+                // Load available displays for dropdown
+                fetch("/api/v1/displays", {
+                    method: "GET",
+                    headers: { "x-koha-embed": "display_items" },
+                })
+                .then(data => {
+                    return data.json();
+                })
+                .then(json => {
+                    availableDisplays = json.filter(display => display.enabled);
+                    updateDisplayDropdown();
+                    updateDisplaySelect();
+                })
+                .catch(error => {
+                    console.error(error);
+                    document.querySelector("#display-dropdown").innerHTML = '<li class="text-center text-muted">Failed to load displays</li>';
+                });
+            });
+        }
+
+        const updateDisplayDropdown = (() => {
+            const dropdown = document.querySelector("#display-dropdown");
+
+            if (availableDisplays.length === 0) {
+                dropdown.innerHTML('<li class="dropdown-item text-muted">No active displays available</li>');
+                return;
+            }
+
+            availableDisplays.forEach(display => {
+                dropdown.innerHTML = '<li><a class="dropdown-item" href="#" data-display-id="%s" onclick="openDisplayModal(%s)">%s</a></li>'.format(display.display_id, display.display_id, display.display_name);
+            });
+        });
+
+        const updateDisplaySelect = (() => {
+            // Update display select
+            const displaySelect = document.querySelector("#display-select");
+
+            let selectHtml = '<option value="">Select a display</option>';
+            availableDisplays.forEach(display => {
+                selectHtml += '<option value="%s">%s</option>'.format(display.display_id, display.display_name);
+            });
+            displaySelect.innerHTML = selectHtml;
+        });
+
+        const initializeDisplayItemsTable = (() => {
+            if (displayItemsTable && displayItemsTable.DataTable) {
+                displayItemsTable.DataTable().destroy();
+                displayItemsTable = null;
+            }
+
+            selectedDisplayItems = [];
+
+            // Use the same API endpoint and embed options as the main items table
+            let itemTableUrl = "/api/v1/biblios/[% biblionumber | uri %]/items?";
+            let embed = ["+strings,_status,effective_home_library,effective_holding_library,home_library,holding_library"];
+
+            displayItemsTable = $("#display-items-table").kohaTable({
+                ajax: { url: itemTableUrl },
+                embed: embed,
+                order: [[1, 'asc']], // Sort by barcode
+                autoWidth: false,
+                paging: false,
+                searching: true,
+                info: false,
+                columns: [
+                    {
+                        data: "me.item_id",
+                        searchable: false,
+                        orderable: false,
+                        render: function (data, type, row, meta) {
+                            return '<input type="checkbox" class="display-item-checkbox" value="%s" data-item-id="%s">'.format(row.item_id, row.item_id);
+                        }
+                    },
+                    {
+                        data: "me.external_id",
+                        searchable: true,
+                        orderable: true,
+                        render: function (data, type, row, meta) {
+                            return escape_str(row.external_id || 'No barcode');
+                        }
+                    },
+                    {
+                        data: "me.effective_holding_library_id",
+                        searchable: false,
+                        orderable: false,
+                        render: function (data, type, row, meta) {
+                            let effective_holding_library_id_str = row._strings.effective_holding_library_id ? row._strings.effective_holding_library_id.str : row.effective_holding_library_id;
+                            return escape_str(effective_holding_library_id_str || '');
+                        }
+                    },
+                    {
+                        data: "me.effective_home_library_id",
+                        searchable: false,
+                        orderable: false,
+                        render: function (data, type, row, meta) {
+                            let effective_home_library_id_str = row._strings.effective_home_library_id ? row._strings.effective_home_library_id.str : row.effective_home_library_id;
+                            return escape_str(effective_home_library_id_str || '');
+                        }
+                    },
+                    {
+                        data: "me.effective_location",
+                        searchable: false,
+                        orderable: false,
+                        render: function (data, type, row, meta) {
+                            let effective_loc_str = row._strings.effective_location ? row._strings.effective_location.str : row.effective_location;
+                            return escape_str(effective_loc_str || '');
+                        }
+                    },
+                    {
+                        data: "me.effective_collection_code",
+                        searchable: false,
+                        orderable: false,
+                        render: function (data, type, row, meta) {
+                            let effective_ccode_str = row._strings.effective_collection_code ? row._strings.effective_collection_code.str : row.effective_collection_code;
+                            return escape_str(effective_ccode_str || '');
+                        }
+                    },
+                    {
+                        data: "me.callnumber",
+                        searchable: true,
+                        orderable: true,
+                        render: function (data, type, row, meta) {
+                            return escape_str(row.callnumber || '');
+                        }
+                    },
+                    {
+                        data: "",
+                        searchable: false,
+                        orderable: false,
+                        render: function (data, type, row, meta) {
+                            let status = '';
+                            if (row._status && row._status.length > 0) {
+                                status = row._status.map(s => s.replace(/_/g, ' ')).join(', ');
+                            } else {
+                                status = 'Available';
+                            }
+                            return escape_str(status);
+                        }
+                    }
+                ],
+                rowCallback: function(row, data) {
+                    if (Koha.prefs.UseDisplayModule && Koha.permissions.CAN_user_displays) {
+                        // Hide items that are already on displays (effective_location starts with "Display:")
+                        if (data.effective_location && data.effective_location.startsWith && data.effective_location.startsWith('Display:')) {
+                            row.style.display = "none";
+                            return;
+                        }
+                        row.style.display = "";
+                    }
+                },
+                drawCallback: function(settings) {
+                    // Handle individual checkbox changes
+                    const individualCheckboxes =  document.querySelectorAll(".display-item-checkbox");
+                    individualCheckboxes.forEach(element => {
+                        element
+                        .addEventListener("change", () => {
+                            const itemId = parseInt(element.value);
+                            if (element.checked) {
+                                if (!selectedDisplayItems.includes(itemId)) {
+                                    selectedDisplayItems.push(itemId);
+                                }
+                            } else {
+                                selectedDisplayItems = selectedDisplayItems.filter(id => id !== itemId);
+                            }
+                            updateSelectAllState();
+                        });
+                    });
+
+                    // Handle select all checkbox
+                    const selectAllCheckbox = document.querySelector("#select-all-display-items");
+                    selectAllCheckbox.addEventListener("change", () => {
+                        const isChecked = selectAllCheckbox.checked;
+                        document.querySelectorAll(".display-item-checkbox").forEach(element => {
+                            element.checked = isChecked;
+                        });
+
+                        if (isChecked) {
+                            selectedDisplayItems = [];
+                            document.querySelectorAll(".display-item-checkbox").forEach(element => {
+                                selectedDisplayItems.push(parseInt(element.value));
+                            });
+                        } else {
+                            selectedDisplayItems = [];
+                        }
+                    });
+                }
+            });
+        });
+
+        const updateSelectAllState = (() => {
+            const totalCheckboxes = document.querySelectorAll(".display-item-checkbox").length;
+            const checkedCheckboxes = document.querySelectorAll(".display-item-checkbox:checked").length;
+            const selectAllCheckbox = document.querySelector("#select-all-display-items");
+
+            if (checkedCheckboxes === 0) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = false;
+            } else if (checkedCheckboxes === totalCheckboxes) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = true;
+            } else {
+                selectAllCheckbox.indeterminate = true;
+                selectAllCheckbox.checked = false;
+            }
+        });
+
+        const openDisplayModal = ((displayId = null) => {
+            const displaySelect = document.querySelector("#display-select");
+            const addToDisplayModal = bootstrap.Modal.getOrCreateInstance(document.querySelector("#addToDisplayModal"));
+
+            if (displayId) displaySelect.value = displayId;
+
+            // Initialize the DataTable when the modal is opened
+            initializeDisplayItemsTable();
+            addToDisplayModal.show();
+        });
+
+        // Clear date button functionality
+        const clearDateSelect = document.querySelector("#clear-date");
+        clearDateSelect?.addEventListener("click", () => {
+            document.querySelector("#date-remove").value = "";
+        });
+
+        // Form submission
+        const addToDisplayForm = document.querySelector("#addToDisplayForm");
+        addToDisplayForm?.addEventListener('submit', (event) => {
+            event.preventDefault();
+
+            const displayId = document.querySelector("#display-select").value;
+            const removeDate = document.querySelector("#date-remove").value;
+
+            if (!displayId) {
+                alert('Please select a display');
+                return;
+            }
+
+            if (selectedDisplayItems.length === 0) {
+                alert('Please select at least one item');
+                return;
+            }
+
+            const addToDisplayBtn = document.querySelector("#add-to-display-btn");
+            addToDisplayBtn.disabled = true;
+            addToDisplayBtn.innerText = _("Adding...");
+
+            // Add each item to the display
+            let promises = selectedDisplayItems.map(itemId => {
+                const biblionumber = [% biblionumber | html %];
+                const data = {
+                    display_id: parseInt(displayId),
+                    itemnumber: parseInt(itemId),
+                    biblionumber: biblionumber,
+                    date_added: new Date().toISOString().split('T')[0]
+                };
+                if (removeDate) {
+                    data.date_remove = removeDate;
+                }
+
+                return fetch("/api/v1/display/items", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(data),
+                });
+            });
+
+            Promise.all(promises).then(() => {
+                const addToDisplayModal = bootstrap.Modal.getOrCreateInstance(document.querySelector("#addToDisplayModal"));
+                const addToDisplayForm = document.querySelector("#addToDisplayForm");
+
+                alert('Successfully added %s item(s) to display'.format(selectedDisplayItems.length));
+                addToDisplayModal.hide();
+                addToDisplayForm.reset();
+                selectedDisplayItems = [];
+
+                // Safely refresh modal table
+                try {
+                    if (displayItemsTable && displayItemsTable.DataTable) {
+                        displayItemsTable.DataTable().draw();
+                    }
+                } catch (e) {
+                    // Modal table refresh failed - not critical
+                }
+
+                // Safely refresh the main items table to show updated locations
+                try {
+                    if (typeof build_items_table === 'function') {
+                        const itemsTables = document.querySelectorAll(".items_table");
+                        itemsTables.forEach(itemsTable => {
+                            const tableId = itemsTable.id.replace("_table", "");
+                            build_items_table(tableId, false, { destroy: true });
+                        });
+                    }
+                } catch (e) {
+                    // Main table refresh failed - reload page as fallback
+                    window.location.reload();
+                }
+            }).catch((error) => {
+                console.error('Error adding items to display:', error);
+                alert('Failed to add some items to display. Please try again.');
+            }).finally(() => {
+                const addToDisplayBtn = document.querySelector("#add-to-display-btn");
+
+                addToDisplayBtn.disabled = false;
+                addToDisplayBtn.innerText = _("Add to display");
+            });
+        });
+
+        // Clean up when modal is hidden
+        const addToDisplayModal = document.querySelector('#addToDisplayModal');
+        addToDisplayModal?.addEventListener("hidden.bs.modal", (event) => {
+            if (displayItemsTable && displayItemsTable.DataTable) {
+                displayItemsTable.DataTable().destroy();
+                displayItemsTable = null;
+            }
+            selectedDisplayItems = [];
+            addToDisplayForm.reset();
+        });
     </script>
     [% CoverImagePlugins | $raw %]
 [% END # /jsinclude %]
+
+[% BLOCK cssinclude %]
+    <style nonce="[% Koha.CSPNonce | $raw %]">
+        .display-location {
+            font-weight: bold;
+            color: #d9534f;
+        }
+        .display-location::before {
+            content: "\1F4FA ";
+            font-size: 0.8em;
+        }
+        .original-location {
+            font-size: 0.9em;
+            font-style: italic;
+        }
+    </style>
+[% END # /cssinclude %]
+
 [% INCLUDE 'intranet-bottom.inc' %]
