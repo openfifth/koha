@@ -1224,6 +1224,9 @@ subtest 'marc_records_to_documents should set the "available" field' => sub {
     my $se = Test::MockModule->new('Koha::SearchEngine::Elasticsearch');
     $se->noop('_foreach_mapping');
 
+    my $mock_indexer = Test::MockModule->new('Koha::SearchEngine::Elasticsearch::Indexer');
+    $mock_indexer->noop('index_items');
+
     my $see = Koha::SearchEngine::Elasticsearch::Search->new(
         { index => $Koha::SearchEngine::Elasticsearch::BIBLIOS_INDEX } );
 
