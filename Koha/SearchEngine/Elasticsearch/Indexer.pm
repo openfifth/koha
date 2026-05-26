@@ -120,6 +120,13 @@ sub update_index {
     }
 
     my $documents = $self->marc_records_to_documents($records);
+
+    if ( $self->index eq $Koha::SearchEngine::BIBLIOS_INDEX ) {
+        for my $i ( 0 .. $#$index_record_ids ) {
+            $documents->[$i]{biblionumber} = int( $index_record_ids->[$i] );
+        }
+    }
+
     my @body;
     for ( my $i = 0 ; $i < scalar @$index_record_ids ; $i++ ) {
         my $id       = $index_record_ids->[$i];
@@ -523,8 +530,8 @@ sub _item_to_document {
     my $withdrawn  = $item->withdrawn  // 0;
     my $onloan     = $item->onloan;
 
-    my $itype_notforloan = $item->itype ? ( $itype_nfl->{ $item->itype } // undef )          : undef;
-    my $not_for_loan     = ( defined $itype_notforloan && !$notforloan ) ? $itype_notforloan : $notforloan;
+    my $itype_notforloan = $item->itype                                  ? $itype_nfl->{ $item->itype } : undef;
+    my $not_for_loan     = ( defined $itype_notforloan && !$notforloan ) ? $itype_notforloan            : $notforloan;
 
     my $available =
         ( !$not_for_loan && $damaged == 0 && $itemlost == 0 && $withdrawn == 0 && !defined $onloan ) ? \1 : \0;
