@@ -72,6 +72,17 @@ specifying neither and so both get indexed.
 Index the biblios only. Combining this with B<-a> is the same as
 specifying neither and so both get indexed.
 
+=item B<-i|--items>
+
+Index the items index. Items are indexed from the database, not from MARC
+records. This flag must be specified explicitly; items are not included in the
+default "index everything" behaviour.
+
+=item B<-in|--itemnumber>
+
+Only index the supplied itemnumber, mostly for testing purposes. May be
+repeated.
+
 =item B<--desc>
 
 Index the records in descending id order. Intended to index newer record before older records.
@@ -120,8 +131,10 @@ use autodie;
 use Getopt::Long qw( GetOptions );
 use Koha::Script;
 use C4::Context;
+use Koha::Items;
 use Koha::MetadataRecord::Authority;
 use Koha::BiblioUtils;
+use Koha::SearchEngine;
 use Koha::SearchEngine::Elasticsearch;
 use Koha::SearchEngine::Elasticsearch::Indexer;
 use MARC::Field;
@@ -131,31 +144,36 @@ use Try::Tiny  qw( catch try );
 
 my $verbose = 0;
 my $commit  = 5000;
-my ( $delete,        $reset, $help, $man, $processes );
-my ( $index_biblios, $index_authorities );
-my ( @biblionumbers, @authids, $where );
+my ( $delete,        $reset,             $help, $man, $processes );
+my ( $index_biblios, $index_authorities, $index_items );
+my ( @biblionumbers, @authids,           @itemnumbers, $where );
 my $desc;
 
 $| = 1;    # flushes output
 
 GetOptions(
-    'c|commit=i'    => \$commit,
-    'd|delete'      => \$delete,
-    'r|reset'       => \$reset,
-    'a|authorities' => \$index_authorities,
-    'b|biblios'     => \$index_biblios,
-    'desc'          => \$desc,
-    'bn|bnumber=i'  => \@biblionumbers,
-    'ai|authid=i'   => \@authids,
-    'w|where=s'     => \$where,
-    'p|processes=i' => \$processes,
-    'v|verbose+'    => \$verbose,
-    'h|help'        => \$help,
-    'man'           => \$man,
+    'c|commit=i'      => \$commit,
+    'd|delete'        => \$delete,
+    'r|reset'         => \$reset,
+    'a|authorities'   => \$index_authorities,
+    'b|biblios'       => \$index_biblios,
+    'i|items'         => \$index_items,
+    'desc'            => \$desc,
+    'bn|bnumber=i'    => \@biblionumbers,
+    'ai|authid=i'     => \@authids,
+    'in|itemnumber=i' => \@itemnumbers,
+    'w|where=s'       => \$where,
+    'p|processes=i'   => \$processes,
+    'v|verbose+'      => \$verbose,
+    'h|help'          => \$help,
+    'man'             => \$man,
 );
 
-# Default is to do both
-unless ( $index_authorities || $index_biblios ) {
+# --itemnumber implies --items
+$index_items ||= 1 if @itemnumbers;
+
+# Default is to do both biblios and authorities; items must be explicitly requested
+unless ( $index_authorities || $index_biblios || $index_items ) {
     $index_authorities = $index_biblios = 1;
 }
 
@@ -178,6 +196,7 @@ if ($reset) {
 
 _verify_index_state( $Koha::SearchEngine::Elasticsearch::BIBLIOS_INDEX,     $delete ) if ($index_biblios);
 _verify_index_state( $Koha::SearchEngine::Elasticsearch::AUTHORITIES_INDEX, $delete ) if ($index_authorities);
+_verify_index_state( $Koha::SearchEngine::ITEMS_INDEX,                      $delete ) if ($index_items);
 
 my $slice_index = 0;
 my $slice_count = ( $processes //= 1 );
@@ -246,6 +265,10 @@ if ($index_authorities) {
         }
     }
     _do_reindex( $next, $Koha::SearchEngine::Elasticsearch::AUTHORITIES_INDEX );
+}
+if ($index_items) {
+    _log( 1, "Indexing items\n" );
+    _do_reindex_items( \@itemnumbers );
 }
 
 if ( $slice_index == 0 ) {
@@ -379,6 +402,53 @@ sub _handle_response {
             }
         }
     }
+}
+
+=head2 _do_reindex_items
+
+    _do_reindex_items(\@itemnumbers);
+
+Reindexes items into the items Elasticsearch index. If C<@itemnumbers> is
+non-empty, only those items are reindexed; otherwise all items are indexed.
+Items are indexed from the database, not from MARC records.
+
+=cut
+
+sub _do_reindex_items {
+    my ($itemnumbers) = @_;
+
+    my $indexer = Koha::SearchEngine::Elasticsearch::Indexer->new( { index => $Koha::SearchEngine::ITEMS_INDEX } );
+
+    if ( $itemnumbers && @{$itemnumbers} ) {
+        $indexer->index_items($itemnumbers);
+        _log( 1, scalar( @{$itemnumbers} ) . " items indexed\n" );
+        return;
+    }
+
+    my $count        = 0;
+    my $commit_count = $commit;
+    my @id_buffer;
+
+    my $items = Koha::Items->search( {}, { order_by => { -asc => 'itemnumber' } } );
+    while ( my $item = $items->next ) {
+        $count++;
+        _log( 2, $item->itemnumber . "\n" );
+        _log( 1, "$count items processed\n" ) if ( $verbose == 1 && $count % 1000 == 0 );
+        push @id_buffer, $item->itemnumber;
+        if ( !( --$commit_count ) ) {
+            _log( 1, "Committing $commit items...\n" );
+            $indexer->index_items( \@id_buffer );
+            _log( 1, "Commit complete\n" );
+            $commit_count = $commit;
+            @id_buffer    = ();
+        }
+    }
+
+    if (@id_buffer) {
+        _log( 1, "Committing final items...\n" );
+        $indexer->index_items( \@id_buffer );
+    }
+    _log( 1, "Total $count items indexed\n" );
 }
 
 =head2 _log
