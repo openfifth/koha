@@ -2042,6 +2042,17 @@ i {
     color: #990000;
 }
 
+.descriptor {
+    cursor: help;
+    text-decoration: underline dashed;
+}
+
+.descriptor::after {
+    font-family: var(--fa-style-family,"Font Awesome 7 Free");
+    font-weight: var(--fa-style, 900);
+    content: " \f05a";
+}
+
 // style for shelving location in catalogsearch
 .shelvingloc {
     display: block;
@@ -2057,6 +2068,11 @@ i {
 .claimed_returned {
     display: block;
     font-style: italic;
+}
+
+// style for displays in catalogsearch
+.displays {
+    display: block;
 }
 
 #closewindow {
