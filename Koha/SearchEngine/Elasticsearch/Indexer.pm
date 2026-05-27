@@ -119,6 +119,13 @@ sub update_index {
     }
 
     my $documents = $self->marc_records_to_documents($records);
+
+    if ( $self->index eq $Koha::SearchEngine::BIBLIOS_INDEX ) {
+        for my $i ( 0 .. $#$index_record_ids ) {
+            $documents->[$i]{biblionumber} = int( $index_record_ids->[$i] );
+        }
+    }
+
     my @body;
     for ( my $i = 0 ; $i < scalar @$index_record_ids ; $i++ ) {
         my $id       = $index_record_ids->[$i];

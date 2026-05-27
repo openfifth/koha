@@ -166,8 +166,10 @@ sub search_compat {
         return $self->_aggregation_scan( $query, $results_per_page, $offset );
     }
 
-    $self->_apply_available_filter($query)
-        if $self->index eq $Koha::SearchEngine::BIBLIOS_INDEX;
+    if ( $self->index eq $Koha::SearchEngine::BIBLIOS_INDEX ) {
+        $self->_apply_available_filter($query);
+        $query->{aggregations}{_biblionumbers} = { terms => { field => 'biblionumber', size => 9_000 } };
+    }
 
     my %options;
     if ( !defined $offset or $offset < 0 ) {
@@ -196,7 +198,14 @@ sub search_compat {
     $result{biblioserver}{RECORDS} = \@records;
     $result{biblioserver}{scores}  = \@scores;
 
-    my $facets = $self->_convert_facets( $results->{aggregations} );
+    my $aggregations = $results->{aggregations} // {};
+    if ( $self->index eq $Koha::SearchEngine::BIBLIOS_INDEX ) {
+        my $bn_agg            = delete $aggregations->{_biblionumbers};
+        my @all_biblionumbers = $bn_agg ? map { $_->{key} } @{ $bn_agg->{buckets} // [] } : ();
+        my $item_facets       = eval { $self->_get_item_facets( \@all_biblionumbers ) } // {};
+        $aggregations->{$_} = $item_facets->{$_} for keys %$item_facets;
+    }
+    my $facets = $self->_convert_facets($aggregations);
     if ( C4::Context->interface eq 'opac' ) {
         my $rules = C4::Context->yaml_preference('OpacHiddenItems');
         $facets = Koha::SearchEngine::Search->post_filter_opac_facets( { facets => $facets, rules => $rules } );
@@ -276,6 +285,64 @@ sub _get_available_biblionumbers {
     );
 
     return map { $_->{key} } @{ $result->{aggregations}{by_biblio}{buckets} };
+}
+
+=head2 _get_item_facets
+
+    my $item_facets = $self->_get_item_facets(\@biblionumbers);
+
+Queries the items Elasticsearch index for the given biblionumbers and returns
+aggregation buckets for item-level facet fields (itype, location, ccode,
+homebranch, holdingbranch). The returned hashref is in the same format as
+ES aggregation results so it can be merged directly into the biblio
+aggregations and processed by C<_convert_facets>.
+
+Returns an empty hashref if the items index is unreachable or no
+biblionumbers are provided.
+
+=cut
+
+sub _get_item_facets {
+    my ( $self, $biblionumbers ) = @_;
+
+    return {} unless @$biblionumbers;
+
+    my $limit = C4::Context->preference('FacetMaxCount') || 20;
+
+    my $items_searcher =
+        Koha::SearchEngine::Elasticsearch::Search->new( { index => $Koha::SearchEngine::ITEMS_INDEX } );
+    my $elasticsearch = $items_searcher->get_elasticsearch();
+    my $result        = $elasticsearch->search(
+        index => $items_searcher->index_name,
+        body  => {
+            query => { terms => { biblionumber => [ map { $_ + 0 } @$biblionumbers ] } },
+            size  => 0,
+            aggs  => {
+                itype => {
+                    terms => { field        => 'itype', size => $limit },
+                    aggs  => { biblio_count => { cardinality => { field => 'biblionumber' } } }
+                },
+                location => {
+                    terms => { field        => 'location', size => $limit },
+                    aggs  => { biblio_count => { cardinality => { field => 'biblionumber' } } }
+                },
+                ccode => {
+                    terms => { field        => 'ccode', size => $limit },
+                    aggs  => { biblio_count => { cardinality => { field => 'biblionumber' } } }
+                },
+                homebranch => {
+                    terms => { field        => 'homebranch', size => $limit },
+                    aggs  => { biblio_count => { cardinality => { field => 'biblionumber' } } }
+                },
+                holdingbranch => {
+                    terms => { field        => 'holdingbranch', size => $limit },
+                    aggs  => { biblio_count => { cardinality => { field => 'biblionumber' } } }
+                },
+            }
+        }
+    );
+
+    return $result->{aggregations} // {};
 }
 
 =head2 search_auth_compat
@@ -633,7 +700,7 @@ sub _convert_facets {
             next
                 unless length($t)
                 ; # FIXME Currently we cannot search for an empty faceted field i.e. ln:"" to find records missing languages, though ES does count them correctly
-            my $c = $term->{doc_count};
+            my $c = $term->{biblio_count} ? $term->{biblio_count}{value} : $term->{doc_count};
             my $label;
             if ( exists( $special{$type} ) ) {
                 $label = $special{$type}->{$t} // $t;
