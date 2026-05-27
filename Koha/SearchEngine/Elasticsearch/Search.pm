@@ -231,8 +231,16 @@ to the C<available:true> field in the biblios index.
 sub _apply_available_filter {
     my ( $self, $query ) = @_;
 
-    my $qs_node = eval { $query->{query}{bool}{must}[0]{query_string} };
-    return unless $qs_node && ( $qs_node->{query} // '' ) =~ /\(?available:true\)?/;
+    my $must = eval { $query->{query}{bool}{must} };
+    return unless ref $must eq 'ARRAY';
+
+    my ($qs_container) = grep {
+               ref $_ eq 'HASH'
+            && exists $_->{query_string}
+            && ( $_->{query_string}{query} // '' ) =~ /\(?available:true\)?/
+    } @$must;
+    return unless $qs_container;
+    my $qs_node = $qs_container->{query_string};
 
     my @biblionumbers;
     eval { @biblionumbers = $self->_get_available_biblionumbers(); 1 } or return;
