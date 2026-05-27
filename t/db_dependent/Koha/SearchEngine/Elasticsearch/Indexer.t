@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 6;
+use Test::More tests => 9;
 use Test::MockModule;
 use Test::Warn;
 use t::lib::Mocks;
@@ -33,12 +33,24 @@ use Koha::Biblios;
 
 my $schema = Koha::Database->schema();
 
+{
+
+    package MockESClient;
+    sub new { bless { calls => [] }, shift }
+
+    sub bulk {
+        my ( $self, %args ) = @_;
+        push @{ $self->{calls} }, \%args;
+        return { errors => 0, items => [] };
+    }
+}
+
 use_ok('Koha::SearchEngine::Elasticsearch::Indexer');
 SKIP: {
 
     eval { Koha::SearchEngine::Elasticsearch->get_elasticsearch_params; };
 
-    skip 'Elasticsearch configuration not available', 3
+    skip 'Elasticsearch configuration not available', 7
         if $@;
 
     $schema->storage->txn_begin;
@@ -237,6 +249,92 @@ SKIP: {
         ($current_count) = $sth_zebraqueue_count->fetchrow_array;
         is( $current_count, $starting_count, "no new entry in zebraqueue for biblio" );
 
+    };
+
+    subtest '_item_to_document() tests' => sub {
+        plan tests => 9;
+
+        $schema->storage->txn_begin;
+
+        my $mock_indexer = Test::MockModule->new('Koha::SearchEngine::Elasticsearch::Indexer');
+        $mock_indexer->mock( 'index_items', sub { } );
+
+        my $item = $builder->build_sample_item( { notforloan => 0, damaged => 0, itemlost => 0, withdrawn => 0 } );
+
+        my $doc = Koha::SearchEngine::Elasticsearch::Indexer::_item_to_document($item);
+
+        is( $doc->{itemnumber},   $item->itemnumber + 0,   'itemnumber is stored as integer' );
+        is( $doc->{biblionumber}, $item->biblionumber + 0, 'biblionumber is stored as integer' );
+        ok( ${ $doc->{available} }, 'available when all statuses clear' );
+
+        $item->set( { notforloan => 1 } )->store;
+        $doc = Koha::SearchEngine::Elasticsearch::Indexer::_item_to_document($item);
+        ok( !${ $doc->{available} }, 'notforloan makes item unavailable' );
+
+        $item->set( { notforloan => 0, damaged => 1 } )->store;
+        $doc = Koha::SearchEngine::Elasticsearch::Indexer::_item_to_document($item);
+        ok( !${ $doc->{available} }, 'damaged makes item unavailable' );
+
+        $item->set( { damaged => 0, itemlost => 1 } )->store;
+        $doc = Koha::SearchEngine::Elasticsearch::Indexer::_item_to_document($item);
+        ok( !${ $doc->{available} }, 'itemlost makes item unavailable' );
+
+        $item->set( { itemlost => 0, withdrawn => 1 } )->store;
+        $doc = Koha::SearchEngine::Elasticsearch::Indexer::_item_to_document($item);
+        ok( !${ $doc->{available} }, 'withdrawn makes item unavailable' );
+
+        $item->set( { withdrawn => 0, onloan => '2024-01-01' } )->store;
+        $doc = Koha::SearchEngine::Elasticsearch::Indexer::_item_to_document($item);
+        ok( !${ $doc->{available} }, 'item on loan is not available' );
+
+        my $itype      = $builder->build_object( { class => 'Koha::ItemTypes', value => { notforloan => 2 } } );
+        my $itype_item = $builder->build_sample_item( { notforloan => 0, itype => $itype->itemtype } );
+        $doc = Koha::SearchEngine::Elasticsearch::Indexer::_item_to_document( $itype_item, { $itype->itemtype => 2 } );
+        ok( !${ $doc->{available} }, 'item type notforloan makes item unavailable via pre-fetched map' );
+
+        $schema->storage->txn_rollback;
+    };
+
+    subtest 'index_items() tests' => sub {
+        plan tests => 4;
+
+        $schema->storage->txn_begin;
+
+        my $mock_es     = Test::MockModule->new('Koha::SearchEngine::Elasticsearch');
+        my $mock_client = MockESClient->new;
+        $mock_es->mock( 'get_elasticsearch', sub { $mock_client } );
+
+        my $item    = $builder->build_sample_item( { notforloan => 0, damaged => 0 } );
+        my $indexer = Koha::SearchEngine::Elasticsearch::Indexer->new( { index => 'items' } );
+
+        $mock_client->{calls} = [];    # discard calls made during item creation
+
+        $indexer->index_items( [] );
+        is( scalar @{ $mock_client->{calls} }, 0, 'index_items with empty list makes no ES call' );
+
+        $indexer->index_items( [ $item->itemnumber ] );
+        is( scalar @{ $mock_client->{calls} }, 1, 'index_items makes one bulk call' );
+
+        my $body = $mock_client->{calls}[0]{body};
+        is( $body->[0]{index}{_id}, $item->itemnumber . '', 'bulk body contains correct document id' );
+        is( $body->[1]{itemnumber}, $item->itemnumber + 0,  'bulk document contains correct itemnumber' );
+
+        $schema->storage->txn_rollback;
+    };
+
+    subtest 'delete_items() tests' => sub {
+        plan tests => 3;
+
+        my $indexer = Koha::SearchEngine::Elasticsearch::Indexer->new( { index => 'items' } );
+
+        my $mock_es     = Test::MockModule->new('Koha::SearchEngine::Elasticsearch');
+        my $mock_client = MockESClient->new;
+        $mock_es->mock( 'get_elasticsearch', sub { $mock_client } );
+
+        $indexer->delete_items( [ 42, 43 ] );
+        is( scalar @{ $mock_client->{calls} },              1,    'delete_items makes one bulk call' );
+        is( scalar @{ $mock_client->{calls}[0]{body} },     2,    'bulk body contains one entry per itemnumber' );
+        is( $mock_client->{calls}[0]{body}[0]{delete}{_id}, '42', 'delete operation has correct id' );
     };
 
 }
