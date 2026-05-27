@@ -196,7 +196,7 @@ if ($reset) {
 
 _verify_index_state( $Koha::SearchEngine::Elasticsearch::BIBLIOS_INDEX,     $delete ) if ($index_biblios);
 _verify_index_state( $Koha::SearchEngine::Elasticsearch::AUTHORITIES_INDEX, $delete ) if ($index_authorities);
-_verify_index_state( $Koha::SearchEngine::ITEMS_INDEX,                      $delete ) if ($index_items);
+_verify_index_state( $Koha::SearchEngine::Elasticsearch::ITEMS_INDEX,       $delete ) if ($index_items);
 
 my $slice_index = 0;
 my $slice_count = ( $processes //= 1 );
@@ -417,7 +417,8 @@ Items are indexed from the database, not from MARC records.
 sub _do_reindex_items {
     my ($itemnumbers) = @_;
 
-    my $indexer = Koha::SearchEngine::Elasticsearch::Indexer->new( { index => $Koha::SearchEngine::ITEMS_INDEX } );
+    my $indexer =
+        Koha::SearchEngine::Elasticsearch::Indexer->new( { index => $Koha::SearchEngine::Elasticsearch::ITEMS_INDEX } );
 
     if ( $itemnumbers && @{$itemnumbers} ) {
         $indexer->index_items($itemnumbers);

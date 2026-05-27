@@ -75,6 +75,7 @@ __PACKAGE__->mk_accessors(qw( sort_fields ));
 # Constants to refer to the standard index names
 Readonly our $BIBLIOS_INDEX     => 'biblios';
 Readonly our $AUTHORITIES_INDEX => 'authorities';
+Readonly our $ITEMS_INDEX       => 'items';
 
 =head1 NAME
 
@@ -216,7 +217,7 @@ sub get_elasticsearch_mappings {
     if ( !defined $all_mappings{ $self->index } ) {
         $sort_fields{ $self->index } = {};
 
-        if ( $self->index eq $Koha::SearchEngine::ITEMS_INDEX ) {
+        if ( $self->index eq $ITEMS_INDEX ) {
             $all_mappings{ $self->index } = $self->_get_items_elasticsearch_mappings();
             $self->sort_fields( \%{ $sort_fields{ $self->index } } );
             return $all_mappings{ $self->index };
@@ -280,7 +281,7 @@ sub get_elasticsearch_mappings {
             $mappings->{properties}{'match-heading'}             = _get_elasticsearch_field_config( 'search', 'text' );
             $mappings->{properties}{'subject-heading-thesaurus'} = _get_elasticsearch_field_config( 'search', 'text' );
         }
-        if ( $self->index eq $Koha::SearchEngine::BIBLIOS_INDEX ) {
+        if ( $self->index eq $BIBLIOS_INDEX ) {
             $mappings->{properties}{biblionumber} = { type => 'integer' };
         }
         $all_mappings{ $self->index } = $mappings;
