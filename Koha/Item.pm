@@ -940,6 +940,59 @@ sub get_transfers {
     return Koha::Item::Transfers->_new_from_dbic($transfers_rs);
 }
 
+=head3 mark_lost
+
+  $item->mark_lost($lost_value);
+  $item->mark_lost($lost_value, { skip_record_index => 1, skip_holds_queue => 1 });
+
+Sets the item's lost status, updates the relevant accountline to reflect the
+status change, and cancels any outstanding transfers (retaining the behaviour
+from bug 27281).
+
+C<$params> is relayed to the item store. C<skip_record_index> and
+C<skip_holds_queue> matter to batch callers: both reach a message broker from
+inside L</store>, which no transaction can roll back, so pass them to keep the
+broker out of the transaction and enqueue the work once the batch is done.
+
+=cut
+
+sub mark_lost {
+    my ( $self, $lost_value, $params ) = @_;
+    my $schema = Koha::Database->new->schema;
+
+    $schema->txn_do(
+        sub {
+            $self->itemlost($lost_value)->store($params);
+
+            my $checkout = $self->checkout;
+            if ($checkout) {
+                my $accountlines = Koha::Account::Lines->search(
+                    {
+                        borrowernumber  => $checkout->borrowernumber,
+                        itemnumber      => $self->itemnumber,
+                        debit_type_code => 'OVERDUE',
+                        status          => 'UNRETURNED',
+                    }
+                );
+                while ( my $accountline = $accountlines->next ) {
+                    if ( $accountline->amount == 0 && $accountline->credits->count == 0 ) {
+                        $accountline->delete;
+                        next;
+                    }
+                    $accountline->status('LOST')->store;
+                }
+            }
+
+            my $transfers = $self->get_transfers;
+            while ( my $transfer = $transfers->next ) {
+                $transfer->cancel( { reason => 'ItemLost', force => 1 } );
+            }
+        }
+    );
+
+    return $self;
+}
+
 =head3 last_borrowers
 
 Returns all patrons who have returned this item, ordered by most recent first.
