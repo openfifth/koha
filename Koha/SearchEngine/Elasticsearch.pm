@@ -280,6 +280,9 @@ sub get_elasticsearch_mappings {
             $mappings->{properties}{'match-heading'}             = _get_elasticsearch_field_config( 'search', 'text' );
             $mappings->{properties}{'subject-heading-thesaurus'} = _get_elasticsearch_field_config( 'search', 'text' );
         }
+        if ( $self->index eq $Koha::SearchEngine::BIBLIOS_INDEX ) {
+            $mappings->{properties}{biblionumber} = { type => 'integer' };
+        }
         $all_mappings{ $self->index } = $mappings;
     }
     $self->sort_fields( \%{ $sort_fields{ $self->index } } );
@@ -299,32 +302,32 @@ sub _get_items_elasticsearch_mappings {
 
     return {
         properties => {
-            itemnumber    => { type => 'integer' },
-            biblionumber  => { type => 'integer' },
-            barcode       => { type => 'keyword' },
-            homebranch    => { type => 'keyword' },
-            holdingbranch => { type => 'keyword' },
-            location      => { type => 'keyword' },
-            itype         => { type => 'keyword' },
-            ccode         => { type => 'keyword' },
-            notforloan    => { type => 'integer' },
-            damaged       => { type => 'integer' },
-            itemlost      => { type => 'integer' },
-            withdrawn     => { type => 'integer' },
-            restricted    => { type => 'integer' },
-            onloan        => { type => 'keyword' },
-            issues        => { type => 'integer' },
-            renewals      => { type => 'integer' },
-            cn_sort       => { type => 'keyword' },
+            itemnumber     => { type => 'integer' },
+            biblionumber   => { type => 'integer' },
+            barcode        => { type => 'keyword' },
+            homebranch     => { type => 'keyword' },
+            holdingbranch  => { type => 'keyword' },
+            location       => { type => 'keyword' },
+            itype          => { type => 'keyword' },
+            ccode          => { type => 'keyword' },
+            notforloan     => { type => 'integer' },
+            damaged        => { type => 'integer' },
+            itemlost       => { type => 'integer' },
+            withdrawn      => { type => 'integer' },
+            restricted     => { type => 'integer' },
+            onloan         => { type => 'keyword' },
+            issues         => { type => 'integer' },
+            renewals       => { type => 'integer' },
+            cn_sort        => { type => 'keyword' },
             itemcallnumber => {
                 type   => 'text',
                 fields => { raw => { type => 'keyword' } }
             },
-            available    => { type => 'boolean' },
-            copynumber   => { type => 'keyword' },
-            enumchron    => { type => 'text' },
-            stocknumber  => { type => 'keyword' },
-            itemnotes    => { type => 'text' },
+            available   => { type => 'boolean' },
+            copynumber  => { type => 'keyword' },
+            enumchron   => { type => 'text' },
+            stocknumber => { type => 'keyword' },
+            itemnotes   => { type => 'text' },
         }
     };
 }
@@ -713,8 +716,7 @@ sub marc_records_to_documents {
 
     my @nfl_itype_codes;
     if ( $self->index eq $BIBLIOS_INDEX ) {
-        @nfl_itype_codes = map { $_->itemtype }
-            Koha::ItemTypes->search( { notforloan => { '>' => 0 } } )->as_list;
+        @nfl_itype_codes = map { $_->itemtype } Koha::ItemTypes->search( { notforloan => { '>' => 0 } } )->as_list;
     }
 
     foreach my $record ( @{$records} ) {
