@@ -31,6 +31,7 @@ use Koha::BackgroundJob::UpdateElasticIndex;
 use C4::AuthoritiesMarc qw//;
 use C4::Context;
 use Koha::Biblios;
+use Koha::ItemTypes;
 use Koha::Items;
 
 =head1 NAME
@@ -460,11 +461,13 @@ sub index_items {
 
     return unless @{$itemnumbers};
 
+    my %itype_nfl = map { $_->itemtype => ( $_->notforloan // 0 ) } Koha::ItemTypes->search( {} )->as_list;
+
     my @body;
     my $items = Koha::Items->search( { itemnumber => { -in => $itemnumbers } } );
     while ( my $item = $items->next ) {
         push @body, { index => { _id => $item->itemnumber . '' } };
-        push @body, _item_to_document($item);
+        push @body, _item_to_document( $item, \%itype_nfl );
     }
 
     return unless @body;
@@ -511,7 +514,8 @@ sub delete_items {
 }
 
 sub _item_to_document {
-    my ($item) = @_;
+    my ( $item, $itype_nfl ) = @_;
+    $itype_nfl //= {};
 
     my $notforloan = $item->notforloan // 0;
     my $damaged    = $item->damaged    // 0;
@@ -519,10 +523,8 @@ sub _item_to_document {
     my $withdrawn  = $item->withdrawn  // 0;
     my $onloan     = $item->onloan;
 
-    my $not_for_loan =
-        $item->itype
-        ? ( $item->effective_not_for_loan_status // 0 )
-        : $notforloan;
+    my $itype_notforloan = $item->itype ? ( $itype_nfl->{ $item->itype } // undef )          : undef;
+    my $not_for_loan     = ( defined $itype_notforloan && !$notforloan ) ? $itype_notforloan : $notforloan;
 
     my $available =
         ( !$not_for_loan && $damaged == 0 && $itemlost == 0 && $withdrawn == 0 && !defined $onloan ) ? \1 : \0;
