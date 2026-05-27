@@ -523,8 +523,8 @@ sub _item_to_document {
     my $withdrawn  = $item->withdrawn  // 0;
     my $onloan     = $item->onloan;
 
-    my $itype_notforloan = $item->itype ? ( $itype_nfl->{ $item->itype } // undef )          : undef;
-    my $not_for_loan     = ( defined $itype_notforloan && !$notforloan ) ? $itype_notforloan : $notforloan;
+    my $itype_notforloan = $item->itype                                  ? $itype_nfl->{ $item->itype } : undef;
+    my $not_for_loan     = ( defined $itype_notforloan && !$notforloan ) ? $itype_notforloan            : $notforloan;
 
     my $available =
         ( !$not_for_loan && $damaged == 0 && $itemlost == 0 && $withdrawn == 0 && !defined $onloan ) ? \1 : \0;
