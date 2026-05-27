@@ -17,14 +17,23 @@
 
 use Modern::Perl;
 
-use Test::More tests => 15;
+use Test::More tests => 18;
 use Test::NoWarnings;
+use Test::MockModule;
 use t::lib::Mocks;
 use t::lib::TestBuilder;
 
+use Koha::SearchEngine;
 use Koha::SearchEngine::Elasticsearch::QueryBuilder;
 use Koha::SearchEngine::Elasticsearch::Indexer;
 use Koha::SearchFields;
+
+{
+
+    package MockESSearchClient;
+    sub new    { bless { response => {} }, shift }
+    sub search { my ( $self, %args ) = @_; return $self->{response} }
+}
 
 my $schema = Koha::Database->new()->schema();
 $schema->storage->txn_begin;
@@ -79,11 +88,46 @@ is( $searcher->index, 'mydb', 'Testing basic accessor' );
 
 ok( my $query = $builder->build_query('easy'), 'Build a search query' );
 
+subtest '_apply_available_filter() tests' => sub {
+    plan tests => 4;
+
+    my $mock_search = Test::MockModule->new('Koha::SearchEngine::Elasticsearch::Search');
+    $mock_search->mock( '_get_available_biblionumbers', sub { return ( 1, 2, 3 ) } );
+
+    my $searcher = Koha::SearchEngine::Elasticsearch::Search->new(
+        { nodes => ['localhost:9200'], index => $Koha::SearchEngine::BIBLIOS_INDEX } );
+
+    my $query = { query => { bool => { must => [ { query_string => { query => 'title:foo' } } ] } } };
+    $searcher->_apply_available_filter($query);
+    is(
+        $query->{query}{bool}{must}[0]{query_string}{query},
+        'title:foo', 'query without available:true is not modified'
+    );
+
+    $query = { query => { bool => { must => [ { query_string => { query => 'available:true' } } ] } } };
+    $searcher->_apply_available_filter($query);
+    ok( exists $query->{query}{bool}{filter}, 'available:true rewrite adds a filter' );
+    is( $query->{query}{bool}{must}[0]{query_string}{query}, '*', 'available:true stripped from query string' );
+
+    $query = {
+        query => {
+            bool => {
+                must => [
+                    { query_string => { query => 'title:foo' } },
+                    { query_string => { query => 'available:true' } },
+                ]
+            }
+        }
+    };
+    $searcher->_apply_available_filter($query);
+    ok( exists $query->{query}{bool}{filter}, 'available:true found and rewritten when not at must[0]' );
+};
+
 SKIP: {
 
     eval { $builder->get_elasticsearch_params; };
 
-    skip 'Elasticsearch configuration not available', 9
+    skip 'Elasticsearch configuration not available', 12
         if $@;
 
     Koha::SearchEngine::Elasticsearch::Indexer->new( { index => 'mydb' } )->drop_index;
@@ -172,5 +216,41 @@ SKIP: {
 
         $schema->storage->txn_rollback;
 
+    };
+
+    subtest '_get_available_biblionumbers() tests' => sub {
+        plan tests => 2;
+
+        my $mock_es     = Test::MockModule->new('Koha::SearchEngine::Elasticsearch');
+        my $mock_client = MockESSearchClient->new;
+        $mock_es->mock( 'get_elasticsearch', sub { $mock_client } );
+
+        $mock_client->{response} = { aggregations => { by_biblio => { buckets => [ { key => 10 }, { key => 20 } ] } } };
+
+        my @bns = $searcher->_get_available_biblionumbers();
+        is( scalar @bns, 2, '_get_available_biblionumbers returns one entry per bucket' );
+        is_deeply( [ sort { $a <=> $b } @bns ], [ 10, 20 ], 'correct biblionumbers returned' );
+    };
+
+    subtest '_get_item_facets() tests' => sub {
+        plan tests => 3;
+
+        my $mock_es     = Test::MockModule->new('Koha::SearchEngine::Elasticsearch');
+        my $mock_client = MockESSearchClient->new;
+        $mock_es->mock( 'get_elasticsearch', sub { $mock_client } );
+
+        my $result = $searcher->_get_item_facets( [] );
+        is_deeply( $result, {}, '_get_item_facets with empty list returns empty hashref' );
+
+        $mock_client->{response} = {
+            aggregations => {
+                itype    => { buckets => [ { key => 'BK', doc_count => 5 } ] },
+                location => { buckets => [] },
+            }
+        };
+
+        $result = $searcher->_get_item_facets( [ 1, 2, 3 ] );
+        ok( exists $result->{itype},    '_get_item_facets returns itype aggregation' );
+        ok( exists $result->{location}, '_get_item_facets returns location aggregation' );
     };
 }
