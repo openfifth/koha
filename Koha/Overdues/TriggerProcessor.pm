@@ -119,7 +119,7 @@ sub ProcessSimpleCalculationOverdues {
         $action_executor->route_item_actions_to_queue( $rule_resolver->{effective_overdue_rule_sets}, $overdue_item );
     }
 
-    # TODO: enact
+    $action_executor->process_action_queue;
 }
 
 1;
