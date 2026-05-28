@@ -188,6 +188,48 @@ sub enact_lost {
     $item->mark_lost($lost_value);
 }
 
+=head3 enact_forgive_fine
+
+Forgive any outstanding UNRETURNED OVERDUE accountline(s) for this checkout via
+L<Koha::Account/forgive_debit>. Gated by the trigger row's C<forgive_fine> rule
+value in L</process_action_queue>; legacy C<WhenLostForgiveFine> is deprecated
+and not consulted.
+
+The audit-trail side effects (UNRETURNED → LOST status flip and zero-amount
+accountline cleanup) are not part of this action — they fire from
+L<Koha::Item/mark_lost>.
+
+=cut
+
+sub enact_forgive_fine {
+    my ( $self, $overdue_item ) = @_;
+
+    my $accountlines = Koha::Account::Lines->search(
+        {
+            borrowernumber  => $overdue_item->{borrowernumber},
+            itemnumber      => $overdue_item->{itemnumber},
+            issue_id        => $overdue_item->{issue_id},
+            debit_type_code => 'OVERDUE',
+            status          => 'UNRETURNED',
+        }
+    );
+
+    my $account        = Koha::Account->new( { patron_id => $overdue_item->{borrowernumber} } );
+    my $forgiven_count = 0;
+    while ( my $accountline = $accountlines->next ) {
+        my $credit = $account->forgive_debit( $accountline, { interface => 'cron' } );
+        if ($credit) {
+            $forgiven_count++;
+        }
+    }
+
+    if ( $forgiven_count && C4::Context->preference('FinesLog') ) {
+        Koha::Logger->get->info(
+            "Overdue forgiven: borrower $overdue_item->{borrowernumber}, item $overdue_item->{itemnumber} ($forgiven_count line(s))"
+        );
+    }
+}
+
 =head3 _resolve_rule_context_branchcode
 
   my $branchcode = $self->_resolve_rule_context_branchcode($overdue_item);
