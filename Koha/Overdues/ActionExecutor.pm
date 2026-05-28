@@ -24,6 +24,9 @@ use Koha::Patron::Debarments qw( AddUniqueDebarment );
 use C4::Accounts             qw( chargelostitem );
 use C4::Circulation          qw( MarkIssueReturned );
 use C4::Context;
+use Koha::Patrons;
+use Koha::Checkouts;
+use Koha::Checkout;
 use Koha::DateUtils qw( dt_from_string output_pref );
 
 =head1 NAME
@@ -228,6 +231,57 @@ sub enact_forgive_fine {
             "Overdue forgiven: borrower $overdue_item->{borrowernumber}, item $overdue_item->{itemnumber} ($forgiven_count line(s))"
         );
     }
+}
+
+=head3 enact_charge
+
+Charge the patron the item's replacement fee.
+
+Resolves the fee-context branch via LKoha::Checkout/branch_for_fee_context so the LOST accountline's library_id honours
+LostChargesControl / HomeOrHoldingBranch. Records the accountline with interface 'cron'.
+
+=cut
+
+sub enact_charge {
+    my ( $self, $overdue_item ) = @_;
+
+    if ( !$overdue_item->{replacementfee} || $overdue_item->{replacementfee} == 0 ) {
+        Koha::Logger->get->warn("No replacement fee set for itemnumber $overdue_item->{itemnumber} — skipping charge");
+        return;
+    }
+
+    my $item   = Koha::Items->find( $overdue_item->{itemnumber} );
+    my $patron = Koha::Patrons->find( $overdue_item->{borrowernumber} );
+    my $issue  = Koha::Checkouts->search(
+        {
+            issue_id => $overdue_item->{issue_id},
+        }
+    )->next;
+
+    my $rule_branch = Koha::Checkout->branch_for_fee_context(
+        fee_type => 'LOST',
+        patron   => $patron,
+        item     => $item,
+        issue    => $issue,
+    );
+
+    my $description = sprintf(
+        "%s %s %s",
+        $item->biblio ? ( $item->biblio->title // q{} ) : q{},
+        $item->barcode        // q{},
+        $item->itemcallnumber // q{},
+    );
+
+    Koha::Account->new( { patron_id => $overdue_item->{borrowernumber} } )->add_lost_replacement_fee(
+        {
+            item              => $item,
+            issue             => $issue,
+            library_id        => $rule_branch,
+            interface         => 'cron',
+            description       => $description,
+            replacement_price => $overdue_item->{replacementfee},
+        }
+    );
 }
 
 =head3 _resolve_rule_context_branchcode
