@@ -109,6 +109,41 @@ sub route_item_actions_to_queue {
     }
 }
 
+=head3 process_action_queue
+
+Process the standard queue.
+
+=cut
+
+sub process_action_queue {
+    my ($self) = @_;
+
+    foreach my $batch ( @{ $self->{action_batch_queue} } ) {
+        my $overdue_item = $batch->{item};
+        my $actions      = $batch->{actions};
+
+        if ( $actions->{restrict} ) {
+            $self->enact_restrict($overdue_item);
+        }
+
+        if ( $actions->{lost} ) {
+            $self->enact_lost( $overdue_item, $actions->{lost} );
+        }
+
+        if ( $actions->{forgive_fine} ) {
+            $self->enact_forgive_fine($overdue_item);
+        }
+
+        if ( $actions->{charge} ) {
+            $self->enact_charge($overdue_item);
+        }
+
+        if ( $actions->{mark_returned} ) {
+            $self->enact_mark_returned($overdue_item);
+        }
+    }
+}
+
 =head3 format_action_item
 
 Takes in an item, an action, and a delay, and returns a formatted action_item to be processed.
