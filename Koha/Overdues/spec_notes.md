@@ -1,4 +1,47 @@
 # TEMPORARY FILE - for ease of access during dev
+
+## DECISIONS
+### Forgive fine atom — home
+- Service-level orchestration (creates a FORGIVEN credit via `add_credit`, then applies it to the debit) lives on `Koha::Account` as `forgive_debit($debit_line, { interface, user_id?, library_id? })`, alongside `add_credit` / `pay` / `add_lost_replacement_fee`. Caller (`ActionExecutor::enact_forgive_fine`) builds the account once and iterates over the patron's UNRETURNED OVERDUE accountlines.
+
+### Branchcode for rule-set lookup in `route_item_actions_to_queue`
+- Must honor both `CircControl` and `HomeOrHoldingBranch` (mirrors the informative blurb in smart-rules.tt).
+- Resolution (cron context, no userenv):
+  - `CircControl = PatronLibrary` → patron's home branch
+  - `CircControl = ItemHomeLibrary` (default) → item homebranch or holdingbranch per `HomeOrHoldingBranch`
+  - `CircControl = PickupLibrary` → falls through to the ItemHomeLibrary case (matches `_GetCircControlBranch`)
+- The issue's `branchcode` (frozen at checkout via `_GetCircControlBranch`) is NOT used directly for rule resolution.
+- Required keys on `$overdue_item` (carried by `TriggerProcessor`, sourced from `Repository`):
+  - `itemhomebranch` (item.homebranch)
+  - `itemholdingbranch` (item.holdingbranch)
+  - `patronhomebranch` (patron.branchcode)
+- Extracted to `ActionExecutor::_resolve_rule_context_branchcode` with a POD TODO pointing at `Koha::CirculationRules` as the eventual home (taking scalars rather than objects so batch callers don't load Item + Patron per row). DRY against `C4::Circulation::_GetCircControlBranch` (private + EXPORT_OK-flagged-as-wrong) is the later refactor.
+
+### Fee-context branch for `enact_charge` — separate concern from rule resolution
+- LOST fees go through `Koha::Checkout::branch_for_fee_context(fee_type => 'LOST', ...)`, which uses `LostChargesControl` (not `CircControl`) + `HomeOrHoldingBranch`.
+- `LostChargesControl` does NOT influence the rule lookup that decides "should we charge?" — that's already settled by the trigger row via `_resolve_rule_context_branchcode` (CircControl-driven).
+- `LostChargesControl` only governs the `library_id` stamped on the resulting LOST debit line, which in turn drives two downstream lookups inside `Koha::Account::add_lost_replacement_fee`:
+  - the `lost_item_processing_fee` circ rule
+  - the itemtype `defaultreplacecost` fallback (when `replacement_price` is undef and `useDefaultReplacementCost` is on)
+- So the two branchcodes used in the executor are separate concerns: `_resolve_rule_context_branchcode` for "which trigger fires", `branch_for_fee_context` for "where the resulting LOST debit is stamped".
+
+### `enact_forgive_fine` — accountline scoping and log policy
+- Search filter scopes to the active checkout via `issue_id` (NOT done by legacy `_FixOverduesOnReturn`, which omits `issue_id` and uses `->next` to pick one arbitrarily — latent bug avoided).
+- Log policy: track `$forgiven_count` inside the loop and gate the `FinesLog` line on it, NOT on the resultset being non-empty. Reason: `forgive_debit` returns `undef` when `amountoutstanding == 0`, so a matching row may still result in no forgiveness — the log should reflect actual work done, with the count appended for visibility.
+
+### Intentional divergence from `_FixOverduesOnReturn`
+The new `enact_forgive_fine` deliberately does NOT replicate several `_FixOverduesOnReturn` behaviours — each is moved or deferred:
+- No zero-amount accountline cleanup (`amount == 0 && payments == 0` → delete) → deferred to `Koha::Item::mark_lost`.
+- No accountline `status` flip (`UNRETURNED → RETURNED`/`LOST`) → deferred to `Koha::Item::mark_lost`.
+- No `txn_do` wrapper.
+- No `$exemptfine` gate — moved up to `process_action_queue` via `_resolve_action_flag('forgive_fine', $actions)` (trigger row OR `WhenLostForgiveFine` syspref fallback).
+- Logging via `Koha::Logger->info` instead of `C4::Log::logaction("FINES", "MODIFY", ...)`. Caveat: legacy writes to `action_logs` table (surfaces in staff UI audit trail); we don't. If FinesLog is meant to be a librarian-visible audit, `Koha::Logger` may not be the right channel — flag for later.
+
+### Cron userenv requirement on `process_circulation_triggers.pl`
+- `MarkIssueReturned` (C4/Circulation.pm:2888) reads `C4::Context->userenv->{branch}` unconditionally to set `issues.checkin_library`. Without an installed userenv, that dereferences undef and dies.
+- The convention is `use Koha::Script -cron;` at the top of the cron script — its import-time hook calls `set_userenv(undef, undef, undef, 'CRON', 'CRON', undef×5)` and `interface('cron')`, installing a placeholder hashref so `userenv->{branch}` returns undef cleanly (and `checkin_library` is stored as NULL).
+- All legacy cronjobs (longoverdue.pl, fines.pl, overdue_notices.pl) declare it. Added to `misc/cronjobs/process_circulation_triggers.pl` between `use warnings;` and the Koha imports, matching their placement.
+
 ## QUESTIONS
 ### general
 - JUST TO CONFIRM:do we only take the date into account when applying triggers, and completely disregard times?
