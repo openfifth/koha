@@ -284,6 +284,34 @@ sub enact_charge {
     );
 }
 
+=head3 enact_mark_returned
+
+Mark the patron's checkout of this item as returned, honouring the patron's
+privacy setting.
+
+Important: MarkIssueReturned archives the issue to old_issues (reassigning
+related accountlines to old_issue_id), clears items.onloan, records
+last_returned_by, and may remove an OVERDUES debarment per
+AutoRemoveOverduesRestrictions. Patron privacy=2 anonymises the archived
+checkout.
+
+=cut
+
+sub enact_mark_returned {
+    my ( $self, $overdue_item ) = @_;
+    my $patron = Koha::Patrons->find( $overdue_item->{borrowernumber} );
+    if ( !$patron ) {
+        Koha::Logger->get->warn("enact_mark_returned: borrower $overdue_item->{borrowernumber} not found — skipping");
+        return;
+    }
+    MarkIssueReturned(
+        $overdue_item->{borrowernumber},
+        $overdue_item->{itemnumber},
+        undef,
+        $patron->privacy,
+    );
+}
+
 =head3 _resolve_rule_context_branchcode
 
   my $branchcode = $self->_resolve_rule_context_branchcode($overdue_item);
