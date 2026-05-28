@@ -154,6 +154,23 @@ sub add_to_action_batch_queue {
     push @{ $self->{action_batch_queue} }, $action_item_batch;
 }
 
+=head3 enact_restrict
+
+Add an OVERDUES debarment for the patron associated with the overdue item.
+
+=cut
+
+sub enact_restrict {
+    my ( $self, $overdue_item ) = @_;
+    AddUniqueDebarment(
+        {
+            borrowernumber => $overdue_item->{borrowernumber},
+            type           => 'OVERDUES',
+            comment        => "OVERDUES_PROCESS " . output_pref( dt_from_string() ),
+        }
+    );
+}
+
 =head3 _resolve_rule_context_branchcode
 
   my $branchcode = $self->_resolve_rule_context_branchcode($overdue_item);
