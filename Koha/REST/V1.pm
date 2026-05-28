@@ -20,6 +20,7 @@ use Modern::Perl;
 use Mojo::Base 'Mojolicious';
 
 use C4::Context;
+use Koha::Language;
 use Koha::Logger;
 use Koha::Auth::Identity::Providers;
 
@@ -70,6 +71,17 @@ sub startup {
             # Flush memory caches before every request
             Koha::Caches->flush_L1_caches();
             Koha::Cache::Memory::Lite->flush();
+
+            # Re-establish language context wiped by the flush above. The
+            # parent app's Language plugin already extracted these from the
+            # request, but they live in Memory::Lite so the flush above
+            # clears them. Restore from the live request instead.
+            if ( my $lang = $c->cookie('KohaOpacLanguage') ) {
+                Koha::Language->set_requested_language($lang);
+            }
+            if ( my $accept_lang = $c->req->headers->accept_language ) {
+                $ENV{HTTP_ACCEPT_LANGUAGE} = $accept_lang;
+            }
 
             # Convert XML payload to JSON and validate against schema
             if ( $c->req->headers->content_type && $c->req->headers->content_type =~ /application\/xml/ ) {

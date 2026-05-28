@@ -770,7 +770,13 @@ sub getlanguage {
             ( $language = $cgi_cookie_language ) =~ s/[^a-zA-Z_-]*//;    # sanitize cookie
         }
     } else {
-        @languages = map { $_->{rfc4646_subtag} } @{ getTranslatedLanguages( $interface, $theme ) };
+        my @all_installed = map { $_->{rfc4646_subtag} } @{ getTranslatedLanguages( $interface, $theme ) };
+        my %installed     = map { $_ => 1 } @all_installed;
+        my @syspref_langs = (
+            split( /,/, C4::Context->preference('StaffInterfaceLanguages') // '' ),
+            split( /,/, C4::Context->preference('OPACLanguages')           // '' ),
+        );
+        @languages = @syspref_langs ? grep { $installed{$_} } @syspref_langs : @all_installed;
         $language  = Koha::Language->get_requested_language();
     }
 
