@@ -171,6 +171,23 @@ sub enact_restrict {
     );
 }
 
+=head3 enact_lost
+
+Set the item's lost status (and cancel outstanding transfers) via
+L<Koha::Item/mark_lost>.
+
+=cut
+
+sub enact_lost {
+    my ( $self, $overdue_item, $lost_value ) = @_;
+    my $item = Koha::Items->find( $overdue_item->{itemnumber} );
+    if ( !$item ) {
+        Koha::Logger->get->warn("enact_lost: itemnumber $overdue_item->{itemnumber} not found — skipping");
+        return;
+    }
+    $item->mark_lost($lost_value);
+}
+
 =head3 _resolve_rule_context_branchcode
 
   my $branchcode = $self->_resolve_rule_context_branchcode($overdue_item);
