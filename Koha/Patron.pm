@@ -47,6 +47,7 @@ use Koha::DateUtils qw( dt_from_string );
 use Koha::Encryption;
 use Koha::Exceptions;
 use Koha::Exceptions::Password;
+use Koha::Patron::AutoNumber;
 use Koha::Exceptions::Authorization;
 use Koha::Exceptions::HoldGroup;
 use Koha::Holds;
@@ -131,11 +132,13 @@ sub new {
 
 Autogenerate next cardnumber from highest value found in database.
 
-Uses the C<autoMemberNumValue> system preference as a monotonic floor so a
-cardnumber is never re-issued after the original holder's cardnumber has been
-changed or their account deleted. The syspref row is selected C<FOR UPDATE>
-inside the enclosing transaction so that concurrent C<store()> callers are
-serialised.
+Delegates to the active L<Koha::Patron::AutoNumber> strategy, which is
+selected by the C<autoMemberNumFormat> system preference.  The strategy is
+responsible for maintaining the C<autoMemberNumValue> monotonic counter and
+for applying any configured range constraints or zero-padding.
+
+Must be called inside an open transaction (C<store()> provides this) so that
+the C<FOR UPDATE> lock taken by the strategy serialises concurrent callers.
 
 =cut
 
@@ -145,27 +148,9 @@ sub fixup_cardnumber {
     my $next = $self->cardnumber;
     Koha::Plugins->call( 'patron_barcode_transform', \$next );
 
-    # Only auto-generate when no cardnumber has been supplied (directly or by a plugin).
     unless ($next) {
-        my $schema  = $self->_result->result_source->schema;
-        my $pref_rs = $schema->resultset('Systempreference')->search(
-            { variable => 'autoMemberNumValue' },
-            { for      => 'update' },
-        );
-        my $pref    = $pref_rs->first;
-        my $counter = ( $pref && $pref->value ) || 0;
-
-        my $db_max = Koha::Patrons->search(
-            { cardnumber => { -regexp => '^-?[0-9]+$' } },
-            {
-                select => \'CAST(cardnumber AS SIGNED)',
-                as     => ['cast_cardnumber'],
-            }
-            )->_resultset->get_column('cast_cardnumber')->max
-            || 0;
-
-        $next = ( $counter > $db_max ? $counter : $db_max ) + 1;
-        $pref->update( { value => $next } ) if $pref;
+        my $schema = $self->_result->result_source->schema;
+        $next = Koha::Patron::AutoNumber->new->next_value($schema);
     }
 
     $self->cardnumber($next);
