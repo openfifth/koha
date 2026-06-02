@@ -34,7 +34,7 @@ The new `enact_forgive_fine` deliberately does NOT replicate several `_FixOverdu
 - No zero-amount accountline cleanup (`amount == 0 && payments == 0` → delete) → deferred to `Koha::Item::mark_lost`.
 - No accountline `status` flip (`UNRETURNED → RETURNED`/`LOST`) → deferred to `Koha::Item::mark_lost`.
 - No `txn_do` wrapper.
-- No `$exemptfine` gate — moved up to `process_action_queue` via `_resolve_action_flag('forgive_fine', $actions)` (trigger row OR `WhenLostForgiveFine` syspref fallback).
+- No `$exemptfine` gate — gated up in `process_action_queue` by the trigger row's `forgive_fine` rule value. `WhenLostForgiveFine` is deprecated and not consulted (see spec.md).
 - Logging via `Koha::Logger->info` instead of `C4::Log::logaction("FINES", "MODIFY", ...)`. Caveat: legacy writes to `action_logs` table (surfaces in staff UI audit trail); we don't. If FinesLog is meant to be a librarian-visible audit, `Koha::Logger` may not be the right channel — flag for later.
 
 ### Cron userenv requirement on `process_circulation_triggers.pl`
