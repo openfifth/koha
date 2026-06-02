@@ -45,6 +45,8 @@ use Koha::Patron::Attribute::Types;
 use Koha::Patron::Categories;
 use Koha::Patron::HouseboundRole;
 use Koha::Patron::HouseboundRoles;
+use Koha::Database;
+use Koha::Patron::AutoNumber;
 use Koha::Policy::Patrons::Cardnumber;
 use Koha::Plugins;
 use Koha::SMS::Providers;
@@ -938,6 +940,14 @@ if ( defined $min ) {
         minlength_cardnumber => $min,
         maxlength_cardnumber => $max
     );
+}
+
+if ( C4::Context->preference('autoMemberNum') ) {
+    my $cardnumber_mandatory = grep { $_ eq 'cardnumber' }
+        split( /\|/, C4::Context->preference('BorrowerMandatoryField') // '' );
+    unless ($cardnumber_mandatory) {
+        $template->param( next_cardnumber_hint => Koha::Patron::AutoNumber->new->peek( Koha::Database->new->schema ) );
+    }
 }
 
 if ( C4::Context->preference('TranslateNotices') ) {

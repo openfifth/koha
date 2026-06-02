@@ -67,6 +67,7 @@
         [% IF borrower_data.messages %]
             [% FOR message IN borrower_data.messages %]
                 [% SWITCH message.error %]
+
                 [% CASE 'error_on_insert_patron' %]
                     <div class="alert alert-warning">Something went wrong when creating the patron. Check the logs for details.</div>
                 [% CASE 'error_on_update_patron' %]
@@ -226,6 +227,7 @@
                             <label><input type="checkbox" id="toggle_hidden_fields" title="These fields are collapsed by default by the CollapseFieldsPatronAddForm system preference" /><strong>Show collapsed fields:</strong></label>
                             [% FOREACH field IN fieldstohide %]
                                 [% SWITCH field %]
+
                                 [% CASE 'identity' %]
                                     <span>Patron identity</span> |
                                 [% CASE 'guarantor' %]
@@ -915,7 +917,7 @@
                                                 [% IF mandatorycardnumber %]
                                                     <div class="hint"><span class="error">autoMemberNum is set to enabled, but card number is marked as mandatory in BorrowerMandatoryField: auto calc has been disabled.</span></div>
                                                 [% ELSE %]
-                                                    <div class="hint">Leave blank for auto calc during registration</div>
+                                                    <div class="hint">Leave blank for auto calc during registration[% IF next_cardnumber_hint %]— next available: <strong>[% next_cardnumber_hint | html %]</strong>[% END %]</div>
                                                 [% END %]
                                             [% END %]
                                         </li>
@@ -937,6 +939,7 @@
                                             [% FOREACH category_type IN patron_categories.keys.sort %]
                                                 [% SET optgroup_label = t("Unknown") %]
                                                 [% SWITCH category_type %]
+
                                                 [% CASE 'C' %]
                                                     [% optgroup_label = t("Child") %]
                                                 [% CASE 'A' %]
