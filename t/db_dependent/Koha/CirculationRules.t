@@ -21,7 +21,7 @@ use Modern::Perl;
 
 use Benchmark;
 use Test::NoWarnings;
-use Test::More tests => 9;
+use Test::More tests => 10;
 use Test::Deep qw( cmp_methods );
 use Test::Exception;
 
@@ -200,7 +200,7 @@ subtest 'set_rule' => sub {
     my $itemtype     = $builder->build( { source => 'Itemtype' } )->{'itemtype'};
 
     subtest 'Correct call' => sub {
-        plan tests => 5;
+        plan tests => 8;
 
         Koha::CirculationRules->delete;
 
@@ -271,6 +271,51 @@ subtest 'set_rule' => sub {
                 );
             },
             'setting fine with branch/category/itemtype succeeds'
+        );
+
+        lives_ok(
+            sub {
+                Koha::CirculationRules->set_rule(
+                    {
+                        branchcode   => $branchcode,
+                        categorycode => $categorycode,
+                        itemtype     => $itemtype,
+                        rule_name    => 'overdue_1_delay',
+                        rule_value   => 7,
+                    }
+                );
+            },
+            'setting overdue_1_delay succeeds (numeric suffix normalised to overdue_X_delay)'
+        );
+
+        lives_ok(
+            sub {
+                Koha::CirculationRules->set_rule(
+                    {
+                        branchcode   => $branchcode,
+                        categorycode => $categorycode,
+                        itemtype     => $itemtype,
+                        rule_name    => 'overdue_2_notice',
+                        rule_value   => 'OVERDUE',
+                    }
+                );
+            },
+            'setting overdue_2_notice succeeds'
+        );
+
+        lives_ok(
+            sub {
+                Koha::CirculationRules->set_rule(
+                    {
+                        branchcode   => $branchcode,
+                        categorycode => $categorycode,
+                        itemtype     => $itemtype,
+                        rule_name    => 'overdue_3_lost',
+                        rule_value   => 1,
+                    }
+                );
+            },
+            'setting overdue_3_lost succeeds'
         );
     };
 
@@ -1145,6 +1190,88 @@ subtest 'get_lostreturn_policy() tests' => sub {
         { lostreturn => 'restore', processingreturn => 'restore' },
         'return_branch undefined, fallback to ItemHomeBranch rule (restore)'
     );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'get_known_overdue_delay_values' => sub {
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    Koha::CirculationRules->search( { rule_name => { -like => 'overdue%delay' } } )->delete;
+
+    my @empty = Koha::CirculationRules->get_known_overdue_delay_values;
+    is_deeply( \@empty, [], 'returns empty list when no overdue delay rules exist' );
+
+    my $branch_a = $builder->build( { source => 'Branch' } )->{branchcode};
+    my $branch_b = $builder->build( { source => 'Branch' } )->{branchcode};
+
+    for my $row (
+        [ $branch_a, 'overdue_1_delay', 7 ],
+        [ $branch_a, 'overdue_2_delay', 14 ],
+        [ $branch_b, 'overdue_1_delay', 7 ],    # duplicate value, distinct context
+        [ $branch_b, 'overdue_2_delay', 30 ],
+        )
+    {
+        $builder->build(
+            {
+                source => 'CirculationRule',
+                value  => {
+                    branchcode   => $row->[0],
+                    categorycode => undef,
+                    itemtype     => undef,
+                    rule_name    => $row->[1],
+                    rule_value   => $row->[2],
+                },
+            }
+        );
+    }
+
+    # A non-integer value must be ignored.
+    $builder->build(
+        {
+            source => 'CirculationRule',
+            value  => {
+                branchcode   => $branch_a,
+                categorycode => undef,
+                itemtype     => undef,
+                rule_name    => 'overdue_3_delay',
+                rule_value   => 'noisy',
+            },
+        }
+    );
+
+    # An empty value must be ignored.
+    $builder->build(
+        {
+            source => 'CirculationRule',
+            value  => {
+                branchcode   => $branch_a,
+                categorycode => undef,
+                itemtype     => undef,
+                rule_name    => 'overdue_4_delay',
+                rule_value   => '',
+            },
+        }
+    );
+
+    # Zero is valid and should be included.
+    $builder->build(
+        {
+            source => 'CirculationRule',
+            value  => {
+                branchcode   => $branch_a,
+                categorycode => undef,
+                itemtype     => undef,
+                rule_name    => 'overdue_4_delay',
+                rule_value   => 0,
+            },
+        }
+    );
+
+    my @delays = Koha::CirculationRules->get_known_overdue_delay_values;
+    is_deeply( \@delays, [ 0, 7, 14, 30 ], 'returns distinct integer delays in ascending order' );
 
     $schema->storage->txn_rollback;
 };
