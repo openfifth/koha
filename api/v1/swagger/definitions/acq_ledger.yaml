@@ -77,7 +77,7 @@ properties:
     type:
       - number
       - "null"
-    description: Adjust fund amounts by this percentage on rollover
+    description: Adjust fund amounts by this percentage on duplication
   round_to_multiple:
     type:
       - number
@@ -87,7 +87,7 @@ properties:
     type:
       - boolean
       - "null"
-    description: Set all fund amounts to zero on rollover
+    description: Set all fund amounts to zero on duplication
   fiscal_period:
     type: object
     description: Fiscal period

@@ -398,18 +398,18 @@ const useAllocationModal = ({
 };
 
 /**
- * Composable that builds and opens a two-step ledger rollover modal.
- * Step 1 collects rollover parameters; step 2 shows a dry-run preview before the
- * user confirms. Commits the rollover via `APIClient.acquisition.ledgers.rollover`.
+ * Composable that builds and opens a two-step ledger duplication modal.
+ * Step 1 collects duplicate parameters; step 2 shows a dry-run preview before the
+ * user confirms. Commits the duplicate via `APIClient.acquisition.ledgers.duplicate`.
  *
  * @param {Object}   params
  * @param {Function} params.setConfirmationDialog - Store action that opens a confirmation modal.
  * @param {Function} params.setWarning            - Store action that displays a warning banner.
  * @param {Function} params.setMessage            - Store action that displays a success banner.
- * @param {Function} [params.onSuccess]           - Optional callback invoked after a successful rollover.
- * @returns {{ openRolloverModal: Function }}
+ * @param {Function} [params.onSuccess]           - Optional callback invoked after a successful duplicate.
+ * @returns {{ openDuplicateModal: Function }}
  */
-const useRolloverModal = ({
+const useDuplicateModal = ({
     setConfirmationDialog,
     setWarning,
     setMessage,
@@ -465,26 +465,26 @@ const useRolloverModal = ({
     };
 
     /**
-     * Opens the rollover configuration dialog for the given ledger resource.
-     * On confirmation, performs a dry-run rollover to generate a preview, then opens
+     * Opens the duplication configuration dialog for the given ledger resource.
+     * On confirmation, performs a dry-run duplication to generate a preview, then opens
      * a second dialog to confirm before committing via the API.
      *
      * @param {Object} resource      - The ledger resource object to roll over.
      * @param {Array}  resourceAttrs - The resource's attribute definitions, used to build form inputs.
      */
-    const openRolloverModal = (resource, resourceAttrs) => {
+    const openDuplicateModal = (resource, resourceAttrs) => {
         const groups = [
             {
                 label: $__("Information and status"),
                 inputs: [
-                    {
-                        name: "rollover_warning",
-                        type: "display",
-                        label: $__("Warning"),
-                        defaultValue: $__(
-                            "The original ledger will be set to inactive on rollover"
-                        ),
-                    },
+                    // {
+                    //     name: "duplicate_warning",
+                    //     type: "display",
+                    //     label: $__("Warning"),
+                    //     defaultValue: $__(
+                    //         "The original ledger will be set to inactive on duplicate"
+                    //     ),
+                    // },
                     {
                         name: "fiscal_period_id",
                         type: "relationshipSelect",
@@ -599,7 +599,7 @@ const useRolloverModal = ({
         setConfirmationDialog(
             {
                 title: $__("Duplicate ledger and funds"),
-                accept_label: $__("Preview rollover"),
+                accept_label: $__("Preview duplication"),
                 cancel_label: $__("Cancel"),
                 size: "modal-lg",
                 groups,
@@ -625,10 +625,10 @@ const useRolloverModal = ({
                 };
 
                 const preview = await APIClient.acquisition.ledgers
-                    .rollover(resource.ledger_id, body, { dryRun: true })
+                    .duplicate(resource.ledger_id, body, { dryRun: true })
                     .catch(() => {
                         setWarning(
-                            $__("An error occurred during rollover preview")
+                            $__("An error occurred during duplicate preview")
                         );
                         return null;
                     });
@@ -672,15 +672,15 @@ const useRolloverModal = ({
 
                 setConfirmationDialog(
                     {
-                        title: $__("Confirm rollover"),
-                        accept_label: $__("Confirm rollover"),
+                        title: $__("Confirm duplication"),
+                        accept_label: $__("Confirm duplication"),
                         cancel_label: $__("Cancel"),
                         size: "modal-lg",
                         groups: previewGroups,
                     },
                     async () => {
                         await APIClient.acquisition.ledgers
-                            .rollover(resource.ledger_id, body)
+                            .duplicate(resource.ledger_id, body)
                             .then(
                                 () => {
                                     setMessage(
@@ -690,7 +690,9 @@ const useRolloverModal = ({
                                 },
                                 () => {
                                     setWarning(
-                                        $__("An error occurred during rollover")
+                                        $__(
+                                            "An error occurred during duplication"
+                                        )
                                     );
                                 }
                             );
@@ -700,7 +702,7 @@ const useRolloverModal = ({
         );
     };
 
-    return { openRolloverModal };
+    return { openDuplicateModal };
 };
 
 /**
@@ -1002,7 +1004,7 @@ const useFundTableConfig = ({
  * via `inject("acquisitionsStore")`.
  *
  * Exposed members: `formatValueWithCurrency`, `buildFundTreeOptions`,
- * `applyNumberValidation`, `useAllocationModal`, `useRolloverModal`,
+ * `applyNumberValidation`, `useAllocationModal`, `useDuplicateModal`,
  * `useAllocationTableConfig`, `useFundTableConfig`, `calculateDistributedAmount`.
  *
  * @param {Object} store - The Pinia store instance (currently unused; reserved for future use).
@@ -1014,7 +1016,7 @@ export const acquisitionsActions = store => {
         buildFundTreeOptions,
         applyNumberValidation,
         useAllocationModal,
-        useRolloverModal,
+        useDuplicateModal,
         useAllocationTableConfig,
         useFundTableConfig,
         calculateDistributedAmount,

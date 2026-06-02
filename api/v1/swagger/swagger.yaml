@@ -303,8 +303,8 @@ paths:
     $ref: ./paths/acq_ledgers.yaml#/~1acquisitions~1ledgers
   "/acquisitions/ledgers/{ledger_id}":
     $ref: ./paths/acq_ledgers.yaml#/~1acquisitions~1ledgers~1{ledger_id}
-  "/acquisitions/ledgers/{ledger_id}/rollover":
-    $ref: ./paths/acq_ledgers.yaml#/~1acquisitions~1ledgers~1{ledger_id}~1rollover
+  "/acquisitions/ledgers/{ledger_id}/duplicate":
+    $ref: ./paths/acq_ledgers.yaml#/~1acquisitions~1ledgers~1{ledger_id}~1duplicate
   /acquisitions/orderlines:
     $ref: ./paths/acq_orderlines.yaml#/~1acquisitions~1orderlines
   "/acquisitions/orderlines/{orderline_id}":

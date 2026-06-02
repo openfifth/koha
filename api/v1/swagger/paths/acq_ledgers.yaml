@@ -348,13 +348,13 @@
     x-koha-authorization:
       permissions:
         acquisition: budget_manage_all
-/acquisitions/ledgers/{ledger_id}/rollover:
+/acquisitions/ledgers/{ledger_id}/duplicate:
   post:
-    x-mojo-to: Acquisitions::Finances::Ledgers#rollover
-    operationId: RolloverLedger
+    x-mojo-to: Acquisitions::Finances::Ledgers#duplicate
+    operationId: duplicateLedger
     tags:
       - acquire
-    summary: Rollover a ledger
+    summary: duplicate a ledger
     description: Creates a new ledger from the supplied data, sets the original ledger inactive (cascading to its funds), and copies all funds to the new ledger
     consumes:
       - application/json
@@ -364,7 +364,7 @@
       - $ref: "../swagger.yaml#/parameters/ledger_id_pp"
       - name: dry_run
         in: query
-        description: If true, simulates the rollover without committing any changes
+        description: If true, simulates the duplicate without committing any changes
         required: false
         type: boolean
       - name: body

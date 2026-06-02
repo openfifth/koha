@@ -280,7 +280,7 @@ subtest 'delete() tests' => sub {
     $schema->storage->txn_rollback;
 };
 
-subtest 'rollover() tests' => sub {
+subtest 'duplicate() tests' => sub {
 
     plan tests => 34;
 
@@ -324,13 +324,13 @@ subtest 'rollover() tests' => sub {
 
     $t->post_ok( "//$unauth_userid:$password@/api/v1/acquisitions/ledgers/"
             . $ledger1->ledger_id
-            . "/rollover" => json => { %$base_body, ledger_amount => $ledger1->ledger_amount } )->status_is(403);
+            . "/duplicate" => json => { %$base_body, ledger_amount => $ledger1->ledger_amount } )->status_is(403);
 
     # Ledger not found
-    $t->post_ok( "//$userid:$password@/api/v1/acquisitions/ledgers/99999999/rollover" => json =>
+    $t->post_ok( "//$userid:$password@/api/v1/acquisitions/ledgers/99999999/duplicate" => json =>
             { %$base_body, ledger_amount => 1000 } )->status_is(404)->json_is( '/error' => 'Ledger not found' );
 
-    # Basic rollover — funds copied with original amounts, original ledger deactivated
+    # Basic duplicate — funds copied with original amounts, original ledger deactivated
     my $fund1 = $builder->build_object(
         {
             class => 'Koha::Acquisition::Finances::Funds',
@@ -340,25 +340,25 @@ subtest 'rollover() tests' => sub {
 
     $t->post_ok( "//$userid:$password@/api/v1/acquisitions/ledgers/"
             . $ledger1->ledger_id
-            . "/rollover" => json => { %$base_body, ledger_amount => $ledger1->ledger_amount } )
+            . "/duplicate" => json => { %$base_body, ledger_amount => $ledger1->ledger_amount } )
         ->status_is( 201, 'REST3.2.1' )
         ->header_like( Location => qr|^\/api\/v1\/acquisitions\/ledgers\/\d+|, 'REST3.4.1' )
         ->json_is( '/name' => $base_body->{name} );
 
     my $new_ledger1_id = $t->tx->res->json->{ledger_id};
     $ledger1->discard_changes;
-    ok( !$ledger1->status, 'Original ledger set inactive after rollover' );
+    ok( !$ledger1->status, 'Original ledger set inactive after duplicate' );
 
     my @copied_funds1 = Koha::Acquisition::Finances::Funds->search( { ledger_id => $new_ledger1_id } )->as_list;
     is( scalar @copied_funds1,          1,                   'Fund copied to new ledger' );
     is( $copied_funds1[0]->fund_amount, $fund1->fund_amount, 'Fund amount unchanged when no adjust options given' );
 
-    my $rollover_allocation = Koha::Acquisition::Finances::Allocations->search(
+    my $duplicate_allocation = Koha::Acquisition::Finances::Allocations->search(
         { ledger_id => $new_ledger1_id, type => 'ROLLOVER_TRANSFER' } )->single;
-    ok( $rollover_allocation, 'Rollover allocation created for new ledger' );
+    ok( $duplicate_allocation, 'duplicate allocation created for new ledger' );
     is(
-        $rollover_allocation->allocation_amount, $ledger1->ledger_amount,
-        'Rollover allocation amount matches ledger amount'
+        $duplicate_allocation->allocation_amount, $ledger1->ledger_amount,
+        'duplicate allocation amount matches ledger amount'
     );
 
     # set_funds_to_zero — all copied fund amounts set to 0
@@ -377,7 +377,7 @@ subtest 'rollover() tests' => sub {
 
     $t->post_ok( "//$userid:$password@/api/v1/acquisitions/ledgers/"
             . $ledger2->ledger_id
-            . "/rollover" => json =>
+            . "/duplicate" => json =>
             { %$base_body, ledger_amount => $ledger2->ledger_amount, set_funds_to_zero => Mojo::JSON->true } )
         ->status_is(201);
 
@@ -403,7 +403,7 @@ subtest 'rollover() tests' => sub {
     );
 
     $t->post_ok(
-        "//$userid:$password@/api/v1/acquisitions/ledgers/" . $ledger3->ledger_id . "/rollover" => json => {
+        "//$userid:$password@/api/v1/acquisitions/ledgers/" . $ledger3->ledger_id . "/duplicate" => json => {
             %$base_body,
             ledger_amount     => $ledger3->ledger_amount,
             adjust_by_percent => 15,
@@ -433,7 +433,7 @@ subtest 'rollover() tests' => sub {
 
     $t->post_ok( "//$userid:$password@/api/v1/acquisitions/ledgers/"
             . $ledger4->ledger_id
-            . "/rollover?dry_run=1" => json => { %$base_body, ledger_amount => $ledger4->ledger_amount } )
+            . "/duplicate?dry_run=1" => json => { %$base_body, ledger_amount => $ledger4->ledger_amount } )
         ->status_is(200)
         ->json_is( '/name'                => $base_body->{name} )
         ->json_is( '/funds/0/fund_amount' => 2500 );
@@ -465,7 +465,7 @@ subtest 'rollover() tests' => sub {
     my $ledger5_count_before = Koha::Acquisition::Finances::Ledgers->search->count;
 
     $t->post_ok(
-        "//$userid:$password@/api/v1/acquisitions/ledgers/" . $ledger5->ledger_id . "/rollover?dry_run=1" => json => {
+        "//$userid:$password@/api/v1/acquisitions/ledgers/" . $ledger5->ledger_id . "/duplicate?dry_run=1" => json => {
             %$base_body,
             ledger_amount     => $ledger5->ledger_amount,
             adjust_by_percent => 15,

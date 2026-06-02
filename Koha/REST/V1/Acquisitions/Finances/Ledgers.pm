@@ -183,11 +183,11 @@ sub delete {
     };
 }
 
-=head3 rollover
+=head3 duplicate
 
 =cut
 
-sub rollover {
+sub duplicate {
     my $c = shift->openapi->valid_input or return;
 
     my $ledger = Koha::Acquisition::Finances::Ledgers->find( $c->param('ledger_id') );
@@ -222,7 +222,7 @@ sub rollover {
             {
                 ledger_id         => $new_ledger->ledger_id,
                 allocation_amount => $new_ledger->ledger_amount,
-                type              => 'ROLLOVER_TRANSFER',
+                type              => 'INITIAL',
             }
         )->store;
 
@@ -306,7 +306,7 @@ sub _copy_fund {
         {
             fund_id           => $new_fund->fund_id,
             allocation_amount => $fund_amount,
-            type              => 'ROLLOVER_TRANSFER',
+            type              => 'INITIAL',
         }
     )->store;
 

@@ -31,7 +31,7 @@ export default {
             getBranchnamesFromGroups,
             differentCurrenciesInLedgers,
             useAllocationModal,
-            useRolloverModal,
+            useDuplicateModal,
             useAllocationTableConfig,
             useFundTableConfig,
         } = acquisitionsStore;
@@ -48,7 +48,7 @@ export default {
             onSuccess: () => refetchResource?.(),
         });
 
-        const { openRolloverModal } = useRolloverModal({
+        const { openDuplicateModal } = useDuplicateModal({
             setConfirmationDialog,
             setWarning,
             setMessage,
@@ -80,11 +80,11 @@ export default {
                     ...getAllocationToolbarButtons(resource),
                     {
                         onClick: () =>
-                            openRolloverModal(
+                            openDuplicateModal(
                                 resource,
                                 baseResource.resourceAttrs
                             ),
-                        title: $__("Rollover"),
+                        title: $__("Duplicate"),
                         icon: "rotate",
                         disabled: !resource.status,
                         hint: $__("This ledger is inactive"),
@@ -387,12 +387,12 @@ export default {
                             ? ["delete"]
                             : []),
                         {
-                            rollover: {
+                            duplicate: {
                                 icon: "fa fa-rotate",
-                                text: $__("Rollover"),
+                                text: $__("Duplicate"),
                                 should_display: row => row.status,
                                 callback: (ledger, dt, e) => {
-                                    openRolloverModal(
+                                    openDuplicateModal(
                                         {
                                             ...ledger,
                                             oe_warning_percent:
