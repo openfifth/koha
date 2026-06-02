@@ -23,7 +23,11 @@ trigger row.
 
 #### Replaced with new overdue_X_[action] circulation rules / their context
 
-Treat them as fallbacks for now, with circulation rules as the override, with the intent to later deprecate them.
+~~Treat them as fallbacks for now, with circulation rules as the override, with the intent to later deprecate them.~~
+
+The script deliberately pre-filters overdues to which a circulation rule set will apply (performance concerns), and only process those.
+-> We cannot reliably honour system preferences as defaults without losing the performance improvement.
+-> These sys prefs are deprecated. 
 
 - WhenLostChargeReplacementFee                  -> whether for a context where one or more rule sets declare 'lost', the same or a later sets 'charge' to true.
                                                 -> indirectly would be a fallback - deprecated
@@ -164,18 +168,18 @@ The current draft of `ActionExecutor` leans (b)-shaped — orchestration in the 
 
 Demoted from global policy to per-trigger column (decision moves into the row):
 
-- `WhenLostChargeReplacementFee` → trigger row `charge: bool`.
-- `MarkLostItemsAsReturned` → trigger row `mark_returned: bool`.
+- `WhenLostChargeReplacementFee` → trigger row `charge: bool`. Syspref deprecated.
+- `MarkLostItemsAsReturned` → trigger row `mark_returned: bool`. Syspref deprecated.
+- `WhenLostForgiveFine` → trigger row `forgive_fine: bool`. Syspref deprecated.
 
-Open question — `WhenLostForgiveFine`: this concerns *fines* not the lost transition itself, and was not part of the legacy `--charge`/`--mark-returned` axes. Working assumption: retain as syspref, consulted by `resolve_overdue_fines_on_lost`. Could be promoted to a per-trigger column later if needed.
+All three are no longer consulted at runtime — the pre-filter only fetches checkouts whose delay matches a configured rule, so a syspref-as-default cannot be honoured without losing the perf improvement (see spec.md).
 
 Open question — `DefaultLongOverdueSkipLostStatuses`: this is about *eligibility* (which items get processed), not enactment. Probably stays in the trigger query/pre-filter, not in the action layer.
 
 ### Open questions before locking the design
 
 1. Orchestration: confirm (b) — application service over a common action-shape struct — or push for (a).
-2. `WhenLostForgiveFine`: retain as syspref, or promote to a per-trigger column?
-3. Is the staff-UI "manually mark item lost" path in scope for this redesign, or are we deprecating only the cron entry point in the first pass?
-4. Transfer cancellation: currently unconditional in `LostItem`. Keep as an implicit consequence of `Koha::Item->mark_lost`, or make it a separately toggleable trigger action?
-5. Lost-as-prerequisite (`ActionExecutor.pm:226-232` draft): keep the coupling — `charge` and `mark_returned` skip unless `lost` is present on the same row — or let each action fire independently per its own flag?
-6. Action iteration order on a single row (`restrict, lost, charge, mark_returned` in the draft): ratify or change.
+2. Is the staff-UI "manually mark item lost" path in scope for this redesign, or are we deprecating only the cron entry point in the first pass?
+3. Transfer cancellation: currently unconditional in `LostItem`. Keep as an implicit consequence of `Koha::Item->mark_lost`, or make it a separately toggleable trigger action?
+4. Lost-as-prerequisite (`ActionExecutor.pm:226-232` draft): keep the coupling — `charge` and `mark_returned` skip unless `lost` is present on the same row — or let each action fire independently per its own flag?
+5. Action iteration order on a single row (`restrict, lost, charge, mark_returned` in the draft): ratify or change.
