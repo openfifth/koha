@@ -109,6 +109,7 @@ INSERT INTO systempreferences ( `variable`, `value` ) VALUES
 ('AutomaticItemReturn','1'),
 ('AutomaticRenewalPeriodBase','date_due'),
 ('autoMemberNum','0'),
+('autoMemberNumFormat','sequential'),
 ('autoMemberNumValue','0'),
 ('AutoRemoveOverduesRestrictions','no'),
 ('AutoRenewalNotices','preferences'),

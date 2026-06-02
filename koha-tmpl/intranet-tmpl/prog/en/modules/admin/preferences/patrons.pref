@@ -312,6 +312,13 @@ Patrons:
          - pref: autoMemberNumValue
          - '<strong>CAUTION:</strong> This value is managed automatically by Koha and should not normally be changed. Koha always generates the next card number from whichever is higher: this counter or the largest numeric card number currently in use. As a result, lowering this counter only has an effect once the patron responsible for the inflated number has been deleted or had their card number corrected. Only lower it if the counter has been inflated by an accidentally-entered barcode or a large test card number and you are certain the value you set will never match a card number held by any current or deleted patron. Setting it too low risks re-issuing a previously used card number, which may grant a new patron unintended access to third-party services linked to the original holder.'
      -
+         - Use the
+         - pref: autoMemberNumFormat
+           choices:
+               sequential: sequential
+               ean13: EAN-13
+         - strategy when auto-generating patron card numbers. <strong>Sequential</strong> increments from the highest number currently in use (the legacy behaviour). <strong>EAN-13</strong> generates valid 13-digit EAN-13 barcodes with a computed check digit, consistent with the format used on physical library cards. Set <code>autoMemberNumValue</code> to your first EAN-13 barcode to seed the sequence with your institutional or GS1 prefix.
+     -
          - Card numbers for patrons must be
          - pref: CardnumberLength
          - "characters long. The length can be a single number to specify an exact length, a range separated by a comma (i.e., 'Min,Max'), or a maximum with no minimum (i.e., ',Max')."
