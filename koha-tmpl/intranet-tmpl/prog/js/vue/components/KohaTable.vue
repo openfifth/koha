@@ -36,6 +36,12 @@ export default {
             table_settings: props.table_settings,
         });
 
+        if (props.options.searching === false) {
+            buttons = buttons.filter(
+                b => b.className !== "dt_button_clear_filter"
+            );
+        }
+
         if (props.add_filters) {
             props.options.orderCellsTop = true;
         }
