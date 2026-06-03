@@ -21,7 +21,7 @@ use Modern::Perl;
 use utf8;
 
 use Test::NoWarnings;
-use Test::More tests => 42;
+use Test::More tests => 43;
 use Test::Exception;
 use Test::MockModule;
 use Test::Warn;
@@ -4010,6 +4010,66 @@ subtest 'holds_fee() tests' => sub {
     # Test without patron
     $fee = $item->holds_fee(undef);
     is( $fee, 0, 'Item holds_fee returns 0 when no patron provided' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'mark_lost tests' => sub {
+
+    plan tests => 5;
+
+    $schema->storage->txn_begin;
+
+    my $library_from = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $library_to   = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron       = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $item         = $builder->build_sample_item( { homebranch => $library_from->branchcode } );
+
+    my $issue = $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => { borrowernumber => $patron->borrowernumber, itemnumber => $item->itemnumber },
+        }
+    );
+
+    my $account     = Koha::Account->new( { patron_id => $patron->borrowernumber } );
+    my $accountline = $account->add_debit(
+        {
+            amount     => 3.50,
+            interface  => 'commandline',
+            type       => 'OVERDUE',
+            item_id    => $item->itemnumber,
+            issue_id   => $issue->issue_id,
+            library_id => $library_from->branchcode,
+        }
+    );
+    $accountline->status('UNRETURNED')->store;
+
+    my $transfer = $builder->build_object(
+        {
+            class => 'Koha::Item::Transfers',
+            value => {
+                itemnumber    => $item->itemnumber,
+                frombranch    => $library_from->branchcode,
+                tobranch      => $library_to->branchcode,
+                datesent      => dt_from_string,
+                datearrived   => undef,
+                datecancelled => undef,
+            }
+        }
+    );
+
+    my $returned = $item->mark_lost(2);
+    is( ref($returned), 'Koha::Item', 'mark_lost returns the item' );
+    $item->discard_changes;
+    is( $item->itemlost, 2, 'itemlost set to the requested value' );
+
+    $accountline->discard_changes;
+    is( $accountline->status, 'LOST', 'non-zero UNRETURNED OVERDUE accountline flipped to LOST' );
+
+    $transfer->discard_changes;
+    ok( $transfer->datecancelled, 'outstanding transfer cancelled' );
+    is( $transfer->cancellation_reason, 'ItemLost', 'transfer cancellation reason is ItemLost' );
 
     $schema->storage->txn_rollback;
 };
