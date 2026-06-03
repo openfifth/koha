@@ -289,8 +289,7 @@ sub enact_charge {
     my $patron = Koha::Patrons->find( $overdue_item->{borrowernumber} );
     my $issue  = Koha::Checkouts->search(
         {
-            itemnumber     => $overdue_item->{itemnumber},
-            borrowernumber => $overdue_item->{borrowernumber},
+            issue_id => $overdue_item->{issue_id},
         }
     )->next;
 
