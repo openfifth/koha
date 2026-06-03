@@ -945,6 +945,7 @@ sub mark_lost {
     my ( $self, $lost_value ) = @_;
 
     $self->itemlost($lost_value)->store;
+    Koha::Plugins->call( 'item_set_lost', $lost_value );
 
     my $checkout = $self->checkout;
     if ($checkout) {
