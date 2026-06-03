@@ -392,11 +392,11 @@ export default {
                                           filters_options: {
                                               status: [
                                                   {
-                                                      _id: true,
+                                                      _id: 1,
                                                       _str: $__("Active"),
                                                   },
                                                   {
-                                                      _id: false,
+                                                      _id: 0,
                                                       _str: $__("Inactive"),
                                                   },
                                               ],
