@@ -336,6 +336,31 @@ sub days_forward {
     return $base_dt;
 }
 
+# Walks backward one calendar day at a time, decrementing $num_days only on open days.
+# Does not implement subroutines routing through DayWeek-mode to prevent 7-day jumps
+# which give wrong results for "exact N open days ago".
+sub days_backward {
+    my ( $self, $start_dt, $num_days ) = @_;
+
+    if ( !exists $self->{days_mode} ) {
+        Koha::Exceptions::MissingParameter->throw(
+            "Missing mandatory option for Koha:Calendar->days_backward: days_mode");
+    }
+
+    if ( $num_days <= 0 ) {
+        return $start_dt;
+    }
+
+    my $base_dt = $start_dt->clone;
+    while ( $num_days > 0 ) {
+        $base_dt->subtract( days => 1 );
+        if ( !$self->is_holiday($base_dt) ) {
+            $num_days--;
+        }
+    }
+    return $base_dt;
+}
+
 sub days_between {
     my $self     = shift;
     my $start_dt = shift;

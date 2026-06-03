@@ -31,7 +31,9 @@ borrower restrictions, and charge item lost fees. Depending on system
 preferences and circulation triggers, it may also alert patrons and
 administrators of overdue items.
 
-This script accounts for IgnoreClosedDaysInOverdueCalculation.
+When the C<OverdueTriggersCalendar> system preference is enabled, trigger
+delays are measured in open days using each branch's calendar; otherwise
+delays are measured in calendar days.
 
 =cut
 
@@ -44,6 +46,6 @@ my $command_line_options = join( " ", @ARGV );
 cronlogaction( { info => $command_line_options } );
 
 my $triggerProcessor = Koha::Overdues::TriggerProcessor->new();
-$triggerProcessor->ProcessSimpleCalculationOverdues();
+$triggerProcessor->ProcessOverdues();
 
 cronlogaction( { action => 'End', info => "COMPLETED" } );
