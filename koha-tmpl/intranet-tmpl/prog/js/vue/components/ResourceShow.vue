@@ -7,11 +7,7 @@
             :componentPropData="{ ...$props, ...$data }"
         />
         <h2>
-            {{
-                instancedResource.i18n.displayName +
-                " #" +
-                resource[instancedResource.idAttr]
-            }}
+            {{ displayName }}
         </h2>
         <TabsWrapper v-if="displayMode == 'tabs'" :tabList="fieldList">
             <template #tabContent="{ tabGroup }">
@@ -178,12 +174,21 @@ export default {
                 : props.instancedResource.formGroupsDisplayMode || "";
         });
 
+        const displayName = computed(() => {
+            return props.instancedResource?.nameAttr
+                ? resource.value[props.instancedResource?.nameAttr]
+                : props.instancedResource?.i18n?.displayName +
+                      " #" +
+                      resource.value[props.instancedResource?.idAttr];
+        });
+
         return {
             initialized,
             resource,
             additionalProps,
             fieldList,
             displayMode,
+            displayName,
         };
     },
     props: {
