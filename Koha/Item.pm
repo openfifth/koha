@@ -938,6 +938,7 @@ sub get_transfers {
 
 Atomic state mutation setting the item's lost status and
 canceling any outstanding transfers (retain behaviour from 27281).
+We also update the relevant accountline to reflect the status change.
 
 =cut
 
