@@ -201,6 +201,11 @@ export class AcquisitionAPIClient {
                     endpoint: `ledgers/${id}/duplicate${dryRun ? "?dry_run=1" : ""}`,
                     body,
                 }),
+            rollover: (id, body, { dryRun = false } = {}) =>
+                this.httpClient.post({
+                    endpoint: `ledgers/${id}/rollover${dryRun ? "?dry_run=1" : ""}`,
+                    body,
+                }),
             count: (query = {}) =>
                 this.httpClient.count({
                     endpoint:

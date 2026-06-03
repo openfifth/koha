@@ -32,6 +32,7 @@ export default {
             differentCurrenciesInLedgers,
             useAllocationModal,
             useDuplicateModal,
+            useRolloverModal,
             useAllocationTableConfig,
             useFundTableConfig,
         } = acquisitionsStore;
@@ -53,6 +54,13 @@ export default {
             setWarning,
             setMessage,
             onSuccess: () => refetchResource?.(),
+        });
+
+        const { openRolloverModal } = useRolloverModal({
+            setConfirmationDialog,
+            setWarning,
+            setMessage,
+            onSuccess: () => baseResource.refreshTemplateState(),
         });
 
         const additionalToolbarButtons = (resource, componentData) => {
@@ -86,6 +94,13 @@ export default {
                             ),
                         title: $__("Duplicate"),
                         icon: "rotate",
+                        disabled: !resource.status,
+                        hint: $__("This ledger is inactive"),
+                    },
+                    {
+                        onClick: () => openRolloverModal(resource),
+                        title: $__("Rollover"),
+                        icon: "right-left",
                         disabled: !resource.status,
                         hint: $__("This ledger is inactive"),
                     },
@@ -401,6 +416,16 @@ export default {
                                         },
                                         baseResource.resourceAttrs
                                     );
+                                },
+                            },
+                        },
+                        {
+                            rollover: {
+                                icon: "fa fa-right-left",
+                                text: $__("Rollover"),
+                                should_display: row => row.status,
+                                callback: (ledger, dt, e) => {
+                                    openRolloverModal(ledger);
                                 },
                             },
                         },

@@ -348,6 +348,58 @@
     x-koha-authorization:
       permissions:
         acquisition: budget_manage_all
+/acquisitions/ledgers/{ledger_id}/rollover:
+  post:
+    x-mojo-to: Acquisitions::Finances::Ledgers#rollover
+    operationId: rolloverLedger
+    tags:
+      - acquire
+    summary: Rollover a ledger, moving open orders to a destination ledger and optionally transferring unspent funds
+    consumes:
+      - application/json
+    produces:
+      - application/json
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/ledger_id_pp"
+      - name: dry_run
+        in: query
+        description: If true, simulates the rollover without committing any changes
+        required: false
+        type: boolean
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - destination_ledger_id
+          properties:
+            destination_ledger_id:
+              type: integer
+            move_unspent_funds:
+              type: boolean
+    responses:
+      '200':
+        description: Dry run preview — no changes committed
+        schema:
+          type: object
+      '204':
+        description: Ledger rolled over successfully
+      '400':
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      '404':
+        description: Ledger not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      '500':
+        description: Internal server error
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: budget_manage_all
 /acquisitions/ledgers/{ledger_id}/duplicate:
   post:
     x-mojo-to: Acquisitions::Finances::Ledgers#duplicate

@@ -706,6 +706,187 @@ const useDuplicateModal = ({
 };
 
 /**
+ * Composable that builds and opens a two-step ledger rollover modal.
+ * Step 1 collects the destination ledger and rollover options; step 2 shows a
+ * dry-run preview before the user confirms. Commits the rollover via
+ * `APIClient.acquisition.ledgers.rollover`.
+ *
+ * @param {Object}   params
+ * @param {Function} params.setConfirmationDialog - Store action that opens a confirmation modal.
+ * @param {Function} params.setWarning            - Store action that displays a warning banner.
+ * @param {Function} params.setMessage            - Store action that displays a success banner.
+ * @param {Function} [params.onSuccess]           - Optional callback invoked after a successful rollover.
+ * @returns {{ openRolloverModal: Function }}
+ */
+const useRolloverModal = ({
+    setConfirmationDialog,
+    setWarning,
+    setMessage,
+    onSuccess,
+}) => {
+    /**
+     * Opens the rollover configuration dialog for the given ledger resource.
+     * On confirmation, performs a dry-run to generate a preview, then opens a
+     * second dialog to confirm before committing via the API.
+     *
+     * @param {Object} resource - The ledger resource object to roll over.
+     */
+    const openRolloverModal = resource => {
+        setConfirmationDialog(
+            {
+                title: $__("Rollover ledger"),
+                accept_label: $__("Preview rollover"),
+                cancel_label: $__("Cancel"),
+                size: "modal-lg",
+                groups: [
+                    {
+                        label: $__("Destination"),
+                        inputs: [
+                            {
+                                name: "destination_ledger_id",
+                                type: "relationshipSelect",
+                                label: $__("Destination ledger"),
+                                relationshipAPIClient:
+                                    APIClient.acquisition.ledgers,
+                                relationshipOptionLabelAttr: "name",
+                                relationshipRequiredKey: "ledger_id",
+                                required: true,
+                                query: {
+                                    ledger_id: { "!=": resource.ledger_id },
+                                },
+                            },
+                            {
+                                name: "move_unspent_funds",
+                                type: "checkbox",
+                                label: $__("Move unspent funds"),
+                                toolTip: $__(
+                                    "Transfer each fund's unspent balance to the matching destination fund"
+                                ),
+                            },
+                        ],
+                    },
+                ],
+            },
+            async (confirmation, inputFields) => {
+                const body = {
+                    destination_ledger_id: inputFields.destination_ledger_id,
+                    move_unspent_funds: inputFields.move_unspent_funds || false,
+                };
+
+                const preview = await APIClient.acquisition.ledgers
+                    .rollover(resource.ledger_id, body, { dryRun: true })
+                    .catch(() => {
+                        setWarning(
+                            $__("An error occurred during rollover preview")
+                        );
+                        return null;
+                    });
+
+                if (!preview) return;
+
+                const allOrderlines = [
+                    ...(preview.funds_matched || []).flatMap(f =>
+                        (f.orderlines || []).map(ol => ({
+                            fund: `${f.source_fund_name} → ${f.destination_fund_name}`,
+                            ...ol,
+                        }))
+                    ),
+                    ...(preview.funds_unmatched || []).flatMap(f =>
+                        (f.orderlines || []).map(ol => ({
+                            fund: `${f.source_fund_name} — ${$__("no matching fund")}`,
+                            ...ol,
+                        }))
+                    ),
+                ];
+
+                const orderlinesInput = allOrderlines.length
+                    ? {
+                          name: "orderlines",
+                          type: "component",
+                          componentPath:
+                              "@koha-vue/components/RelationshipTableDisplay.vue",
+                          componentProps: {
+                              tableOptions: {
+                                  type: "object",
+                                  value: {
+                                      columns: [
+                                          {
+                                              title: $__("Fund"),
+                                              data: "fund",
+                                          },
+                                          {
+                                              title: $__("Orderline ID"),
+                                              data: "orderline_id",
+                                          },
+                                          {
+                                              title: $__("Title"),
+                                              data: "title",
+                                          },
+                                          {
+                                              title: $__("Purchase order"),
+                                              data: "purchase_order_name",
+                                          },
+                                          {
+                                              title: $__("Amount"),
+                                              data: "amount",
+                                              render: data =>
+                                                  data != null
+                                                      ? Number(data).toFixed(2)
+                                                      : "—",
+                                          },
+                                      ],
+                                      data: allOrderlines,
+                                      actions: {},
+                                      options: {
+                                          paging: false,
+                                          searching: false,
+                                      },
+                                  },
+                              },
+                          },
+                      }
+                    : {
+                          name: "orderlines",
+                          type: "display",
+                          defaultValue: $__("No open orders"),
+                      };
+
+                setConfirmationDialog(
+                    {
+                        title: $__("Confirm rollover"),
+                        accept_label: $__("Confirm rollover"),
+                        cancel_label: $__("Cancel"),
+                        size: "modal-lg",
+                        inputs: [orderlinesInput],
+                    },
+                    async () => {
+                        await APIClient.acquisition.ledgers
+                            .rollover(resource.ledger_id, body)
+                            .then(
+                                () => {
+                                    setMessage(
+                                        $__("Ledger rolled over successfully")
+                                    );
+                                    onSuccess?.();
+                                },
+                                error => {
+                                    setWarning(
+                                        $__(
+                                            "An error occurred while rolling over the ledger"
+                                        )
+                                    );
+                                }
+                            );
+                    }
+                );
+            }
+        );
+    };
+
+    return { openRolloverModal };
+};
+
+/**
  * Calculates and mutates all amount fields on a fund distribution object.
  *
  * If `distribution.percentage` is set, `distributed_amount_oc` is derived from
@@ -1004,7 +1185,7 @@ const useFundTableConfig = ({
  * via `inject("acquisitionsStore")`.
  *
  * Exposed members: `formatValueWithCurrency`, `buildFundTreeOptions`,
- * `applyNumberValidation`, `useAllocationModal`, `useDuplicateModal`,
+ * `applyNumberValidation`, `useAllocationModal`, `useDuplicateModal`, `useRolloverModal`,
  * `useAllocationTableConfig`, `useFundTableConfig`, `calculateDistributedAmount`.
  *
  * @param {Object} store - The Pinia store instance (currently unused; reserved for future use).
@@ -1017,6 +1198,7 @@ export const acquisitionsActions = store => {
         applyNumberValidation,
         useAllocationModal,
         useDuplicateModal,
+        useRolloverModal,
         useAllocationTableConfig,
         useFundTableConfig,
         calculateDistributedAmount,

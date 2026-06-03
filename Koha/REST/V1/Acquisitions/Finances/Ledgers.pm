@@ -27,6 +27,7 @@ use Koha::Acquisition::Finances::Allocation;
 use Koha::Acquisition::Finances::Ledger;
 use Koha::Acquisition::Finances::Ledgers;
 use Koha::Acquisition::Finances::FiscalPeriods;
+use Koha::Acquisition::OrderManagement::OrderlineFundDistributions;
 
 use C4::Context;
 
@@ -183,6 +184,139 @@ sub delete {
     };
 }
 
+=head3 rollover
+
+=cut
+
+sub rollover {
+    my $c = shift->openapi->valid_input or return;
+
+    my $ledger = Koha::Acquisition::Finances::Ledgers->find( $c->param('ledger_id') );
+    return $c->render_resource_not_found("Ledger") unless $ledger;
+
+    my $dry_run        = $c->param('dry_run') ? 1 : 0;
+    my $body           = $c->req->json;
+    my $destination_id = $body->{destination_ledger_id};
+    my $move_unspent   = $body->{move_unspent_funds} ? 1 : 0;
+
+    my $destination_ledger = Koha::Acquisition::Finances::Ledgers->find($destination_id);
+    return $c->render( status => 400, openapi => { error => "Destination ledger not found or inactive" } )
+        unless $destination_ledger && $destination_ledger->status;
+
+    my $schema = Koha::Database->new->schema;
+
+    return try {
+        $schema->txn_begin;
+
+        my ( @matched, @unmatched );
+
+        my $destination_funds_by_code = { map { $_->code => $_ }
+                Koha::Acquisition::Finances::Funds->search( { ledger_id => $destination_id } )->as_list };
+
+        my @source_funds = Koha::Acquisition::Finances::Funds->search( { ledger_id => $ledger->ledger_id } )->as_list;
+
+        for my $source_fund (@source_funds) {
+            my $destination_fund = $destination_funds_by_code->{ $source_fund->code };
+            my $open             = _get_open_distributions( $source_fund->fund_id );
+
+            unless ($destination_fund) {
+                push @unmatched, {
+                    source_fund_name   => $source_fund->name,
+                    orders_left_behind => scalar( @{ $open->{ids} } ),
+                    orderlines         => $open->{orderlines},
+                };
+                next;
+            }
+
+            $schema->resultset('AcqOrderlineFundDistribution')
+                ->search( { orderline_fund_distribution_id => { -in => $open->{ids} } } )
+                ->update( { fund_id                        => $destination_fund->fund_id } )
+                if @{ $open->{ids} };
+
+            my $summary = $source_fund->summary;
+            my $unspent =
+                $source_fund->fund_amount -
+                ( $summary ? ( $summary->ordered // 0 ) : 0 ) -
+                ( $summary ? ( $summary->spent   // 0 ) : 0 );
+
+            if ( $move_unspent && $unspent > 0 ) {
+                Koha::Acquisition::Finances::Allocation->new(
+                    {
+                        fund_id           => $source_fund->fund_id,
+                        allocation_amount => -$unspent,
+                        type              => 'ROLLOVER_TRANSFER',
+                    }
+                )->store;
+                Koha::Acquisition::Finances::Allocation->new(
+                    {
+                        fund_id           => $destination_fund->fund_id,
+                        allocation_amount => $unspent,
+                        type              => 'ROLLOVER_TRANSFER',
+                    }
+                )->store;
+            }
+
+            push @matched, {
+                source_fund_name      => $source_fund->name,
+                destination_fund_name => $destination_fund->name,
+                orders_to_move        => scalar( @{ $open->{ids} } ),
+                unspent_amount        => $unspent,
+                orderlines            => $open->{orderlines},
+            };
+        }
+
+        $ledger->status(0)->store;
+
+        my $preview = { funds_matched => \@matched, funds_unmatched => \@unmatched };
+
+        if ($dry_run) {
+            $schema->txn_rollback;
+            return $c->render( status => 200, openapi => $preview );
+        }
+
+        $schema->txn_commit;
+        return $c->render( status => 204, openapi => 'Ledger rolled over' );
+    } catch {
+        $schema->txn_rollback;
+        $c->unhandled_exception($_);
+    };
+}
+
+sub _get_open_distributions {
+    my ($fund_id) = @_;
+
+    my @distributions = Koha::Acquisition::OrderManagement::OrderlineFundDistributions->search(
+        { 'me.fund_id' => $fund_id },
+        { prefetch     => { orderline => [ 'acq_accessions', 'biblio', 'purchase_order' ] } }
+    )->as_list;
+
+    my ( @ids, @orderlines );
+    for my $distribution (@distributions) {
+        my $orderline = $distribution->_result->orderline;
+        my $is_open;
+        if ( $orderline->status =~ /^(?:CONTINUING|NEW|DRAFT)$/ ) {
+            $is_open = 1;
+        } else {
+            my $fulfilled = 0;
+            $fulfilled += ( $_->quantity_received // 0 ) + ( $_->quantity_cancelled // 0 )
+                for $orderline->acq_accessions->as_list;
+            $is_open = $orderline->quantity_ordered > $fulfilled;
+        }
+        if ($is_open) {
+            push @ids, $distribution->orderline_fund_distribution_id;
+            push @orderlines, {
+                amount              => $distribution->distributed_amount + 0,
+                title               => $orderline->biblio ? $orderline->biblio->title : undef,
+                orderline_id        => $orderline->orderline_id,
+                purchase_order_name => $orderline->purchase_order
+                ? $orderline->purchase_order->po_name
+                : undef,
+            };
+        }
+    }
+    return { ids => \@ids, orderlines => \@orderlines };
+}
+
 =head3 duplicate
 
 =cut
@@ -225,8 +359,6 @@ sub duplicate {
                 type              => 'INITIAL',
             }
         )->store;
-
-        $ledger->status(0)->store;
 
         my @top_level_funds =
             Koha::Acquisition::Finances::Funds->search( { ledger_id => $ledger->ledger_id, parent_fund_id => undef } )
