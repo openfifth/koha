@@ -63,6 +63,7 @@ class HttpClient {
                         throwDetailedError(message, errorResponse);
                     });
                 }
+                if (response.status === 204) return null;
                 return return_response || !is_json ? response : response.json();
             })
             .then(result => {
