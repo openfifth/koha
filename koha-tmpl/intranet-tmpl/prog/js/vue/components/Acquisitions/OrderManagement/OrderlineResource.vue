@@ -1501,6 +1501,12 @@ export default {
             ];
         };
 
+        const afterResourceFetch = (componentData, resource, caller) => {
+            if (caller === "form") {
+                createItemsWhen.value = resource.create_items;
+            }
+        };
+
         return {
             ...baseResource,
             tableOptions,
@@ -1508,6 +1514,7 @@ export default {
             navigationOnFormSaveAdditionalOptions,
             handleResourceSearch,
             readyToDisplay,
+            afterResourceFetch,
         };
     },
     components: { BaseResource },
