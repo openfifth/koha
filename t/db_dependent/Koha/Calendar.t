@@ -19,7 +19,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 3;
+use Test::More tests => 4;
 use Test::Exception;
 use Test::NoWarnings;
 
@@ -133,6 +133,85 @@ subtest 'has_business_days_between' => sub {
         $calendar->has_business_days_between( $monday, $monday ), 0,
         'Should find no business days between same date'
     );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'days_backward' => sub {
+
+    plan tests => 5;
+
+    $schema->storage->txn_begin;
+
+    my $library    = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $branchcode = $library->branchcode;
+
+    my $today = dt_from_string('2024-03-15');    # a Friday
+
+    # 1. No closures — walks back exactly $num_days calendar days.
+    {
+        my $calendar = Koha::Calendar->new( branchcode => $branchcode, days_mode => 'Calendar' );
+        my $result   = $calendar->days_backward( $today->clone, 5 );
+        is( $result->ymd, '2024-03-10', 'no closures: 5 days back = 5 calendar days' );
+
+        # days_backward (via is_holidays) cached an empty holiday set for this branch;
+        # clear it so inserted closures are actually read from the DB for later tests.
+        Koha::Caches->get_instance->flush_all();
+    }
+
+    # 2. Add 3 closed days: multi-day special holiday inside the window — extends the calendar reach.
+    # unscoped so all coming tests are affected.
+    for my $iso ( '2024-03-12', '2024-03-13', '2024-03-14' ) {
+        my $dt = dt_from_string($iso);
+
+        $builder->build(
+            {
+                source => 'SpecialHoliday',
+                value  => {
+                    branchcode  => $branchcode,
+                    day         => $dt->day,
+                    month       => $dt->month,
+                    year        => $dt->year,
+                    title       => "closed $iso",
+                    isexception => 0,
+                },
+            }
+        );
+    }
+
+    {
+        my $calendar = Koha::Calendar->new( branchcode => $branchcode, days_mode => 'Calendar' );
+
+        # From 2024-03-15: skip 3 closed days (12, 13, 14), then count back 5 open days.
+        # Open days walking back: 11, 10, 9, 8, 7. So days_backward(today, 5) = 2024-03-07.
+        my $result = $calendar->days_backward( $today->clone, 5 );
+        is( $result->ymd, '2024-03-07', '3-day closure: 5 open days = 8 calendar days back' );
+    }
+
+    # 3. Regression: DayWeek mode must NOT cause 7-day jumps.
+    {
+        my $calendar_default = Koha::Calendar->new( branchcode => $branchcode, days_mode => 'Calendar' );
+        my $calendar_dayweek = Koha::Calendar->new( branchcode => $branchcode, days_mode => 'Dayweek' );
+        is(
+            $calendar_dayweek->days_backward( $today->clone, 5 )->ymd,
+            $calendar_default->days_backward( $today->clone, 5 )->ymd,
+            'days_backward gives the same result in Dayweek as in Calendar mode (no get_push_amt path)'
+        );
+    }
+
+    # 4. num_days == 0 → returns the start date unchanged.
+    {
+        my $calendar = Koha::Calendar->new( branchcode => $branchcode, days_mode => 'Calendar' );
+        my $result   = $calendar->days_backward( $today->clone, 0 );
+        is( $result->ymd, $today->ymd, 'num_days 0 returns start date unchanged' );
+    }
+
+    # 5. Missing days_mode throws.
+    {
+        my $calendar = bless { branchcode => $branchcode }, 'Koha::Calendar';
+        eval { $calendar->days_backward( $today->clone, 3 ) };
+        ok( $@, 'days_backward throws when days_mode is missing' );
+    }
 
     $schema->storage->txn_rollback;
 };
