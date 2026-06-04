@@ -194,7 +194,7 @@
                         <label for="description" class="required">Description: </label>
                         <input type="text" id="description" name="description" size="48" value="[% itemtype.description | html %]" required="required" /> <span class="required">Required</span>
                         [% IF can_be_translated %]
-                            [% INCLUDE 'localization-link.inc' source='Itemtype' object_id=itemtype.itemtype property='description' %]
+                            <a href="/cgi-bin/koha/admin/localization.pl?entity=itemtypes&code=[% itemtype.itemtype | uri %]"> <i class="fa-solid fa-pencil" aria-hidden="true"></i> Translate into other languages </a>
                         [% END %]
                     </li>
                     <li>
