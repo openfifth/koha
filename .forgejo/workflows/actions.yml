@@ -1,0 +1,32 @@
+---
+name: Fully test, build, and publish Koha code
+
+on:
+  push:
+    branches:
+      - '*.*.*'
+      - '!*.*.x'
+      - '!main'
+  workflow_dispatch:
+
+jobs:
+  spawn-light-tests:
+    name: 'Spawn light test suite'
+    if: ${{ !cancelled() }}
+    uses: openfifth/Koha-forgejo-actions/.forgejo/workflows/callables/run-light-tests.yml@trunk
+
+  spawn-build-suite:
+    name: 'Spawn build suite'
+    needs:
+      - spawn-light-tests
+    if: ${{ !cancelled() }}
+    uses: openfifth/Koha-forgejo-actions/.forgejo/workflows/callables/run-build-suite.yml@trunk
+    secrets: inherit
+
+  spawn-l10n-fetch-suite:
+    name: 'Spawn koha-l10n fetch suite'
+    needs:
+      - spawn-build-suite
+    if: ${{ !cancelled() }}
+    uses: openfifth/Koha-forgejo-actions/.forgejo/workflows/callables/run-l10n-fetch.yml@trunk
+    secrets: inherit
