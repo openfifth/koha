@@ -131,26 +131,27 @@ export function useBaseElement(instancedElement) {
 
             if (prop.type === "filter") {
                 Object.keys(prop.keys).forEach(k => {
-                    if (
+                    let resolvedValue;
+                    if (prop.keys[k].hasOwnProperty("value")) {
+                        resolvedValue = prop.keys[k].value;
+                    } else if (
                         prop.keys[k].hasOwnProperty("filterType") &&
                         prop.keys[k].filterType
                     ) {
-                        acc[key] = {
-                            [k]: {
-                                [prop.keys[k].filterType]: accessNestedProperty(
-                                    prop.keys[k].property,
-                                    instancedElement.resource
-                                ),
-                            },
-                        };
-                    } else {
-                        acc[key] = {
-                            [k]: accessNestedProperty(
+                        resolvedValue = {
+                            [prop.keys[k].filterType]: accessNestedProperty(
                                 prop.keys[k].property,
                                 instancedElement.resource
                             ),
                         };
+                    } else {
+                        resolvedValue = accessNestedProperty(
+                            prop.keys[k].property,
+                            instancedElement.resource
+                        );
                     }
+                    // Merge so a filter may carry more than one key
+                    acc[key] = { ...acc[key], [k]: resolvedValue };
                 });
             }
             if (prop.type === "parentProp") {
