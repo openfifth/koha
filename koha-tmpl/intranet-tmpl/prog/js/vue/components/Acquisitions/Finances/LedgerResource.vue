@@ -605,8 +605,8 @@ export default {
                               name: $__("Funds"),
                               filterKey: "ledger_id",
                               filterProperty: "ledger_id",
-                              resourceName: "fund",
-                              resourceNamePlural: "funds",
+                              resourceName: $__("fund"),
+                              resourceNamePlural: $__("funds"),
                               tree: {
                                   childrenField: "sub_funds",
                                   idField: "fund_id",

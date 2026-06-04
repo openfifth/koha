@@ -206,26 +206,7 @@ export default {
                             },
                         },
                     },
-                    tableColumnDefinition: {
-                        title: $__("Parent fund"),
-                        data: "parent_fund.name",
-                        searchable: true,
-                        orderable: true,
-                        render(data, type, row, meta) {
-                            return row.parent_fund
-                                ? '<a href="' +
-                                      baseResource.router.resolve({
-                                          name: "FundShow",
-                                          params: {
-                                              fund_id: row.parent_fund.fund_id,
-                                          },
-                                      }).href +
-                                      '" class="show">' +
-                                      escape_str(row.parent_fund.name) +
-                                      "</a>"
-                                : "";
-                        },
-                    },
+                    hideIn: ["List"],
                 },
                 {
                     name: "name",
@@ -471,7 +452,10 @@ export default {
                 APIClient.acquisition.httpClient._baseURL +
                 "funds?" +
                 new URLSearchParams({
-                    q: JSON.stringify({ "me.status": status }),
+                    q: JSON.stringify({
+                        "me.parent_fund_id": null,
+                        "me.status": status,
+                    }),
                 })
             );
         };
@@ -505,7 +489,7 @@ export default {
                                           text: $__("Delete"),
                                           icon: "fa fa-trash",
                                           should_display: row =>
-                                              row.sub_funds.length == 0,
+                                              !row.sub_funds?.length,
                                       },
                                   },
                               ]
@@ -513,6 +497,12 @@ export default {
                     ],
                 },
             }),
+            tree: {
+                childrenField: "sub_funds",
+                idField: "fund_id",
+                parentField: "parent_fund_id",
+                defaultExpanded: false,
+            },
         };
 
         const onFormSave = (e, fundToSave) => {
@@ -670,8 +660,14 @@ export default {
                               hidden: fund => fund.fund_id,
                               filterKey: "parent_fund_id",
                               filterProperty: "fund_id",
-                              resourceName: "sub fund",
-                              resourceNamePlural: "sub funds",
+                              resourceName: $__("sub fund"),
+                              resourceNamePlural: $__("sub funds"),
+                              tree: {
+                                  childrenField: "sub_funds",
+                                  idField: "fund_id",
+                                  parentField: "parent_fund_id",
+                                  defaultExpanded: false,
+                              },
                               router: baseResource.router,
                           }),
                       ]

@@ -1176,7 +1176,10 @@ const useFundTableConfig = ({
             type: "filter",
             keys: {
                 [filterKey]: { property: filterProperty },
-                ...(tree && { parent_fund_id: { value: null } }),
+                ...(tree &&
+                    filterKey !== "parent_fund_id" && {
+                        parent_fund_id: { value: null },
+                    }),
             },
         },
         resource: { type: "resource" },
