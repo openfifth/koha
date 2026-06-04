@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 16;
+use Test::More tests => 17;
 use Test::MockModule;
 use Test::Exception;
 use Test::Warn;
@@ -1546,6 +1546,41 @@ subtest 'Koha::Account::payin_amount() tests' => sub {
     is( $offset->debit_id,   $debit_5->id, "Offset added against debit_5" );
     is( $offset->type,       'APPLY',      "APPLY used for offset_type" );
     is( $offset->amount * 1, -2.50,        'Correct amount offset against debit_5' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'forgive_debit() tests' => sub {
+
+    plan tests => 4;
+
+    $schema->storage->txn_begin;
+
+    my $library    = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron     = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $account    = $patron->account;
+    my $branchcode = $library->branchcode;
+
+    my $debit  = $account->add_debit( { amount => 7.50, interface => 'commandline', type => 'OVERDUE', } );
+    my $credit = $account->forgive_debit( $debit, { interface => 'cron', library_id => $branchcode } );
+
+    is( $credit->credit_type_code, 'FORGIVEN', 'credit is of FORGIVEN type' );
+
+    $debit->discard_changes;
+    is( $debit->amountoutstanding + 0, 0, 'debit fully forgiven' );
+
+    # Already-zero outstanding: no-op.
+    is(
+        $account->forgive_debit( $debit, { interface => 'cron', library_id => $branchcode } ),
+        undef, 'returns undef when amountoutstanding is already zero'
+    );
+
+    # Partial outstanding: forgive only the remainder.
+    my $partial = $account->add_debit( { amount => 10, interface => 'commandline', type => 'OVERDUE' } );
+    my $pay     = $account->add_credit( { amount => 4, interface => 'commandline', type => 'PAYMENT' } );
+    $pay->apply( { debits => [$partial] } );
+    my $forgive = $account->forgive_debit( $partial, { interface => 'cron', library_id => $branchcode } );
+    is( $forgive->amount + 0, -6, 'forgives only the remaining outstanding amount' );
 
     $schema->storage->txn_rollback;
 };
