@@ -34,3 +34,34 @@ textarea {
     pointer-events: none;
     font-weight: 700;
 }
+
+/* Tree tables: expandable child rows rendered via DataTables row.child()
+   (see the `tree` prop in KohaTable.vue). */
+td.tree-control {
+    width: 1.5em;
+    text-align: center;
+}
+.tree-toggle {
+    cursor: pointer;
+}
+@keyframes tree-row-expand {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+@keyframes tree-row-collapse {
+    from { opacity: 1; }
+    to   { opacity: 0; }
+}
+tr.tree-child-row {
+    animation: tree-row-expand 0.15s ease-out;
+}
+tr.tree-child-row > td {
+    background-color: #e8f0fc !important;
+}
+tr.tree-child-row > td.tree-control::before {
+    content: "└";
+    color: #aaa;
+}
+tr.tree-child-row-collapsing {
+    animation: tree-row-collapse 0.15s ease-in forwards;
+}

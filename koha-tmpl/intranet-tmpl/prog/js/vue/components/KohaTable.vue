@@ -24,6 +24,7 @@ import {
 } from "vue";
 import { useRoute } from "vue-router";
 import { $__ } from "@koha-vue/i18n";
+import { useTreeTable } from "../composables/datatables";
 
 DataTable.use(DataTablesLib);
 
@@ -113,6 +114,18 @@ export default {
             let dt = table.value.dt;
             return dt;
         };
+
+        // Tree behaviour (expandable child rows) is encapsulated in this
+        // composable; it self-registers its lifecycle hooks and no-ops when
+        // props.tree is null. Call it before the registrations below so the
+        // tree-control column is prepended and its handler torn down in order.
+        useTreeTable({
+            tree: props.tree,
+            tableRef: table,
+            tableColumns,
+            actions: props.actions,
+            onAction: (name, data, dt, e) => emit(name, data, dt, e),
+        });
 
         onBeforeMount(() => {
             if (props.actions.hasOwnProperty("-1")) {
@@ -343,6 +356,11 @@ export default {
             type: Array,
             required: false,
             default: [],
+        },
+        tree: {
+            type: Object,
+            required: false,
+            default: null,
         },
     },
 };
