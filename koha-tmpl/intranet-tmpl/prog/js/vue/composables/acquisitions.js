@@ -1070,6 +1070,8 @@ const useAllocationTableConfig = ({ entity }) => {
  * @param {string}   params.filterProperty     - Resource property used as the filter value (e.g. "ledger_id" or "fund_id").
  * @param {string}   params.resourceName       - Singular resource label (e.g. "fund" or "sub fund").
  * @param {string}   params.resourceNamePlural - Plural resource label (e.g. "funds" or "sub funds").
+ * @param {boolean}  [params.tree]             - When true, render a tree table: only top-level funds
+ *                                               are rows and their sub-funds appear as expandable child rows.
  * @param {Object}   params.router             - Vue Router instance used for navigation and href resolution.
  * @returns {Object} Tab config object suitable for use in appendToShow.
  */
@@ -1080,6 +1082,7 @@ const useFundTableConfig = ({
     filterProperty,
     resourceName,
     resourceNamePlural,
+    tree = null,
     router,
 }) => ({
     type: "component",
@@ -1141,6 +1144,7 @@ const useFundTableConfig = ({
                 url: APIClient.acquisition.httpClient._baseURL + "funds",
                 table_settings: null,
                 add_filters: true,
+                ...(tree && { options: { embed: tree.childrenField }, tree }),
                 filters_options: {
                     status: [
                         { _id: 1, _str: $__("Active") },
@@ -1148,7 +1152,7 @@ const useFundTableConfig = ({
                     ],
                 },
                 actions: {
-                    0: [
+                    [tree ? 1 : 0]: [
                         {
                             showFund: {
                                 callback: (fund, dt, event) => {
@@ -1172,6 +1176,7 @@ const useFundTableConfig = ({
             type: "filter",
             keys: {
                 [filterKey]: { property: filterProperty },
+                ...(tree && { parent_fund_id: { value: null } }),
             },
         },
         resource: { type: "resource" },

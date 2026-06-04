@@ -607,6 +607,12 @@ export default {
                               filterProperty: "ledger_id",
                               resourceName: "fund",
                               resourceNamePlural: "funds",
+                              tree: {
+                                  childrenField: "sub_funds",
+                                  idField: "fund_id",
+                                  parentField: "parent_fund_id",
+                                  defaultExpanded: false,
+                              },
                               router: baseResource.router,
                           }),
                       ]
