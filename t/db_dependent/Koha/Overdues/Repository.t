@@ -20,12 +20,13 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 3;
+use Test::More tests => 6;
 
 use Koha::Database;
 use Koha::DateUtils qw( dt_from_string );
 use Koha::Overdues::Repository;
 
+use t::lib::Mocks;
 use t::lib::TestBuilder;
 
 my $schema  = Koha::Database->new->schema;
@@ -128,6 +129,193 @@ subtest 'GetOverdueSummariesForKnownTriggerDelays filters by date_due matching k
     ok( $seen{ $item_14_a->itemnumber }, '14-day overdue returned when patron has prefs' );
     ok( $seen{ $item_14_b->itemnumber }, '14-day overdue returned when patron has no prefs' );
     ok( !$seen{ $item_3->itemnumber },   '3-day overdue checkout excluded (not a known delay)' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'rule_context_branch_column honours CircControl + HomeOrHoldingBranch' => sub {
+    plan tests => 4;
+
+    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+    is(
+        Koha::Overdues::Repository->rule_context_branch_column,
+        'patron.branchcode', 'PatronLibrary → patron.branchcode'
+    );
+
+    t::lib::Mocks::mock_preference( 'CircControl',         'ItemHomeLibrary' );
+    t::lib::Mocks::mock_preference( 'HomeOrHoldingBranch', 'homebranch' );
+    is(
+        Koha::Overdues::Repository->rule_context_branch_column,
+        'item.homebranch', 'ItemHomeLibrary + homebranch → item.homebranch'
+    );
+
+    t::lib::Mocks::mock_preference( 'HomeOrHoldingBranch', 'holdingbranch' );
+    is(
+        Koha::Overdues::Repository->rule_context_branch_column,
+        'item.holdingbranch', 'ItemHomeLibrary + holdingbranch → item.holdingbranch'
+    );
+
+    t::lib::Mocks::mock_preference( 'CircControl',         'PickupLibrary' );
+    t::lib::Mocks::mock_preference( 'HomeOrHoldingBranch', 'homebranch' );
+    is(
+        Koha::Overdues::Repository->rule_context_branch_column,
+        'item.homebranch', 'PickupLibrary falls through to item-side path (matches _GetCircControlBranch)'
+    );
+};
+
+subtest 'GetDistinctOverdueBranches' => sub {
+    plan tests => 4;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+
+    my $library_a = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $library_b = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $library_c = $builder->build_object( { class => 'Koha::Libraries' } );    # no overdues
+
+    my $patron_a =
+        $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $library_a->branchcode } } );
+    my $patron_b =
+        $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $library_b->branchcode } } );
+
+    my $item_a = $builder->build_sample_item( { homebranch => $library_a->branchcode } );
+    my $item_b = $builder->build_sample_item( { homebranch => $library_b->branchcode } );
+
+    my $today = dt_from_string;
+    $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => {
+                borrowernumber => $patron_a->borrowernumber,
+                itemnumber     => $item_a->itemnumber,
+                branchcode     => $library_a->branchcode,
+                date_due       => $today->clone->subtract( days => 10 )->strftime('%Y-%m-%d %H:%M:%S'),
+            },
+        }
+    );
+    $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => {
+                borrowernumber => $patron_b->borrowernumber,
+                itemnumber     => $item_b->itemnumber,
+                branchcode     => $library_b->branchcode,
+                date_due       => $today->clone->subtract( days => 2 )->strftime('%Y-%m-%d %H:%M:%S'),
+            },
+        }
+    );
+
+    # min_delay = 5: library_a's patron is 10 days overdue (in), library_b's is 2 days overdue (out).
+    my @branches = sort Koha::Overdues::Repository->GetDistinctOverdueBranches(5);
+    is( scalar @branches, 1,                      'min_delay=5: only one branch' );
+    is( $branches[0],     $library_a->branchcode, 'returns the patron branch with sufficiently-overdue items' );
+
+    # min_delay = 1: both branches qualify.
+    @branches = sort Koha::Overdues::Repository->GetDistinctOverdueBranches(1);
+    is( scalar @branches, 2, 'min_delay=1: both branches' );
+
+    # library_c (no overdues) never appears.
+    ok(
+        !grep( { $_ eq $library_c->branchcode } @branches ),
+        'branch without overdues not returned'
+    );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'GetOverdueSummariesByBranchDatePairs + GetOverdueSummariesByBranchDates' => sub {
+    plan tests => 6;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+
+    my $library_a = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $library_b = $builder->build_object( { class => 'Koha::Libraries' } );
+
+    my $patron_a =
+        $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $library_a->branchcode } } );
+    my $patron_b =
+        $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $library_b->branchcode } } );
+
+    $builder->build(
+        {
+            source => 'BorrowerMessagePreference',
+            value  => { borrowernumber => $patron_a->borrowernumber, wants_digest => 0 },
+        }
+    );
+    $builder->build(
+        {
+            source => 'BorrowerMessagePreference',
+            value  => { borrowernumber => $patron_b->borrowernumber, wants_digest => 0 },
+        }
+    );
+
+    my $item_a = $builder->build_sample_item( { homebranch => $library_a->branchcode } );
+    my $item_b = $builder->build_sample_item( { homebranch => $library_b->branchcode } );
+
+    my $today  = dt_from_string;
+    my $date_a = $today->clone->subtract( days => 7 )->strftime('%Y-%m-%d');
+    my $date_b = $today->clone->subtract( days => 14 )->strftime('%Y-%m-%d');
+
+    $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => {
+                borrowernumber => $patron_a->borrowernumber,
+                itemnumber     => $item_a->itemnumber,
+                branchcode     => $library_a->branchcode,
+                date_due       => "$date_a 23:59:00",
+            },
+        }
+    );
+    $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => {
+                borrowernumber => $patron_b->borrowernumber,
+                itemnumber     => $item_b->itemnumber,
+                branchcode     => $library_b->branchcode,
+                date_due       => "$date_b 23:59:00",
+            },
+        }
+    );
+
+    # Alg 2: pairs hit each branch's exact date.
+    my $rs = Koha::Overdues::Repository->GetOverdueSummariesByBranchDatePairs(
+        [
+            { branchcode => $library_a->branchcode, dates => [$date_a] },
+            { branchcode => $library_b->branchcode, dates => [$date_b] },
+        ]
+    );
+    my %seen;
+    while ( my $row = $rs->next ) { $seen{ $row->itemnumber } = 1 }
+    ok( $seen{ $item_a->itemnumber }, 'pair (A, date_a) matches item A' );
+    ok( $seen{ $item_b->itemnumber }, 'pair (B, date_b) matches item B' );
+
+    # Cross-pair must NOT match — branch A on date B shouldn't return item B.
+    $rs = Koha::Overdues::Repository->GetOverdueSummariesByBranchDatePairs(
+        [
+            { branchcode => $library_a->branchcode, dates => [$date_b] },
+        ]
+    );
+    %seen = ();
+    while ( my $row = $rs->next ) { $seen{ $row->itemnumber } = 1 }
+    ok( !$seen{ $item_b->itemnumber }, 'pair (A, date_b) does not return item B (branch mismatch)' );
+
+    # Alg 3: single-branch variant.
+    $rs   = Koha::Overdues::Repository->GetOverdueSummariesByBranchDates( $library_a->branchcode, [$date_a] );
+    %seen = ();
+    while ( my $row = $rs->next ) { $seen{ $row->itemnumber } = 1 }
+    ok( $seen{ $item_a->itemnumber },  'per-branch variant returns item A' );
+    ok( !$seen{ $item_b->itemnumber }, 'per-branch variant scoped to A excludes B' );
+
+    # Empty pair list short-circuits.
+    is(
+        Koha::Overdues::Repository->GetOverdueSummariesByBranchDatePairs( [] ),
+        undef, 'empty pair list returns undef'
+    );
 
     $schema->storage->txn_rollback;
 };
