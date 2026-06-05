@@ -156,7 +156,7 @@ subtest 'set_effective_overdue_rule_sets' => sub {
         },
     };
 
-    $resolver->set_effective_overdue_rule_sets( ['BR'], ['PC'], ['IT'], [7] );
+    $resolver->set_effective_overdue_rule_sets( ['BR'], ['PC'], ['IT'], { BR => { 7 => 7 } } );
 
     my $key = 'BR|PC|IT|7';
     my $eff = $resolver->{effective_overdue_rule_sets}->{$key};
