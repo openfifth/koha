@@ -56,17 +56,19 @@ Sets the array or effective (resolved) rule sets for a given run of the circulat
 =cut
 
 sub set_effective_overdue_rule_sets {
-    my ( $self, $branch_list, $category_list, $itemtype_list, $known_delay_values ) = @_;
+    my ( $self, $branch_list, $category_list, $itemtype_list, $effective_delay_by_raw_delay ) = @_;
 
     foreach my $branchcode (@$branch_list) {
+        my $branch_delays = $effective_delay_by_raw_delay->{$branchcode} // {};
         foreach my $categorycode (@$category_list) {
             foreach my $itemtype (@$itemtype_list) {
-                foreach my $delay (@$known_delay_values) {
+                foreach my $raw_delay ( keys %$branch_delays ) {
+                    my $effective_delay = $branch_delays->{$raw_delay};
 
                     # create the rule set
-                    my $key     = join( "|", $branchcode, $categorycode, $itemtype, $delay );
+                    my $key     = join( "|", $branchcode, $categorycode, $itemtype, $effective_delay );
                     my $context = { branchcode => $branchcode, categorycode => $categorycode, itemtype => $itemtype };
-                    my $effective_rules = $self->_find_effective_overdue_rule_set( $context, $delay );
+                    my $effective_rules = $self->_find_effective_overdue_rule_set( $context, $raw_delay );
 
                     if ( !@{ $effective_rules->{actions} } ) {
                         next;

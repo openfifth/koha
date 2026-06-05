@@ -63,7 +63,7 @@ sub route_item_actions_to_queue {
     my $branchcode     = $self->_resolve_rule_context_branchcode($overdue_item);
     my $categorycode   = $overdue_item->{categorycode};
     my $itemtype       = $overdue_item->{itemtype};
-    my $days_overdue   = $overdue_item->{days_overdue};     # TODO: alternatively calc. against calendar
+    my $days_overdue   = $overdue_item->{days_overdue};
     my $borrowernumber = $overdue_item->{borrowernumber};
 
     my $actions_hashes = $effective_rule_sets->{"$branchcode|$categorycode|$itemtype|$days_overdue"}->{actions};

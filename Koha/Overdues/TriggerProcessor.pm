@@ -84,6 +84,19 @@ sub _process_simple_calculation {
         return;
     }
 
+    my $min_delay = $known_delay_values[0];
+    my @branches  = Koha::Overdues::Repository->GetDistinctOverdueBranches($min_delay);
+    if ( !@branches ) {
+        return;
+    }
+
+    my %effective_delay_by_raw_delay;    # branchcode => { raw_delay => effective_delay }
+    for my $branch (@branches) {
+        for my $delay (@known_delay_values) {
+            $effective_delay_by_raw_delay{$branch}{$delay} = $delay;
+        }
+    }
+
     my $allOverduesForKnownDelays =
         Koha::Overdues::Repository->GetOverdueSummariesForKnownTriggerDelays( \@known_delay_values );
 
@@ -91,7 +104,7 @@ sub _process_simple_calculation {
         return;
     }
 
-    return $self->_dispatch_overdues( $allOverduesForKnownDelays, \@known_delay_values );
+    return $self->_dispatch_overdues( $allOverduesForKnownDelays, \%effective_delay_by_raw_delay );
 }
 
 =head3 _process_calendar_adjusted
@@ -129,12 +142,15 @@ sub _process_calendar_adjusted {
     my $days_mode = C4::Context->preference('useDaysMode');
 
     my %target_dates_by_branch;
+    my %effective_delay_by_raw_delay;    # branchcode => { raw_delay => effective_delay }
     for my $branch (@branches) {
         my $calendar = Koha::Calendar->new( branchcode => $branch, days_mode => $days_mode );
         my @dates;
         for my $delay (@known_delay_values) {
-            push @dates,
-                $calendar->days_backward( $today->clone, $delay )->strftime('%Y-%m-%d');
+            my $target_dt       = $calendar->days_backward( $today->clone, $delay );
+            my $effective_delay = $today->delta_days($target_dt)->in_units('days');
+            push @dates, $target_dt->strftime('%Y-%m-%d');
+            $effective_delay_by_raw_delay{$branch}{$delay} = $effective_delay;
         }
         $target_dates_by_branch{$branch} = \@dates;
     }
@@ -153,7 +169,7 @@ sub _process_calendar_adjusted {
         return;
     }
 
-    return $self->_dispatch_overdues( $overdues_resultset, \@known_delay_values );
+    return $self->_dispatch_overdues( $overdues_resultset, \%effective_delay_by_raw_delay );
 }
 
 # Alg 3 fallback: issue one query per branch and return a merged in-memory
@@ -177,7 +193,7 @@ sub _fetch_per_branch {
 # rules, route through ActionExecutor. Identical for both simple and
 # calendar-adjusted paths.
 sub _dispatch_overdues {
-    my ( $self, $overdues_resultset, $known_delay_values ) = @_;
+    my ( $self, $overdues_resultset, $effective_delay_by_raw_delay ) = @_;
 
     my %seen_branches;
     my %seen_categories;
@@ -223,7 +239,7 @@ sub _dispatch_overdues {
     # generate exhaustive effective set for relevant contexts
     $rule_resolver->set_effective_overdue_rule_sets(
         \@branch_list,   \@category_list,
-        \@itemtype_list, $known_delay_values
+        \@itemtype_list, $effective_delay_by_raw_delay
     );
 
     my $action_executor = Koha::Overdues::ActionExecutor->new();
