@@ -104,7 +104,7 @@ the timestamp for when a booking has been updated
 
   data_type: 'enum'
   default_value: 'new'
-  extra: {list => ["new","cancelled","completed"]}
+  extra: {list => ["new","cancelled","issued","completed"]}
   is_nullable: 0
 
 current status of the booking
@@ -170,7 +170,7 @@ __PACKAGE__->add_columns(
   {
     data_type => "enum",
     default_value => "new",
-    extra => { list => ["new", "cancelled", "completed"] },
+    extra => { list => ["new", "cancelled", "issued", "completed"] },
     is_nullable => 0,
   },
   "cancellation_reason",
