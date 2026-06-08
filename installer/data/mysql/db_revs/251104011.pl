@@ -30,7 +30,11 @@ return {
 
             my $index_name = $Koha::SearchEngine::Elasticsearch::BIBLIOS_INDEX;
             my $indexer    = Koha::SearchEngine::Elasticsearch::Indexer->new( { index => $index_name } );
-            $indexer->update_mappings();
+            my $searchengine =
+                $dbh->selectrow_array(q|SELECT value FROM systempreferences WHERE variable = 'SearchEngine'|);
+            if ( $searchengine eq 'Elasticsearch' ) {
+                $indexer->update_mappings();
+            }
             say $out "Updated ES mappings to make local-number sortable";
         } elsif ( !defined $local_number_map_id ) {
             say_warning( $out, "No mapping defined for local-number" );
