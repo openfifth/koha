@@ -622,15 +622,14 @@ sub map_vendor_to_budget_id {
 
     return '' unless $vendor_name;
 
-    my $map_pref = C4::Context->preference('EDIServiceChargesBudgetMap') // '';
-    for my $line ( split /\r?\n/, $map_pref ) {
-        $line =~ s/^\s+|\s+$//g;
-        next unless $line =~ /^([^=]+)=(.+)$/;
-        my ( $pattern, $budget_id ) = ( $1, $2 );
-        $pattern =~ s/\s+$//;
-        return $budget_id if $vendor_name =~ /^\Q$pattern\E\b/i;
+    # Map vendor names to budget IDs
+    if ( $vendor_name =~ /^WCC\b/i ) {
+        return '104';    #'WCHG';
+    } elsif ( $vendor_name =~ /^RBKC\b/i ) {
+        return '76';     #KCHG';
     }
 
+    # Default fallback - could be made configurable
     return '';
 }
 
