@@ -17,12 +17,16 @@
 
 use Modern::Perl;
 
-use Test::More tests => 18;
+use Test::More tests => 19;
 use Test::NoWarnings;
 use Test::MockModule;
 use t::lib::Mocks;
 use t::lib::TestBuilder;
 
+use Koha::Caches;
+
+use Koha::Items;
+use Test::Warn;
 use Koha::SearchEngine;
 use Koha::SearchEngine::Elasticsearch::QueryBuilder;
 use Koha::SearchEngine::Elasticsearch::Indexer;
@@ -31,8 +35,16 @@ use Koha::SearchFields;
 {
 
     package MockESSearchClient;
-    sub new    { bless { response => {} }, shift }
+    sub new    { bless { response => {}, count_response => { count => 0 } }, shift }
     sub search { my ( $self, %args ) = @_; return $self->{response} }
+    sub count  { my ( $self, %args ) = @_; return $self->{count_response} }
+}
+
+{
+
+    package MockItemsRS;
+    sub new   { bless { count => 0 }, shift }
+    sub count { return $_[0]->{count} }
 }
 
 my $schema = Koha::Database->new()->schema();
@@ -121,6 +133,60 @@ subtest '_apply_available_filter() tests' => sub {
     };
     $searcher->_apply_available_filter($query);
     ok( exists $query->{query}{bool}{filter}, 'available:true found and rewritten when not at must[0]' );
+};
+
+subtest '_items_index_ready() tests' => sub {
+    plan tests => 9;
+
+    my $mock_es    = Test::MockModule->new('Koha::SearchEngine::Elasticsearch::Search');
+    my $mock_items = Test::MockModule->new('Koha::Items');
+    my $cache      = Koha::Caches->get_instance();
+
+    my $mock_items_rs = MockItemsRS->new;
+    $mock_items->mock( 'search', sub { $mock_items_rs } );
+
+    my $searcher_bib = Koha::SearchEngine::Elasticsearch::Search->new(
+        { nodes => ['localhost:9200'], index => $Koha::SearchEngine::BIBLIOS_INDEX } );
+
+    # ES throws (index does not exist yet)
+    $cache->clear_from_cache('elasticsearch_items_index_ready');
+    $mock_es->mock( 'get_elasticsearch', sub { die "index_not_found_exception\n" } );
+    warning_like { is( $searcher_bib->_items_index_ready, 0, 'returns false when ES throws an exception' ) }
+        qr/rebuild_elasticsearch/, 'warns when ES throws';
+
+    # Index exists but has no documents
+    $cache->clear_from_cache('elasticsearch_items_index_ready');
+    my $mock_client = MockESSearchClient->new;
+    $mock_es->mock( 'get_elasticsearch', sub { $mock_client } );
+    warning_like { is( $searcher_bib->_items_index_ready, 0, 'returns false when items index is empty' ) }
+        qr/rebuild_elasticsearch/, 'warns when items index is empty';
+
+    # Index sparsely populated (e.g. single checkout before full rebuild)
+    $cache->clear_from_cache('elasticsearch_items_index_ready');
+    $mock_client->{count_response} = { count => 1 };
+    $mock_items_rs->{count}        = 5000;
+    warning_like {
+        is( $searcher_bib->_items_index_ready, 0, 'returns false when items index has far fewer documents than DB items' )
+    }
+    qr/rebuild_elasticsearch/, 'warns when items index is sparsely populated';
+
+    # Index fully populated (>= 95% of DB items indexed)
+    $cache->clear_from_cache('elasticsearch_items_index_ready');
+    $mock_client->{count_response} = { count => 4900 };
+    $mock_items_rs->{count}        = 5000;
+    is( $searcher_bib->_items_index_ready, 1, 'returns true when items index has >= 95% of DB items' );
+
+    # Cached result: ES not queried on repeat call
+    my $es_calls = 0;
+    $mock_es->mock( 'get_elasticsearch', sub { $es_calls++; $mock_client } );
+    $searcher_bib->_items_index_ready;    # already cached from previous test
+    is( $es_calls, 0, 'cached result used on repeat call without querying ES' );
+
+    # Cache miss: ES queried exactly once
+    $cache->clear_from_cache('elasticsearch_items_index_ready');
+    $es_calls = 0;
+    $searcher_bib->_items_index_ready;
+    is( $es_calls, 1, 'ES queried exactly once on cache miss' );
 };
 
 SKIP: {

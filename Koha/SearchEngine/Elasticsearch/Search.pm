@@ -43,9 +43,11 @@ use Modern::Perl;
 use base qw(Koha::SearchEngine::Elasticsearch);
 use C4::Context;
 use C4::AuthoritiesMarc;
+use Koha::Items;
 use Koha::ItemTypes;
 use Koha::AuthorisedValues;
 use Koha::AuthorisedValueCategories;
+use Koha::Caches;
 use Koha::SearchEngine;
 use Koha::SearchEngine::QueryBuilder;
 use Koha::SearchEngine::Search;
@@ -166,7 +168,7 @@ sub search_compat {
         return $self->_aggregation_scan( $query, $results_per_page, $offset );
     }
 
-    if ( $self->index eq $Koha::SearchEngine::BIBLIOS_INDEX ) {
+    if ( $self->index eq $Koha::SearchEngine::BIBLIOS_INDEX && $self->_items_index_ready ) {
         $self->_apply_available_filter($query);
         $query->{aggregations}{_biblionumbers} = { terms => { field => 'biblionumber', size => 9_000 } };
     }
@@ -211,6 +213,50 @@ sub search_compat {
         $facets = Koha::SearchEngine::Search->post_filter_opac_facets( { facets => $facets, rules => $rules } );
     }
     return ( undef, \%result, $facets );
+}
+
+=head2 _items_index_ready
+
+    my $ready = $self->_items_index_ready();
+
+Returns true if the items Elasticsearch index is fully populated, defined as
+containing at least 95% of the items in the database. This guards against the
+index being considered ready after only a handful of items have been indexed
+via individual circulation events before a full C<rebuild_elasticsearch.pl --items>
+run has completed.
+
+The result is cached: 5 minutes when ready (the index is unlikely to become
+unpopulated), 60 seconds when not ready (so a freshly built index is detected
+quickly without requiring a restart).
+
+=cut
+
+sub _items_index_ready {
+    my ($self) = @_;
+
+    my $cache     = Koha::Caches->get_instance();
+    my $cache_key = 'elasticsearch_items_index_ready';
+    my $cached    = $cache->get_from_cache($cache_key);
+    return $cached if defined $cached;
+
+    my $ready = 0;
+    eval {
+        my $items_searcher =
+            Koha::SearchEngine::Elasticsearch::Search->new( { index => $Koha::SearchEngine::ITEMS_INDEX } );
+        my $elasticsearch = $items_searcher->get_elasticsearch();
+        my $result        = $elasticsearch->count( index => $items_searcher->index_name );
+        my $es_count      = $result->{count} // 0;
+        if ( $es_count > 0 ) {
+            my $db_count = Koha::Items->search( {} )->count;
+            $ready = ( $db_count > 0 && $es_count >= $db_count * 0.95 ) ? 1 : 0;
+        }
+    };
+
+    $cache->set_in_cache( $cache_key, $ready, { expiry => $ready ? 300 : 60 } );
+    warn
+        "Elasticsearch items index not ready. Please run rebuild_elasticsearch.pl --items to enable availability filtering\n"
+        unless $ready;
+    return $ready;
 }
 
 =head2 _apply_available_filter
