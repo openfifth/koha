@@ -624,9 +624,9 @@ sub map_vendor_to_budget_id {
 
     # Map vendor names to budget IDs
     if ( $vendor_name =~ /^WCC\b/i ) {
-        return '104';    #'WCHG';
+        return '222';    #'WCHG';
     } elsif ( $vendor_name =~ /^RBKC\b/i ) {
-        return '76';     #KCHG';
+        return '194';     #KCHG';
     }
 
     # Default fallback - could be made configurable
