@@ -257,6 +257,7 @@ sub _dispatch_overdues {
     }
 
     $action_executor->process_action_queue;
+    $action_executor->process_notice_queue;
 }
 
 # Minimal iterator that chains a list of DBIx::Class resultsets so the
