@@ -76,12 +76,20 @@ sub route_item_actions_to_queue {
 
     # handle notice
     if ( $actions{notice} && defined $actions{notice}->{notice_code} && $actions{notice}->{notice_code} ne '' ) {
-        my $notice_key =
-            join( "|", $borrowernumber, $actions{notice}->{notice_code}, $actions{notice}->{mtt} // '', $days_overdue );
-        $self->add_to_notice_queue(
-            $notice_key,
-            [ { item => $overdue_item, action => $actions{notice}, delay => $days_overdue } ]
-        );
+        my $mtts = $actions{notice}->{mtts} // [];
+
+        for my $mtt (@$mtts) {
+            my $per_mtt_action = { %{ $actions{notice} }, mtt => $mtt };
+            delete $per_mtt_action->{mtts};
+
+            $self->add_to_notice_queue(
+                $borrowernumber,
+                $actions{notice}->{notice_code},
+                $mtt,
+                $days_overdue,
+                [ $self->format_notice_item( $overdue_item, $per_mtt_action, $days_overdue ) ],
+            );
+        }
     }
 
     # handle action batch
@@ -158,27 +166,28 @@ sub format_action_item {
     # FIXME: return { item =>  $overdue_item, action => $action_hashref, delay => $overdue_item->{days_overdue} };
 }
 
-=head3 format_notice_context
+=head3 format_notice_item
 
-Takes in an item, an action, and a delay, and returns a formatted notice_context to be processed.
+Takes in an item, an action, and a delay, and returns a formatted notice_item to be processed.
 
 =cut
 
-sub format_notice_context {
+sub format_notice_item {
     my ( $self, $item, $action_hashref, $delay ) = @_;
     return { item => $item, action => $action_hashref, delay => $delay };
 }
 
 =head3 add_to_notice_queue
 
-Adds an action item to the notice queue, or, if the key exists, updates it.
-Takes in a notice_context, that is borrowernumber|notice_code|delay.
-Takes in the action items to assign to this notice
+Pushes the given notice items onto the bucket addressed by
+C<($borrowernumber, $notice_code, $mtt, $delay)>. Buckets autovivify on first
+push.
+
 =cut
 
 sub add_to_notice_queue {
-    my ( $self, $key, $action_item_array ) = @_;
-    push @{ $self->{notice_queue}->{$key} }, @$action_item_array;
+    my ( $self, $borrowernumber, $notice_code, $mtt, $delay, $notice_items ) = @_;
+    push @{ $self->{notice_queue}{$borrowernumber}{$notice_code}{$mtt}{$delay} }, @$notice_items;
 }
 
 =head3 add_to_action_batch_queue
