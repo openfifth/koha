@@ -21,10 +21,34 @@ Redesign the daily overdues processing system to handle large-scale libraries ef
 - Multiple rules per context possible, each with different delay values
 
 ### 3. Digest Notifications
-- Patrons can opt for digest per notice type
+- Patrons can opt for digest per notice type       ------ not for overdues, they can't.* 
 - Group overdues by: `patron + notice_code + delay`
 - Send single notice per group instead of individual notices
 - Non-digest actions execute individually
+
+*the Koha manual notes
+"If your library has the EnhancedMessagingPreferences system preference set to ‘Allow’ and the EnhancedMessagingPreferencesOPAC system preference set to ‘Show’, then patrons are able to choose the messages they receive from the library (with the exception of overdue notices, which the library controls)."
+
+---> patrons cannot set preferences for overude notices, and cannot set them as digest either.
+
+More importantly, overdue_notices.pl batch-groups overdues items with the same delay and same notice type and sends digests for these, always: we must maintain this digest behaviour.
+
+staff can set digests for:
+
+- Advance notice (PREDUE, PREDUEDGST)
+- Auto renewal (AUTO_RENEWAL, AUTO_RENEWAL_DGST)
+- Hold filled (HOLD, HOLDDGST, NEW_CURBSIDE_PICKUP)
+- Hold reminder (HOLD_REMINDER)
+- Interlibrary loan ready (ILL_PICKUP_READY)
+- Interlibrary loan unavailable (ILL_REQUEST_UNAVAIL)
+- Interlibrary loan updated (ILL_REQUEST_UPDATE)
+- Item check-in (CHECKIN)
+- Item checkout (CHECKOUT, RENEWAL)
+- Item due (DUE, DUEDGST)
+- Recall awaiting pickup (PICKUP_RECALLED_ITEM)
+- Return recalled item (RETURN_RECALLED_ITEM)
+
+Of these, only Item due (DUE, DUEDGST) may be relevant?
 
 ### 4. Closed Days Handling
 - System preference controls whether to exclude closed days from calculations
@@ -53,7 +77,7 @@ SELECT
     iss.borrowernumber, iss.date_due,
     b.categorycode as patron_category, b.branchcode as library_id,
     DATEDIFF(?, DATE(iss.date_due)) as days_overdue,
-    bp.notice_preferences
+    bp.notice_preferences                                             -- redundant - overdues are admin-side only
 FROM items i
 JOIN issues iss ON i.itemnumber = iss.itemnumber
 JOIN borrowers b ON iss.borrowernumber = b.borrowernumber  
@@ -129,7 +153,7 @@ Execute individual actions separately
     patron_category => string,
     library_id => string,
     days_overdue => int,
-    notice_preferences => hashref
+    notice_preferences => hashref                                                         # redundant - no overdues notice prefs exist for patrons  
     replacementfee => decimal                                                             # ADDED (so we do not need to re-fetch items when enacting the 'charge' action)
 }
 ```
@@ -148,7 +172,7 @@ Execute individual actions separately
 }
 ```
 
-### Digest Group Structure                                                                  YESN'T (IMPLEMENTED, BUT WITH A TWIST - SEE QUESTIONS)
+### Digest Group Structure                                                                  YESN'T (IMPLEMENTED, BUT WITH A FEW TWISTS - SEE spec_notes.md)
 ```perl
 # Key format: "borrowernumber|notice_code|delay"
 {

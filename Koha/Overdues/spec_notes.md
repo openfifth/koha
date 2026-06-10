@@ -42,30 +42,30 @@ The new `enact_forgive_fine` deliberately does NOT replicate several `_FixOverdu
 - The convention is `use Koha::Script -cron;` at the top of the cron script — its import-time hook calls `set_userenv(undef, undef, undef, 'CRON', 'CRON', undef×5)` and `interface('cron')`, installing a placeholder hashref so `userenv->{branch}` returns undef cleanly (and `checkin_library` is stored as NULL).
 - All legacy cronjobs (longoverdue.pl, fines.pl, overdue_notices.pl) declare it. Added to `misc/cronjobs/process_circulation_triggers.pl` between `use warnings;` and the Koha imports, matching their placement.
 
+### `notice_queue` shape — nested hashrefs over stringified compound keys
+- The spec's `"borrowernumber|notice_code|mtt|delay" => [@entries]` shape carried over by analogy from the rule cache (`"library|category|itemtype" => $rules`) without the structural pressure that justifies it there. The rule cache's string keys earn their keep via `_get_fallback_contexts`, which generates seven `*`-wildcard candidate keys per resolution and probes each as a direct hash lookup — string-key with sigils is the cleanest shape for that walk. The notice queue has no fallback hierarchy, no wildcards, no priority walking — just a flat collection of buckets.
+- Going with `$self->{notice_queue}{$borrowernumber}{$notice_code}{$mtt}{$delay} = [@entries]`:
+    - Drops `_parse_notice_key` and `_build_notice_key` (format-knowledge helpers that only exist because we serialised).
+    - Reduces `_corresponding_print_key` to a direct sub-hash access — no swap-and-rebuild.
+    - Reduces `_notice_keys_for_mtt` to direct nested iteration (no `grep` + `split`).
+    - Removes the (low-risk but non-zero) concern that a `|` in a `notice_code` breaks the key parser.
+    - Mirrors legacy `overdue_notices.pl`'s `$borrower_overdues->{triggers}->{$i}->{$notice}->{$mtt}` shape — readers can map between the two without translation overhead.
+- **Scope: notice queue only.** Rule resolver caches (`raw_overdue_rule_sets`, `effective_overdue_rule_sets`) stay string-keyed — wildcard fallback iteration in `_get_fallback_contexts` genuinely needs that shape.
+- Concrete callsite list (for the refactor): `add_to_notice_queue`, `route_item_actions_to_queue`, `process_notice_queue`, `_corresponding_print_key`, `_notice_keys_for_mtt`, plus tests that poke `$executor->{notice_queue}->{'42|OD1|email|7'}` directly.
+
+### `mtt` is a structural level in the notice queue
+- Spec proposed `"borrowernumber|notice_code|delay"`, omitting `mtt`. Grouping multiple MTTs under one bucket can't be reconciled at send time — different transports need different rendering and produce different `message_queue` rows. `mtt` is its own level.
+- In the nested shape: `$self->{notice_queue}{$borrowernumber}{$notice_code}{$mtt}{$delay}`. A rule with `mtt = "email,print"` fans out into two distinct buckets (one per MTT), driven by the multi-MTT fan-out in `route_item_actions_to_queue` and the per-MTT processing passes in `process_notice_queue`.
+
+### Cross-notice_code aggregation — not combined
+- Scenario: patron has a book and a CD both 5 days overdue; general rule for library + patron category says notice `OD1`, CD-specific rule says `ITEM_DUE_REMINDER`. Result: two separate sends, one per notice_code, one MTT row per send.
+- Matches legacy `overdue_notices.pl`: it never combines across notice_codes — bucket key is `(trigger, notice_code, mtt)`, `parse_overdues_letter` is called once per bucket.
+- Combining across notice_codes ("daily summary across all notices") would be a feature beyond legacy parity. Out of scope.
+
 ## QUESTIONS
 ### general
 - JUST TO CONFIRM:do we only take the date into account when applying triggers, and completely disregard times?
     - alternatively, do we interprete this as 'if date_due is 2025-10-10 14:00:00', then only enact if the script runs after 14:00:00.
-###  Koha::Overdues::ActionExecutor
-- QUESTION - HYPOTHETICALLY, DOES THIS SEEM ACCURATE ? :
-    - the old overdue_notice.pl script has
-    `push @{ $borrower_overdues->{triggers}->{$i}->{ $overdue_rules->{ "overdue_$i" . '_notice' } }->{$mtt} }, $data;`
-    - but this spec indicates that the digest key should be
-    `"borrowernumber|notice_code|delay" `
-    which is incorrect. It needs to be something like 
-    `"borrowernumber|notice_code|mtt|delay" `
-    because it makes no sense to group action items together by notice but not by mtt (we can't batch handle different transport types)
-    correct?
-
-- JUST TO CONFIRM (EDGE CASE HANDLING): Key format for Digest Queue Structure to be "borrowernumber|notice_code|delay" 
-    - that would not allow all notices for one borrower on one day to be grouped
-    -   say I have borrowed a book and a CD ten day days ago
-    -   say these are both 5 days overdue
-    -   say the general rule for my library and patron category is "send an overdue notice"
-    -   say for CDs specifically, it's 'send item due reminder' instead, for whatever reason
-    We now have two separate emails and/or sms and/or print sent to the patron that day
-    -> Is that the desired behaviour?
-    -> Do we want instead to have the option to combine notices into one and send as one?
 ### Path 1: Simple Calculation (No Closed Days)
 - is it alright for the grouping of notices to depend on Koha::Checkouts::GetOverduesSummaries() fetching grouping overdues by borrowers as it fetches them? Should there be some form of failsafe in place? 
 ### Closed Days Calculation
