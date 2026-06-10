@@ -24,6 +24,9 @@ use Koha::Patron::Debarments qw( AddUniqueDebarment );
 use C4::Accounts             qw( chargelostitem );
 use C4::Circulation          qw( MarkIssueReturned );
 use C4::Context;
+use C4::Letters;
+use Koha::Notice::Message;
+use Koha::Notice::Messages;
 use Koha::Patrons;
 use Koha::Checkouts;
 use Koha::Checkout;
@@ -150,6 +153,164 @@ sub process_action_queue {
             $self->enact_mark_returned($overdue_item);
         }
     }
+}
+
+=head3 process_notice_queue
+
+Drain the notice queue, generating a prepared letter and inserting a pending
+L<Koha::Notice::Message> row for each bucket
+C<< $self->{notice_queue}{$borrowernumber}{$notice_code}{$mtt}{$delay} >>.
+Every item routed to the same bucket in L</route_item_actions_to_queue>
+renders into one letter via the template's repeat block.
+
+Processes transports in reliability order — C<print>, then C<sms>, then
+C<email>. When an C<sms> or C<email> entry can't be delivered (patron has no
+C<smsalertnumber> / no C<notice_email_address>), a C<print> entry is
+synthesised for the same (borrower, notice_code) unless the system already
+holds a pending print for that pair — covers prints written earlier in this
+run (explicit or synthesised) and any pending leftover from prior runs.
+
+=cut
+
+sub process_notice_queue {
+    my ($self) = @_;
+
+    for my $mtt (qw( print sms email )) {
+        for my $borrowernumber ( sort keys %{ $self->{notice_queue} } ) {
+            my $by_notice_code = $self->{notice_queue}{$borrowernumber};
+            for my $notice_code ( sort keys %$by_notice_code ) {
+                my $by_mtt = $by_notice_code->{$notice_code};
+                next if !$by_mtt->{$mtt};
+
+                for my $delay ( sort { $a <=> $b } keys %{ $by_mtt->{$mtt} } ) {
+                    my $entries = $by_mtt->{$mtt}{$delay};
+                    if ( !$entries || !@$entries ) {
+                        next;
+                    }
+
+                    if ( $mtt eq 'print' ) {
+                        $self->_enqueue_letter_for_bucket( $entries, 'print' );
+                        next;
+                    }
+
+                    my $patron = Koha::Patrons->find($borrowernumber);
+                    if ( !$patron ) {
+                        Koha::Logger->get->warn("process_notice_queue: borrower $borrowernumber not found — skipping");
+                        next;
+                    }
+
+                    my $viable = $mtt eq 'sms' ? $patron->smsalertnumber : $patron->notice_email_address;
+                    if ($viable) {
+                        $self->_enqueue_letter_for_bucket( $entries, $mtt );
+                        next;
+                    }
+
+                    if ( $self->_pending_print_exists( $borrowernumber, $notice_code ) ) {
+                        next;
+                    }
+                    $self->_enqueue_letter_for_bucket( $entries, 'print' );
+                }
+            }
+        }
+    }
+}
+
+=head3 _pending_print_exists
+
+Returns true if a pending print message_queue row already exists for this
+(borrowernumber, letter_code) pair. Used to dedup synthesised print fallbacks
+against any print — explicit, prior-pass synthesised, or leftover from a prior
+run — already sitting in the pipeline.
+
+=cut
+
+sub _pending_print_exists {
+    my ( $self, $borrowernumber, $notice_code ) = @_;
+    return Koha::Notice::Messages->search(
+        {
+            borrowernumber         => $borrowernumber,
+            letter_code            => $notice_code,
+            message_transport_type => 'print',
+            status                 => 'pending',
+        }
+    )->count > 0;
+}
+
+=head3 _enqueue_letter_for_bucket
+
+Renders the bucket's items into a single prepared letter and stores it as a
+pending L<Koha::Notice::Message> row. C<$mtt> is the transport the message is
+queued under — may differ from the entries' originating mtt when this is being
+called as a print fallback for an undeliverable sms/email bucket.
+
+=cut
+
+sub _enqueue_letter_for_bucket {
+    my ( $self, $entries, $mtt ) = @_;
+
+    my $head           = $entries->[0];
+    my $borrowernumber = $head->{item}->{borrowernumber};
+    my $notice_code    = $head->{action}->{notice_code};
+    my $branchcode     = $self->_resolve_rule_context_branchcode( $head->{item} );
+
+    my $patron = Koha::Patrons->find($borrowernumber);
+    if ( !$patron ) {
+        Koha::Logger->get->warn("process_notice_queue: borrower $borrowernumber not found — skipping");
+        return;
+    }
+
+    my @item_rows;
+    for my $entry (@$entries) {
+        my $item = Koha::Items->find( $entry->{item}->{itemnumber} );
+        if ( !$item ) {
+            Koha::Logger->get->warn(
+                "process_notice_queue: itemnumber $entry->{item}->{itemnumber} not found — skipping");
+            next;
+        }
+        push @item_rows,
+            {
+            biblio      => $item->biblionumber,
+            biblioitems => $item->biblionumber,
+            items       => $item->itemnumber,
+            issues      => $entry->{item}->{issue_id},
+            };
+    }
+
+    if ( !@item_rows ) {
+        return;
+    }
+
+    my $letter = C4::Letters::GetPreparedLetter(
+        module      => 'circulation',
+        letter_code => $notice_code,
+        branchcode  => $branchcode,
+        lang        => $patron->lang,
+        tables      => {
+            borrowers => $borrowernumber,
+            branches  => $branchcode,
+        },
+        substitute             => { count => scalar @item_rows },
+        repeat                 => { item  => \@item_rows },
+        message_transport_type => $mtt,
+    );
+
+    if ( !$letter ) {
+        Koha::Logger->get->warn(
+            "process_notice_queue: no letter for borrower=$borrowernumber code=$notice_code mtt=$mtt — skipping");
+        return;
+    }
+
+    Koha::Notice::Message->new(
+        {
+            borrowernumber         => $borrowernumber,
+            subject                => $letter->{title},
+            content                => $letter->{content},
+            content_type           => $letter->{'content-type'} // 'text/plain; charset="UTF-8"',
+            letter_code            => $notice_code,
+            message_transport_type => $mtt,
+            status                 => 'pending',
+        }
+    )->store;
 }
 
 =head3 format_action_item
