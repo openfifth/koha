@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 6;
+use Test::More tests => 7;
 
 use Koha::CirculationRules;
 use Koha::Database;
@@ -165,12 +165,49 @@ subtest 'set_effective_overdue_rule_sets' => sub {
     my %by_type = map { $_->{type} => $_ } @{ $eff->{actions} };
     is_deeply(
         $by_type{notice},
-        { type => 'notice', notice_code => 'OD1', mtt => 'email' },
-        'notice action shape: type/notice_code/mtt'
+        { type => 'notice', notice_code => 'OD1', mtts => ['email'] },
+        'notice action shape: type/notice_code/mtts'
     );
     is_deeply(
         $by_type{lost},
         { type => 'lost', value => 1 },
         'non-notice action shape: type/value'
     );
+};
+
+subtest 'notice action splits comma-separated mtt rule value' => sub {
+    plan tests => 4;
+
+    my $resolver = Koha::Overdues::RuleResolver->new;
+    $resolver->{raw_overdue_rule_sets} = {
+        'BR|PC|IT|7'  => { delay => 7,  actions => { notice => 'OD1', mtt => 'email, print' } },
+        'BR|PC|IT|14' => { delay => 14, actions => { notice => 'OD2', mtt => '' } },
+        'BR|PC|IT|21' => { delay => 21, actions => { notice => 'OD3', mtt => 'sms' } },
+    };
+
+    $resolver->set_effective_overdue_rule_sets(
+        ['BR'], ['PC'], ['IT'],
+        { BR => { 7 => 7, 14 => 14, 21 => 21 } }
+    );
+
+    my %by_type_7 = map { $_->{type} => $_ } @{ $resolver->{effective_overdue_rule_sets}->{'BR|PC|IT|7'}->{actions} };
+    is_deeply(
+        $by_type_7{notice}->{mtts},
+        [ 'email', 'print' ],
+        'comma-scalar splits and trims whitespace into mtts array'
+    );
+
+    ok(
+        !exists $resolver->{effective_overdue_rule_sets}->{'BR|PC|IT|14'},
+        'empty mtt scalar skips the notice action entirely (no rule cached)'
+    );
+
+    my %by_type_21 = map { $_->{type} => $_ } @{ $resolver->{effective_overdue_rule_sets}->{'BR|PC|IT|21'}->{actions} };
+    is_deeply(
+        $by_type_21{notice}->{mtts},
+        ['sms'],
+        'single mtt wraps in a one-element mtts array'
+    );
+
+    ok( !exists $by_type_7{notice}->{mtt}, 'no scalar mtt key leaks alongside mtts' );
 };
