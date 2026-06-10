@@ -105,16 +105,22 @@ sub _find_effective_overdue_rule_set {
                 );
                 next;
             }
-            my $mtt = $self->_find_effective_rule_value( $branchcode, $categorycode, $itemtype, $delay, 'mtt' );
-            if ( !defined $mtt ) {
+            my $mtt_value = $self->_find_effective_rule_value( $branchcode, $categorycode, $itemtype, $delay, 'mtt' );
+            if ( !defined $mtt_value ) {
                 Koha::Logger->get->warn(
                     "No mtt rule found for notice $notice_code at delay $delay — skipping notice action");
                 next;
             }
+
+            my @mtts = grep { length } split /\s*,\s*/, $mtt_value;
+            if ( !@mtts ) {
+                next;
+            }
+
             push @{ $effective_rule->{actions} }, {
                 type        => 'notice',
                 notice_code => $notice_code,
-                mtt         => $mtt,
+                mtts        => \@mtts,
             };
             next;
         }
