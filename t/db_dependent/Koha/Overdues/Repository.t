@@ -206,14 +206,19 @@ subtest 'get_distinct_overdue_branches' => sub {
         }
     );
 
+    # Filter results to the branches we created — the kohadev DB may carry
+    # unrelated committed checkouts (manual_test seeds etc.) that get_distinct_overdue_branches
+    # legitimately reports but the test isn't interested in.
+    my %ours = map { $_->branchcode => 1 } ( $library_a, $library_b, $library_c );
+
     # min_delay = 5: library_a's patron is 10 days overdue (in), library_b's is 2 days overdue (out).
-    my @branches = sort Koha::Overdues::Repository->get_distinct_overdue_branches(5);
-    is( scalar @branches, 1,                      'min_delay=5: only one branch' );
+    my @branches = sort grep { $ours{$_} } Koha::Overdues::Repository->get_distinct_overdue_branches(5);
+    is( scalar @branches, 1,                      'min_delay=5: only one of our branches' );
     is( $branches[0],     $library_a->branchcode, 'returns the patron branch with sufficiently-overdue items' );
 
     # min_delay = 1: both branches qualify.
-    @branches = sort Koha::Overdues::Repository->get_distinct_overdue_branches(1);
-    is( scalar @branches, 2, 'min_delay=1: both branches' );
+    @branches = sort grep { $ours{$_} } Koha::Overdues::Repository->get_distinct_overdue_branches(1);
+    is( scalar @branches, 2, 'min_delay=1: both of our overdue branches' );
 
     # library_c (no overdues) never appears.
     ok(
