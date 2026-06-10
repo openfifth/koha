@@ -7,7 +7,7 @@ Companion to `spec.md`. Where `spec.md` covers timing, rule resolution, queueing
 
 **Should we?** — provide a run-once helper CLI (e.g. `misc/cronjobs/translate_longoverdue_to_triggers.pl`), or staff UI button "Import legacy longoverdue settings", that reads the six `DefaultLongOverdue*` sysprefs and generates the equivalent trigger rows for the librarian to review before committing. Opt-in: nothing happens unless explicitly run. Avoids the auto-migration contention (libraries that didn't have automated actions don't get them) while giving librarians with bespoke values a non-clunky path off the old script. Cf. the "make it easy for administrators to retain existing behaviours" line in §Intended behaviour.
 
-## Intended behaviour   
+## Intended behaviour - actions enactement
 
 Insofar as we have chosen to allow use of the circulation_triggers staff UI to set charge, lost, and mark returned, the scripts must implement the behaviours defined by administrators.
 
@@ -49,10 +49,10 @@ The script deliberately pre-filters overdues to which a circulation rule set wil
 ~~### New~~
 - ~~IgnoreClosedDaysInOverdueCalculation~~
 
-### Updated
+#### Updated
 - Rename `OverdueNoticeCalendar` syspref to `OverdueTriggersCalendar
 
-### Kept as sys prefs and must be accounted for at runtime
+#### Kept as sys prefs and must be accounted for at runtime
 - CircControl — PatronLibrary | PickupLibrary | ItemHomeLibrary. Determines which branch the rule-set lookup is keyed on (patron home / userenv (or item-side fallback in cron) / item-side per HomeOrHoldingBranch). Mirrors smart-rules.tt's informative blurb.
 - HomeOrHoldingBranch — homebranch | holdingbranch. Used (a) for rule-set lookup when CircControl = ItemHomeLibrary (or PickupLibrary falling through in cron) and (b) when LostChargesControl = ItemHomeLibrary.
 - LostChargesControl — PatronLibrary | PickupLibrary | ItemHomeLibrary.
@@ -62,7 +62,7 @@ The script deliberately pre-filters overdues to which a circulation rule set wil
 - EmailOverduesNoEmail
 - AddressForFailedOverdueNotices
 
-### Adjacent — shape what happens after a trigger fires, not the trigger itself - do not impact the script
+#### Adjacent — shape what happens after a trigger fires, not the trigger itself - do not impact the script
 - BlockReturnOfLostItems (checkin-time)
 - ClaimReturnedLostValue (claims-returned workflow)
 - AutoRemoveOverduesRestrictions (restriction removal on return)
@@ -102,6 +102,103 @@ Things worth flagging for the trigger redesign:
 ### `misc/cronjobs/overdue_notices.pl`
 
 Notice-only. Does not touch charge, lost value, or mark-returned at all. Explicitly *excludes* lost items from its working set via `items.itemlost = 0` at `overdue_notices.pl:591`. Its sole enactment is generating/queueing overdue notices (digest or individual) per the patron's messaging preferences.
+
+## Intended behaviour - notices enactement
+
+Key difficulty: 
+
+there are system-level differences in notices handling, eg "overdue notice digests are controlled by library, not patron", yet there is no
+way to tell an overdue notice from a non-overdue notice as these are not categorised. And while default notices exist, libraries may create
+as many different notices as they would like, and use each for whichever purpose.
+
+### Questions
+
+### About digests
+
+From https://koha-community.org/manual/latest/en/html/opac.html#your-messaging-label: 
+`EnhancedMessagingPreferences` and `EnhancedMessagingPreferencesOPAC` control whether patrons may choose whether to receive digests or not.
+Overdue notices are controlled by the library and only the library.
+
+(Currently available: 'Advance notice', 'Item checkout', 'Hold filled', 'Item due', 'Item check-in')
+
+Digests are out of scope for 39756, as we do not need to handle patrons potentially requesting them.
+Giving administrators the ability to request to have digest sent out through this new system can and should be a follow-up bug.
+
+### Parity gaps to close against `overdue_notices.pl`
+
+Items the legacy notice path covers that `Koha::Overdues::ActionExecutor::process_notice_queue` currently does not. Listed roughly in order of likely site impact.
+
+#### Letter prep payload (`GetPreparedLetter` parameters)
+
+Legacy goes through `C4::Overdues::parse_overdues_letter` (`C4/Overdues.pm:817-868`). The new path calls `C4::Letters::GetPreparedLetter` directly with a thinner payload. To keep existing site templates rendering correctly:
+
+- `repeat.item.items` must be the **full item hashref** (e.g. `$item->unblessed`), not the bare itemnumber. Templates routinely reference `[% item.items.barcode %]`, `[% item.items.title %]`, `[% item.items.itemcallnumber %]`, etc. The legacy code also stamps `$item->{fine}` onto each row via `GetFine` + `currency_format`.
+- `repeat.item.issues` should be the **itemnumber** (legacy uses itemnumber here, not issue_id — see `C4/Overdues.pm:850`).
+- `loops => { overdues => [ itemnumber, ... ] }` must be passed for templates that iterate `[% FOREACH o IN overdues %]`.
+- `substitute` must include at least `bib => $library->branchname` and `'items.content' => $titles` (pre-rendered title list via `C4::Letters::get_item_content`, see `overdue_notices.pl:923-927`) alongside `count`.
+
+Retain all the above.
+~~Upgrade notice template in place? (update loops etc).~~
+~~Flag to administrator, interrupt, await new templates?~~
+
+#### Enqueue addressing
+
+Legacy passes `to_address`, `from_address`, and `reply_address` explicitly to `EnqueueLetter` (`overdue_notices.pl:1047-1051`):
+
+- `from_address` ← `$library->from_email_address` (with `AddressForFailedOverdueNotices` fallback when `patron_homelibrary` is set, see `:872-878`)
+- `to_address`   ← `$patron->notice_email_address` (or the union of `@emails_to_use` when `--email` is passed)
+- `reply_address` ← `$library->inbound_email_address`
+
+`Koha::Notice::Message` - try that first
+
+`Koha::Notice::Message->new->store` is lower-level than `EnqueueLetter`; either switch to `C4::Letters::EnqueueLetter` or populate these fields directly so message_queue rows carry the right per-branch envelope.
+
+#### MTT degradation rules
+
+Process notice in a reverse transport type order
+Send all prints
+Send all sms
+If email fails
+Check if print exist 
+If not, send print
+
+
+- `mtt eq 'email'` with no email → downgrade to `print` (`overdue_notices.pl:898-903`).
+- `mtt eq 'sms'` with no `smsalertnumber` → downgrade to `print` (same block).
+- `mtt eq 'itiva'` → skip (`overdue_notices.pl:896`).
+- Print-once-per-patron guard so a multi-MTT trigger does not enqueue duplicate print rows (`$print_sent` at `:893, :1040, :1056`).
+
+#### Template existence pre-check
+
+Legacy calls `Koha::Notice::Templates->find_effective_template` *before* rendering (`overdue_notices.pl:936-944`). The new path relies on `GetPreparedLetter` returning undef. Functionally equivalent, but worth confirming the warn message is informative enough for operators triaging missing templates.
+
+Implement `Koha::Notice::Templates->find_effective_template`.
+
+#### `PrintNoticesMaxLines` truncation
+
+If print fallback lands, splice items past the limit and append the "List too long for form…" footer (`overdue_notices.pl:929-932, :975-978`).
+
+Handle that.
+
+#### Unreplaced-placeholder diagnostic
+
+Legacy scans rendered content for unmatched `<…>` terms and warns under `--verbose` (`overdue_notices.pl:980-986`). Optional, but cheap to port and useful during template debugging.
+
+port that bit across
+                my @misses = grep { /./ } map { /^([^>]*)[>]+/; ( $1 || '' ); } split /\</,
+                    $letter->{'content'};
+                if (@misses) {
+                    $verbose
+                        and warn "The following terms were not matched and replaced: \n\t" . join "\n\t",
+                        @misses;
+                }
+
+#### Out of scope by design (not gaps — record so reviewers do not re-raise)
+
+- `--nomail` / `--csv` / `--html` / `--text` output modes (legacy `:988-1013, :842-854`). The new pipeline always enqueues.
+- `patron_homelibrary` branch filter at notice-prep time. Item-set narrowing now lives upstream in `Koha::Overdues::Repository`.
+- `--list-all`, `--itemscontent`, `--max`, `--frombranch`, per-borrower email override flags. Operator UX of the legacy script does not carry over.
+- Digests (already covered under [About digests](#about-digests) — follow-up bug).
 
 ## Implication for the trigger system
 
