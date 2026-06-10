@@ -20,13 +20,14 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 7;
+use Test::More tests => 18;
 use Test::Warn;
 
 use Koha::Account;
 use Koha::Account::Lines;
 use Koha::Database;
 use Koha::Items;
+use Koha::Notice::Messages;
 use Koha::Old::Checkouts;
 use Koha::Overdues::ActionExecutor;
 use Koha::Patron::Restriction;
@@ -85,7 +86,7 @@ subtest 'route_item_actions_to_queue splits notice vs action batch' => sub {
     my $effective_rule_sets = {
         'LIB|PC|IT|7' => {
             actions => [
-                { type => 'notice',   notice_code => 'OD1', mtt => 'email' },
+                { type => 'notice',   notice_code => 'OD1', mtts => ['email'] },
                 { type => 'lost',     value       => 1 },
                 { type => 'charge',   value       => 1 },
                 { type => 'restrict', value       => '' },    # empty → ignored
@@ -105,10 +106,9 @@ subtest 'route_item_actions_to_queue splits notice vs action batch' => sub {
     my $executor = Koha::Overdues::ActionExecutor->new;
     $executor->route_item_actions_to_queue( $effective_rule_sets, $overdue_item );
 
-    my $notice_key = '42|OD1|email|7';
     ok(
-        exists $executor->{notice_queue}->{$notice_key},
-        "notice routed under borrowernumber|notice_code|mtt|delay ($notice_key)"
+        exists $executor->{notice_queue}{42}{OD1}{email}{7},
+        'notice routed under {borrowernumber}{notice_code}{mtt}{delay}'
     );
 
     is( scalar @{ $executor->{action_batch_queue} }, 1, 'one action batch enqueued' );
@@ -272,6 +272,738 @@ subtest 'enact_charge creates LOST debit with caller-resolved branch' => sub {
     my $logger = t::lib::Mocks::Logger->new();
     $executor->enact_charge($overdue_free);
     $logger->warn_like( qr/No replacement fee set/, 'warns and skips when replacementfee is zero' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'route_item_actions_to_queue: aggregates multiple items under (borrower|code|mtt|delay) key' => sub {
+    plan tests => 4;
+
+    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+
+    my $effective_rule_sets = {
+        'LIB|PC|IT|7' => {
+            actions => [ { type => 'notice', notice_code => 'OD1', mtts => ['email'] } ],
+        },
+        'LIB|PC|IT|14' => {
+            actions => [ { type => 'notice', notice_code => 'OD1', mtts => ['email'] } ],
+        },
+    };
+
+    my $base_item = {
+        borrowernumber   => 42,
+        categorycode     => 'PC',
+        itemtype         => 'IT',
+        patronhomebranch => 'LIB',
+    };
+
+    my $executor = Koha::Overdues::ActionExecutor->new;
+    $executor->route_item_actions_to_queue(
+        $effective_rule_sets,
+        { %$base_item, itemnumber => 7, days_overdue => 7 },
+    );
+    $executor->route_item_actions_to_queue(
+        $effective_rule_sets,
+        { %$base_item, itemnumber => 8, days_overdue => 7 },
+    );
+    $executor->route_item_actions_to_queue(
+        $effective_rule_sets,
+        { %$base_item, itemnumber => 9, days_overdue => 14 },
+    );
+
+    is(
+        scalar keys %{ $executor->{notice_queue}{42}{OD1}{email} }, 2,
+        'two delay buckets exist under (42, OD1, email)'
+    );
+    ok(
+        exists $executor->{notice_queue}{42}{OD1}{email}{7},
+        'delay=7 bucket routed'
+    );
+    is(
+        scalar @{ $executor->{notice_queue}{42}{OD1}{email}{7} }, 2,
+        'two items at delay 7 collapse into one bucket with two entries'
+    );
+    is(
+        scalar @{ $executor->{notice_queue}{42}{OD1}{email}{14} }, 1,
+        'distinct delay routes to its own bucket, one entry'
+    );
+};
+
+subtest 'process_notice_queue: digest entry enqueues one Koha::Notice::Message with repeated items' => sub {
+    plan tests => 5;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron =
+        $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $library->branchcode } } );
+
+    my $item_a  = $builder->build_sample_item( { homebranch => $library->branchcode } );
+    my $item_b  = $builder->build_sample_item( { homebranch => $library->branchcode } );
+    my $issue_a = $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => { borrowernumber => $patron->borrowernumber, itemnumber => $item_a->itemnumber }
+        }
+    );
+    my $issue_b = $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => { borrowernumber => $patron->borrowernumber, itemnumber => $item_b->itemnumber }
+        }
+    );
+
+    $builder->build(
+        {
+            source => 'Letter',
+            value  => {
+                module                 => 'circulation',
+                code                   => 'OD1',
+                branchcode             => q{},
+                message_transport_type => 'email',
+                name                   => 'OD1',
+                title                  => 'Overdue notice for [% borrower.firstname %]',
+                content                => "You have [% count %] overdue item(s): <item><<items.barcode>> </item>",
+                is_html                => 0,
+                lang                   => 'default',
+            },
+        }
+    );
+
+    my $base_item = {
+        borrowernumber    => $patron->borrowernumber,
+        categorycode      => $patron->categorycode,
+        itemtype          => $item_a->itype,
+        patronhomebranch  => $library->branchcode,
+        itemhomebranch    => $library->branchcode,
+        itemholdingbranch => $library->branchcode,
+        days_overdue      => 7,
+    };
+
+    my $executor = Koha::Overdues::ActionExecutor->new;
+    $executor->add_to_notice_queue(
+        $patron->borrowernumber, 'OD1', 'email', 7,
+        [
+            {
+                item   => { %$base_item, itemnumber => $item_a->itemnumber, issue_id => $issue_a->issue_id },
+                action => { type => 'notice', notice_code => 'OD1', mtt => 'email' },
+                delay  => 7,
+            },
+            {
+                item   => { %$base_item, itemnumber => $item_b->itemnumber, issue_id => $issue_b->issue_id },
+                action => { type => 'notice', notice_code => 'OD1', mtt => 'email' },
+                delay  => 7,
+            },
+        ],
+    );
+
+    $executor->process_notice_queue;
+
+    my $messages =
+        Koha::Notice::Messages->search( { borrowernumber => $patron->borrowernumber, letter_code => 'OD1' } );
+    is( $messages->count, 1, 'one Koha::Notice::Message row created for the digest key' );
+
+    my $message = $messages->next;
+    is( $message->message_transport_type, 'email',   'mtt copied from action' );
+    is( $message->status,                 'pending', 'status pending — waiting for SendQueuedMessages' );
+    like(
+        $message->content, qr/2 overdue item/,
+        'count substitution reflects aggregated item count'
+    );
+    like(
+        $message->content, qr/\Q@{ [ $item_a->barcode ] }\E.*\Q@{ [ $item_b->barcode ] }\E/s,
+        'both items appear in the repeat loop'
+    );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'process_notice_queue: two items at the same trigger render one row' => sub {
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron =
+        $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $library->branchcode } } );
+
+    my $item_a  = $builder->build_sample_item( { homebranch => $library->branchcode } );
+    my $item_b  = $builder->build_sample_item( { homebranch => $library->branchcode } );
+    my $issue_a = $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => { borrowernumber => $patron->borrowernumber, itemnumber => $item_a->itemnumber }
+        }
+    );
+    my $issue_b = $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => { borrowernumber => $patron->borrowernumber, itemnumber => $item_b->itemnumber }
+        }
+    );
+
+    $builder->build(
+        {
+            source => 'Letter',
+            value  => {
+                module                 => 'circulation',
+                code                   => 'OD2',
+                branchcode             => q{},
+                message_transport_type => 'email',
+                name                   => 'OD2',
+                title                  => 'Overdue',
+                content                => 'You have [% count %] overdue item(s)',
+                is_html                => 0,
+                lang                   => 'default',
+            },
+        }
+    );
+
+    my $base_item = {
+        borrowernumber    => $patron->borrowernumber,
+        categorycode      => $patron->categorycode,
+        itemtype          => $item_a->itype,
+        patronhomebranch  => $library->branchcode,
+        itemhomebranch    => $library->branchcode,
+        itemholdingbranch => $library->branchcode,
+        days_overdue      => 3,
+    };
+
+    my $effective_rule_sets = {
+        join( '|', $library->branchcode, $patron->categorycode, $item_a->itype, 3 ) => {
+            actions => [ { type => 'notice', notice_code => 'OD2', mtts => ['email'] } ],
+        },
+    };
+
+    my $executor = Koha::Overdues::ActionExecutor->new;
+    $executor->route_item_actions_to_queue(
+        $effective_rule_sets,
+        { %$base_item, itemnumber => $item_a->itemnumber, issue_id => $issue_a->issue_id }
+    );
+    $executor->route_item_actions_to_queue(
+        $effective_rule_sets,
+        { %$base_item, itemnumber => $item_b->itemnumber, issue_id => $issue_b->issue_id }
+    );
+
+    is(
+        scalar @{ $executor->{notice_queue}{ $patron->borrowernumber }{OD2}{email}{3} }, 2,
+        'two items collapse to one notice_queue bucket pre-process'
+    );
+
+    $executor->process_notice_queue;
+
+    my $messages =
+        Koha::Notice::Messages->search( { borrowernumber => $patron->borrowernumber, letter_code => 'OD2' } );
+    is( $messages->count, 1, 'two items at the same trigger render exactly one row' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'process_notice_queue: missing patron warns and skips' => sub {
+    plan tests => 2;
+
+    my $logger = t::lib::Mocks::Logger->new();
+
+    my $executor = Koha::Overdues::ActionExecutor->new;
+    $executor->add_to_notice_queue(
+        999999999, 'OD1', 'email', 7,
+        [
+            {
+                item   => { borrowernumber => 999999999, itemnumber  => 1,     patronhomebranch => 'X' },
+                action => { type           => 'notice',  notice_code => 'OD1', mtt              => 'email' },
+                delay  => 7,
+            },
+        ],
+    );
+
+    $executor->process_notice_queue;
+
+    $logger->warn_like( qr/borrower 999999999 not found/, 'warns on missing patron' );
+    is(
+        Koha::Notice::Messages->search( { borrowernumber => 999999999 } )->count,
+        0, 'no Koha::Notice::Message row created'
+    );
+};
+
+subtest 'process_notice_queue: missing letter template warns and skips' => sub {
+    plan tests => 3;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron =
+        $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $library->branchcode } } );
+    my $item  = $builder->build_sample_item( { homebranch => $library->branchcode } );
+    my $issue = $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => { borrowernumber => $patron->borrowernumber, itemnumber => $item->itemnumber }
+        }
+    );
+
+    my $logger = t::lib::Mocks::Logger->new();
+
+    my $executor = Koha::Overdues::ActionExecutor->new;
+    $executor->add_to_notice_queue(
+        $patron->borrowernumber, 'NO_SUCH_CODE', 'email', 7,
+        [
+            {
+                item => {
+                    borrowernumber    => $patron->borrowernumber,
+                    itemnumber        => $item->itemnumber,
+                    issue_id          => $issue->issue_id,
+                    patronhomebranch  => $library->branchcode,
+                    itemhomebranch    => $library->branchcode,
+                    itemholdingbranch => $library->branchcode,
+                },
+                action => { type => 'notice', notice_code => 'NO_SUCH_CODE', mtt => 'email' },
+                delay  => 7,
+            },
+        ],
+    );
+
+    warning_like { $executor->process_notice_queue }
+    qr/No circulation NO_SUCH_CODE letter transported by email/,
+        'C4::Letters warns when the template is missing';
+
+    $logger->warn_like( qr/no letter for/, 'ActionExecutor logs "no letter for" via Koha::Logger' );
+    is(
+        Koha::Notice::Messages->search( { borrowernumber => $patron->borrowernumber, letter_code => 'NO_SUCH_CODE' } )
+            ->count,
+        0, 'no Koha::Notice::Message row created'
+    );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'route_item_actions_to_queue: multi-MTT fans out per-MTT queue entries' => sub {
+    plan tests => 4;
+
+    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+
+    my $effective_rule_sets = {
+        'LIB|PC|IT|7' => {
+            actions => [
+                { type => 'notice', notice_code => 'OD1', mtts => [ 'email', 'print' ] },
+            ],
+        },
+    };
+
+    my $overdue_item = {
+        borrowernumber   => 42,
+        itemnumber       => 7,
+        categorycode     => 'PC',
+        itemtype         => 'IT',
+        patronhomebranch => 'LIB',
+        days_overdue     => 7,
+    };
+
+    my $executor = Koha::Overdues::ActionExecutor->new;
+    $executor->route_item_actions_to_queue( $effective_rule_sets, $overdue_item );
+
+    is(
+        scalar keys %{ $executor->{notice_queue}{42}{OD1} }, 2,
+        'two mtt sub-buckets for (42, OD1)'
+    );
+    ok( exists $executor->{notice_queue}{42}{OD1}{email}{7}, 'email bucket routed' );
+    ok( exists $executor->{notice_queue}{42}{OD1}{print}{7}, 'print bucket routed' );
+    is(
+        $executor->{notice_queue}{42}{OD1}{print}{7}->[0]->{action}->{mtt},
+        'print',
+        'per-entry action carries the split mtt'
+    );
+};
+
+subtest 'process_notice_queue: email -> print fallback when patron has no email' => sub {
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron  = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => {
+                branchcode => $library->branchcode,
+                email      => q{},
+                emailpro   => q{},
+                B_email    => q{},
+            }
+        }
+    );
+    my $item  = $builder->build_sample_item( { homebranch => $library->branchcode } );
+    my $issue = $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => { borrowernumber => $patron->borrowernumber, itemnumber => $item->itemnumber }
+        }
+    );
+
+    $builder->build(
+        {
+            source => 'Letter',
+            value  => {
+                module                 => 'circulation',
+                code                   => 'OD1',
+                branchcode             => q{},
+                message_transport_type => 'print',
+                name                   => 'OD1 print',
+                title                  => 'OD1',
+                content                => 'print body',
+                is_html                => 0,
+                lang                   => 'default',
+            },
+        }
+    );
+
+    my $executor = Koha::Overdues::ActionExecutor->new;
+    $executor->add_to_notice_queue(
+        $patron->borrowernumber, 'OD1', 'email', 7,
+        [
+            {
+                item => {
+                    borrowernumber    => $patron->borrowernumber,
+                    itemnumber        => $item->itemnumber,
+                    issue_id          => $issue->issue_id,
+                    patronhomebranch  => $library->branchcode,
+                    itemhomebranch    => $library->branchcode,
+                    itemholdingbranch => $library->branchcode,
+                },
+                action => { type => 'notice', notice_code => 'OD1', mtt => 'email' },
+                delay  => 7,
+            },
+        ],
+    );
+
+    $executor->process_notice_queue;
+
+    my $messages =
+        Koha::Notice::Messages->search( { borrowernumber => $patron->borrowernumber, letter_code => 'OD1' } );
+    is( $messages->count, 1, 'exactly one Koha::Notice::Message row created' );
+    is(
+        $messages->next->message_transport_type, 'print',
+        'mtt is print (synthesised fallback)'
+    );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'process_notice_queue: sms -> print fallback when patron has no smsalertnumber' => sub {
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron  = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => {
+                branchcode     => $library->branchcode,
+                smsalertnumber => q{},
+            }
+        }
+    );
+    my $item  = $builder->build_sample_item( { homebranch => $library->branchcode } );
+    my $issue = $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => { borrowernumber => $patron->borrowernumber, itemnumber => $item->itemnumber }
+        }
+    );
+
+    $builder->build(
+        {
+            source => 'Letter',
+            value  => {
+                module                 => 'circulation',
+                code                   => 'OD1',
+                branchcode             => q{},
+                message_transport_type => 'print',
+                name                   => 'OD1 print',
+                title                  => 'OD1',
+                content                => 'print body',
+                is_html                => 0,
+                lang                   => 'default',
+            },
+        }
+    );
+
+    my $executor = Koha::Overdues::ActionExecutor->new;
+    $executor->add_to_notice_queue(
+        $patron->borrowernumber, 'OD1', 'sms', 7,
+        [
+            {
+                item => {
+                    borrowernumber    => $patron->borrowernumber,
+                    itemnumber        => $item->itemnumber,
+                    issue_id          => $issue->issue_id,
+                    patronhomebranch  => $library->branchcode,
+                    itemhomebranch    => $library->branchcode,
+                    itemholdingbranch => $library->branchcode,
+                },
+                action => { type => 'notice', notice_code => 'OD1', mtt => 'sms' },
+                delay  => 7,
+            },
+        ],
+    );
+
+    $executor->process_notice_queue;
+
+    my $messages =
+        Koha::Notice::Messages->search( { borrowernumber => $patron->borrowernumber, letter_code => 'OD1' } );
+    is( $messages->count, 1, 'exactly one Koha::Notice::Message row created' );
+    is(
+        $messages->next->message_transport_type, 'print',
+        'mtt is print (synthesised fallback)'
+    );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'process_notice_queue: pending print in message_queue blocks fallback synthesis' => sub {
+    plan tests => 1;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron  = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => {
+                branchcode => $library->branchcode,
+                email      => q{},
+                emailpro   => q{},
+                B_email    => q{},
+            }
+        }
+    );
+    my $item  = $builder->build_sample_item( { homebranch => $library->branchcode } );
+    my $issue = $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => { borrowernumber => $patron->borrowernumber, itemnumber => $item->itemnumber }
+        }
+    );
+
+    # Pre-seed a pending print row from a notional prior run.
+    Koha::Notice::Message->new(
+        {
+            borrowernumber         => $patron->borrowernumber,
+            letter_code            => 'OD1',
+            message_transport_type => 'print',
+            status                 => 'pending',
+            subject                => 'OD1',
+            content                => 'prior body',
+        }
+    )->store;
+
+    my $executor = Koha::Overdues::ActionExecutor->new;
+    $executor->add_to_notice_queue(
+        $patron->borrowernumber, 'OD1', 'email', 7,
+        [
+            {
+                item => {
+                    borrowernumber    => $patron->borrowernumber,
+                    itemnumber        => $item->itemnumber,
+                    issue_id          => $issue->issue_id,
+                    patronhomebranch  => $library->branchcode,
+                    itemhomebranch    => $library->branchcode,
+                    itemholdingbranch => $library->branchcode,
+                },
+                action => { type => 'notice', notice_code => 'OD1', mtt => 'email' },
+                delay  => 7,
+            },
+        ],
+    );
+
+    $executor->process_notice_queue;
+
+    my $count =
+        Koha::Notice::Messages->search( { borrowernumber => $patron->borrowernumber, letter_code => 'OD1' } )->count;
+    is( $count, 1, 'pre-existing pending print blocks synthesis — still just one row' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'process_notice_queue: existing print entry blocks fallback synthesis' => sub {
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron  = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => {
+                branchcode => $library->branchcode,
+                email      => q{},
+                emailpro   => q{},
+                B_email    => q{},
+            }
+        }
+    );
+    my $item  = $builder->build_sample_item( { homebranch => $library->branchcode } );
+    my $issue = $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => { borrowernumber => $patron->borrowernumber, itemnumber => $item->itemnumber }
+        }
+    );
+
+    $builder->build(
+        {
+            source => 'Letter',
+            value  => {
+                module                 => 'circulation',
+                code                   => 'OD1',
+                branchcode             => q{},
+                message_transport_type => 'print',
+                name                   => 'OD1 print',
+                title                  => 'OD1',
+                content                => 'print body',
+                is_html                => 0,
+                lang                   => 'default',
+            },
+        }
+    );
+
+    my $item_payload = {
+        borrowernumber    => $patron->borrowernumber,
+        itemnumber        => $item->itemnumber,
+        issue_id          => $issue->issue_id,
+        patronhomebranch  => $library->branchcode,
+        itemhomebranch    => $library->branchcode,
+        itemholdingbranch => $library->branchcode,
+    };
+
+    my $executor = Koha::Overdues::ActionExecutor->new;
+    $executor->add_to_notice_queue(
+        $patron->borrowernumber, 'OD1', 'email', 7,
+        [
+            {
+                item   => $item_payload,
+                action => { type => 'notice', notice_code => 'OD1', mtt => 'email' },
+                delay  => 7,
+            },
+        ],
+    );
+    $executor->add_to_notice_queue(
+        $patron->borrowernumber, 'OD1', 'print', 7,
+        [
+            {
+                item   => $item_payload,
+                action => { type => 'notice', notice_code => 'OD1', mtt => 'print' },
+                delay  => 7,
+            },
+        ],
+    );
+
+    $executor->process_notice_queue;
+
+    my $messages =
+        Koha::Notice::Messages->search( { borrowernumber => $patron->borrowernumber, letter_code => 'OD1' } );
+    is( $messages->count,                        1,       'exactly one print row — explicit print blocks synthesis' );
+    is( $messages->next->message_transport_type, 'print', 'the row is print, no email row' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'process_notice_queue: processes print -> sms -> email order' => sub {
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron  = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => {
+                branchcode     => $library->branchcode,
+                email          => 'test@example.com',
+                smsalertnumber => '0123456789',
+            }
+        }
+    );
+    my $item  = $builder->build_sample_item( { homebranch => $library->branchcode } );
+    my $issue = $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => { borrowernumber => $patron->borrowernumber, itemnumber => $item->itemnumber }
+        }
+    );
+
+    for my $mtt (qw( email sms print )) {
+        $builder->build(
+            {
+                source => 'Letter',
+                value  => {
+                    module                 => 'circulation',
+                    code                   => 'OD1',
+                    branchcode             => q{},
+                    message_transport_type => $mtt,
+                    name                   => "OD1 $mtt",
+                    title                  => 'OD1',
+                    content                => 'body',
+                    is_html                => 0,
+                    lang                   => 'default',
+                },
+            }
+        );
+    }
+
+    my $item_payload = {
+        borrowernumber    => $patron->borrowernumber,
+        itemnumber        => $item->itemnumber,
+        issue_id          => $issue->issue_id,
+        patronhomebranch  => $library->branchcode,
+        itemhomebranch    => $library->branchcode,
+        itemholdingbranch => $library->branchcode,
+    };
+
+    my $executor = Koha::Overdues::ActionExecutor->new;
+
+    # Add in email/sms/print order — passes should reorder enactment to print/sms/email.
+    for my $mtt (qw( email sms print )) {
+        $executor->add_to_notice_queue(
+            $patron->borrowernumber, 'OD1', $mtt, 7,
+            [
+                {
+                    item   => $item_payload,
+                    action => { type => 'notice', notice_code => 'OD1', mtt => $mtt },
+                    delay  => 7,
+                },
+            ],
+        );
+    }
+
+    $executor->process_notice_queue;
+
+    my @rows = Koha::Notice::Messages->search(
+        { borrowernumber => $patron->borrowernumber, letter_code => 'OD1' },
+        { order_by       => 'message_id' }
+    )->as_list;
+    is( scalar @rows, 3, 'three rows enqueued' );
+    is_deeply(
+        [ map { $_->message_transport_type } @rows ],
+        [ 'print', 'sms', 'email' ],
+        'rows enqueued in print -> sms -> email order'
+    );
 
     $schema->storage->txn_rollback;
 };
