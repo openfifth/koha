@@ -85,7 +85,7 @@ sub _process_simple_calculation {
     }
 
     my $min_delay = $known_delay_values[0];
-    my @branches  = Koha::Overdues::Repository->GetDistinctOverdueBranches($min_delay);
+    my @branches  = Koha::Overdues::Repository->get_distinct_overdue_branches($min_delay);
     if ( !@branches ) {
         return;
     }
@@ -97,8 +97,7 @@ sub _process_simple_calculation {
         }
     }
 
-    my $allOverduesForKnownDelays =
-        Koha::Overdues::Repository->GetOverdueSummariesForKnownTriggerDelays( \@known_delay_values );
+    my $allOverduesForKnownDelays = Koha::Overdues::Repository->get_overdue_summaries_by_delays( \@known_delay_values );
 
     if ( !$allOverduesForKnownDelays ) {
         return;
@@ -133,7 +132,7 @@ sub _process_calendar_adjusted {
     }
 
     my $min_delay = $known_delay_values[0];
-    my @branches  = Koha::Overdues::Repository->GetDistinctOverdueBranches($min_delay);
+    my @branches  = Koha::Overdues::Repository->get_distinct_overdue_branches($min_delay);
     if ( !@branches ) {
         return;
     }
@@ -162,7 +161,7 @@ sub _process_calendar_adjusted {
         $overdues_resultset = $self->_fetch_per_branch( \%target_dates_by_branch );
     } else {
         my @pairs = map { { branchcode => $_, dates => $target_dates_by_branch{$_} } } @branches;
-        $overdues_resultset = Koha::Overdues::Repository->GetOverdueSummariesByBranchDatePairs( \@pairs );
+        $overdues_resultset = Koha::Overdues::Repository->get_overdue_summaries_by_branch_date_pairs( \@pairs );
     }
 
     if ( !$overdues_resultset ) {
@@ -180,8 +179,10 @@ sub _fetch_per_branch {
 
     my @resultsets;
     for my $branch ( keys %$target_dates_by_branch ) {
-        my $rs =
-            Koha::Overdues::Repository->GetOverdueSummariesByBranchDates( $branch, $target_dates_by_branch->{$branch} );
+        my $rs = Koha::Overdues::Repository->get_overdue_summaries_by_branch_dates(
+            $branch,
+            $target_dates_by_branch->{$branch}
+        );
         push @resultsets, $rs if $rs;
     }
     return unless @resultsets;
@@ -195,31 +196,37 @@ sub _fetch_per_branch {
 sub _dispatch_overdues {
     my ( $self, $overdues_resultset, $effective_delay_by_raw_delay ) = @_;
 
+    my $today_date = dt_from_string->truncate( to => 'day' );
+
     my %seen_branches;
     my %seen_categories;
     my %seen_itemtypes;
     my @overdue_items;
 
     while ( my $row = $overdues_resultset->next ) {
-        $seen_branches{ $row->get_column('branchcode') }     = 1;
-        $seen_categories{ $row->get_column('categorycode') } = 1;
-        $seen_itemtypes{ $row->get_column('itemtype') }      = 1;
+        my $item         = $row->item;
+        my $patron       = $row->patron;
+        my $due_date     = dt_from_string( $row->date_due )->truncate( to => 'day' );
+        my $days_overdue = $today_date->delta_days($due_date)->in_units('days');
+
+        $seen_branches{ $row->branchcode }        = 1;
+        $seen_categories{ $patron->categorycode } = 1;
+        $seen_itemtypes{ $item->itype }           = 1;
 
         my $item_hashref = {
-            issue_id           => $row->issue_id,
-            borrowernumber     => $row->borrowernumber,
-            itemnumber         => $row->itemnumber,
-            branchcode         => $row->branchcode,
-            date_due           => $row->date_due,
-            categorycode       => $row->get_column('categorycode'),
-            itemtype           => $row->get_column('itemtype'),
-            days_overdue       => $row->get_column('days_overdue'),
-            biblionumber       => $row->get_column('biblionumber'),
-            notice_preferences => $row->get_column('notice_preferences'),
-            replacementfee     => $row->get_column('replacementfee'),
-            itemhomebranch     => $row->get_column('itemhomebranch'),
-            itemholdingbranch  => $row->get_column('itemholdingbranch'),
-            patronhomebranch   => $row->get_column('patronhomebranch'),
+            issue_id          => $row->issue_id,
+            borrowernumber    => $row->borrowernumber,
+            itemnumber        => $row->itemnumber,
+            branchcode        => $row->branchcode,
+            date_due          => $row->date_due,
+            categorycode      => $patron->categorycode,
+            itemtype          => $item->itype,
+            days_overdue      => $days_overdue,
+            biblionumber      => $item->biblionumber,
+            replacementfee    => $item->replacementprice,
+            itemhomebranch    => $item->homebranch,
+            itemholdingbranch => $item->holdingbranch,
+            patronhomebranch  => $patron->branchcode,
         };
 
         push @overdue_items, $item_hashref;
