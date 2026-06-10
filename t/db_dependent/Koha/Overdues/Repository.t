@@ -36,12 +36,12 @@ subtest 'empty delay list returns nothing' => sub {
     plan tests => 1;
 
     is(
-        Koha::Overdues::Repository->GetOverdueSummariesForKnownTriggerDelays( [] ),
+        Koha::Overdues::Repository->get_overdue_summaries_by_delays( [] ),
         undef, 'no delays in → undef out'
     );
 };
 
-subtest 'GetOverdueSummariesForKnownTriggerDelays filters by date_due matching known delays' => sub {
+subtest 'get_overdue_summaries_by_delays filters by date_due matching known delays' => sub {
     plan tests => 5;
 
     $schema->storage->txn_begin;
@@ -117,7 +117,7 @@ subtest 'GetOverdueSummariesForKnownTriggerDelays filters by date_due matching k
         }
     );
 
-    my $rs = Koha::Overdues::Repository->GetOverdueSummariesForKnownTriggerDelays( [ 7, 14 ] );
+    my $rs = Koha::Overdues::Repository->get_overdue_summaries_by_delays( [ 7, 14 ] );
     isa_ok( $rs, 'Koha::Checkouts', 'returns a Koha::Checkouts resultset' );
 
     my %seen;
@@ -163,7 +163,7 @@ subtest 'rule_context_branch_column honours CircControl + HomeOrHoldingBranch' =
     );
 };
 
-subtest 'GetDistinctOverdueBranches' => sub {
+subtest 'get_distinct_overdue_branches' => sub {
     plan tests => 4;
 
     $schema->storage->txn_begin;
@@ -207,12 +207,12 @@ subtest 'GetDistinctOverdueBranches' => sub {
     );
 
     # min_delay = 5: library_a's patron is 10 days overdue (in), library_b's is 2 days overdue (out).
-    my @branches = sort Koha::Overdues::Repository->GetDistinctOverdueBranches(5);
+    my @branches = sort Koha::Overdues::Repository->get_distinct_overdue_branches(5);
     is( scalar @branches, 1,                      'min_delay=5: only one branch' );
     is( $branches[0],     $library_a->branchcode, 'returns the patron branch with sufficiently-overdue items' );
 
     # min_delay = 1: both branches qualify.
-    @branches = sort Koha::Overdues::Repository->GetDistinctOverdueBranches(1);
+    @branches = sort Koha::Overdues::Repository->get_distinct_overdue_branches(1);
     is( scalar @branches, 2, 'min_delay=1: both branches' );
 
     # library_c (no overdues) never appears.
@@ -224,7 +224,7 @@ subtest 'GetDistinctOverdueBranches' => sub {
     $schema->storage->txn_rollback;
 };
 
-subtest 'GetOverdueSummariesByBranchDatePairs + GetOverdueSummariesByBranchDates' => sub {
+subtest 'get_overdue_summaries_by_branch_date_pairs + get_overdue_summaries_by_branch_dates' => sub {
     plan tests => 6;
 
     $schema->storage->txn_begin;
@@ -283,7 +283,7 @@ subtest 'GetOverdueSummariesByBranchDatePairs + GetOverdueSummariesByBranchDates
     );
 
     # Alg 2: pairs hit each branch's exact date.
-    my $rs = Koha::Overdues::Repository->GetOverdueSummariesByBranchDatePairs(
+    my $rs = Koha::Overdues::Repository->get_overdue_summaries_by_branch_date_pairs(
         [
             { branchcode => $library_a->branchcode, dates => [$date_a] },
             { branchcode => $library_b->branchcode, dates => [$date_b] },
@@ -295,7 +295,7 @@ subtest 'GetOverdueSummariesByBranchDatePairs + GetOverdueSummariesByBranchDates
     ok( $seen{ $item_b->itemnumber }, 'pair (B, date_b) matches item B' );
 
     # Cross-pair must NOT match — branch A on date B shouldn't return item B.
-    $rs = Koha::Overdues::Repository->GetOverdueSummariesByBranchDatePairs(
+    $rs = Koha::Overdues::Repository->get_overdue_summaries_by_branch_date_pairs(
         [
             { branchcode => $library_a->branchcode, dates => [$date_b] },
         ]
@@ -305,7 +305,7 @@ subtest 'GetOverdueSummariesByBranchDatePairs + GetOverdueSummariesByBranchDates
     ok( !$seen{ $item_b->itemnumber }, 'pair (A, date_b) does not return item B (branch mismatch)' );
 
     # Alg 3: single-branch variant.
-    $rs   = Koha::Overdues::Repository->GetOverdueSummariesByBranchDates( $library_a->branchcode, [$date_a] );
+    $rs   = Koha::Overdues::Repository->get_overdue_summaries_by_branch_dates( $library_a->branchcode, [$date_a] );
     %seen = ();
     while ( my $row = $rs->next ) { $seen{ $row->itemnumber } = 1 }
     ok( $seen{ $item_a->itemnumber },  'per-branch variant returns item A' );
@@ -313,7 +313,7 @@ subtest 'GetOverdueSummariesByBranchDatePairs + GetOverdueSummariesByBranchDates
 
     # Empty pair list short-circuits.
     is(
-        Koha::Overdues::Repository->GetOverdueSummariesByBranchDatePairs( [] ),
+        Koha::Overdues::Repository->get_overdue_summaries_by_branch_date_pairs( [] ),
         undef, 'empty pair list returns undef'
     );
 
