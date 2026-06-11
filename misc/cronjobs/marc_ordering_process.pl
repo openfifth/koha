@@ -136,12 +136,14 @@ foreach my $acct (@accounts) {
                             # Download the file
                             if ( $file_transport->download_file( $filename, $local_file ) ) {
                                 if ($rename_ext) {
-                                    $file_transport->rename_file( $filename, "$filename.$rename_ext" );
+                                    $file_transport->rename_file( $filename, "$filename.$rename_ext" )
+                                        or say "Failed to rename remote file: $filename";
                                 } elsif ($delete_remote) {
-                                    $file_transport->delete_file($filename);
+                                    $file_transport->delete_file($filename)
+                                        or say "Failed to delete remote file: $filename";
                                 }
                             } else {
-                                say "Failed to download file: $filename" if $verbose;
+                                say "Failed to download file: $filename";
                             }
                         }
                     }
@@ -156,7 +158,7 @@ foreach my $acct (@accounts) {
         }
     }
 
-    opendir my $dir, $working_dir or die "Can't open filepath";
+    opendir my $dir, $working_dir or die "Can't open working directory '$working_dir': $!";
     my @files = grep { /$valid_file_extensions/ } readdir $dir;
     closedir $dir;
     print "No new files found\n" if scalar(@files) == 0;
