@@ -40,10 +40,10 @@ Koha::Overdues::TriggerProcessor - Koha Overdue TriggerProcessor object set clas
 =head3 new
 
 $triggerProcessor = Koha::Overdues::TriggerProcessor->new();
-$triggerProcessor = Koha::Overdues::TriggerProcessor->new( { debug => 1 } );
+$triggerProcessor = Koha::Overdues::TriggerProcessor->new( { verbose => 1, debug => 1 } );
 
-Optional C<debug> flag drive the queue-dump and rule-set-dump
-output emitted by L</_dispatch_overdues> for the C<--debug>
+Optional C<verbose> and C<debug> flags drive the queue-dump and rule-set-dump
+output emitted by L</_dispatch_overdues> for the C<--verbose> / C<--debug>
 modes of C<process_circulation_triggers.pl>.
 
 =cut
@@ -51,7 +51,8 @@ modes of C<process_circulation_triggers.pl>.
 sub new {
     my ( $class, $params ) = @_;
     my $self = {
-        debug => $params->{debug} // 0,
+        verbose => $params->{verbose} // 0,
+        debug   => $params->{debug}   // 0,
     };
     return bless $self, $class;
 }
@@ -273,6 +274,10 @@ sub _dispatch_overdues {
         print Data::Dumper->Dump( [ $action_executor->{action_batch_queue} ],        ['action_batch_queue'] );
         print Data::Dumper->Dump( [ $action_executor->{notice_queue} ],              ['notice_queue'] );
 
+    }
+
+    if ( $self->{verbose} ) {
+        $action_executor->print_queues;
     }
 
     $action_executor->process_action_queue;
