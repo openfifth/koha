@@ -56,6 +56,25 @@ Of these, only Item due (DUE, DUEDGST) may be relevant?
   - **Simple**: Use database `DATEDIFF` for performance
   - **Complex**: Application-level calculation excluding closed days per library calendar
 
+### 5. Debugging And Testing
+
+- One new test suite per newly introduced .pm modules
+- Coverage of all methods added to existing .pm modules
+- Manual script runs: flags:
+    - dry-run (db transaction with rollback)
+    - verbose (summarises actions that would be taken / have been taken)
+    - debug   (dumps queue - intended for dev use only. Can balloon)
+
+#### Note
+An enhancement (likely out of scope) would be to expose dry runs to the circulation triggers UI. This would require a new stepper-style interface where adminstrators would:
+- view the current state of overdues (likely with some filtering so they may choose a given subset)
+- be presented with a message explaining what the dry run will and won't do
+- click a 'see projected script run outcome'
+- be presented with a loading screen
+- be presented with the projected outcome of the script (actions taken, items / borrowers / overdue issues affected, etc)
+
+While the first point could be achieved by pulling a report, the last step cannot -> if building a UI for this, it would be more consistent to present start and end point in the same format.
+
 ## Algorithm Specification
 
 ### Main Processing Flow
