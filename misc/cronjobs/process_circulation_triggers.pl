@@ -24,7 +24,7 @@ process_circulation_triggers.pl  daily cron script to process overdue materials.
 
 =head1 SYNOPSIS
 
-process_circulation_triggers.pl [ --dry-run ] [ --debug ]
+process_circulation_triggers.pl [ --dry-run ] [ --verbose ] [ --debug ]
 
 =head1 DESCRIPTION
 
@@ -47,6 +47,11 @@ Run the full pipeline inside a transaction that is rolled back at the end,
 producing no permanent changes (no debarments, lost flags, charges, returns,
 or queued notices).
 
+=item B<--verbose>
+
+Print one line per queued action and notice bucket after routing but before
+enactment. Composes with C<--dry-run>.
+
 =item B<--debug>
 
 In addition to C<--verbose> output, dump the matched overdue rows and the
@@ -67,20 +72,34 @@ my $command_line_options = join( " ", @ARGV );
 cronlogaction( { info => $command_line_options } );
 
 my $dry_run = 0;
+my $verbose = 0;
 my $debug   = 0;
 
 GetOptions(
     'dry-run' => \$dry_run,
+    'verbose' => \$verbose,
     'debug'   => \$debug,
 );
+
+# --debug dumps full hashrefs and would balloon cron mail / log files at
+# realistic data volumes. If STDOUT isn't a terminal (cron), silently
+# downgrade --debug so the run still completes — overdues processing has
+# real financial impact (lost-item charges, account restrictions) and must
+# not be skipped because of a misconfigured crontab flag.
+if ( $debug && !-t STDOUT ) {
+    warn "--debug suppressed: not running on an interactive terminal\n";
+    $debug = 0;
+}
 
 my $schema = Koha::Database->new->schema;
 if ($dry_run) {
     $schema->storage->txn_begin;
-    print "Dry run: changes will be rolled back\n";
+    print "DRY RUN: changes will be rolled back\n";
+    print "Projected outcome: \n";
+    print "--------------------------------------- \n";
 }
 
-my $triggerProcessor = Koha::Overdues::TriggerProcessor->new( { debug => $debug } );
+my $triggerProcessor = Koha::Overdues::TriggerProcessor->new( { verbose => $verbose, debug => $debug } );
 $triggerProcessor->ProcessOverdues();
 
 if ($dry_run) {
