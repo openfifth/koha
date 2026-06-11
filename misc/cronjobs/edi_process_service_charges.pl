@@ -289,6 +289,22 @@ sub process_invoice_service_charges {
                 next;
             }
 
+            my $edi_ordernumber = $line->ordernumber();
+            my $received_order  =
+                find_received_order_for_invoice( $edi_ordernumber, $koha_invoice, $orders_processed );
+            my $actual_ordernumber = $received_order ? $received_order->ordernumber : undef;
+
+            my $order_info = $actual_ordernumber || $edi_ordernumber || 'Unknown';
+            if ( $actual_ordernumber && $actual_ordernumber != $edi_ordernumber ) {
+                $order_info .= " (split from #$edi_ordernumber)";
+            }
+
+            # Accumulate total charges per line for a single orderline price adjustment,
+            # avoiding the double-subtract bug when multiple MOA+8 charges exist on one line.
+            my $total_charge_excl = 0;
+            my $total_charge_tax  = 0;
+            my $has_charges       = 0;
+
             foreach my $alc_data (@$allowances_charges) {
                 my $type         = $alc_data->{type};     # 'charge' or 'allowance'
                 my $amount       = $alc_data->{amount};
@@ -352,17 +368,10 @@ sub process_invoice_service_charges {
                     next;
                 }
 
+                # Use tax rate from EDI TAX segment
+                my $tax_rate_pct = $alc_data->{tax_rate} || 0;
+
                 if ( !$dry_run ) {
-
-                    # Create the invoice adjustment with enhanced order linkage
-                    # Find the actual received order (which may be split from the original)
-                    my $edi_ordernumber = $line->ordernumber();
-                    my $received_order =
-                        find_received_order_for_invoice( $edi_ordernumber, $koha_invoice, $orders_processed );
-                    my $actual_ordernumber = $received_order ? $received_order->ordernumber : undef;
-
-                    # Use tax rate from EDI TAX segment
-                    my $tax_rate_pct = $alc_data->{tax_rate} || 0;
 
                     my $note = sprintf(
                         'EDI %s: Order #%s%s | EDI Line: %s | Service: %s%s | Tax Rate: %s%% | EDI_EXCL: %s | EDI_TAX: %s',
@@ -402,31 +411,12 @@ sub process_invoice_service_charges {
                             . "), budget_id=$budget_id, service_code=$service_code, order="
                             . ( $actual_ordernumber || $edi_ordernumber || 'unknown' ) );
 
-                    # Adjust the orderline to avoid double-counting service charges
-                    # Service charges are included in MOA+128/203 totals but we're extracting them separately
-                    if ( $type eq 'charge' && $received_order ) {
-                        adjust_orderline_for_service_charge(
-                            $received_order, $amount, $alc_data->{tax_amount}, $verbose, $edi_ordernumber,
-                            $line
-                        );
-                    } elsif ( $type eq 'charge' && !$received_order ) {
-                        $logger->warn(
-                            "EDI Service Charges: Cannot adjust orderline for service charge - no received order found for line "
-                                . $line->line_item_number
-                                . " (original order $edi_ordernumber)" );
-                    }
+                    # Accumulate charge amounts; orderline adjustment happens after all charges
+                    # are processed to avoid subtracting each charge from the same EDI base total.
+                    $total_charge_excl += $amount;
+                    $total_charge_tax  += $alc_data->{tax_amount} || 0;
+                    $has_charges = 1;
                 } else {
-
-                    # For dry-run, also show the split order handling
-                    my $edi_ordernumber = $line->ordernumber();
-                    my $received_order =
-                        find_received_order_for_invoice( $edi_ordernumber, $koha_invoice, $orders_processed );
-                    my $actual_ordernumber = $received_order ? $received_order->ordernumber : undef;
-
-                    my $order_info = $actual_ordernumber || $edi_ordernumber || 'Unknown';
-                    if ( $actual_ordernumber && $actual_ordernumber != $edi_ordernumber ) {
-                        $order_info .= " (split from #$edi_ordernumber)";
-                    }
 
                     print "  Would create $type adjustment for invoice "
                         . $koha_invoice->invoiceid
@@ -438,15 +428,31 @@ sub process_invoice_service_charges {
                             . $koha_invoice->invoicenumber
                             . ": adjustment=$adjustment_amount (charge=$amount, tax=" . $alc_data->{tax_amount}
                             . "), budget_id=$budget_id, service_code=$service_code, order=$order_info" );
-
-                    if ( $type eq 'charge' ) {
-                        if ($received_order) {
-                            print "  Would adjust orderline $order_info to correct price based on EDI PRI data\n";
-                        }
-                    }
                 }
 
                 $adjustments_created++;
+            }
+
+            # Single orderline price adjustment for all accumulated charges on this line.
+            # Calling adjust_orderline_for_service_charge once per charge would cause each
+            # call to subtract only its own amount from the full EDI base price (MOA+128),
+            # leaving the last charge's result as the final unit price instead of subtracting all.
+            if ( !$dry_run && $has_charges ) {
+                if ($received_order) {
+                    adjust_orderline_for_service_charge(
+                        $received_order, $total_charge_excl, $total_charge_tax,
+                        $verbose, $edi_ordernumber, $line
+                    );
+                } else {
+                    $logger->warn(
+                        "EDI Service Charges: Cannot adjust orderline for service charge - no received order found for line "
+                            . $line->line_item_number
+                            . " (original order $edi_ordernumber)" );
+                }
+            } elsif ( $dry_run && $has_charges ) {
+                print "  Would adjust orderline $order_info to correct price based on EDI PRI data"
+                    . " (total charge excl tax: $total_charge_excl, total charge tax: $total_charge_tax)\n"
+                    if $verbose;
             }
         }
     }
