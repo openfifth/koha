@@ -24,7 +24,7 @@ process_circulation_triggers.pl  daily cron script to process overdue materials.
 
 =head1 SYNOPSIS
 
-process_circulation_triggers.pl [ --dry-run ]
+process_circulation_triggers.pl [ --dry-run ] [ --debug ]
 
 =head1 DESCRIPTION
 
@@ -47,6 +47,11 @@ Run the full pipeline inside a transaction that is rolled back at the end,
 producing no permanent changes (no debarments, lost flags, charges, returns,
 or queued notices).
 
+=item B<--debug>
+
+In addition to C<--verbose> output, dump the matched overdue rows and the
+effective rule-set entries used to route them. Composes with C<--dry-run>.
+
 =back
 
 =cut
@@ -62,8 +67,12 @@ my $command_line_options = join( " ", @ARGV );
 cronlogaction( { info => $command_line_options } );
 
 my $dry_run = 0;
+my $debug   = 0;
 
-GetOptions( 'dry-run' => \$dry_run );
+GetOptions(
+    'dry-run' => \$dry_run,
+    'debug'   => \$debug,
+);
 
 my $schema = Koha::Database->new->schema;
 if ($dry_run) {
@@ -71,7 +80,7 @@ if ($dry_run) {
     print "Dry run: changes will be rolled back\n";
 }
 
-my $triggerProcessor = Koha::Overdues::TriggerProcessor->new();
+my $triggerProcessor = Koha::Overdues::TriggerProcessor->new( { debug => $debug } );
 $triggerProcessor->ProcessOverdues();
 
 if ($dry_run) {
