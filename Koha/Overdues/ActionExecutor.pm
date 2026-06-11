@@ -120,6 +120,49 @@ sub route_item_actions_to_queue {
     }
 }
 
+=head3 print_queues
+
+Dump the populated action-batch and notice queues as one structured line per
+queued entry. Called between routing and enactment to give C<--verbose> mode
+in C<process_circulation_triggers.pl> a preview of what the script is about
+to do. Side-effect free.
+
+=cut
+
+sub print_queues {
+    my ($self) = @_;
+
+    printf "ACTION ENACTED: \n";
+
+    foreach my $batch ( @{ $self->{action_batch_queue} } ) {
+        my $item = $batch->{item};
+        for my $type ( sort keys %{ $batch->{actions} } ) {
+            printf "    type=%s value=%s borrower=%s item=%s days_overdue=%s\n",
+                $type,
+                $batch->{actions}->{$type},
+                $item->{borrowernumber},
+                $item->{itemnumber},
+                $batch->{delay};
+        }
+    }
+
+    printf "NOTICES ENQUEUED: \n";
+
+    for my $borrowernumber ( sort { $a <=> $b } keys %{ $self->{notice_queue} } ) {
+        my $by_code = $self->{notice_queue}{$borrowernumber};
+        for my $notice_code ( sort keys %$by_code ) {
+            my $by_mtt = $by_code->{$notice_code};
+            for my $mtt ( sort keys %$by_mtt ) {
+                for my $delay ( sort { $a <=> $b } keys %{ $by_mtt->{$mtt} } ) {
+                    my $count = scalar @{ $by_mtt->{$mtt}{$delay} };
+                    printf "    letter_code=%s mtt=%s borrower=%s days_overdue=%s items=%s\n",
+                        $notice_code, $mtt, $borrowernumber, $delay, $count;
+                }
+            }
+        }
+    }
+}
+
 =head3 process_action_queue
 
 Process the standard queue.
@@ -289,8 +332,10 @@ sub _enqueue_letter_for_bucket {
             borrowers => $borrowernumber,
             branches  => $branchcode,
         },
-        substitute             => { count => scalar @item_rows },
-        repeat                 => { item  => \@item_rows },
+        substitute => { count    => scalar @item_rows },
+        repeat     => { item     => \@item_rows },
+        loops      => { overdues => [ map { $_->{items} } @item_rows ] }
+        ,    # for compatibility with templates expecting data that can be parsed like [% FOREACH overdue IN overdues %]
         message_transport_type => $mtt,
     );
 
