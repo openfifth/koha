@@ -269,10 +269,13 @@ sub _dispatch_overdues {
         require Data::Dumper;
         local $Data::Dumper::Sortkeys = 1;
         local $Data::Dumper::Indent   = 1;
-        print Data::Dumper->Dump( [ \@overdue_items ],                               ['overdue_items'] );
-        print Data::Dumper->Dump( [ $rule_resolver->{effective_overdue_rule_sets} ], ['effective_overdue_rule_sets'] );
-        print Data::Dumper->Dump( [ $action_executor->{action_batch_queue} ],        ['action_batch_queue'] );
-        print Data::Dumper->Dump( [ $action_executor->{notice_queue} ],              ['notice_queue'] );
+        print STDERR Data::Dumper->Dump( [ \@overdue_items ], ['overdue_items'] );
+        print STDERR Data::Dumper->Dump(
+            [ $rule_resolver->{effective_overdue_rule_sets} ],
+            ['effective_overdue_rule_sets']
+        );
+        print STDERR Data::Dumper->Dump( [ $action_executor->{action_batch_queue} ], ['action_batch_queue'] );
+        print STDERR Data::Dumper->Dump( [ $action_executor->{notice_queue} ],       ['notice_queue'] );
 
     }
 
