@@ -24,6 +24,8 @@ process_circulation_triggers.pl  daily cron script to process overdue materials.
 
 =head1 SYNOPSIS
 
+process_circulation_triggers.pl [ --dry-run ]
+
 =head1 DESCRIPTION
 
 This script is designed to update item lost and/or returned statuses,
@@ -35,17 +37,45 @@ When the C<OverdueTriggersCalendar> system preference is enabled, trigger
 delays are measured in open days using each branch's calendar; otherwise
 delays are measured in calendar days.
 
+=head1 OPTIONS
+
+=over
+
+=item B<--dry-run>
+
+Run the full pipeline inside a transaction that is rolled back at the end,
+producing no permanent changes (no debarments, lost flags, charges, returns,
+or queued notices).
+
+=back
+
 =cut
 
 use strict;
 use warnings;
+use Getopt::Long qw( GetOptions );
+use Koha::Database;
 use Koha::Overdues::TriggerProcessor;
 use C4::Log qw( cronlogaction );
 
 my $command_line_options = join( " ", @ARGV );
 cronlogaction( { info => $command_line_options } );
 
+my $dry_run = 0;
+
+GetOptions( 'dry-run' => \$dry_run );
+
+my $schema = Koha::Database->new->schema;
+if ($dry_run) {
+    $schema->storage->txn_begin;
+    print "Dry run: changes will be rolled back\n";
+}
+
 my $triggerProcessor = Koha::Overdues::TriggerProcessor->new();
 $triggerProcessor->ProcessOverdues();
+
+if ($dry_run) {
+    $schema->storage->txn_rollback;
+}
 
 cronlogaction( { action => 'End', info => "COMPLETED" } );
