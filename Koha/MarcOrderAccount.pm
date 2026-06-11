@@ -68,6 +68,7 @@ sub file_transport {
     # Use Koha::File::Transports to determine the correct polymorphic class
     require Koha::File::Transports;
     my $class = Koha::File::Transports->object_class($transport_rs);
+    return unless $class;
 
     return $class->_new_from_dbic($transport_rs);
 }
