@@ -1,10 +1,20 @@
 import { setError, submitting, submitted } from "../messages";
+import { $__ } from "@koha-vue/i18n";
 
 function _ifDocumentAvailable(callback) {
     if (typeof document !== "undefined" && document.getElementById) {
         callback();
     }
 }
+
+const _calculateMissingPerms = permissions => {
+    if (typeof permissions != "object") return;
+
+    let text = JSON.stringify(permissions, null, 2);
+    let pre = $("<pre>").addClass("my-3").append(text);
+
+    return pre.prop("outerHTML");
+};
 
 class HttpClient {
     constructor(options = {}) {
@@ -49,6 +59,11 @@ class HttpClient {
                                 json.error ||
                                 json.errors.map(e => e.message).join("\n") ||
                                 json;
+
+                            if (json.required_permissions)
+                                message += _calculateMissingPerms(
+                                    json.required_permissions
+                                );
                         } else {
                             message = response.statusText;
                         }
