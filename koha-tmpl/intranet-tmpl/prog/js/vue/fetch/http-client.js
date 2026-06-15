@@ -7,6 +7,15 @@ function _ifDocumentAvailable(callback) {
     }
 }
 
+const _calculateMissingPerms = permissions => {
+    if (typeof permissions != "object") return;
+
+    let text = JSON.stringify(permissions, null, 2);
+    let pre = $("<pre>").addClass("my-3").append(text);
+
+    return pre.prop("outerHTML");
+};
+
 class HttpClient {
     constructor(options = {}) {
         this._baseURL = options.baseURL || "";
@@ -65,6 +74,13 @@ class HttpClient {
                                         .join("\n") ||
                                     json.message ||
                                     json;
+
+                                if (json.required_permissions) {
+                                    message += _calculateMissingPerms(
+                                        json.required_permissions
+                                    );
+                                }
+
                                 code = json.error_code;
                             } catch {
                                 // Content-type claimed JSON but the body
