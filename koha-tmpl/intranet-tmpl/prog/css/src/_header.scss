@@ -7,6 +7,12 @@
     }
 }
 
+.sticky {
+    position: sticky;
+    top: -1px;
+    z-index: $zindex-sticky;
+}
+
 #header_search {
     background-color: $background-color-primary;
     border-radius: 0;
