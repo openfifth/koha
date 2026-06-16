@@ -389,6 +389,21 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 aqvendor_allocations
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::AqvendorAllocation>
+
+=cut
+
+__PACKAGE__->has_many(
+  "aqvendor_allocations",
+  "Koha::Schema::Result::AqvendorAllocation",
+  { "foreign.booksellerid" => "self.id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 edifact_messages
 
 Type: has_many
@@ -550,8 +565,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-01-22 15:51:11
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:CbYWsA9Nt//ekI0vcBjGiQ
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-06-16 10:45:21
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:ZT1YQygtlv7XLJPYgARjYQ
 
 __PACKAGE__->add_columns(
     '+active' => { is_boolean => 1 },

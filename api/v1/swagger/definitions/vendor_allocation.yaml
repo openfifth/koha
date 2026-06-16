@@ -1,0 +1,27 @@
+---
+type: object
+properties:
+  allocation_id:
+    type: integer
+    description: Internally assigned identifier
+    readOnly: true
+  vendor_id:
+    type: integer
+    description: ID of the vendor (aqbooksellers.id)
+  budget_period_id:
+    type: integer
+    description: ID of the budget period (aqbudgetperiods.budget_period_id)
+  allocation_amount:
+    type: number
+    description: Maximum spend allowed for this vendor in this budget period
+  warn_at_percentage:
+    type:
+      - number
+      - "null"
+    description: Warn when spend reaches this percentage of allocation_amount
+  warn_at_amount:
+    type:
+      - number
+      - "null"
+    description: Warn when spend reaches this fixed amount
+additionalProperties: false

@@ -10,6 +10,7 @@ INSERT INTO systempreferences ( `variable`, `value` ) VALUES
 ('AcquisitionLog','0'),
 ('AcquisitionsDefaultEmailAddress', ''),
 ('AcquisitionsDefaultReplyTo', ''),
+('AcqVendorAllocations','0'),
 ('AcqViewBaskets','user'),
 ('AcqWarnOnDuplicateInvoice','0'),
 ('ActionLogsTraceDepth', '0'),

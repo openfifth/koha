@@ -1,0 +1,249 @@
+---
+"/acquisitions/vendors/{vendor_id}/allocations":
+  get:
+    x-mojo-to: Acquisitions::Vendor::Allocations#list
+    operationId: listVendorAllocations
+    tags:
+      - vendors
+    summary: List vendor allocations
+    produces:
+      - application/json
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/vendor_id_pp"
+      - $ref: "../swagger.yaml#/parameters/match"
+      - $ref: "../swagger.yaml#/parameters/order_by"
+      - $ref: "../swagger.yaml#/parameters/page"
+      - $ref: "../swagger.yaml#/parameters/per_page"
+      - $ref: "../swagger.yaml#/parameters/q_param"
+      - $ref: "../swagger.yaml#/parameters/q_body"
+      - $ref: "../swagger.yaml#/parameters/request_id_header"
+    responses:
+      "200":
+        description: A list of vendor allocations
+        schema:
+          type: array
+          items:
+            $ref: "../swagger.yaml#/definitions/vendor_allocation"
+      "400":
+        description: |
+          Bad request. Possible `error_code` attribute values:
+
+            * `invalid_query`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Resource not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |-
+          Internal server error. Possible `error_code` attribute values:
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: budget_manage
+  post:
+    x-mojo-to: Acquisitions::Vendor::Allocations#add
+    operationId: addVendorAllocation
+    tags:
+      - vendors
+    summary: Add a vendor allocation
+    consumes:
+      - application/json
+    produces:
+      - application/json
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/vendor_id_pp"
+      - description: A JSON object containing information about the new allocation
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: "../swagger.yaml#/definitions/vendor_allocation"
+    responses:
+      "201":
+        description: Allocation added
+        schema:
+          $ref: "../swagger.yaml#/definitions/vendor_allocation"
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Resource not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "409":
+        description: Conflict (allocation already exists for this vendor + period)
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |-
+          Internal server error. Possible `error_code` attribute values:
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: budget_manage
+
+"/acquisitions/vendors/{vendor_id}/allocations/{allocation_id}":
+  get:
+    x-mojo-to: Acquisitions::Vendor::Allocations#get
+    operationId: getVendorAllocation
+    tags:
+      - vendors
+    summary: Get a vendor allocation
+    produces:
+      - application/json
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/vendor_id_pp"
+      - $ref: "../swagger.yaml#/parameters/allocation_id_pp"
+    responses:
+      "200":
+        description: Vendor allocation
+        schema:
+          $ref: "../swagger.yaml#/definitions/vendor_allocation"
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Resource not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |-
+          Internal server error. Possible `error_code` attribute values:
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: budget_manage
+  put:
+    x-mojo-to: Acquisitions::Vendor::Allocations#update
+    operationId: updateVendorAllocation
+    tags:
+      - vendors
+    summary: Update a vendor allocation
+    consumes:
+      - application/json
+    produces:
+      - application/json
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/vendor_id_pp"
+      - $ref: "../swagger.yaml#/parameters/allocation_id_pp"
+      - description: A JSON object containing the allocation fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: "../swagger.yaml#/definitions/vendor_allocation"
+    responses:
+      "200":
+        description: Allocation updated
+        schema:
+          $ref: "../swagger.yaml#/definitions/vendor_allocation"
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Resource not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |-
+          Internal server error. Possible `error_code` attribute values:
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: budget_manage
+  delete:
+    x-mojo-to: Acquisitions::Vendor::Allocations#delete
+    operationId: deleteVendorAllocation
+    tags:
+      - vendors
+    summary: Delete a vendor allocation
+    produces:
+      - application/json
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/vendor_id_pp"
+      - $ref: "../swagger.yaml#/parameters/allocation_id_pp"
+    responses:
+      "204":
+        description: Allocation deleted
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Resource not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |-
+          Internal server error. Possible `error_code` attribute values:
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        acquisition: budget_manage

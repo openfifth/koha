@@ -21,6 +21,7 @@ use Koha::Acquisition::Bookseller::Aliases;
 use Koha::Acquisition::Bookseller::Contacts;
 use Koha::Acquisition::Bookseller::Interfaces;
 use Koha::Acquisition::Bookseller::Issues;
+use Koha::Acquisition::VendorAllocations;
 use Koha::Subscriptions;
 
 use C4::Contract qw( GetContracts );
@@ -217,6 +218,20 @@ sub to_api_mapping {
         listincgst    => 'list_includes_gst',
         invoiceincgst => 'invoice_includes_gst'
     };
+}
+
+=head3 vendor_allocations
+
+    my $allocations = $vendor->vendor_allocations;
+
+Returns the C<Koha::Acquisition::VendorAllocations> result set for this vendor.
+
+=cut
+
+sub vendor_allocations {
+    my ($self) = @_;
+    my $rs = $self->_result->aqvendor_allocations;
+    return Koha::Acquisition::VendorAllocations->_new_from_dbic($rs);
 }
 
 =head2 Internal methods

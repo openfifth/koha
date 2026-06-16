@@ -1,0 +1,29 @@
+---
+type: object
+properties:
+  budget_period_id:
+    type: integer
+    description: Internally assigned identifier
+    readOnly: true
+  description:
+    type:
+      - string
+      - "null"
+    description: Description of the budget period
+  start_date:
+    type: string
+    format: date
+    description: Start date of the budget period
+  end_date:
+    type: string
+    format: date
+    description: End date of the budget period
+  active:
+    type: boolean
+    description: Whether this budget period is currently active
+  total:
+    type:
+      - number
+      - "null"
+    description: Total amount available in this budget period
+additionalProperties: false

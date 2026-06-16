@@ -28,6 +28,8 @@ definitions:
     $ref: ./definitions/booking.yaml
   booking_patch:
     $ref: ./definitions/booking_patch.yaml
+  budget_period:
+    $ref: ./definitions/budget_period.yaml
   bundle_link:
     $ref: ./definitions/bundle_link.yaml
   cash_register:
@@ -228,6 +230,8 @@ definitions:
     $ref: ./definitions/vendor_alias.yaml
   vendor_interface:
     $ref: ./definitions/vendor_interface.yaml
+  vendor_allocation:
+    $ref: ./definitions/vendor_allocation.yaml
   vendor_issue:
     $ref: ./definitions/vendor_issue.yaml
   vendors_config:
@@ -239,6 +243,8 @@ paths:
     $ref: ./paths/acquisitions_baskets.yaml#/~1acquisitions~1baskets
   /acquisitions/baskets/managers:
     $ref: ./paths/acquisitions_baskets.yaml#/~1acquisitions~1baskets~1managers
+  /acquisitions/budget_periods:
+    $ref: ./paths/acquisitions_budget_periods.yaml#/~1acquisitions~1budget_periods
   /acquisitions/edifiles:
     $ref: ./paths/acquisitions_edifiles.yaml#/~1acquisitions~1edifiles
   /acquisitions/funds:
@@ -259,6 +265,10 @@ paths:
     $ref: ./paths/acquisitions_vendors_config.yaml#/~1acquisitions~1vendors~1config
   "/acquisitions/vendors/{vendor_id}":
     $ref: "./paths/acquisitions_vendors.yaml#/~1acquisitions~1vendors~1{vendor_id}"
+  "/acquisitions/vendors/{vendor_id}/allocations":
+    $ref: "./paths/acquisitions_vendor_allocations.yaml#/~1acquisitions~1vendors~1{vendor_id}~1allocations"
+  "/acquisitions/vendors/{vendor_id}/allocations/{allocation_id}":
+    $ref: "./paths/acquisitions_vendor_allocations.yaml#/~1acquisitions~1vendors~1{vendor_id}~1allocations~1{allocation_id}"
   "/acquisitions/vendors/{vendor_id}/issues":
     $ref: "./paths/acquisitions_vendor_issues.yaml#/~1acquisitions~1vendors~1{vendor_id}~1issues"
   /advanced_editor/macros:
@@ -1125,6 +1135,12 @@ parameters:
     name: limit_id
     required: true
     type: string
+  allocation_id_pp:
+    description: Vendor allocation identifier
+    in: path
+    name: allocation_id
+    required: true
+    type: integer
   vendor_id_pp:
     description: Vendor id
     in: path

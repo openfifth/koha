@@ -145,9 +145,24 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 aqvendor_allocations
 
-# Created by DBIx::Class::Schema::Loader v0.07049 @ 2021-01-21 13:39:29
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:F/ipbU/Wrqy3pDInlmLOTw
+Type: has_many
+
+Related object: L<Koha::Schema::Result::AqvendorAllocation>
+
+=cut
+
+__PACKAGE__->has_many(
+  "aqvendor_allocations",
+  "Koha::Schema::Result::AqvendorAllocation",
+  { "foreign.budget_period_id" => "self.budget_period_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-06-16 10:45:21
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:VG2IlTGoDTjfhh5uvQKTgQ
 
 __PACKAGE__->add_columns(
     '+budget_period_active' => { is_boolean => 1 },

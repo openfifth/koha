@@ -65,6 +65,42 @@ export class AcquisitionAPIClient {
         };
     }
 
+    get budget_periods() {
+        return {
+            getAll: (query, params) =>
+                this.httpClient.getAll({
+                    endpoint: "budget_periods",
+                    query,
+                    params: { _order_by: "-active,description", ...params },
+                }),
+        };
+    }
+
+    get vendor_allocations() {
+        return {
+            getAll: (vendor_id, query, params) =>
+                this.httpClient.getAll({
+                    endpoint: `vendors/${vendor_id}/allocations`,
+                    query,
+                    params,
+                }),
+            create: (vendor_id, allocation) =>
+                this.httpClient.post({
+                    endpoint: `vendors/${vendor_id}/allocations`,
+                    body: allocation,
+                }),
+            update: (vendor_id, allocation_id, allocation) =>
+                this.httpClient.put({
+                    endpoint: `vendors/${vendor_id}/allocations/${allocation_id}`,
+                    body: allocation,
+                }),
+            delete: (vendor_id, allocation_id) =>
+                this.httpClient.delete({
+                    endpoint: `vendors/${vendor_id}/allocations/${allocation_id}`,
+                }),
+        };
+    }
+
     get baskets() {
         return {
             count: (query = {}) =>

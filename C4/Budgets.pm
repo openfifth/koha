@@ -79,6 +79,7 @@ use C4::Context;
 use Koha::Database;
 use Koha::Patrons;
 use Koha::Acquisition::Invoice::Adjustments;
+use Koha::Acquisition::VendorAllocations;
 use C4::Acquisition;
 use C4::Log qw(logaction);
 
@@ -1446,6 +1447,16 @@ sub CloneBudgetPeriod {
         {
             budgets              => $budgets,
             new_budget_period_id => $new_budget_period_id
+        }
+    );
+
+    Koha::Acquisition::VendorAllocations->clone_for_period(
+        {
+            from_budget_period_id         => $original_budget_period_id,
+            to_budget_period_id           => $new_budget_period_id,
+            reset                         => $reset_all_budgets,
+            amount_change_percentage      => $amount_change_percentage,
+            amount_change_round_increment => $amount_change_round_increment,
         }
     );
 

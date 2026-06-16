@@ -1,4 +1,4 @@
-package Koha::Acquisition::Budget;
+package Koha::REST::V1::Acquisitions::BudgetPeriods;
 
 # This file is part of Koha.
 #
@@ -17,44 +17,40 @@ package Koha::Acquisition::Budget;
 
 use Modern::Perl;
 
-use Koha::Database;
+use Mojo::Base 'Mojolicious::Controller';
 
-use base qw(Koha::Object);
+use Koha::Acquisition::Budgets;
+
+use Try::Tiny qw( catch try );
 
 =head1 NAME
 
-Koha::Acquisition::Budget object class
+Koha::REST::V1::Acquisitions::BudgetPeriods
 
 =head1 API
 
 =head2 Class methods
 
-=head3 to_api_mapping
+=head3 list
+
+Return the list of budget periods
 
 =cut
 
-sub to_api_mapping {
-    return {
-        budget_period_id          => 'budget_period_id',
-        budget_period_description => 'description',
-        budget_period_startdate   => 'start_date',
-        budget_period_enddate     => 'end_date',
-        budget_period_active      => 'active',
-        budget_period_total       => 'total',
-        budget_period_locked      => undef,
-        sort1_authcat             => undef,
-        sort2_authcat             => undef,
+sub list {
+    my $c = shift->openapi->valid_input or return;
+
+    return try {
+        my $budget_periods_rs = Koha::Acquisition::Budgets->new;
+        my $budget_periods    = $c->objects->search($budget_periods_rs);
+
+        return $c->render(
+            status  => 200,
+            openapi => $budget_periods,
+        );
+    } catch {
+        $c->unhandled_exception($_);
     };
-}
-
-=head2 Internal methods
-
-=head3 _type
-
-=cut
-
-sub _type {
-    return 'Aqbudgetperiod';
 }
 
 1;

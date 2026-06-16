@@ -1010,6 +1010,18 @@ export default {
                     },
                     splitPane: "right",
                 },
+                {
+                    type: "component",
+                    name: $__("Vendor allocations"),
+                    componentPath:
+                        "@koha-vue/components/Vendors/VendorAllocations.vue",
+                    componentProps: {
+                        vendor: {
+                            type: "resource",
+                        },
+                    },
+                    splitPane: "right",
+                },
             ];
         };
 

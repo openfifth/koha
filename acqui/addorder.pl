@@ -133,6 +133,7 @@ use C4::Suggestions qw( ModSuggestion );
 use Koha::Acquisition::Baskets;
 use Koha::Acquisition::Currencies;
 use Koha::Acquisition::Orders;
+use Koha::Acquisition::VendorAllocations;
 use Koha::AdditionalFields;
 use Koha::DateUtils qw( dt_from_string );
 
@@ -150,12 +151,14 @@ if ( $op eq 'cud-order' ) {
 
     my $confirm_not_duplicate = $input->param('confirm_not_duplicate') || 0;
 
+    my $budget_id = $input->param('budget_id');
+    my $budget    = GetBudget($budget_id);
+    my $currency  = Koha::Acquisition::Currencies->get_active;
+
     # Check if order total amount exceed allowed budget
     my $confirm_budget_exceeding = $input->param('confirm_budget_exceeding');
     unless ($confirm_budget_exceeding) {
-        my $budget_id      = $input->param('budget_id');
         my $total          = $input->param('total');
-        my $budget         = GetBudget($budget_id);
         my $budget_spent   = GetBudgetSpent($budget_id);
         my $budget_ordered = GetBudgetOrdered($budget_id);
 
@@ -179,61 +182,83 @@ if ( $op eq 'cud-order' ) {
             || ( ( $budget_encumbrance + 0 ) && ( $budget_used + $total ) > $budget_encumbrance )
             || ( ( $budget_expenditure + 0 ) && ( $budget_used + $total ) > $budget_expenditure ) )
         {
-            my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
-                {
-                    template_name => "acqui/addorder.tt",
-                    query         => $input,
-                    type          => "intranet",
-                    flagsrequired => { acquisition => 'order_manage' },
-                }
-            );
-
-            my $url = $input->referer();
-            unless ( defined $url ) {
-                my $basketno = $input->param('basketno');
-                $url = "/cgi-bin/koha/acqui/basket.pl?basketno=$basketno";
-            }
-
-            my $vars = $input->Vars;
-            my @vars_loop;
-            foreach ( keys %$vars ) {
-                push @vars_loop, {
-                    name   => $_,
-                    values => [ $input->multi_param($_) ],
-                };
-            }
+            my %limit_params = ( not_enough_budget => 1 );
 
             if (   ( $budget_encumbrance + 0 )
                 && ( $budget_used + $total ) > $budget_encumbrance
                 && $total <= $budget_remaining )
             {
-                $template->param(
-                    encumbrance_exceeded => 1,
-                    encumbrance          => sprintf( "%.2f", $budget->{'budget_encumb'} ),
-                );
+                $limit_params{encumbrance_exceeded} = 1;
+                $limit_params{encumbrance}          = sprintf( "%.2f", $budget->{'budget_encumb'} );
             }
             if (   ( $budget_expenditure + 0 )
                 && ( $budget_used + $total ) > $budget_expenditure
                 && $total <= $budget_remaining )
             {
-                my $currency = Koha::Acquisition::Currencies->get_active;
-                $template->param(
-                    expenditure_exceeded => 1,
-                    expenditure          => sprintf( "%.2f", $budget_expenditure ),
-                    currency             => ($currency) ? $currency->symbol : '',
-                );
+                $limit_params{expenditure_exceeded} = 1;
+                $limit_params{expenditure}          = sprintf( "%.2f", $budget_expenditure );
+                $limit_params{currency}             = ($currency) ? $currency->symbol : '';
             }
             if ( $total > $budget_remaining ) {
-                $template->param( budget_exceeded => 1 );
+                $limit_params{budget_exceeded} = 1;
             }
 
-            $template->param(
-                not_enough_budget => 1,
-                referer           => $url,
-                vars_loop         => \@vars_loop,
+            _render_limit_exceeded_page( $input, %limit_params );
+        }
+    }
+
+    # Check vendor allocation if the feature is enabled
+    my $confirm_vendor_allocation_exceeded = $input->param('confirm_vendor_allocation_exceeded');
+    unless ($confirm_vendor_allocation_exceeded) {
+        if ( C4::Context->preference('AcqVendorAllocations') ) {
+            my $basketno         = $input->param('basketno');
+            my $basket           = Koha::Acquisition::Baskets->find($basketno);
+            my $booksellerid     = $basket->booksellerid;
+            my $budget_period_id = $budget->{budget_period_id};
+
+            my $vendor_allocation = Koha::Acquisition::VendorAllocations->find(
+                {
+                    booksellerid     => $booksellerid,
+                    budget_period_id => $budget_period_id,
+                }
             );
-            output_html_with_http_headers $input, $cookie, $template->output;
-            exit;
+
+            if ( $vendor_allocation && $vendor_allocation->allocation_amount > 0 ) {
+                my $used    = $vendor_allocation->used;
+                my $total   = $input->param('total');
+
+                my $ordernumber = $input->param('ordernumber');
+                if ($ordernumber) {
+                    my $order = Koha::Acquisition::Orders->find($ordernumber);
+                    my ( $unitprice_field, $ecost_field ) = FieldsForCalculatingFundValues();
+                    $used -= $order->$ecost_field * $order->quantity;
+                }
+
+                my $remaining = $vendor_allocation->allocation_amount - $used;
+
+                my $warn_percentage_threshold = $vendor_allocation->warn_at_percentage
+                    ? $vendor_allocation->allocation_amount * $vendor_allocation->warn_at_percentage / 100
+                    : 0;
+                my $warn_amount_threshold = $vendor_allocation->warn_at_amount // 0;
+
+                if (   $total > $remaining
+                    || ( $warn_percentage_threshold && ( $used + $total ) > $warn_percentage_threshold )
+                    || ( $warn_amount_threshold && ( $used + $total ) > $warn_amount_threshold ) )
+                {
+                    my %limit_params = ( not_enough_vendor_allocation => 1 );
+
+                    if ( $total > $remaining ) {
+                        $limit_params{vendor_allocation_exceeded} = 1;
+                    } else {
+                        $limit_params{vendor_allocation_warning} = 1;
+                        $limit_params{vendor_allocation_amount}  = sprintf( "%.2f", $vendor_allocation->allocation_amount );
+                        $limit_params{vendor_allocation_used}    = sprintf( "%.2f", $used + $total );
+                        $limit_params{currency}                  = ($currency) ? $currency->symbol : '';
+                    }
+
+                    _render_limit_exceeded_page( $input, %limit_params );
+                }
+            }
         }
     }
 
@@ -508,5 +533,41 @@ if ( $op eq 'cud-order' ) {
 } else {
     my $basketno = $input->param('basketno');
     print $input->redirect("/cgi-bin/koha/acqui/basket.pl?basketno=$basketno");
+    exit;
+}
+
+sub _render_limit_exceeded_page {
+    my ( $input, %extra_params ) = @_;
+
+    my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
+        {
+            template_name => "acqui/addorder.tt",
+            query         => $input,
+            type          => "intranet",
+            flagsrequired => { acquisition => 'order_manage' },
+        }
+    );
+
+    my $url = $input->referer();
+    unless ( defined $url ) {
+        my $basketno = $input->param('basketno');
+        $url = "/cgi-bin/koha/acqui/basket.pl?basketno=$basketno";
+    }
+
+    my $vars = $input->Vars;
+    my @vars_loop;
+    foreach ( keys %$vars ) {
+        push @vars_loop, {
+            name   => $_,
+            values => [ $input->multi_param($_) ],
+        };
+    }
+
+    $template->param(
+        referer   => $url,
+        vars_loop => \@vars_loop,
+        %extra_params,
+    );
+    output_html_with_http_headers $input, $cookie, $template->output;
     exit;
 }
