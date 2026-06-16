@@ -381,6 +381,7 @@ INSERT INTO systempreferences ( `variable`, `value` ) VALUES
 ('intranetreadinghistory','1'),
 ('IntranetReadingHistoryHolds', '1'),
 ('IntranetSlipPrinterJS',''),
+('IntranetStickyHeader','1'),
 ('intranetstylesheet',''),
 ('IntranetUserCSS',''),
 ('IntranetUserJS',''),
