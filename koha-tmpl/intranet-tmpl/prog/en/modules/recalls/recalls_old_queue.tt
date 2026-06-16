@@ -32,7 +32,7 @@
 [% SET aside = Koha.Preference('CircSidebar') ? 'circ-nav' : '' %]
 [% WRAPPER 'main-container.inc' aside=aside %]
     <h1>Old recalls</h1>
-    [% IF Koha.Preference('UseRecalls') %]
+    [% IF Koha.Preference('UseRecalls') != "off" %]
         <div class="page-section"> [% INCLUDE 'recalls.inc' %] </div>
         <!-- /.page-section -->
     [% ELSE %]
