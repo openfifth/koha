@@ -1325,7 +1325,7 @@ sub CanBookBeIssued {
                     $needsconfirmation{'rescardnumber'}     = $hold_patron->cardnumber;
                     $needsconfirmation{'resborrowernumber'} = $hold_patron->borrowernumber;
                     $needsconfirmation{'resbranchcode'}     = $res->{branchcode};
-                    $needsconfirmation{'resreservedate'}    = $res->{reservedate};
+                    $needsconfirmation{'resreservedate'}    = dt_from_string( $res->{reservedate} )->ymd;
                     $needsconfirmation{'reserve_id'}        = $res->{reserve_id};
                 } elsif ( $restype eq "Transferred" ) {
 
@@ -1336,7 +1336,7 @@ sub CanBookBeIssued {
                     $needsconfirmation{'rescardnumber'}     = $hold_patron->cardnumber;
                     $needsconfirmation{'resborrowernumber'} = $hold_patron->borrowernumber;
                     $needsconfirmation{'resbranchcode'}     = $res->{branchcode};
-                    $needsconfirmation{'resreservedate'}    = $res->{reservedate};
+                    $needsconfirmation{'resreservedate'}    = dt_from_string( $res->{reservedate} )->ymd;
                     $needsconfirmation{'reserve_id'}        = $res->{reserve_id};
                 } elsif ( $restype eq "Processing" ) {
 
@@ -1347,7 +1347,7 @@ sub CanBookBeIssued {
                     $needsconfirmation{'rescardnumber'}     = $hold_patron->cardnumber;
                     $needsconfirmation{'resborrowernumber'} = $hold_patron->borrowernumber;
                     $needsconfirmation{'resbranchcode'}     = $res->{branchcode};
-                    $needsconfirmation{'resreservedate'}    = $res->{reservedate};
+                    $needsconfirmation{'resreservedate'}    = dt_from_string( $res->{reservedate} )->ymd;
                     $needsconfirmation{'reserve_id'}        = $res->{reserve_id};
                 }
             }
