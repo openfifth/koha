@@ -180,12 +180,12 @@ sub process_action_queue {
             $self->enact_restrict($overdue_item);
         }
 
-        if ( $actions->{lost} ) {
-            $self->enact_lost( $overdue_item, $actions->{lost} );
-        }
-
         if ( $actions->{forgive_fine} ) {
             $self->enact_forgive_fine($overdue_item);
+        }
+
+        if ( $actions->{lost} ) {
+            $self->enact_lost( $overdue_item, $actions->{lost} );
         }
 
         if ( $actions->{charge} ) {
