@@ -19,8 +19,9 @@
 
 use Modern::Perl;
 
+use Test::MockModule;
 use Test::NoWarnings;
-use Test::More tests => 18;
+use Test::More tests => 19;
 use Test::Warn;
 
 use Koha::Account;
@@ -1006,4 +1007,35 @@ subtest 'process_notice_queue: processes print -> sms -> email order' => sub {
     );
 
     $schema->storage->txn_rollback;
+};
+
+subtest 'process_action_queue: enacts actions in a fixed order' => sub {
+    plan tests => 1;
+
+    my $mock = Test::MockModule->new('Koha::Overdues::ActionExecutor');
+
+    my @order;
+    for my $action (qw( enact_restrict enact_forgive_fine enact_lost enact_charge enact_mark_returned )) {
+        $mock->mock( $action, sub { push @order, $action } );
+    }
+
+    my $executor = Koha::Overdues::ActionExecutor->new;
+
+    # Insert the action keys in an order that differs from the enactment order
+    # to prove the ordering comes from process_action_queue, not the hash.
+    $executor->add_to_action_batch_queue(
+        {
+            item    => { borrowernumber => 1, itemnumber => 1 },
+            delay   => 7,
+            actions => { mark_returned => 1, charge => 1, lost => 2, forgive_fine => 1, restrict => 1 },
+        }
+    );
+
+    $executor->process_action_queue;
+
+    is_deeply(
+        \@order,
+        [qw( enact_restrict enact_forgive_fine enact_lost enact_charge enact_mark_returned )],
+        'actions enacted in restrict -> forgive_fine -> lost -> charge -> mark_returned order'
+    );
 };
