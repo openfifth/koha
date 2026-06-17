@@ -1632,6 +1632,7 @@ sub clear_search_fields_cache {
     $cache->clear_from_cache('elasticsearch_search_fields_opac_biblios');
     $cache->clear_from_cache('elasticsearch_search_fields_staff_client_authorities');
     $cache->clear_from_cache('elasticsearch_search_fields_opac_authorities');
+    $cache->clear_from_cache('elasticsearch_search_fields_value_boost_functions');
 
 }
 
