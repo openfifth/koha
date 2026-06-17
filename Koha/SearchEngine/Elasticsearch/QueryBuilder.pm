@@ -49,6 +49,7 @@ use C4::Context;
 use Koha::Exceptions;
 use Koha::Caches;
 use Koha::AuthorisedValueCategories;
+use Koha::SearchFieldValueBoosts;
 
 our %index_field_convert = (
     'kw'                      => '',
@@ -251,6 +252,21 @@ sub build_query {
     }
 
     $res = _rebuild_to_es_advanced_query($res) if @$es_advanced_searches;
+
+    if ( $self->index eq $Koha::SearchEngine::Elasticsearch::BIBLIOS_INDEX ) {
+        my $value_boost_functions = $self->_get_value_boost_functions();
+        if (@$value_boost_functions) {
+            $res->{query} = {
+                function_score => {
+                    query      => $res->{query},
+                    functions  => $value_boost_functions,
+                    score_mode => 'max',
+                    boost_mode => 'multiply',
+                }
+            };
+        }
+    }
+
     return $res;
 }
 
@@ -1281,6 +1297,47 @@ sub _fix_limit_special_cases {
         }
     }
     return \@new_lim;
+}
+
+=head2 _get_value_boost_functions
+
+    my $functions = $builder->_get_value_boost_functions();
+
+Returns an arrayref of C<function_score> filter/weight pairs for all configured
+search field value boosts, suitable for use in an Elasticsearch C<function_score>
+query. Results are cached for 5 minutes.
+
+=cut
+
+sub _get_value_boost_functions {
+    my ($self) = @_;
+
+    my $cache     = Koha::Caches->get_instance();
+    my $cache_key = 'elasticsearch_search_fields_value_boost_functions';
+    my $functions = $cache->get_from_cache( $cache_key, { unsafe => 1 } );
+    return $functions if defined $functions;
+
+    my @boosts = Koha::SearchFieldValueBoosts->search(
+        {},
+        {
+            join      => 'search_field',
+            '+select' => ['search_field.name'],
+            '+as'     => ['field_name'],
+        }
+    )->as_list;
+
+    $functions = [];
+    for my $boost (@boosts) {
+        my $field_name = $boost->get_column('field_name');
+        push @$functions, {
+            filter => { term => { "${field_name}__facet" => $boost->value } },
+            weight => $boost->weight +
+                0,    # DBIx::Class returns decimals as strings; + 0 ensures JSON encodes as a number not a string
+        };
+    }
+
+    $cache->set_in_cache( $cache_key, $functions, { expiry => 300 } );
+    return $functions;
 }
 
 =head2 _sort_field
