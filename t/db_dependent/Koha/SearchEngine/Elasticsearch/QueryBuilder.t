@@ -23,12 +23,16 @@ use Test::Warn;
 use t::lib::Mocks;
 use t::lib::TestBuilder;
 use Test::NoWarnings;
-use Test::More tests => 10;
+use Test::More tests => 11;
 
 use List::Util qw( all );
 
 use Koha::Database;
 use Koha::SearchEngine::Elasticsearch::QueryBuilder;
+use Koha::SearchFieldValueBoost;
+use Koha::SearchFieldValueBoosts;
+use Koha::SearchFields;
+use Koha::Caches;
 use Koha::SearchFilters;
 
 my $schema = Koha::Database->new->schema;
@@ -82,6 +86,9 @@ $se->mock(
         return $all_mappings{ $self->index };
     }
 );
+
+my $qb_mock = Test::MockModule->new('Koha::SearchEngine::Elasticsearch::QueryBuilder');
+$qb_mock->mock( '_get_value_boost_functions', sub { return [] } );
 
 subtest 'build_authorities_query_compat() tests' => sub {
 
@@ -1333,6 +1340,82 @@ subtest "_build_field_match_boost_query() tests" => sub {
         'SHould query is correctly added'
     );
 
+};
+
+subtest '_get_value_boost_functions() and build_query function_score tests' => sub {
+    plan tests => 13;
+
+    $qb_mock->unmock('_get_value_boost_functions');
+    my $cache = Koha::Caches->get_instance();
+    $cache->clear_from_cache('elasticsearch_search_fields_value_boost_functions');
+
+    my $qb = Koha::SearchEngine::Elasticsearch::QueryBuilder->new( { index => 'biblios' } );
+
+    # No boosts configured — function_score should not be added
+    my $functions = $qb->_get_value_boost_functions();
+    is_deeply( $functions, [], '_get_value_boost_functions returns empty arrayref when no boosts configured' );
+
+    my $query = $qb->build_query('test');
+    ok(
+        !exists $query->{query}{function_score},
+        'build_query does not wrap in function_score when no boosts configured'
+    );
+    ok( exists $query->{query}{bool}, 'build_query produces a bool query when no boosts configured' );
+
+    # Create a search field and two value boosts
+    my $itype_field = Koha::SearchFields->find( { name => 'itype' } );
+SKIP: {
+        skip 'itype search field not found in DB', 10 unless $itype_field;
+
+        Koha::SearchFieldValueBoost->new( { search_field_id => $itype_field->id, value => 'BK', weight => 2.0 } )
+            ->store;
+        Koha::SearchFieldValueBoost->new( { search_field_id => $itype_field->id, value => 'DVD', weight => 0.5 } )
+            ->store;
+
+        $cache->clear_from_cache('elasticsearch_search_fields_value_boost_functions');
+
+        $functions = $qb->_get_value_boost_functions();
+        is( scalar @$functions, 2, '_get_value_boost_functions returns one entry per boost' );
+        ok(
+            ( grep { $_->{filter}{term}{'itype__facet'} eq 'BK' && $_->{weight} == 2.0 } @$functions ),
+            'BK boost has correct filter and weight'
+        );
+        ok(
+            ( grep { $_->{filter}{term}{'itype__facet'} eq 'DVD' && $_->{weight} == 0.5 } @$functions ),
+            'DVD boost has correct filter and weight'
+        );
+
+        $query = $qb->build_query('test');
+        ok( exists $query->{query}{function_score}, 'build_query wraps in function_score when boosts are configured' );
+        is( $query->{query}{function_score}{score_mode}, 'max',      'score_mode is max' );
+        is( $query->{query}{function_score}{boost_mode}, 'multiply', 'boost_mode is multiply' );
+        ok(
+            exists $query->{query}{function_score}{query}{bool},
+            'original bool query is preserved inside function_score'
+        );
+
+        # Authorities index must not get function_score even with boosts in the DB
+        my $auth_qb = Koha::SearchEngine::Elasticsearch::QueryBuilder->new( { index => 'authorities' } );
+        $cache->clear_from_cache('elasticsearch_search_fields_value_boost_functions');
+        $query = $auth_qb->build_query('test');
+        ok( !exists $query->{query}{function_score}, 'authorities index is not wrapped in function_score' );
+
+        # Geolocation search + value boosts: function_score must wrap the rebuilt geo query, not be discarded by it
+        $cache->clear_from_cache('elasticsearch_search_fields_value_boost_functions');
+        ( undef, $query ) = $qb->build_query_compat(
+            undef,
+            ['lat:51.5* lon:-0.1* distance:5km*'],
+            ['geolocation'],
+        );
+        ok(
+            exists $query->{query}{function_score},
+            'build_query_compat wraps in function_score when boosts are active and a geolocation search is issued'
+        );
+        ok(
+            exists $query->{query}{function_score}{query}{bool}{filter}{geo_distance},
+            'geo_distance filter is preserved inside function_score.query when both value boosts and geolocation are active'
+        );
+    }
 };
 
 $schema->storage->txn_rollback;
