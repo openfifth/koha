@@ -29,6 +29,8 @@ use Koha::SearchMarcMaps;
 use Koha::SearchFields;
 use Koha::Caches;
 use Koha::AuthorisedValues;
+use Koha::SearchFieldValueBoost;
+use Koha::SearchFieldValueBoosts;
 
 use Try::Tiny                 qw( catch try );
 use Module::Load::Conditional qw( can_load );
@@ -210,6 +212,34 @@ if ( $op eq 'cud-edit' ) {
     C4::Log::logaction( 'SEARCHENGINE', 'RESET_MAPPINGS', undef, q{} );
 } elsif ( $op eq 'reset_confirm' ) {
     $template->param( reset_confirm => 1 );
+} elsif ( $op eq 'cud-edit-value-boost' ) {
+    my $search_field_id = $input->param('value_boost_search_field_id');
+    my $value           = $input->param('value_boost_value');
+    my $weight          = $input->param('value_boost_weight');
+
+    if ( !$search_field_id || !defined $value || $value eq '' ) {
+        push @errors, { type => 'error', code => 'invalid_value_boost_params' };
+    } elsif ( !looks_like_number($weight) || $weight <= 0 ) {
+        push @errors, { type => 'error', code => 'invalid_value_boost_weight', weight => $weight };
+    } else {
+        my $boost = Koha::SearchFieldValueBoosts->find( { search_field_id => $search_field_id, value => $value } );
+        if ($boost) {
+            $boost->weight($weight)->store;
+        } else {
+            Koha::SearchFieldValueBoost->new(
+                { search_field_id => $search_field_id, value => $value, weight => $weight } )->store;
+        }
+        Koha::SearchEngine::Elasticsearch->clear_search_fields_cache();
+        push @messages, { type => 'message', code => 'success_on_update' };
+    }
+} elsif ( $op eq 'cud-delete-value-boost' ) {
+    my $id = $input->param('value_boost_id');
+    if ($id) {
+        my $boost = Koha::SearchFieldValueBoosts->find($id);
+        $boost->delete if $boost;
+        Koha::SearchEngine::Elasticsearch->clear_search_fields_cache();
+        push @messages, { type => 'message', code => 'success_on_update' };
+    }
 }
 
 my @indexes;
@@ -297,6 +327,28 @@ while ( my $search_field = $search_fields->next ) {
 }
 
 my @authorised_value_categories = Koha::AuthorisedValues->new->categories;
+
+my @value_boosts;
+my $all_value_boosts = Koha::SearchFieldValueBoosts->search(
+    {},
+    {
+        join      => 'search_field',
+        '+select' => [ 'search_field.name', 'search_field.label' ],
+        '+as'     => [ 'field_name',        'field_label' ],
+        order_by  => [ 'search_field.name', 'value' ],
+    }
+);
+while ( my $boost = $all_value_boosts->next ) {
+    push @value_boosts, {
+        id              => $boost->id,
+        search_field_id => $boost->search_field_id,
+        field_name      => $boost->get_column('field_name'),
+        field_label     => $boost->get_column('field_label'),
+        value           => $boost->value,
+        weight          => $boost->weight,
+    };
+}
+
 push @messages, @errors;
 $template->param(
     indexes                     => \@indexes,
@@ -304,6 +356,7 @@ $template->param(
     facetable_fields            => \@facetable_fields,
     messages                    => \@messages,
     authorised_value_categories => \@authorised_value_categories,
+    value_boosts                => \@value_boosts,
 );
 
 output_html_with_http_headers $input, $cookie, $template->output;

@@ -56,6 +56,10 @@
                 [% tx("Index '{index}' needs to be reindexed.", { index = m.index }) | html %]
             [% CASE 'recreate_required' %]
                 [% tx("Index '{index}' needs to be recreated.", { index = m.index }) | html %]
+            [% CASE 'invalid_value_boost_params' %]
+                [% t("A search field and value are required to add a relevance boost.") | $raw %]
+            [% CASE 'invalid_value_boost_weight' %]
+                [% tx("Invalid boost weight '{weight}', must be a positive decimal number.", { weight = m.weight }) | html %]
             [% CASE 'success_on_update' %]
                 [% t("Mappings updated successfully.") | $raw %]
             [% CASE 'success_on_reset' %]
@@ -576,6 +580,47 @@
                                     </tfoot>
                                 </table>
                             </div>
+
+                            <h3>Relevance boosts</h3>
+                            <div class="hint">Boost or penalize search results based on specific field values. A weight greater than 1 promotes results; less than 1 demotes them.</div>
+                            <table id="value_boosts_table">
+                                <thead>
+                                    <tr>
+                                        <th>Search field</th>
+                                        <th>Value</th>
+                                        <th>Weight</th>
+                                        <th>&nbsp;</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    [% FOREACH boost IN value_boosts %]
+                                        <tr>
+                                            <td>[% boost.field_label | html %] ([% boost.field_name | html %])</td>
+                                            <td>[% boost.value | html %]</td>
+                                            <td>[% boost.weight | html %]</td>
+                                            <td>
+                                                <button type="button" class="btn btn-default btn-xs delete-value-boost" data-id="[% boost.id | html %]"><i class="fa fa-trash"></i> Delete</button>
+                                            </td>
+                                        </tr>
+                                    [% END %]
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td>
+                                            <select name="value_boost_search_field_id" id="value_boost_search_field_id" form="add_value_boost_form">
+                                                [% FOREACH f IN facetable_fields %]
+                                                    <option value="[% f.id | html %]">[% f.label | html %] ([% f.name | html %])</option>
+                                                [% END %]
+                                            </select>
+                                        </td>
+                                        <td><input type="text" name="value_boost_value" id="value_boost_value" form="add_value_boost_form" placeholder="e.g. BK" /></td>
+                                        <td><input type="text" inputmode="decimal" pattern="[0-9\.]*" name="value_boost_weight" id="value_boost_weight" form="add_value_boost_form" value="1.00" /></td>
+                                        <td>
+                                            <button type="submit" form="add_value_boost_form" class="btn btn-default btn-xs"><i class="fa fa-plus"></i> Add</button>
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
                         [% END %]
                     [% END # /WRAPPER tab_panel#mapping_{ index.index_name} %]
                 [% END # /FOREACH index %]
@@ -593,12 +638,27 @@
             <a id="export_mappings" class="btn btn-default"><i class="fa-solid fa-download" aria-hidden="true"></i> Export mappings</a>
         </fieldset>
     </form>
+
+    <form id="add_value_boost_form" method="post" action="/cgi-bin/koha/admin/searchengine/elasticsearch/mappings.pl">
+        [% INCLUDE 'csrf-token.inc' %]
+        <input type="hidden" name="op" value="cud-edit-value-boost" />
+    </form>
+    <form id="delete_value_boost_form" method="post" action="/cgi-bin/koha/admin/searchengine/elasticsearch/mappings.pl">
+        [% INCLUDE 'csrf-token.inc' %]
+        <input type="hidden" name="op" value="cud-delete-value-boost" />
+        <input type="hidden" name="value_boost_id" id="delete_value_boost_id" value="" />
+    </form>
 [% END %]
 
 [% MACRO jsinclude BLOCK %]
     [% INCLUDE 'datatables.inc' %]
     [% Asset.js("js/elasticsearch-mappings.js") | $raw %]
     <script nonce="[% Koha.CSPNonce | $raw %]">
+        $(document).on("click", ".delete-value-boost", function () {
+            $("#delete_value_boost_id").val($(this).data("id"));
+            $("#delete_value_boost_form").submit();
+        });
+
         $("#export_mappings").on("click", function (e) {
             e.preventDefault();
             fetch("/api/v1/config/search_mappings", {
