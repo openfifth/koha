@@ -111,6 +111,17 @@ there are system-level differences in notices handling, eg "overdue notice diges
 way to tell an overdue notice from a non-overdue notice as these are not categorised. And while default notices exist, libraries may create
 as many different notices as they would like, and use each for whichever purpose.
 
+### Lost items and notice suppression (decided)
+
+`overdue_notices.pl` excludes lost items wholesale via `items.itemlost = 0` (`:591`). The trigger pipeline cannot copy that as a fetch-level filter: a later trigger may legitimately act on an already-lost item (e.g. `mark_returned`, `forgive_fine`), so lost items must stay in the working set. The lost/notice interaction is therefore resolved at *notice enactment*, per item, not at fetch:
+
+- A notice on a lost item (`items.itemlost != 0`) is suppressed **only when it is the trigger's sole action** — a bare overdue reminder. This reproduces the legacy "stop nagging about a lost item" behaviour.
+- A notice whose trigger *also* carries a non-notice action (`charge` / `lost` / `restrict` / `mark_returned` / `forgive_fine`) is an **event notification** ("item declared lost, you have been charged …") and always sends — on the same trigger or a later one, regardless of `itemlost`.
+
+This is the only out-of-band signal the notice path honours, and it is sufficient because there is **no manual staff path to send an overdue notice** (staff can only *resend* an already-queued message). The only manual decision that should silence a routine reminder is the upstream lost-marking, which `itemlost` already captures. A general "respect staff's deliberate non-actions" mechanism via `action_logs` was considered and rejected: the relevant logs are syspref-gated (`CataloguingLog` / `FinesLog` / `ReturnLog` / `BorrowersLog`), the replacement-fee charge is not logged at all, and an audit trail records actions taken — never a deliberate non-action.
+
+Implementation: `Koha::Overdues::ActionExecutor::route_item_actions_to_queue` builds the non-notice action batch first, then enqueues the notice only when the item is not lost or the trigger carries a non-notice action. `itemlost` is carried on the per-item hashref assembled in `Koha::Overdues::TriggerProcessor::_dispatch_overdues`.
+
 ### Questions
 
 ### About digests
