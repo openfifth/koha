@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 18;
+use Test::More tests => 19;
 use Test::MockModule;
 use Test::Exception;
 use Test::Warn;
@@ -1684,6 +1684,47 @@ subtest 'forgive_debit() tests' => sub {
     $pay->apply( { debits => [$partial] } );
     my $forgive = $account->forgive_debit( $partial, { interface => 'cron', library_id => $branchcode } );
     is( $forgive->amount + 0, -6, 'forgives only the remaining outstanding amount' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'forgive_debit() forgives each accrual increment exactly once' => sub {
+
+    plan tests => 7;
+
+    $schema->storage->txn_begin;
+
+    my $library    = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron     = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $account    = $patron->account;
+    my $branchcode = $library->branchcode;
+
+    # An overdue fine of 5.00, forgiven on the day the trigger fires.
+    my $fine = $account->add_debit( { amount => 5, interface => 'commandline', type => 'OVERDUE' } );
+    $fine->status('UNRETURNED')->store;
+
+    my $first = $account->forgive_debit( $fine, { interface => 'cron', library_id => $branchcode } );
+    $fine->discard_changes;
+    is( $first->amount + 0,           -5, 'first forgive credits the full outstanding' );
+    is( $fine->amountoutstanding + 0,  0, 'outstanding cleared after first forgive' );
+
+    # Same day, the fine accrues a further 2.00 (UpdateFine path) and the
+    # script runs again. amountoutstanding reflects only the new increment,
+    # because forgiveness was netted into it.
+    $fine->adjust( { amount => 7, type => 'overdue_update', interface => 'commandline' } );
+    $fine->discard_changes;
+    is( $fine->amountoutstanding + 0, 2, 'accrual leaves only the new increment outstanding' );
+
+    my $second = $account->forgive_debit( $fine, { interface => 'cron', library_id => $branchcode } );
+    $fine->discard_changes;
+    is( $second->amount + 0,          -2, 'second forgive credits the increment, not the gross amount' );
+    is( $fine->amountoutstanding + 0,  0, 'outstanding cleared again' );
+
+    # Two distinct FORGIVEN credits, summing to the full accrued debt — the
+    # 5.00 is never forgiven twice, the 2.00 increment is forgiven once.
+    my $forgiven = $fine->credits( { credit_type_code => 'FORGIVEN' } );
+    is( $forgiven->count,      2, 'one FORGIVEN credit per accrual increment' );
+    is( $forgiven->total + 0, -7, 'forgiven credits sum to the full accrued debt' );
 
     $schema->storage->txn_rollback;
 };
