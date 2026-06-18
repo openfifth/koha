@@ -6049,6 +6049,24 @@ CREATE TABLE `search_field` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `search_field_value_boost`
+--
+
+DROP TABLE IF EXISTS `search_field_value_boost`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `search_field_value_boost` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `search_field_id` int(11) NOT NULL COMMENT 'FK to search_field',
+  `value` varchar(255) NOT NULL COMMENT 'the field value to boost',
+  `weight` decimal(5,2) NOT NULL DEFAULT 1.00 COMMENT 'relevance multiplier applied when a document matches this value',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `search_field_value` (`search_field_id`,`value`(191)),
+  CONSTRAINT `sfvb_ibfk_1` FOREIGN KEY (`search_field_id`) REFERENCES `search_field` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `search_filters`
 --
 
