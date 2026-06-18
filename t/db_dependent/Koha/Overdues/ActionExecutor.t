@@ -21,13 +21,15 @@ use Modern::Perl;
 
 use Test::MockModule;
 use Test::NoWarnings;
-use Test::More tests => 19;
+use Test::More tests => 20;
 use Test::Warn;
 
 use Koha::Account;
 use Koha::Account::Lines;
 use Koha::Database;
+use Koha::DateUtils qw( dt_from_string );
 use Koha::Items;
+use Koha::Notice::Message;
 use Koha::Notice::Messages;
 use Koha::Old::Checkouts;
 use Koha::Overdues::ActionExecutor;
@@ -807,6 +809,7 @@ subtest 'process_notice_queue: pending print in message_queue blocks fallback sy
             status                 => 'pending',
             subject                => 'OD1',
             content                => 'prior body',
+            time_queued            => dt_from_string,
         }
     )->store;
 
@@ -1038,4 +1041,96 @@ subtest 'process_action_queue: enacts actions in a fixed order' => sub {
         [qw( enact_restrict enact_forgive_fine enact_lost enact_charge enact_mark_returned )],
         'actions enacted in restrict -> forgive_fine -> lost -> charge -> mark_returned order'
     );
+};
+
+subtest 'process_notice_queue: re-run skips a notice already queued today' => sub {
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron  = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { branchcode => $library->branchcode, email => 'patron@example.com' },
+        }
+    );
+    my $item  = $builder->build_sample_item( { homebranch => $library->branchcode } );
+    my $issue = $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => { borrowernumber => $patron->borrowernumber, itemnumber => $item->itemnumber }
+        }
+    );
+
+    $builder->build(
+        {
+            source => 'Letter',
+            value  => {
+                module                 => 'circulation',
+                code                   => 'OD1',
+                branchcode             => q{},
+                message_transport_type => 'email',
+                name                   => 'OD1 email',
+                title                  => 'OD1',
+                content                => 'body',
+                is_html                => 0,
+                lang                   => 'default',
+            },
+        }
+    );
+
+    my $notice_entry = {
+        item => {
+            borrowernumber    => $patron->borrowernumber,
+            itemnumber        => $item->itemnumber,
+            issue_id          => $issue->issue_id,
+            patronhomebranch  => $library->branchcode,
+            itemhomebranch    => $library->branchcode,
+            itemholdingbranch => $library->branchcode,
+        },
+        action => { type => 'notice', notice_code => 'OD1', mtt => 'email' },
+        delay  => 7,
+    };
+
+    # A notice already SENT to this patron today (queue drained by
+    # SendQueuedMessages) must block a re-run from enqueuing a duplicate.
+    Koha::Notice::Message->new(
+        {
+            borrowernumber         => $patron->borrowernumber,
+            letter_code            => 'OD1',
+            message_transport_type => 'email',
+            status                 => 'sent',
+            subject                => 'OD1',
+            content                => 'already sent today',
+            time_queued            => dt_from_string,
+        }
+    )->store;
+
+    my $executor = Koha::Overdues::ActionExecutor->new;
+    $executor->add_to_notice_queue( $patron->borrowernumber, 'OD1', 'email', 7, [$notice_entry] );
+    $executor->process_notice_queue;
+
+    is(
+        Koha::Notice::Messages->search( { borrowernumber => $patron->borrowernumber, letter_code => 'OD1' } )->count,
+        1, 'sent notice from today blocks re-enqueue — no duplicate row'
+    );
+
+    # The same notice queued on an earlier day must NOT block — a later overdue
+    # episode still notifies (the same-day bound in _notice_exists).
+    Koha::Notice::Messages->search( { borrowernumber => $patron->borrowernumber } )
+        ->update( { time_queued => dt_from_string->subtract( days => 1 ) } );
+
+    my $next_run = Koha::Overdues::ActionExecutor->new;
+    $next_run->add_to_notice_queue( $patron->borrowernumber, 'OD1', 'email', 7, [$notice_entry] );
+    $next_run->process_notice_queue;
+
+    is(
+        Koha::Notice::Messages->search( { borrowernumber => $patron->borrowernumber, letter_code => 'OD1' } )->count,
+        2, 'notice queued on an earlier day does not block — fresh episode enqueues'
+    );
+
+    $schema->storage->txn_rollback;
 };
