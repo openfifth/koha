@@ -164,6 +164,21 @@ __PACKAGE__->add_unique_constraint("name", ["name"]);
 
 =head1 RELATIONS
 
+=head2 search_field_value_boosts
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::SearchFieldValueBoost>
+
+=cut
+
+__PACKAGE__->has_many(
+  "search_field_value_boosts",
+  "Koha::Schema::Result::SearchFieldValueBoost",
+  { "foreign.search_field_id" => "self.id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 search_marc_to_fields
 
 Type: has_many
@@ -180,8 +195,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2024-05-07 09:45:57
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:/WPJEu04y32zDMr+vnK5og
+# Created by DBIx::Class::Schema::Loader v0.07053 @ 2026-06-18 11:16:58
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:QuxywtqYkIPQ2A3nprdRIg
 
 __PACKAGE__->add_columns(
     '+mandatory'    => { is_boolean => 1 },
