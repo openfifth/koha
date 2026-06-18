@@ -209,9 +209,15 @@ renders into one letter via the template's repeat block.
 Processes transports in reliability order — C<print>, then C<sms>, then
 C<email>. When an C<sms> or C<email> entry can't be delivered (patron has no
 C<smsalertnumber> / no C<notice_email_address>), a C<print> entry is
-synthesised for the same (borrower, notice_code) unless the system already
-holds a pending print for that pair — covers prints written earlier in this
-run (explicit or synthesised) and any pending leftover from prior runs.
+synthesised instead.
+
+Every enqueue is guarded by L</_notice_exists>: a bucket is skipped when a
+message_queue row for the same (borrower, letter_code, transport) was already
+queued today and is still pending or sent. This makes a re-run idempotent —
+including one that lands after C<SendQueuedMessages> has drained the queue to
+C<sent> — while still letting a later day's overdue episode notify. It also
+covers the synthesised-print case: an explicit or earlier-synthesised print for
+the same pair blocks a duplicate fallback.
 
 =cut
 
@@ -232,6 +238,7 @@ sub process_notice_queue {
                     }
 
                     if ( $mtt eq 'print' ) {
+                        next if $self->_notice_exists( $borrowernumber, $notice_code, 'print', [ 'pending', 'sent' ] );
                         $self->_enqueue_letter_for_bucket( $entries, 'print' );
                         next;
                     }
@@ -244,11 +251,12 @@ sub process_notice_queue {
 
                     my $viable = $mtt eq 'sms' ? $patron->smsalertnumber : $patron->notice_email_address;
                     if ($viable) {
+                        next if $self->_notice_exists( $borrowernumber, $notice_code, $mtt, [ 'pending', 'sent' ] );
                         $self->_enqueue_letter_for_bucket( $entries, $mtt );
                         next;
                     }
 
-                    if ( $self->_pending_print_exists( $borrowernumber, $notice_code ) ) {
+                    if ( $self->_notice_exists( $borrowernumber, $notice_code, 'print', [ 'pending', 'sent' ] ) ) {
                         next;
                     }
                     $self->_enqueue_letter_for_bucket( $entries, 'print' );
@@ -258,23 +266,26 @@ sub process_notice_queue {
     }
 }
 
-=head3 _pending_print_exists
+=head3 _notice_exists
 
-Returns true if a pending print message_queue row already exists for this
-(borrowernumber, letter_code) pair. Used to dedup synthesised print fallbacks
-against any print — explicit, prior-pass synthesised, or leftover from a prior
-run — already sitting in the pipeline.
+Returns true if a notice message_queue row already exists for this day, for this
+(borrowernumber, letter_code) pair. Used to dedup synthesised notice fallbacks
+against any notice — explicit, prior-pass synthesised, or leftover from a prior
+run — already sitting in the pipeline. Status specific.
 
 =cut
 
-sub _pending_print_exists {
-    my ( $self, $borrowernumber, $notice_code ) = @_;
+sub _notice_exists {
+    my ( $self, $borrowernumber, $code, $type, $status ) = @_;
+    my $today = dt_from_string->truncate( to => 'day' )->strftime('%Y-%m-%d %H:%M:%S');
+
     return Koha::Notice::Messages->search(
         {
             borrowernumber         => $borrowernumber,
-            letter_code            => $notice_code,
-            message_transport_type => 'print',
-            status                 => 'pending',
+            letter_code            => $code,
+            message_transport_type => $type,
+            status                 => $status,
+            time_queued            => { '>=' => $today },
         }
     )->count > 0;
 }
@@ -354,6 +365,7 @@ sub _enqueue_letter_for_bucket {
             letter_code            => $notice_code,
             message_transport_type => $mtt,
             status                 => 'pending',
+            time_queued            => dt_from_string(),
         }
     )->store;
 }
