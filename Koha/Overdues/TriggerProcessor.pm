@@ -233,6 +233,7 @@ sub _dispatch_overdues {
             days_overdue      => $days_overdue,
             biblionumber      => $item->biblionumber,
             replacementfee    => $item->replacementprice,
+            itemlost          => $item->itemlost,
             itemhomebranch    => $item->homebranch,
             itemholdingbranch => $item->holdingbranch,
             patronhomebranch  => $patron->branchcode,

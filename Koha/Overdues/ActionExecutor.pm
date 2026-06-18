@@ -77,25 +77,9 @@ sub route_item_actions_to_queue {
 
     my %actions = map { $_->{type} => $_ } @$actions_hashes;
 
-    # handle notice
-    if ( $actions{notice} && defined $actions{notice}->{notice_code} && $actions{notice}->{notice_code} ne '' ) {
-        my $mtts = $actions{notice}->{mtts} // [];
-
-        for my $mtt (@$mtts) {
-            my $per_mtt_action = { %{ $actions{notice} }, mtt => $mtt };
-            delete $per_mtt_action->{mtts};
-
-            $self->add_to_notice_queue(
-                $borrowernumber,
-                $actions{notice}->{notice_code},
-                $mtt,
-                $days_overdue,
-                [ $self->format_notice_item( $overdue_item, $per_mtt_action, $days_overdue ) ],
-            );
-        }
-    }
-
-    # handle action batch
+    # Build the non-notice action batch first: whether the trigger carries any
+    # non-notice action decides how a notice on an already-lost item is treated
+    # (see the notice block below).
     my %action_batch;
     for my $type (qw( restrict lost charge mark_returned forgive_fine )) {
         if ( !$actions{$type} ) {
@@ -109,6 +93,37 @@ sub route_item_actions_to_queue {
         $action_batch{$type} = $actions{$type}{value};
     }
 
+    # handle notice
+    if ( $actions{notice} && defined $actions{notice}->{notice_code} && $actions{notice}->{notice_code} ne '' ) {
+
+        # Parity with the itemlost = 0 filter legacy overdue_notices.pl applied:
+        # once an item is lost, suppress a *bare* overdue reminder — a notice
+        # whose trigger does nothing else. A notice that shares its trigger with
+        # a non-notice action is an event notification ("item declared lost, you
+        # have been charged …") and always sends, on this or a later trigger.
+        # Lost items still flow through the pipeline so action triggers (e.g.
+        # mark_returned) can act on them.
+        my $bare_reminder_on_lost = $overdue_item->{itemlost} && !%action_batch;
+
+        if ( !$bare_reminder_on_lost ) {
+            my $mtts = $actions{notice}->{mtts} // [];
+
+            for my $mtt (@$mtts) {
+                my $per_mtt_action = { %{ $actions{notice} }, mtt => $mtt };
+                delete $per_mtt_action->{mtts};
+
+                $self->add_to_notice_queue(
+                    $borrowernumber,
+                    $actions{notice}->{notice_code},
+                    $mtt,
+                    $days_overdue,
+                    [ $self->format_notice_item( $overdue_item, $per_mtt_action, $days_overdue ) ],
+                );
+            }
+        }
+    }
+
+    # handle action batch
     if (%action_batch) {
         $self->add_to_action_batch_queue(
             {
