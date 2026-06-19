@@ -15,18 +15,22 @@
 // Configuration
 // Include any default variable overrides here
 @import "_variables";
+@import "_variables-dark";
+@import "_color-mode";
 
 // Include remainder of required Bootstrap stylesheets
 @import "~bootstrap/scss/_variables";
+@import "~bootstrap/scss/_variables-dark";
 @import "~bootstrap/scss/_mixins";
 
-$enable-dark-mode: false;
+$color-mode-type: data;
 
 @import "~bootstrap/scss/_maps";
 @import "~bootstrap/scss/_utilities";
 
 // Layout & components
 @import "~bootstrap/scss/_root";
+@import "_root";
 @import "~bootstrap/scss/_reboot";
 @import "~bootstrap/scss/_type";
 @import "~bootstrap/scss/_images";

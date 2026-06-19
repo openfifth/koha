@@ -1,0 +1,81 @@
+// Koha runtime theme tokens.
+// These CSS custom properties are the bridge between the Sass variables
+// in _variables.scss / _variables-dark.scss (compile-time) and the runtime
+// dark-mode toggle. Component SCSS should reference var(--koha-*) rather
+// than hard-coded hex literals so a single attribute flip on <html>
+// (data-bs-theme="dark") re-skins the whole UI.
+// Light values live at :root. Dark overrides live in the matching
+// [data-bs-theme="dark"] block emitted via the color-mode() mixin.
+
+:root {
+    // Surfaces
+    --koha-surface: #FFF;             // cards, fieldsets, page sections
+    --koha-surface-muted: #F3F4F4;    // toolbar, table headers
+    --koha-surface-accent: #E6E6E6;   // sidebar, patroninfo, search facets
+    --koha-surface-overlay: #FFF;     // dropdowns, popovers
+
+    // Text on surfaces
+    --koha-on-surface: #000;
+    --koha-on-surface-muted: #696969; // legend, footers, captions
+    --koha-on-surface-subtle: #808080;
+
+    // Borders
+    --koha-border: #DDD;
+    --koha-border-muted: #EEE;
+    --koha-border-strong: #ADADAD;
+
+    // Inputs — text fields, selects, textareas in custom (.fg-row) forms.
+    --koha-input-bg: #FFF;
+    --koha-input-color: #495057;
+    --koha-input-border: #AAAAAA;
+    --koha-input-bg-disabled: #EEE;
+
+    // Brand (the brand fill stays constant across themes; the *text*
+    // greens below are tuned per-theme because dark-green-on-dark fails AA).
+    --koha-brand: #{$background-color-primary};
+    --koha-brand-on: #FFF;
+
+    // Link / success text. The light greens are dark enough for AA on
+    // light surfaces but fail on dark ones, so the dark block re-tunes them.
+    --koha-link: #{$link-color};              // #016100, ~7.9:1 on #FFF
+    --koha-link-hover: #{$link-hover-color};
+    --koha-text-success: #{$green-text-color}; // #006100
+    --koha-text-danger: #{$warning-text-color}; // #CC0000, ~5.9:1 on #FFF
+}
+
+@include color-mode(dark) {
+    // The color-mode() mixin already emits the [data-bs-theme="dark"]
+    // selector, which is set on <html> (i.e. :root) by the FOUC-killer
+    // script in doc-head-open.inc. Don't wrap a :root block inside —
+    // that compiles to "[data-bs-theme=dark] :root", a descendant
+    // combinator that never matches.
+
+    // Surfaces — Material-style elevation: each step lighter than body.
+    --koha-surface: #1E1E1E;
+    --koha-surface-muted: #262626;
+    --koha-surface-accent: #2A2A2A;
+    --koha-surface-overlay: #2D2D2D;
+
+    // Text — keep AA contrast on the surfaces above.
+    --koha-on-surface: #E6E6E6;        // ~13:1 on #1E1E1E
+    --koha-on-surface-muted: #9D9D9D;  // ~5.4:1 on #1E1E1E
+    --koha-on-surface-subtle: #7C7C7C; // ~3.7:1 — large text only
+
+    // Borders — sit just above the surface they bound.
+    --koha-border: #3A3A3A;
+    --koha-border-muted: #2E2E2E;
+    --koha-border-strong: #4A4A4A;
+
+    // Inputs — slightly lighter than the surface they sit on, with a
+    // visible border so empty fields read as fields.
+    --koha-input-bg: #2A2A2A;
+    --koha-input-color: #E6E6E6;
+    --koha-input-border: #525252;
+    --koha-input-bg-disabled: #1A1A1A;
+
+    // Link / success / danger text — lifted to lighter tints for AA on dark.
+    --koha-link: #6FBF73;              // ~7.3:1 on #1E1E1E
+    --koha-link-hover: #8FD693;
+    --koha-text-success: #6FBF73;
+    --koha-text-danger: #FF6B66;       // ~5.9:1 on #1E1E1E (vs #CC0000 ~1.8:1)
+}
