@@ -1766,9 +1766,11 @@ $btn-primary: #FFC32B;
 $btn-primary-hover: lighten( $btn-primary, 10 );
 
 $language-footer-min-height: 30px;
-$table-border-color: #BCBCBC;
-$table-header-background: #FFF;
-$table-odd-row: #f3f4f4;
+// Reuse the Bootstrap CSS custom properties so these flip with
+// [data-bs-theme="dark"] instead of staying glued to the light values.
+$table-border-color: var(--#{$prefix}border-color);
+$table-header-background: var(--koha-surface-muted);
+$table-odd-row: var(--koha-surface-muted);
 
 $default-bs-btn-bg: #FFF;
 $default-bs-btn-border-color: #555;
