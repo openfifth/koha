@@ -18,13 +18,18 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 11;
+use Test::More tests => 12;
 
 use t::lib::Mocks;
 use t::lib::TestBuilder;
 
 use Koha::Database;
 use Koha::DateUtils qw( dt_from_string );
+
+use C4::Reserves qw( AddReserve );
+use Koha::CirculationRules;
+use Koha::Holds;
+use Koha::HoldGroups;
 
 BEGIN { use_ok('Koha::Patron::Availability::Hold'); }
 
@@ -193,6 +198,71 @@ subtest 'no_short_circuit collects all blockers' => sub {
     ok( !$result->available,              'Not available' );
     ok( $result->blockers->{bad_address}, 'bad_address collected' );
     ok( $result->blockers->{card_lost},   'card_lost collected' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'Hold group counting in reservesallowed' => sub {
+
+    plan tests => 4;
+
+    $schema->storage->txn_begin;
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries', value => { pickup_location => 1 } } );
+    my $patron  = $builder->build_object( { class => 'Koha::Patrons',   value => { branchcode => $library->id } } );
+    my @biblios = map { $builder->build_sample_biblio() } ( 1 .. 4 );
+    my @items   = map { $builder->build_sample_item( { biblionumber => $_->id } ) } @biblios;
+
+    Koha::CirculationRules->delete;
+    Koha::CirculationRules->set_rules(
+        {
+            branchcode   => undef,
+            categorycode => undef,
+            itemtype     => undef,
+            rules        => { reservesallowed => 2, holds_per_record => 99, holds_per_day => 99 },
+        }
+    );
+
+    # Place 2 holds and group them
+    my $rid1 = C4::Reserves::AddReserve(
+        { branchcode => $library->id, borrowernumber => $patron->id, biblionumber => $biblios[0]->id } );
+    my $rid2 = C4::Reserves::AddReserve(
+        { branchcode => $library->id, borrowernumber => $patron->id, biblionumber => $biblios[1]->id } );
+    my $hg = $builder->build_object( { class => 'Koha::HoldGroups' } );
+    Koha::Holds->find($rid1)->set( { hold_group_id => $hg->id } )->store;
+    Koha::Holds->find($rid2)->set( { hold_group_id => $hg->id } )->store;
+
+    # 2 grouped holds count as 1 — under limit of 2
+    my $result = Koha::Patron::Availability::Hold->check(
+        {
+            patron    => $patron, library_id => $library->id, item_type_id => $items[2]->effective_itemtype,
+            biblio_id => $biblios[2]->id
+        }
+    );
+    ok( $result->available, 'Grouped holds count as 1, under limit' );
+
+    # Add ungrouped hold — effective count = 2, at limit
+    C4::Reserves::AddReserve(
+        { branchcode => $library->id, borrowernumber => $patron->id, biblionumber => $biblios[2]->id } );
+    $result = Koha::Patron::Availability::Hold->check(
+        {
+            patron    => $patron, library_id => $library->id, item_type_id => $items[3]->effective_itemtype,
+            biblio_id => $biblios[3]->id
+        }
+    );
+    ok( !$result->available,                    '1 group + 1 ungrouped = 2, at limit' );
+    ok( $result->blockers->{too_many_reserves}, 'Blocker is too_many_reserves' );
+
+    # Ungroup — 3 holds, over limit
+    Koha::Holds->find($rid1)->set( { hold_group_id => undef } )->store;
+    Koha::Holds->find($rid2)->set( { hold_group_id => undef } )->store;
+    $result = Koha::Patron::Availability::Hold->check(
+        {
+            patron    => $patron, library_id => $library->id, item_type_id => $items[3]->effective_itemtype,
+            biblio_id => $biblios[3]->id
+        }
+    );
+    ok( !$result->available, '3 ungrouped holds over limit of 2' );
 
     $schema->storage->txn_rollback;
 };

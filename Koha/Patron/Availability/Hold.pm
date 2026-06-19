@@ -183,7 +183,7 @@ sub check {
 
     # holds_per_day
     if ( defined $holds_per_day && $holds_per_day ne '' ) {
-        my $today_holds = $patron->holds->search( { reservedate => dt_from_string()->date } )->count;
+        my $today_holds = $patron->holds->count_holds( { reservedate => dt_from_string()->date } );
         if ( $today_holds >= $holds_per_day ) {
             $result->add_blocker( too_many_reserves_today => $holds_per_day );
             return $result unless $no_short_circuit;
@@ -196,7 +196,7 @@ sub check {
             $result->add_blocker( no_reserves_allowed => 1 );
             return $result unless $no_short_circuit;
         }
-        my $total = $patron->holds->count;
+        my $total = $patron->holds->count_holds;
         if ( $total >= $reservesallowed ) {
             $result->add_blocker( too_many_reserves => $reservesallowed );
             return $result unless $no_short_circuit;
@@ -212,7 +212,7 @@ sub check {
         }
     );
     if ( $max_holds_rule && defined( $max_holds_rule->rule_value ) && $max_holds_rule->rule_value ne '' ) {
-        my $total = $patron->holds->count;
+        my $total = $patron->holds->count_holds;
         if ( $total >= $max_holds_rule->rule_value ) {
             $result->add_blocker( too_many_reserves => $max_holds_rule->rule_value );
             return $result unless $no_short_circuit;
