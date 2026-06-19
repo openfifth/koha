@@ -82,11 +82,11 @@ export default {
 }
 
 .sidebar_menu ul li a.disabled {
-    color: #666;
+    color: var(--koha-on-surface-muted);
     pointer-events: none;
     font-weight: 700;
 }
 .sidebar_menu ul li a.disabled.router-link-active {
-    color: #000;
+    color: var(--koha-on-surface);
 }
 </style>

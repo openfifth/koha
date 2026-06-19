@@ -92,7 +92,8 @@ export default {
 
 form .v-select {
     display: inline-block;
-    background-color: white;
+    background-color: var(--koha-input-bg);
+    color: var(--koha-input-color);
     width: 30%;
 }
 
@@ -101,7 +102,7 @@ input:not([type="submit"]):not([type="search"]):not([type="button"]):not(
         [type="checkbox"]
     ):not([type="radio"]),
 textarea {
-    border-color: rgba(60, 60, 60, 0.26);
+    border-color: var(--koha-input-border);
     border-width: 1px;
     border-radius: 4px;
     min-width: 30%;
@@ -112,7 +113,7 @@ textarea {
 .sidebar_menu ul li a.current.disabled {
     background-color: inherit;
     border-left: 5px solid transparent;
-    color: #000;
+    color: var(--koha-on-surface);
 }
 .sidebar_menu ul li a.disabled {
     color: #666;

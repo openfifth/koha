@@ -296,7 +296,7 @@ div.rows + div.rows {
     margin-top: 0em;
 }
 .accordion fieldset legend {
-    border: 1px solid #fff;
+    border: 1px solid var(--koha-surface);
     margin-bottom: 0rem;
     margin-left: -0.5em;
     margin-top: -0.5em;

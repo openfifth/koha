@@ -153,12 +153,13 @@ export default {
     flex-wrap: wrap;
 }
 .count-list li {
-    background: #eee;
+    background: var(--koha-surface-accent);
+    color: var(--koha-on-surface);
     padding: 0.3em 0.8em;
     border-radius: 12px;
 }
 .inactive-link {
-    color: #888;
+    color: var(--koha-on-surface-muted);
 }
 .count-list a {
     text-decoration: none;

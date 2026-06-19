@@ -199,8 +199,9 @@ export default {
 
 <style scoped>
 .widget {
-    background-color: #fff;
-    border: 1px solid #ccc;
+    background-color: var(--koha-surface);
+    color: var(--koha-on-surface);
+    border: 1px solid var(--koha-border);
     border-radius: 8px;
     padding: 16px;
     margin-bottom: 12px;
@@ -208,14 +209,14 @@ export default {
 }
 
 .widget-header {
-    background-color: #f7f7f7;
-    border-bottom: 1px solid #ccc;
+    background-color: var(--koha-surface-muted);
+    border-bottom: 1px solid var(--koha-border);
     border-top-left-radius: 8px;
     border-top-right-radius: 8px;
 }
 
 .widget-settings {
-    border-bottom: 1px solid #ccc;
+    border-bottom: 1px solid var(--koha-border);
     border-top-left-radius: 8px;
     border-top-right-radius: 8px;
 }
