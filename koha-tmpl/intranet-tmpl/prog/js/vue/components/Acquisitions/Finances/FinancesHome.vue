@@ -160,6 +160,7 @@ export default {
             },
             table_settings: null,
             add_filters: true,
+            default_filters: { "me.status": true },
         });
 
         return {
