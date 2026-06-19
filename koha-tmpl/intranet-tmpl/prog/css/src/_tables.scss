@@ -1,7 +1,14 @@
 :root {
+    // DataTables consumes these as rgb()/rgba() triplets.
     --dt-row-selected: 231, 255, 218;
     --dt-row-selected-text: 0, 0, 0;
     --dt-row-selected-link: 0, 97, 0;
+}
+
+[data-bs-theme="dark"] {
+    --dt-row-selected: 30, 50, 20;
+    --dt-row-selected-text: 230, 230, 230;
+    --dt-row-selected-link: 110, 200, 110;
 }
 
 table {
@@ -44,7 +51,7 @@ table {
             &.dt-button {
                 background: transparent none;
                 border: 0;
-                color: #595959;
+                color: var(--koha-on-surface-muted);
                 font-size: 60%;
                 margin: 0 .5em;
 
@@ -52,13 +59,13 @@ table {
                     background: transparent none;
                     border: 0;
                     box-shadow: none;
-                    color: #000;
+                    color: var(--koha-on-surface);
                 }
 
                 &:hover:not( .disabled ) {
                     background: transparent none;
                     border: 0;
-                    color: #000;
+                    color: var(--koha-on-surface);
                 }
             }
         }
@@ -142,7 +149,7 @@ table {
                     &.dt-orderable-asc span.dt-column-order::before,
                     &.dt-orderable-desc span.dt-column-order::after,
                     &.dt-orderable-desc span.dt-column-order::after {
-                        color: #000;
+                        color: var(--koha-on-surface);
                         opacity: .2;
                     }
 
@@ -158,7 +165,7 @@ table {
                     &.dt-ordering-asc span.dt-column-order::before,
                     &.dt-ordering-desc span.dt-column-order::after,
                     &.dt-ordering-desc span.dt-column-order::after {
-                        color: $green-text-color;
+                        color: var(--koha-text-success);
                         opacity: 1;
                     }
                 }
@@ -172,7 +179,8 @@ table {
 
             tr.dtrg-group {
                 td {
-                    background: #e0e0e0;
+                    background: var(--koha-surface-accent);
+                    color: var(--koha-on-surface);
                 }
             }
         }
@@ -195,21 +203,21 @@ table {
     &.group {
         tr {
             &.odd td {
-                background-color: #F3F3F3;
+                background-color: var(--koha-surface-muted);
                 border: 1px solid $table-border-color;
                 border-right: 1px solid $table-border-color;
             }
 
             &.even td {
-                background-color: #FFF;
+                background-color: var(--koha-surface);
                 border-right: 1px solid $table-border-color;
             }
         }
 
         td.group {
-            background-color: #D1CFD0;
-            border-bottom: 2px solid #A19B9E;
-            border-top: 2px solid #A19B9E;
+            background-color: var(--koha-surface-accent);
+            border-bottom: 2px solid var(--koha-border-strong);
+            border-top: 2px solid var(--koha-border-strong);
         }
     }
 }
@@ -230,7 +238,8 @@ th {
 }
 
 td {
-    background-color: #FFFFFF;
+    background-color: var(--koha-surface);
+    color: var(--koha-on-surface);
     vertical-align: top;
 
     &.actions {
@@ -248,15 +257,15 @@ td {
 
     input {
         &.approve {
-            background-color: #FFC;
+            background-color: var(--bs-warning-bg-subtle);
         }
     }
 
     /* Row grouping */
     &.group {
-        background-color: #D1CFD0;
-        border-bottom: 2px solid #A19B9E;
-        border-top: 2px solid #A19B9E;
+        background-color: var(--koha-surface-accent);
+        border-bottom: 2px solid var(--koha-border-strong);
+        border-top: 2px solid var(--koha-border-strong);
     }
 }
 
@@ -282,19 +291,19 @@ tr {
 
     &.expired {
         td {
-            color: #999999;
+            color: var(--koha-on-surface-muted);
         }
     }
 
     &.highlight {
         td {
-            background-color: #F6F6F6;
+            background-color: var(--koha-surface-muted);
             border-color: $table-border-color;
         }
 
         th {
             &[scope="row"] {
-                background-color: #DDDDDD;
+                background-color: var(--koha-surface-accent);
                 border-color: $table-border-color;
             }
         }
@@ -308,58 +317,69 @@ tr {
         }
     }
 
+    // Status rows. Bootstrap 5.3 gives us *-bg-subtle and
+    // *-text-emphasis token pairs that automatically flip in dark mode
+    // (pale bg + dark text in light, dark bg + pale text in dark) while
+    // preserving each colour's semantic identity.
+
     &.odd {
         &.onissue {
             td {
-                background-color: #FFFFE1;
+                background-color: var(--bs-warning-bg-subtle);
+                color: var(--bs-warning-text-emphasis);
             }
         }
     }
 
     &.ok {
         td {
-            background-color: #FFFFCC;
+            background-color: var(--bs-warning-bg-subtle);
+            color: var(--bs-warning-text-emphasis);
         }
 
         &:nth-child( odd ) {
             td {
-                background-color: #FFFFCC;
+                background-color: var(--bs-warning-bg-subtle);
             }
         }
 
         &:nth-child( even ) {
             td {
-                background-color: #FFFFCC;
+                background-color: var(--bs-warning-bg-subtle);
             }
         }
     }
 
     &.onissue {
         td {
-            background-color: #FFFFCC;
+            background-color: var(--bs-warning-bg-subtle);
+            color: var(--bs-warning-text-emphasis);
         }
     }
 
     &.reserved {
         td {
-            background-color: #EEFFD4;
+            background-color: var(--bs-success-bg-subtle);
+            color: var(--bs-success-text-emphasis);
         }
     }
 
     &.transferred {
         td {
-            background-color: #E8F0F6;
+            background-color: var(--bs-info-bg-subtle);
+            color: var(--bs-info-text-emphasis);
         }
     }
 
     &.warn {
         td {
-            background-color: #FF9090;
+            background-color: var(--bs-danger-bg-subtle);
+            color: var(--bs-danger-text-emphasis);
         }
 
         &:nth-child( odd ) {
             td {
-                background-color: #FF9090;
+                background-color: var(--bs-danger-bg-subtle);
             }
         }
     }
@@ -375,7 +395,7 @@ tr {
     tr {
         &:hover {
             td {
-                background-color: #FFFF99;
+                background-color: var(--bs-warning-bg-subtle);
             }
         }
     }
@@ -390,30 +410,39 @@ tfoot {
 }
 
 caption {
-    color: #000;
+    color: var(--koha-on-surface);
     font-size: 133.9%;
     font-weight: bold;
     margin: .3em 0;
 }
 
+// Strong-flag rows. These are intentionally more saturated than the
+// status rows above (deliberately catch the eye), so we keep the
+// solid-warning / solid-danger Bootstrap tokens rather than the
+// subtle pair, and pair each with the matching text-emphasis token
+// so contrast holds in either mode.
 .highlighted-row,
 .highlighted-row td {
-    background-color: #FFD000;
+    background-color: var(--bs-warning);
+    color: var(--bs-warning-text-emphasis);
 }
 
 .selected-row,
 .selected-row td {
-    background-color: #e6fa8e;
+    background-color: var(--bs-success-bg-subtle);
+    color: var(--bs-success-text-emphasis);
 }
 
 .warned-row,
 .warned-row td {
-    background-color: #FF9000;
+    background-color: var(--bs-warning);
+    color: var(--bs-warning-text-emphasis);
 }
 
 .high-warned-row,
 .high-warned-row td {
-    background-color: #FF0000;
+    background-color: var(--bs-danger);
+    color: var(--bs-danger-text-emphasis);
 }
 
 tbody {
@@ -430,7 +459,7 @@ tbody {
             &:nth-child( odd ):not( .dtrg-group, .active, .ok ) {
                 td {
                     &:not( .bg-danger, .bg-warning, .bg-info, .bg-success, .bg-primary ) {
-                        background-color: #F9FAE0;
+                        background-color: var(--bs-warning-bg-subtle);
                     }
                 }
             }
@@ -441,11 +470,11 @@ tbody {
 div {
     &.dt-container {
         .dt-processing {
-            background-color: #F4F8F9;
+            background-color: var(--koha-surface-overlay);
             border: 2px solid $background-color-primary;
             border-radius: 3px;
             box-shadow: 2px 2px 3px 1px rgba( 0, 0, 0, .2 );
-            color: #333;
+            color: var(--koha-on-surface);
             height: unset;
             left: 50%;
             padding: 1.5em;
@@ -500,8 +529,8 @@ div {
                 padding: .3rem .5rem;
 
                 &:hover:not( .disabled ) {
-                    background: #EEE none;
-                    border: 1px solid #666;
+                    background: var(--koha-surface-muted) none;
+                    border: 1px solid var(--koha-border-strong);
                 }
 
                 &.dt_button_clear_filter {
@@ -526,7 +555,7 @@ div {
             .dt-paging-button {
                 border: 1px solid transparent;
                 border-radius: 0;
-                color: $green-text-color;
+                color: var(--koha-text-success);
                 padding: .2em 1em .5em 1em;
 
                 &:hover,
@@ -541,7 +570,7 @@ div {
                 &.current {
                     background: transparent none;
                     border: 0;
-                    color: #666;
+                    color: var(--koha-on-surface-muted);
                     font-weight: bold;
 
                     &:hover,
@@ -549,7 +578,7 @@ div {
                         background: transparent none;
                         border: 0;
                         box-shadow: none;
-                        color: #666;
+                        color: var(--koha-on-surface-muted);
                         cursor: default;
                     }
                 }
@@ -649,7 +678,7 @@ div {
                 }
 
                 &:hover {
-                    background: #EEE none;
+                    background: var(--koha-surface-muted) none;
                 }
             }
         }
@@ -663,14 +692,15 @@ div {
                 &.buttons-excel,
                 &.buttons-html5,
                 &.buttons-print {
-                    background: #FFF none;
+                    background: var(--koha-surface) none;
                     box-shadow: none;
+                    color: var(--koha-on-surface);
                     font-size: 1.2em;
                     padding: .5em .7em;
                     text-shadow: none;
 
                     &:hover {
-                        background: #EEE none;
+                        background: var(--koha-surface-muted) none;
                     }
                 }
 
@@ -706,7 +736,7 @@ div {
         }
 
         .dt-button-active::after {
-            color: $green-text-color;
+            color: var(--koha-text-success);
             display: inline-block;
             font-weight: bold;
             margin-top: unset;
@@ -720,9 +750,21 @@ div {
 }
 
 .dt-button-down-arrow {
-    color: #787878;
+    color: var(--koha-on-surface-muted);
     font-size: 90%;
     padding-left: .3rem;
+}
+
+// DataTables core CSS colours disabled paging buttons rgba(0,0,0,.5) and only
+// ships a dark variant for `html.dark`, not Koha's [data-bs-theme="dark"], so
+// they render black-on-dark. Override at matching+1 specificity in dark mode
+// only (light mode keeps the stock DataTables colour).
+@include color-mode(dark) {
+    div.dt-container .dt-paging .dt-paging-button.disabled,
+    div.dt-container .dt-paging .dt-paging-button.disabled:hover,
+    div.dt-container .dt-paging .dt-paging-button.disabled:active {
+        color: var(--koha-on-surface-muted);
+    }
 }
 
 .dt-info {
@@ -752,7 +794,9 @@ div {
 
     input {
         &[type="search"] {
-            border: 1px solid #CCC;
+            background-color: var(--koha-input-bg);
+            border: 1px solid var(--koha-input-border);
+            color: var(--koha-input-color);
         }
     }
 
@@ -778,8 +822,9 @@ div {
 .filter_column {
     & > input {
         &[type="text"] {
+            background-color: transparent;
             border: 0;
-            color: #999;
+            color: var(--koha-on-surface-muted);
             font-size: 85%;
             width: 100%;
         }
@@ -792,7 +837,7 @@ div {
 }
 
 .table_controls {
-    border-top: 1px solid #EEE;
+    border-top: 1px solid var(--koha-border-muted);
     display: flex;
     flex-grow: 1;
     justify-content: flex-end;
