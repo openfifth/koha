@@ -172,7 +172,31 @@ export default {
                             },
                         },
                     },
-                    hideIn: ["List"],
+                    tableColumnDefinition: {
+                        title: $__("Fiscal period"),
+                        data: "fiscal_period.name",
+                        searchable: true,
+                        orderable: true,
+                        render(data, type, row, meta) {
+                            if (!row.fiscal_period)
+                                return escape_str($__("No fiscal period"));
+                            const href = baseResource.router.resolve({
+                                name: "FiscalPeriodShow",
+                                params: {
+                                    fiscal_period_id:
+                                        row.fiscal_period.fiscal_period_id,
+                                },
+                            }).href;
+                            return (
+                                '<a href="' +
+                                href +
+                                '" class="fiscal-period-show">' +
+                                escape_str(row.fiscal_period.name) +
+                                "</a>"
+                            );
+                        },
+                    },
+                    hideIn: [],
                 },
                 {
                     name: "ledger_name",
@@ -189,7 +213,30 @@ export default {
                             },
                         },
                     },
-                    hideIn: ["List"],
+                    tableColumnDefinition: {
+                        title: $__("Ledger"),
+                        data: "ledger.name",
+                        searchable: true,
+                        orderable: true,
+                        render(data, type, row, meta) {
+                            if (!row.ledger)
+                                return escape_str($__("No ledger"));
+                            const href = baseResource.router.resolve({
+                                name: "LedgerShow",
+                                params: {
+                                    ledger_id: row.ledger_id,
+                                },
+                            }).href;
+                            return (
+                                '<a href="' +
+                                href +
+                                '" class="ledger-show">' +
+                                escape_str(row.ledger.name) +
+                                "</a>"
+                            );
+                        },
+                    },
+                    hideIn: [],
                 },
                 {
                     name: "fund_parent_name",
@@ -251,6 +298,7 @@ export default {
                         attr.options.find(op => op.value === val).description,
                     required: true,
                     disabled: fund => fund.parent_status === false,
+                    hideIn: ["List"],
                 },
                 ...(!isSubFund.value &&
                 authorisedValues.value.av_fund_type.length
@@ -285,7 +333,6 @@ export default {
                             : $__(
                                   "Please note: you can change this amount after creating the fund record"
                               ),
-                    hideIn: ["List"],
                 },
                 {
                     name: "oe_warning_percent",
@@ -468,7 +515,9 @@ export default {
         const tableOptions = {
             table_settings: null,
             add_filters: true,
-            options: { embed: "sub_funds,allocations,parent_fund" },
+            options: {
+                embed: "sub_funds,allocations,parent_fund,fiscal_period,ledger",
+            },
             filters_options: {
                 ...(authorisedValues.value.av_fund_type.length && {
                     fund_type: () =>
@@ -478,6 +527,8 @@ export default {
             ...(!props.embedded && {
                 actions: {
                     0: ["show"],
+                    2: ["fiscal-period-show"],
+                    3: ["ledger-show"],
                     "-1": [
                         ...(baseResource.isUserPermitted("editFund")
                             ? ["edit"]
@@ -738,6 +789,25 @@ export default {
 
         refetchResource = baseResource.refetchResource;
 
+        const customTableEvents = {
+            "fiscal-period-show": (row, dt, e) => {
+                e.preventDefault();
+                baseResource.router.push({
+                    name: "FiscalPeriodShow",
+                    params: {
+                        fiscal_period_id: row.fiscal_period?.fiscal_period_id,
+                    },
+                });
+            },
+            "ledger-show": (row, dt, e) => {
+                e.preventDefault();
+                baseResource.router.push({
+                    name: "LedgerShow",
+                    params: { ledger_id: row.ledger_id },
+                });
+            },
+        };
+
         return {
             ...baseResource,
             tableOptions,
@@ -746,6 +816,7 @@ export default {
             isSubFund,
             appendToShow,
             afterNewResourceCreate,
+            customTableEvents,
         };
     },
     components: { BaseResource },

@@ -162,6 +162,7 @@ export default {
                     format: (val, resource, attr) =>
                         attr.options.find(op => op.value === val).description,
                     required: true,
+                    hideIn: ["List"],
                 },
                 {
                     name: "managing_branch",

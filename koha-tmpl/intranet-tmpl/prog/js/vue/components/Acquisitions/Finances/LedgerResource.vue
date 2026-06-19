@@ -178,7 +178,30 @@ export default {
                             },
                         },
                     },
-                    hideIn: ["List"],
+                    tableColumnDefinition: {
+                        title: $__("Fiscal period"),
+                        data: "fiscal_period.name",
+                        searchable: true,
+                        orderable: true,
+                        render(data, type, row, meta) {
+                            if (!row.fiscal_period)
+                                return escape_str($__("No fiscal period"));
+                            const href = baseResource.router.resolve({
+                                name: "FiscalPeriodShow",
+                                params: {
+                                    fiscal_period_id: row.fiscal_period_id,
+                                },
+                            }).href;
+                            return (
+                                '<a href="' +
+                                href +
+                                '" class="fiscal-period-show">' +
+                                escape_str(row.fiscal_period.name) +
+                                "</a>"
+                            );
+                        },
+                    },
+                    hideIn: [],
                 },
                 {
                     name: "name",
@@ -216,6 +239,7 @@ export default {
                         attr.options.find(op => op.value === val).description,
                     required: true,
                     disabled: ledger => ledger.parent_status === false,
+                    hideIn: ["List"],
                 },
                 {
                     name: "locked",
@@ -254,7 +278,6 @@ export default {
                             : $__(
                                   "Please note: you can change this amount after creating the ledger record"
                               ),
-                    hideIn: ["List"],
                 },
                 {
                     name: "managing_branch",
@@ -390,10 +413,11 @@ export default {
         const tableOptions = {
             table_settings: null,
             add_filters: true,
-            options: { embed: "funds" },
+            options: { embed: "fiscal_period,funds" },
             ...(!props.embedded && {
                 actions: {
                     0: ["show"],
+                    1: ["fiscal-period-show"],
                     "-1": [
                         ...(baseResource.isUserPermitted("editLedger")
                             ? ["edit"]
@@ -622,6 +646,16 @@ export default {
 
         refetchResource = baseResource.refetchResource;
 
+        const customTableEvents = {
+            "fiscal-period-show": (row, dt, e) => {
+                e.preventDefault();
+                baseResource.router.push({
+                    name: "FiscalPeriodShow",
+                    params: { fiscal_period_id: row.fiscal_period_id },
+                });
+            },
+        };
+
         return {
             ...baseResource,
             tableOptions,
@@ -629,6 +663,7 @@ export default {
             afterResourceFetch,
             afterNewResourceCreate,
             appendToShow,
+            customTableEvents,
         };
     },
     components: { BaseResource },
