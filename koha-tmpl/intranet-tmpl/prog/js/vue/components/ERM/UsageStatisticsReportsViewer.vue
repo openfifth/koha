@@ -424,7 +424,7 @@ export default {
                                 cells[0].style.textAlign = "center";
                                 cells[0].style.verticalAlign = "middle";
                                 cells[0].style.borderRight =
-                                    "1px solid #BCBCBC";
+                                    "1px solid var(--koha-border)";
                             } else {
                                 cells[0].remove();
                             }

@@ -87,8 +87,8 @@ export default {
 }
 
 .widget-header {
-    background-color: #f7f7f7;
-    border-bottom: 1px solid #ccc;
+    background-color: var(--koha-surface-muted);
+    border-bottom: 1px solid var(--koha-border);
     border-top-left-radius: 8px;
     border-top-right-radius: 8px;
     padding: 6px 12px;

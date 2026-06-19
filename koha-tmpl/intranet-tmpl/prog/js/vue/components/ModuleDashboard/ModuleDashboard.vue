@@ -107,7 +107,7 @@ export default {
             const dropContext = event.relatedContext;
             if (dropContext) {
                 const dropElement = dropContext.element;
-                dropElement.style.border = "2px dotted #ccc";
+                dropElement.style.border = "2px dotted var(--koha-border)";
                 event.onDragEnd(() => {
                     dropElement.style.border = "";
                 });
@@ -307,12 +307,12 @@ export default {
     left: 0;
     right: 0;
     min-height: 150px;
-    background-color: #fafafa;
-    color: #999;
+    background-color: var(--koha-surface-muted);
+    color: var(--koha-on-surface-muted);
     font-style: italic;
     font-size: 1.2rem;
     pointer-events: none;
-    border: 2px dotted #ccc;
+    border: 2px dotted var(--koha-border);
     display: flex;
     align-items: center;
     justify-content: center;
