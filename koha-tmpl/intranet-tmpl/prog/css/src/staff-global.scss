@@ -91,9 +91,31 @@ $color-mode-type: data;
     )
 }
 
+// The default button is built from compile-time Sass literals (all light),
+// so re-point the Bootstrap button custom properties at the surface tokens
+// in dark mode — otherwise it renders as a glaring white button.
+@include color-mode(dark) {
+    .btn-default {
+        --bs-btn-bg: var(--koha-surface-accent);
+        --bs-btn-border-color: var(--koha-border-strong);
+        --bs-btn-color: var(--koha-on-surface);
+        --bs-btn-hover-bg: var(--koha-surface-muted);
+        --bs-btn-hover-border-color: var(--koha-border-strong);
+        --bs-btn-hover-color: var(--koha-on-surface);
+        --bs-btn-active-bg: var(--koha-surface-muted);
+        --bs-btn-active-border-color: var(--koha-border-strong);
+        --bs-btn-active-color: var(--koha-on-surface);
+        --bs-btn-disabled-bg: var(--koha-surface);
+        --bs-btn-disabled-border-color: var(--koha-border);
+        --bs-btn-disabled-color: var(--koha-on-surface-muted);
+    }
+}
+
 .badge {
     &[class$="-subtle"] {
-        color: #000;
+        // Bootstrap's *-subtle backgrounds flip dark under data-bs-theme;
+        // track the surface text colour so the label stays legible.
+        color: var(--koha-on-surface);
     }
 }
 
@@ -170,13 +192,13 @@ a {
     }
 
     &.edit-patronimage {
-        background-color: #E6E6E6;
-        border-color: #ADADAD;
-        color: #333;
+        background-color: var(--koha-surface-accent);
+        border-color: var(--koha-border-strong);
+        color: var(--koha-on-surface);
 
         &:hover {
-            background-color: #DADADA;
-            color: #333;
+            background-color: var(--koha-surface-muted);
+            color: var(--koha-on-surface);
             text-decoration: none;
         }
     }
@@ -189,7 +211,7 @@ a {
     }
 
     &.clear_date {
-        color: $warning-text-color;
+        color: var(--koha-text-danger);
         font-size: 130%;
         vertical-align: middle;
 
@@ -212,7 +234,7 @@ a {
             border: solid 3px $background-color-secondary;
             border-radius: 50%;
             box-sizing: content-box;
-            color: $green-text-color;
+            color: var(--koha-text-success);
             display: flex;
             height: 40px;
             justify-content: center;
@@ -225,7 +247,7 @@ a {
         }
 
         &:hover {
-            color: $green-text-color;
+            color: var(--koha-text-success);
             font-weight: bold;
             text-decoration: none;
 
@@ -233,7 +255,7 @@ a {
             img {
                 background-color: transparent;
                 border-color: $background-color-primary;
-                color: $green-text-color;
+                color: var(--koha-text-success);
             }
         }
 
@@ -312,7 +334,7 @@ a {
 
 #resetZ3950Search {
     font-size: 110%;
-    color: $green-text-color;
+    color: var(--koha-text-success);
 }
 
 .alert-message {
@@ -445,7 +467,8 @@ aside {
             }
 
             & + .action {
-                background-color: #FFF;
+                background-color: var(--koha-surface);
+                color: var(--koha-on-surface);
                 margin-left: 0;
                 padding: 1rem;
             }
@@ -465,12 +488,12 @@ aside {
 }
 
 .sidebar_menu {
-    background-color: #E6E6E6;
+    background-color: var(--koha-surface-accent);
     display: block;
     padding: 1em 0 1em 0;
 
     h5 {
-        color: #666;
+        color: var(--koha-on-surface-muted);
         font-size: 1.3em;
         font-weight: bold;
         margin-top: 0;
@@ -482,7 +505,7 @@ aside {
         padding-left: 0;
 
         ul {
-            background-color: #F3F4F4;
+            background-color: var(--koha-surface-muted);
 
             li {
                 a {
@@ -496,7 +519,7 @@ aside {
 
             a {
                 border-left: 5px solid transparent;
-                color: #000;
+                color: var(--koha-on-surface);
                 display: block;
                 padding: .7em .3em .7em 1rem;
                 text-decoration: none;
@@ -505,9 +528,9 @@ aside {
             &.active > a,
             a:hover,
             a.current {
-                background-color: #F3F4F4;
+                background-color: var(--koha-surface-muted);
                 border-left: solid 5px $background-color-primary;
-                color: $green-text-color;
+                color: var(--koha-text-success);
                 font-weight: bold;
                 text-decoration: none;
             }
@@ -556,7 +579,7 @@ div {
                 a,
                 a:visited,
                 a:link {
-                    color: #000;
+                    color: var(--koha-on-surface);
                 }
             }
         }
@@ -601,7 +624,7 @@ div {
     &.alert-info {
         i {
             &.fa-exclamation {
-                color: $warning-text-color;
+                color: var(--koha-text-danger);
                 font-style: italic;
                 padding: 0 .3em;
             }
@@ -609,7 +632,7 @@ div {
     }
 
     &.required {
-        color: $warning-text-color;
+        color: var(--koha-text-danger);
         font-style: italic;
         margin-left: .5em;
     }
@@ -732,7 +755,7 @@ button {
 }
 
 #add_to_patron_list_submit {
-    color: $green-text-color;
+    color: var(--koha-text-success);
 
     &:hover {
         border: 0;
@@ -1151,7 +1174,7 @@ $leadClashTrail: #e5d4f5 !default;
 
 label,
 .label {
-    color: #000;
+    color: var(--koha-on-surface);
     display: inline;
     font-size: inherit;
     font-weight: normal;
@@ -1175,7 +1198,7 @@ label,
     }
 
     &.required {
-        color: $warning-text-color;
+        color: var(--koha-text-danger);
     }
 }
 
@@ -1275,7 +1298,7 @@ ol {
 
 .overdue,
 .debit {
-    color: $warning-text-color;
+    color: var(--koha-text-danger);
     font-weight: bold;
 }
 
@@ -1284,7 +1307,7 @@ ol {
 }
 
 .problem {
-    color: #990000;
+    color: var(--koha-text-danger);
     font-weight: bold;
 }
 
@@ -1301,11 +1324,11 @@ fieldset {
     }
 
     &.standard {
-        background-color: #F4F8F9 !important;
+        background-color: var(--koha-surface-muted) !important;
     }
 
     &.contrast {
-        background-color: #F3F3F3 !important;
+        background-color: var(--koha-surface-accent) !important;
     }
 
     &.action {
@@ -1516,8 +1539,8 @@ dd {
 }
 
 .patroninfo {
-    background-color: #E6E6E6;
-    color: #000;
+    background-color: var(--koha-surface-accent);
+    color: var(--koha-on-surface);
     left: -10px;
     margin-right: .5rem;
     padding-bottom: 1rem;
@@ -1525,7 +1548,7 @@ dd {
     width: 100%;
 
     h5 {
-        color: #000;
+        color: var(--koha-on-surface);
         font-weight: bold;
         margin-bottom: 0;
         padding: .5em .9em;
@@ -1644,8 +1667,8 @@ dd {
 }
 
 .patronviews {
-    border-right: 1px solid #000;
-    border-top: 1px solid #000;
+    border-right: 1px solid var(--koha-border-strong);
+    border-top: 1px solid var(--koha-border-strong);
     margin-bottom: .5em;
     padding: .5em 0;
 }
@@ -1720,17 +1743,17 @@ input[type="text"]:read-only:focus {
 }
 
 .error {
-    color: $warning-text-color;
+    color: var(--koha-text-danger);
 }
 
 // Font Awesome icons
 i {
     &.error {
-        color: $warning-text-color;
+        color: var(--koha-text-danger);
     }
 
     &.success {
-        color: $green-text-color;
+        color: var(--koha-text-success);
     }
 
     &.warn {
@@ -1838,7 +1861,7 @@ i {
 
 .blocker,
 .inaccurate-item-statuses {
-    color: #990000;
+    color: var(--koha-text-danger);
 }
 
 .circmessage {
@@ -2003,7 +2026,7 @@ i {
 
     i {
         &.fa {
-            color: $green-text-color;
+            color: var(--koha-text-success);
         }
     }
 }
@@ -2011,7 +2034,7 @@ i {
 .deny {
     i {
         &.fa {
-            color: $warning-text-color;
+            color: var(--koha-text-danger);
         }
     }
 }
@@ -2104,7 +2127,7 @@ li {
 }
 
 .empty {
-    color: #666;
+    color: var(--koha-on-surface-muted);
 }
 
 .address {
@@ -2157,7 +2180,7 @@ li {
 #tbl_cash_register_stats_wrapper,
 #resulttable_wrapper,
 #numberpatternst_wrapper {
-    background-color: #FFFFFF;
+    background-color: var(--koha-surface);
     box-shadow: 8px 8px 12px rgba( 170, 170, 170, .356 );
     margin-top: 20px;
     padding: 20px;
@@ -2172,7 +2195,8 @@ li {
 }
 
 #searchresults {
-    background-color: #FFFFFF;
+    background-color: var(--koha-surface);
+    color: var(--koha-on-surface);
     margin-bottom: 1rem;
     margin-top: 20px;
     min-width: 100%;
@@ -2184,7 +2208,7 @@ li {
     }
 
     h3 {
-        color: #696969;
+        color: var(--koha-on-surface-muted);
         margin: 0;
         padding-bottom: .7em;
     }
@@ -2193,7 +2217,7 @@ li {
         ul {
             li {
                 clear: left;
-                color: #000;
+                color: var(--koha-on-surface);
                 font-size: 90%;
                 list-style: url( "../img/item-bullet.svg" );
                 padding: .2em 0;
@@ -2216,7 +2240,7 @@ li {
     span {
         &.status {
             clear: left;
-            color: #900;
+            color: var(--bs-danger-text-emphasis);
             display: block;
         }
 
@@ -2271,9 +2295,9 @@ li {
     position: sticky;
     top: -1px;
     z-index: 999;
-    background-color: #F3F4F4;
+    background-color: var(--koha-surface-muted);
     box-shadow: 0 0 2px 1px rgba( 0, 0, 0, .2 );
-    color: #696969;
+    color: var(--koha-on-surface-muted);
     display: block;
     font-size: 80%;
     margin-bottom: .5em;
@@ -2341,12 +2365,12 @@ li {
 }
 
 #search-facets {
-    background-color: #E6E6E6;
+    background-color: var(--koha-surface-accent);
 
     h4 {
         background-color: $background-color-primary;
         border-radius: 0 4px 0 0;
-        color: #FFFFFF;
+        color: var(--koha-brand-on);
         font-size: 100%;
         margin: 0;
         padding: .4em .2em;
@@ -2437,7 +2461,7 @@ td {
         text-align: right;
 
         tfoot & {
-            color: #000;
+            color: var(--koha-on-surface);
         }
     }
 }
@@ -2446,7 +2470,7 @@ td {
     background-color: transparent;
     border: 0;
     box-shadow: none;
-    color: $green-text-color;
+    color: var(--koha-text-success);
     font-size: 100%;
     padding: .3em;
 
@@ -2487,7 +2511,7 @@ td {
 #CheckAll,
 #CheckNone,
 #CheckPending {
-    color: $green-text-color;
+    color: var(--koha-text-success);
     font-weight: normal;
     margin: 0 .5em 0 0;
 }
@@ -2500,7 +2524,7 @@ td {
 .lost,
 .withdrawn,
 .notforloan {
-    color: #990000;
+    color: var(--koha-text-danger);
     display: block;
 }
 
@@ -2537,7 +2561,7 @@ td.bundle {
 
 .labeledmarc-label {
     border: 0;
-    color: #000000;
+    color: var(--koha-on-surface);
     font-size: 11pt;
     font-style: italic;
     padding: 5;
@@ -2545,7 +2569,7 @@ td.bundle {
 
 .labeledmarc-value {
     border: 0;
-    color: #000;
+    color: var(--koha-on-surface);
     font-size: 10pt;
     padding: 5;
 }
@@ -2562,7 +2586,7 @@ td.bundle {
         tr {
             &:nth-child( 2n+1 ) {
                 td {
-                    background-color: #FFFFFF;
+                    background-color: var(--koha-surface);
                 }
             }
         }
@@ -2575,7 +2599,7 @@ td.bundle {
     }
 
     th {
-        background-color: #FFFFFF;
+        background-color: var(--koha-surface);
         border: 0;
         padding: 2px;
         text-align: left;
@@ -2638,17 +2662,17 @@ td.bundle {
     border-bottom: 1px solid $background-color-secondary;
 
     h3 {
-        color: #000;
+        color: var(--koha-on-surface);
     }
 }
 
 .modal-body {
-    background-color: #FFF;
+    background-color: var(--koha-surface);
     overflow-y: auto;
 
     fieldset,
     ol {
-        background-color: #FFF;
+        background-color: var(--koha-surface);
         border: 0;
         margin: 0;
         padding: 0;
@@ -2656,7 +2680,8 @@ td.bundle {
 }
 
 .modal-content {
-    background-color: $background-color-modal;
+    background-color: var(--koha-surface);
+    color: var(--koha-on-surface);
 
     fieldset {
         box-shadow: none;
@@ -2738,7 +2763,7 @@ td.bundle {
 }
 
 .results_summary {
-    color: #202020;
+    color: var(--koha-on-surface);
     display: block;
     padding: 0 0 .5em;
 
@@ -2747,7 +2772,7 @@ td.bundle {
     }
 
     .label {
-        color: #707070;
+        color: var(--koha-on-surface-muted);
     }
 }
 
@@ -2913,7 +2938,7 @@ td.bundle {
         text-shadow: 0 -1px 0 #666;
 
         &:hover {
-            color: $warning-text-color;
+            color: var(--koha-text-danger);
         }
     }
 }
@@ -2935,7 +2960,7 @@ td.bundle {
         text-shadow: 0 -1px 0 #666;
 
         &:hover {
-            color: $warning-text-color;
+            color: var(--koha-text-danger);
         }
     }
 }
@@ -2988,10 +3013,10 @@ td.bundle {
 
 // Override core jQueryUI widgets
 .ui-widget-content {
-    background: #FFFFFF none;
+    background: var(--koha-surface-overlay) none;
     border: 1px solid $background-color-secondary;
     border-radius: 4px;
-    color: #222222;
+    color: var(--koha-on-surface);
 }
 
 // Override jQuery Autocomplete
@@ -3005,7 +3030,7 @@ td.bundle {
         padding: 0;
 
         a {
-            color: #000;
+            color: var(--koha-on-surface);
         }
 
         li {
@@ -3058,7 +3083,7 @@ td.bundle {
 }
 
 fieldset > .toptabs {
-    background-color: #F3F4F4;
+    background-color: var(--koha-surface-muted);
     padding: 1em;
 }
 
@@ -3134,7 +3159,7 @@ fieldset > .toptabs {
     margin-bottom: 1em;
 
     a {
-        color: $green-text-color;
+        color: var(--koha-text-success);
         font-weight: normal;
         text-decoration: underline;
 
@@ -3208,8 +3233,8 @@ video {
 // Bootstrap overrides
 
 .dropdown-header {
-    border-top: 1px solid #EEE;
-    color: #000;
+    border-top: 1px solid var(--koha-border-muted);
+    color: var(--koha-on-surface);
     font-weight: bold;
     margin-top: 5px;
     padding-left: 10px;
@@ -3227,7 +3252,7 @@ nav {
 #breadcrumbs {
     a {
         &[href="/cgi-bin/koha/mainpage.pl"] {
-            color: $green-text-color;
+            color: var(--koha-text-success);
 
             &::before {
                 content: "\f015";
@@ -3285,6 +3310,25 @@ nav {
     margin: .5em 0;
 }
 
+// Bootstrap emits --bs-pagination-* directly on .pagination (from the light
+// $pagination-bg: $white), which beats a value inherited from the
+// [data-bs-theme=dark] root. Override at the element to re-skin in dark mode.
+@include color-mode(dark) {
+    .pagination {
+        --bs-pagination-bg: var(--koha-surface);
+        --bs-pagination-color: var(--koha-link);
+        --bs-pagination-hover-bg: var(--koha-surface-muted);
+        --bs-pagination-hover-color: var(--koha-link-hover);
+        --bs-pagination-focus-bg: var(--koha-surface-muted);
+        --bs-pagination-focus-color: var(--koha-link-hover);
+        --bs-pagination-disabled-bg: var(--koha-surface-muted);
+        --bs-pagination-disabled-color: var(--koha-on-surface-muted);
+        --bs-pagination-border-color: var(--koha-border);
+        --bs-pagination-disabled-border-color: var(--koha-border);
+        --bs-pagination-hover-border-color: var(--koha-border-strong);
+    }
+}
+
 button,
 .btn {
     @include default-button;
@@ -3305,16 +3349,16 @@ button,
 /* Bootstrap Collapse */
 
 .panel {
-    background: #F7F9F6 none;
+    background: var(--koha-surface-muted) none;
     box-shadow: none;
 
     &:hover {
-        background: #E3F1DF none;
+        background: var(--koha-surface-accent) none;
     }
 }
 
 .panel-collapse {
-    background: #FFF none;
+    background: var(--koha-surface) none;
 }
 
 .panel-title {
@@ -3365,7 +3409,7 @@ button,
         padding: 0;
 
         a {
-            color: #000;
+            color: var(--koha-on-surface);
         }
 
         + .panel-collapse {
@@ -3414,10 +3458,10 @@ button,
         }
 
         .tooltip-inner {
-            background-color: #FFFFFF;
+            background-color: var(--koha-surface-overlay);
             border: 1px solid rgba( 0, 0, 0, .2 );
             box-shadow: 0 5px 10px rgba( 0, 0, 0, .2 );
-            color: #000;
+            color: var(--koha-on-surface);
             font-size: 120%;
             padding: 1em;
         }
@@ -3531,9 +3575,10 @@ code {
 }
 
 .tab-content {
-    background-color: #FFF;
+    background-color: var(--koha-surface);
     border: 0;
     border-radius: 0;
+    color: var(--koha-on-surface);
     padding: 1em;
 }
 
@@ -3673,7 +3718,7 @@ progress {
 }
 
 #browse-return-to-results {
-    background-color: #E6E6E6;
+    background-color: var(--koha-surface-accent);
     border: 1px solid lighten( $background-color-primary, 30% );
     border-bottom-width: 0;
     border-top-left-radius: 5px;
@@ -3695,7 +3740,7 @@ progress {
 }
 
 a.browse-button {
-    color: $green-text-color;
+    color: var(--koha-text-success);
 
     &:hover {
         background: #FFF;
@@ -3708,12 +3753,12 @@ span {
     }
 
     &.circ-hlt {
-        color: $warning-text-color;
+        color: var(--koha-text-danger);
         font-weight: bold;
     }
 
     &.expired {
-        color: #990000;
+        color: var(--koha-text-danger);
         font-style: italic;
     }
 
@@ -3723,7 +3768,7 @@ span {
     }
 
     &.required {
-        color: $warning-text-color;
+        color: var(--koha-text-danger);
         font-style: italic;
         margin-left: .5em;
     }
@@ -3808,20 +3853,20 @@ input.renew {
 #i18nMenu {
     .nav-link {
         &.currentlanguage {
-            color: #000;
+            color: var(--koha-on-surface);
             font-weight: bold;
             pointer-events: none;
         }
 
         &.sublanguage-selected {
-            color: #000;
+            color: var(--koha-on-surface);
             font-weight: bold;
         }
     }
 }
 
 .onsite_checkout {
-    color: $warning-text-color;
+    color: var(--koha-text-danger);
 }
 
 .onsite-checkout-only {
@@ -3892,7 +3937,7 @@ input.renew {
 }
 
 .form-message {
-    background-color: #FFF;
+    background-color: var(--koha-surface);
     border: 1px solid #A4BEDD;
     border-radius: 5px;
     margin: 1em;
@@ -4324,9 +4369,9 @@ input.renew {
         margin-bottom: 15px;
 
         a {
-            background-color: #E0E0E0;
+            background-color: var(--koha-surface-accent);
             border-radius: 6px;
-            color: #101010;
+            color: var(--koha-on-surface);
             display: block;
             font-size: 110%;
             font-weight: bold;
@@ -4478,7 +4523,7 @@ input.renew {
         cursor: pointer;
 
         &:hover {
-            color: $green-text-color;
+            color: var(--koha-text-success);
         }
     }
 }
@@ -4518,7 +4563,7 @@ input.renew {
 }
 
 .parent {
-    border: 1px solid #DDD;
+    border: 1px solid var(--koha-border);
     border-bottom-width: 0;
     padding: 5px;
 
@@ -4527,19 +4572,19 @@ input.renew {
     }
 
     &:nth-child( odd ) {
-        background-color: #F8F8F8;
+        background-color: var(--koha-surface-muted);
     }
 }
 
 .superlibrarian-hint {
-    color: #000;
+    color: var(--koha-on-surface);
     padding: .2em 0;
     text-indent: 2em;
 }
 
 .child-flags {
-    background-color: #FFF;
-    border: 1px solid #DDD;
+    background-color: var(--koha-surface);
+    border: 1px solid var(--koha-border);
     border-bottom-width: 0;
     margin: 0 5px 0 20px;
     padding: 5px;
@@ -4553,7 +4598,7 @@ input.renew {
     }
 
     &:nth-child( odd ) {
-        background-color: #EEE;
+        background-color: var(--koha-surface-accent);
     }
 }
 
@@ -4663,7 +4708,7 @@ div .suggestion_note {
     }
 
     .results_checkedout {
-        color: #900;
+        color: var(--koha-text-danger);
         margin: .3em 0;
     }
 
@@ -4935,9 +4980,9 @@ div .suggestion_note {
 }
 
 .navbar.fixed-bottom {
-    background: #FFF none;
+    background: var(--koha-surface) none;
     border-radius: 0;
-    border-top: 1px solid #ADADAD;
+    border-top: 1px solid var(--koha-border-strong);
     box-shadow: none;
 
     fieldset {

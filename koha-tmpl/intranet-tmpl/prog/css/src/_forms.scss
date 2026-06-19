@@ -3,7 +3,7 @@ fieldset {
 
     legend {
         border-bottom: 0 none;
-        color: #696969;
+        color: var(--koha-on-surface-muted);
         float: left;
         font-weight: bold;
         margin-bottom: .5rem;
@@ -52,7 +52,7 @@ fieldset {
             }
 
             .btn-default {
-                border: 1px solid #AAA;
+                border: 1px solid var(--koha-input-border);
                 border-radius: .375rem;
                 height: calc( 1.5em + .75rem + 2px );
                 padding: .375rem .75rem;
@@ -92,10 +92,10 @@ fieldset {
             input[type="text"],
             input[type="password"],
             select {
-                background-color: #FFF;
-                border: 1px solid #AAAAAA;
+                background-color: var(--koha-input-bg);
+                border: 1px solid var(--koha-input-border);
                 border-radius: 4px;
-                color: #495057;
+                color: var(--koha-input-color);
                 display: inline-block;
                 height: calc( 1.5em + .75rem + 2px );
                 line-height: 1.5;
@@ -106,7 +106,7 @@ fieldset {
             input[type="text"] {
                 &.readonly,
                 &:read-only {
-                    background: #EEE url( "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' fill='currentColor'%3E%3Cpath d='M6.5 1.371c.962 0 1.742.78 1.742 1.742v1.549H4.758V3.113c0-.962.78-1.742 1.742-1.742m2.613 5.226V3.113c0-3.484-5.226-3.484-5.226 0v1.549c-.962 0-1.742.78-1.742 1.741v4.355c0 .962.78 1.742 1.742 1.742h5.226c.962 0 1.742-.78 1.742-1.742V6.403c0-.962-.78-1.741-1.742-1.741' style='fill:%23838383'/%3E%3C/svg%3E" ) 1% 50% no-repeat;
+                    background: var(--koha-input-bg-disabled) url( "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' fill='currentColor'%3E%3Cpath d='M6.5 1.371c.962 0 1.742.78 1.742 1.742v1.549H4.758V3.113c0-.962.78-1.742 1.742-1.742m2.613 5.226V3.113c0-3.484-5.226-3.484-5.226 0v1.549c-.962 0-1.742.78-1.742 1.741v4.355c0 .962.78 1.742 1.742 1.742h5.226c.962 0 1.742-.78 1.742-1.742V6.403c0-.962-.78-1.741-1.742-1.741' style='fill:%23838383'/%3E%3C/svg%3E" ) 1% 50% no-repeat;
                     border-style: inset;
                     border-width: 1px;
                     cursor: default;
@@ -130,9 +130,9 @@ fieldset {
             }
 
             textarea {
-                border: 1px solid #AAAAAA;
+                border: 1px solid var(--koha-input-border);
                 border-radius: 4px;
-                color: #495057;
+                color: var(--koha-input-color);
                 padding: .375rem .75rem;
                 width: 100%;
             }
@@ -160,8 +160,8 @@ fieldset {
         }
 
         .form-control[type="file"] {
-            background-color: #FFF;
-            border: 1px solid #AAA;
+            background-color: var(--koha-input-bg);
+            border: 1px solid var(--koha-input-border);
             display: inline-block;
             width: 80%;
         }
@@ -299,7 +299,7 @@ fieldset {
         }
 
         &.unselected {
-            background-color: #FFFFFF;
+            background-color: var(--koha-surface);
             border: 0;
             border-width: 0;
         }
@@ -533,5 +533,17 @@ fieldset {
             clear: both;
             margin: 1em;
         }
+    }
+}
+
+// Native <select> popups: the OS renders the option list from the element's
+// own background/color, which color-scheme alone does not reliably darken
+// (e.g. the DataTables page-length menu stayed light). Theme the options
+// explicitly in dark mode; light mode keeps the browser defaults.
+@include color-mode(dark) {
+    select option,
+    select optgroup {
+        background-color: var(--koha-input-bg);
+        color: var(--koha-input-color);
     }
 }

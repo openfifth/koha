@@ -4,7 +4,7 @@
     justify-content: flex-start;
     flex-wrap: wrap;
 
-    background-color: #f3F4F4;
+    background-color: var(--koha-surface-muted);
     border: 0;
 
     margin-bottom: 5px;
@@ -44,12 +44,12 @@
             background-color: transparent;
             border: 0;
             display: inline-block;
-            color: #696969;
+            color: var(--koha-on-surface-muted);
 
             &:hover, &:focus {
                 text-decoration: none;
-                background-color: #DADADA;
-                color: #696969;
+                background-color: var(--koha-surface-accent);
+                color: var(--koha-on-surface-muted);
             }
 
             &:active {
@@ -78,7 +78,7 @@
                 .btn {
                     &.btn-default {
                         border-radius: 0;
-                        color: black;
+                        color: var(--koha-on-surface);
                         padding: 3px 20px;
                         text-align: left;
                     }
