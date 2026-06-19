@@ -2339,13 +2339,13 @@ subtest 'Hold limit rules count grouped holds as a single unit' => sub {
     # Add an ungrouped hold — effective count = 1 group + 1 ungrouped = 2, at the limit
     AddReserve( { branchcode => $library->id, borrowernumber => $patron->id, biblionumber => $biblios[2]->id } );
     $res = CanItemBeReserved( $patron, $items[3], $library->id );
-    is( $res->{status}, 'tooManyReserves', 'reservesallowed: 1 group + 1 ungrouped = 2, limit of 2 reached' );
+    is( $res->{status}, 'too_many_reserves', 'reservesallowed: 1 group + 1 ungrouped = 2, limit of 2 reached' );
 
     # Ungroup — now 3 ungrouped, count = 3, still blocked
     Koha::Holds->find($rid1)->set( { hold_group_id => undef } )->store;
     Koha::Holds->find($rid2)->set( { hold_group_id => undef } )->store;
     $res = CanItemBeReserved( $patron, $items[3], $library->id );
-    is( $res->{status}, 'tooManyReserves', 'reservesallowed: 3 ungrouped holds count as 3, limit of 2 exceeded' );
+    is( $res->{status}, 'too_many_reserves', 'reservesallowed: 3 ungrouped holds count as 3, limit of 2 exceeded' );
 
     # Re-group rid1+rid2 to reset to grouped count = 2 for remaining tests
     Koha::Holds->find($rid1)->set( { hold_group_id => $hg->id } )->store;
@@ -2370,7 +2370,7 @@ subtest 'Hold limit rules count grouped holds as a single unit' => sub {
 
     # max_holds=2, effective count = 1 group + 1 ungrouped = 2, at the limit
     $res = CanItemBeReserved( $patron, $items[3], $library->id );
-    is( $res->{status}, 'tooManyReserves', 'max_holds: 1 group + 1 ungrouped = 2, limit of 2 reached' );
+    is( $res->{status}, 'too_many_reserves', 'max_holds: 1 group + 1 ungrouped = 2, limit of 2 reached' );
 
     # Delete the ungrouped hold — now only the group remains, count = 1, under limit
     $patron->holds->search( { hold_group_id => undef } )->next->delete;
@@ -2381,13 +2381,13 @@ subtest 'Hold limit rules count grouped holds as a single unit' => sub {
     AddReserve( { branchcode => $library->id, borrowernumber => $patron->id, biblionumber => $biblios[2]->id } );
     AddReserve( { branchcode => $library->id, borrowernumber => $patron->id, biblionumber => $biblios[3]->id } );
     $res = CanItemBeReserved( $patron, $items[3], $library->id );
-    is( $res->{status}, 'tooManyReserves', 'max_holds: 1 group + 2 ungrouped = 3, limit of 2 exceeded' );
+    is( $res->{status}, 'too_many_reserves', 'max_holds: 1 group + 2 ungrouped = 3, limit of 2 exceeded' );
 
     # Ungroup — 4 individual holds, count = 4, still over limit
     Koha::Holds->find($rid1)->set( { hold_group_id => undef } )->store;
     Koha::Holds->find($rid2)->set( { hold_group_id => undef } )->store;
     $res = CanItemBeReserved( $patron, $items[3], $library->id );
-    is( $res->{status}, 'tooManyReserves', 'max_holds: 4 ungrouped holds count as 4, limit of 2 exceeded' );
+    is( $res->{status}, 'too_many_reserves', 'max_holds: 4 ungrouped holds count as 4, limit of 2 exceeded' );
 
     # With only the group (re-group rid1+rid2, delete the other 2), count = 1, under limit of 2
     Koha::Holds->find($rid1)->set( { hold_group_id => $hg->id } )->store;
