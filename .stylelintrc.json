@@ -31,5 +31,41 @@
       "selector-pseudo-element-colon-notation": "double",
       "shorthand-property-no-redundant-values": null,
       "font-family-no-missing-generic-family-keyword": null
-  }
+  },
+  "overrides": [
+    {
+      "files": [
+        "koha-tmpl/intranet-tmpl/prog/css/src/**/*.scss"
+      ],
+      "rules": {
+        "color-no-hex": [
+          true,
+          {
+            "severity": "warning",
+            "message": "Use --koha-* CSS custom properties (defined in _root.scss) or named Sass variables. Hex literals belong only in _variables*.scss / _root.scss; everything else must theme via tokens so dark mode works."
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "koha-tmpl/intranet-tmpl/prog/css/src/_variables.scss",
+        "koha-tmpl/intranet-tmpl/prog/css/src/_variables-dark.scss",
+        "koha-tmpl/intranet-tmpl/prog/css/src/_root.scss",
+        "koha-tmpl/intranet-tmpl/prog/css/src/_flatpickr_vars.scss",
+        "koha-tmpl/intranet-tmpl/prog/css/src/staff-global.scss",
+        "koha-tmpl/intranet-tmpl/prog/css/src/_header.scss",
+        "koha-tmpl/intranet-tmpl/prog/css/src/_flatpickr.scss",
+        "koha-tmpl/intranet-tmpl/prog/css/src/_forms.scss",
+        "koha-tmpl/intranet-tmpl/prog/css/src/edifact_interchange.scss",
+        "koha-tmpl/intranet-tmpl/prog/css/src/installer.scss",
+        "koha-tmpl/intranet-tmpl/prog/css/src/calendar.scss",
+        "koha-tmpl/intranet-tmpl/prog/css/src/holds.scss",
+        "koha-tmpl/intranet-tmpl/prog/css/src/mainpage.scss"
+      ],
+      "rules": {
+        "color-no-hex": null
+      }
+    }
+  ]
 }
