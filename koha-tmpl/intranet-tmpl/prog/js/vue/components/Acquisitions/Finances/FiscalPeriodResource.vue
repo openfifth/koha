@@ -48,6 +48,23 @@ export default {
             };
         };
 
+        const defaultToolbarButtons = (defaultButtons, resource) => {
+            return {
+                list: defaultButtons.list,
+                show: defaultButtons.show.map(button => {
+                    if (button.action === "delete" && resource.ledgers?.length)
+                        return {
+                            ...button,
+                            disabled: true,
+                            hint: $__(
+                                "This fiscal period has ledgers and cannot be deleted"
+                            ),
+                        };
+                    return button;
+                }),
+            };
+        };
+
         const baseResource = useBaseResource({
             resourceName: "fiscal_period",
             nameAttr: "name",
@@ -102,6 +119,7 @@ export default {
             ],
             props,
             additionalToolbarButtons,
+            defaultToolbarButtons,
             resourceAttrs: [
                 {
                     name: "fiscal_period_id",
@@ -260,7 +278,16 @@ export default {
                         ? ["edit"]
                         : []),
                     ...(baseResource.isUserPermitted("deleteFiscalPeriod")
-                        ? ["delete"]
+                        ? [
+                              {
+                                  delete: {
+                                      text: $__("Delete"),
+                                      icon: "fa fa-trash",
+                                      should_display: row =>
+                                          !row.ledgers?.length,
+                                  },
+                              },
+                          ]
                         : []),
                 ],
             },

@@ -111,7 +111,17 @@ export default {
         const defaultToolbarButtons = (defaultButtons, resource) => {
             return {
                 list: [],
-                show: defaultButtons.show,
+                show: defaultButtons.show.map(button => {
+                    if (button.action === "delete" && resource.funds?.length)
+                        return {
+                            ...button,
+                            disabled: true,
+                            hint: $__(
+                                "This ledger has funds and cannot be deleted"
+                            ),
+                        };
+                    return button;
+                }),
             };
         };
 
@@ -423,7 +433,16 @@ export default {
                             ? ["edit"]
                             : []),
                         ...(baseResource.isUserPermitted("deleteLedger")
-                            ? ["delete"]
+                            ? [
+                                  {
+                                      delete: {
+                                          text: $__("Delete"),
+                                          icon: "fa fa-trash",
+                                          should_display: row =>
+                                              !row.funds?.length,
+                                      },
+                                  },
+                              ]
                             : []),
                         {
                             duplicate: {
