@@ -269,6 +269,35 @@
                         </li>
                     [% END %]
                     [% INCLUDE 'langmenu-staff-top.inc' %]
+                    <li class="nav-item dropdown" id="bd-theme">
+                        <a id="bd-theme-toggle" class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Toggle colour theme (current: auto)">
+                            <i class="fa fa-circle-half-stroke theme-icon-active" aria-hidden="true"></i>
+                            <span id="bd-theme-text" class="visually-hidden">Toggle colour theme</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" role="menu" aria-labelledby="bd-theme-toggle">
+                            <li>
+                                <button type="button" class="dropdown-item d-flex align-items-center" data-bs-theme-value="light" aria-pressed="false">
+                                    <i class="fa fa-fw fa-sun me-2" aria-hidden="true"></i>
+                                    <span>Light</span>
+                                    <i class="fa fa-fw fa-check ms-auto theme-active-marker" aria-hidden="true"></i>
+                                </button>
+                            </li>
+                            <li>
+                                <button type="button" class="dropdown-item d-flex align-items-center" data-bs-theme-value="dark" aria-pressed="false">
+                                    <i class="fa fa-fw fa-moon me-2" aria-hidden="true"></i>
+                                    <span>Dark</span>
+                                    <i class="fa fa-fw fa-check ms-auto theme-active-marker" aria-hidden="true"></i>
+                                </button>
+                            </li>
+                            <li>
+                                <button type="button" class="dropdown-item d-flex align-items-center" data-bs-theme-value="auto" aria-pressed="true">
+                                    <i class="fa fa-fw fa-circle-half-stroke me-2" aria-hidden="true"></i>
+                                    <span>Auto</span>
+                                    <i class="fa fa-fw fa-check ms-auto theme-active-marker" aria-hidden="true"></i>
+                                </button>
+                            </li>
+                        </ul>
+                    </li>
                 [% ELSE %]
                     <li class="nav-item loggedout">
                         <a href="/cgi-bin/koha/mainpage.pl" id="login">Log in</a>

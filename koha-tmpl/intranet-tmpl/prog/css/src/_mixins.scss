@@ -11,7 +11,8 @@ $nav-menu-bullet: url( "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/
     padding: 1rem;
 
     &:not( .bg-danger, .bg-warning, .bg-info, .bg-success, .bg-primary, .bg-danger-subtle, .bg-warning-subtle, .bg-info-subtle, .bg-success-subtle, .bg-primary-subtle, .action ) {
-        background-color: #FFF;
+        background-color: var(--koha-surface);
+        color: var(--koha-on-surface);
     }
 }
 

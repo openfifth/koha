@@ -29,6 +29,7 @@
 [% Asset.js("js/sidebar.js") | $raw %]
 [% Asset.js("js/staff-global.js") | $raw %]
 [% Asset.js("js/form-submit.js",{'type' => 'module'}) | $raw %]
+[% Asset.js("js/switch-theme.js") | $raw %]
 [% INCLUDE 'js-date-format.inc' %]
 [% INCLUDE 'js-patron-get-age.inc' %]
 [% INCLUDE 'js-patron-format-address.inc' %]
