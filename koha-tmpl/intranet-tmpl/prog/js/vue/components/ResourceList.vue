@@ -380,7 +380,11 @@ export default {
                 }
                 return acc;
             }, {});
-            return { ...tableEvents.value, ...actionButtons };
+            return {
+                ...tableEvents.value,
+                ...(props.instancedResource.customTableEvents || {}),
+                ...actionButtons,
+            };
         });
         onBeforeMount(() => {
             if (props.instancedResource.embedded) {
