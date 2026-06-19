@@ -269,7 +269,7 @@ export default {
         });
 
         const tableOptions = {
-            table_settings: null,
+            table_settings: fiscal_period_table_settings,
             add_filters: true,
             actions: {
                 0: ["show"],

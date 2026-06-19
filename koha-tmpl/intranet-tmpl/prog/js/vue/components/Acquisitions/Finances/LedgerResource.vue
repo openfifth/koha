@@ -421,7 +421,7 @@ export default {
         ];
 
         const tableOptions = {
-            table_settings: null,
+            table_settings: ledger_table_settings,
             add_filters: true,
             options: { embed: "fiscal_period,funds" },
             ...(!props.embedded && {

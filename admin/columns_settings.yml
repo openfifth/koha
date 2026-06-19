@@ -275,6 +275,62 @@ modules:
             cannot_be_toggled: 1
             cannot_be_modified: 1
 
+    finances:
+      fiscal_periods:
+        columns:
+            -
+              columnname: fiscal_period_id
+            -
+              columnname: name
+            -
+              columnname: description
+            -
+              columnname: start_date
+            -
+              columnname: end_date
+            -
+              columnname: actions
+              cannot_be_toggled: 1
+              cannot_be_modified: 1
+      ledgers:
+        columns:
+            -
+              columnname: ledger_id
+            -
+              columnname: fiscal_period
+            -
+              columnname: name
+            -
+              columnname: description
+            -
+              columnname: locked
+            -
+              columnname: ledger_amount
+            -
+              columnname: actions
+              cannot_be_toggled: 1
+              cannot_be_modified: 1
+      funds:
+        columns:
+            -
+              columnname: fund_id
+            -
+              columnname: fiscal_period
+            -
+              columnname: ledger
+            -
+              columnname: name
+            -
+              columnname: code
+            -
+              columnname: description
+            -
+              columnname: fund_amount
+            -
+              columnname: actions
+              cannot_be_toggled: 1
+              cannot_be_modified: 1
+
   admin:
     cities:
       table_cities:

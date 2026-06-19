@@ -37,6 +37,9 @@
         // const library_groups = [% To.json(library_groups) | $raw %];
         const currencyList = [% To.json(currencies) | $raw %];
         const permitted_patrons = [% To.json(permitted_patrons) | $raw %];
+        const fiscal_period_table_settings = [% TablesSettings.GetTableSettings('acqui', 'finances', 'fiscal_periods', 'json') | $raw %];
+        const ledger_table_settings = [% TablesSettings.GetTableSettings('acqui', 'finances', 'ledgers', 'json') | $raw %];
+        const fund_table_settings = [% TablesSettings.GetTableSettings('acqui', 'finances', 'funds', 'json') | $raw %];
     </script>
     [% Asset.js("js/vue/dist/acquisitions/acquisitions.js") | $raw %]
     [% INCLUDE 'select2.inc' %]

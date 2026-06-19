@@ -513,7 +513,7 @@ export default {
         ];
 
         const tableOptions = {
-            table_settings: null,
+            table_settings: fund_table_settings,
             add_filters: true,
             options: {
                 embed: "sub_funds,allocations,parent_fund,fiscal_period,ledger",
