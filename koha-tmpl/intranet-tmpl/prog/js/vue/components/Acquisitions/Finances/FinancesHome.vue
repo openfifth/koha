@@ -109,6 +109,16 @@ export default {
                             : "",
                 },
                 {
+                    title: $__("Managing library"),
+                    data: "managing_library",
+                    searchable: false,
+                    orderable: false,
+                    render: (data, type, row) =>
+                        row.managing_library
+                            ? `<a href="/cgi-bin/koha/admin/branches.pl?op=view&branchcode=${row.managing_branch}">${escape_str(row.managing_library.name)}</a>`
+                            : "",
+                },
+                {
                     title: $__("Fund amount"),
                     data: "fund_amount",
                     searchable: false,
@@ -144,7 +154,7 @@ export default {
             },
             url: "/api/v1/acquisitions/funds",
             options: {
-                embed: "summary,ledger",
+                embed: "summary,ledger,managing_library",
                 order: [[2, "asc"]],
                 dom: '<"top pager"<"table_entries"ip>>tr<"bottom pager"ip>',
             },
