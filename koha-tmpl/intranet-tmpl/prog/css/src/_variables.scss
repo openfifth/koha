@@ -1180,8 +1180,8 @@ $nav-tabs-border-width:             var(--#{$prefix}border-width);
 $nav-tabs-border-radius:            0; // var(--#{$prefix}border-radius);
 $nav-tabs-link-hover-border-color:  #408540; // var(--#{$prefix}secondary-bg) var(--#{$prefix}secondary-bg) $nav-tabs-border-color;
 $nav-tabs-link-active-color:        var(--#{$prefix}emphasis-color);
-$nav-tabs-link-active-bg:           $white; // var(--#{$prefix}body-bg);
-$nav-tabs-link-active-border-color: $white; // var(--#{$prefix}border-color) var(--#{$prefix}border-color) $nav-tabs-link-active-bg;
+$nav-tabs-link-active-bg:           var(--#{$prefix}body-bg);
+$nav-tabs-link-active-border-color: var(--#{$prefix}body-bg);
 
 $nav-pills-border-radius:           var(--#{$prefix}border-radius);
 $nav-pills-link-active-color:       $component-active-color;

@@ -10,17 +10,18 @@
 }
 
 .newsitem {
-    background-color: #FFF;
-    border-bottom: 1px solid #EEE;
+    background-color: var(--koha-surface);
+    border-bottom: 1px solid var(--koha-border-muted);
     border-radius: 6px;
+    color: var(--koha-on-surface);
     margin: .3em;
-    opacity: .75;
     padding: 3px;
 }
 
 .newsfooter {
-    color: #585858;
+    color: var(--koha-on-surface-subtle);
     margin: .5rem 0;
+    font-size: 80%;
 }
 
 ul {
@@ -34,9 +35,9 @@ ul {
             a {
                 &.icon_general {
                     align-items: center;
-                    background-color: #E0E0E0;
+                    background-color: var(--koha-surface-accent);
                     border-radius: 6px;
-                    color: #000;
+                    color: var(--koha-on-surface);
                     display: flex;
                     font-size: large;
                     height: 50px;
@@ -45,7 +46,7 @@ ul {
 
                     &:hover {
                         background-color: $background-color-primary;
-                        color: #FFF;
+                        color: var(--koha-brand-on);
 
                         img {
                             filter: invert( 100% );
@@ -66,7 +67,7 @@ ul {
                     }
 
                     .fa-stack-1x {
-                        color: #626262;
+                        color: var(--koha-on-surface-muted);
                         font-size: .9em;
                         left: -5px;
                         top: -1px;

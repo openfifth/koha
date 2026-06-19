@@ -7,6 +7,17 @@
     }
 }
 
+// Theme switcher dropdown — checkmark next to the currently-active option.
+#bd-theme {
+    .theme-active-marker {
+        visibility: hidden;
+    }
+
+    [aria-pressed="true"] .theme-active-marker {
+        visibility: visible;
+    }
+}
+
 #header_search {
     background-color: $background-color-primary;
     border-radius: 0;
@@ -81,7 +92,7 @@
     }
 
     .form-content {
-        background-color: white;
+        background-color: var(--koha-surface-overlay);
         margin-left: -16px;
         padding-left: 16px;
         border-radius: 0 16px 16px 0;
@@ -97,9 +108,10 @@
             border-radius: 0;
             box-shadow: unset;
             margin: 0;
+            color: var(--koha-on-surface);
 
             &:not(:first-child) {
-                border-left: 1px solid #e0e0e0;
+                border-left: 1px solid var(--koha-border);
             }
         }
 
@@ -116,8 +128,8 @@
         right: 60px;
         position: absolute;
         top: 31px;
-        background-color: #f3f4f4;
-        background-color: white;
+        background-color: var(--koha-surface-overlay);
+        color: var(--koha-on-surface);
         padding: 1em;
         border-radius: 0 0 8px 8px;
         border: 1px solid $background-color-primary;
@@ -127,7 +139,7 @@
         display: none;
 
         a {
-            color: $green-text-color;
+            color: var(--koha-text-success);
         }
 
         div {
@@ -289,7 +301,7 @@
 .breadcrumb-item {
     &.active {
         a {
-            color: dimgray;
+            color: var(--koha-on-surface-muted);
         }
     }
 }
@@ -315,7 +327,7 @@
         padding: 0 .7rem;
 
         &:hover {
-            background-color: #FFF;
+            background-color: var(--koha-surface);
         }
     }
 }
