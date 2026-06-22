@@ -10,7 +10,7 @@ import BaseResource from "../../BaseResource.vue";
 import { APIClient } from "../../../fetch/api-client.js";
 import { useBaseResource } from "../../../composables/base-resource";
 import { $__ } from "@koha-vue/i18n";
-import { computed, inject, ref } from "vue";
+import { inject, ref } from "vue";
 import { storeToRefs } from "pinia";
 
 export default {
@@ -24,7 +24,6 @@ export default {
         const isSubFund = ref(props.route.query.fund_id ? true : false);
 
         const patron_to_html = $patron_to_html;
-        const format_date = $date;
 
         const acquisitionsStore = inject("acquisitionsStore");
         const { user, authorisedValues } = storeToRefs(acquisitionsStore);
