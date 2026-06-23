@@ -2741,7 +2741,6 @@ modules:
               columnname: interface
             -
               columnname: diff
-              is_hidden: 1
     marc-modification-templates:
       templatest:
         columns:
