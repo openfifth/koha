@@ -230,6 +230,18 @@ if ($do_it) {
                 }
             }
 
+            if ( $result->{module} eq 'MEMBERS' ) {
+                my $json_engine = JSON->new->utf8->canonical(1)->pretty(1);
+                if ( $result->{info} && $result->{info} =~ /^[{\[]/ ) {
+                    my $perl_info = $json_engine->decode( $result->{info} );
+                    $result->{info} = $json_engine->encode($perl_info);
+                }
+                if ( $result->{diff} && $result->{diff} =~ /^[{\[]/ ) {
+                    my $perl_diff = $json_engine->decode( $result->{diff} );
+                    $result->{diff} = $json_engine->encode($perl_diff);
+                }
+            }
+
             push @data, $result;
         }
 
