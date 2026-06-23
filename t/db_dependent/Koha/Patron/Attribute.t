@@ -18,7 +18,7 @@
 # along with Koha; if not, see <https://www.gnu.org/licenses>.
 
 use Modern::Perl;
-use JSON qw( to_json );
+use JSON qw( encode_json from_json );
 
 use Test::NoWarnings;
 use Test::More tests => 5;
@@ -531,20 +531,10 @@ subtest 'action log tests' => sub {
 
     my $get_info = sub {
         my ( $before, $after, $code, $repeatable ) = @_;
-        my $change = {
-            before => $before,
-            after  => $after
-        };
         if ($repeatable) {
-            while ( my ( $k, $v ) = each %{$change} ) {
-                if ( ref $v eq 'ARRAY' ) {
-                    $change->{$k} = [ sort @{$v} ];
-                } else {
-                    $change->{$k} = $v ? [$v] : [];
-                }
-            }
+            $after = ref $after eq 'ARRAY' ? [ sort @{$after} ] : ( $after ? [$after] : [] );
         }
-        return to_json( { "attribute.$code" => $change }, { pretty => 1, canonical => 1 } );
+        return encode_json( { "attribute.$code" => $after } );
     };
 
     my $patron         = $builder->build_object( { class => 'Koha::Patrons' } );
@@ -689,9 +679,7 @@ subtest 'action log tests' => sub {
     ];
     $patron->extended_attributes($attributes);
 
-    $info = $get_info->( [], [ 'Foo', 'Bar' ], $attribute_type->code, 1 );
-    use Data::Dumper;
-    print Dumper($info);
+    $info        = $get_info->( [], [ 'Foo', 'Bar' ], $attribute_type->code, 1 );
     $action_logs = Koha::ActionLogs->search(
         {
             module => "MEMBERS",

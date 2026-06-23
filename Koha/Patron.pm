@@ -21,7 +21,6 @@ package Koha::Patron;
 use Modern::Perl;
 
 use List::MoreUtils    qw( any none uniq notall zip6);
-use JSON               qw( to_json );
 use Scalar::Util       qw( blessed looks_like_number );
 use Unicode::Normalize qw( NFKD );
 use Try::Tiny;
@@ -2687,10 +2686,10 @@ sub add_extended_attribute {
     if ( C4::Context->preference("BorrowersLog") ) {
         my $code = $attribute->{code};
         logaction(
-            "MEMBERS",
-            "MODIFY",
-            $self->borrowernumber,
-            to_json( { "attribute.$code" => $change }, { pretty => 1, canonical => 1 } )
+            "MEMBERS", "MODIFY", $self->borrowernumber,
+            { "attribute.$code" => $change->{after} },
+            undef,
+            { "attribute.$code" => $change->{before} }
         );
     }
 
@@ -2814,12 +2813,9 @@ sub extended_attributes {
                 }
 
                 if ( %{$all_changes} ) {
-                    logaction(
-                        "MEMBERS",
-                        "MODIFY",
-                        $self->borrowernumber,
-                        to_json( $all_changes, { pretty => 1, canonical => 1 } )
-                    );
+                    my %log_from = map { $_ => $all_changes->{$_}->{before} } keys %{$all_changes};
+                    my %log_to   = map { $_ => $all_changes->{$_}->{after} } keys %{$all_changes};
+                    logaction( "MEMBERS", "MODIFY", $self->borrowernumber, \%log_to, undef, \%log_from );
                 }
             }
         );
