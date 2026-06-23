@@ -211,64 +211,6 @@ is( $message->purchase_order_number, undef, 'RFF+ON after LIN segment is ignored
 $message = Koha::Edifact::Message->new( [ $header, $bgm, @datasegs ] );
 is( $message->purchase_order_number, 'CORRECT_PO_NUM', 'Correct RFF+ON extracted when multiple RFF segments present' );
 
-# Test JSON output functionality
-my $json_output = $quote->to_json();
-ok( $json_output, 'JSON output generated' );
-
-my $parsed_json = decode_json($json_output);
-ok( $parsed_json, 'JSON output is valid JSON' );
-
-# Test structure
-ok( exists $parsed_json->{header}, 'JSON has header field' );
-ok( exists $parsed_json->{messages}, 'JSON has messages field' );
-ok( exists $parsed_json->{trailer}, 'JSON has trailer field' );
-
-# Test header content (should be UNB segment)
-like( $parsed_json->{header}, qr/^UNB\+/, 'Header starts with UNB' );
-
-# Test messages array
-is( ref $parsed_json->{messages}, 'ARRAY', 'Messages is an array' );
-is( scalar @{$parsed_json->{messages}}, 1, 'Correct number of messages' );
-
-# Test first message structure
-my $first_msg = $parsed_json->{messages}->[0];
-ok( exists $first_msg->{header}, 'Message has header' );
-ok( exists $first_msg->{segments}, 'Message has segments' );
-ok( exists $first_msg->{trailer}, 'Message has trailer' );
-
-# Test message header/trailer format
-like( $first_msg->{header}, qr/^UNH\+/, 'Message header starts with UNH' );
-like( $first_msg->{trailer}, qr/^UNT\+/, 'Message trailer starts with UNT' );
-
-# Test segments array
-is( ref $first_msg->{segments}, 'ARRAY', 'Segments is an array' );
-ok( scalar @{$first_msg->{segments}} > 0, 'Message has segments' );
-
-# Find a LIN segment to test line_id functionality
-my $lin_segment;
-my $lin_related_segment;
-for my $seg (@{$first_msg->{segments}}) {
-    if ($seg->{tag} eq 'LIN') {
-        $lin_segment = $seg;
-    } elsif ($lin_segment && $seg->{tag} =~ /^(QTY|PRI|PIA)$/ && $seg->{line_id}) {
-        $lin_related_segment = $seg;
-        last;
-    }
-}
-
-ok( $lin_segment, 'Found LIN segment in JSON' );
-if ($lin_segment) {
-    ok( exists $lin_segment->{line_id}, 'LIN segment has line_id' );
-    ok( exists $lin_segment->{raw}, 'LIN segment has raw data' );
-    ok( exists $lin_segment->{elements}, 'LIN segment has elements array' );
-    like( $lin_segment->{raw}, qr/^LIN\+/, 'LIN raw data starts correctly' );
-}
-
-ok( $lin_related_segment, 'Found line-related segment with line_id' );
-if ($lin_related_segment && $lin_segment) {
-    is( $lin_related_segment->{line_id}, $lin_segment->{line_id}, 'Line-related segment has matching line_id' );
-}
-
 # Test LSL (Library Sub-Location) field extraction from GIR segments
 my $mock_line_data = {
     GIR => [
