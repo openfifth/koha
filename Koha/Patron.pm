@@ -3977,7 +3977,11 @@ sub _unblessed_for_log {
     my $data = $self->unblessed;
     delete @{$data}{qw(password lastseen updated_on)};
     for my $key ( keys %$data ) {
-        $data->{$key} = "$data->{$key}" if blessed( $data->{$key} );
+        if ( defined $data->{$key} && $data->{$key} ne '' ) {
+            $data->{$key} = "$data->{$key}" if blessed( $data->{$key} );
+        } else {
+            delete $data->{$key};
+        }
     }
     return $data;
 }
