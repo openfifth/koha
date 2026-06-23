@@ -83,6 +83,11 @@ subtest 'Config from XML matches config from database' => sub {
         # Remove 'password' from file config as it's no longer migrated (security improvement)
         # Passwords are now validated against the borrowers table using bcrypt hashes
         delete $fileSIPconfig->{accounts}->{$key}{'password'};
+
+        # Set patron_branchcode_in_ao default as it was added after XML config format (Bug 41311)
+        if ( !defined $fileSIPconfig->{accounts}->{$key}{'patron_branchcode_in_ao'} ) {
+            $fileSIPconfig->{accounts}->{$key}{'patron_branchcode_in_ao'} = '0';
+        }
     }
 
     #Test accounts
