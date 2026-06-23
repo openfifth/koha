@@ -27,7 +27,7 @@ use Unicode::Normalize qw( NFKD );
 use Try::Tiny;
 use DateTime ();
 
-use C4::Auth qw( checkpw_hash );
+use C4::Auth qw( checkpw_hash get_user_subpermissions );
 use C4::Context;
 use C4::Letters qw( GetPreparedLetter EnqueueLetter SendQueuedMessages );
 use C4::Log     qw( logaction );
@@ -3903,6 +3903,63 @@ sub identify_updated_extended_attributes {
     }
 
     return \@changed_attributes;
+}
+
+=head3 get_permissions
+
+my $flags = $patron->get_permissons
+
+Returns a structure such as:
+{
+  "permissions": 1,
+  "borrowers": 1,
+  "circulate": {
+    "manage_curbside_pickups": 1,
+    "overdues_report": 1,
+    "override_renewals": 1,
+    "manage_restrictions": 1,
+    "manage_checkout_notes": 1,
+    "manage_bookings": 1
+  },
+  "catalogue": 1,
+  "reserveforothers": {
+    "place_holds": 1,
+    "modify_holds_priority": 1
+  }
+}
+where a 1 indicates full permissions and a hash indicates
+partial permissions with the given permissions as hash keys
+
+=cut
+
+sub permissions {
+    my ($self) = @_;
+
+    my $dbh = C4::Context->dbh;
+    my $sth = $dbh->prepare("SELECT bit, flag FROM userflags ORDER BY bit");
+    $sth->execute();
+    my $userflags = { map { $_->[0] => $_->[1] } @{ $sth->fetchall_arrayref() } };
+
+    my $flags = $self->flags // 0;
+
+    my $active_flags = {};
+
+    foreach my $bit ( keys %$userflags ) {
+        if ( $flags & ( 1 << $bit ) ) {
+            my $flag = $userflags->{$bit};
+            $active_flags->{$flag} = 1;
+        }
+    }
+
+    my $user_perms = get_user_subpermissions( $self->userid );
+
+    for my $module ( keys %$user_perms ) {
+        for my $code ( keys %{ $user_perms->{$module} } ) {
+            $active_flags->{$module}->{$code} = 1;
+        }
+    }
+
+    return $active_flags;
 }
 
 =head2 Internal methods
