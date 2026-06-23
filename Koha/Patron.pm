@@ -3905,9 +3905,9 @@ sub identify_updated_extended_attributes {
     return \@changed_attributes;
 }
 
-=head3 get_permissions
+=head3 permissions
 
-my $flags = $patron->get_permissons
+my $flags = $patron->permissions
 
 Returns a structure such as:
 {
