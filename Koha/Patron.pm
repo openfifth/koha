@@ -3935,22 +3935,23 @@ partial permissions with the given permissions as hash keys
 sub permissions {
     my ($self) = @_;
 
-    my $dbh = C4::Context->dbh;
-    my $sth = $dbh->prepare("SELECT bit, flag FROM userflags ORDER BY bit");
-    $sth->execute();
-    my $userflags = { map { $_->[0] => $_->[1] } @{ $sth->fetchall_arrayref() } };
+    # Get userflags using ORM
+    my $schema        = Koha::Database->schema;
+    my @userflags     = $schema->resultset('Userflag')->search( {}, { order_by => 'bit' } )->all;
+    my %userflags_map = map { $_->bit => $_->flag } @userflags;
 
-    my $flags = $self->flags // 0;
-
+    my $flags        = $self->flags // 0;
     my $active_flags = {};
 
-    foreach my $bit ( keys %$userflags ) {
+    # Check which flags are active based on bit values
+    foreach my $bit ( keys %userflags_map ) {
         if ( $flags & ( 1 << $bit ) ) {
-            my $flag = $userflags->{$bit};
+            my $flag = $userflags_map{$bit};
             $active_flags->{$flag} = 1;
         }
     }
 
+    # Get granular subpermissions using existing helper
     my $user_perms = get_user_subpermissions( $self->userid );
 
     for my $module ( keys %$user_perms ) {
