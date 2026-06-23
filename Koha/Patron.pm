@@ -4071,7 +4071,7 @@ sub _unblessed_for_log {
     # Use get_column rather than unblessed to avoid DBIC column inflation:
     # date/datetime values are returned as raw ISO strings directly, without
     # constructing DateTime objects that we would only immediately stringify.
-    my %data = map { $_ => $self->get_column($_) } $self->result_source->columns;
+    my %data = map { $_ => $self->get_column($_) } $self->{_result}->result_source->columns;
     delete @data{qw(password lastseen updated_on)};
     for my $key ( keys %data ) {
         delete $data{$key} unless defined $data{$key} && $data{$key} ne '';
