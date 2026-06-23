@@ -248,6 +248,7 @@ INSERT INTO systempreferences ( `variable`, `value`, `options`, `explanation`, `
 ('EdifactOrderSendBlockDuplicatesEmailAddresses', '', NULL, 'Comma-separated list of acquisitions staff email addresses to use when EdifactOrderSendBlockDuplicatesEmailNotice is set to specific email addresses.', 'Textarea'),
 ('EdifactOrderSendBlockDuplicatesEmailNotice', '0', '0|AcquisitionsDefaultEmailAddress|EdifactOrderSendBlockDuplicatesEmailAddresses|KohaAdminEmailAddress', 'Send duplicate EDIFACT order block notifications using the EDI_DUP_ORD_LIBRARY notice template to the selected address. Vendor EDI contacts are always notified separately via EDI_DUP_ORD_VENDOR.', 'Choice'),
 ('ElasticsearchBoostFieldMatch', '0', NULL, 'Add a "match" query to es when searching, will follow indexes chosen in advanced search, or use title-cover for generic keyword or title index search', 'YesNo'),
+('ElasticsearchBoostFieldMatchAmount', '0', NULL, 'Amount to boost the "match" query for Elasticsearch searches', 'Free'),
 ('ElasticsearchCrossFields', '1', NULL, 'Enable "cross_fields" option for searches using Elastic search.', 'YesNo'),
 ('ElasticsearchEscapeCharacters', '', NULL, 'List of characters to always escape in intranet Elasticsearch searches', 'Free'),
 ('ElasticsearchIndexStatus_authorities', '0', 'Authorities index status', NULL, NULL),
