@@ -16,8 +16,9 @@
 
 use Modern::Perl;
 use Data::Dumper qw( Dumper );
+
 use Test::NoWarnings;
-use Test::More tests => 8;
+use Test::More tests => 9;
 
 use C4::Context;
 use C4::Log  qw( logaction cronlogaction );
@@ -219,6 +220,24 @@ subtest 'Test storing diff of objects' => sub {
         Koha::ActionLogs->search( { module => 'MY_MODULE', action => 'TEST02', object => $item->itemnumber } )->next;
     $diff = decode_json( $logs->diff );
     is( $diff->{D}->{barcode}->{N}, '_MY_TEST_BARCODE_', 'Diff of changes logged successfully' );
+};
+
+subtest 'Test storing diff of hashrefs' => sub {
+    plan tests => 1;
+    my $original_data = {
+        firstname => 'John',
+        surname   => 'Doe'
+    };
+    my $edited_data = {
+        firstname => 'Johnny',
+        surname   => 'Doe'
+    };
+
+    logaction( 'MY_MODULE', 'TEST', 12345, $edited_data, 'staff', $original_data );
+
+    my $logs = Koha::ActionLogs->search( { module => 'MY_MODULE', action => 'TEST' } )->next;
+    my $diff = decode_json( $logs->diff );
+    is( $diff->{D}->{firstname}->{N}, 'Johnny', 'Diff of changes logged successfully' );
 };
 
 subtest 'Test storing original version of an item' => sub {
