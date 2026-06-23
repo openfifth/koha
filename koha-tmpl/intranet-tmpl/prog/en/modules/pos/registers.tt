@@ -224,7 +224,7 @@
                                             data-bankable="[% rbankable | $Price %]"
                                             data-float="[% register.starting_float | $Price %]"
                                             data-registerid="[% register.id | html %]"
-                                            [% IF rtotal == 0 %]disabled title="No transactions"[% END %]
+                                            [% IF rtotal == 0 %]disabled title="[% 'No transactions' | html %]"[% END %]
                                             ><i class="fa-solid fa-money-bill-1"></i> Record cashup</button
                                         >
                                     [% END %]
