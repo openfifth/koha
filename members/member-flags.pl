@@ -109,7 +109,10 @@ if ( $op eq 'cud-newflags' ) {
     }
 
     my $permissions_after = $patron->get_from_storage->permissions();
-    logaction( 'MEMBERS', 'MODIFY', $member, $permissions_after, undef, $permissions_before );
+    logaction(
+        'MEMBERS', 'MODIFY', $member, { permissions => $permissions_after }, undef,
+        { permissions => $permissions_before }
+    );
     print $input->redirect("/cgi-bin/koha/members/moremember.pl?borrowernumber=$member");
 } else {
 
