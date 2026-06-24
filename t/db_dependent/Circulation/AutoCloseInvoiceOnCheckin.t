@@ -360,14 +360,21 @@ subtest 'AcqCreateItem=receiving: record_physical_receipt is a no-op' => sub {
 
     my $invoice = $builder->build_object( { class => 'Koha::Acquisition::Invoices', value => { closedate => undef } } );
 
-    my $order = $builder->build(
+    my $basket = $builder->build(
         {
-            source => 'Aqorder',
-            value  => { invoiceid => $invoice->invoiceid, orderstatus => 'complete' },
+            source => 'Aqbasket',
+            value  => { create_items => undef },
         }
     );
 
-    # Basket defaults to AcqCreateItem syspref (receiving), so effective_create_items = 'receiving'
+    my $order = $builder->build(
+        {
+            source => 'Aqorder',
+            value  => { invoiceid => $invoice->invoiceid, orderstatus => 'complete', basketno => $basket->{basketno} },
+        }
+    );
+
+    # Basket has create_items=NULL, so effective_create_items falls back to AcqCreateItem syspref ('receiving')
     $builder->build(
         {
             source => 'AqordersItem',
