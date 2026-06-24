@@ -35,7 +35,7 @@ use C4::Biblio qw( GetMarcFromKohaField ModBiblio );
 use C4::HoldsQueue;
 use C4::Members;
 use C4::Reserves
-    qw( AddReserve AlterPriority CheckReserves ModReserve ModReserveAffect ReserveSlip CalculatePriority CanBookBeReserved IsAvailableForItemLevelRequest MoveReserve CanItemBeReserved MergeHolds );
+    qw( AddReserve AlterPriority CheckReserves ModReserve ModReserveAffect ReserveSlip CalculatePriority CanBookBeReserved IsAvailableForItemLevelRequest MoveReserve CanItemBeReserved MergeHolds ToggleLowestPriority );
 use Koha::ActionLogs;
 use Koha::Biblios;
 use Koha::Caches;
