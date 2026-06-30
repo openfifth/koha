@@ -409,7 +409,8 @@
                                     <label for="borrowernumber">Patron ID:</label>
                                     <input name="borrowernumber" id="borrowernumber" type="text" value="[% request.borrowernumber | html %]" />
                                 </li>
-                                [% PROCESS select_manager_form
+                                [%
+                                    PROCESS select_manager_form
                                     manager => request.manager
                                     required_permission => CAN_user_ill
                                 %]

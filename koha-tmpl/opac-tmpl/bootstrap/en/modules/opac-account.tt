@@ -73,8 +73,7 @@
                     [% IF logged_in_user.category.print_notice_charge > 0 %]
                         <div class="alert alert-info">
                             <h5><i class="fa fa-info-circle"></i> About Print Notice Charges</h5>
-                            <p>Print notice charges of [% logged_in_user.category.print_notice_charge | $Price %]
-                               each help cover postage and processing costs when notices are sent by mail.</p>
+                            <p>Print notice charges of [% logged_in_user.category.print_notice_charge | $Price %] each help cover postage and processing costs when notices are sent by mail.</p>
                             <p><strong>To avoid future print notice charges:</strong></p>
                             <ul>
                                 <li>Make sure your <a href="/cgi-bin/koha/opac-memberentry.pl">contact information</a> includes an email address</li>

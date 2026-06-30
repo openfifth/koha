@@ -1210,19 +1210,18 @@
     <script nonce="[% Koha.CSPNonce | $raw %]">
         function select_suggester(borrowernumber, borrower) {
             $.ajax({
-                type: 'GET',
-                url: '/api/v1/patrons/' + borrowernumber,
+                type: "GET",
+                url: "/api/v1/patrons/" + borrowernumber,
                 headers: {
-                    "x-koha-embed": "+strings"
+                    "x-koha-embed": "+strings",
                 },
                 success: function (data) {
                     var suggested = '<input type="hidden" id="suggestedby" name="suggestedby" value="' + data.patron_id + '" />';
                     suggested += '<a href="/cgi-bin/koha/members/moremember.pl?borrowernumber=' + data.patron_id + '">';
-                    suggested += data.surname.escapeHtml() + ', ' + data.firstname.escapeHtml() + ' (' + data.cardnumber.escapeHtml() + ')';
-                    suggested += '</a> ';
-                    suggested += data._strings.library_id.str.escapeHtml() + ' (' + data._strings.category_id.str.escapeHtml() + ')';
+                    suggested += data.surname.escapeHtml() + ", " + data.firstname.escapeHtml() + " (" + data.cardnumber.escapeHtml() + ")";
+                    suggested += "</a> ";
+                    suggested += data._strings.library_id.str.escapeHtml() + " (" + data._strings.category_id.str.escapeHtml() + ")";
                     $("#tdsuggestedby").html(suggested);
-
                 },
                 error: function (data) {
                     alert(_("Cannot retrieve info for this patron."));
@@ -1234,14 +1233,13 @@
         //keep a copy of all budgets before removing the inactives
         var budgetId = $("#budgetid");
         var disabledBudgetsCopy = budgetId.html();
-        $('.b_inactive').remove();
+        $(".b_inactive").remove();
 
-        $('.showallfunds').click(function() {
+        $(".showallfunds").click(function () {
             if ($(this).is(":checked")) {
                 budgetId.html(disabledBudgetsCopy); //Puts back all the funds
-            }
-            else {
-                $('.b_inactive').remove();
+            } else {
+                $(".b_inactive").remove();
             }
         });
     </script>
