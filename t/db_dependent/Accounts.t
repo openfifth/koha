@@ -581,7 +581,7 @@ subtest 'balance' => sub {
 };
 
 subtest "C4::Accounts::chargelostitem tests" => sub {
-    plan tests => 4;
+    plan tests => 5;
 
     my $branch     = $builder->build( { source => 'Branch' } );
     my $branchcode = $branch->{branchcode};
