@@ -90,8 +90,6 @@ enrollment fee for the patron
 
 are overdue notices sent to this patron category (1 for yes, 0 for no)
 
-
-
 =head2 print_notice_charge
 
   data_type: 'decimal'
@@ -175,6 +173,13 @@ if patrons of this category can do the password reset flow,
   is_nullable: 1
 
 if patrons of this category can change their passwords in the OAPC
+
+=head2 password_history_count
+
+  data_type: 'smallint'
+  is_nullable: 1
+
+Number of previous passwords to check against when changing password for this patron type
 
 =head2 min_password_length
 
@@ -339,6 +344,8 @@ __PACKAGE__->add_columns(
   { data_type => "tinyint", is_nullable => 1 },
   "change_password",
   { data_type => "tinyint", is_nullable => 1 },
+  "password_history_count",
+  { data_type => "smallint", is_nullable => 1 },
   "min_password_length",
   { data_type => "smallint", is_nullable => 1 },
   "require_strong_password",
@@ -474,8 +481,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-05-24 16:32:52
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:vzwTrbCz1W9rJ3k5UrHWtw
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-06-30 13:24:41
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:ajbj/ZhKiT9atkyZUb85ig
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration
 

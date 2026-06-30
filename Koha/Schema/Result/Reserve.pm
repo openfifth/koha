@@ -531,8 +531,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-11-03 19:54:07
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:B8/T/fmEf+RMPQsqOG+MiQ
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-06-30 13:24:42
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:ZGiKO86yLtACeZtJ4MjP1g
 
 __PACKAGE__->belongs_to(
   "item",
