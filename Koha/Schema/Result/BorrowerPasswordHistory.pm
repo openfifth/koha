@@ -99,6 +99,24 @@ __PACKAGE__->belongs_to(
 # Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-06-30 13:24:41
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:8/6ePR0IHc/dVCXneeQVtQ
 
+=head2 koha_objects_class
 
-# You can replace this text with custom code or comments, and it will be preserved on regeneration
+Missing POD for koha_objects_class.
+
+=cut
+
+sub koha_objects_class {
+    'Koha::PatronPasswordHistories';
+}
+
+=head2 koha_object_class
+
+Missing POD for koha_object_class.
+
+=cut
+
+sub koha_object_class {
+    'Koha::PatronPasswordHistory';
+}
+
 1;
