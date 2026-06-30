@@ -379,6 +379,9 @@
                                 [% END %]
                             </select>
                         </li>
+                    [% END %]
+                </ol>
+            </fieldset>
 
             <fieldset class="action">
                 <input type="submit" class="btn btn-primary" value="Save changes" />
