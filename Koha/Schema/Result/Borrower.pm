@@ -1151,6 +1151,21 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 borrower_password_histories
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::BorrowerPasswordHistory>
+
+=cut
+
+__PACKAGE__->has_many(
+  "borrower_password_histories",
+  "Koha::Schema::Result::BorrowerPasswordHistory",
+  { "foreign.borrowernumber" => "self.borrowernumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 borrower_relationships_guarantees
 
 Type: has_many
@@ -1736,6 +1751,36 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 patron_quota_usages
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::PatronQuotaUsage>
+
+=cut
+
+__PACKAGE__->has_many(
+  "patron_quota_usages",
+  "Koha::Schema::Result::PatronQuotaUsage",
+  { "foreign.patron_id" => "self.borrowernumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+=head2 patron_quotas
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::PatronQuota>
+
+=cut
+
+__PACKAGE__->has_many(
+  "patron_quotas",
+  "Koha::Schema::Result::PatronQuota",
+  { "foreign.patron_id" => "self.borrowernumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 patronimage
 
 Type: might_have
@@ -2227,8 +2272,8 @@ Composing rels: L</user_permissions> -> permission
 __PACKAGE__->many_to_many("permissions", "user_permissions", "permission");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-11-03 14:19:07
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:NHrhTcf4p6JW5fNgfYiqeQ
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-06-30 13:24:41
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:7Ufu82QGZ5j4MibSFrh+FQ
 
 __PACKAGE__->belongs_to(
   "library",

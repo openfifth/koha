@@ -172,6 +172,8 @@ __PACKAGE__->add_columns(
   { data_type => "varchar", is_nullable => 1, size => 50 },
   "basket_name_field",
   { data_type => "varchar", is_nullable => 1, size => 10 },
+  "file_transport_id",
+  { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
 );
 
 =head1 PRIMARY KEY
@@ -208,6 +210,26 @@ __PACKAGE__->belongs_to(
   },
 );
 
+=head2 file_transport
+
+Type: belongs_to
+
+Related object: L<Koha::Schema::Result::FileTransport>
+
+=cut
+
+__PACKAGE__->belongs_to(
+  "file_transport",
+  "Koha::Schema::Result::FileTransport",
+  { file_transport_id => "file_transport_id" },
+  {
+    is_deferrable => 1,
+    join_type     => "LEFT",
+    on_delete     => "SET NULL",
+    on_update     => "CASCADE",
+  },
+);
+
 =head2 vendor
 
 Type: belongs_to
@@ -229,8 +251,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-03-17 10:20:02
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:+VquKvpwIyuSbWjUlbNcQA
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-06-30 13:24:42
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:TIQK3iYYij+CoIojbHyaxg
 
 __PACKAGE__->add_columns(
     '+parse_items' => { is_boolean => 1 },
