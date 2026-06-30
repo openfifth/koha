@@ -26,10 +26,7 @@ const islandsExport = application => {
             outputModule: true,
         },
         entry: {
-            islands: [
-                "./koha-tmpl/intranet-tmpl/prog/js/vue/csp-nonce.js",
-                "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/islands.ts",
-            ],
+            islands: "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/islands.ts",
         },
         output: {
             filename: "[name].esm.js",
