@@ -237,7 +237,6 @@ Foreign key to cash_registers.id
   data_type: 'tinyint'
   is_nullable: 1
 
-
 =head2 show_checkin_message
 
   data_type: 'tinyint'
@@ -514,8 +513,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-05-24 16:32:53
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:7xlHxjcI/Du780Cz05dbDw
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-06-30 13:24:42
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:nsUK5WQFOnvOe+pfExn5VQ
 
 
 __PACKAGE__->add_columns(
