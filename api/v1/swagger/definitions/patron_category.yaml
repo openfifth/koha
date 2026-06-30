@@ -107,6 +107,11 @@ properties:
       - boolean
       - "null"
     description: Set required password strength for patrons in this category
+  password_history_count:
+    type:
+      - number
+      - "null"
+    description: Number of previous passwords to check against to prevent reuse for patrons in this category
   exclude_from_local_holds_priority:
     type:
       - boolean
