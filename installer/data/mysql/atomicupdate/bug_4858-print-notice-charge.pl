@@ -9,12 +9,14 @@ return {
         my ( $dbh, $out ) = @$args{qw(dbh out)};
 
         # Add print_notice_charge column to categories table
-        $dbh->do(
-            q{ALTER TABLE categories
-              ADD COLUMN print_notice_charge decimal(28,6) DEFAULT 0.00
-              COMMENT 'charge for print notices (0.00 = disabled)'
-              AFTER overduenoticerequired}
-        );
+        if ( !column_exists( 'categories', 'print_notice_charge' ) ) {
+            $dbh->do(
+                q{ALTER TABLE categories
+                  ADD COLUMN print_notice_charge decimal(28,6) DEFAULT 0.00
+                  COMMENT 'charge for print notices (0.00 = disabled)'
+                  AFTER overduenoticerequired}
+            );
+        }
 
         # Add PRINT_NOTICE debit type
         $dbh->do(
