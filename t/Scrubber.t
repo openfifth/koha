@@ -19,7 +19,9 @@
 
 use Modern::Perl;
 
-use Test::More tests => 8;
+use File::Temp qw( tempdir );
+
+use Test::More tests => 9;
 use Test::NoWarnings;
 use Test::Exception;
 use Test::Warn;
@@ -455,5 +457,82 @@ subtest 'record_display profile tests' => sub {
             $card_html,
             'complete virtual card HTML preserved'
         );
+    };
+};
+
+subtest 'override_default_settings' => sub {
+    plan tests => 4;
+
+    my $tmpdir    = tempdir( CLEANUP => 1 );
+    my $conf_file = "$tmpdir/koha-conf.xml";
+    my $yaml_file = "$tmpdir/html_scrubber.yaml";
+
+    open my $fh, '>', $conf_file or die "Cannot write $conf_file: $!";
+    print $fh "<yazgfs><config></config></yazgfs>\n";
+    close $fh;
+
+    local $ENV{KOHA_CONF} = $conf_file;
+
+    subtest 'no override file present' => sub {
+        plan tests => 1;
+
+        my $settings = { default => {}, foo => { allow => ['a'] } };
+        my $result   = C4::Scrubber::override_default_settings( { settings => $settings } );
+        is_deeply(
+            $result, { default => {}, foo => { allow => ['a'] } },
+            'settings unchanged when no override file exists'
+        );
+    };
+
+    subtest 'valid override file replaces a type' => sub {
+        plan tests => 2;
+
+        open my $yfh, '>', $yaml_file or die "Cannot write $yaml_file: $!";
+        print $yfh "foo:\n  allow: [\"div\"]\n";
+        close $yfh;
+
+        my $settings = { default => {}, foo => { allow => ['a'] } };
+        my $result;
+        warning_is { $result = C4::Scrubber::override_default_settings( { settings => $settings } ) } undef,
+            'no warning logged for a valid override file';
+        is_deeply( $result->{foo}, { allow => ['div'] }, 'override replaces the type entry' );
+
+        unlink $yaml_file;
+    };
+
+    subtest 'malformed override file falls back to defaults and warns' => sub {
+        plan tests => 2;
+
+        open my $yfh, '>', $yaml_file or die "Cannot write $yaml_file: $!";
+        print $yfh "foo: [ this is not : valid yaml\n";
+        close $yfh;
+
+        my $settings = { default => {}, foo => { allow => ['a'] } };
+        my $result;
+        warning_like { $result = C4::Scrubber::override_default_settings( { settings => $settings } ) }
+        qr/Could not load html_scrubber\.yaml/, 'warns when the override file cannot be parsed';
+        is_deeply(
+            $result, { default => {}, foo => { allow => ['a'] } },
+            'settings fall back to defaults on parse failure'
+        );
+
+        unlink $yaml_file;
+    };
+
+    subtest 'non-hash override content is ignored' => sub {
+        plan tests => 1;
+
+        open my $yfh, '>', $yaml_file or die "Cannot write $yaml_file: $!";
+        print $yfh "- just\n- a\n- list\n";
+        close $yfh;
+
+        my $settings = { default => {}, foo => { allow => ['a'] } };
+        my $result   = C4::Scrubber::override_default_settings( { settings => $settings } );
+        is_deeply(
+            $result, { default => {}, foo => { allow => ['a'] } },
+            'settings unchanged when override content is not a hash'
+        );
+
+        unlink $yaml_file;
     };
 };
