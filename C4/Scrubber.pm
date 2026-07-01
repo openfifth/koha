@@ -24,7 +24,7 @@ use warnings;
 use Carp qw( croak carp );
 use HTML::Scrubber;
 use File::Basename qw( fileparse );
-use Try::Tiny qw( try catch );
+use Try::Tiny      qw( try catch );
 use YAML::XS;
 
 use C4::Context;
@@ -150,6 +150,20 @@ C4::Scrubber
 
 =head3 override_default_settings
 
+    override_default_settings({ settings => \%scrubbertypes });
+
+Looks for a F<html_scrubber.yaml> file next to the active F<koha-conf.xml>
+and, if found, applies its contents on top of C<%scrubbertypes>.
+
+The YAML file must be a hash keyed by scrubber type (e.g. C<record_display>).
+Each entry completely replaces the built-in entry for that type - it is not
+merged key-by-key, so an override that only sets C<allow> will also drop
+that type's existing C<rules>.
+
+This is only evaluated once, when C<C4::Scrubber> is first loaded, so
+changes to F<html_scrubber.yaml> require a restart (C<restart_all>) to
+take effect. If the file cannot be parsed, the built-in defaults are kept
+and a warning is logged.
 
 =cut
 
@@ -159,7 +173,7 @@ sub override_default_settings {
     if ($settings) {
         my ( $koha_conf_filename, $config_dir ) = fileparse( Koha::Config->guess_koha_conf );
         my $filename = sprintf( "%s/html_scrubber.yaml", $config_dir );
-        if ( $filename && -f $filename ) {
+        if ( -f $filename ) {
             try {
                 my $override_settings = YAML::XS::LoadFile($filename);
                 if ( $override_settings && ref $override_settings && ref $override_settings eq 'HASH' ) {
@@ -168,7 +182,8 @@ sub override_default_settings {
                     }
                 }
             } catch {
-                carp "Could not load html_scrubber.yaml overrides from '$filename', falling back to built-in defaults: $_";
+                carp
+                    "Could not load html_scrubber.yaml overrides from '$filename', falling back to built-in defaults: $_";
             };
         }
     }
