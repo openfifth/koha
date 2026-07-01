@@ -354,12 +354,6 @@ sub send_files {
 
 }
 
-=head2 apply_print_notice_charge
-
-Apply a print notice charge to the patron's account
-
-=cut
-
 sub apply_print_notice_charge {
     my ($message) = @_;
 
@@ -476,6 +470,15 @@ Useful for testing or administrative runs.
 Print a brief help message
 
 =back
+
+=head1 METHODS
+
+=head2 apply_print_notice_charge
+
+Apply a print notice charge to the patron's account
+
+=cut
+
 
 =head1 AUTHOR
 
