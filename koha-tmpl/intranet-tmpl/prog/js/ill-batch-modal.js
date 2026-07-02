@@ -126,6 +126,9 @@
         }
     );
 
+    // Handler reference for the select-all backend listener (for proper cleanup)
+    var selectAllBackendHandler = null;
+
     // Keep track of submission API calls that are in progress
     // so we don't duplicate them
     var submissionSent = {};
@@ -212,6 +215,10 @@
         createButtonEventListener();
         updateRowCount();
         storeBackendSelectionEventListener();
+        if (have_batch_auto_backends.length) {
+            buildSelectAllBackend();
+            selectAllBackendEventListener();
+        }
     }
 
     function initPostCreate() {
@@ -484,6 +491,82 @@
         identifierTable.removeEventListener("click", toggleMetadata);
         identifierTable.removeEventListener("click", removeRow);
         createRequestsButton.removeEventListener("click", requestRequestable);
+        if (selectAllBackendHandler) {
+            document
+                .getElementById("batch-auto-backend-select-all")
+                .removeEventListener("change", selectAllBackendHandler);
+            selectAllBackendHandler = null;
+        }
+    }
+
+    function buildSelectAllBackend() {
+        var container = document.getElementById(
+            "batch-auto-backend-select-all"
+        );
+        container.innerHTML = "";
+
+        var label = document.createElement("strong");
+        label.textContent = ill_batch_select_all_backend + " ";
+        container.appendChild(label);
+
+        var names = have_batch_auto_backends.map(function (b) {
+            return b.name;
+        });
+        names.push("Standard");
+
+        names.forEach(function (name) {
+            var lbl = document.createElement("label");
+            lbl.classList.add(
+                "ill-batches-backend-label",
+                "ill-batches-select-all-option"
+            );
+            var input = document.createElement("input");
+            input.type = "radio";
+            input.name = "select_all_backend";
+            input.value = name;
+            lbl.appendChild(input);
+            lbl.appendChild(document.createTextNode(" " + name));
+            container.appendChild(lbl);
+        });
+    }
+
+    function isBackendEnabled(backend) {
+        return (
+            backend.success === "" ||
+            !!backend.success ||
+            backend.warning === "" ||
+            !!backend.warning
+        );
+    }
+
+    function selectAllBackendEventListener() {
+        var container = document.getElementById(
+            "batch-auto-backend-select-all"
+        );
+        selectAllBackendHandler = function (ev) {
+            if (ev.target.name !== "select_all_backend") return;
+            var selectedValue = ev.target.value;
+            tableContent.data = tableContent.data.map(function (row) {
+                if (
+                    Array.isArray(row.auto_backends) &&
+                    row.auto_backends.length
+                ) {
+                    var targetBackend = row.auto_backends.find(function (b) {
+                        return b.name === selectedValue;
+                    });
+                    if (!targetBackend || !isBackendEnabled(targetBackend)) {
+                        return row;
+                    }
+                    row.auto_backends = row.auto_backends.map(function (b) {
+                        return Object.assign({}, b, {
+                            suggested: b.name === selectedValue ? 1 : 0,
+                        });
+                    });
+                }
+                return row;
+            });
+        };
+        container.addEventListener("change", selectAllBackendHandler);
     }
 
     function storeBackendSelectionEventListener() {
@@ -1135,11 +1218,7 @@
             .map((item, i) => {
                 const checked = item.suggested ? "checked" : "";
                 const disabled =
-                    data.ill_backend_id ||
-                    item.success === "" ||
-                    !!item.success ||
-                    item.warning === "" ||
-                    !!item.warning
+                    data.ill_backend_id || isBackendEnabled(item)
                         ? ""
                         : "disabled";
                 const color =
@@ -1302,9 +1381,15 @@
     // Redraw the table
     function updateTable() {
         if (!table) return;
-        tableEl.style.display = tableContent.data.length > 0 ? "table" : "none";
+        var hasRows = tableContent.data.length > 0;
+        tableEl.style.display = hasRows ? "table" : "none";
         tableEl.style.width = "100%";
         table.api().clear().rows.add(tableContent.data).draw();
+        if (have_batch_auto_backends.length) {
+            document.getElementById(
+                "batch-auto-backend-select-all"
+            ).style.display = hasRows ? "flex" : "none";
+        }
     }
 
     function identifyIdentifier(identifier) {
