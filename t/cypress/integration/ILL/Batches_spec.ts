@@ -278,8 +278,6 @@ describe("ILL Batches", () => {
 });
 
 describe("AutoILLBackendPriority syspref", () => {
-    let original_plugin_restricted;
-    let kohaconf = "/etc/koha/sites/kohadev/koha-conf.xml";
     beforeEach(() => {
         cy.login();
         cy.task("query", {
@@ -294,21 +292,8 @@ describe("AutoILLBackendPriority syspref", () => {
             cy.wrap(rows[0].value).as("syspref_AutoILLBackendPriority");
         });
         cy.set_syspref("AutoILLBackendPriority", "PluginBackend");
-        cy.task("readXmlElementValue", {
-            filePath: kohaconf,
-            element: "plugins_restricted",
-        }).then(value => {
-            original_plugin_restricted = value;
-            if (value == "1") {
-                cy.task("modifyXmlElement", {
-                    filePath: kohaconf,
-                    element: "plugins_restricted",
-                    value: "0",
-                });
-            }
-        });
         cy.title().should("eq", "Koha staff interface");
-        cy.get("a.icon_administration").contains("Koha administration").click();
+        cy.get("a.icon_administration").contains("Administration").click();
         cy.get("a").contains("Manage plugins").click();
         cy.get("a#upload_plugin").contains("Upload plugin").click();
 
@@ -340,12 +325,6 @@ describe("AutoILLBackendPriority syspref", () => {
             "AutoILLBackendPriority",
             this.syspref_AutoILLBackendPriority
         );
-        //Restore plugins_restricted original value
-        cy.task("modifyXmlElement", {
-            filePath: kohaconf,
-            element: "plugins_restricted",
-            value: original_plugin_restricted,
-        });
         //Clean-up created test batches
         cy.task("query", {
             sql: "DELETE from illbatches",
