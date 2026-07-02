@@ -343,6 +343,8 @@ paths:
     $ref: ./paths/checkins.yaml#/~1checkins
   "/checkins/availability":
     $ref: "./paths/checkins.yaml#/~1checkins~1availability"
+  "/checkins/{checkin_id}":
+    $ref: "./paths/checkins.yaml#/~1checkins~1{checkin_id}"
   /checkouts:
     $ref: ./paths/checkouts.yaml#/~1checkouts
   "/checkouts/{checkout_id}":
