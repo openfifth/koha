@@ -60,6 +60,7 @@
                             <div id="processed_progress_bar" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="min-width: 2em;"> 0% </div>
                         </div>
                     </div>
+                    <div id="batch-auto-backend-select-all" style="display:none" class="batch-auto-backend-select-all"></div>
                     <table id="identifier-table" style="display:none">
                         <thead>
                             <tr id="identifier-table-header">
