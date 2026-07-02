@@ -15,6 +15,26 @@ form#illfilter_form div.ms-parent div.ms-drop ul > li {
     padding: .25rem 8px;
 }
 
+.batch-auto-backend-select-all {
+    align-items: center;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    margin-bottom: 8px;
+    margin-top: 12px;
+    padding: 8px 12px;
+
+    strong {
+        white-space: nowrap;
+    }
+}
+
+.ill-batches-select-all-option {
+    margin-right: 4px;
+}
+
 .ill-batches-backend-option-row {
     display: flex;
     align-items: center;
