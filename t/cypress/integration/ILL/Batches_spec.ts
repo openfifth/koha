@@ -537,4 +537,142 @@ describe("AutoILLBackendPriority syspref", () => {
         cy.get("input[name='auto_backend_0']").first().should("be.checked");
         cy.get("input[name='auto_backend_0']").eq(1).should("not.be.checked");
     });
+
+    it("AutoILLBackendPriority: Select-all bar applies backend to all rows", function () {
+        // ILL toolbar
+        cy.visit("/cgi-bin/koha/ill/ill-requests.pl");
+        cy.get("#ill-batch-backend-dropdown").should("not.exist");
+        cy.get(".ill-toolbar a.btn-default")
+            .contains("New ILL requests batch")
+            .click();
+        cy.wait("@get-batchstatuses");
+
+        // Modal
+        cy.get("#ill-batch-modal").should("be.visible");
+        cy.get("#ill-batch-modal #button_create_batch")
+            .should("exist")
+            .and("be.disabled");
+
+        // Create a batch
+        cy.get("#ill-batch-modal #name").type("second test batch");
+        cy.get("#ill-batch-modal #batchcardnumber").type("42");
+        cy.get("#ill-batch-modal #branchcode").select("Centerville");
+        cy.get("#ill-batch-modal #button_create_batch")
+            .should("exist")
+            .and("not.be.disabled");
+        cy.get("#ill-batch-modal #button_create_batch").click();
+        cy.get("#ill-batch-modal #add_batch_items").should("be.visible");
+
+        // Stage 2 identifiers, both get PluginBackend success
+        cy.intercept("GET", "/api/v1/contrib/pubmed/esummary*", {
+            statusCode: 200,
+            body: pubmedid_metadata_response,
+        }).as("get-pubmedid-metadata");
+        cy.intercept("POST", "/api/v1/contrib/pubmed/parse_to_ill", {
+            statusCode: 200,
+            body: parse_to_ill_response,
+        }).as("get-parse_to_ill");
+        cy.intercept(
+            "GET",
+            "/api/v1/contrib/pluginbackend/ill_backend_availability_pluginbackend*",
+            {
+                statusCode: 200,
+                body: { success: "" },
+            }
+        ).as("get-backend-availability");
+
+        cy.get("#ill-batch-modal #identifiers_input").type("123{enter}456");
+        cy.get("#ill-batch-modal #process-button")
+            .contains("Process identifiers")
+            .click();
+        cy.wait("@get-pubmedid-metadata");
+        cy.wait("@get-parse_to_ill");
+        cy.wait("@get-backend-availability");
+        // Wait for all rows to finish processing
+        cy.get("#create-requests").should("not.have.css", "display", "none");
+
+        // Both rows: PluginBackend selected (index 0), Standard not selected (index 1)
+        cy.get("input[name='auto_backend_0']").first().should("be.checked");
+        cy.get("input[name='auto_backend_1']").first().should("be.checked");
+
+        // Select-all bar is visible with one option per backend
+        cy.get("#batch-auto-backend-select-all").should("be.visible");
+        cy.get(
+            "#batch-auto-backend-select-all input[value='PluginBackend']"
+        ).should("exist");
+        cy.get("#batch-auto-backend-select-all input[value='Standard']").should(
+            "exist"
+        );
+
+        // Click Standard in select-all → both rows switch to Standard
+        cy.get(
+            "#batch-auto-backend-select-all input[value='Standard']"
+        ).click();
+        cy.get("input[name='auto_backend_0']").eq(1).should("be.checked");
+        cy.get("input[name='auto_backend_1']").eq(1).should("be.checked");
+    });
+
+    it("AutoILLBackendPriority: Select-all skips rows where selected backend is disabled", function () {
+        // ILL toolbar
+        cy.visit("/cgi-bin/koha/ill/ill-requests.pl");
+        cy.get("#ill-batch-backend-dropdown").should("not.exist");
+        cy.get(".ill-toolbar a.btn-default")
+            .contains("New ILL requests batch")
+            .click();
+        cy.wait("@get-batchstatuses");
+
+        // Modal
+        cy.get("#ill-batch-modal").should("be.visible");
+        cy.get("#ill-batch-modal #button_create_batch")
+            .should("exist")
+            .and("be.disabled");
+
+        // Create a batch
+        cy.get("#ill-batch-modal #name").type("second test batch");
+        cy.get("#ill-batch-modal #batchcardnumber").type("42");
+        cy.get("#ill-batch-modal #branchcode").select("Centerville");
+        cy.get("#ill-batch-modal #button_create_batch")
+            .should("exist")
+            .and("not.be.disabled");
+        cy.get("#ill-batch-modal #button_create_batch").click();
+        cy.get("#ill-batch-modal #add_batch_items").should("be.visible");
+
+        // Single identifier with PluginBackend error → Standard selected.
+        // Clicking PluginBackend in the select-all bar must leave it unchanged
+        // because PluginBackend is disabled for this row.
+        cy.intercept("GET", "/api/v1/contrib/pubmed/esummary?pmid=123", {
+            statusCode: 200,
+            body: pubmedid_metadata_response,
+        }).as("get-pubmedid-metadata");
+        cy.intercept("POST", "/api/v1/contrib/pubmed/parse_to_ill", {
+            statusCode: 200,
+            body: parse_to_ill_response,
+        }).as("get-parse_to_ill");
+        cy.intercept(
+            "GET",
+            "/api/v1/contrib/pluginbackend/ill_backend_availability_pluginbackend*",
+            {
+                statusCode: 404,
+                body: { error: "Not available" },
+            }
+        ).as("get-backend-availability");
+
+        cy.get("#ill-batch-modal #identifiers_input").type("123");
+        cy.get("#ill-batch-modal #process-button")
+            .contains("Process identifiers")
+            .click();
+        cy.wait("@get-pubmedid-metadata");
+        cy.wait("@get-parse_to_ill");
+        cy.wait("@get-backend-availability");
+
+        // PluginBackend errored → Standard selected for row 0
+        cy.get("input[name='auto_backend_0']").eq(1).should("be.checked");
+
+        // Clicking PluginBackend in select-all must not change the row
+        // because PluginBackend is disabled for it
+        cy.get(
+            "#batch-auto-backend-select-all input[value='PluginBackend']"
+        ).click();
+        cy.get("input[name='auto_backend_0']").eq(1).should("be.checked");
+    });
 });
