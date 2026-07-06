@@ -65,14 +65,20 @@
     [% Asset.js("js/cancel_booking_modal.js") | $raw %]
     [% Asset.js("js/combobox.js") | $raw %]
     [% Asset.js("js/additional-filters.js") | $raw %]
-    <script>
+    [% Asset.js("js/bookings/common.js") | $raw %]
+    <script nonce="[% Koha.CSPNonce | $raw %]">
         var cancel_success = 0;
         var update_success = 0;
         var bookings_table;
         var timeline;
         let biblionumber = "[% biblionumber | uri %]";
-        $(document).ready(function(){
-
+        Koha.addPermissions({
+            CAN_user_circulate_manage_bookings: [% CAN_user_circulate_manage_bookings ? 1 : 0 | html %],
+            CAN_user_circulate_circulate_remaining_permissions: [% CAN_user_circulate_circulate_remaining_permissions ? 1 : 0 | html %],
+        });
+    </script>
+    <script nonce="[% Koha.CSPNonce | $raw %]">
+        $(document).ready(function () {
             var items = $.ajax({
                 url: '/api/v1/biblios/%s/items?bookable=1'.format(biblionumber),
                 dataType: 'json',
@@ -238,160 +244,95 @@
                     visible: false
                 },
                 {
-                    data: "",
-                    title: _("Status"),
-                    name: "status",
-                    searchable: false,
-                    orderable: false,
-                    visible: true,
-                    render: function (data, type, row, meta) {
-                        const statusMap = {
-                            new: () => _("New"),
-                            cancelled: () => [_("Cancelled"), row.cancellation_reason].filter(Boolean).join(": "),
-                            issued: () => _("Issued"),
-                            completed: () => _("Completed"),
-                        };
-
-                        const statusText = statusMap[row.status] ? statusMap[row.status]() : _("Unknown");
-
-                        const classMap = [
-                            { status: _("Cancelled"), class: "bg-secondary" },
-                            { status: _("Completed"), class: "bg-secondary" },
-                            { status: _("Issued"), class: "bg-info" },
-                            { status: _("New"), class: "bg-success" },
-                        ];
-
-                        const badgeClass = classMap.find(mapping => statusText.startsWith(mapping.status))?.class || "bg-secondary";
-
-                        return `<span class="badge rounded-pill ${badgeClass}">${statusText}</span>`;
-                    }
+                    ajax: {
+                        url: bookings_table_url,
+                    },
+                    embed: ["item", "item.checkout", "patron", "pickup_library"],
+                    createdRow: function (row, data) {
+                        BookingsTable.highlightRow(data, row);
+                    },
+                    columns: [
+                        {
+                            data: "booking_id",
+                            title: _("Booking ID"),
+                            visible: false,
+                        },
+                        {
+                            data: "",
+                            title: _("Status"),
+                            name: "status",
+                            searchable: false,
+                            orderable: false,
+                            visible: true,
+                            render: function (data, type, row, meta) {
+                                return BookingsTable.statusBadge(row);
+                            },
+                        },
+                        {
+                            data: "item.external_id",
+                            title: _("Item"),
+                            searchable: true,
+                            orderable: true,
+                            defaultContent: _("Any item"),
+                            render: function (data, type, row, meta) {
+                                return BookingsTable.itemContent(row);
+                            },
+                        },
+                        {
+                            data: "patron.firstname:patron.surname",
+                            title: _("Patron"),
+                            searchable: true,
+                            orderable: true,
+                            render: function (data, type, row, meta) {
+                                return $patron_to_html(row.patron, {
+                                    display_cardnumber: true,
+                                    url: true,
+                                });
+                            },
+                        },
+                        {
+                            data: "pickup_library.name",
+                            title: _("Pickup library"),
+                            searchable: true,
+                            orderable: true,
+                            render: function (data, type, row, meta) {
+                                return row.pickup_library.name;
+                            },
+                        },
+                        {
+                            data: "start_date",
+                            title: _("Start date"),
+                            searchable: true,
+                            orderable: true,
+                            render: function (data, type, row, meta) {
+                                return $date(row.start_date);
+                            },
+                        },
+                        {
+                            data: "end_date",
+                            title: _("End date"),
+                            searchable: true,
+                            orderable: true,
+                            render: function (data, type, row, meta) {
+                                return $date(row.end_date);
+                            },
+                        },
+                        {
+                            data: "",
+                            title: _("Actions"),
+                            class: "actions",
+                            searchable: false,
+                            orderable: false,
+                            render: function (data, type, row, meta) {
+                                return BookingsTable.actionsContent(row);
+                            },
+                        },
+                    ],
                 },
-                {
-                    data: "item.external_id",
-                    title: _("Item"),
-                    searchable: true,
-                    orderable: true,
-                    defaultContent: _("Any item"),
-                    render: function(data,type,row,meta) {
-                        if ( row.item ) {
-                            return row.item.external_id + " (" + row.booking_id + ")";
-                        } else {
-                            return null;
-                        }
-                    }
-                },
-                {
-                    data: "patron.firstname:patron.surname",
-                    title: _("Patron"),
-                    searchable: true,
-                    orderable: true,
-                    render: function(data, type, row, meta) {
-                        return $patron_to_html(row.patron, {
-                            display_cardnumber: true,
-                            url: true
-                        });
-                    }
-                },
-                {
-                    data: "pickup_library.name",
-                    title: _("Pickup library"),
-                    searchable: true,
-                    orderable: true,
-                    render: function(data, type, row, meta) {
-                        return row.pickup_library.name;
-                    }
-                },
-                {
-                    data: "start_date",
-                    title: _("Start date"),
-                    searchable: true,
-                    orderable: true,
-                    render: function(data, type, row, meta) {
-                        return $date(row.start_date);
-                    }
-                },
-                {
-                    data: "end_date",
-                    title: _("End date"),
-                    searchable: true,
-                    orderable: true,
-                    render: function(data, type, row, meta) {
-                        return $date(row.end_date);
-                    }
-                },
-                {
-                    data: "",
-                    title: _("Actions"),
-                    class:"actions",
-                    searchable: false,
-                    orderable: false,
-                    render: function(data, type, row, meta) {
-                        let result = "";
-                        const is_readonly = ["cancelled", "issued", "completed"].includes(row.status);
-                        [% IF CAN_user_circulate_manage_bookings %]
-                        if (!is_readonly) {
-                            result += `
-                                <button type="button" class="btn btn-default btn-xs edit-action"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#placeBookingModal"
-                                    data-booking="%s"
-                                    data-biblionumber="%s"
-                                    data-itemnumber="%s"
-                                    data-patron="%s"
-                                    data-pickup_library="%s"
-                                    data-start_date="%s"
-                                    data-end_date="%s"
-                                    data-item_type_id="%s"
-                                >
-                                    <i class="fa fa-pencil" aria-hidden="true"></i> %s
-                                </button>
-                            `.format(
-                                escape_str(row.booking_id),
-                                escape_str(biblionumber),
-                                escape_str(row.item_id),
-                                escape_str(row.patron_id),
-                                escape_str(row.pickup_library_id),
-                                escape_str(row.start_date),
-                                escape_str(row.end_date),
-                                escape_str(row.item.item_type_id),
-                                _("Edit")
-                            );
-                            result += `
-                                <button type="button" class="btn btn-default btn-xs cancel-action"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#cancelBookingModal"
-                                    data-booking="%s"
-                                >
-                                    <i class="fa fa-trash" aria-hidden="true"></i> %s
-                                </button>
-                            `.format(
-                                escape_str(row.booking_id),
-                                _("Cancel")
-                            );
-                            result += `
-                                <form name="checkout-transform" method="post" action="/cgi-bin/koha/circ/circulation.pl?borrowernumber=%s">
-                                    [% INCLUDE 'csrf-token.inc' %]
-                                    <input type="hidden" name="op" value="cud-checkout"/>
-                                    <input type="hidden" name="borrowernumber" value="%s"/>
-                                    <input type="hidden" name="barcode" value="%s"/>
-                                    <input type="hidden" name="duedatespec" value="%s"/>
-                                    <button id="checkout_action" class="btn btn-default btn-xs" type="submit">
-                                       <i class="fa fa-check-circle" aria-hidden="true"></i> %s
-                                    </button>
-                                </form>
-                            `.format(
-                                escape_str(row.patron_id),
-                                escape_str(row.patron_id),
-                                escape_str(row.item.external_id),
-                                escape_str(row.end_date),
-                                _("Transform to checkout")
-                            );
-                        }
-                        [% END %]
-                        return result;
-                    }
-                }]
-            }, undefined, 0, additional_filters);
+                undefined,
+                0,
+                additional_filters
+            );
 
             $("#cancellation-reason").comboBox({
                 displayProperty: 'name',
