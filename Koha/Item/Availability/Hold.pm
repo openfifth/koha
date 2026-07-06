@@ -179,6 +179,19 @@ sub check {
         return $result unless $no_short_circuit;
     }
 
+    # Retrieve the rule object to get the itemtype the rule was defined for.
+    # A rule with itemtype=undef (wildcard) means all holds count against it;
+    # a specific itemtype means only holds for that itemtype count.
+    my $reservesallowed_rule_obj = Koha::CirculationRules->get_effective_rule(
+        {
+            categorycode => $patron->categorycode,
+            branchcode   => $reserves_control_branch,
+            itemtype     => $item->effective_itemtype,
+            rule_name    => 'reservesallowed',
+        }
+    );
+    my $rule_itemtype = $reservesallowed_rule_obj ? $reservesallowed_rule_obj->itemtype : undef;
+
     unless ( $overrides->{not_reservable} ) {
         if ( $branchitemrule->{holdallowed} eq 'not_allowed' ) {
             $result->add_blocker( not_reservable => 1 );
@@ -208,6 +221,7 @@ sub check {
                 item_type_id     => $item->effective_itemtype,
                 library_id       => $reserves_control_branch,
                 biblio_id        => $item->biblionumber,
+                rule_itemtype    => $rule_itemtype,
                 no_short_circuit => $no_short_circuit,
                 overrides        => $overrides,
             }

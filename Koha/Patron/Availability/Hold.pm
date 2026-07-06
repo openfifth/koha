@@ -68,6 +68,8 @@ Parameters (hashref):
 
 =item biblio_id - biblionumber for per-record limit (optional)
 
+=item rule_itemtype - itemtype from the matching reservesallowed rule (optional, for scoped counting)
+
 =item no_short_circuit - collect all blockers (optional)
 
 =back
@@ -81,6 +83,7 @@ sub check {
     my $item_type_id     = $params->{item_type_id};
     my $library_id       = $params->{library_id};
     my $biblio_id        = $params->{biblio_id};
+    my $rule_itemtype    = $params->{rule_itemtype};
     my $no_short_circuit = $params->{no_short_circuit} // 0;
     my $overrides        = $params->{overrides}        // {};
 
@@ -196,7 +199,45 @@ sub check {
             $result->add_blocker( no_reserves_allowed => 1 );
             return $result unless $no_short_circuit;
         }
-        my $total = $patron->holds->count_holds;
+
+        # Count existing holds filtered by branch and (optionally) itemtype,
+        # matching the scope of the rule that applies to this item.
+        # This mirrors the old C4::Reserves logic: a per-itemtype rule only
+        # counts holds for items of that itemtype.
+        my $rule_itemtype = $params->{rule_itemtype};
+
+        my $search_params = {};
+        my $search_attrs  = {};
+
+        # Filter by control branch
+        my $controlbranch_pref = C4::Context->preference('ReservesControlBranch');
+        if ( $controlbranch_pref eq 'ItemHomeLibrary' ) {
+            $search_params->{'item.homebranch'} = [ $library_id, undef ];
+            $search_attrs->{join}               = { 'item' => 'biblioitem' };
+        } else {
+
+            # PatronLibrary: patron's branch matches (always true for this patron's holds)
+            # No additional branch filter needed since all patron's holds are for this patron
+        }
+
+        # Filter by itemtype when the matching rule is itemtype-specific
+        if ( defined $rule_itemtype ) {
+            $search_attrs->{join} //= { 'item' => 'biblioitem' };
+            if ( C4::Context->preference('item-level_itypes') ) {
+                $search_params->{'-or'} = [
+                    { 'item.itype'          => $rule_itemtype },
+                    { 'biblioitem.itemtype' => $rule_itemtype },
+                    { 'me.itemtype'         => $rule_itemtype },
+                ];
+            } else {
+                $search_params->{'-or'} = [
+                    { 'biblioitem.itemtype' => $rule_itemtype },
+                    { 'me.itemtype'         => $rule_itemtype },
+                ];
+            }
+        }
+
+        my $total = $patron->holds->count_holds( $search_params, $search_attrs );
         if ( $total >= $reservesallowed ) {
             $result->add_blocker( too_many_reserves => $reservesallowed );
             return $result unless $no_short_circuit;
