@@ -112,7 +112,7 @@
             </div>
         [% END %]
 
-        [% SET total_bankable = accountlines.total( payment_type => [ 'CASH', 'SIP00' ]) * -1 %]
+        [% SET total_bankable = accountlines.total( payment_type => cashup_payment_type_codes ) * -1 %]
         [% SET total_transactions = accountlines.total * -1 %]
         [% IF ( CAN_user_cash_management_cashup ) %]
             <div id="toolbar" class="btn-toolbar">
@@ -141,10 +141,30 @@
                 >
             [% END %]
             <li>Float: [% register.starting_float | $Price %]</li>
-            <li>Total income (cash): [% accountlines.credits_total * -1 | $Price %] ([% accountlines.credits_total(payment_type => [ 'CASH', 'SIP00' ]) * -1 | $Price %])</li>
-            <li>Total outgoing (cash): [% accountlines.debits_total * -1 | $Price %] ([% accountlines.debits_total( payment_type => [ 'CASH', 'SIP00' ]) * -1 | $Price %])</li>
+            <li>Total income (cash): [% accountlines.credits_total * -1 | $Price %] ([% accountlines.credits_total(payment_type => cashup_payment_type_codes) * -1 | $Price %])</li>
+            <li>Total outgoing (cash): [% accountlines.debits_total * -1 | $Price %] ([% accountlines.debits_total( payment_type => cashup_payment_type_codes) * -1 | $Price %])</li>
             <li>Total bankable: [% total_bankable | $Price %]</li>
         </ul>
+
+        [% IF cashup_payment_types_breakdown.size > 1 %]
+            <h2>Bankable by payment type</h2>
+            <table class="cashup-breakdown" style="max-width: 30em;">
+                <thead>
+                    <tr>
+                        <th>Payment type</th>
+                        <th class="text-end">Expected</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    [% FOREACH pt IN cashup_payment_types_breakdown %]
+                        <tr>
+                            <td>[% pt.label | html %]</td>
+                            <td class="text-end">[% pt.expected | $Price %]</td>
+                        </tr>
+                    [% END %]
+                </tbody>
+            </table>
+        [% END %]
 
         [% IF register.last_cashup %]
             <h2>Transactions since [% register.last_cashup.timestamp | $KohaDates with_hours => 1 %]</h2>
@@ -444,7 +464,7 @@
 <div class="modal" id="confirmCashupModal" tabindex="-1" role="dialog" aria-labelledby="confirmCashupLabel">
     <form id="cashup_form" method="post" enctype="multipart/form-data" class="validated">
         [% INCLUDE 'csrf-token.inc' %]
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <h1 class="modal-title" id="confirmCashupLabel">
@@ -459,58 +479,69 @@
                 <div class="modal-body">
                     <fieldset class="rows">
                         <ol>
-                            <li>
-                                <span class="label">
-                                    [% IF cashup_in_progress %]
-                                        [% IF cashup_in_progress.amount < 0 %]
-                                            Expected amount to add:
-                                        [% ELSE %]
-                                            Expected cashup amount:
+                            <li class="cashup-per-type-rows">
+                                <table class="table" id="cashup_reconciliation_table">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Payment type</th>
+                                            <th scope="col" class="text-end">Expected</th>
+                                            <th scope="col">Actual counted <span class="required">*</span></th>
+                                            <th scope="col" class="text-end">Discrepancy</th>
+                                            <th scope="col">Reconciliation note [% IF reconciliation_note_required %]<span class="required">*</span>[% END %]</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        [% FOREACH pt IN cashup_payment_types_breakdown %]
+                                            <tr class="cashup-row" data-payment-type="[% pt.payment_type | html %]" data-expected="[% pt.expected | html %]">
+                                                <td>[% pt.label | html %]</td>
+                                                <td class="text-end expected-cell">[% pt.expected | $Price %]</td>
+                                                <td>
+                                                    <input
+                                                        type="text"
+                                                        inputmode="decimal"
+                                                        pattern="^-?\d+(\.\d{1,2})?$"
+                                                        name="actual_amount_[% pt.payment_type | html %]"
+                                                        class="cashup-amount-input"
+                                                        required="required"
+                                                    />
+                                                </td>
+                                                <td class="text-end discrepancy-cell"></td>
+                                                <td class="note-cell">
+                                                    [% IF reconciliation_note_avs %]
+                                                        <select name="reconciliation_note_[% pt.payment_type | html %]" class="reconciliation-note-input" disabled="disabled">
+                                                            <option value="">-- Select a reason --</option>
+                                                            [% FOREACH av IN reconciliation_note_avs %]
+                                                                <option value="[% av.authorised_value | html %]">[% av.lib | html %]</option>
+                                                            [% END %]
+                                                        </select>
+                                                    [% ELSE %]
+                                                        <input
+                                                            type="text"
+                                                            name="reconciliation_note_[% pt.payment_type | html %]"
+                                                            class="reconciliation-note-input"
+                                                            maxlength="1000"
+                                                            placeholder="Enter a note explaining the surplus or deficit..."
+                                                            disabled="disabled"
+                                                        />
+                                                    [% END %]
+                                                </td>
+                                            </tr>
                                         [% END %]
-                                    [% ELSE %]
-                                        Expected amount to remove:
-                                    [% END %]
-                                </span>
-                                <span id="expected_amount" class="expected-amount">[% cashup_in_progress.amount | $Price %]</span>
-                            </li>
-                            <li>
-                                <label class="required" for="amount">
-                                    [% IF cashup_in_progress %]
-                                        [% IF cashup_in_progress.amount < 0 %]
-                                            Actual amount added to register:
-                                        [% ELSE %]
-                                            Actual cashup amount counted:
-                                        [% END %]
-                                    [% ELSE %]
-                                        Actual amount removed from register:
-                                    [% END %]
-                                </label>
-                                <input type="text" inputmode="decimal" pattern="^-?\d+(\.\d{2})?$" id="amount" name="amount" required="required" />
-                                <span class="required">Required</span>
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <th scope="row">Total</th>
+                                            <th class="text-end" id="cashup_expected_total"></th>
+                                            <th class="text-end" id="cashup_actual_total"></th>
+                                            <th class="text-end" id="cashup_discrepancy_total"></th>
+                                            <th></th>
+                                        </tr>
+                                    </tfoot>
+                                </table>
                             </li>
                             <li id="reconciliation_display" style="display: none;">
                                 <span class="label">Reconciliation:</span>
                                 <span id="reconciliation_text"></span>
-                            </li>
-                            <li id="reconciliation_note_field" style="display: none;">
-                                <label for="reconciliation_note" id="reconciliation_note_label">Note:</label>
-                                [% IF reconciliation_note_avs %]
-                                    <select id="reconciliation_note" name="reconciliation_note">
-                                        <option value="">-- Select a reason --</option>
-                                        [% FOREACH av IN reconciliation_note_avs %]
-                                            <option value="[% av.authorised_value | html %]">[% av.lib | html %]</option>
-                                        [% END %]
-                                    </select>
-                                    [% IF reconciliation_note_required %]
-                                        <span class="required">Required</span>
-                                    [% END %]
-                                [% ELSE %]
-                                    <textarea id="reconciliation_note" name="reconciliation_note" rows="3" cols="40" maxlength="1000" placeholder="Enter a note explaining the surplus or deficit..."></textarea>
-                                    [% IF reconciliation_note_required %]
-                                        <span class="required">Required</span>
-                                    [% END %]
-                                    <div class="hint">Maximum 1000 characters</div>
-                                [% END %]
                             </li>
                         </ol>
                     </fieldset>
@@ -578,7 +609,7 @@
 <div class="modal" id="triggerCashupModal" tabindex="-1" role="dialog" aria-labelledby="triggerCashupLabel">
     <form method="post" class="validated">
         [% INCLUDE 'csrf-token.inc' %]
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <h1 class="modal-title" id="triggerCashupLabel"> Cashup for <em>[% register.description | html %]</em> </h1>
@@ -601,8 +632,7 @@
                 <div class="modal-footer">
                     <input type="hidden" name="registerid" value="[% register.id | html %]" />
                     <input type="hidden" name="op" value="cud-cashup_start" />
-                    <input type="hidden" name="amount" value="" />
-                    <input type="hidden" id="register_bankable_amount" value="[% accountlines.total( payment_type => [ 'CASH', 'SIP00' ]) * -1 | html %]" />
+                    <input type="hidden" id="register_bankable_amount" value="[% accountlines.total( payment_type => cashup_payment_type_codes ) * -1 | html %]" />
                     <button type="submit" class="btn btn-primary">Start cashup</button>
                     <button type="button" class="btn btn-success" id="quick_cashup_btn_individual">Quick cashup</button>
                     <button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancel</button>
@@ -761,67 +791,96 @@
             ]
         }, null, 1);
 
-        // Real-time reconciliation calculation for cashup modal
-        $("#amount").on("input", function() {
-            var actualAmount = parseFloat($(this).val()) || 0;
-            var expectedText = $("#expected_amount").text().replace(/[£$,]/g, '');
-            var expectedAmount = parseFloat(expectedText) || 0;
-            var difference = actualAmount - expectedAmount;
+        // Real-time per-payment-type reconciliation calculation for cashup modal
+        function recalculateCashup() {
+            var totalExpected = 0, totalActual = 0;
+            var allEntered = true, anyEntered = false, anyDiscrepancy = false;
 
-            if ($(this).val() && !isNaN(actualAmount)) {
-                var reconciliationText = "";
-                var reconciliationClass = "";
-                var hasDiscrepancy = false;
+            $("#cashup_reconciliation_table .cashup-row").each(function() {
+                var $row = $(this);
+                var expected = parseFloat($row.data("expected")) || 0;
+                var $amount = $row.find(".cashup-amount-input");
+                var $note = $row.find(".reconciliation-note-input");
+                var $cell = $row.find(".discrepancy-cell");
 
-                if (difference > 0) {
-                    reconciliationText = "Surplus: " + difference.format_price();
-                    reconciliationClass = "success";
-                    hasDiscrepancy = true;
-                } else if (difference < 0) {
-                    reconciliationText = "Deficit: " + Math.abs(difference).format_price();
-                    reconciliationClass = "warning";
-                    hasDiscrepancy = true;
-                } else {
-                    reconciliationText = "Balanced - no surplus or deficit";
-                    reconciliationClass = "success";
-                    hasDiscrepancy = false;
+                totalExpected += expected;
+
+                // Reset row state on every recalc - re-applied below if discrepant.
+                $note.prop("disabled", true).removeAttr("required");
+                $row.find(".note-cell").removeClass("required");
+
+                var val = $amount.val();
+                if (val === "" || val === undefined) {
+                    allEntered = false;
+                    $cell.text("").removeClass("text-success text-warning");
+                    $note.val("");
+                    return;
                 }
 
-                $("#reconciliation_text").text(reconciliationText)
-                    .removeClass("success warning")
-                    .addClass(reconciliationClass);
-                $("#reconciliation_display").show();
-
-                // Show/hide note field based on whether there's a discrepancy
-                if (hasDiscrepancy) {
-                    $("#reconciliation_note_field").show();
-                    // Update required attribute and label based on system preference
-                    [% IF reconciliation_note_required %]
-                        $("#reconciliation_note").attr('required', 'required');
-                        $("#reconciliation_note_label").addClass("required");
-                    [% ELSE %]
-                        $("#reconciliation_note").removeAttr('required');
-                        $("#reconciliation_note_label").removeClass("required");
-                    [% END %]
-                } else {
-                    $("#reconciliation_note_field").hide();
-                    $("#reconciliation_note").val(''); // Clear note when balanced
-                    $("#reconciliation_note").removeAttr('required');
-                    $("#reconciliation_note_label").removeClass("required");
+                var actual = parseFloat(val);
+                if (isNaN(actual)) {
+                    allEntered = false;
+                    $cell.text("").removeClass("text-success text-warning");
+                    $note.val("");
+                    return;
                 }
-            } else {
+
+                anyEntered = true;
+                totalActual += actual;
+                var diff = actual - expected;
+
+                if (diff > 0) {
+                    $cell.text("+" + diff.format_price()).addClass("text-success").removeClass("text-warning");
+                    anyDiscrepancy = true;
+                } else if (diff < 0) {
+                    $cell.text(diff.format_price()).addClass("text-warning").removeClass("text-success");
+                    anyDiscrepancy = true;
+                } else {
+                    $cell.text(_("Balanced")).removeClass("text-success text-warning");
+                    $note.val("");
+                    return;
+                }
+
+                // Discrepant row: enable the note input and apply required when the preference says so.
+                $note.prop("disabled", false);
+                [% IF reconciliation_note_required %]
+                    $note.attr("required", "required");
+                    $row.find(".note-cell").addClass("required");
+                [% END %]
+            });
+
+            $("#cashup_expected_total").text(totalExpected.format_price());
+            $("#cashup_actual_total").text(allEntered ? totalActual.format_price() : "");
+            $("#cashup_discrepancy_total").text(allEntered ? (totalActual - totalExpected).format_price() : "");
+
+            if (!anyEntered) {
                 $("#reconciliation_display").hide();
-                $("#reconciliation_note_field").hide();
+                return;
             }
-        });
+
+            if (anyDiscrepancy) {
+                $("#reconciliation_text").text(_("Reconciliation needed - see discrepancies above"))
+                    .removeClass("success").addClass("warning");
+            } else {
+                $("#reconciliation_text").text(_("Balanced - no surplus or deficit"))
+                    .removeClass("warning").addClass("success");
+            }
+            $("#reconciliation_display").show();
+        }
+
+        $("#cashup_reconciliation_table").on("input", ".cashup-amount-input", recalculateCashup);
 
         // Reset modal when opened
         $("#confirmCashupModal").on("shown.bs.modal", function() {
-            // Start with empty actual amount field (user must enter amount)
-            $("#amount").val('').focus();
+            var $table = $("#cashup_reconciliation_table");
+            $table.find(".cashup-amount-input").val("");
+            $table.find(".reconciliation-note-input").val("").prop("disabled", true).removeAttr("required");
+            $table.find(".note-cell").removeClass("required");
+            $table.find(".discrepancy-cell").text("");
+            $("#cashup_actual_total, #cashup_discrepancy_total").text("");
+            recalculateCashup();
             $("#reconciliation_display").hide();
-            $("#reconciliation_note_field").hide();
-            $("#reconciliation_note").val('');
+            $table.find(".cashup-amount-input").first().trigger("focus");
         });
 
         // Handle triggerCashupModal for individual register page
@@ -873,15 +932,13 @@
         $("#quick_cashup_btn_individual").on("click", function(e){
            e.preventDefault();
            var form = $(this).closest('form');
-           var bankableAmount = $("#register_bankable_amount").val();
 
-           // Change operation to cud-cashup (quick cashup)
+           // Change operation to cud-cashup. The controller will build a
+           // balanced per-payment-type reconciliations array from the
+           // register's expected totals because no actual_amount_* fields
+           // are present on this form.
            form.find('input[name="op"]').val('cud-cashup');
 
-           // Set the amount to the expected bankable amount
-           form.find('input[name="amount"]').val(bankableAmount);
-
-           // Submit the form
            form.submit();
         });
     </script>

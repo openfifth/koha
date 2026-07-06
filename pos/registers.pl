@@ -53,6 +53,21 @@ if ( !$registers->count ) {
     $template->param( registers => $registers );
 }
 
+# Get authorized values for reconciliation notes if configured
+my $note_av_category = C4::Context->preference('CashupReconciliationNoteAuthorisedValue');
+my $reconciliation_note_avs;
+if ($note_av_category) {
+    require Koha::AuthorisedValues;
+    $reconciliation_note_avs = Koha::AuthorisedValues->search(
+        { category => $note_av_category },
+        { order_by => { '-asc' => 'lib' } }
+    );
+}
+$template->param(
+    reconciliation_note_avs      => $reconciliation_note_avs,
+    reconciliation_note_required => C4::Context->preference('CashupReconciliationNoteRequired'),
+);
+
 # Handle success/error messages from redirects
 my $cashup_start_success    = $input->param('cashup_start_success');
 my $cashup_start_errors     = $input->param('cashup_start_errors');
@@ -143,6 +158,29 @@ if ( $op eq 'cud-cashup_start' ) {
         my @errors           = ();
         my $success_count    = 0;
 
+        # The Complete cashup modal posts actual_amount_<TYPE> +
+        # reconciliation_note_<TYPE> for every configured payment type. The
+        # Quick cashup path posts no amounts at all and we fill in the
+        # expected per-type totals so the cashup is balanced.
+        my $form_reconciliations;
+        if ( @register_ids == 1 ) {
+            my $register = Koha::Cash::Registers->find( { id => $register_ids[0] } );
+            if ($register) {
+                my @entries;
+                for my $type ( @{ $register->cashup_payment_types } ) {
+                    my $amt = $input->param( 'actual_amount_' . $type );
+                    next unless defined $amt;
+                    push @entries,
+                        {
+                        payment_type  => $type,
+                        actual_amount => $amt,
+                        note          => $input->param( 'reconciliation_note_' . $type ),
+                        };
+                }
+                $form_reconciliations = \@entries if @entries;
+            }
+        }
+
         foreach my $register_id (@register_ids) {
             $register_id =~ s/^\s+|\s+$//g;    # Trim whitespace
             next unless $register_id;
@@ -151,28 +189,20 @@ if ( $op eq 'cud-cashup_start' ) {
             next unless $register;
 
             eval {
-                # Get the amount from the request parameter
-                # For quick cashup, this will be the expected amount set by JavaScript
-                # For two-stage cashup completion, this will be the user-entered actual amount
-                my $amount = $input->param('amount');
+                my %cashup_params = ( manager_id => $logged_in_user->id );
 
-                # If no amount provided, calculate expected amount (backwards compatibility)
-                unless ( defined $amount && $amount ne '' ) {
-                    $amount = $register->outstanding_accountlines->total( { payment_type => [ 'CASH', 'SIP00' ] } ) * -1;
-                }
+                if ($form_reconciliations) {
 
-                # Get optional reconciliation note
-                my $reconciliation_note = $input->param('reconciliation_note');
+                    # Per-payment-type submission from an individual Complete cashup.
+                    $cashup_params{reconciliations} = $form_reconciliations;
+                } else {
 
-                # Complete the cashup
-                my %cashup_params = (
-                    manager_id => $logged_in_user->id,
-                    amount     => $amount,
-                );
-
-                # Add reconciliation note if provided
-                if ( defined $reconciliation_note && $reconciliation_note ne '' ) {
-                    $cashup_params{reconciliation_note} = $reconciliation_note;
+                    # Quick cashup path — JS hasn't supplied any actual amounts.
+                    # Build a balanced reconciliations list using each type's
+                    # expected outstanding total so the API cashes up cleanly.
+                    $cashup_params{reconciliations} =
+                        [ map { { payment_type => $_->{payment_type}, actual_amount => $_->{expected} } }
+                            @{ $register->cashup_payment_types_breakdown } ];
                 }
 
                 $register->add_cashup( \%cashup_params );
