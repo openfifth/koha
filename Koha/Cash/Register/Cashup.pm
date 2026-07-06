@@ -298,6 +298,14 @@ sub _get_session_boundaries {
     return ( $session_start, $session_end );
 }
 
+=head3 _get_session_end
+
+Internal method to determine the end timestamp of the session that this
+cashup covers. For a two-phase cashup, this is the CASHUP_START timestamp
+that this CASHUP completed; otherwise it's this cashup's own timestamp.
+
+=cut
+
 sub _get_session_end {
     my ($self) = @_;
 
