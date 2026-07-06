@@ -80,29 +80,29 @@
                                         [% SWITCH fail %]
                                         [% CASE 'damaged' %]
                                             <span>Item is damaged</span>
-                                        [% CASE 'ageRestricted' %]
+                                        [% CASE 'age_restricted' %]
                                             <span>The record and its items are age restricted</span>
-                                        [% CASE 'tooManyHoldsForThisRecord' %]
+                                        [% CASE 'too_many_holds_for_this_record' %]
                                             <span>You have exceeded the number of concurrent holds for this record</span>
-                                        [% CASE 'tooManyReservesToday' %]
+                                        [% CASE 'too_many_reserves_today' %]
                                             <span>You've reached your daily holds limit</span>
-                                        [% CASE 'tooManyReserves' %]
+                                        [% CASE 'too_many_reserves' %]
                                             <span>You have too many holds already</span>
-                                        [% CASE 'notReservable' %]
+                                        [% CASE 'not_reservable' %]
                                             <span>Not holdable</span>
-                                        [% CASE 'cannotReserveFromOtherBranches' %]
+                                        [% CASE 'cannot_reserve_from_other_branches' %]
                                             <span>You are from a different library</span>
                                         [% CASE 'branchNotInHoldGroup' %]
                                             <span>Holds are not allowed from your library</span>
-                                        [% CASE 'itemAlreadyOnHold' %]
+                                        [% CASE 'item_already_on_hold' %]
                                             <span>You already have a hold for this item</span>
-                                        [% CASE 'cannotBeTransferred' %]
+                                        [% CASE 'cannot_be_transferred' %]
                                             <span>Cannot be transferred to pickup library</span>
-                                        [% CASE 'pickupNotInHoldGroup' %]
+                                        [% CASE 'pickup_not_in_hold_group' %]
                                             <span>The chosen pickup location is not allowed</span>
-                                        [% CASE 'noReservesAllowed' %]
+                                        [% CASE 'no_reserves_allowed' %]
                                             <span>No holds are allowed on this item</span>
-                                        [% CASE 'libraryNotPickupLocation' %]
+                                        [% CASE 'library_not_pickup_location' %]
                                             <span>Library is not a valid pickup location</span>
                                         [% CASE 'no_valid_pickup_location' %]
                                             <span>No valid pickup location</span>

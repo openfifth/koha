@@ -205,19 +205,19 @@
                         <label>Hold ID: </label>
                         <span>[% fail.hold_id | html %]</span>
                         [% SWITCH fail.error %]
-                        [% CASE 'cannotReserveFromOtherBranches' %]
+                        [% CASE 'cannot_reserve_from_other_branches' %]
                             <span>Target item cannot be placed on hold from other libraries</span>
-                        [% CASE 'ageRestricted' %]
+                        [% CASE 'age_restricted' %]
                             <span>The target record and/or items are age restricted</span>
                         [% CASE 'alreadypossession' %]
                             <span>Target item is already checked out to patron</span>
-                        [% CASE 'noReservesAllowed' %]
+                        [% CASE 'no_reserves_allowed' %]
                             <span>No holds are allowed on the target item(s)</span>
-                        [% CASE 'tooManyReservesToday' %]
+                        [% CASE 'too_many_reserves_today' %]
                             <span>Target item has too many holds placed on it today</span>
-                        [% CASE 'tooManyReserves' %]
+                        [% CASE 'too_many_reserves' %]
                             <span>Target item has too many holds placed on it</span>
-                        [% CASE 'notReservable' %]
+                        [% CASE 'not_reservable' %]
                             <span>Target item cannot be placed on hold</span>
                         [% CASE 'branchNotInHoldGroup' %]
                             <span>Target item is not in the local hold group</span>
@@ -244,29 +244,29 @@
                         [% SWITCH fail %]
                         [% CASE 'damaged' %]
                             <span>Item is damaged</span>
-                        [% CASE 'ageRestricted' %]
+                        [% CASE 'age_restricted' %]
                             <span>The record and its items are age restricted</span>
-                        [% CASE 'tooManyHoldsForThisRecord' %]
+                        [% CASE 'too_many_holds_for_this_record' %]
                             <span>Patron exceeded the number of concurrent holds for this record</span>
-                        [% CASE 'tooManyReservesToday' %]
+                        [% CASE 'too_many_reserves_today' %]
                             <span>Patron reached daily holds limit</span>
-                        [% CASE 'tooManyReserves' %]
+                        [% CASE 'too_many_reserves' %]
                             <span>Too many holds already</span>
-                        [% CASE 'notReservable' %]
+                        [% CASE 'not_reservable' %]
                             <span>Not holdable</span>
-                        [% CASE 'cannotReserveFromOtherBranches' %]
+                        [% CASE 'cannot_reserve_from_other_branches' %]
                             <span>Patron from a different library</span>
                         [% CASE 'branchNotInHoldGroup' %]
                             <span>Holds are not allowed from patron's library</span>
-                        [% CASE 'itemAlreadyOnHold' %]
+                        [% CASE 'item_already_on_hold' %]
                             <span>Patron already has a hold for failed item(s)</span>
-                        [% CASE 'cannotBeTransferred' %]
+                        [% CASE 'cannot_be_transferred' %]
                             <span>Cannot be transferred to pickup library</span>
-                        [% CASE 'pickupNotInHoldGroup' %]
+                        [% CASE 'pickup_not_in_hold_group' %]
                             <span>The chosen pickup location is not allowed</span>
-                        [% CASE 'noReservesAllowed' %]
+                        [% CASE 'no_reserves_allowed' %]
                             <span>No holds are allowed on failed item(s)</span>
-                        [% CASE 'libraryNotPickupLocation' %]
+                        [% CASE 'library_not_pickup_location' %]
                             <span>Library is not a valid pickup location</span>
                         [% CASE 'no_valid_pickup_location' %]
                             <span>No valid pickup location</span>
@@ -536,7 +536,7 @@
             </div>
         [% END %]
 
-        [% IF ( no_reserves_allowed || exceeded_maxreserves || exceeded_holds_per_record || alreadyreserved || none_available || none_available_override || alreadypossession || ageRestricted || recall ) %]
+        [% IF ( no_reserves_allowed || exceeded_maxreserves || exceeded_holds_per_record || alreadyreserved || none_available || none_available_override || alreadypossession || age_restricted || recall ) %]
             <div class="alert alert-warning">
                 [% UNLESS ( multi_hold ) %]
                     <h3>Cannot place hold</h3>
@@ -557,7 +557,7 @@
                             <li>[% INCLUDE 'patron-title.inc' patron => patron no_title => 1 no_cardnumber => 1 hide_patron_infos_if_needed => 1 hide_patron_infos_if_needed => 1 %] <strong>is already in possession</strong> of one item.</li>
                         [% ELSIF ( alreadyreserved ) %]
                             <li>[% INCLUDE 'patron-title.inc' patron => patron no_title => 1 no_cardnumber => 1 hide_patron_infos_if_needed => 1 %] <strong>already has a hold</strong> on this item.</li>
-                        [% ELSIF ( ageRestricted ) %]
+                        [% ELSIF ( age_restricted ) %]
                             <li><strong>Age restricted</strong></li>
                         [% ELSIF ( none_available || none_available_override ) %]
                             <li> <strong>No items are available</strong> to be placed on hold.</li>
@@ -581,7 +581,7 @@
                         >
                     [% ELSIF ( exceeded_holds_per_record ) %]
                         [% FOREACH biblioloo IN biblioloop %]
-                            [% IF (biblioloo.tooManyHoldsForThisRecord) %]
+                            [% IF (biblioloo.too_many_holds_for_this_record) %]
                                 <li
                                     ><strong>Too many holds for <a href="/cgi-bin/koha/catalogue/detail.pl?biblionumber=[% biblioloo.biblionumber | uri %]"> [% biblioloo.title | html %]</a>:</strong>
                                     [% INCLUDE 'patron-title.inc' patron => patron no_title => 1 no_cardnumber => 1 hide_patron_infos_if_needed => 1 %] can only place a maximum of [% max_holds_for_record | html %] hold(s) on this
@@ -978,29 +978,29 @@
                                                         [% IF itemloo.not_holdable %]
                                                             [% IF itemloo.not_holdable == 'damaged' %]
                                                                 <span>Item damaged</span>
-                                                            [% ELSIF itemloo.not_holdable == 'ageRestricted' %]
+                                                            [% ELSIF itemloo.not_holdable == 'age_restricted' %]
                                                                 <span>Age restricted</span>
-                                                            [% ELSIF itemloo.not_holdable == 'tooManyHoldsForThisRecord' %]
+                                                            [% ELSIF itemloo.not_holdable == 'too_many_holds_for_this_record' %]
                                                                 <span>Exceeded max holds per record</span>
-                                                            [% ELSIF itemloo.not_holdable == 'tooManyReservesToday' %]
+                                                            [% ELSIF itemloo.not_holdable == 'too_many_reserves_today' %]
                                                                 <span>Daily hold limit reached for patron</span>
-                                                            [% ELSIF itemloo.not_holdable == 'tooManyReserves' %]
+                                                            [% ELSIF itemloo.not_holdable == 'too_many_reserves' %]
                                                                 <span>Too many holds</span>
-                                                            [% ELSIF itemloo.not_holdable == 'notReservable' %]
+                                                            [% ELSIF itemloo.not_holdable == 'not_reservable' %]
                                                                 <span>Not holdable</span>
-                                                            [% ELSIF itemloo.not_holdable == 'cannotReserveFromOtherBranches' %]
+                                                            [% ELSIF itemloo.not_holdable == 'cannot_reserve_from_other_branches' %]
                                                                 <span>Patron is from different library</span>
                                                             [% ELSIF itemloo.not_holdable == 'branchNotInHoldGroup' %]
                                                                 <span>Cannot place hold from patron's library</span>
-                                                            [% ELSIF itemloo.not_holdable == 'itemAlreadyOnHold' %]
+                                                            [% ELSIF itemloo.not_holdable == 'item_already_on_hold' %]
                                                                 <span>Patron already has hold for this item</span>
-                                                            [% ELSIF itemloo.not_holdable == 'cannotBeTransferred' %]
+                                                            [% ELSIF itemloo.not_holdable == 'cannot_be_transferred' %]
                                                                 <span>Cannot be transferred to pickup library</span>
-                                                            [% ELSIF itemloo.not_holdable == 'pickupNotInHoldGroup' %]
+                                                            [% ELSIF itemloo.not_holdable == 'pickup_not_in_hold_group' %]
                                                                 <span>Only pickup locations within the same hold group are allowed</span>
-                                                            [% ELSIF itemloo.not_holdable == 'noReservesAllowed' %]
+                                                            [% ELSIF itemloo.not_holdable == 'no_reserves_allowed' %]
                                                                 <span>No holds are allowed on this item</span>
-                                                            [% ELSIF itemloo.not_holdable == 'libraryNotPickupLocation' %]
+                                                            [% ELSIF itemloo.not_holdable == 'library_not_pickup_location' %]
                                                                 <span>Library is not a pickup location</span>
                                                             [% ELSIF itemloo.not_holdable == 'no_valid_pickup_location' %]
                                                                 <span>No valid pickup location</span>
@@ -1622,16 +1622,16 @@
 
         var ERROR_MAP = {
             damaged: _("Item damaged"),
-            ageRestricted: _("Age restricted"),
-            tooManyHoldsForThisRecord: _("Exceeded max holds per record"),
-            tooManyReservesToday: _("Daily hold limit reached for patron"),
-            tooManyReserves: _("Too many holds"),
-            notReservable: _("Not holdable"),
-            noReservesAllowed: _("No holds allowed"),
-            cannotReserveFromOtherBranches: _("Patron is from different library"),
-            itemAlreadyOnHold: _("Patron already has hold for this item"),
-            cannotBeTransferred: _("Cannot be transferred to pickup library"),
-            pickupNotInHoldGroup: _("Only pickup locations within the same hold group are allowed"),
+            age_restricted: _("Age restricted"),
+            too_many_holds_for_this_record: _("Exceeded max holds per record"),
+            too_many_reserves_today: _("Daily hold limit reached for patron"),
+            too_many_reserves: _("Too many holds"),
+            not_reservable: _("Not holdable"),
+            no_reserves_allowed: _("No holds allowed"),
+            cannot_reserve_from_other_branches: _("Patron is from different library"),
+            item_already_on_hold: _("Patron already has hold for this item"),
+            cannot_be_transferred: _("Cannot be transferred to pickup library"),
+            pickup_not_in_hold_group: _("Only pickup locations within the same hold group are allowed"),
         };
 
         $.fn.select2.defaults.set("width", "100%");
