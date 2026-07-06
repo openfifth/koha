@@ -50,7 +50,7 @@ __PACKAGE__->table("club_holds_to_patron_holds");
 =head2 error_code
 
   data_type: 'enum'
-  extra: {list => ["damaged","ageRestricted","itemAlreadyOnHold","tooManyHoldsForThisRecord","tooManyReservesToday","tooManyReserves","notReservable","cannotReserveFromOtherBranches","libraryNotFound","libraryNotPickupLocation","cannotBeTransferred","noReservesAllowed"]}
+  extra: {list => ["damaged","age_restricted","item_already_on_hold","too_many_holds_for_this_record","too_many_reserves_today","too_many_reserves","not_reservable","cannot_reserve_from_other_branches","library_not_found","library_not_pickup_location","cannot_be_transferred","no_reserves_allowed"]}
   is_nullable: 1
 
 =head2 error_message
@@ -76,17 +76,17 @@ __PACKAGE__->add_columns(
     extra => {
       list => [
         "damaged",
-        "ageRestricted",
-        "itemAlreadyOnHold",
-        "tooManyHoldsForThisRecord",
-        "tooManyReservesToday",
-        "tooManyReserves",
-        "notReservable",
-        "cannotReserveFromOtherBranches",
-        "libraryNotFound",
-        "libraryNotPickupLocation",
-        "cannotBeTransferred",
-        "noReservesAllowed",
+        "age_restricted",
+        "item_already_on_hold",
+        "too_many_holds_for_this_record",
+        "too_many_reserves_today",
+        "too_many_reserves",
+        "not_reservable",
+        "cannot_reserve_from_other_branches",
+        "library_not_found",
+        "library_not_pickup_location",
+        "cannot_be_transferred",
+        "no_reserves_allowed",
       ],
     },
     is_nullable => 1,
