@@ -2098,7 +2098,7 @@ CREATE TABLE `club_holds_to_patron_holds` (
   `club_hold_id` int(11) NOT NULL,
   `patron_id` int(11) NOT NULL,
   `hold_id` int(11) DEFAULT NULL,
-  `error_code` enum('damaged','ageRestricted','itemAlreadyOnHold','tooManyHoldsForThisRecord','tooManyReservesToday','tooManyReserves','notReservable','cannotReserveFromOtherBranches','libraryNotFound','libraryNotPickupLocation','cannotBeTransferred','noReservesAllowed') DEFAULT NULL,
+  `error_code` enum('damaged','age_restricted','item_already_on_hold','too_many_holds_for_this_record','too_many_reserves_today','too_many_reserves','not_reservable','cannot_reserve_from_other_branches','library_not_found','library_not_pickup_location','cannot_be_transferred','no_reserves_allowed') DEFAULT NULL,
   `error_message` varchar(100) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `clubs_holds_paton_holds_ibfk_1` (`club_hold_id`),
