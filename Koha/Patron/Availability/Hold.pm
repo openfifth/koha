@@ -213,16 +213,19 @@ sub check {
         my $controlbranch_pref = C4::Context->preference('ReservesControlBranch');
         if ( $controlbranch_pref eq 'ItemHomeLibrary' ) {
             $search_params->{'item.homebranch'} = [ $library_id, undef ];
-            $search_attrs->{join}               = { 'item' => 'biblioitem' };
+            $search_attrs->{join}               = [ 'item', { biblio => 'biblioitem' } ];
         } else {
 
-            # PatronLibrary: patron's branch matches (always true for this patron's holds)
-            # No additional branch filter needed since all patron's holds are for this patron
+            # PatronLibrary: all patron's holds count (same as old behavior).
+            # Join only needed when filtering by itemtype.
+            $search_attrs->{join} = [ 'item', { biblio => 'biblioitem' } ] if defined $rule_itemtype;
         }
 
-        # Filter by itemtype when the matching rule is itemtype-specific
+        # Filter by itemtype when the matching rule is itemtype-specific.
+        # Join biblioitems via biblio (not via item) so biblio-level holds
+        # without an item still match on the biblio's itemtype.
         if ( defined $rule_itemtype ) {
-            $search_attrs->{join} //= { 'item' => 'biblioitem' };
+            $search_attrs->{join} //= [ 'item', { biblio => 'biblioitem' } ];
             if ( C4::Context->preference('item-level_itypes') ) {
                 $search_params->{'-or'} = [
                     { 'item.itype'          => $rule_itemtype },

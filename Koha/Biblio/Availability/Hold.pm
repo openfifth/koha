@@ -113,6 +113,7 @@ sub check {
         push @items, @host_items;
     }
 
+    my @item_failures;
     for my $item (@items) {
         my $item_result = Koha::Item::Availability::Hold->check(
             {
@@ -127,11 +128,16 @@ sub check {
             $result->set_context( available_item => $item );
             return $result;
         }
+        push @item_failures, {
+            itemnumber => $item->itemnumber,
+            blockers   => $item_result->blockers,
+        };
     }
 
     # No item available
     $result->add_blocker( no_item_available => 1 ) unless @items == 0;
-    $result->add_blocker( no_items          => 1 ) if @items == 0;
+    $result->add_blocker( no_items => 1 ) if @items == 0;
+    $result->set_context( item_failures => \@item_failures ) if @item_failures;
 
     return $result;
 }
