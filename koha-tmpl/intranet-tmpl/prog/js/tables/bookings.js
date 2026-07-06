@@ -1,3 +1,5 @@
+/* global __ $biblio_to_html $date AdditionalFilters BookingsTable patron_borrowernumber table_settings_bookings_table */
+
 // Bookings
 var bookings_table;
 $(document).ready(function () {
@@ -44,7 +46,10 @@ $(document).ready(function () {
                     ajax: {
                         url: bookings_table_url,
                     },
-                    embed: ["biblio", "item", "patron"],
+                    embed: ["biblio", "item", "item.checkout", "patron"],
+                    createdRow: function (row, data) {
+                        BookingsTable.highlightRow(data, row);
+                    },
                     columns: [
                         {
                             data: "booking_id",
@@ -56,7 +61,9 @@ $(document).ready(function () {
                             name: "status",
                             searchable: false,
                             orderable: false,
-                            render: renderStatus,
+                            render: function (data, type, row, meta) {
+                                return BookingsTable.statusBadge(row);
+                            },
                         },
                         {
                             data: "biblio.title",
@@ -76,16 +83,7 @@ $(document).ready(function () {
                             orderable: true,
                             defaultContent: __("Any item"),
                             render: function (data, type, row, meta) {
-                                if (row.item) {
-                                    return (
-                                        row.item.external_id +
-                                        " (" +
-                                        row.booking_id +
-                                        ")"
-                                    );
-                                } else {
-                                    return null;
-                                }
+                                return BookingsTable.itemContent(row);
                             },
                         },
                         {
@@ -113,16 +111,7 @@ $(document).ready(function () {
                             searchable: false,
                             orderable: false,
                             render: function (data, type, row, meta) {
-                                let result = "";
-                                if (CAN_user_circulate_manage_bookings) {
-                                    result +=
-                                        '<button type="button" class="btn btn-default btn-xs cancel-action" data-bs-toggle="modal" data-bs-target="#cancelBookingModal" data-booking="' +
-                                        row.booking_id +
-                                        '"><i class="fa fa-trash" aria-hidden="true"></i> ' +
-                                        __("Cancel") +
-                                        "</button>";
-                                }
-                                return result;
+                                return BookingsTable.actionsContent(row);
                             },
                         },
                     ],
@@ -132,34 +121,5 @@ $(document).ready(function () {
                 additional_filters
             );
         }
-    }
-
-    function renderStatus(data, type, row, meta) {
-        const statusMap = {
-            new: () => __("New"),
-            cancelled: () =>
-                [__("Cancelled"), row.cancellation_reason]
-                    .filter(Boolean)
-                    .join(": "),
-            issued: () => __("Issued"),
-            completed: () => __("Completed"),
-        };
-
-        const statusText = statusMap[row.status]
-            ? statusMap[row.status]()
-            : __("Unknown");
-
-        const classMap = [
-            { status: __("Cancelled"), class: "bg-secondary" },
-            { status: __("Completed"), class: "bg-secondary" },
-            { status: __("Issued"), class: "bg-info" },
-            { status: __("New"), class: "bg-success" },
-        ];
-
-        const badgeClass =
-            classMap.find(mapping => statusText.startsWith(mapping.status))
-                ?.class || "bg-secondary";
-
-        return `<span class="badge rounded-pill ${badgeClass}">${statusText}</span>`;
     }
 });
