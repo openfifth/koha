@@ -605,7 +605,7 @@ is( $r2[0]->priority, 4, 'priority for hold not in future should be correct' );
 # end of tests for bug 12630
 
 ####
-####### Testing Bug 13113 - Prevent juvenile/children from reserving ageRestricted material >>>
+####### Testing Bug 13113 - Prevent juvenile/children from reserving age_restricted material >>>
 ####
 
 t::lib::Mocks::mock_preference( 'AgeRestrictionMarker', 'FSK|PEGI|Age|K' );
@@ -621,7 +621,7 @@ C4::Biblio::ModBiblio( $record, $bibnum, $frameworkcode );
 
 is(
     C4::Reserves::CanBookBeReserved( $borrowernumber, $biblionumber )->{status}, 'OK',
-    "Reserving an ageRestricted Biblio without a borrower dateofbirth succeeds"
+    "Reserving an age_restricted Biblio without a borrower dateofbirth succeeds"
 );
 
 #Set the dateofbirth for the Borrower making them "too young".
@@ -629,7 +629,7 @@ $borrower->{dateofbirth} = DateTime->now->add( years => -15 );
 Koha::Patrons->find($borrowernumber)->set( { dateofbirth => $borrower->{dateofbirth} } )->store;
 
 is(
-    C4::Reserves::CanBookBeReserved( $borrowernumber, $biblionumber )->{status}, 'ageRestricted',
+    C4::Reserves::CanBookBeReserved( $borrowernumber, $biblionumber )->{status}, 'age_restricted',
     "Reserving a 'PEGI 16' Biblio by a 15 year old borrower fails"
 );
 
@@ -1397,13 +1397,13 @@ subtest 'AllowHoldOnPatronPossession test' => sub {
             $patron->borrowernumber,
             $item->biblionumber
         )->{status},
-        'alreadypossession',
+        'already_possession',
         'Patron cannot place hold on a book loaned to itself'
     );
 
     is(
         C4::Reserves::CanItemBeReserved( $patron, $item )->{status},
-        'alreadypossession',
+        'already_possession',
         'Patron cannot place hold on an item loaned to itself'
     );
 
@@ -1847,7 +1847,7 @@ subtest 'CanItemBeReserved() tests' => sub {
     ## Limit on item type is 2, two holds, one of them biblio-level/item type-constrained
 
     $res = CanItemBeReserved( $patron, $item_2, $library->id );
-    is_deeply( $res, { status => 'tooManyReserves', limit => 2 }, 'Holds on itemtype limit reached' );
+    is_deeply( $res, { status => 'too_many_reserves', limit => 2 }, 'Holds on itemtype limit reached' );
 
     $schema->storage->txn_rollback;
 };

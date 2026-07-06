@@ -285,7 +285,7 @@ is(
 t::lib::Mocks::mock_preference( 'IndependentBranches',         1 );
 t::lib::Mocks::mock_preference( 'canreservefromotherbranches', 0 );
 ok(
-    CanItemBeReserved( $patrons[0], $foreign_item )->{status} eq 'cannotReserveFromOtherBranches',
+    CanItemBeReserved( $patrons[0], $foreign_item )->{status} eq 'cannot_reserve_from_other_branches',
     '$branch_1 patron NOT allowed to reserve $branch_2 item with IndependentBranches ON ... (bug 2394)'
 );
 
@@ -364,7 +364,7 @@ $hold = Koha::Hold->new(
 )->store();
 is(
     CanItemBeReserved( $patrons[0], $damaged_item )->{status},
-    'itemAlreadyOnHold',
+    'item_already_on_hold',
     "Patron cannot place a second item level hold for a given item"
 );
 $hold->delete();
@@ -424,7 +424,7 @@ $item_group_1->add_item( { item_id => $itemnumber } );
 $hold->item_group_id( $item_group_2->id )->update;
 ok( !defined( ( CheckReserves($nfl_item) )[1] ), "Hold cannot be trapped for item with non-matching item group" );
 is(
-    CanItemBeReserved( $patrons[0], $nfl_item )->{status}, 'itemAlreadyOnHold',
+    CanItemBeReserved( $patrons[0], $nfl_item )->{status}, 'item_already_on_hold',
     "cannot request item that you have already reservedd"
 );
 is(
@@ -446,11 +446,11 @@ AddReserve(
     }
 );
 is(
-    CanItemBeReserved( $patrons[0], $item )->{status}, 'noReservesAllowed',
+    CanItemBeReserved( $patrons[0], $item )->{status}, 'no_reserves_allowed',
     "cannot request item if policy that matches on item-level item type forbids it"
 );
 is(
-    CanItemBeReserved( $patrons[0], $item, undef, { ignore_hold_counts => 1 } )->{status}, 'noReservesAllowed',
+    CanItemBeReserved( $patrons[0], $item, undef, { ignore_hold_counts => 1 } )->{status}, 'no_reserves_allowed',
     "cannot request item if policy that matches on item-level item type forbids it even if ignoring counts"
 );
 
@@ -516,7 +516,7 @@ subtest 'CanItemBeReserved' => sub {
         }
     );
 
-    subtest 'noReservesAllowed' => sub {
+    subtest 'no_reserves_allowed' => sub {
         plan tests => 5;
 
         my $biblionumber_cannot = $builder->build_sample_biblio( { itemtype => $itemtype_cant } )->biblionumber;
@@ -559,7 +559,7 @@ subtest 'CanItemBeReserved' => sub {
 
         t::lib::Mocks::mock_preference( 'item-level_itypes', 1 );
         is(
-            CanItemBeReserved( $patrons[0], $item_2_cannot )->{status}, 'noReservesAllowed',
+            CanItemBeReserved( $patrons[0], $item_2_cannot )->{status}, 'no_reserves_allowed',
             "With item level set, rule from item must be picked (CANNOT)"
         );
         is(
@@ -568,7 +568,7 @@ subtest 'CanItemBeReserved' => sub {
         );
         t::lib::Mocks::mock_preference( 'item-level_itypes', 0 );
         is(
-            CanItemBeReserved( $patrons[0], $item_1_can )->{status}, 'noReservesAllowed',
+            CanItemBeReserved( $patrons[0], $item_1_can )->{status}, 'no_reserves_allowed',
             "With biblio level set, rule from biblio must be picked (CANNOT)"
         );
         is(
@@ -576,12 +576,12 @@ subtest 'CanItemBeReserved' => sub {
             "With biblio level set, rule from biblio must be picked (CAN)"
         );
         is(
-            CanItemBeReserved( $patrons[0], $item_3_cannot )->{status}, 'noReservesAllowed',
-            "When no holds allowed and no holds per record allowed should return noReservesAllowed"
+            CanItemBeReserved( $patrons[0], $item_3_cannot )->{status}, 'no_reserves_allowed',
+            "When no holds allowed and no holds per record allowed should return no_reserves_allowed"
         );
     };
 
-    subtest 'tooManyHoldsForThisRecord + tooManyReserves + itemAlreadyOnHold' => sub {
+    subtest 'too_many_holds_for_this_record + too_many_reserves + item_already_on_hold' => sub {
         plan tests => 7;
 
         my $biblionumber_1 = $builder->build_sample_biblio( { itemtype => $itemtype_can } )->biblionumber;
@@ -655,7 +655,7 @@ subtest 'CanItemBeReserved' => sub {
             }
         );
         is(
-            CanItemBeReserved( $patrons[0], $item_12 )->{status}, 'tooManyHoldsForThisRecord',
+            CanItemBeReserved( $patrons[0], $item_12 )->{status}, 'too_many_holds_for_this_record',
             "A item-level hold already exists and holds_per_record=1, another hold cannot be placed on this record"
         );
         Koha::CirculationRules->set_rules(
@@ -670,8 +670,8 @@ subtest 'CanItemBeReserved' => sub {
             }
         );
         is(
-            CanItemBeReserved( $patrons[0], $item_12 )->{status}, 'tooManyHoldsForThisRecord',
-            "A item-level hold already exists and holds_per_record=1 - tooManyHoldsForThisRecord has priority over tooManyReserves"
+            CanItemBeReserved( $patrons[0], $item_12 )->{status}, 'too_many_holds_for_this_record',
+            "A item-level hold already exists and holds_per_record=1 - too_many_holds_for_this_record has priority over too_many_reserves"
         );
         Koha::CirculationRules->set_rules(
             {
@@ -709,12 +709,12 @@ subtest 'CanItemBeReserved' => sub {
             }
         );
         is(
-            CanItemBeReserved( $patrons[0], $item_21 )->{status}, 'itemAlreadyOnHold',
-            "A item-level holds already exists on this item, itemAlreadyOnHold should be raised"
+            CanItemBeReserved( $patrons[0], $item_21 )->{status}, 'item_already_on_hold',
+            "A item-level holds already exists on this item, item_already_on_hold should be raised"
         );
         is(
-            CanItemBeReserved( $patrons[0], $item_22 )->{status}, 'tooManyReserves',
-            "This patron has already placed reservesallowed holds, tooManyReserves should be raised"
+            CanItemBeReserved( $patrons[0], $item_22 )->{status}, 'too_many_reserves',
+            "This patron has already placed reservesallowed holds, too_many_reserves should be raised"
         );
     };
 };
@@ -757,8 +757,8 @@ $biblio = $builder->build_sample_biblio( { itemtype => 'CANNOT' } );
 my $branch_rule_item =
     $builder->build_sample_item( { library => $branch_1, itype => 'CANNOT', biblionumber => $biblio->biblionumber } );
 is(
-    CanItemBeReserved( $patrons[0], $branch_rule_item )->{status}, 'notReservable',
-    "CanItemBeReserved should return 'notReservable'"
+    CanItemBeReserved( $patrons[0], $branch_rule_item )->{status}, 'not_reservable',
+    "CanItemBeReserved should return 'not_reservable'"
 );
 
 t::lib::Mocks::mock_preference( 'ReservesControlBranch', 'PatronLibrary' );
@@ -766,7 +766,7 @@ $branch_rule_item =
     $builder->build_sample_item( { library => $branch_2, itype => 'CAN', biblionumber => $biblio->biblionumber } );
 is(
     CanItemBeReserved( $patrons[0], $branch_rule_item )->{status},
-    'cannotReserveFromOtherBranches',
+    'cannot_reserve_from_other_branches',
     "CanItemBeReserved should use PatronLibrary rule when ReservesControlBranch set to 'PatronLibrary'"
 );
 t::lib::Mocks::mock_preference( 'ReservesControlBranch', 'ItemHomeLibrary' );
@@ -822,7 +822,7 @@ my $res_id = AddReserve(
 
 is(
     CanItemBeReserved( $patrons[0], $limit_count_item )->{status},
-    'tooManyReserves', 'Patron cannot reserve item with hold limit of 1, 1 bib level hold placed'
+    'too_many_reserves', 'Patron cannot reserve item with hold limit of 1, 1 bib level hold placed'
 );
 is(
     CanItemBeReserved( $patrons[0], $limit_count_item, undef, { ignore_hold_counts => 1 } )->{status},
@@ -833,7 +833,7 @@ is(
 t::lib::Mocks::mock_preference( 'ReservesControlBranch', 'ItemHomeLibrary' );
 is(
     CanItemBeReserved( $patrons[0], $limit_count_item )->{status},
-    'tooManyReserves', 'Patron cannot reserve item with hold limit of 1, 1 bib level hold placed'
+    'too_many_reserves', 'Patron cannot reserve item with hold limit of 1, 1 bib level hold placed'
 );
 
 #reset for further tests
@@ -900,14 +900,14 @@ subtest 'Test max_holds per library/patron category' => sub {
     $rule_branch->delete();
 
     $ret = CanItemBeReserved( $patrons[0], $max_holds_item );
-    is( $ret->{status}, 'tooManyReserves', 'Patron cannot place hold with only a category rule of 3' );
+    is( $ret->{status}, 'too_many_reserves', 'Patron cannot place hold with only a category rule of 3' );
 
     $rule_all->delete();
     $rule_branch->rule_value(3);
     $rule_branch->store();
 
     $ret = CanItemBeReserved( $patrons[0], $max_holds_item );
-    is( $ret->{status}, 'tooManyReserves', 'Patron cannot place hold with only a branch/category rule of 3' );
+    is( $ret->{status}, 'too_many_reserves', 'Patron cannot place hold with only a branch/category rule of 3' );
 
     $rule_branch->rule_value(5);
     $rule_branch->update();
@@ -960,18 +960,18 @@ subtest 'Pickup location availability tests' => sub {
     )->store;
     is(
         CanItemBeReserved( $patron, $pickup_item, $branch_to )->{status},
-        'cannotBeTransferred', 'Item cannot be transferred'
+        'cannot_be_transferred', 'Item cannot be transferred'
     );
     $limit->delete;
 
     $library->pickup_location('0')->store;
     is(
         CanItemBeReserved( $patron, $pickup_item, $branch_to )->{status},
-        'libraryNotPickupLocation', 'Library is not a pickup location'
+        'library_not_pickup_location', 'Library is not a pickup location'
     );
     is(
         CanItemBeReserved( $patron, $pickup_item, 'nonexistent' )->{status},
-        'libraryNotFound', 'Cannot set unknown library as pickup location'
+        'library_not_found', 'Cannot set unknown library as pickup location'
     );
 };
 
@@ -1031,11 +1031,11 @@ subtest 'CanItemBeReserved / holds_per_day tests' => sub {
 
     is_deeply(
         CanItemBeReserved( $patron, $item_1 ),
-        { status => 'tooManyReserves', limit => 1 },
+        { status => 'too_many_reserves', limit => 1 },
         'Patron cannot reserve item with hold limit of 1, 1 bib level hold placed'
     );
 
-    # Raise reservesallowed to avoid tooManyReserves from it
+    # Raise reservesallowed to avoid too_many_reserves from it
     Koha::CirculationRules->set_rule(
         {
 
@@ -1064,7 +1064,7 @@ subtest 'CanItemBeReserved / holds_per_day tests' => sub {
     );
     is_deeply(
         CanItemBeReserved( $patron, $item_2 ),
-        { status => 'tooManyReservesToday', limit => 2 },
+        { status => 'too_many_reserves_today', limit => 2 },
         'Patron cannot a third item with 2 reserves daily cap'
     );
 
@@ -1095,7 +1095,7 @@ subtest 'CanItemBeReserved / holds_per_day tests' => sub {
     Koha::Holds->search->delete;
     is_deeply(
         CanItemBeReserved( $patron, $item_2 ),
-        { status => 'tooManyReservesToday', limit => 0 },
+        { status => 'too_many_reserves_today', limit => 0 },
         'Patron cannot reserve if holds_per_day is 0 (i.e. 0 is 0)'
     );
 
@@ -1148,7 +1148,7 @@ subtest 'CanItemBeReserved / holds_per_day tests' => sub {
     );
     is_deeply(
         CanItemBeReserved( $patron, $item_3 ),
-        { status => 'tooManyReserves', limit => 3 },
+        { status => 'too_many_reserves', limit => 3 },
         'Unlimited daily holds, but reached reservesallowed'
     );
 
@@ -1156,7 +1156,7 @@ subtest 'CanItemBeReserved / holds_per_day tests' => sub {
     t::lib::Mocks::mock_preference( 'ReservesControlBranch', 'ItemHomeLibrary' );
     is_deeply(
         CanItemBeReserved( $patron, $item_3 ),
-        { status => 'tooManyReserves', limit => 3 },
+        { status => 'too_many_reserves', limit => 3 },
         'Unlimited daily holds, but reached reservesallowed'
     );
 
@@ -1263,7 +1263,7 @@ subtest 'CanItemBeReserved / branch_not_in_hold_group' => sub {
     # Test 3: Patron 3 cannot place hold
     is_deeply(
         CanItemBeReserved( $patron3, $item_2 ),
-        { status => 'branchNotInHoldGroup' },
+        { status => 'branch_not_in_hold_group' },
         'Patron cannot place hold because patron\'s home library is not part of hold group'
     );
 
@@ -1303,7 +1303,7 @@ subtest 'CanItemBeReserved / branch_not_in_hold_group' => sub {
     # Test 5: Patron 3 cannot place hold
     is_deeply(
         CanItemBeReserved( $patron3, $item_2 ),
-        { status => 'branchNotInHoldGroup' },
+        { status => 'branch_not_in_hold_group' },
         'Patron cannot place hold if holdallowed is set to "hold group" for library 2'
     );
 
@@ -1343,7 +1343,7 @@ subtest 'CanItemBeReserved / branch_not_in_hold_group' => sub {
     # Test 7: Patron 3 cannot place hold
     is_deeply(
         CanItemBeReserved( $patron3, $item_2 ),
-        { status => 'branchNotInHoldGroup' },
+        { status => 'branch_not_in_hold_group' },
         'Patron cannot place hold if holdallowed is set to "hold group" for itemtype 2'
     );
 
@@ -1383,7 +1383,7 @@ subtest 'CanItemBeReserved / branch_not_in_hold_group' => sub {
     # Test 9: Patron 3 cannot place hold
     is_deeply(
         CanItemBeReserved( $patron3, $item_2 ),
-        { status => 'branchNotInHoldGroup' },
+        { status => 'branch_not_in_hold_group' },
         'Patron cannot place hold if holdallowed is set to "hold group" for itemtype 2 and library 2'
     );
 
@@ -1490,7 +1490,7 @@ subtest 'CanItemBeReserved / pickup_not_in_hold_group' => sub {
     # Test 3: Patron 3 cannot place hold
     is_deeply(
         CanItemBeReserved( $patron3, $item_2, $library3->branchcode ),
-        { status => 'pickupNotInHoldGroup' },
+        { status => 'pickup_not_in_hold_group' },
         'Patron cannot place hold because pickup location is not part of hold group'
     );
 
@@ -1530,7 +1530,7 @@ subtest 'CanItemBeReserved / pickup_not_in_hold_group' => sub {
     # Test 5: Patron 3 cannot place hold
     is_deeply(
         CanItemBeReserved( $patron3, $item_2, $library3->branchcode ),
-        { status => 'pickupNotInHoldGroup' },
+        { status => 'pickup_not_in_hold_group' },
         'Patron cannot place hold if hold_fulfillment_policy is set to "hold group" for library 2'
     );
 
@@ -1570,7 +1570,7 @@ subtest 'CanItemBeReserved / pickup_not_in_hold_group' => sub {
     # Test 7: Patron 3 cannot place hold
     is_deeply(
         CanItemBeReserved( $patron3, $item_2, $library3->branchcode ),
-        { status => 'pickupNotInHoldGroup' },
+        { status => 'pickup_not_in_hold_group' },
         'Patron cannot place hold if hold_fulfillment_policy is set to "hold group" for itemtype 2'
     );
 
@@ -1610,7 +1610,7 @@ subtest 'CanItemBeReserved / pickup_not_in_hold_group' => sub {
     # Test 9: Patron 3 cannot place hold
     is_deeply(
         CanItemBeReserved( $patron3, $item_2, $library3->branchcode ),
-        { status => 'pickupNotInHoldGroup' },
+        { status => 'pickup_not_in_hold_group' },
         'Patron cannot place hold if hold_fulfillment_policy is set to "hold group" for itemtype 2 and library 2'
     );
 
@@ -1804,7 +1804,7 @@ subtest 'CanItemBeReserved rule precedence tests' => sub {
     );
     is_deeply(
         CanItemBeReserved( $patron, $item, $library->branchcode ),
-        { status => 'tooManyReserves', limit => 1 },
+        { status => 'too_many_reserves', limit => 1 },
         'Patron of specified category can place 1 hold on specified itemtype, cannot place a second'
     );
     Koha::CirculationRules->set_rules(

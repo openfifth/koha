@@ -259,14 +259,14 @@ subtest "Test endpoints with permission" => sub {
 
     $t->post_ok( "//$userid_3:$password@/api/v1/holds" => json => $post_data )
         ->status_is(403)
-        ->json_like( '/error', qr/itemAlreadyOnHold/ );
+        ->json_like( '/error', qr/item_already_on_hold/ );
 
     $post_data->{biblio_id} = $biblio_2->biblionumber;
     $post_data->{item_id}   = $item_2->itemnumber;
 
     $t->post_ok( "//$userid_3:$password@/api/v1/holds" => json => $post_data )
         ->status_is(403)
-        ->json_like( '/error', qr/Hold cannot be placed. Reason: tooManyReserves/ );
+        ->json_like( '/error', qr/Hold cannot be placed. Reason: too_many_reserves/ );
 
     my $to_delete_patron  = $builder->build_object( { class => 'Koha::Patrons' } );
     my $deleted_patron_id = $to_delete_patron->borrowernumber;

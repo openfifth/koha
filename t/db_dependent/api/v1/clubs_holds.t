@@ -202,7 +202,7 @@ subtest 'add() tests' => sub {
                 ->status_is( 403, 'User with no relevant permissions cannot place club holds' )
                 ->json_is( '/error' => 'Authorization failure. Missing required permission(s).' );
 
-            $can_be_reserved_status = 'tooManyHoldsForThisRecord';
+            $can_be_reserved_status = 'too_many_holds_for_this_record';
 
             # place a club hold with the place_hold specific permsision - should succeed
             warnings_like {
@@ -214,12 +214,12 @@ subtest 'add() tests' => sub {
                     ->json_is( '/biblio_id' => $item->biblionumber );
             }
             [
-                qr/Hold cannot be placed. Reason: tooManyHoldsForThisRecord/,
-                qr/Hold cannot be placed. Reason: tooManyHoldsForThisRecord/,
-                qr/Hold cannot be placed. Reason: tooManyHoldsForThisRecord/,
-                qr/Hold cannot be placed. Reason: tooManyHoldsForThisRecord/,
-                qr/Hold cannot be placed. Reason: tooManyHoldsForThisRecord/,
-                qr/Hold cannot be placed. Reason: tooManyHoldsForThisRecord/,
+                qr/Hold cannot be placed. Reason: too_many_holds_for_this_record/,
+                qr/Hold cannot be placed. Reason: too_many_holds_for_this_record/,
+                qr/Hold cannot be placed. Reason: too_many_holds_for_this_record/,
+                qr/Hold cannot be placed. Reason: too_many_holds_for_this_record/,
+                qr/Hold cannot be placed. Reason: too_many_holds_for_this_record/,
+                qr/Hold cannot be placed. Reason: too_many_holds_for_this_record/,
             ],
                 "Print warning when CanBookBeReserved doesn't return 'OK'";
         };
@@ -269,7 +269,7 @@ subtest 'add() tests' => sub {
                 ->status_is( 403, 'User with no relevant permissions cannot place club holds' )
                 ->json_is( '/error' => 'Authorization failure. Missing required permission(s).' );
 
-            $can_be_reserved_status = 'tooManyHoldsForThisRecord';
+            $can_be_reserved_status = 'too_many_holds_for_this_record';
 
             # place a club hold with the place_hold specific permsision - should succeed
             warnings_like {
@@ -281,12 +281,12 @@ subtest 'add() tests' => sub {
                     ->json_is( '/biblio_id' => $item->biblionumber );
             }
             [
-                qr/Hold cannot be placed. Reason: tooManyHoldsForThisRecord/,
-                qr/Hold cannot be placed. Reason: tooManyHoldsForThisRecord/,
-                qr/Hold cannot be placed. Reason: tooManyHoldsForThisRecord/,
-                qr/Hold cannot be placed. Reason: tooManyHoldsForThisRecord/,
-                qr/Hold cannot be placed. Reason: tooManyHoldsForThisRecord/,
-                qr/Hold cannot be placed. Reason: tooManyHoldsForThisRecord/,
+                qr/Hold cannot be placed. Reason: too_many_holds_for_this_record/,
+                qr/Hold cannot be placed. Reason: too_many_holds_for_this_record/,
+                qr/Hold cannot be placed. Reason: too_many_holds_for_this_record/,
+                qr/Hold cannot be placed. Reason: too_many_holds_for_this_record/,
+                qr/Hold cannot be placed. Reason: too_many_holds_for_this_record/,
+                qr/Hold cannot be placed. Reason: too_many_holds_for_this_record/,
             ],
                 "Print warning when CanItemBeReserved doesn't return 'OK'";
         };

@@ -274,7 +274,7 @@ if ( $op eq 'cud-place_reserve' ) {
         if (   $maxreserves
             && $reserve_cnt >= $maxreserves )
         {
-            push @failed_holds, 'tooManyReserves';
+            push @failed_holds, 'too_many_reserves';
             $canreserve = 0;
         }
 
