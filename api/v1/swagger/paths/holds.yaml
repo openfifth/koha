@@ -124,6 +124,9 @@
           Bad request. Possible `error_code` attribute values:
 
             * `invalid_query`
+            * `hold_date_in_future`
+            * `item_biblio_mismatch`
+            * `missing_biblio_or_item`
         schema:
           $ref: "../swagger.yaml#/definitions/error"
       "401":
@@ -131,7 +134,33 @@
         schema:
           $ref: "../swagger.yaml#/definitions/error"
       "403":
-        description: Hold not allowed
+        description: |
+          Hold not allowed. Possible `error_code` attribute values:
+
+            * `invalid_pickup_location`
+            * `patron_not_found`
+            * `age_restricted`
+            * `damaged`
+            * `too_many_reserves`
+            * `too_many_holds_for_this_record`
+            * `too_many_reserves_today`
+            * `no_reserves_allowed`
+            * `not_reservable`
+            * `cannot_reserve_from_other_branches`
+            * `item_already_on_hold`
+            * `cannot_be_transferred`
+            * `pickup_not_in_hold_group`
+            * `branch_not_in_hold_group`
+            * `library_not_pickup_location`
+            * `no_item_available`
+            * `already_possession`
+            * `recall`
+            * `expired`
+            * `debt_limit`
+            * `bad_address`
+            * `card_lost`
+            * `restricted`
+            * `hold_limit`
         schema:
           $ref: "../swagger.yaml#/definitions/error"
       "404":
@@ -532,7 +561,10 @@
         schema:
           $ref: "../swagger.yaml#/definitions/hold"
       "400":
-        description: Bad request
+        description: |
+          Bad request. Possible `error_code` attribute values:
+
+            * `invalid_pickup_location`
         schema:
           $ref: "../swagger.yaml#/definitions/error"
       "401":

@@ -95,7 +95,10 @@ sub add {
         if ( !C4::Context->preference('AllowHoldDateInFuture') && $hold_date ) {
             return $c->render(
                 status  => 400,
-                openapi => { error => "Hold date in future not allowed" }
+                openapi => {
+                    error      => "Hold date in future not allowed",
+                    error_code => 'hold_date_in_future',
+                }
             );
         }
 
@@ -108,7 +111,10 @@ sub add {
             unless ($item) {
                 return $c->render(
                     status  => 400,
-                    openapi => { error => "Item $item_id doesn't belong to biblio $biblio_id" }
+                    openapi => {
+                        error      => "Item $item_id doesn't belong to biblio $biblio_id",
+                        error_code => 'item_biblio_mismatch',
+                    }
                 );
             }
         } elsif ($item_id) {
@@ -124,7 +130,10 @@ sub add {
         } else {
             return $c->render(
                 status  => 400,
-                openapi => { error => "At least one of biblio_id, item_id should be given" }
+                openapi => {
+                    error      => "At least one of biblio_id, item_id should be given",
+                    error_code => 'missing_biblio_or_item',
+                }
             );
         }
 
@@ -139,7 +148,10 @@ sub add {
         unless ($patron) {
             return $c->render(
                 status  => 400,
-                openapi => { error => 'patron_id not found' }
+                openapi => {
+                    error      => 'patron_id not found',
+                    error_code => 'patron_not_found',
+                }
             );
         }
 
@@ -160,7 +172,10 @@ sub add {
 
             return $c->render(
                 status  => 400,
-                openapi => { error => 'The supplied pickup location is not valid' }
+                openapi => {
+                    error      => 'The supplied pickup location is not valid',
+                    error_code => 'invalid_pickup_location',
+                }
             ) unless $valid_pickup_location;
 
             my $can_place_holds = $patron->can_place_holds( { overrides => $overrides } );
@@ -184,7 +199,10 @@ sub add {
             unless ( $can_hold_be_placed->{status} eq 'OK' ) {
                 return $c->render(
                     status  => 403,
-                    openapi => { error => "Hold cannot be placed. Reason: " . $can_hold_be_placed->{status} }
+                    openapi => {
+                        error      => "Hold cannot be placed. Reason: " . $can_hold_be_placed->{status},
+                        error_code => $can_hold_be_placed->{status},
+                    }
                 );
             }
         }
@@ -276,7 +294,10 @@ sub edit {
         {
             return $c->render(
                 status  => 400,
-                openapi => { error => 'The supplied pickup location is not valid' }
+                openapi => {
+                    error      => 'The supplied pickup location is not valid',
+                    error_code => 'invalid_pickup_location',
+                }
             );
         }
 

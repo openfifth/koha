@@ -276,7 +276,7 @@ subtest "Test endpoints with permission" => sub {
     $post_data->{patron_id} = $deleted_patron_id;
     $t->post_ok( "//$userid_3:$password@/api/v1/holds" => json => $post_data )
         ->status_is(400)
-        ->json_is( { error => 'patron_id not found' } );
+        ->json_is( '/error' => 'patron_id not found' );
 
     # Restore the original patron_id as it is expected by the next subtest
     # FIXME: this tests need to be rewritten from scratch
@@ -1315,11 +1315,11 @@ subtest 'edit() tests' => sub {
 
     $t->patch_ok( "//$userid:$password@/api/v1/holds/" . $biblio_hold->id => json => $biblio_hold_data )
         ->status_is(400)
-        ->json_is( { error => 'The supplied pickup location is not valid' } );
+        ->json_is( '/error' => 'The supplied pickup location is not valid' );
 
     $t->put_ok( "//$userid:$password@/api/v1/holds/" . $biblio_hold->id => json => $biblio_hold_data )
         ->status_is(400)
-        ->json_is( { error => 'The supplied pickup location is not valid' } );
+        ->json_is( '/error' => 'The supplied pickup location is not valid' );
 
     $biblio_hold->discard_changes;
     is( $biblio_hold->branchcode, $library_3->branchcode, 'branchcode remains untouched' );
@@ -1384,11 +1384,11 @@ subtest 'edit() tests' => sub {
 
     $t->patch_ok( "//$userid:$password@/api/v1/holds/" . $item_hold->id => json => $item_hold_data )
         ->status_is(400)
-        ->json_is( { error => 'The supplied pickup location is not valid' } );
+        ->json_is( '/error' => 'The supplied pickup location is not valid' );
 
     $t->put_ok( "//$userid:$password@/api/v1/holds/" . $item_hold->id => json => $item_hold_data )
         ->status_is(400)
-        ->json_is( { error => 'The supplied pickup location is not valid' } );
+        ->json_is( '/error' => 'The supplied pickup location is not valid' );
 
     $item_hold->discard_changes;
     is( $item_hold->branchcode, $library_3->branchcode, 'branchcode remains untouched' );
@@ -1577,7 +1577,7 @@ subtest 'add() tests' => sub {
 
     $t->post_ok( "//$userid:$password@/api/v1/holds" => json => $biblio_hold_data )
         ->status_is(400)
-        ->json_is( { error => 'The supplied pickup location is not valid' } );
+        ->json_is( '/error' => 'The supplied pickup location is not valid' );
 
     $biblio_hold_data->{pickup_library_id} = $library_2->branchcode;
     $t->post_ok( "//$userid:$password@/api/v1/holds" => json => $biblio_hold_data )->status_is(201);
@@ -1607,7 +1607,7 @@ subtest 'add() tests' => sub {
 
     $t->post_ok( "//$userid:$password@/api/v1/holds" => json => $biblio_hold_data )
         ->status_is(400)
-        ->json_is( { error => 'The supplied pickup location is not valid' } );
+        ->json_is( '/error' => 'The supplied pickup location is not valid' );
 
     $biblio_hold_data->{pickup_library_id} = $library_2->branchcode;
     $t->post_ok( "//$userid:$password@/api/v1/holds" => json => $biblio_hold_data )->status_is(201);
@@ -1636,7 +1636,7 @@ subtest 'add() tests' => sub {
 
     $t->post_ok( "//$userid:$password@/api/v1/holds" => json => $item_hold_data )
         ->status_is(400)
-        ->json_is( { error => 'The supplied pickup location is not valid' } );
+        ->json_is( '/error' => 'The supplied pickup location is not valid' );
 
     $can_item_be_reserved   = 'notReservable';
     $can_biblio_be_reserved = 'OK';
@@ -1645,7 +1645,7 @@ subtest 'add() tests' => sub {
 
     $t->post_ok( "//$userid:$password@/api/v1/holds" => json => $item_hold_data )
         ->status_is( 403, 'Item checks performed when both biblio_id and item_id passed (Bug 35053)' )
-        ->json_is( { error => 'Hold cannot be placed. Reason: notReservable' } );
+        ->json_is( '/error' => 'Hold cannot be placed. Reason: notReservable' );
 
     $can_item_be_reserved   = 'OK';
     $can_biblio_be_reserved = 'OK';
@@ -1662,7 +1662,7 @@ subtest 'add() tests' => sub {
 
     $t->post_ok( "//$userid:$password@/api/v1/holds" => json => $biblio_hold_data )
         ->status_is(400)
-        ->json_is( { error => 'The supplied pickup location is not valid' } );
+        ->json_is( '/error' => 'The supplied pickup location is not valid' );
 
     # empty cases
     $mock_item->mock(
@@ -1674,7 +1674,7 @@ subtest 'add() tests' => sub {
 
     $t->post_ok( "//$userid:$password@/api/v1/holds" => json => $item_hold_data )
         ->status_is(400)
-        ->json_is( { error => 'The supplied pickup location is not valid' } );
+        ->json_is( '/error' => 'The supplied pickup location is not valid' );
 
     $schema->storage->txn_rollback;
 };
