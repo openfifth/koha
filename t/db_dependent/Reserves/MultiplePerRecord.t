@@ -251,10 +251,10 @@ $hold_id = AddReserve(
 ok( $hold_id, 'Second hold was placed' );
 
 $can = CanBookBeReserved( $patron->{borrowernumber}, $biblio->biblionumber );
-is( $can->{status}, 'tooManyHoldsForThisRecord', 'Third hold exceeds limit of holds per record' );
+is( $can->{status}, 'too_many_holds_for_this_record', 'Third hold exceeds limit of holds per record' );
 
 Koha::Holds->find($hold_id)->found("W")->store;
 $can = CanBookBeReserved( $patron->{borrowernumber}, $biblio->biblionumber );
-is( $can->{status}, 'tooManyHoldsForThisRecord', 'Third hold exceeds limit of holds per record' );
+is( $can->{status}, 'too_many_holds_for_this_record', 'Third hold exceeds limit of holds per record' );
 
 $schema->storage->txn_rollback;

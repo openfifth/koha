@@ -385,18 +385,19 @@ if (   ( $findborrower && $borrowernumber_hold || $findclub && $club_hold )
                 if ( $canReserve->{status} eq 'OK' ) {
 
                     #All is OK and we can continue
-                } elsif ( $canReserve->{status} eq 'noReservesAllowed' || $canReserve->{status} eq 'notReservable' ) {
+                } elsif ( $canReserve->{status} eq 'no_reserves_allowed' || $canReserve->{status} eq 'not_reservable' )
+                {
                     $no_reserves_allowed = 1;
-                } elsif ( $canReserve->{status} eq 'tooManyReserves' ) {
+                } elsif ( $canReserve->{status} eq 'too_many_reserves' ) {
                     $exceeded_maxreserves = 1;
                     $template->param( maxreserves => $canReserve->{limit} );
-                } elsif ( $canReserve->{status} eq 'tooManyHoldsForThisRecord' ) {
+                } elsif ( $canReserve->{status} eq 'too_many_holds_for_this_record' ) {
                     $exceeded_holds_per_record = 1;
                     $biblioloopiter{ $canReserve->{status} } = 1;
-                } elsif ( $canReserve->{status} eq 'ageRestricted' ) {
+                } elsif ( $canReserve->{status} eq 'age_restricted' ) {
                     $template->param( $canReserve->{status} => 1 );
                     $biblioloopiter{ $canReserve->{status} } = 1;
-                } elsif ( $canReserve->{status} eq 'alreadypossession' ) {
+                } elsif ( $canReserve->{status} eq 'already_possession' ) {
                     $template->param( $canReserve->{status} => 1 );
                     $biblioloopiter{ $canReserve->{status} } = 1;
                 } elsif ( $canReserve->{status} eq 'recall' ) {
@@ -601,8 +602,8 @@ if (   ( $findborrower && $borrowernumber_hold || $findclub && $club_hold )
                     } elsif ( C4::Context->preference('AllowHoldPolicyOverride') ) {
 
                         # If AllowHoldPolicyOverride is set, it should override EVERY restriction, not just branch item rules
-                        # with the exception of itemAlreadyOnHold because, you know, the item is already on hold
-                        if ( $can_item_be_reserved ne 'itemAlreadyOnHold' ) {
+                        # with the exception of item_already_on_hold because, you know, the item is already on hold
+                        if ( $can_item_be_reserved ne 'item_already_on_hold' ) {
 
                             # Send the pickup locations count to the UI, the pickup locations will be pulled using the API
                             my @pickup_locations = $item_object->pickup_locations( { patron => $patron } )->as_list;

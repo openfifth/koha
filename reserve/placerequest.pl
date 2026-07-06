@@ -101,7 +101,7 @@ if ( $op eq 'cud-placerequest' && $patron ) {
                     my $can_item_be_reserved = CanItemBeReserved( $patron, $item, $item_pickup_location )->{status};
 
                     if ( $can_item_be_reserved eq 'OK'
-                        || ( $can_item_be_reserved ne 'itemAlreadyOnHold' && $can_override ) )
+                        || ( $can_item_be_reserved ne 'item_already_on_hold' && $can_override ) )
                     {
                         my $reserve_id = AddReserve(
                             {

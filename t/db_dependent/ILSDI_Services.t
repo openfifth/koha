@@ -497,7 +497,7 @@ subtest 'Holds test' => sub {
     );
 
     $reply = C4::ILSDI::Services::HoldTitle($query);
-    is( $reply->{code}, 'itemAlreadyOnHold', "Item already on hold" );
+    is( $reply->{code}, 'item_already_on_hold', "Item already on hold" );
 
     my $biblio_with_no_item = $builder->build_sample_biblio;
 
@@ -531,7 +531,7 @@ subtest 'Holds test' => sub {
     $query->param( 'item_id',   $item2->itemnumber );
 
     $reply = C4::ILSDI::Services::HoldItem($query);
-    is( $reply->{code}, 'tooManyReserves', "Too many reserves" );
+    is( $reply->{code}, 'too_many_reserves', "Too many reserves" );
 
     Koha::CirculationRules->set_rule(
         {
@@ -549,7 +549,7 @@ subtest 'Holds test' => sub {
     $query->param( 'item_id',   $item2->itemnumber );
 
     $reply = C4::ILSDI::Services::HoldItem($query);
-    is( $reply->{code}, 'noReservesAllowed', "No reserves allowed" );
+    is( $reply->{code}, 'no_reserves_allowed', "No reserves allowed" );
 
     my $origin_branch = $builder->build(
         {
@@ -606,7 +606,7 @@ subtest 'Holds test' => sub {
     $query->param( 'pickup_location', $origin_branch->{branchcode} );
     $reply = C4::ILSDI::Services::HoldItem($query);
 
-    is( $reply->{code},            'alreadypossession', "Patron has issued same book" );
+    is( $reply->{code},            'already_possession', "Patron has issued same book" );
     is( $reply->{pickup_location}, undef,               "No reserve placed" );
 
     # Test Patron cannot reserve if expired and BlockExpiredPatronOpacActions
@@ -716,10 +716,10 @@ subtest 'Holds test for branch transfer limits' => sub {
     $query->param( 'item_id',         $item->itemnumber );
 
     my $reply = C4::ILSDI::Services::HoldItem($query);
-    is( $reply->{code}, 'cannotBeTransferred', "Item hold, Item cannot be transferred" );
+    is( $reply->{code}, 'cannot_be_transferred', "Item hold, Item cannot be transferred" );
 
     $reply = C4::ILSDI::Services::HoldTitle($query);
-    is( $reply->{code}, 'cannotBeTransferred', "Record hold, Item cannot be transferred" );
+    is( $reply->{code}, 'cannot_be_transferred', "Record hold, Item cannot be transferred" );
 
     t::lib::Mocks::mock_preference( 'UseBranchTransferLimits', '0' );
 
