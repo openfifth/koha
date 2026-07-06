@@ -18,7 +18,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 12;
+use Test::More tests => 14;
 
 use t::lib::Mocks;
 use t::lib::TestBuilder;
@@ -263,6 +263,192 @@ subtest 'Hold group counting in reservesallowed' => sub {
         }
     );
     ok( !$result->available, '3 ungrouped holds over limit of 2' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'reservesallowed filters by itemtype when rule is itemtype-specific' => sub {
+
+    plan tests => 4;
+
+    $schema->storage->txn_begin;
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries', value => { pickup_location => 1 } } );
+    my $patron  = $builder->build_object( { class => 'Koha::Patrons',   value => { branchcode => $library->id } } );
+
+    my $itemtype_bk  = $builder->build_object( { class => 'Koha::ItemTypes' } );
+    my $itemtype_dvd = $builder->build_object( { class => 'Koha::ItemTypes' } );
+
+    t::lib::Mocks::mock_preference( 'maxreserves',           0 );
+    t::lib::Mocks::mock_preference( 'ReservesControlBranch', 'ItemHomeLibrary' );
+    t::lib::Mocks::mock_preference( 'item-level_itypes',     1 );
+
+    Koha::CirculationRules->delete;
+
+    # Per-itemtype rules: BK allows 2, DVD allows 1
+    Koha::CirculationRules->set_rules(
+        {
+            branchcode   => $library->id,
+            categorycode => $patron->categorycode,
+            itemtype     => $itemtype_bk->itemtype,
+            rules        => { reservesallowed => 2, holds_per_record => 99, holds_per_day => 99 },
+        }
+    );
+    Koha::CirculationRules->set_rules(
+        {
+            branchcode   => $library->id,
+            categorycode => $patron->categorycode,
+            itemtype     => $itemtype_dvd->itemtype,
+            rules        => { reservesallowed => 1, holds_per_record => 99, holds_per_day => 99 },
+        }
+    );
+
+    # Create 2 BK items and 1 DVD item
+    my $biblio_bk = $builder->build_sample_biblio();
+    my $item_bk   = $builder->build_sample_item(
+        { biblionumber => $biblio_bk->id, library => $library->id, itype => $itemtype_bk->itemtype } );
+    my $biblio_bk2 = $builder->build_sample_biblio();
+    my $item_bk2   = $builder->build_sample_item(
+        { biblionumber => $biblio_bk2->id, library => $library->id, itype => $itemtype_bk->itemtype } );
+    my $biblio_dvd = $builder->build_sample_biblio();
+    my $item_dvd   = $builder->build_sample_item(
+        { biblionumber => $biblio_dvd->id, library => $library->id, itype => $itemtype_dvd->itemtype } );
+
+    # Place 1 hold on a BK item
+    C4::Reserves::AddReserve(
+        {
+            branchcode     => $library->id,
+            borrowernumber => $patron->id,
+            biblionumber   => $biblio_bk->id,
+            itemnumber     => $item_bk->id,
+        }
+    );
+
+    # DVD hold should still be allowed (1 BK hold doesn't count against DVD limit of 1)
+    my $result = Koha::Patron::Availability::Hold->check(
+        {
+            patron        => $patron,
+            library_id    => $library->id,
+            item_type_id  => $itemtype_dvd->itemtype,
+            rule_itemtype => $itemtype_dvd->itemtype,
+            biblio_id     => $biblio_dvd->id,
+        }
+    );
+    ok( $result->available, 'DVD hold allowed: BK hold does not count against DVD limit' );
+
+    # Second BK hold should be allowed (only 1 BK hold exists, limit is 2)
+    $result = Koha::Patron::Availability::Hold->check(
+        {
+            patron        => $patron,
+            library_id    => $library->id,
+            item_type_id  => $itemtype_bk->itemtype,
+            rule_itemtype => $itemtype_bk->itemtype,
+            biblio_id     => $biblio_bk2->id,
+        }
+    );
+    ok( $result->available, 'Second BK hold allowed: 1 of 2 used' );
+
+    # Place second BK hold
+    C4::Reserves::AddReserve(
+        {
+            branchcode     => $library->id,
+            borrowernumber => $patron->id,
+            biblionumber   => $biblio_bk2->id,
+            itemnumber     => $item_bk2->id,
+        }
+    );
+
+    # Third BK hold should be blocked (2 BK holds exist, limit is 2)
+    my $biblio_bk3 = $builder->build_sample_biblio();
+    $result = Koha::Patron::Availability::Hold->check(
+        {
+            patron        => $patron,
+            library_id    => $library->id,
+            item_type_id  => $itemtype_bk->itemtype,
+            rule_itemtype => $itemtype_bk->itemtype,
+            biblio_id     => $biblio_bk3->id,
+        }
+    );
+    ok( !$result->available,                    'Third BK hold blocked: 2 of 2 used' );
+    ok( $result->blockers->{too_many_reserves}, 'Blocker is too_many_reserves' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'reservesallowed filters by branch when ReservesControlBranch is ItemHomeLibrary' => sub {
+
+    plan tests => 3;
+
+    $schema->storage->txn_begin;
+
+    my $library_a = $builder->build_object( { class => 'Koha::Libraries', value => { pickup_location => 1 } } );
+    my $library_b = $builder->build_object( { class => 'Koha::Libraries', value => { pickup_location => 1 } } );
+    my $patron    = $builder->build_object( { class => 'Koha::Patrons',   value => { branchcode => $library_a->id } } );
+
+    t::lib::Mocks::mock_preference( 'maxreserves',           0 );
+    t::lib::Mocks::mock_preference( 'ReservesControlBranch', 'ItemHomeLibrary' );
+    t::lib::Mocks::mock_preference( 'item-level_itypes',     1 );
+
+    Koha::CirculationRules->delete;
+
+    # Rule at library_a: 1 hold allowed
+    Koha::CirculationRules->set_rules(
+        {
+            branchcode   => $library_a->id,
+            categorycode => $patron->categorycode,
+            itemtype     => undef,
+            rules        => { reservesallowed => 1, holds_per_record => 99, holds_per_day => 99 },
+        }
+    );
+
+    # Rule at library_b: 1 hold allowed
+    Koha::CirculationRules->set_rules(
+        {
+            branchcode   => $library_b->id,
+            categorycode => $patron->categorycode,
+            itemtype     => undef,
+            rules        => { reservesallowed => 1, holds_per_record => 99, holds_per_day => 99 },
+        }
+    );
+
+    # Create items at different branches
+    my $biblio_a = $builder->build_sample_biblio();
+    my $item_a   = $builder->build_sample_item( { biblionumber => $biblio_a->id, library => $library_a->id } );
+    my $biblio_b = $builder->build_sample_biblio();
+    my $item_b   = $builder->build_sample_item( { biblionumber => $biblio_b->id, library => $library_b->id } );
+
+    # Place a hold on item at library_a
+    C4::Reserves::AddReserve(
+        {
+            branchcode     => $library_a->id,
+            borrowernumber => $patron->id,
+            biblionumber   => $biblio_a->id,
+            itemnumber     => $item_a->id,
+        }
+    );
+
+    # Hold at library_b should be allowed (the existing hold is at library_a, doesn't count)
+    my $result = Koha::Patron::Availability::Hold->check(
+        {
+            patron     => $patron,
+            library_id => $library_b->id,
+            biblio_id  => $biblio_b->id,
+        }
+    );
+    ok( $result->available, 'Hold at library_b allowed: hold at library_a does not count' );
+
+    # Second hold at library_a should be blocked
+    my $biblio_a2 = $builder->build_sample_biblio();
+    $builder->build_sample_item( { biblionumber => $biblio_a2->id, library => $library_a->id } );
+    $result = Koha::Patron::Availability::Hold->check(
+        {
+            patron     => $patron,
+            library_id => $library_a->id,
+            biblio_id  => $biblio_a2->id,
+        }
+    );
+    ok( !$result->available,                    'Second hold at library_a blocked: limit reached' );
+    ok( $result->blockers->{too_many_reserves}, 'Blocker is too_many_reserves' );
 
     $schema->storage->txn_rollback;
 };
