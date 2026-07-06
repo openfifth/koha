@@ -36,6 +36,10 @@
 </script>
 <script>
     var Koha = {};
+    Koha.permissions = {};
+    Koha.addPermissions = function (permissions) {
+        Object.assign(Koha.permissions, permissions);
+    };
     [% IF CAN_user_parameters_manage_column_config %]
         var CAN_user_parameters_manage_column_config = 1;
     [% ELSE %]
