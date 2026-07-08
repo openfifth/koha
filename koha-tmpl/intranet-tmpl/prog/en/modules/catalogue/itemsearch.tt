@@ -393,6 +393,8 @@
     </form>
 [% END %]
 
+[% INCLUDE 'modals/item_list_add.inc' %]
+
 [% MACRO jsinclude BLOCK %]
     [% INCLUDE 'calendar.inc' %]
     [% INCLUDE 'datatables.inc' %]
@@ -677,6 +679,15 @@
                         _("Batch item deletion") +
                         "</a> </li>";
                 }
+                if ($("#item-list-add-form-select > option").length > 0) {
+                    table +=
+                        "" +
+                        '                <li> <a class="dropdown-item send_to_item_list"" href="#" data-bs-toggle="tooltip" data-bs-placement="right" title="' +
+                        _("Send selected items to item list") +
+                        '">' +
+                        _("Batch add to item list") +
+                        "</a> </li>";
+                }
                 table += "" + "            </ul>" + "        </div>";
             }
             table +=
@@ -952,6 +963,10 @@
                 batch_mod_form.submit();
             });
 
+            $("body").on("click", ".send_to_item_list", function (e) {
+                showItemListAddModal();
+            });
+
             $("body").on("click", "#item_search tbody td", function (e) {
                 var checkbox = $(this).find("input[type=checkbox]");
                 if (e.target.type != "checkbox") {
@@ -974,6 +989,7 @@
             }
         });
     </script>
+    [% Asset.js("js/modals/item_list_add.js") | $raw %]
 [% END %]
 
 [% INCLUDE 'intranet-bottom.inc' %]
