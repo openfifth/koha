@@ -73,7 +73,7 @@ sub process {
             BatchRevertRecords($import_batch_id);    # TODO BatchRevertRecords still needs a progress_callback
         $schema->storage->txn_commit;
 
-        my $count = $num_deleted + $num_reverted;
+        my $count = $num_deleted + $num_reverted + $num_errors;
         if ($count) {
             $self->set( { progress => $count, size => $count } );
         } else {                                     # TODO Nothing happened? Refine later

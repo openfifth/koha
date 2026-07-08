@@ -20,6 +20,10 @@
                 <td>[% report.num_ignored | html %]</td>
             </tr>
             <tr>
+                <td>Number of records with errors</td>
+                <td>[% report.num_errored | html %]</td>
+            </tr>
+            <tr>
                 <td>Number of items added</td>
                 <td>[% report.num_items_added | html %]</td>
             </tr>
