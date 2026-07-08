@@ -71,6 +71,8 @@ BEGIN {
     );
 }
 
+use Try::Tiny qw( catch try );
+
 use C4::Context;
 use C4::Koha   qw( GetNormalizedISBN );
 use JSON       qw( encode_json decode_json );
@@ -519,7 +521,7 @@ sub BatchFindDuplicates {
   Takes a hashref containing params for committing the batch - optional parameters 'progress_interval' and
   'progress_callback' will define code called every X records.
 
-  my ($num_added, $num_updated, $num_items_added, $num_items_replaced, $num_items_errored, $num_ignored) =
+  my ($num_added, $num_updated, $num_items_added, $num_items_replaced, $num_items_errored, $num_ignored, $num_errored) =
         BatchCommitRecords({
             batch_id  => $batch_id,
             framework => $framework,
@@ -527,6 +529,12 @@ sub BatchFindDuplicates {
             progress_interval => $progress_interval,
             progress_callback => $progress_callback,
         });
+
+A record whose metadata cannot be decoded (for example, MARCXML that C<Koha::Biblio::Metadata::store>
+cannot parse nor recover) is not allowed to abort the whole batch. It is flagged with an C<error> status
+and its C<import_error> message is recorded, so it is counted in C<$num_errored> and reported to the
+user rather than silently failing the entire import job.
+
 =cut
 
 sub BatchCommitRecords {
@@ -548,6 +556,7 @@ sub BatchCommitRecords {
     my $num_items_replaced = 0;
     my $num_items_errored  = 0;
     my $num_ignored        = 0;
+    my $num_errored        = 0;
 
     # commit (i.e., save, all records in the batch)
     my $overlay_action = GetImportBatchOverlayAction($batch_id);
@@ -618,29 +627,48 @@ sub BatchCommitRecords {
 
         my $recordid;
         my $query;
+        my $import_error;    # set if this record's metadata could not be decoded
         if ( $record_result eq 'create_new' ) {
             $num_added++;
             if ( $record_type eq 'biblio' ) {
                 my $biblioitemnumber;
-                ( $recordid, $biblioitemnumber ) = AddBiblio( $marc_record, $framework, { skip_record_index => 1 } );
-                push @biblio_ids, $recordid if $recordid;
-                $query = "UPDATE import_biblios SET matched_biblionumber = ? WHERE import_record_id = ?"
-                    ;    # FIXME call SetMatchedBiblionumber instead
-                if ( $item_result eq 'create_new' || $item_result eq 'replace' ) {
-                    my ( $bib_items_added, $bib_items_replaced, $bib_items_errored ) =
-                        _batchCommitItems( $rowref->{'import_record_id'}, $recordid, $item_result, $biblioitemnumber );
-                    $num_items_added    += $bib_items_added;
-                    $num_items_replaced += $bib_items_replaced;
-                    $num_items_errored  += $bib_items_errored;
+                try {
+                    ( $recordid, $biblioitemnumber ) =
+                        AddBiblio( $marc_record, $framework, { skip_record_index => 1 } );
+                } catch {
+                    my $exception = $_;
+                    if ( ref($exception) && $exception->isa('Koha::Exceptions::Metadata::Invalid') ) {
+                        $import_error = $exception->full_message;
+                    } else {
+                        die $exception;
+                    }
+                };
+                if ($import_error) {
+                    $num_added--;
+                } else {
+                    push @biblio_ids, $recordid if $recordid;
+                    $query = "UPDATE import_biblios SET matched_biblionumber = ? WHERE import_record_id = ?"
+                        ;    # FIXME call SetMatchedBiblionumber instead
+                    if ( $item_result eq 'create_new' || $item_result eq 'replace' ) {
+                        my ( $bib_items_added, $bib_items_replaced, $bib_items_errored ) = _batchCommitItems(
+                            $rowref->{'import_record_id'}, $recordid, $item_result,
+                            $biblioitemnumber
+                        );
+                        $num_items_added    += $bib_items_added;
+                        $num_items_replaced += $bib_items_replaced;
+                        $num_items_errored  += $bib_items_errored;
+                    }
                 }
             } else {
                 $recordid = AddAuthority( $marc_record, undef, GuessAuthTypeCode($marc_record) );
                 $query    = "UPDATE import_auths SET matched_authid = ? WHERE import_record_id = ?";
             }
-            my $sth = $dbh->prepare_cached($query);
-            $sth->execute( $recordid, $rowref->{'import_record_id'} );
-            $sth->finish();
-            SetImportRecordStatus( $rowref->{'import_record_id'}, 'imported' );
+            unless ($import_error) {
+                my $sth = $dbh->prepare_cached($query);
+                $sth->execute( $recordid, $rowref->{'import_record_id'} );
+                $sth->finish();
+                SetImportRecordStatus( $rowref->{'import_record_id'}, 'imported' );
+            }
         } elsif ( $record_result eq 'replace' ) {
             $num_updated++;
             $recordid = $record_match;
@@ -665,27 +693,41 @@ sub BatchCommitRecords {
                     $context->{userid}       = $logged_in_patron->userid;
                 }
 
-                ModBiblio(
-                    $marc_record,
-                    $recordid,
-                    $overlay_framework // $oldbiblio->frameworkcode,
-                    {
-                        overlay_context   => $context,
-                        skip_record_index => 1,
-                        skip_holds_queue  => 1,
+                try {
+                    ModBiblio(
+                        $marc_record,
+                        $recordid,
+                        $overlay_framework // $oldbiblio->frameworkcode,
+                        {
+                            overlay_context   => $context,
+                            skip_record_index => 1,
+                            skip_holds_queue  => 1,
+                        }
+                    );
+                } catch {
+                    my $exception = $_;
+                    if ( ref($exception) && $exception->isa('Koha::Exceptions::Metadata::Invalid') ) {
+                        $import_error = $exception->full_message;
+                    } else {
+                        die $exception;
                     }
-                );
-                push @biblio_ids,  $recordid;
-                push @updated_ids, $recordid;
-                $query = "UPDATE import_biblios SET matched_biblionumber = ? WHERE import_record_id = ?"
-                    ;    # FIXME call SetMatchedBiblionumber instead
+                };
 
-                if ( $item_result eq 'create_new' || $item_result eq 'replace' ) {
-                    my ( $bib_items_added, $bib_items_replaced, $bib_items_errored ) =
-                        _batchCommitItems( $rowref->{'import_record_id'}, $recordid, $item_result );
-                    $num_items_added    += $bib_items_added;
-                    $num_items_replaced += $bib_items_replaced;
-                    $num_items_errored  += $bib_items_errored;
+                if ($import_error) {
+                    $num_updated--;
+                } else {
+                    push @biblio_ids,  $recordid;
+                    push @updated_ids, $recordid;
+                    $query = "UPDATE import_biblios SET matched_biblionumber = ? WHERE import_record_id = ?"
+                        ;    # FIXME call SetMatchedBiblionumber instead
+
+                    if ( $item_result eq 'create_new' || $item_result eq 'replace' ) {
+                        my ( $bib_items_added, $bib_items_replaced, $bib_items_errored ) =
+                            _batchCommitItems( $rowref->{'import_record_id'}, $recordid, $item_result );
+                        $num_items_added    += $bib_items_added;
+                        $num_items_replaced += $bib_items_replaced;
+                        $num_items_errored  += $bib_items_errored;
+                    }
                 }
             } else {
                 $oldxml = GetAuthorityXML($recordid);
@@ -694,14 +736,18 @@ sub BatchCommitRecords {
                 $query = "UPDATE import_auths SET matched_authid = ? WHERE import_record_id = ?";
             }
 
-            # Combine xml update, SetImportRecordOverlayStatus, and SetImportRecordStatus updates into a single update for efficiency, especially in a transaction
-            my $sth = $dbh->prepare_cached(
-                "UPDATE import_records SET marcxml_old = ?, status = ?, overlay_status = ? WHERE import_record_id = ?");
-            $sth->execute( $oldxml, 'imported', 'match_applied', $rowref->{'import_record_id'} );
-            $sth->finish();
-            my $sth2 = $dbh->prepare_cached($query);
-            $sth2->execute( $recordid, $rowref->{'import_record_id'} );
-            $sth2->finish();
+            unless ($import_error) {
+
+                # Combine xml update, SetImportRecordOverlayStatus, and SetImportRecordStatus updates into a single update for efficiency, especially in a transaction
+                my $sth = $dbh->prepare_cached(
+                    "UPDATE import_records SET marcxml_old = ?, status = ?, overlay_status = ? WHERE import_record_id = ?"
+                );
+                $sth->execute( $oldxml, 'imported', 'match_applied', $rowref->{'import_record_id'} );
+                $sth->finish();
+                my $sth2 = $dbh->prepare_cached($query);
+                $sth2->execute( $recordid, $rowref->{'import_record_id'} );
+                $sth2->finish();
+            }
         } elsif ( $record_result eq 'ignore' ) {
             $recordid = $record_match;
             $num_ignored++;
@@ -726,7 +772,14 @@ sub BatchCommitRecords {
             }
             SetImportRecordStatus( $rowref->{'import_record_id'}, 'ignored' );
         }
-        $schema->txn_commit;
+
+        if ($import_error) {
+            $schema->txn_rollback;
+            SetImportRecordStatus( $rowref->{'import_record_id'}, 'error', $import_error );
+            $num_errored++;
+        } else {
+            $schema->txn_commit;
+        }
     }
 
     if ($progress_interval) {
@@ -744,7 +797,10 @@ sub BatchCommitRecords {
     Koha::BackgroundJob::BatchUpdateBiblioHoldsQueue->new->enqueue( { biblio_ids => \@updated_ids } )
         if ( @updated_ids && C4::Context->preference('RealTimeHoldsQueue') );
 
-    return ( $num_added, $num_updated, $num_items_added, $num_items_replaced, $num_items_errored, $num_ignored );
+    return (
+        $num_added,         $num_updated, $num_items_added, $num_items_replaced,
+        $num_items_errored, $num_ignored, $num_errored
+    );
 }
 
 =head2 _batchCommitItems
@@ -777,7 +833,16 @@ sub _batchCommitItems {
 
     while ( my $row = $sth->fetchrow_hashref() ) {
         my $item_marc =
-            MARC::Record->new_from_xml( StripNonXmlChars( $row->{'marcxml'} ), 'UTF-8', $row->{'encoding'} );
+            eval { MARC::Record->new_from_xml( StripNonXmlChars( $row->{'marcxml'} ), 'UTF-8', $row->{'encoding'} ); };
+        if ($@) {
+            my $decoding_error = $@;
+            chomp $decoding_error;
+            my $updsth =
+                $dbh->prepare("UPDATE import_items SET status = ?, import_error = ? WHERE import_items_id = ?");
+            $updsth->execute( 'error', $decoding_error, $row->{'import_items_id'} );
+            $num_items_errored++;
+            next;
+        }
 
         # Delete date_due subfield as to not accidentally delete item checkout due dates
         my ( $MARCfield, $MARCsubfield ) = GetMarcFromKohaField('items.onloan');
@@ -861,8 +926,11 @@ sub _batchCommitItems {
 
 =head2 BatchRevertRecords
 
-  my ($num_deleted, $num_errors, $num_reverted, $num_items_deleted, 
+  my ($num_deleted, $num_errors, $num_reverted, $num_items_deleted,
       $num_ignored) = BatchRevertRecords($batch_id);
+
+A record whose C<marcxml_old> cannot be decoded is not allowed to abort the whole revert. It is
+flagged with an C<error> status and counted in C<$num_errors> instead.
 
 =cut
 
@@ -929,10 +997,25 @@ sub BatchRevertRecords {
             }
         } elsif ( $record_result eq 'restore' ) {
             $num_reverted++;
-            my $old_record = MARC::Record->new_from_xml(
-                StripNonXmlChars( $rowref->{'marcxml_old'} ), 'UTF-8',
-                $rowref->{'encoding'},                        $marc_type
-            );
+            my $old_record = eval {
+                MARC::Record->new_from_xml(
+                    StripNonXmlChars( $rowref->{'marcxml_old'} ), 'UTF-8',
+                    $rowref->{'encoding'},                        $marc_type
+                );
+            };
+            if ($@) {
+                my $decoding_error = $@;
+                chomp $decoding_error;
+                $logger->warn(
+                          "C4::ImportBatch::BatchRevertRecords: could not decode marcxml_old for import_record_id "
+                        . $rowref->{'import_record_id'}
+                        . ": $decoding_error" );
+                $num_reverted--;
+                $num_errors++;
+                SetImportRecordStatus( $rowref->{'import_record_id'}, 'error', $decoding_error );
+                next;
+            }
+            my $restore_error;
             if ( $record_type eq 'biblio' ) {
                 my $biblionumber = $rowref->{'matched_biblionumber'};
                 my $oldbiblio    = Koha::Biblios->find($biblionumber);
@@ -944,11 +1027,40 @@ sub BatchRevertRecords {
 
                 $num_items_deleted +=
                     BatchRevertItems( $rowref->{'import_record_id'}, $rowref->{'matched_biblionumber'} );
-                ModBiblio( $old_record, $biblionumber, $oldbiblio->frameworkcode );
+                try {
+                    ModBiblio( $old_record, $biblionumber, $oldbiblio->frameworkcode );
+                } catch {
+                    my $exception = $_;
+                    if ( ref($exception) && $exception->isa('Koha::Exceptions::Metadata::Invalid') ) {
+                        $restore_error = $exception->full_message;
+                    } else {
+                        die $exception;
+                    }
+                };
             } else {
                 my $authid = $rowref->{'matched_authid'};
-                ModAuthority( $authid, $old_record, GuessAuthTypeCode($old_record) );
+                try {
+                    ModAuthority( $authid, $old_record, GuessAuthTypeCode($old_record) );
+                } catch {
+                    my $exception = $_;
+                    if ( ref($exception) && $exception->isa('Koha::Exceptions::Metadata::Invalid') ) {
+                        $restore_error = $exception->full_message;
+                    } else {
+                        die $exception;
+                    }
+                };
             }
+
+            if ($restore_error) {
+                $logger->warn( "C4::ImportBatch::BatchRevertRecords: could not restore import_record_id "
+                        . $rowref->{'import_record_id'}
+                        . ": $restore_error" );
+                $num_reverted--;
+                $num_errors++;
+                SetImportRecordStatus( $rowref->{'import_record_id'}, 'error', $restore_error );
+                next;
+            }
+
             SetImportRecordStatus( $rowref->{'import_record_id'}, 'reverted' );
         } elsif ( $record_result eq 'ignore' ) {
             if ( $record_type eq 'biblio' ) {
@@ -1220,7 +1332,7 @@ sub GetImportRecordsRange {
     $order_by .= " $order_by_direction, authorized_heading" if $order_by eq 'title';
 
     my $query = "SELECT title, author, isbn, issn, authorized_heading, import_records.import_record_id,
-                                           record_sequence, status, overlay_status,
+                                           record_sequence, status, overlay_status, import_error,
                                            matched_biblionumber, matched_authid, record_type
                                     FROM   import_records
                                     LEFT JOIN import_auths ON (import_records.import_record_id=import_auths.import_record_id)
@@ -1519,16 +1631,18 @@ sub GetImportRecordStatus {
 
 =head2 SetImportRecordStatus
 
-  SetImportRecordStatus($import_record_id, $new_status);
+  SetImportRecordStatus($import_record_id, $new_status, [$import_error]);
+
+C<$import_error> is optional and is stored to record why a status of C<error> was reached.
 
 =cut
 
 sub SetImportRecordStatus {
-    my ( $import_record_id, $new_status ) = @_;
+    my ( $import_record_id, $new_status, $import_error ) = @_;
 
     my $dbh = C4::Context->dbh;
-    my $sth = $dbh->prepare("UPDATE import_records SET status = ? WHERE import_record_id = ?");
-    $sth->execute( $new_status, $import_record_id );
+    my $sth = $dbh->prepare("UPDATE import_records SET status = ?, import_error = ? WHERE import_record_id = ?");
+    $sth->execute( $new_status, $import_error, $import_record_id );
     $sth->finish();
 
 }

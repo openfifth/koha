@@ -1,16 +1,22 @@
 #!/usr/bin/perl
 
 use Modern::Perl;
+use Test::MockModule;
 use Test::NoWarnings;
-use Test::More tests => 21;
+use Test::More tests => 25;
 use utf8;
 use File::Basename;
 use File::Temp qw/tempfile/;
 
+use MARC::Field;
+use MARC::Record;
+
 use t::lib::Mocks;
 use t::lib::TestBuilder;
 
+use Koha::Biblios;
 use Koha::Database;
+use Koha::Exceptions::Metadata;
 use Koha::Import::Records;
 
 BEGIN {
@@ -272,6 +278,24 @@ subtest "_batchCommitItems" => sub {
     );
 };
 
+subtest "_batchCommitItems reports items whose MARCXML cannot be decoded" => sub {
+    plan tests => 3;
+
+    my $import_item = $builder->build_object(
+        {
+            class => 'Koha::Import::Record::Items',
+            value => { marcxml => 'this is not valid MARCXML' },
+        }
+    );
+
+    my ( $num_items_added, $num_items_replaced, $num_items_errored ) =
+        C4::ImportBatch::_batchCommitItems( $import_item->import_record_id, 32, 'always_add', 64 );
+    is( $num_items_errored, 1, "Item with undecodable MARCXML is reported as errored, not fatal" );
+    $import_item->discard_changes();
+    is( $import_item->status, 'error', "Import item marked as error when its MARCXML cannot be decoded" );
+    ok( $import_item->import_error, 'The decoding error is recorded for the user to see' );
+};
+
 subtest "RecordsFromMarcPlugin" => sub {
     plan tests => 5;
 
@@ -404,6 +428,207 @@ subtest "BatchCommitRecords overlay into framework" => sub {
     );
     $biblio->discard_changes;
     is( $biblio->frameworkcode, "QQ", "Framework set on overlay" );
+};
+
+subtest "BatchCommitRecords reports invalid metadata without aborting the batch" => sub {
+    plan tests => 5;
+
+    my $good_record = MARC::Record->new();
+    $good_record->leader('00000nam a2200000uu 4500');
+    $good_record->append_fields( MARC::Field->new( '245', '', '', 'a' => 'A good record' ) );
+
+    my $bad_record = MARC::Record->new();
+    $bad_record->leader('00000nam a2200000uu 4500');
+    $bad_record->append_fields( MARC::Field->new( '245', '', '', 'a' => 'A bad record' ) );
+
+    my $import_batch = {
+        matcher_id     => 3,
+        template_id    => 3,
+        branchcode     => 'QRT',
+        overlay_action => 'create_new',
+        nomatch_action => 'create_new',
+        item_action    => 'ignore',
+        import_status  => 'staged',
+        batch_type     => 'batch',
+        file_name      => 'test.mrc',
+        comments       => 'test',
+        record_type    => 'biblio',
+    };
+    my $id_import_batch       = C4::ImportBatch::AddImportBatch($import_batch);
+    my $good_import_record_id = AddBiblioToBatch( $id_import_batch, 0, $good_record, 'utf8', 0 );
+    my $bad_import_record_id  = AddBiblioToBatch( $id_import_batch, 1, $bad_record,  'utf8', 0 );
+
+    my $mock_import = Test::MockModule->new("C4::ImportBatch");
+    $mock_import->mock(
+        AddBiblio => sub {
+            my ( $record, $framework, $options ) = @_;
+            if ( $record->subfield( '245', 'a' ) eq 'A bad record' ) {
+                Koha::Exceptions::Metadata::Invalid->throw(
+                    id             => undef,
+                    biblionumber   => undef,
+                    format         => 'marcxml',
+                    schema         => 'MARC21',
+                    decoding_error => 'Field 942 must have at least one subfield',
+                );
+            }
+            return $mock_import->original('AddBiblio')->( $record, $framework, $options );
+        }
+    );
+
+    my (
+        $num_added, $num_updated, $num_items_added, $num_items_replaced, $num_items_errored, $num_ignored,
+        $num_errored
+    ) = BatchCommitRecords( { batch_id => $id_import_batch, framework => '' } );
+
+    is( $num_added,   1, 'The valid record was added despite the other record failing' );
+    is( $num_errored, 1, 'The invalid record is reported as errored rather than aborting the batch' );
+
+    my $bad_import_record = Koha::Import::Records->find($bad_import_record_id);
+    is( $bad_import_record->status, 'error', 'The bad import record is flagged with an error status' );
+    like(
+        $bad_import_record->import_error,
+        qr/Field 942 must have at least one subfield/,
+        'The decoding error is recorded so it can be shown to the user'
+    );
+
+    my $good_import_record = Koha::Import::Records->find($good_import_record_id);
+    is( $good_import_record->status, 'imported', 'The good import record was still imported successfully' );
+};
+
+subtest "BatchRevertRecords reports records whose marcxml_old cannot be decoded" => sub {
+    plan tests => 4;
+
+    my $import_batch = {
+        matcher_id     => 4,
+        template_id    => 4,
+        branchcode     => 'QRT',
+        overlay_action => 'replace',
+        nomatch_action => 'create_new',
+        item_action    => 'ignore',
+        import_status  => 'imported',
+        batch_type     => 'batch',
+        file_name      => 'test.mrc',
+        comments       => 'test',
+        record_type    => 'biblio',
+    };
+    my $id_import_batch = C4::ImportBatch::AddImportBatch($import_batch);
+
+    my $import_record = $builder->build_object(
+        {
+            class => 'Koha::Import::Records',
+            value => {
+                import_batch_id => $id_import_batch,
+                record_type     => 'biblio',
+                status          => 'imported',
+                overlay_status  => 'match_applied',
+                marcxml_old     => 'this is not valid MARCXML',
+                encoding        => 'UTF-8',
+            }
+        }
+    );
+
+    my ( $num_deleted, $num_errors, $num_reverted, $num_items_deleted, $num_ignored ) =
+        C4::ImportBatch::BatchRevertRecords($id_import_batch);
+
+    is( $num_reverted, 0, 'The record was not counted as reverted since it could not be decoded' );
+    is( $num_errors,   1, 'The record with undecodable marcxml_old is reported as errored, not fatal to the batch' );
+
+    $import_record->discard_changes;
+    is( $import_record->status, 'error', 'The import record is flagged with an error status' );
+    ok( $import_record->import_error, 'The decoding error is recorded for the user to see' );
+};
+
+subtest "BatchRevertRecords isolates a record that fails to restore without aborting the whole batch" => sub {
+    plan tests => 6;
+
+    my $import_batch = {
+        matcher_id     => 5,
+        template_id    => 5,
+        branchcode     => 'QRT',
+        overlay_action => 'replace',
+        nomatch_action => 'create_new',
+        item_action    => 'ignore',
+        import_status  => 'imported',
+        batch_type     => 'batch',
+        file_name      => 'test.mrc',
+        comments       => 'test',
+        record_type    => 'biblio',
+    };
+    my $id_import_batch = C4::ImportBatch::AddImportBatch($import_batch);
+
+    my $good_biblio = $builder->build_sample_biblio;
+    my $bad_biblio  = $builder->build_sample_biblio;
+
+    my $good_marc = MARC::Record->new;
+    $good_marc->append_fields( MARC::Field->new( '245', '', '', 'a' => 'Good restored title' ) );
+    my $bad_marc = MARC::Record->new;
+    $bad_marc->append_fields( MARC::Field->new( '245', '', '', 'a' => 'Bad restored title' ) );
+
+    my $good_import_record_id = AddBiblioToBatch( $id_import_batch, 0, $good_marc, 'UTF-8', 0 );
+    my $bad_import_record_id  = AddBiblioToBatch( $id_import_batch, 1, $bad_marc,  'UTF-8', 0 );
+    C4::ImportBatch::SetMatchedBiblionumber( $good_import_record_id, $good_biblio->biblionumber );
+    C4::ImportBatch::SetMatchedBiblionumber( $bad_import_record_id,  $bad_biblio->biblionumber );
+
+    my $good_import_record = Koha::Import::Records->find($good_import_record_id);
+    $good_import_record->update(
+        {
+            status         => 'imported',
+            overlay_status => 'match_applied',
+            marcxml_old    => $good_marc->as_xml_record('MARC21'),
+            encoding       => 'UTF-8',
+        }
+    );
+    my $bad_import_record = Koha::Import::Records->find($bad_import_record_id);
+    $bad_import_record->update(
+        {
+            status         => 'imported',
+            overlay_status => 'match_applied',
+            marcxml_old    => $bad_marc->as_xml_record('MARC21'),
+            encoding       => 'UTF-8',
+        }
+    );
+
+    my $mock_import = Test::MockModule->new("C4::ImportBatch");
+    $mock_import->mock(
+        ModBiblio => sub {
+            my ( $record, $biblionumber, $frameworkcode, $options ) = @_;
+            if ( $biblionumber == $bad_biblio->biblionumber ) {
+                Koha::Exceptions::Metadata::Invalid->throw(
+                    id             => undef,
+                    biblionumber   => $biblionumber,
+                    format         => 'marcxml',
+                    schema         => 'MARC21',
+                    decoding_error => 'Simulated unrecoverable metadata on restore',
+                );
+            }
+            return $mock_import->original('ModBiblio')->( $record, $biblionumber, $frameworkcode, $options );
+        }
+    );
+
+    my ( $num_deleted, $num_errors, $num_reverted, $num_items_deleted, $num_ignored ) =
+        C4::ImportBatch::BatchRevertRecords($id_import_batch);
+
+    is( $num_reverted, 1, 'Only the good record is counted as reverted' );
+    is( $num_errors,   1, 'The record that failed to restore is reported as errored, not fatal to the batch' );
+
+    $bad_import_record->discard_changes;
+    is( $bad_import_record->status, 'error', 'The bad import record is flagged with an error status' );
+    like(
+        $bad_import_record->import_error,
+        qr/Simulated unrecoverable metadata on restore/,
+        'The decoding error is recorded so it can be shown to the user'
+    );
+
+    $good_import_record->discard_changes;
+    is(
+        $good_import_record->status, 'reverted',
+        'The good import record in the same batch was still reverted despite the other one failing'
+    );
+    is(
+        Koha::Biblios->find( $good_biblio->biblionumber )->metadata->record->subfield( '245', 'a' ),
+        'Good restored title',
+        'The good biblio was actually restored to its old metadata'
+    );
 };
 
 subtest "Do not adjust biblionumber when replacing items during import" => sub {
