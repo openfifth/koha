@@ -23,8 +23,10 @@ use MARC::Record;
 use C4::Context;
 use C4::Biblio          qw(ModBiblio);
 use C4::AuthoritiesMarc qw(GuessAuthTypeCode ModAuthority);
+use Koha::Biblio::Metadata;
 use Koha::Database;
 use Koha::Import::Record::Biblios;
+use Koha::Logger;
 use Koha::Import::Record::Auths;
 use Koha::Import::Record::Matches;
 
@@ -56,7 +58,14 @@ sub get_marc_record {
         $format = 'UNIMARCAUTH';
     }
 
-    my $record = MARC::Record->new_from_xml( $self->marcxml, 'UTF-8', $format );
+    my $record = eval { MARC::Record->new_from_xml( $self->marcxml, 'UTF-8', $format ) };
+    unless ($record) {
+        my $first_error = $@;
+        ($record) = Koha::Biblio::Metadata->repair_marcxml( $self->marcxml, $format );
+        unless ($record) {
+            Koha::Logger->get->warn( sprintf( "Failed to parse import MARC XML: %s", $first_error ) );
+        }
+    }
 
     return $record;
 }
