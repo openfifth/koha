@@ -1586,6 +1586,51 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 item_list_contents
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::ItemListContent>
+
+=cut
+
+__PACKAGE__->has_many(
+  "item_list_contents",
+  "Koha::Schema::Result::ItemListContent",
+  { "foreign.borrowernumber" => "self.borrowernumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+=head2 item_list_shares
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::ItemListShare>
+
+=cut
+
+__PACKAGE__->has_many(
+  "item_list_shares",
+  "Koha::Schema::Result::ItemListShare",
+  { "foreign.borrowernumber" => "self.borrowernumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+=head2 item_lists
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::ItemList>
+
+=cut
+
+__PACKAGE__->has_many(
+  "item_lists",
+  "Koha::Schema::Result::ItemList",
+  { "foreign.owner" => "self.borrowernumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 items_last_borrowers
 
 Type: has_many
@@ -2242,8 +2287,8 @@ Composing rels: L</user_permissions> -> permission
 __PACKAGE__->many_to_many("permissions", "user_permissions", "permission");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-14 10:19:11
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:Tptr5nUuS5haVck624FS3Q
+# Created by DBIx::Class::Schema::Loader v0.07053 @ 2026-06-29 14:27:18
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:KjlA0Ibpvmtr8qwW6TvXOQ
 
 __PACKAGE__->belongs_to(
   "library",
