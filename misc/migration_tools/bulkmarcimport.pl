@@ -574,6 +574,9 @@ RECORD: while () {
                 }
 
                 # Create biblio, unless we already have it (either match or ISBN)
+                my @import_warnings;
+                $mod_biblio_options->{warnings} = \@import_warnings;
+                $add_biblio_options->{warnings} = \@import_warnings;
                 if ($matched_record_id) {
                     eval { $biblioitemnumber = Koha::Biblios->find($matched_record_id)->biblioitem->biblioitemnumber; };
                     if ($update) {
@@ -633,6 +636,19 @@ RECORD: while () {
                         }
                     ) if ($logfile);
                     next RECORD;
+                }
+                for my $w (@import_warnings) {
+                    warn sprintf(
+                        "WARNING: metadata for biblio %s was automatically repaired (%s): %s",
+                        $record_id // $originalid, $w->{type}, $w->{message}
+                    );
+                    printlog(
+                        {
+                            id     => $record_id // $originalid,
+                            op     => "import",
+                            status => "warning : metadata automatically repaired ($w->{type})"
+                        }
+                    ) if ($logfile);
                 }
                 my $record_has_added_items = 0;
                 if ($record_id) {

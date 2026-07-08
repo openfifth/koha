@@ -585,7 +585,7 @@
                                         : aData["status"] == "staged"
                                           ? _("Staged")
                                           : aData["status"] == "error"
-                                            ? _("Error")
+                                            ? '<span class="text-danger" title="' + escape_str(aData["import_error"] || "") + '">' + _("Error") + "</span>"
                                             : aData["status"]
                             );
 

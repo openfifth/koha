@@ -99,6 +99,7 @@ foreach my $record (@$records) {
         issn             => $record->{'issn'},
         isbn             => $record->{'isbn'},
         status           => $record->{'status'},
+        import_error     => $record->{'import_error'},
         overlay_status   => $record->{'overlay_status'},
         matched          => $record->{'matched_biblionumber'}
             || $record->{'matched_authid'}

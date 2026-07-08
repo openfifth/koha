@@ -80,9 +80,13 @@ if ($record) {
 if ($importid) {
     my $import_record  = Koha::Import::Records->find($importid);
     my $recordImportid = $import_record->get_marc_record();
-    $formatted2 = $recordImportid->as_formatted;
-    my $biblio = GetImportBiblios($importid);
-    $importTitle = $biblio->[0]->{'title'};
+    if ($recordImportid) {
+        $formatted2 = $recordImportid->as_formatted;
+        my $biblio = GetImportBiblios($importid);
+        $importTitle = $biblio->[0]->{'title'};
+    } else {
+        $errorFormatted2 = 1;
+    }
 } else {
     $errorFormatted2 = 1;
 }

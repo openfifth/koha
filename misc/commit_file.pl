@@ -89,8 +89,11 @@ sub process_batch {
     my ($import_batch_id) = @_;
 
     print "... importing MARC records -- please wait\n";
-    my ( $num_added, $num_updated, $num_items_added, $num_items_replaced, $num_items_errored, $num_ignored ) =
-        BatchCommitRecords(
+    my (
+        $num_added, $num_updated, $num_items_added, $num_items_replaced, $num_items_errored, $num_ignored,
+        $num_errored
+        )
+        = BatchCommitRecords(
         {
             batch_id          => $import_batch_id,
             framework         => $framework,
@@ -108,6 +111,7 @@ Batch number:                    $import_batch_id
 Number of new records added:     $num_added
 Number of records replaced:      $num_updated
 Number of records ignored:       $num_ignored
+Number of records with errors:   $num_errored
 Number of items added:           $num_items_added
 Number of items replaced:        $num_items_replaced
 Number of items ignored:         $num_items_errored
