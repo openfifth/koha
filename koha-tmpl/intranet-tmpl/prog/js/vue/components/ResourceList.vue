@@ -22,15 +22,19 @@
 
 <script>
 import Toolbar from "./Toolbar.vue";
-import { ref, onBeforeMount, computed } from "vue";
+import { ref, onBeforeMount, computed, inject } from "vue";
 import { APIClient } from "../fetch/api-client.js";
 import KohaTable from "./KohaTable.vue";
 import { $__ } from "@koha-vue/i18n";
 import { useBaseElement } from "../composables/base-element.js";
+import { storeToRefs } from "pinia";
 
 export default {
     inheritAttrs: false,
     setup(props) {
+        const navigationStore = inject("navigationStore");
+        const { breadcrumbMetadata } = storeToRefs(navigationStore);
+
         const table = ref();
         const resourceCount = ref(0);
         const initialized = ref(false);
@@ -333,6 +337,21 @@ export default {
             return { ...tableEvents.value, ...actionButtons };
         });
         onBeforeMount(() => {
+            if (props.instancedResource.parentResource) {
+                props.instancedResource.parentResource.apiClient
+                    .get(
+                        props.instancedResource.route.params[
+                            props.instancedResource.parentResource.idAttr
+                        ]
+                    )
+                    .then(
+                        resource => {
+                            breadcrumbMetadata.value = resource;
+                        },
+                        error => {}
+                    );
+            }
+
             if (props.instancedResource.embedded) {
                 getResourceCount().then(() => (initialized.value = true));
             } else {
