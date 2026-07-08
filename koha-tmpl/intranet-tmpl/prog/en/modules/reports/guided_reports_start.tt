@@ -221,6 +221,8 @@
 </div>
 <!-- #update_sql -->
 
+[% INCLUDE 'modals/item_list_add.inc' %]
+
 <div class="main container-fluid">
     <div class="row">
         <div class="col-md-10 order-md-2 order-sm-1">
@@ -1262,6 +1264,11 @@
                                                                     >Batch item deletion</a
                                                                 >
                                                             </li>
+                                                            [% IF item_lists.count %]
+                                                                <li>
+                                                                    <a href="#" data-bs-toggle="tooltip" data-bs-placement="right" title="Add visible items to an item list" class="dropdown-item send_to_item_list">Add items to list</a>
+                                                                </li>
+                                                            [% END %]
                                                         [% END %]
                                                         [% IF header_ro.cell == 'reserve_id' || header_types.item( header_ro.cell ) == 'reserve_id' %]
                                                             <li class="dropdown-header">Hold records</li>
@@ -1797,6 +1804,7 @@
     [% Asset.css("lib/codemirror/highlight.css") | $raw %]
     [% Asset.js( "js/mana.js" ) | $raw %]
     [% Asset.js( "js/throttledButton.js" ) | $raw %]
+    [% Asset.js("js/modals/item_list_add.js") | $raw %]
     [% INCLUDE 'select2.inc' %]
     <script nonce="[% Koha.CSPNonce | $raw %]">
         let op = "";
@@ -2559,6 +2567,10 @@
             $("#batch_add_to_list").on("submit", function (e) {
                 e.preventDefault();
                 addToList();
+            });
+
+            $(".send_to_item_list").on("click", function (e) {
+                showItemListAddModal();
             });
 
             $("body").on("click", ".preview_sql", function (e) {
