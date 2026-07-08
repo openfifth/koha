@@ -393,6 +393,8 @@
     </form>
 [% END %]
 
+[% INCLUDE 'modals/item_list_add.inc' %]
+
 [% MACRO jsinclude BLOCK %]
     [% INCLUDE 'calendar.inc' %]
     [% INCLUDE 'datatables.inc' %]
@@ -652,7 +654,9 @@
                 "</a></li>" +
                 "            </ul>" +
                 "        </div>";
-            if (Koha.permissions.CAN_user_tools_items_batchmod || Koha.permissions.CAN_user_tools_items_batchdel) {
+
+            const have_item_lists = $("#item-list-add-form-select > option").length > 0;
+            if (Koha.permissions.CAN_user_tools_items_batchmod || Koha.permissions.CAN_user_tools_items_batchdel || have_item_lists) {
                 table +=
                     "" +
                     '        <div class="btn-group"><button class="btn btn-default btn-sm dropdown-toggle disabled" disabled="disabled" type="button" id="batch_mod_menu"data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="true"> ' +
@@ -675,6 +679,15 @@
                         _("Send selected items to batch item deletion") +
                         '">' +
                         _("Batch item deletion") +
+                        "</a> </li>";
+                }
+                if (have_item_lists) {
+                    table +=
+                        "" +
+                        '                <li> <a class="dropdown-item send_to_item_list"" href="#" data-bs-toggle="tooltip" data-bs-placement="right" title="' +
+                        _("Send selected items to item list") +
+                        '">' +
+                        _("Batch add to item list") +
                         "</a> </li>";
                 }
                 table += "" + "            </ul>" + "        </div>";
@@ -952,6 +965,10 @@
                 batch_mod_form.submit();
             });
 
+            $("body").on("click", ".send_to_item_list", function (e) {
+                showItemListAddModal();
+            });
+
             $("body").on("click", "#item_search tbody td", function (e) {
                 var checkbox = $(this).find("input[type=checkbox]");
                 if (e.target.type != "checkbox") {
@@ -974,6 +991,7 @@
             }
         });
     </script>
+    [% Asset.js("js/modals/item_list_add.js") | $raw %]
 [% END %]
 
 [% INCLUDE 'intranet-bottom.inc' %]
