@@ -194,6 +194,7 @@ sub _shared_preferences {
         RefundLostOnReturnControl
         WhenLostChargeReplacementFee
         WhenLostForgiveFine
+        CashupPaymentTypes
         FineNoRenewals
         FineNoRenewalsBlockAutoRenew
         FineNoRenewalsBlockSelfCheckRenew
