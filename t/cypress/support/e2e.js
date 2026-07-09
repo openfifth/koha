@@ -1841,6 +1841,52 @@ cy.getCounterRegistryProvider = () => {
     ];
 };
 
+cy.getItem = () => {
+    return {
+        _strings: {
+            location: {
+                str: "Shelving",
+            },
+        },
+        biblio: {
+            author: "Doe, Blake",
+            biblio_id: 1,
+            subtitle: null,
+            title: "A Novel",
+        },
+        biblio_id: 1,
+        callnumber: null,
+        external_id: "1001",
+        holding_library: {
+            name: "A Library",
+        },
+        holding_library_id: "ALB",
+        home_library_id: "ALB",
+        item_id: 1,
+        item_type: {
+            description: "Book",
+        },
+        item_type_id: "BK",
+        location: "GEN",
+    };
+};
+
+cy.getItemList = () => {
+    return {
+        created_date: "1995-08-15T00:00:00+00:00",
+        id: 1,
+        name: "Item List",
+        owner: 1,
+        updated_date: "2026-05-29T00:00:00+00:00",
+        visibility: "private",
+        item_list_contents_count: 5,
+        can_read: true,
+        can_update: true,
+        can_delete: true,
+        can_manage: true,
+    };
+};
+
 cy.getSushiService = () => {
     return {
         api_key_info: "",
