@@ -93,6 +93,7 @@ use C4::Charset     qw(
 );
 use C4::Languages;
 use C4::Linker;
+use C4::Heading::MARC21;
 use C4::OAI::Sets;
 
 use Koha::Logger;
@@ -803,6 +804,38 @@ sub LinkBibHeadingsToAuthorities {
                         if ( $userenv && $userenv->{'branch'} ) {
                             $library = Koha::Libraries->find( $userenv->{'branch'} );
                         }
+                        my $marcorgcode =
+                            $library ? $library->get_effective_marcorgcode : C4::Context->preference('MARCOrgCode');
+
+                        # Bug 31925: code the new authority with the source heading's actual
+                        # thesaurus instead of relying on AddAuthority()'s LCSH-only default.
+                        # AddAuthority() only defaults 008/040 when they aren't already present
+                        # on the record, so pre-populating them here is sufficient - no change
+                        # to AddAuthority() itself is needed.
+                        if ( $heading->{thesaurus} ) {
+                            my $auth_008_11 =
+                                C4::Heading::MARC21::thesaurus_to_authority_008_11( $heading->{thesaurus} );
+                            my $date        = POSIX::strftime( '%y%m%d', localtime );
+                            my $default_008 = C4::Context->preference('MARCAuthorityControlField008');
+                            if ( !$default_008 or length($default_008) < 34 ) {
+                                $default_008 = '|| aca||aabn           | a|a     d';
+                            } else {
+                                $default_008 = substr( $default_008, 0, 34 );
+                            }
+
+                            # Position 11 is absolute (over date + body); within the
+                            # 34-char body alone that's index 11 - 6 = 5.
+                            substr( $default_008, 5, 1, $auth_008_11 );
+                            $marcrecordauth->insert_fields_ordered( MARC::Field->new( '008', $date . $default_008 ) );
+
+                            my @f040_subfields = ( 'a' => $marcorgcode, 'c' => $marcorgcode );
+                            push @f040_subfields, ( 'f' => $heading->{thesaurus} )
+                                unless exists
+                                $C4::Heading::MARC21::thesaurus_to_authority_008_11_table->{ $heading->{thesaurus} };
+                            $marcrecordauth->insert_fields_ordered(
+                                MARC::Field->new( '040', '', '', @f040_subfields ) );
+                        }
+
                         $marcrecordauth->insert_fields_ordered(
                             MARC::Field->new(
                                 '667', '', '',
@@ -813,10 +846,8 @@ sub LinkBibHeadingsToAuthorities {
                         $cite =~ s/^[\s\,]*//;
                         $cite =~ s/[\s\,]*$//;
                         $cite =
-                            C4::Context->preference('GenerateAuthorityField670') . ": ("
-                            . (
-                            $library ? $library->get_effective_marcorgcode : C4::Context->preference('MARCOrgCode') )
-                            . ")"
+                              C4::Context->preference('GenerateAuthorityField670') . ": ("
+                            . "$marcorgcode)"
                             . $bib->subfield( '999', 'c' ) . ": "
                             . $cite;
                         $marcrecordauth->insert_fields_ordered( MARC::Field->new( '670', '', '', 'a' => $cite ) );
