@@ -344,6 +344,46 @@ sub parse_heading {
     );
 }
 
+=head2 thesaurus_to_authority_008_11
+
+  my $code = C4::Heading::MARC21::thesaurus_to_authority_008_11($thesaurus);
+
+Given a thesaurus name as stored by C<parse_heading()> in a C<C4::Heading>
+object's C<thesaurus> value (e.g. 'lcsh', 'mesh', or a raw $2 subfield value
+for indicator 2 = 7 headings such as 'fast' or 'sao'), return the
+single-character code for MARC21 authority field 008/11 ("Subject heading
+system/thesaurus"), per L<https://www.loc.gov/marc/authority/ad008.html>.
+
+Any value not present in the table -- in practice this only happens for
+indicator-2 = 7 headings identified by a raw $2 code that isn't one of the
+values with their own dedicated indicator (lcsh, lcac, mesh, nal, cash, rvm,
+notspecified/notdefined) -- returns 'z' (Other), consistent with how
+Elasticsearch indexing already reconciles 008/11 vs 040$f (see
+Koha::SearchEngine::Elasticsearch::_process_mappings, where a 'z' is dropped
+in favour of a genuine 040$f value).
+
+=cut
+
+our $thesaurus_to_authority_008_11_table = {
+    lcsh          => 'a',
+    lcac          => 'b',
+    mesh          => 'c',
+    nal           => 'd',
+    notapplicable => 'n',
+    cash          => 'k',
+    rvm           => 'v',
+    aat           => 'r',
+    sears         => 's',
+    notdefined    => 'z',
+    notspecified  => '|',
+};
+
+sub thesaurus_to_authority_008_11 {
+    my ($thesaurus) = @_;
+    return 'z' unless defined $thesaurus;
+    return $thesaurus_to_authority_008_11_table->{$thesaurus} // 'z';
+}
+
 =head1 INTERNAL FUNCTIONS
 
 =head2 _get_subject_thesaurus

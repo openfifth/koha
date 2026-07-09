@@ -7,11 +7,12 @@ use strict;
 use warnings;
 
 use Test::NoWarnings;
-use Test::More tests => 11;
+use Test::More tests => 17;
 use C4::Context;
 
 BEGIN {
     use_ok( 'C4::Heading', qw( new_from_field ) );
+    use_ok('C4::Heading::MARC21');
 }
 
 SKIP: {
@@ -35,3 +36,12 @@ SKIP: {
     ok( !defined $heading->{thesaurus}, 'Thesaurus is not generated outside of 6XX fields' );
 
 }
+
+is( C4::Heading::MARC21::thesaurus_to_authority_008_11('lcsh'), 'a', 'lcsh maps to 008/11 code a' );
+is( C4::Heading::MARC21::thesaurus_to_authority_008_11('mesh'), 'c', 'mesh maps to 008/11 code c' );
+is( C4::Heading::MARC21::thesaurus_to_authority_008_11('rvm'),  'v', 'rvm maps to 008/11 code v' );
+is(
+    C4::Heading::MARC21::thesaurus_to_authority_008_11('fast'), 'z',
+    'Unrecognized raw $2 code (e.g. fast, from an ind2=7 heading) maps to 008/11 code z (Other)'
+);
+is( C4::Heading::MARC21::thesaurus_to_authority_008_11(undef), 'z', 'undef maps to 008/11 code z (Other)' );
