@@ -287,6 +287,18 @@ export default {
                             : $__(
                                   "Please note: you can change this amount after creating the ledger record"
                               ),
+                    tableColumnDefinition: {
+                        title: $__("Ledger amount"),
+                        data: "ledger_amount",
+                        searchable: true,
+                        orderable: true,
+                        render(data, type, row, meta) {
+                            return formatValueWithCurrency(
+                                row.ledger_amount,
+                                row.currency
+                            );
+                        },
+                    },
                 },
                 {
                     name: "managing_branch",

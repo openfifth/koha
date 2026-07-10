@@ -332,6 +332,18 @@ export default {
                             : $__(
                                   "Please note: you can change this amount after creating the fund record"
                               ),
+                    tableColumnDefinition: {
+                        title: $__("Fund amount"),
+                        data: "fund_amount",
+                        searchable: true,
+                        orderable: true,
+                        render(data, type, row, meta) {
+                            return formatValueWithCurrency(
+                                row.fund_amount,
+                                row.currency
+                            );
+                        },
+                    },
                 },
                 {
                     name: "oe_warning_percent",
