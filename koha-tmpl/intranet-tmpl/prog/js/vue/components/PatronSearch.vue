@@ -121,6 +121,7 @@ export default {
 
         const showPatronSearchModal = () => {
             const $modal = $("#patron_search_modal");
+            $modal.find(".search_patron_filter").val("");
             $modal.modal("show");
             $modal.css("z-index", 10000);
         };
