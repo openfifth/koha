@@ -119,9 +119,15 @@ export default {
             buildDatatable();
         });
 
+        const showPatronSearchModal = () => {
+            const $modal = $("#patron_search_modal");
+            $modal.modal("show");
+            $modal.css("z-index", 10000);
+        };
+
         const addPatron = () => {
             passSearchDataToModal();
-            $("#patron_search_modal").modal("show");
+            showPatronSearchModal();
             const modalEventListener = () => {
                 newPatronsAdded();
                 $(document).off(
@@ -155,7 +161,7 @@ export default {
 
         const selectPatron = () => {
             passSearchDataToModal();
-            $("#patron_search_modal").modal("show");
+            showPatronSearchModal();
             const modalEventListener = () => {
                 $(document).off(
                     "hidden.bs.modal",
