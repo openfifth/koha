@@ -20,7 +20,7 @@ package Koha::REST::V1::Acquisitions::Finances::Finances;
 use Modern::Perl;
 
 use Mojo::Base 'Mojolicious::Controller';
-use Mojo::JSON qw(encode_json decode_json);
+use Mojo::JSON qw(from_json to_json);
 use Try::Tiny;
 
 use C4::Context;
@@ -73,7 +73,7 @@ sub list_users {
     my $c = shift->openapi->valid_input or return;
 
     return try {
-        my $query = decode_json( $c->req->param('q') );
+        my $query = from_json( $c->req->param('q') );
         my $permission;
         if ( $query->{permission} ) {
             $permission = $query->{permission};
@@ -91,7 +91,7 @@ sub list_users {
                 }
             }
         }
-        $c->req->param( 'q', encode_json($query) );
+        $c->req->param( 'q', to_json($query) );
 
         my $patrons_rs = Koha::Patrons->new->filter_by_have_permission($permission);
         my $patrons    = $c->objects->search($patrons_rs);
