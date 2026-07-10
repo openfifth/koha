@@ -7,6 +7,7 @@
         :required="required"
         :class="classNames"
         :disabled="disabled"
+        :maxlength="maxlength"
         :max="max"
         :min="min"
         :step="step"
@@ -25,6 +26,7 @@ export default {
         required: Boolean,
         classNames: String,
         disabled: Boolean,
+        maxlength: Number | null,
         max: Number | null,
         min: Number | null,
         step: Number | null,

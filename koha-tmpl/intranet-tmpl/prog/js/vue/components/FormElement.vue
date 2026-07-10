@@ -27,6 +27,7 @@
             :placeholder="getPlaceholder"
             :required="required"
             :disabled="disabled"
+            :maxlength="attr.maxlength"
             @update:modelValue="checkForInputErrorAndRunOnChangeHandler()"
             :classNames="attr.class"
         />
