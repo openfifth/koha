@@ -18,6 +18,7 @@
           enum:
           - fiscal_period
           - ledger
+          - ledger.fiscal_period
           - allocations
           - owner
           - sub_funds

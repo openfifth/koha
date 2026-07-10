@@ -46,7 +46,7 @@ export default {
     setup() {
         const router = useRouter();
         const acquisitionsStore = inject("acquisitionsStore");
-        const { isUserPermitted } = acquisitionsStore;
+        const { isUserPermitted, formatValueWithCurrency } = acquisitionsStore;
 
         const fundSummaryTable = useTemplateRef("fundSummaryTable");
 
@@ -70,22 +70,22 @@ export default {
             columns: [
                 {
                     title: $__("Fiscal period"),
-                    data: "summary",
-                    searchable: false,
-                    orderable: false,
+                    data: "ledger.fiscal_period.name",
+                    searchable: true,
+                    orderable: true,
                     render: data =>
-                        data?.period
-                            ? `<a href="#" class="showFiscalPeriod">${escape_str(data.period)}</a>`
+                        data
+                            ? `<a href="#" class="showFiscalPeriod">${escape_str(data)}</a>`
                             : "",
                 },
                 {
                     title: $__("Ledger"),
-                    data: "summary",
-                    searchable: false,
-                    orderable: false,
+                    data: "ledger.name",
+                    searchable: true,
+                    orderable: true,
                     render: data =>
-                        data?.ledger
-                            ? `<a href="#" class="showLedger">${escape_str(data.ledger)}</a>`
+                        data
+                            ? `<a href="#" class="showLedger">${escape_str(data)}</a>`
                             : "",
                 },
                 {
@@ -110,9 +110,9 @@ export default {
                 },
                 {
                     title: $__("Managing library"),
-                    data: "managing_library",
-                    searchable: false,
-                    orderable: false,
+                    data: "managing_library.name",
+                    searchable: true,
+                    orderable: true,
                     render: (data, type, row) =>
                         row.managing_library
                             ? `<a href="/cgi-bin/koha/admin/branches.pl?op=view&branchcode=${row.managing_branch}">${escape_str(row.managing_library.name)}</a>`
@@ -123,6 +123,8 @@ export default {
                     data: "fund_amount",
                     searchable: false,
                     orderable: true,
+                    render: (data, type, row) =>
+                        formatValueWithCurrency(row.fund_amount, row.currency),
                 },
                 {
                     title: $__("Pre-encumbered"),
@@ -154,7 +156,7 @@ export default {
             },
             url: "/api/v1/acquisitions/funds",
             options: {
-                embed: "summary,ledger,managing_library",
+                embed: "summary,ledger.fiscal_period,managing_library",
                 order: [[2, "asc"]],
                 dom: '<"top pager"<"table_entries"ip>>tr<"bottom pager"ip>',
             },
