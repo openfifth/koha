@@ -40,6 +40,7 @@
         const fiscal_period_table_settings = [% TablesSettings.GetTableSettings('acqui', 'finances', 'fiscal_periods', 'json') | $raw %];
         const ledger_table_settings = [% TablesSettings.GetTableSettings('acqui', 'finances', 'ledgers', 'json') | $raw %];
         const fund_table_settings = [% TablesSettings.GetTableSettings('acqui', 'finances', 'funds', 'json') | $raw %];
+        const currency_table_settings = [% TablesSettings.GetTableSettings('acqui', 'finances', 'currencies', 'json') | $raw %];
     </script>
     [% Asset.js("js/vue/dist/acquisitions/acquisitions.js") | $raw %]
     [% INCLUDE 'select2.inc' %]

@@ -22,6 +22,7 @@ use Modern::Perl;
 use Test::NoWarnings;
 use Test::More tests => 6;
 use Test::Mojo;
+use Test::Warn;
 
 use t::lib::TestBuilder;
 use t::lib::Mocks;
@@ -149,7 +150,7 @@ subtest 'get() tests' => sub {
 
 subtest 'add() tests' => sub {
 
-    plan tests => 8;
+    plan tests => 12;
 
     $schema->storage->txn_begin;
 
@@ -189,6 +190,14 @@ subtest 'add() tests' => sub {
         ->json_is( '/currency' => $new_currency->{currency} )
         ->json_is( '/symbol'   => $new_currency->{symbol} )
         ->json_is( '/rate'     => $new_currency->{rate} );
+
+    # Adding a currency with an existing code must not overwrite it silently
+    warnings_like {
+        $t->post_ok( "//$userid:$password@/api/v1/acquisitions/currencies" => json => $new_currency )
+            ->status_is( 409, 'Duplicate currency code returns Conflict' )
+            ->json_is( '/error_code' => 'duplicate_id' );
+    }
+    qr{DBD::mysql::st execute failed: Duplicate entry};
 
     $schema->storage->txn_rollback;
 };

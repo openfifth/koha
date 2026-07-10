@@ -81,6 +81,10 @@
         description: Access forbidden
         schema:
           $ref: "../swagger.yaml#/definitions/error"
+      "409":
+        description: Conflict. A currency with this code already exists
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
       "500":
         description: |
           Internal server error. Possible `error_code` attribute values:

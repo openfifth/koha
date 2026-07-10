@@ -50,26 +50,63 @@ export default {
                     name: "currency",
                     type: "text",
                     label: $__("Currency code"),
-                },
-                {
-                    name: "symbol",
-                    type: "text",
-                    label: $__("Symbol"),
-                },
-                {
-                    name: "isocode",
-                    type: "text",
-                    label: $__("ISO code"),
+                    required: true,
+                    maxlength: 50,
+                    disabled: () => props.routeAction === "edit",
                 },
                 {
                     name: "rate",
                     type: "text",
                     label: $__("Rate"),
+                    required: true,
+                    maxlength: 10,
+                    formErrorHandler: value =>
+                        value === null ||
+                        value === "" ||
+                        Number.isFinite(Number(value)),
+                    formErrorMessage: $__(
+                        "Please enter a decimal number in the format: 0.0"
+                    ),
+                    onChange: resource => {
+                        if (Number(resource.rate) !== 1) {
+                            resource.active = false;
+                        }
+                    },
+                },
+                {
+                    name: "symbol",
+                    type: "text",
+                    label: $__("Symbol"),
+                    required: true,
+                    maxlength: 5,
+                },
+                {
+                    name: "isocode",
+                    type: "text",
+                    label: $__("ISO code"),
+                    maxlength: 5,
+                },
+                {
+                    name: "timestamp",
+                    type: "date",
+                    label: $__("Last updated"),
+                    hideIn: ["Form"],
                 },
                 {
                     name: "active",
                     type: "checkbox",
                     label: $__("Active"),
+                    disabled: resource => Number(resource.rate) !== 1,
+                    hint: resource =>
+                        Number(resource.rate) !== 1
+                            ? $__("The active currency must have a rate of 1.0")
+                            : "",
+                },
+                {
+                    name: "archived",
+                    type: "checkbox",
+                    label: $__("Archived"),
+                    hideIn: ["Form"],
                 },
                 {
                     name: "p_cs_precedes",
@@ -87,7 +124,7 @@ export default {
         });
 
         const tableOptions = {
-            table_settings: null,
+            table_settings: currency_table_settings,
             add_filters: false,
             actions: {
                 0: ["show"],
@@ -106,11 +143,11 @@ export default {
             e.preventDefault();
 
             const currency = JSON.parse(JSON.stringify(currencyToSave));
-            const currency_id = currency.currency;
 
             delete currency.timestamp;
 
-            if (currency_id && baseResource.routeAction !== "add") {
+            if (props.routeAction === "edit") {
+                const currency_id = baseResource.route.params.currency;
                 delete currency.currency;
                 return baseResource.apiClient
                     .update(currency, currency_id)
@@ -121,15 +158,15 @@ export default {
                         },
                         error => {}
                     );
-            } else {
-                return baseResource.apiClient.create(currency).then(
-                    newCurrency => {
-                        baseResource.setMessage($__("Currency created"));
-                        return newCurrency;
-                    },
-                    error => {}
-                );
             }
+
+            return baseResource.apiClient.create(currency).then(
+                newCurrency => {
+                    baseResource.setMessage($__("Currency created"));
+                    return newCurrency;
+                },
+                error => {}
+            );
         };
 
         return {

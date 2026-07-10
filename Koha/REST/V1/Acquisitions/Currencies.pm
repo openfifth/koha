@@ -21,6 +21,7 @@ use Modern::Perl;
 
 use Mojo::Base 'Mojolicious::Controller';
 use Try::Tiny;
+use Scalar::Util qw( blessed );
 
 use Koha::Acquisition::Currency;
 use Koha::Acquisition::Currencies;
@@ -78,6 +79,15 @@ sub add {
             openapi => $c->objects->to_api($currency)
         );
     } catch {
+        if ( blessed $_ and $_->isa('Koha::Exceptions::Object::DuplicateID') ) {
+            return $c->render(
+                status  => 409,
+                openapi => {
+                    error      => "A currency with this code already exists",
+                    error_code => "duplicate_id",
+                }
+            );
+        }
         return $c->unhandled_exception($_);
     };
 }
