@@ -147,6 +147,7 @@ export default {
                     label: $__("Start date"),
                     group: $__("Information and status"),
                     required: true,
+                    format: $date,
                     componentProps: {
                         required: {
                             type: "boolean",
@@ -157,13 +158,32 @@ export default {
                             value: "end_date",
                         },
                     },
+                    tableColumnDefinition: {
+                        title: $__("Start date"),
+                        data: "start_date",
+                        searchable: true,
+                        orderable: true,
+                        render(data, type, row, meta) {
+                            return $date(row.start_date);
+                        },
+                    },
                 },
                 {
                     name: "end_date",
                     type: "date",
+                    format: $date,
                     label: $__("End date"),
                     group: $__("Information and status"),
                     required: true,
+                    tableColumnDefinition: {
+                        title: $__("End date"),
+                        data: "end_date",
+                        searchable: true,
+                        orderable: true,
+                        render(data, type, row, meta) {
+                            return $date(row.end_date);
+                        },
+                    },
                 },
                 {
                     name: "status",
