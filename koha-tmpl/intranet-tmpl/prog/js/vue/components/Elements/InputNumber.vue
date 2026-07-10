@@ -8,7 +8,7 @@
         :size="size"
         :maxlength="maxlength"
         :disabled="disabled"
-        @blur="isInputActive = false"
+        @blur="onBlur"
         @focus="isInputActive = true"
     />
 </template>
@@ -48,7 +48,19 @@ export default {
                 emit("update:modelValue", value);
             },
         });
-        return { model, isInputActive };
+
+        const onBlur = () => {
+            isInputActive.value = false;
+            const value = props.modelValue;
+            if (value === "" || value === null || value === undefined) {
+                emit("update:modelValue", null);
+                return;
+            }
+            const number = Number(value);
+            emit("update:modelValue", Number.isNaN(number) ? value : number);
+        };
+
+        return { model, isInputActive, onBlur };
     },
     name: "InputNumber",
 };
