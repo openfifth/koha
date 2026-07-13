@@ -336,39 +336,11 @@ sub add_item {
                   C4::Barcodes::ValueBuilder::hbyymmincr::get_barcode(
                     { year => $year, mon => $month } );
                 $barcode = $homebranch . $barcode;
-<<<<<<< HEAD
             }
             elsif ( $autoBarcode eq 'EAN13' ) {
-
-                # not the best, two catalogers could add the same
-                # barcode easily this way :/
-                my $query = "select max(abs(barcode)) from items";
-                my $dbh   = C4::Context->dbh;
-                my $sth   = $dbh->prepare($query);
-                $sth->execute();
-                my $nextnum;
-                while ( my ($last) = $sth->fetchrow_array ) {
-                    $nextnum = $last;
-                }
-                my $ean = CheckDigits('ean');
-                if ( $ean->is_valid($nextnum) ) {
-                    my $next = $ean->basenumber($nextnum) + 1;
-                    $nextnum = $ean->complete($next);
-                    $nextnum =
-                      '0' x ( 13 - length($nextnum) ) . $nextnum;    # pad zeros
-                }
-                else {
-                    warn "ERROR: invalid EAN-13 $nextnum, using increment";
-                    $nextnum++;
-                }
-                $barcode = $nextnum;
+                ($barcode) = C4::Barcodes::ValueBuilder::EAN13::get_barcode();
             }
             else {
-=======
-            } elsif ( $autoBarcode eq 'EAN13' ) {
-                ($barcode) = C4::Barcodes::ValueBuilder::EAN13::get_barcode();
-            } else {
->>>>>>> 2d41a8dd66f (Bug 42221: Fix EAN-13 autoBarcode not incrementing)
                 warn "ERROR: unknown autoBarcode: $autoBarcode";
             }
             $item->barcode($barcode) if $barcode;
