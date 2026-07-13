@@ -19,10 +19,12 @@
 
 use Modern::Perl;
 
-use Test::More tests => 14;
+use Test::More tests => 15;
+use Test::Exception;
 use Test::NoWarnings;
 
 use C4::Circulation qw( AddIssue AddReturn );
+use C4::Reserves    qw( AddReserve );
 use Koha::Account;
 use Koha::Checkins;
 use Koha::Database;
@@ -489,6 +491,109 @@ subtest 'debits() and credits() tests' => sub {
 
     # Verify the right lines are in each set
     is( $debits->total_outstanding, 15.00, 'Debits total is correct' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'confirm_hold() tests' => sub {
+
+    plan tests => 7;
+
+    $schema->storage->txn_begin;
+
+    my $checkin_library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $pickup_library  = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $user            = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $patron          = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $item            = $builder->build_sample_item( { library => $checkin_library->branchcode } );
+
+    t::lib::Mocks::mock_userenv(
+        { branchcode => $checkin_library->branchcode, borrowernumber => $user->borrowernumber } );
+
+    # Create a hold at the same library (no transfer needed)
+    my $reserve_id = AddReserve(
+        {
+            branchcode     => $checkin_library->branchcode,
+            borrowernumber => $patron->borrowernumber,
+            biblionumber   => $item->biblionumber,
+            itemnumber     => $item->itemnumber,
+            priority       => 1,
+        }
+    );
+
+    my $checkin = Koha::Checkin->new(
+        {
+            item_id    => $item->itemnumber,
+            user_id    => $user->borrowernumber,
+            library_id => $checkin_library->branchcode,
+            hold_id    => $reserve_id,
+        }
+    )->store;
+
+    # Test confirm_hold at same library (no transfer)
+    $checkin->confirm_hold;
+    $checkin->discard_changes;
+
+    my $hold = Koha::Holds->find($reserve_id);
+    is( $hold->found,          'W',   'Hold set to waiting after confirm_hold' );
+    is( $checkin->transfer_id, undef, 'No transfer created when same library' );
+
+    $schema->storage->txn_rollback;
+
+    # Test confirm_hold with different pickup library (transfer needed)
+    $schema->storage->txn_begin;
+
+    $checkin_library = $builder->build_object( { class => 'Koha::Libraries' } );
+    $pickup_library  = $builder->build_object( { class => 'Koha::Libraries' } );
+    $user            = $builder->build_object( { class => 'Koha::Patrons' } );
+    $patron          = $builder->build_object( { class => 'Koha::Patrons' } );
+    $item            = $builder->build_sample_item( { library => $checkin_library->branchcode } );
+
+    t::lib::Mocks::mock_userenv(
+        { branchcode => $checkin_library->branchcode, borrowernumber => $user->borrowernumber } );
+
+    $reserve_id = AddReserve(
+        {
+            branchcode     => $pickup_library->branchcode,
+            borrowernumber => $patron->borrowernumber,
+            biblionumber   => $item->biblionumber,
+            itemnumber     => $item->itemnumber,
+            priority       => 1,
+        }
+    );
+
+    $checkin = Koha::Checkin->new(
+        {
+            item_id    => $item->itemnumber,
+            user_id    => $user->borrowernumber,
+            library_id => $checkin_library->branchcode,
+            hold_id    => $reserve_id,
+        }
+    )->store;
+
+    $checkin->confirm_hold;
+    $checkin->discard_changes;
+
+    $hold = Koha::Holds->find($reserve_id);
+    is( $hold->found, 'T', 'Hold set to in-transit when pickup differs' );
+    ok( $checkin->transfer_id, 'Transfer ID set on checkin' );
+
+    my $transfer = $checkin->transfer;
+    is( $transfer->tobranch, $pickup_library->branchcode, 'Transfer destination is pickup library' );
+    ok( $transfer->datesent, 'Transfer set in transit (datesent populated)' );
+
+    # Test confirm_hold with no hold (throws)
+    my $checkin_no_hold = Koha::Checkin->new(
+        {
+            item_id    => $item->itemnumber,
+            user_id    => $user->borrowernumber,
+            library_id => $checkin_library->branchcode,
+        }
+    )->store;
+
+    throws_ok { $checkin_no_hold->confirm_hold }
+    'Koha::Exceptions::MissingParameter',
+        'confirm_hold throws MissingParameter when no hold';
 
     $schema->storage->txn_rollback;
 };

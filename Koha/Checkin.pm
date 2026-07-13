@@ -31,6 +31,8 @@ use Koha::Patrons;
 use Koha::Recalls;
 use Koha::Checkouts::ReturnClaims;
 
+use C4::Reserves qw( ModReserveAffect );
+
 use base qw(Koha::Object);
 
 =head1 NAME
@@ -217,6 +219,48 @@ sub credits {
     my ($self) = @_;
     my $rs = $self->_result->credits;
     return Koha::Account::Credits->_new_from_dbic($rs);
+}
+
+=head2 Actions
+
+=head3 confirm_hold
+
+    $checkin->confirm_hold;
+
+Sets the trapped hold to waiting. If the pickup library differs from the
+checkin library, creates a transfer and sets it in transit.
+
+Throws C<Koha::Exceptions::MissingParameter> if there is no hold associated
+with this checkin.
+
+Returns the C<Koha::Checkin> object for chaining.
+
+=cut
+
+sub confirm_hold {
+    my ($self) = @_;
+
+    Koha::Exceptions::MissingParameter->throw("No hold associated with this checkin")
+        unless $self->hold_id;
+
+    my $hold            = $self->hold;
+    my $item            = $self->item;
+    my $checkin_library = $self->library_id;
+    my $pickup_library  = $hold->branchcode;
+
+    # If pickup branch differs, a transfer is needed
+    my $diff_branch = ( $checkin_library ne $pickup_library ) ? $pickup_library : undef;
+
+    ModReserveAffect( $item->itemnumber, $hold->borrowernumber, $diff_branch, $hold->id );
+
+    # Create transfer if needed
+    if ($diff_branch) {
+        my $transfer = $item->request_transfer( { to => $hold->pickup_library, reason => 'Reserve', enqueue => 1 } );
+        $transfer->transit;
+        $self->set( { transfer_id => $transfer->id } )->store;
+    }
+
+    return $self;
 }
 
 =head2 Internal methods
