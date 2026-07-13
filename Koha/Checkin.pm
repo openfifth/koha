@@ -318,6 +318,43 @@ sub confirm_transfer {
     return $self;
 }
 
+=head3 cancel_transfer
+
+    $checkin->cancel_transfer;
+
+Cancels the transfer associated with this checkin and clears the transfer_id.
+
+If the item has a recall in transit, it reverts the recall transfer as well.
+
+Throws C<Koha::Exceptions::MissingParameter> if there is no transfer associated
+with this checkin.
+
+Returns the C<Koha::Checkin> object for chaining.
+
+=cut
+
+sub cancel_transfer {
+    my ($self) = @_;
+
+    Koha::Exceptions::MissingParameter->throw("No transfer associated with this checkin")
+        unless $self->transfer_id;
+
+    my $transfer = $self->transfer;
+
+    $transfer->cancel( { reason => 'Manual', force => 1 } );
+
+    # If there's a recall in transit for this item, revert it
+    if ( C4::Context->preference('UseRecalls') ) {
+        my $item   = $self->item;
+        my $recall = Koha::Recalls->find( { item_id => $item->itemnumber, status => 'in_transit' } );
+        $recall->revert_transfer if $recall;
+    }
+
+    $self->set( { transfer_id => undef } )->store;
+
+    return $self;
+}
+
 =head2 Internal methods
 
 =head3 _type

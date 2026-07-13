@@ -19,7 +19,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 17;
+use Test::More tests => 18;
 use Test::Exception;
 use Test::NoWarnings;
 use Test::Warn;
@@ -741,6 +741,60 @@ subtest 'confirm_transfer() tests' => sub {
     # Test that confirm_transfer returns self for chaining
     my $result = $checkin->confirm_transfer;
     is( ref($result), 'Koha::Checkin', 'confirm_transfer returns $self for chaining' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'cancel_transfer() tests' => sub {
+
+    plan tests => 5;
+
+    $schema->storage->txn_begin;
+
+    my $from_library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $to_library   = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $user         = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $item         = $builder->build_sample_item( { library => $from_library->branchcode } );
+
+    t::lib::Mocks::mock_userenv( { branchcode => $from_library->branchcode, borrowernumber => $user->borrowernumber } );
+    t::lib::Mocks::mock_preference( 'UseRecalls', 0 );
+
+    # Create a transfer and set it in transit
+    my $transfer = $item->request_transfer( { to => $to_library, reason => 'Manual' } );
+    $transfer->transit;
+    ok( $transfer->datesent, 'Transfer is in transit' );
+
+    my $checkin = Koha::Checkin->new(
+        {
+            item_id     => $item->itemnumber,
+            user_id     => $user->borrowernumber,
+            library_id  => $from_library->branchcode,
+            transfer_id => $transfer->id,
+        }
+    )->store;
+
+    # Cancel the transfer
+    $checkin->cancel_transfer;
+    $checkin->discard_changes;
+
+    is( $checkin->transfer_id, undef, 'transfer_id cleared after cancel_transfer' );
+
+    $transfer->discard_changes;
+    ok( $transfer->datecancelled, 'Transfer has datecancelled set' );
+    is( $transfer->cancellation_reason, 'Manual', 'Cancellation reason is Manual' );
+
+    # Test cancel_transfer with no transfer (throws)
+    my $checkin_no_transfer = Koha::Checkin->new(
+        {
+            item_id    => $item->itemnumber,
+            user_id    => $user->borrowernumber,
+            library_id => $from_library->branchcode,
+        }
+    )->store;
+
+    throws_ok { $checkin_no_transfer->cancel_transfer }
+    'Koha::Exceptions::MissingParameter',
+        'cancel_transfer throws MissingParameter when no transfer';
 
     $schema->storage->txn_rollback;
 };
