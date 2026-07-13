@@ -308,9 +308,10 @@
           ).draw();
         }
 
+        var zero_formatted = "[% 0 | $Price %]";
+
         function updateChangeValues() {
             var change = $('#change')[0];
-            var zero_formatted = "[% 0 | $Price %]";
             change.innerHTML = Math.round(($('#tendered')[0].value - $('#paid')[0].value) * 100) / 100;
             if (change.innerHTML <= 0) {
                 var paid = $('#paid')[0];
@@ -521,7 +522,6 @@
                         $(':input[name="change"]').val(zero_formatted);
                         checked = false;
                     }, 0);
-
                     [% END %]
 
                     return true;
