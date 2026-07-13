@@ -19,15 +19,17 @@
 
 use Modern::Perl;
 
-use Test::More tests => 15;
+use Test::More tests => 16;
 use Test::Exception;
 use Test::NoWarnings;
+use Test::Warn;
 
 use C4::Circulation qw( AddIssue AddReturn );
 use C4::Reserves    qw( AddReserve );
 use Koha::Account;
 use Koha::Checkins;
 use Koha::Database;
+use Koha::Old::Holds;
 
 use t::lib::TestBuilder;
 use t::lib::Mocks;
@@ -594,6 +596,93 @@ subtest 'confirm_hold() tests' => sub {
     throws_ok { $checkin_no_hold->confirm_hold }
     'Koha::Exceptions::MissingParameter',
         'confirm_hold throws MissingParameter when no hold';
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'cancel_hold() tests' => sub {
+
+    plan tests => 8;
+
+    $schema->storage->txn_begin;
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $user    = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $patron  = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $item    = $builder->build_sample_item( { library => $library->branchcode } );
+
+    t::lib::Mocks::mock_userenv( { branchcode => $library->branchcode, borrowernumber => $user->borrowernumber } );
+
+    # Test cancel without reason (no letter attempted)
+    my $reserve_id = AddReserve(
+        {
+            branchcode     => $library->branchcode,
+            borrowernumber => $patron->borrowernumber,
+            biblionumber   => $item->biblionumber,
+            itemnumber     => $item->itemnumber,
+            priority       => 1,
+        }
+    );
+
+    my $checkin = Koha::Checkin->new(
+        {
+            item_id    => $item->itemnumber,
+            user_id    => $user->borrowernumber,
+            library_id => $library->branchcode,
+            hold_id    => $reserve_id,
+        }
+    )->store;
+
+    $checkin->cancel_hold;
+    $checkin->discard_changes;
+
+    is( $checkin->hold_id, undef, 'hold_id cleared after cancel_hold (no reason)' );
+    my $old_hold = Koha::Old::Holds->find($reserve_id);
+    ok( $old_hold, 'Hold moved to old_reserves (no reason)' );
+    is( $old_hold->cancellation_reason, undef, 'No cancellation reason stored' );
+
+    # Test cancel with reason (letter warning expected)
+    my $reserve_id2 = AddReserve(
+        {
+            branchcode     => $library->branchcode,
+            borrowernumber => $patron->borrowernumber,
+            biblionumber   => $item->biblionumber,
+            itemnumber     => $item->itemnumber,
+            priority       => 1,
+        }
+    );
+
+    my $checkin2 = Koha::Checkin->new(
+        {
+            item_id    => $item->itemnumber,
+            user_id    => $user->borrowernumber,
+            library_id => $library->branchcode,
+            hold_id    => $reserve_id2,
+        }
+    )->store;
+
+    warning_like { $checkin2->cancel_hold( { reason => 'PATRON_REQUEST' } ) }
+    qr/HOLD_CANCELLATION/,
+        'Warning about missing letter template when cancelling with reason';
+
+    $checkin2->discard_changes;
+    is( $checkin2->hold_id, undef, 'hold_id cleared after cancel_hold (with reason)' );
+    my $old_hold2 = Koha::Old::Holds->find($reserve_id2);
+    ok( $old_hold2, 'Hold moved to old_reserves (with reason)' );
+    is( $old_hold2->cancellation_reason, 'PATRON_REQUEST', 'Cancellation reason stored' );
+
+    # Test cancel_hold with no hold (throws)
+    my $checkin_no_hold = Koha::Checkin->new(
+        {
+            item_id    => $item->itemnumber,
+            user_id    => $user->borrowernumber,
+            library_id => $library->branchcode,
+        }
+    )->store;
+
+    throws_ok { $checkin_no_hold->cancel_hold }
+    'Koha::Exceptions::MissingParameter',
+        'cancel_hold throws MissingParameter when no hold';
 
     $schema->storage->txn_rollback;
 };

@@ -263,6 +263,35 @@ sub confirm_hold {
     return $self;
 }
 
+=head3 cancel_hold
+
+    $checkin->cancel_hold;
+    $checkin->cancel_hold( { reason => 'PATRON_REQUEST' } );
+
+Cancels the hold associated with this checkin and clears the hold_id.
+
+Throws C<Koha::Exceptions::MissingParameter> if there is no hold associated
+with this checkin.
+
+Returns the C<Koha::Checkin> object for chaining.
+
+=cut
+
+sub cancel_hold {
+    my ( $self, $params ) = @_;
+
+    Koha::Exceptions::MissingParameter->throw("No hold associated with this checkin")
+        unless $self->hold_id;
+
+    my $hold = $self->hold;
+
+    $hold->cancel( { cancellation_reason => $params->{reason} } );
+
+    $self->set( { hold_id => undef } )->store;
+
+    return $self;
+}
+
 =head2 Internal methods
 
 =head3 _type
