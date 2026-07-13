@@ -19,7 +19,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 18;
+use Test::More tests => 19;
 use Test::Exception;
 use Test::NoWarnings;
 use Test::Warn;
@@ -30,6 +30,7 @@ use Koha::Account;
 use Koha::Checkins;
 use Koha::Database;
 use Koha::Old::Holds;
+use Koha::Recall;
 
 use t::lib::TestBuilder;
 use t::lib::Mocks;
@@ -795,6 +796,115 @@ subtest 'cancel_transfer() tests' => sub {
     throws_ok { $checkin_no_transfer->cancel_transfer }
     'Koha::Exceptions::MissingParameter',
         'cancel_transfer throws MissingParameter when no transfer';
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'confirm_recall() tests' => sub {
+
+    plan tests => 6;
+
+    $schema->storage->txn_begin;
+
+    my $checkin_library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $pickup_library  = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $user            = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $patron          = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $item            = $builder->build_sample_item( { library => $checkin_library->branchcode } );
+
+    t::lib::Mocks::mock_userenv(
+        { branchcode => $checkin_library->branchcode, borrowernumber => $user->borrowernumber } );
+    t::lib::Mocks::mock_preference( 'UseRecalls', 1 );
+
+    # Test confirm_recall at same library (set to waiting)
+    my $recall = Koha::Recall->new(
+        {
+            patron_id         => $patron->borrowernumber,
+            created_date      => \'NOW()',
+            biblio_id         => $item->biblionumber,
+            pickup_library_id => $checkin_library->branchcode,
+            status            => 'requested',
+            item_id           => $item->itemnumber,
+            expiration_date   => undef,
+            item_level        => 1,
+        }
+    )->store;
+
+    my $checkin = Koha::Checkin->new(
+        {
+            item_id    => $item->itemnumber,
+            user_id    => $user->borrowernumber,
+            library_id => $checkin_library->branchcode,
+            recall_id  => $recall->id,
+        }
+    )->store;
+
+    $checkin->confirm_recall;
+
+    $recall->discard_changes;
+    ok( $recall->waiting,         'Recall set to waiting when same library' );
+    ok( $recall->expiration_date, 'Expiration date set' );
+
+    $schema->storage->txn_rollback;
+
+    # Test confirm_recall with different pickup library (start transfer)
+    $schema->storage->txn_begin;
+
+    $checkin_library = $builder->build_object( { class => 'Koha::Libraries' } );
+    $pickup_library  = $builder->build_object( { class => 'Koha::Libraries' } );
+    $user            = $builder->build_object( { class => 'Koha::Patrons' } );
+    $patron          = $builder->build_object( { class => 'Koha::Patrons' } );
+    $item            = $builder->build_sample_item( { library => $checkin_library->branchcode } );
+
+    t::lib::Mocks::mock_userenv(
+        { branchcode => $checkin_library->branchcode, borrowernumber => $user->borrowernumber } );
+    t::lib::Mocks::mock_preference( 'UseRecalls', 1 );
+
+    $recall = Koha::Recall->new(
+        {
+            patron_id         => $patron->borrowernumber,
+            created_date      => \'NOW()',
+            biblio_id         => $item->biblionumber,
+            pickup_library_id => $pickup_library->branchcode,
+            status            => 'requested',
+            item_id           => $item->itemnumber,
+            expiration_date   => undef,
+            item_level        => 1,
+        }
+    )->store;
+
+    $checkin = Koha::Checkin->new(
+        {
+            item_id    => $item->itemnumber,
+            user_id    => $user->borrowernumber,
+            library_id => $checkin_library->branchcode,
+            recall_id  => $recall->id,
+        }
+    )->store;
+
+    $checkin->confirm_recall;
+
+    $recall->discard_changes;
+    ok( $recall->in_transit, 'Recall set to in_transit when pickup differs' );
+    is( $recall->item_id, $item->itemnumber, 'Item assigned to recall' );
+
+    # Idempotent - calling again doesn't fail
+    $checkin->confirm_recall;
+    $recall->discard_changes;
+    ok( $recall->in_transit, 'confirm_recall is idempotent on in-transit recall' );
+
+    # Test confirm_recall with no recall (throws)
+    my $checkin_no_recall = Koha::Checkin->new(
+        {
+            item_id    => $item->itemnumber,
+            user_id    => $user->borrowernumber,
+            library_id => $checkin_library->branchcode,
+        }
+    )->store;
+
+    throws_ok { $checkin_no_recall->confirm_recall }
+    'Koha::Exceptions::MissingParameter',
+        'confirm_recall throws MissingParameter when no recall';
 
     $schema->storage->txn_rollback;
 };

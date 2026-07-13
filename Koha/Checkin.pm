@@ -355,6 +355,45 @@ sub cancel_transfer {
     return $self;
 }
 
+=head3 confirm_recall
+
+    $checkin->confirm_recall;
+
+Resolves the recall associated with this checkin. If the recall's pickup
+library is the same as the checkin library, sets the recall to waiting.
+Otherwise, starts a transfer to the pickup library.
+
+Throws C<Koha::Exceptions::MissingParameter> if there is no recall associated
+with this checkin.
+
+Returns the C<Koha::Checkin> object for chaining.
+
+=cut
+
+sub confirm_recall {
+    my ($self) = @_;
+
+    Koha::Exceptions::MissingParameter->throw("No recall associated with this checkin")
+        unless $self->recall_id;
+
+    my $recall = $self->recall;
+    my $item   = $self->item;
+
+    if ( $recall->pickup_library_id ne $self->library_id ) {
+
+        # Needs transfer to pickup library
+        $recall->start_transfer( { item => $item } ) unless $recall->in_transit;
+    } else {
+
+        # Same library — set to waiting
+        my $expirationdate = $recall->calc_expirationdate;
+        $recall->set_waiting( { item => $item, expirationdate => $expirationdate } )
+            unless $recall->waiting;
+    }
+
+    return $self;
+}
+
 =head2 Internal methods
 
 =head3 _type
