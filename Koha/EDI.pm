@@ -804,7 +804,21 @@ sub quote_item {
             my $details = "Skipped order line, could not add biblio for " . $item->item_number_id;
             if ( $biblio_error =~ /\S/ ) {
                 $biblio_error =~ s/\s+\z//;
-                $details .= ": $biblio_error";
+
+                # AddBiblio failures here are frequently the search engine
+                # (Elasticsearch/Zebra) rejecting the record - e.g. during
+                # authority auto-linking or post-store indexing - rather than
+                # a problem with the quote data itself. Tag those cases so
+                # they're easy to find/count later without losing the
+                # original detail; this is otherwise invisible to staff
+                # beyond the order line simply being skipped.
+                if ( _looks_like_search_engine_error($biblio_error) ) {
+                    $details .= ": [SEARCH ENGINE ERROR] $biblio_error";
+                } else {
+                    $details .= ": $biblio_error";
+                }
+            } else {
+                $details .= ' (no further detail was captured by Koha - check the koha-edi log around this time)';
             }
             $quote_message->add_to_edifact_errors(
                 {
@@ -1256,6 +1270,18 @@ sub _format_store_error {
     return $message;
 }
 
+sub _looks_like_search_engine_error {
+    my ($error) = @_;
+
+    return $error =~ /
+          Search::Elasticsearch
+        | NoNodes
+        | Unable [ ] to [ ] perform [ ] your [ ] search
+        | ZOOM::Exception
+        | ZOOM [ ] error
+    /xi;
+}
+
 sub get_edifact_ean {
 
     my $dbh = C4::Context->dbh;
@@ -1625,6 +1651,18 @@ Koha::EDI
      end-user friendly string for the EDIFACT error report. Where the error is
      a known Koha::Exceptions::Object exception the offending field is surfaced
      so that library staff can identify the problem data in the quote.
+
+=head2 _looks_like_search_engine_error
+
+     ok = _looks_like_search_engine_error($error_text)
+
+     Returns true if $error_text looks like it originated from the
+     configured search engine (Elasticsearch or Zebra) rather than from the
+     quote data itself - e.g. a connection failure during authority
+     auto-linking or post-store indexing in AddBiblio. Used to tag such
+     failures in the EDIFACT error report so they're easy to find and count
+     over time, since they otherwise look identical to any other biblio
+     creation failure.
 
 =head2 _validate_location_code
 
