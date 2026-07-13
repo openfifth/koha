@@ -292,6 +292,32 @@ sub cancel_hold {
     return $self;
 }
 
+=head3 confirm_transfer
+
+    $checkin->confirm_transfer;
+
+Sets the transfer associated with this checkin in transit (populates datesent).
+
+Throws C<Koha::Exceptions::MissingParameter> if there is no transfer associated
+with this checkin.
+
+Returns the C<Koha::Checkin> object for chaining.
+
+=cut
+
+sub confirm_transfer {
+    my ($self) = @_;
+
+    Koha::Exceptions::MissingParameter->throw("No transfer associated with this checkin")
+        unless $self->transfer_id;
+
+    my $transfer = $self->transfer;
+
+    $transfer->transit unless $transfer->datesent;
+
+    return $self;
+}
+
 =head2 Internal methods
 
 =head3 _type

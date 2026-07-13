@@ -19,7 +19,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 16;
+use Test::More tests => 17;
 use Test::Exception;
 use Test::NoWarnings;
 use Test::Warn;
@@ -683,6 +683,64 @@ subtest 'cancel_hold() tests' => sub {
     throws_ok { $checkin_no_hold->cancel_hold }
     'Koha::Exceptions::MissingParameter',
         'cancel_hold throws MissingParameter when no hold';
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'confirm_transfer() tests' => sub {
+
+    plan tests => 5;
+
+    $schema->storage->txn_begin;
+
+    my $from_library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $to_library   = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $user         = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $item         = $builder->build_sample_item( { library => $from_library->branchcode } );
+
+    t::lib::Mocks::mock_userenv( { branchcode => $from_library->branchcode, borrowernumber => $user->borrowernumber } );
+
+    # Create a pending transfer (not yet in transit)
+    my $transfer = $item->request_transfer( { to => $to_library, reason => 'Manual' } );
+    ok( !$transfer->datesent, 'Transfer not yet in transit' );
+
+    my $checkin = Koha::Checkin->new(
+        {
+            item_id     => $item->itemnumber,
+            user_id     => $user->borrowernumber,
+            library_id  => $from_library->branchcode,
+            transfer_id => $transfer->id,
+        }
+    )->store;
+
+    # Confirm the transfer
+    $checkin->confirm_transfer;
+
+    $transfer->discard_changes;
+    ok( $transfer->datesent, 'Transfer set in transit after confirm_transfer' );
+
+    # Calling again on already-sent transfer is a no-op
+    my $datesent = $transfer->datesent;
+    $checkin->confirm_transfer;
+    $transfer->discard_changes;
+    is( $transfer->datesent, $datesent, 'confirm_transfer is idempotent on already-sent transfer' );
+
+    # Test confirm_transfer with no transfer (throws)
+    my $checkin_no_transfer = Koha::Checkin->new(
+        {
+            item_id    => $item->itemnumber,
+            user_id    => $user->borrowernumber,
+            library_id => $from_library->branchcode,
+        }
+    )->store;
+
+    throws_ok { $checkin_no_transfer->confirm_transfer }
+    'Koha::Exceptions::MissingParameter',
+        'confirm_transfer throws MissingParameter when no transfer';
+
+    # Test that confirm_transfer returns self for chaining
+    my $result = $checkin->confirm_transfer;
+    is( ref($result), 'Koha::Checkin', 'confirm_transfer returns $self for chaining' );
 
     $schema->storage->txn_rollback;
 };
