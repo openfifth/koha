@@ -579,29 +579,16 @@ subtest 'process_quote' => sub {
 
         $schema->storage->txn_begin;
 
-        # Create file transport for local testing
-        my $file_transport = $builder->build(
-            {
-                source => 'FileTransport',
-                value  => {
-                    name               => 'Test Bad Branch Transport',
-                    transport          => 'local',
-                    download_directory => $dirname,
-                    upload_directory   => $dirname,
-                }
-            }
-        );
-
         my $account = $builder->build(
             {
                 source => 'VendorEdiAccount',
                 value  => {
-                    description       => 'bad branch test vendor',
-                    file_transport_id => $file_transport->{file_transport_id},
-                    plugin            => '',
-                    san               => $test_san,
-                    orders_enabled    => 1,
-                    auto_orders       => 1,
+                    description    => 'bad branch test vendor',
+                    transport      => 'FILE',
+                    plugin         => '',
+                    san            => $test_san,
+                    orders_enabled => 1,
+                    auto_orders    => 1,
                 }
             }
         );
@@ -720,28 +707,16 @@ subtest 'process_quote' => sub {
             }
         );
 
-        my $file_transport = $builder->build(
-            {
-                source => 'FileTransport',
-                value  => {
-                    name               => 'Test Biblio Failure Transport',
-                    transport          => 'local',
-                    download_directory => $dirname,
-                    upload_directory   => $dirname,
-                }
-            }
-        );
-
         my $account = $builder->build(
             {
                 source => 'VendorEdiAccount',
                 value  => {
-                    description       => 'biblio failure test vendor',
-                    file_transport_id => $file_transport->{file_transport_id},
-                    plugin            => '',
-                    san               => $test_san,
-                    orders_enabled    => 1,
-                    auto_orders       => 0,
+                    description    => 'biblio failure test vendor',
+                    transport      => 'FILE',
+                    plugin         => '',
+                    san            => $test_san,
+                    orders_enabled => 1,
+                    auto_orders    => 0,
                 }
             }
         );
