@@ -1,0 +1,29 @@
+[% USE raw %]
+[% USE To %]
+[% USE Asset %]
+[% PROCESS 'i18n.inc' %]
+[% SET footerjs = 1 %]
+[% INCLUDE 'doc-head-open.inc' %]
+<title>
+    [% FILTER collapse %]
+        [% t("Check in") | html %]
+        &rsaquo; [% t("Circulation") | html %] &rsaquo; [% t("Koha") | html %]
+    [% END %]
+</title>
+[% INCLUDE 'doc-head-close.inc' %]
+</head>
+
+<body id="circ_checkin" class="circ">
+[% WRAPPER 'header.inc' %]
+    [% INCLUDE 'circ-search.inc' %]
+[% END %]
+
+<div id="checkin"></div>
+
+[% MACRO jsinclude BLOCK %]
+    <script nonce="[% Koha.CSPNonce | $raw %]">
+        window.__MODULE_POLICY__ = [% To.json(module_policy.to_hashref) | $raw %];
+    </script>
+    [% Asset.js("js/vue/dist/checkin.js") | $raw %]
+[% END %]
+[% INCLUDE 'intranet-bottom.inc' %]
