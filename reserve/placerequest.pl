@@ -198,8 +198,15 @@ if ( $op eq 'cud-placerequest' && $patron ) {
     foreach my $msg ( keys %failed_holds ) {
         push( @failed_hold_msgs, $msg );
     }
-    $redirect_url->query_form( biblionumber => [@biblionumbers], failed_holds => \@failed_hold_msgs );
-    $redirect_url .= "&successful_holds=" . join( '|', @successful_biblionumbers );
+    $redirect_url->query_form(
+        biblionumber => [@biblionumbers],
+        failed_holds => \@failed_hold_msgs,
+        (
+            @successful_biblionumbers
+            ? ( successful_biblionumbers => join( '|', @successful_biblionumbers ) )
+            : ()
+        ),
+    );
     print $input->redirect($redirect_url);
 } elsif ( $borrowernumber eq '' ) {
     print $input->header();

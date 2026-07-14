@@ -425,7 +425,7 @@ $template->param(
     AutoResumeSuspendedHolds       => C4::Context->preference('AutoResumeSuspendedHolds'),
     OpacHoldNotes                  => C4::Context->preference('OpacHoldNotes'),
     failed_holds                   => scalar $query->param('failed_holds'),
-    successful_holds               => scalar $query->param('successful_holds'),
+    successful_biblionumbers       => scalar $query->param('successful_biblionumbers'),
     opac_user_holds                => scalar $query->param('opac-user-holds')            || 0,
     opac_user_overdues             => scalar $query->param('opac-user-overdues')         || 0,
     opac_user_article_requests     => scalar $query->param('opac-user-article-requests') || 0,

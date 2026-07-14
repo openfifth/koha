@@ -196,7 +196,7 @@ if ( $op eq 'cud-place_reserve' ) {
 
     my @failed_holds;
     my @successful_hold_ids;
-    my @successful_holds;
+    my @successful_biblionumbers;
     while (@selectedItems) {
         my $biblioNum = shift(@selectedItems);
         my $itemNum   = shift(@selectedItems);
@@ -311,8 +311,8 @@ if ( $op eq 'cud-place_reserve' ) {
             );
             if ($reserve_id) {
                 ++$reserve_cnt;
-                push @successful_hold_ids, $reserve_id;
-                push @successful_holds,    $biblioNum;
+                push @successful_hold_ids,      $reserve_id;
+                push @successful_biblionumbers, $biblioNum;
             } else {
                 push @failed_holds, 'not_placed';
             }
@@ -321,10 +321,14 @@ if ( $op eq 'cud-place_reserve' ) {
 
     $patron->create_hold_group( \@successful_hold_ids ) if $add_to_hold_group;
 
-    print $query->redirect( "/cgi-bin/koha/opac-user.pl?"
-            . ( @failed_holds     ? "failed_holds=" . join( '|', @failed_holds )         : q|| )
-            . ( @successful_holds ? "successful_holds=" . join( '|', @successful_holds ) : q|| )
-            . "&opac-user-holds=1" );
+    print $query->redirect(
+              "/cgi-bin/koha/opac-user.pl?"
+            . ( @failed_holds ? "failed_holds=" . join( '|', @failed_holds ) : q|| )
+            . (
+            @successful_biblionumbers ? "&successful_biblionumbers=" . join( '|', @successful_biblionumbers ) : q||
+            )
+            . "&tab=opac-user-holds"
+    );
     exit;
 }
 

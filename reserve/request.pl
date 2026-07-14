@@ -92,8 +92,8 @@ my $exceeded_holds_per_record;
 my @failed_holds   = $input->multi_param('failed_holds');
 my $form_submitted = $input->param('form_submitted');
 
-my @successful_holds = $input->multi_param('successful_holds');
-my $op               = $input->param('op') || q{};
+my $successful_biblionumbers = $input->param('successful_biblionumbers');
+my $op                       = $input->param('op') || q{};
 
 if ( $op eq 'cud-move' ) {
     my $where           = $input->param('where');
@@ -809,7 +809,7 @@ $template->param( biblionumbers => \@biblionumbers );
 $template->param( pickup => $pickup || C4::Context->userenv->{branch} );
 
 $template->param( borrowernumber => $borrowernumber_hold );
-$template->param( failed_holds   => \@failed_holds, successful_holds => @successful_holds );
+$template->param( failed_holds   => \@failed_holds, successful_biblionumbers => $successful_biblionumbers );
 
 # printout the page
 output_html_with_http_headers $input, $cookie, $template->output;
