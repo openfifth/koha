@@ -148,8 +148,24 @@ $(document).ready(function () {
         },
         "me.branchcode": function () {
             let branchcode = $("#illfilter_branchname").val();
-            if (!branchcode) return "";
-            return { "=": branchcode };
+            let group = $("#illfilter_group").val();
+
+            if (!group) {
+                if (!branchcode) {
+                    return "";
+                }
+                return { "=": branchcode };
+            }
+
+            if (!branchcode) {
+                return { "=": group_branchcodes[group] };
+            }
+
+            return {
+                "=": group_branchcodes[group].includes(branchcode)
+                    ? branchcode
+                    : [],
+            };
         },
         "me.borrowernumber": function () {
             return borrower_prefilter ? { "=": borrower_prefilter } : "";
@@ -612,6 +628,7 @@ $(document).ready(function () {
     function clearSearch() {
         let filters = [
             "illfilter_backend",
+            "illfilter_group",
             "illfilter_branchname",
             "illfilter_patron",
             "illfilter_managed_by",

@@ -33,6 +33,7 @@ use Koha::ILL::Request::Workflow::Availability;
 use Koha::ILL::Request::Workflow::HistoryCheck;
 use Koha::ILL::Request::Workflow::TypeDisclaimer;
 use Koha::ILL::Request::Workflow::ConfirmAuto;
+use Koha::Library::Groups;
 use Koha::Libraries;
 use Koha::Plugins;
 
@@ -454,7 +455,24 @@ if ($backends_available) {
             }
         }
 
-        $template->param( table_actions => encode_json( Koha::ILL::Request->get_staff_table_actions ) );
+        my @groups = Koha::Library::Groups->search( { branchcode => undef }, { order_by => 'title' } )->as_list;
+        @groups = grep {
+            Koha::Library::Groups->get_root_ancestor( { id => $_->id } )->ft_ill_group
+                && grep { $_->branchcode eq C4::Context->mybranch }
+                $_->all_libraries
+        } @groups;
+
+        my $group_branchcodes;
+        foreach my $group (@groups) {
+            my @branchcodes = map { $_->branchcode } $group->all_libraries;
+            $group_branchcodes->{ $group->id } = \@branchcodes;
+        }
+
+        $template->param(
+            table_actions     => encode_json( Koha::ILL::Request->get_staff_table_actions ),
+            library_groups    => \@groups,
+            group_branchcodes => encode_json($group_branchcodes)
+        );
     } elsif ( $op eq "cud-save_comment" ) {
         my $comment = Koha::ILL::Comment->new(
             {

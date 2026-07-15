@@ -1128,6 +1128,7 @@
         <script nonce="[% Koha.CSPNonce | $raw %]" data-tt-allowed="true">
             [% IF op == 'illlist' %]
                 var ill_table_actions = [% table_actions | $raw %];
+                const group_branchcodes = [% group_branchcodes | $raw %];
             [% END %]
 
             [% IF metadata_enrichment_services %]
