@@ -88,6 +88,7 @@
         [% IF op == 'illlist' %]
             <script>
                 var ill_table_actions = [% table_actions | $raw %];
+                const group_branchcodes = [% group_branchcodes | $raw %];
             </script>
         [% END %]
 

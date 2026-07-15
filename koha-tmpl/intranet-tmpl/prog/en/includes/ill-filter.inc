@@ -38,6 +38,15 @@
                 <input type="text" name="illfilter_datemodified_end" id="illfilter_datemodified_end" class="flatpickr" />
             </li>
             <li>
+                <label for="illfilter_group">Group:</label>
+                <select name="illfilter_group" id="illfilter_group">
+                    <option value="">All groups</option>
+                    [% FOREACH group IN library_groups %]
+                        <option value="[% group.id | html %]">[% group.title | html %]</option>
+                    [% END %]
+                </select>
+            </li>
+            <li>
                 <label for="illfilter_branchname">Library:</label>
                 <select name="illfilter_branchname" id="illfilter_branchname">
                     <option value="">All libraries</option>
