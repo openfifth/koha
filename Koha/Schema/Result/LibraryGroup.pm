@@ -306,6 +306,7 @@ __PACKAGE__->add_columns(
     '+ft_local_hold_group'    => { is_boolean => 1 },
     '+ft_search_groups_opac'  => { is_boolean => 1 },
     '+ft_search_groups_staff' => { is_boolean => 1 },
+    '+ft_ill_group'           => { is_boolean => 1 },
 );
 
 1;
