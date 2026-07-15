@@ -110,10 +110,12 @@
             - debits
             - desk
             - hold
+            - hold.patron
             - item
             - item.biblio
             - library
             - recall
+            - recall.patron
             - restriction
             - transfer
             - user

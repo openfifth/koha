@@ -51,6 +51,11 @@ The client decodes the JWT payload and uses it to show/hide controls.
 The server still enforces every action - this is informational, not an
 authorization token.
 
+In addition to the keys listed below, the policy hashref includes the
+C<global> namespace inherited from L<Koha::Module::Policy> (e.g.,
+C<audio_alerts>, C<catalog_concerns>). See the base class documentation
+for the full list of global keys.
+
 =head2 Policy keys
 
 =over 4
@@ -62,8 +67,6 @@ authorization token.
 =item B<dropbox_mode> - Book drop mode available
 
 =item B<forgive_hold_fees> - Can forgive manual hold expiration charges
-
-=item B<audio_alerts> - Audio alerts enabled
 
 =item B<recalls_enabled> - Recall feature active
 
@@ -80,8 +83,6 @@ authorization token.
 =item B<show_all_checkins> - Display items scanned but not actually returned
 
 =item B<max_returned_items> - Max items to display in the checked-in table
-
-=item B<catalog_concerns> - "Report a concern" feature available
 
 =item B<fine_notify_at_checkin> - Show patron balance after checkin
 
@@ -145,8 +146,6 @@ sub _build_hashref {
         # Display
         show_all_checkins  => C4::Context->preference('ShowAllCheckins') ? 1 : 0,
         max_returned_items => ( C4::Context->preference('numReturnedItemsToShow') || 8 ),
-        audio_alerts       => C4::Context->preference('AudioAlerts')     ? 1 : 0,
-        catalog_concerns   => C4::Context->preference('CatalogConcerns') ? 1 : 0,
 
         # Blockers (informational - the API enforces these, but the client
         # can use them to show warnings or adjust messaging)
@@ -157,32 +156,28 @@ sub _build_hashref {
 
 =head1 NOTES
 
-=head2 Staleness and re-evaluation
+=head2 Policy delivery
 
-The JWT is generated fresh on every API response. If a preference or
-permission changes mid-session, the very next response will carry the
-updated policy. The client compares with its current state and updates
-the UI reactively.
+The policy is delivered to the client in two ways:
 
-This replaces the need for a dedicated GET /config endpoint and solves
-the stale-config problem inherent in such patterns.
+=over 4
 
-=head2 Initial hydration
+=item * B<Page load> - The .tt template injects the policy hashref as a
+JSON window global. The Vue app reads it on mount.
 
-For the initial page load (before any API call), the thin .tt wrapper
-can inject the policy JWT (or its decoded payload) as a JS variable.
-This gives the Vue app immediate access to capabilities without a
-bootstrapping request. The same Koha::Module::Policy::Checkin class
-is used in both contexts.
+=item * B<API response header> - When the controller rejects a request
+because a client-asserted capability is no longer valid (e.g.,
+C<exempt_fine> sent but permission revoked), it attaches the updated
+policy as a JWT in the C<X-Koha-Module-Policy> response header. The
+client decodes the payload and updates its state reactively.
+
+=back
 
 =head2 Permissions in the template shell
 
-The .tt shell may also need to inject user permissions for the page
-chrome (header, sidebar navigation). This is a separate concern from
-the module policy - the policy governs the module's functional area,
-while the template chrome uses CAN_user_* flags for navigation visibility.
-Over time, the chrome itself can become a Vue component reading from
-the policy or a broader session contract.
+The .tt shell injects C<CAN_user_*> flags for page chrome (header,
+sidebar navigation). This is separate from the module policy which
+governs the module's functional capabilities.
 
 =head1 AUTHOR
 

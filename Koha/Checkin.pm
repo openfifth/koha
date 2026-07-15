@@ -238,7 +238,6 @@ Returns the C<Koha::Checkin> object for chaining.
 sub confirm_hold {
     my ($self) = @_;
 
-
     my $hold            = $self->hold;
     my $item            = $self->item;
     my $checkin_library = $self->library_id;
@@ -274,10 +273,14 @@ Returns the C<Koha::Checkin> object for chaining.
 sub cancel_hold {
     my ( $self, $params ) = @_;
 
-
     my $hold = $self->hold;
 
-    $hold->cancel( { cancellation_reason => $params->{reason} } );
+    $hold->cancel(
+        {
+            cancellation_reason => $params->{reason},
+            ( $params->{forgive_hold_fees} ? () : ( charge_cancel_fee => 1 ) ),
+        }
+    );
 
     $self->set( { hold_id => undef } )->store;
 
@@ -297,7 +300,6 @@ Returns the C<Koha::Checkin> object for chaining.
 
 sub confirm_transfer {
     my ($self) = @_;
-
 
     my $transfer = $self->transfer;
 
@@ -321,7 +323,6 @@ Returns the C<Koha::Checkin> object for chaining.
 
 sub cancel_transfer {
     my ($self) = @_;
-
 
     my $transfer = $self->transfer;
 
@@ -354,7 +355,6 @@ Returns the C<Koha::Checkin> object for chaining.
 
 sub confirm_recall {
     my ($self) = @_;
-
 
     my $recall = $self->recall;
     my $item   = $self->item;

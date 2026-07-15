@@ -41,6 +41,7 @@ class HttpClient {
         })
             .then(response => {
                 if (!response.ok) {
+                    if (return_response) return response;
                     return response.text().then(text => {
                         let message;
                         if (text) {

@@ -1,6 +1,8 @@
 [% USE raw %]
 [% USE To %]
 [% USE Asset %]
+[% USE Koha %]
+[% USE Branches %]
 [% PROCESS 'i18n.inc' %]
 [% SET footerjs = 1 %]
 [% INCLUDE 'doc-head-open.inc' %]
@@ -15,14 +17,30 @@
 
 <body id="circ_checkin" class="circ">
 [% WRAPPER 'header.inc' %]
-    [% INCLUDE 'circ-search.inc' %]
+    [% INCLUDE 'checkin-search.inc' %]
 [% END %]
 
-<div id="checkin"></div>
+[% WRAPPER 'sub-header.inc' %]
+    [% WRAPPER breadcrumbs %]
+        [% WRAPPER breadcrumb_item %]
+            <a href="/cgi-bin/koha/circ/circulation-home.pl">[% t("Circulation") | html %]</a>
+        [% END %]
+        [% WRAPPER breadcrumb_item bc_active=1 %]
+            [% t("Check in") | html %]
+        [% END %]
+    [% END #/ WRAPPER breadcrumbs %]
+[% END #/ WRAPPER sub-header.inc %]
+
+[% SET aside = Koha.Preference('CircSidebar') ? 'circ-nav' : '' %]
+[% WRAPPER 'main-container.inc' aside=aside %]
+    <div id="checkin"></div>
+[% END %]
 
 [% MACRO jsinclude BLOCK %]
+    [% INCLUDE 'calendar.inc' %]
     <script nonce="[% Koha.CSPNonce | $raw %]">
         window.__MODULE_POLICY__ = [% To.json(module_policy.to_hashref) | $raw %];
+        window.__LIBRARY_ID__ = "[% Branches.GetLoggedInBranchcode | html %]";
     </script>
     [% Asset.js("js/vue/dist/checkin.js") | $raw %]
 [% END %]

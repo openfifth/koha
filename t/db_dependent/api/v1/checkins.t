@@ -98,7 +98,7 @@ subtest 'get_availability' => sub {
 
 subtest 'add' => sub {
 
-    plan tests => 42;
+    plan tests => 33;
 
     $schema->storage->txn_begin;
 
@@ -136,34 +136,16 @@ subtest 'add' => sub {
         }
     )->status_is(404);
 
-    # Not checked out - needs confirmation
+    # Not checked out - succeeds directly (local use, no confirmation needed)
     $t->post_ok(
         "//$userid:$password\@/api/v1/checkins" => json => {
             item_id    => $item->id,
             library_id => $library->branchcode,
         }
         )
-        ->status_is(412)
-        ->json_is( '/error_code' => 'confirmation_required' )
-        ->json_has('/confirms/NotIssued')
-        ->json_has('/confirmation_token');
-
-    # Not checked out - with invalid token
-    $t->post_ok(
-        "//$userid:$password\@/api/v1/checkins?confirmation=invalid.token.value" => json => {
-            item_id    => $item->id,
-            library_id => $library->branchcode,
-        }
-    )->status_is(412)->json_is( '/error_code' => 'confirmation_required' );
-
-    # Not checked out - with valid token
-    my $token = $t->tx->res->json('/confirmation_token');
-    $t->post_ok(
-        "//$userid:$password\@/api/v1/checkins?confirmation=$token" => json => {
-            item_id    => $item->id,
-            library_id => $library->branchcode,
-        }
-    )->status_is(200)->json_has('/checkin_id')->json_is( '/item_id' => $item->id )->json_has('/local_use');
+        ->status_is(200)
+        ->json_has('/checkin_id')
+        ->json_is( '/item_id' => $item->id );
 
     # Check out then check in - normal flow
     AddIssue( $patron, $item->barcode );
@@ -304,7 +286,7 @@ subtest 'add - return_date and dropbox_mode' => sub {
 
 subtest 'add - post-checkin messages' => sub {
 
-    plan tests => 8;
+    plan tests => 6;
 
     $schema->storage->txn_begin;
 
@@ -337,18 +319,9 @@ subtest 'add - post-checkin messages' => sub {
     # Check in item not checked out (with confirmation token) - should get not_issued and local_use
     my $free_item = $builder->build_sample_item( { library => $library->branchcode } );
 
-    # First get the confirmation token
-    my $res = $t->post_ok(
-        "//$userid:$password\@/api/v1/checkins" => json => {
-            item_id    => $free_item->id,
-            library_id => $library->branchcode,
-        }
-    )->status_is(412);
-
-    my $token = $res->tx->res->json('/confirmation_token');
-
+    # Check in item not checked out - succeeds directly
     $t->post_ok(
-        "//$userid:$password\@/api/v1/checkins?confirmation=$token" => json => {
+        "//$userid:$password\@/api/v1/checkins" => json => {
             item_id    => $free_item->id,
             library_id => $library->branchcode,
         }
@@ -413,7 +386,7 @@ subtest 'X-Koha-Module-Policy header' => sub {
 
 subtest 'sub-resource confirmation endpoints' => sub {
 
-    plan tests => 26;
+    plan tests => 24;
 
     $schema->storage->txn_begin;
 
