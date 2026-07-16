@@ -19,10 +19,9 @@
 
 use Modern::Perl;
 
-use Test::More tests => 17;
+use Test::More;
 use Test::MockModule;
 use Test::Mojo;
-use Test::NoWarnings;
 
 use MIME::Base64 qw( encode_base64 );
 
@@ -32,10 +31,19 @@ use Koha::Session;
 use t::lib::Mocks;
 use t::lib::TestBuilder;
 
-# Skip unless Net::SAML2 available (same guard as middleware test)
+# Skip unless Net::SAML2 available (same guard as middleware test).
+# Test::NoWarnings is imported only after this guard: it registers an
+# END block that runs regardless of plan skip_all, which would otherwise
+# turn a clean skip into a "planned 0 but ran 1" failure.
 BEGIN {
     eval { require Net::SAML2 };
     plan skip_all => 'Net::SAML2 not installed' if $@;
+}
+
+use Test::NoWarnings;
+
+BEGIN {
+    plan tests => 17;
 }
 
 my $schema  = Koha::Database->new->schema;

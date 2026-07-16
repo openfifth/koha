@@ -20,15 +20,19 @@
 use Modern::Perl;
 use Test::More;
 use Test::MockModule;
-use Test::NoWarnings;
 use File::Temp   qw( tempdir );
 use MIME::Base64 qw( decode_base64 encode_base64 );
 
-# Skip all tests if Net::SAML2 is not installed
+# Skip all tests if Net::SAML2 is not installed.
+# Test::NoWarnings is imported only after this guard: it registers an
+# END block that runs regardless of plan skip_all, which would otherwise
+# turn a clean skip into a "planned 0 but ran 1" failure.
 BEGIN {
     eval { require Net::SAML2 };
     plan skip_all => 'Net::SAML2 not installed' if $@;
 }
+
+use Test::NoWarnings;
 
 # We need Net::SAML2 modules loaded so mock them properly
 BEGIN {
