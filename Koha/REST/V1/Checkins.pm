@@ -211,12 +211,6 @@ sub add {
             $effective_return_date,
         );
 
-        # Rebuild holds queue if item was actually returned
-        if ( $doreturn && C4::Context->preference('RealTimeHoldsQueue') ) {
-            require Koha::BackgroundJob::BatchUpdateBiblioHoldsQueue;
-            Koha::BackgroundJob::BatchUpdateBiblioHoldsQueue->new->enqueue( { biblio_ids => [ $item->biblionumber ] } );
-        }
-
         # Serialize messages from the checkin object
         my @messages = map {
             my $msg = { message => $_->message, type => $_->type };
@@ -268,78 +262,145 @@ sub add {
     };
 }
 
-=head3 update
+=head3 hold_confirmation
 
-Resolve post-checkin decisions (confirm hold, cancel hold, transfer, recall, etc.)
+POST /checkins/{checkin_id}/hold_confirmation
 
 =cut
 
-sub update {
-    my $c    = shift->openapi->valid_input or return;
-    my $user = $c->stash('koha.user');
+sub hold_confirmation {
+    my $c = shift->openapi->valid_input or return;
 
-    my $checkin_id = $c->param('checkin_id');
-    my $body       = $c->req->json;
-    my $action     = $body->{action};
+    my $checkin = Koha::Checkins->find( $c->param('checkin_id') );
+    return $c->render_resource_not_found("Checkin") unless $checkin;
 
-    my $checkin = Koha::Checkins->find($checkin_id);
-
-    return $c->render_resource_not_found("Checkin")
-        unless $checkin;
+    return $c->render( status => 400, openapi => { error => "No hold associated with this checkin" } )
+        unless $checkin->hold_id;
 
     return try {
-        if ( $action eq 'confirm_hold' ) {
-            $checkin->confirm_hold;
-        } elsif ( $action eq 'cancel_hold' ) {
-            $checkin->cancel_hold( { reason => $body->{cancel_reason} } );
-        } elsif ( $action eq 'confirm_transfer' ) {
-            $checkin->confirm_transfer;
-        } elsif ( $action eq 'cancel_transfer' ) {
-            $checkin->cancel_transfer;
-        } elsif ( $action eq 'confirm_recall' ) {
-            $checkin->confirm_recall;
-        } elsif ( $action eq 'ignore' ) {
-
-            # No-op: staff acknowledges the message without action
-        } else {
-            return $c->render(
-                status  => 400,
-                openapi => {
-                    error      => "Unknown action: $action",
-                    error_code => 'invalid_action',
-                }
-            );
-        }
-
-        # Rebuild holds queue
-        if ( C4::Context->preference('RealTimeHoldsQueue') ) {
-            require Koha::BackgroundJob::BatchUpdateBiblioHoldsQueue;
-            Koha::BackgroundJob::BatchUpdateBiblioHoldsQueue->new->enqueue(
-                { biblio_ids => [ $checkin->item->biblionumber ] } );
-        }
-
-        $checkin->discard_changes;
-
-        my $response = $c->objects->to_api($checkin);
-
-        $c->attach_module_policy( 'Checkin', { library => $checkin->library_id } );
-
-        return $c->render(
-            status  => 200,
-            openapi => $response,
-        );
+        $checkin->confirm_hold;
+        return $c->_render_checkin_response($checkin);
     } catch {
-        if ( ref($_) eq 'Koha::Exceptions::MissingParameter' ) {
-            return $c->render(
-                status  => 400,
-                openapi => {
-                    error      => "$_",
-                    error_code => 'invalid_action',
-                }
-            );
-        }
         $c->unhandled_exception($_);
     };
+}
+
+=head3 hold_cancellation
+
+POST /checkins/{checkin_id}/hold_cancellation
+
+=cut
+
+sub hold_cancellation {
+    my $c = shift->openapi->valid_input or return;
+
+    my $checkin = Koha::Checkins->find( $c->param('checkin_id') );
+    return $c->render_resource_not_found("Checkin") unless $checkin;
+
+    return $c->render( status => 400, openapi => { error => "No hold associated with this checkin" } )
+        unless $checkin->hold_id;
+
+    my $body = $c->req->json // {};
+
+    return try {
+        $checkin->cancel_hold( { reason => $body->{reason} } );
+        return $c->_render_checkin_response($checkin);
+    } catch {
+        $c->unhandled_exception($_);
+    };
+}
+
+=head3 transfer_confirmation
+
+POST /checkins/{checkin_id}/transfer_confirmation
+
+=cut
+
+sub transfer_confirmation {
+    my $c = shift->openapi->valid_input or return;
+
+    my $checkin = Koha::Checkins->find( $c->param('checkin_id') );
+    return $c->render_resource_not_found("Checkin") unless $checkin;
+
+    return $c->render( status => 400, openapi => { error => "No transfer associated with this checkin" } )
+        unless $checkin->transfer_id;
+
+    return try {
+        $checkin->confirm_transfer;
+        return $c->_render_checkin_response($checkin);
+    } catch {
+        $c->unhandled_exception($_);
+    };
+}
+
+=head3 transfer_cancellation
+
+POST /checkins/{checkin_id}/transfer_cancellation
+
+=cut
+
+sub transfer_cancellation {
+    my $c = shift->openapi->valid_input or return;
+
+    my $checkin = Koha::Checkins->find( $c->param('checkin_id') );
+    return $c->render_resource_not_found("Checkin") unless $checkin;
+
+    return $c->render( status => 400, openapi => { error => "No transfer associated with this checkin" } )
+        unless $checkin->transfer_id;
+
+    return try {
+        $checkin->cancel_transfer;
+        return $c->_render_checkin_response($checkin);
+    } catch {
+        $c->unhandled_exception($_);
+    };
+}
+
+=head3 recall_confirmation
+
+POST /checkins/{checkin_id}/recall_confirmation
+
+=cut
+
+sub recall_confirmation {
+    my $c = shift->openapi->valid_input or return;
+
+    my $checkin = Koha::Checkins->find( $c->param('checkin_id') );
+    return $c->render_resource_not_found("Checkin") unless $checkin;
+
+    return $c->render( status => 400, openapi => { error => "No recall associated with this checkin" } )
+        unless $checkin->recall_id;
+
+    return try {
+        $checkin->confirm_recall;
+        return $c->_render_checkin_response($checkin);
+    } catch {
+        $c->unhandled_exception($_);
+    };
+}
+
+=head2 Internal methods
+
+=head3 _render_checkin_response
+
+Renders the standard checkin response with Location header and policy.
+
+=cut
+
+sub _render_checkin_response {
+    my ( $c, $checkin ) = @_;
+
+    $checkin->discard_changes;
+
+    my $response = $c->objects->to_api($checkin);
+
+    $c->attach_module_policy( 'Checkin', { library => $checkin->library_id } );
+    $c->res->headers->location( "/api/v1/checkins/" . $checkin->id );
+
+    return $c->render(
+        status  => 201,
+        openapi => $response,
+    );
 }
 
 1;

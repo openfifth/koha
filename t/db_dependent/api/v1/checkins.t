@@ -411,9 +411,9 @@ subtest 'X-Koha-Module-Policy header' => sub {
     $schema->storage->txn_rollback;
 };
 
-subtest 'update (PUT /checkins/{checkin_id})' => sub {
+subtest 'sub-resource confirmation endpoints' => sub {
 
-    plan tests => 33;
+    plan tests => 26;
 
     $schema->storage->txn_begin;
 
@@ -430,17 +430,21 @@ subtest 'update (PUT /checkins/{checkin_id})' => sub {
 
     t::lib::Mocks::mock_userenv(
         { branchcode => $checkin_library->branchcode, borrowernumber => $librarian->borrowernumber } );
-    t::lib::Mocks::mock_preference( 'RealTimeHoldsQueue', 0 );
-    t::lib::Mocks::mock_preference( 'UseRecalls',         0 );
+    t::lib::Mocks::mock_preference( 'UseRecalls', 0 );
 
-    # -- Not found
-    $t->put_ok( "//$userid:$password\@/api/v1/checkins/999999999" => json => { action => 'ignore' } )->status_is(404);
+    # -- hold_confirmation: not found
+    $t->post_ok( "//$userid:$password\@/api/v1/checkins/999999999/hold_confirmation" )->status_is(404);
 
-    # -- Unauthorized
-    $t->put_ok( "//" . $patron->userid . ":pass000\@/api/v1/checkins/999999999" => json => { action => 'ignore' } )
-        ->status_is(403);
+    # -- hold_confirmation: no hold (400)
+    my $item_no_hold = $builder->build_sample_item( { library => $checkin_library->branchcode } );
+    AddIssue( $patron, $item_no_hold->barcode );
+    $t->post_ok( "//$userid:$password\@/api/v1/checkins" => json =>
+            { item_id => $item_no_hold->id, library_id => $checkin_library->branchcode } )->status_is(200);
+    my $checkin_no_hold_id = $t->tx->res->json('/checkin_id');
 
-    # -- confirm_hold: same library (set to waiting)
+    $t->post_ok( "//$userid:$password\@/api/v1/checkins/$checkin_no_hold_id/hold_confirmation" )->status_is(400);
+
+    # -- hold_confirmation: same library (set to waiting)
     my $item = $builder->build_sample_item( { library => $checkin_library->branchcode } );
     AddIssue( $patron, $item->barcode );
 
@@ -454,31 +458,24 @@ subtest 'update (PUT /checkins/{checkin_id})' => sub {
         }
     );
 
-    # Do the checkin via POST
-    $t->post_ok(
-        "//$userid:$password\@/api/v1/checkins" => json => {
-            item_id    => $item->id,
-            library_id => $checkin_library->branchcode,
-        }
-    )->status_is(200);
-
+    $t->post_ok( "//$userid:$password\@/api/v1/checkins" => json =>
+            { item_id => $item->id, library_id => $checkin_library->branchcode } )->status_is(200);
     my $checkin_id = $t->tx->res->json('/checkin_id');
 
-    # PUT confirm_hold
-    $t->put_ok( "//$userid:$password\@/api/v1/checkins/$checkin_id" => json => { action => 'confirm_hold' } )
-        ->status_is(200)
-        ->json_is( '/checkin_id' => $checkin_id );
+    $t->post_ok( "//$userid:$password\@/api/v1/checkins/$checkin_id/hold_confirmation" )
+        ->status_is(201)
+        ->header_like( 'Location' => qr{/api/v1/checkins/\d+} );
 
     my $hold = Koha::Holds->find($reserve_id);
-    is( $hold->found, 'W', 'Hold set to waiting after confirm_hold via API' );
+    is( $hold->found, 'W', 'Hold set to waiting after hold_confirmation' );
 
-    # -- confirm_hold: different library (transfer created)
+    # -- hold_cancellation
     my $item2 = $builder->build_sample_item( { library => $checkin_library->branchcode } );
     AddIssue( $patron, $item2->barcode );
 
     my $reserve_id2 = AddReserve(
         {
-            branchcode     => $pickup_library->branchcode,
+            branchcode     => $checkin_library->branchcode,
             borrowernumber => $patron->borrowernumber,
             biblionumber   => $item2->biblionumber,
             itemnumber     => $item2->itemnumber,
@@ -486,100 +483,57 @@ subtest 'update (PUT /checkins/{checkin_id})' => sub {
         }
     );
 
-    $t->post_ok(
-        "//$userid:$password\@/api/v1/checkins" => json => {
-            item_id    => $item2->id,
-            library_id => $checkin_library->branchcode,
-        }
-    )->status_is(200);
-
+    $t->post_ok( "//$userid:$password\@/api/v1/checkins" => json =>
+            { item_id => $item2->id, library_id => $checkin_library->branchcode } )->status_is(200);
     my $checkin_id2 = $t->tx->res->json('/checkin_id');
 
-    $t->put_ok( "//$userid:$password\@/api/v1/checkins/$checkin_id2" => json => { action => 'confirm_hold' } )
-        ->status_is(200)
-        ->json_has('/transfer_id');
-
-    my $hold2 = Koha::Holds->find($reserve_id2);
-    is( $hold2->found, 'T', 'Hold set to in-transit when pickup differs' );
-
-    # -- cancel_hold
-    my $item3 = $builder->build_sample_item( { library => $checkin_library->branchcode } );
-    AddIssue( $patron, $item3->barcode );
-
-    my $reserve_id3 = AddReserve(
-        {
-            branchcode     => $checkin_library->branchcode,
-            borrowernumber => $patron->borrowernumber,
-            biblionumber   => $item3->biblionumber,
-            itemnumber     => $item3->itemnumber,
-            priority       => 1,
-        }
-    );
-
-    $t->post_ok(
-        "//$userid:$password\@/api/v1/checkins" => json => {
-            item_id    => $item3->id,
-            library_id => $checkin_library->branchcode,
-        }
-    )->status_is(200);
-
-    my $checkin_id3 = $t->tx->res->json('/checkin_id');
-
     warning_like {
-        $t->put_ok( "//$userid:$password\@/api/v1/checkins/$checkin_id3" => json =>
-                { action => 'cancel_hold', cancel_reason => 'PATRON_REQUEST' } )
-            ->status_is(200)
-            ->json_is( '/hold_id' => undef );
-    }
-    qr/HOLD_CANCELLATION/, 'Warning about missing letter template expected';
+        $t->post_ok(
+            "//$userid:$password\@/api/v1/checkins/$checkin_id2/hold_cancellation" => json =>
+                { reason => 'PATRON_REQUEST' } )->status_is(201);
+    } qr/HOLD_CANCELLATION/, 'Warning about missing letter template expected';
 
-    is( Koha::Holds->find($reserve_id3), undef, 'Hold cancelled via API' );
+    is( Koha::Holds->find($reserve_id2), undef, 'Hold cancelled' );
 
-    # -- confirm_transfer
-    my $item4     = $builder->build_sample_item( { library => $checkin_library->branchcode } );
+    # -- transfer_confirmation
+    my $item3     = $builder->build_sample_item( { library => $checkin_library->branchcode } );
     my $to_branch = $builder->build_object( { class => 'Koha::Libraries' } );
-    my $transfer  = $item4->request_transfer( { to => $to_branch, reason => 'Manual' } );
+    my $transfer  = $item3->request_transfer( { to => $to_branch, reason => 'Manual' } );
 
-    my $checkin4 = Koha::Checkin->new(
+    my $checkin3 = Koha::Checkin->new(
         {
-            item_id     => $item4->itemnumber,
+            item_id     => $item3->itemnumber,
             user_id     => $librarian->borrowernumber,
             library_id  => $checkin_library->branchcode,
             transfer_id => $transfer->id,
         }
     )->store;
 
-    $t->put_ok( "//$userid:$password\@/api/v1/checkins/" . $checkin4->id => json => { action => 'confirm_transfer' } )
-        ->status_is(200);
+    $t->post_ok( "//$userid:$password\@/api/v1/checkins/" . $checkin3->id . "/transfer_confirmation" )
+        ->status_is(201);
 
     $transfer->discard_changes;
-    ok( $transfer->datesent, 'Transfer set in transit via API' );
+    ok( $transfer->datesent, 'Transfer set in transit' );
 
-    # -- cancel_transfer
-    my $item5     = $builder->build_sample_item( { library => $checkin_library->branchcode } );
-    my $transfer5 = $item5->request_transfer( { to => $to_branch, reason => 'Manual' } );
-    $transfer5->transit;
+    # -- transfer_cancellation
+    my $item4      = $builder->build_sample_item( { library => $checkin_library->branchcode } );
+    my $transfer4  = $item4->request_transfer( { to => $to_branch, reason => 'Manual' } );
+    $transfer4->transit;
 
-    my $checkin5 = Koha::Checkin->new(
+    my $checkin4 = Koha::Checkin->new(
         {
-            item_id     => $item5->itemnumber,
+            item_id     => $item4->itemnumber,
             user_id     => $librarian->borrowernumber,
             library_id  => $checkin_library->branchcode,
-            transfer_id => $transfer5->id,
+            transfer_id => $transfer4->id,
         }
     )->store;
 
-    $t->put_ok( "//$userid:$password\@/api/v1/checkins/" . $checkin5->id => json => { action => 'cancel_transfer' } )
-        ->status_is(200)
-        ->json_is( '/transfer_id' => undef );
+    $t->post_ok( "//$userid:$password\@/api/v1/checkins/" . $checkin4->id . "/transfer_cancellation" )
+        ->status_is(201);
 
-    $transfer5->discard_changes;
-    ok( $transfer5->datecancelled, 'Transfer cancelled via API' );
-
-    # -- invalid action on checkin with no hold
-    $t->put_ok( "//$userid:$password\@/api/v1/checkins/" . $checkin5->id => json => { action => 'confirm_hold' } )
-        ->status_is(400)
-        ->json_is( '/error_code' => 'invalid_action' );
+    $transfer4->discard_changes;
+    ok( $transfer4->datecancelled, 'Transfer cancelled' );
 
     $schema->storage->txn_rollback;
 };

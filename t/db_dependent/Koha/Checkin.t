@@ -500,7 +500,7 @@ subtest 'debits() and credits() tests' => sub {
 
 subtest 'confirm_hold() tests' => sub {
 
-    plan tests => 7;
+    plan tests => 6;
 
     $schema->storage->txn_begin;
 
@@ -585,25 +585,13 @@ subtest 'confirm_hold() tests' => sub {
     is( $transfer->tobranch, $pickup_library->branchcode, 'Transfer destination is pickup library' );
     ok( $transfer->datesent, 'Transfer set in transit (datesent populated)' );
 
-    # Test confirm_hold with no hold (throws)
-    my $checkin_no_hold = Koha::Checkin->new(
-        {
-            item_id    => $item->itemnumber,
-            user_id    => $user->borrowernumber,
-            library_id => $checkin_library->branchcode,
-        }
-    )->store;
-
-    throws_ok { $checkin_no_hold->confirm_hold }
-    'Koha::Exceptions::MissingParameter',
-        'confirm_hold throws MissingParameter when no hold';
 
     $schema->storage->txn_rollback;
 };
 
 subtest 'cancel_hold() tests' => sub {
 
-    plan tests => 8;
+    plan tests => 7;
 
     $schema->storage->txn_begin;
 
@@ -672,25 +660,13 @@ subtest 'cancel_hold() tests' => sub {
     ok( $old_hold2, 'Hold moved to old_reserves (with reason)' );
     is( $old_hold2->cancellation_reason, 'PATRON_REQUEST', 'Cancellation reason stored' );
 
-    # Test cancel_hold with no hold (throws)
-    my $checkin_no_hold = Koha::Checkin->new(
-        {
-            item_id    => $item->itemnumber,
-            user_id    => $user->borrowernumber,
-            library_id => $library->branchcode,
-        }
-    )->store;
-
-    throws_ok { $checkin_no_hold->cancel_hold }
-    'Koha::Exceptions::MissingParameter',
-        'cancel_hold throws MissingParameter when no hold';
 
     $schema->storage->txn_rollback;
 };
 
 subtest 'confirm_transfer() tests' => sub {
 
-    plan tests => 5;
+    plan tests => 4;
 
     $schema->storage->txn_begin;
 
@@ -726,18 +702,6 @@ subtest 'confirm_transfer() tests' => sub {
     $transfer->discard_changes;
     is( $transfer->datesent, $datesent, 'confirm_transfer is idempotent on already-sent transfer' );
 
-    # Test confirm_transfer with no transfer (throws)
-    my $checkin_no_transfer = Koha::Checkin->new(
-        {
-            item_id    => $item->itemnumber,
-            user_id    => $user->borrowernumber,
-            library_id => $from_library->branchcode,
-        }
-    )->store;
-
-    throws_ok { $checkin_no_transfer->confirm_transfer }
-    'Koha::Exceptions::MissingParameter',
-        'confirm_transfer throws MissingParameter when no transfer';
 
     # Test that confirm_transfer returns self for chaining
     my $result = $checkin->confirm_transfer;
@@ -748,7 +712,7 @@ subtest 'confirm_transfer() tests' => sub {
 
 subtest 'cancel_transfer() tests' => sub {
 
-    plan tests => 5;
+    plan tests => 4;
 
     $schema->storage->txn_begin;
 
@@ -784,25 +748,13 @@ subtest 'cancel_transfer() tests' => sub {
     ok( $transfer->datecancelled, 'Transfer has datecancelled set' );
     is( $transfer->cancellation_reason, 'Manual', 'Cancellation reason is Manual' );
 
-    # Test cancel_transfer with no transfer (throws)
-    my $checkin_no_transfer = Koha::Checkin->new(
-        {
-            item_id    => $item->itemnumber,
-            user_id    => $user->borrowernumber,
-            library_id => $from_library->branchcode,
-        }
-    )->store;
-
-    throws_ok { $checkin_no_transfer->cancel_transfer }
-    'Koha::Exceptions::MissingParameter',
-        'cancel_transfer throws MissingParameter when no transfer';
 
     $schema->storage->txn_rollback;
 };
 
 subtest 'confirm_recall() tests' => sub {
 
-    plan tests => 6;
+    plan tests => 5;
 
     $schema->storage->txn_begin;
 
@@ -893,18 +845,6 @@ subtest 'confirm_recall() tests' => sub {
     $recall->discard_changes;
     ok( $recall->in_transit, 'confirm_recall is idempotent on in-transit recall' );
 
-    # Test confirm_recall with no recall (throws)
-    my $checkin_no_recall = Koha::Checkin->new(
-        {
-            item_id    => $item->itemnumber,
-            user_id    => $user->borrowernumber,
-            library_id => $checkin_library->branchcode,
-        }
-    )->store;
-
-    throws_ok { $checkin_no_recall->confirm_recall }
-    'Koha::Exceptions::MissingParameter',
-        'confirm_recall throws MissingParameter when no recall';
 
     $schema->storage->txn_rollback;
 };

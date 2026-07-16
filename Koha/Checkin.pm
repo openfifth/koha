@@ -230,8 +230,6 @@ sub credits {
 Sets the trapped hold to waiting. If the pickup library differs from the
 checkin library, creates a transfer and sets it in transit.
 
-Throws C<Koha::Exceptions::MissingParameter> if there is no hold associated
-with this checkin.
 
 Returns the C<Koha::Checkin> object for chaining.
 
@@ -240,8 +238,6 @@ Returns the C<Koha::Checkin> object for chaining.
 sub confirm_hold {
     my ($self) = @_;
 
-    Koha::Exceptions::MissingParameter->throw("No hold associated with this checkin")
-        unless $self->hold_id;
 
     my $hold            = $self->hold;
     my $item            = $self->item;
@@ -270,8 +266,6 @@ sub confirm_hold {
 
 Cancels the hold associated with this checkin and clears the hold_id.
 
-Throws C<Koha::Exceptions::MissingParameter> if there is no hold associated
-with this checkin.
 
 Returns the C<Koha::Checkin> object for chaining.
 
@@ -280,8 +274,6 @@ Returns the C<Koha::Checkin> object for chaining.
 sub cancel_hold {
     my ( $self, $params ) = @_;
 
-    Koha::Exceptions::MissingParameter->throw("No hold associated with this checkin")
-        unless $self->hold_id;
 
     my $hold = $self->hold;
 
@@ -298,8 +290,6 @@ sub cancel_hold {
 
 Sets the transfer associated with this checkin in transit (populates datesent).
 
-Throws C<Koha::Exceptions::MissingParameter> if there is no transfer associated
-with this checkin.
 
 Returns the C<Koha::Checkin> object for chaining.
 
@@ -308,8 +298,6 @@ Returns the C<Koha::Checkin> object for chaining.
 sub confirm_transfer {
     my ($self) = @_;
 
-    Koha::Exceptions::MissingParameter->throw("No transfer associated with this checkin")
-        unless $self->transfer_id;
 
     my $transfer = $self->transfer;
 
@@ -326,8 +314,6 @@ Cancels the transfer associated with this checkin and clears the transfer_id.
 
 If the item has a recall in transit, it reverts the recall transfer as well.
 
-Throws C<Koha::Exceptions::MissingParameter> if there is no transfer associated
-with this checkin.
 
 Returns the C<Koha::Checkin> object for chaining.
 
@@ -336,8 +322,6 @@ Returns the C<Koha::Checkin> object for chaining.
 sub cancel_transfer {
     my ($self) = @_;
 
-    Koha::Exceptions::MissingParameter->throw("No transfer associated with this checkin")
-        unless $self->transfer_id;
 
     my $transfer = $self->transfer;
 
@@ -363,8 +347,6 @@ Resolves the recall associated with this checkin. If the recall's pickup
 library is the same as the checkin library, sets the recall to waiting.
 Otherwise, starts a transfer to the pickup library.
 
-Throws C<Koha::Exceptions::MissingParameter> if there is no recall associated
-with this checkin.
 
 Returns the C<Koha::Checkin> object for chaining.
 
@@ -373,8 +355,6 @@ Returns the C<Koha::Checkin> object for chaining.
 sub confirm_recall {
     my ($self) = @_;
 
-    Koha::Exceptions::MissingParameter->throw("No recall associated with this checkin")
-        unless $self->recall_id;
 
     my $recall = $self->recall;
     my $item   = $self->item;

@@ -343,8 +343,16 @@ paths:
     $ref: ./paths/checkins.yaml#/~1checkins
   "/checkins/availability":
     $ref: "./paths/checkins.yaml#/~1checkins~1availability"
-  "/checkins/{checkin_id}":
-    $ref: "./paths/checkins.yaml#/~1checkins~1{checkin_id}"
+  "/checkins/{checkin_id}/hold_confirmation":
+    $ref: "./paths/checkins.yaml#/~1checkins~1{checkin_id}~1hold_confirmation"
+  "/checkins/{checkin_id}/hold_cancellation":
+    $ref: "./paths/checkins.yaml#/~1checkins~1{checkin_id}~1hold_cancellation"
+  "/checkins/{checkin_id}/transfer_confirmation":
+    $ref: "./paths/checkins.yaml#/~1checkins~1{checkin_id}~1transfer_confirmation"
+  "/checkins/{checkin_id}/transfer_cancellation":
+    $ref: "./paths/checkins.yaml#/~1checkins~1{checkin_id}~1transfer_cancellation"
+  "/checkins/{checkin_id}/recall_confirmation":
+    $ref: "./paths/checkins.yaml#/~1checkins~1{checkin_id}~1recall_confirmation"
   /checkouts:
     $ref: ./paths/checkouts.yaml#/~1checkouts
   "/checkouts/{checkout_id}":
