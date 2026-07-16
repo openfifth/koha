@@ -168,6 +168,24 @@ sub _delete_file {
     return 1;
 }
 
+=head3 _current_directory
+
+    my $path = $self->_current_directory;
+
+Internal method that returns the SFTP connection's current working directory.
+
+Net::SFTP::Foreign's C<cwd()> is a pure read-only accessor - it reports the
+current remote directory without navigating - unlike FTP's C<cwd()> (see
+Koha::File::Transport::FTP::_current_directory).
+
+=cut
+
+sub _current_directory {
+    my ($self) = @_;
+
+    return $self->{connection}->cwd;
+}
+
 =head3 _change_directory
 
     my $success = $server->_change_directory($directory);
