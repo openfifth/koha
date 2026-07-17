@@ -19,7 +19,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 5;
+use Test::More tests => 6;
 
 use Test::MockModule;
 use Test::MockObject;
@@ -38,6 +38,30 @@ use t::lib::Mocks;
 
 my $schema  = Koha::Database->new->schema;
 my $builder = t::lib::TestBuilder->new;
+
+subtest 'for_protocol() tests' => sub {
+
+    plan tests => 5;
+
+    is(
+        ref( Koha::Auth::Client->for_protocol('OAuth') ), 'Koha::Auth::Client::OAuth',
+        'OAuth protocol resolves to the OAuth client'
+    );
+    is(
+        ref( Koha::Auth::Client->for_protocol('OIDC') ), 'Koha::Auth::Client::OAuth',
+        'OIDC protocol is handled by the OAuth client'
+    );
+    is(
+        ref( Koha::Auth::Client->for_protocol('SAML2') ), 'Koha::Auth::Client::SAML2',
+        'SAML2 protocol resolves to the SAML2 client'
+    );
+
+    throws_ok { Koha::Auth::Client->for_protocol() }
+    'Koha::Exceptions::MissingParameter', 'Exception thrown when protocol is missing';
+
+    throws_ok { Koha::Auth::Client->for_protocol('CAS') }
+    'Koha::Exceptions::Auth::UnsupportedProtocol', 'Exception thrown for unknown protocol';
+};
 
 subtest 'get_user() tests' => sub {
 

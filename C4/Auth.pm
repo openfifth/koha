@@ -1558,7 +1558,12 @@ sub checkauth {
     if ($exclusive_provider) {
         my $redirect_url;
         if ( $exclusive_provider->protocol eq 'SAML2' ) {
-            $redirect_url = Koha::Auth::Client::SAML2->new->login_url($query) if $shib;
+
+            # $shib reflects is_enabled(), which validates more than the provider's
+            # DB flag (web-server integration, required config); only redirect when
+            # the client is actually usable, otherwise fall through to the login
+            # page where the exclusive provider's button is shown
+            $redirect_url = Koha::Auth::Client->for_protocol('SAML2')->login_url($query) if $shib;
         } elsif ( $exclusive_provider->protocol eq 'OIDC' || $exclusive_provider->protocol eq 'OAuth' ) {
             my $base = ( $type eq 'opac' ) ? "/api/v1/public/oauth/login" : "/api/v1/oauth/login";
             $redirect_url = "$base/" . $exclusive_provider->code . "/$type";
