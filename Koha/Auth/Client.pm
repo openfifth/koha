@@ -21,6 +21,7 @@ use Modern::Perl;
 
 use C4::Context;
 
+use Koha::Exceptions;
 use Koha::Exceptions::Auth;
 use Koha::Auth::Identity::Providers;
 
@@ -43,6 +44,36 @@ sub new {
     my $self = {};
 
     bless( $self, $class );
+}
+
+=head3 for_protocol
+
+    my $client = Koha::Auth::Client->for_protocol( $provider->protocol );
+
+Factory method returning an instance of the I<Koha::Auth::Client> subclass that
+implements the given protocol, so callers dispatch on the C<protocol> column
+without hard-coding class names. Throws
+I<Koha::Exceptions::Auth::UnsupportedProtocol> for unknown protocols.
+
+=cut
+
+sub for_protocol {
+    my ( $class, $protocol ) = @_;
+
+    Koha::Exceptions::MissingParameter->throw( parameter => 'protocol' )
+        unless $protocol;
+
+    my $map = {
+        OAuth => 'Koha::Auth::Client::OAuth',
+        OIDC  => 'Koha::Auth::Client::OAuth',
+        SAML2 => 'Koha::Auth::Client::SAML2',
+    };
+
+    my $subclass = $map->{$protocol}
+        or Koha::Exceptions::Auth::UnsupportedProtocol->throw( protocol => $protocol );
+
+    eval "require $subclass";
+    return $subclass->new;
 }
 
 =head3 get_user

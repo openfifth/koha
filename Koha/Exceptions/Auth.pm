@@ -41,6 +41,11 @@ use Exception::Class (
         description => 'More than one patron found for matchpoint',
         fields      => [ 'matchpoint', 'value' ]
     },
+    'Koha::Exceptions::Auth::UnsupportedProtocol' => {
+        isa         => 'Koha::Exceptions::Auth',
+        description => 'No auth client implements the requested protocol',
+        fields      => ['protocol']
+    },
 );
 
 1;
