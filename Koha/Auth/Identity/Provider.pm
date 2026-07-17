@@ -167,13 +167,29 @@ sub set_config {
 
 =head3 store
 
-Identity provider specific store method to ensure config population before saving to db
+Identity provider specific store method to ensure config population before saving to db.
+
+Config invariants are enforced here rather than only in C<set_config> so an
+invalid provider can never be persisted, however C<config> was populated
+(C<set_config>, C<set_from_api> or a direct accessor call). Throws
+I<Koha::Exceptions::MissingParameter> if a mandatory config attribute for the
+provider's protocol is missing.
 
 =cut
 
 sub store {
     my ($self) = @_;
+
     $self->config( $self->config // '{}' );
+
+    require Koha::Auth::Identity::Providers;
+    my $class  = Koha::Auth::Identity::Providers->object_class($self);
+    my $config = $self->get_config;
+    for my $param ( $class->mandatory_config_attributes ) {
+        Koha::Exceptions::MissingParameter->throw( parameter => $param )
+            unless defined $config->{$param};
+    }
+
     return $self->SUPER::store();
 }
 
