@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 8;
+use Test::More tests => 9;
 
 use Test::MockModule;
 use Test::Exception;
@@ -67,7 +67,10 @@ subtest 'get_config() tests' => sub {
 
     $schema->storage->txn_begin;
 
-    my $provider = $builder->build_object( { class => 'Koha::Auth::Identity::Providers', value => { config => '{' } } );
+    # SAML2 has no mandatory config attributes, so store() below can persist
+    # the arbitrary config this subtest exercises
+    my $provider = $builder->build_object(
+        { class => 'Koha::Auth::Identity::Providers', value => { protocol => 'SAML2', config => '{' } } );
 
     throws_ok { $provider->get_config() }
     'Koha::Exceptions::Object::BadValue', 'Expected exception thrown on bad JSON';
@@ -76,6 +79,40 @@ subtest 'get_config() tests' => sub {
     $provider->config( encode_json($config) )->store;
 
     is_deeply( $provider->get_config, $config, 'Config correctly retrieved' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'store() config validation tests' => sub {
+
+    plan tests => 4;
+
+    $schema->storage->txn_begin;
+
+    my $provider = $builder->build_object(
+        {
+            class => 'Koha::Auth::Identity::Providers',
+            value => { protocol => 'OAuth', config => '{}' }
+        }
+    );
+
+    # config was populated behind set_config()'s back; store() must still
+    # refuse to persist an invalid provider
+    throws_ok { $provider->store }
+    'Koha::Exceptions::MissingParameter', 'store() enforces mandatory config attributes';
+    is( $@->parameter, 'key', 'Missing parameter is reported' );
+
+    $provider->set_config(
+        {
+            key           => 'key',
+            secret        => 'secret',
+            authorize_url => 'https://koha-community.org/auth/authorize',
+            token_url     => 'https://koha-community.org/auth/token',
+        }
+    );
+
+    ok( $provider->store, 'store() succeeds once config is complete' );
+    is( ref($provider), 'Koha::Auth::Identity::Provider::OAuth', 'Polymorphic class preserved' );
 
     $schema->storage->txn_rollback;
 };
@@ -252,8 +289,24 @@ subtest 'find_exclusive_provider() tests' => sub {
         'Returns undef when hostname is empty string'
     );
 
+    # Complete config so the provider survives store()-time validation when
+    # the subtest toggles enabled via update()
     my $provider = $builder->build_object(
-        { class => 'Koha::Auth::Identity::Providers', value => { protocol => 'OIDC', enabled => 1 } } );
+        {
+            class => 'Koha::Auth::Identity::Providers',
+            value => {
+                protocol => 'OIDC',
+                enabled  => 1,
+                config   => encode_json(
+                    {
+                        key            => 'key',
+                        secret         => 'secret',
+                        well_known_url => 'https://sso.example.com/.well-known/openid-configuration'
+                    }
+                )
+            }
+        }
+    );
 
     my $hostname_record =
         $builder->build_object( { class => 'Koha::Auth::Hostnames', value => { hostname => 'sso.example.com' } } );
