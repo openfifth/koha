@@ -1407,6 +1407,21 @@ sub get_type_disclaimer_date {
     return $attr->value;
 }
 
+=head3 get_type_disclaimer_text
+
+    my $text = $abstract->type_disclaimer_text();
+
+Return the text of the disclaimer submitted in the type disclaimer workflow stage
+
+=cut
+
+sub get_type_disclaimer_text {
+    my ($self) = @_;
+    my $attr = $self->extended_attributes->find( { type => 'type_disclaimer_text' } );
+    return if !$attr;
+    return $attr->value;
+}
+
 =head3 manager
 
     my $manager = $request->manager();

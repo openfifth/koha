@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 9;
+use Test::More tests => 10;
 use Test::MockModule;
 
 use Koha::ILL::Requests;
@@ -177,6 +177,38 @@ subtest 'get_type_disclaimer_date() tests' => sub {
     is(
         $request->get_type_disclaimer_date, "2023-11-27T14:27:01",
         'get_type_disclaimer_date() returns the value if is set'
+    );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'get_type_disclaimer_text() tests' => sub {
+
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    my $request = $builder->build_object( { class => 'Koha::ILL::Requests' } );
+
+    is(
+        $request->get_type_disclaimer_text, undef,
+        'get_type_disclaimer_text() returns undef if no type_disclaimer_text is set'
+    );
+
+    $builder->build_object(
+        {
+            class => 'Koha::ILL::Request::Attributes',
+            value => {
+                illrequest_id => $request->illrequest_id,
+                type          => 'type_disclaimer_text',
+                value         => 'Example text'
+            }
+        }
+    );
+
+    is(
+        $request->get_type_disclaimer_text, "Example text",
+        'get_type_disclaimer_text() returns the value if is set'
     );
 
     $schema->storage->txn_rollback;
