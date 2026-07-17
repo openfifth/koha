@@ -18,7 +18,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 6;
+use Test::More tests => 11;
 
 use Test::MockModule;
 use Test::MockObject;
@@ -110,6 +110,45 @@ is(
     $type_disclaimer->show_type_disclaimer($request),
     1, 'able to show type disclaimer form'
 );
+
+# Mock ILLModuleDisclaimerByType to test bypass
+t::lib::Mocks::mock_preference(
+    'ILLModuleDisclaimerByType', "all:
+ text: |
+  <h2>HTML title</h2>
+  <p>This is an HTML paragraph</p>
+  <p>This is another HTML paragraph</p>
+ av_category_code: YES_NO
+journal:
+ bypass: 1"
+);
+
+ok(
+    !$type_disclaimer->show_type_disclaimer($request),
+    'can bypass type disclaimer form'
+);
+
+# Mock ILLModuleDisclaimerByType to test interface
+my %cases = ( none => 0, both => 1, staff => 1, opac => 0 );
+
+while ( my ( $interface, $expected ) = each %cases ) {
+    t::lib::Mocks::mock_preference(
+        'ILLModuleDisclaimerByType', "all:
+ text: |
+  <h2>HTML title</h2>
+  <p>This is an HTML paragraph</p>
+  <p>This is another HTML paragraph</p>
+ av_category_code: YES_NO
+journal:
+ interface: " . $interface
+    );
+
+    is(
+        $type_disclaimer->show_type_disclaimer($request),
+        $expected,
+        'type disclaimer form ' . ( $expected ? 'shown' : 'not shown' ) . " for interface $interface"
+    );
+}
 
 # Mock ILLModuleDisclaimerByType with invalid YAML
 my $type_disclaimer_module = Test::MockModule->new('Koha::ILL::Request::Workflow::TypeDisclaimer');

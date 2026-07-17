@@ -59,13 +59,17 @@ sub show_type_disclaimer {
         $self->{metadata}->{type}
     );
 
+    if ( $disc_info->{interface} ) {
+        return 0 if $disc_info->{interface} eq 'none';
+        return 0
+            if ( $disc_info->{interface} ne 'both'
+            && $disc_info->{interface} ne $self->{ui_context} );
+    }
+
     return
 
         # ILLModuleDisclaimerByType contains correct YAML
         %{$disc_sys_pref}
-
-        # Check that we have info to display for this type
-        && $disc_info
 
         # ILLModuleDisclaimerByType contains at least 'all'
         && $disc_sys_pref->{all}
@@ -175,13 +179,14 @@ sub _get_type_disclaimer_info {
 
     my $disc_info = undef;
     if ( scalar @matching_request_type ) {
-        return if $disc_sys_pref->{$type}->{bypass};
-
-        $disc_info->{text}   = $disc_sys_pref->{$type}->{text};
-        $disc_info->{av_cat} = $disc_sys_pref->{$type}->{av_category_code};
+        $disc_info->{text}      = $disc_sys_pref->{$type}->{text};
+        $disc_info->{av_cat}    = $disc_sys_pref->{$type}->{av_category_code};
+        $disc_info->{interface} = $disc_sys_pref->{$type}->{interface};
+        $disc_info->{interface} = 'none' if $disc_sys_pref->{$type}->{bypass};
     } elsif ( $disc_sys_pref->{all} ) {
-        $disc_info->{text}   = $disc_sys_pref->{all}->{text};
-        $disc_info->{av_cat} = $disc_sys_pref->{all}->{av_category_code};
+        $disc_info->{text}      = $disc_sys_pref->{all}->{text};
+        $disc_info->{av_cat}    = $disc_sys_pref->{all}->{av_category_code};
+        $disc_info->{interface} = $disc_sys_pref->{all}->{interface};
     }
     return $disc_info;
 }
