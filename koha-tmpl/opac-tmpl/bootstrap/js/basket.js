@@ -235,6 +235,12 @@ function delSingleRecord(biblionumber) {
     var arrayRecords = valCookie.split("/");
     var pos = jQuery.inArray(biblionumber, arrayRecords);
     arrayRecords.splice(pos, 1);
+
+    //if cart is empty, bail
+    if (pos <= -1) {
+        return;
+    }
+
     valCookie = arrayRecords.join("/");
     writeCookie(nameCookie, valCookie);
     updateBasket(arrayRecords.length - 1);

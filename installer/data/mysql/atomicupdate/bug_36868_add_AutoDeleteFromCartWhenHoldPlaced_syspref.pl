@@ -8,14 +8,21 @@ return {
         my ($args) = @_;
         my ( $dbh, $out ) = @$args{qw(dbh out)};
 
-        # Do your stuff here
+        my $exists = $dbh->selectrow_array(
+            q{SELECT 1 FROM systempreferences WHERE variable = 'AutoDeleteFromCartWhenHoldPlaced'});
+
+        if ($exists) {
+            say_warning( $out, "System preference 'AutoDeleteFromCartWhenHoldPlaced' already exists, skipping" );
+            return;
+        }
+
         $dbh->do(
             q{
             INSERT IGNORE INTO systempreferences ( `variable`, `value`, `options`, `explanation`, `type` ) VALUES
             ('AutoDeleteFromCartWhenHoldPlaced', '','', 'Automatically delete items from cart when a hold is placed','Choice')
         }
         );
+        say_success( $out, "Added new system preference 'AutoDeleteFromCartWhenHoldPlaced'" );
 
-        say $out "Added new system preference 'AutoDeleteFromCartWhenHoldPlaced'";
     },
 };
