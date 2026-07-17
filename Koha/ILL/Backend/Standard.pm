@@ -147,8 +147,9 @@ sub metadata {
     my ( $self, $request ) = @_;
 
     my @ignore = (
-        'requested_partners', 'type', 'type_disclaimer_value', 'type_disclaimer_date', 'unauthenticated_first_name',
-        'unauthenticated_last_name', 'unauthenticated_email', 'historycheck_requests', 'copyrightclearance_confirmed'
+        'requested_partners',         'type', 'type_disclaimer_value', 'type_disclaimer_date', 'type_disclaimer_text',
+        'unauthenticated_first_name', 'unauthenticated_last_name', 'unauthenticated_email', 'historycheck_requests',
+        'copyrightclearance_confirmed'
     );
 
     # Use database-level filtering instead of manual iteration

@@ -126,6 +126,11 @@ Actions that need to be done after the request has been created
 sub after_request_created {
     my ( $self, $params, $request ) = @_;
 
+    my $disc_info = $self->_get_type_disclaimer_info(
+        $self->_get_type_disclaimer_sys_pref,
+        $params->{type}
+    );
+
     # Store type disclaimer date and value
     my $type_disclaimer_date = {
         illrequest_id => $request->illrequest_id,
@@ -142,6 +147,14 @@ sub after_request_created {
         readonly      => 0
     };
     Koha::ILL::Request::Attribute->new($type_disclaimer_value)->store;
+
+    my $type_disclaimer_text = {
+        illrequest_id => $request->illrequest_id,
+        type          => "type_disclaimer_text",
+        value         => $disc_info->{text},
+        readonly      => 0
+    };
+    Koha::ILL::Request::Attribute->new($type_disclaimer_text)->store;
 }
 
 =head3 _get_type_disclaimer_info
