@@ -186,32 +186,24 @@ sub add {
 
         if ( $availability->needs_confirmation ) {
 
-            # NotIssued alone does not require confirmation — matches
-            # the staff interface behavior (just shows a message)
-            my $confirmations = $availability->confirmations;
-            my @keys          = keys %$confirmations;
-            my $only_not_issued = ( scalar @keys == 1 && $keys[0] eq 'NotIssued' );
+            $availability->set_context( item => $item );
+            $availability->set_context( user => $user );
 
-            unless ($only_not_issued) {
-                $availability->set_context( item => $item );
-                $availability->set_context( user => $user );
+            my $confirmed = 0;
 
-                my $confirmed = 0;
+            if ( my $token = $c->param('confirmation') ) {
+                $confirmed = $availability->check_token($token);
+            }
 
-                if ( my $token = $c->param('confirmation') ) {
-                    $confirmed = $availability->check_token($token);
-                }
-
-                unless ($confirmed) {
-                    return $c->render(
-                        status  => 412,
-                        openapi => {
-                            error      => 'Confirmation required',
-                            error_code => 'confirmation_required',
-                            %{ $availability->to_api },
-                        }
-                    );
-                }
+            unless ($confirmed) {
+                return $c->render(
+                    status  => 412,
+                    openapi => {
+                        error      => 'Confirmation required',
+                        error_code => 'confirmation_required',
+                        %{ $availability->to_api },
+                    }
+                );
             }
         }
 
