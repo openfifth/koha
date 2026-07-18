@@ -19,7 +19,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 10;
+use Test::More tests => 11;
 use Test::NoWarnings;
 
 use t::lib::TestBuilder;
@@ -53,7 +53,7 @@ subtest 'check() - item exists' => sub {
     $schema->storage->txn_rollback;
 };
 
-subtest 'check() - BlockedWithdrawn blocker' => sub {
+subtest 'check() - blocked_withdrawn blocker' => sub {
 
     plan tests => 4;
 
@@ -70,11 +70,11 @@ subtest 'check() - BlockedWithdrawn blocker' => sub {
         }
     );
 
-    # Not checked out: blocker and NotIssued confirmation
+    # Not checked out: blocker and NotIssued warning
     my $result = $item->checkin_availability( { library => $library->branchcode } );
 
-    is( $result->blockers->{BlockedWithdrawn}, 1,              'BlockedWithdrawn blocker set' );
-    is( $result->confirmations->{NotIssued},   $item->barcode, 'NotIssued confirmation set for non-checked-out item' );
+    is( $result->blockers->{blocked_withdrawn}, 1,              'blocked_withdrawn blocker set' );
+    is( $result->warnings->{not_issued},   $item->barcode, 'NotIssued warning set for non-checked-out item' );
 
     # Checked out: blocker but no NotIssued, context has checkout/patron
     my $patron   = $builder->build_object( { class => 'Koha::Patrons' } );
@@ -90,7 +90,7 @@ subtest 'check() - BlockedWithdrawn blocker' => sub {
 
     $result = $item->checkin_availability( { library => $library->branchcode } );
 
-    is( $result->blockers->{BlockedWithdrawn}, 1,                'BlockedWithdrawn blocker set for checked-out item' );
+    is( $result->blockers->{blocked_withdrawn}, 1,                'blocked_withdrawn blocker set for checked-out item' );
     is( ref( $result->context->{checkout} ),   'Koha::Checkout', 'checkout context preserved when blocked' );
 
     $schema->storage->txn_rollback;
@@ -117,12 +117,12 @@ subtest 'check() - withdrawn warning (not blocked)' => sub {
 
     ok( $result->available, 'no blockers when BlockReturnOfWithdrawnItems is off' );
     is( $result->warnings->{withdrawn},      1,              'withdrawn warning set' );
-    is( $result->confirmations->{NotIssued}, $item->barcode, 'NotIssued confirmation still set' );
+    is( $result->warnings->{not_issued}, $item->barcode, 'NotIssued warning still set' );
 
     $schema->storage->txn_rollback;
 };
 
-subtest 'check() - BlockedLost blocker' => sub {
+subtest 'check() - blocked_lost blocker' => sub {
 
     plan tests => 4;
 
@@ -139,15 +139,15 @@ subtest 'check() - BlockedLost blocker' => sub {
         }
     );
 
-    # Not checked out: blocker and NotIssued confirmation
+    # Not checked out: blocker and NotIssued warning
     my $result = $item->checkin_availability(
         {
             library => $library->branchcode,
         }
     );
 
-    is( $result->blockers->{BlockedLost},    1,              'BlockedLost blocker set' );
-    is( $result->confirmations->{NotIssued}, $item->barcode, 'NotIssued confirmation set for non-checked-out item' );
+    is( $result->blockers->{blocked_lost},    1,              'blocked_lost blocker set' );
+    is( $result->warnings->{not_issued}, $item->barcode, 'NotIssued warning set for non-checked-out item' );
 
     # Checked out: blocker but checkout context preserved
     my $patron   = $builder->build_object( { class => 'Koha::Patrons' } );
@@ -167,7 +167,7 @@ subtest 'check() - BlockedLost blocker' => sub {
         }
     );
 
-    is( $result->blockers->{BlockedLost},    1,                'BlockedLost blocker set for checked-out item' );
+    is( $result->blockers->{blocked_lost},    1,                'blocked_lost blocker set for checked-out item' );
     is( ref( $result->context->{checkout} ), 'Koha::Checkout', 'checkout context preserved when blocked' );
 
     $schema->storage->txn_rollback;
@@ -206,9 +206,9 @@ subtest 'check() - Wrongbranch blocker' => sub {
         }
     );
 
-    is( ref( $result->blockers->{Wrongbranch} ),         'HASH',                   'Wrongbranch blocker is hashref' );
-    is( $result->blockers->{Wrongbranch}->{Wrongbranch}, $wrongbranch->branchcode, 'wrong branch recorded' );
-    is( $result->blockers->{Wrongbranch}->{Rightbranch}, $homebranch->branchcode,  'right branch recorded' );
+    is( ref( $result->blockers->{wrong_branch} ),         'HASH',                   'Wrongbranch blocker is hashref' );
+    is( $result->blockers->{wrong_branch}->{wrong_branch}, $wrongbranch->branchcode, 'wrong branch recorded' );
+    is( $result->blockers->{wrong_branch}->{right_branch}, $homebranch->branchcode,  'right branch recorded' );
 
     # Test holdingbranch restriction
     t::lib::Mocks::mock_preference( 'AllowReturnToBranch', 'holdingbranch' );
@@ -219,11 +219,11 @@ subtest 'check() - Wrongbranch blocker' => sub {
     );
 
     is(
-        $result->blockers->{Wrongbranch}->{Wrongbranch}, $wrongbranch->branchcode,
+        $result->blockers->{wrong_branch}->{wrong_branch}, $wrongbranch->branchcode,
         'wrong branch recorded for holdingbranch'
     );
     is(
-        $result->blockers->{Wrongbranch}->{Rightbranch}, $holdingbranch->branchcode,
+        $result->blockers->{wrong_branch}->{right_branch}, $holdingbranch->branchcode,
         'holding branch recorded as right branch'
     );
 
@@ -236,7 +236,7 @@ subtest 'check() - Wrongbranch blocker' => sub {
     );
 
     is(
-        $result->blockers->{Wrongbranch}->{Wrongbranch}, $wrongbranch->branchcode,
+        $result->blockers->{wrong_branch}->{wrong_branch}, $wrongbranch->branchcode,
         'wrong branch recorded for homeorholdingbranch'
     );
 
@@ -248,13 +248,13 @@ subtest 'check() - Wrongbranch blocker' => sub {
         }
     );
 
-    is( $result->blockers->{Wrongbranch}, undef, 'no Wrongbranch blocker when anywhere allowed' );
+    is( $result->blockers->{wrong_branch}, undef, 'no Wrongbranch blocker when anywhere allowed' );
     is( keys %{ $result->blockers },      0,     'no blockers when anywhere allowed' );
 
     $schema->storage->txn_rollback;
 };
 
-subtest 'check() - NotIssued confirmation' => sub {
+subtest 'check() - NotIssued warning' => sub {
 
     plan tests => 4;
 
@@ -275,7 +275,7 @@ subtest 'check() - NotIssued confirmation' => sub {
     );
 
     is( keys %{ $result->blockers },         0,              'no blockers for not issued item' );
-    is( $result->confirmations->{NotIssued}, $item->barcode, 'NotIssued confirmation set with barcode' );
+    is( $result->warnings->{not_issued}, $item->barcode, 'NotIssued warning set with barcode' );
     is( $result->context->{checkout},        undef,          'checkout is undef when not checked out' );
     is( $result->context->{patron},          undef,          'patron is undef when not checked out' );
 
@@ -356,9 +356,9 @@ subtest 'check() - multiple simultaneous blockers' => sub {
 
     ok( !$result->available, 'item is not available for check-in' );
     is( keys %{ $result->blockers },                     3, 'all three blockers reported simultaneously' );
-    is( $result->blockers->{BlockedWithdrawn},           1, 'BlockedWithdrawn blocker present' );
-    is( $result->blockers->{Wrongbranch}->{Rightbranch}, $homebranch->branchcode, 'Wrongbranch blocker present' );
-    is( $result->blockers->{BlockedLost},                1,                       'BlockedLost blocker present' );
+    is( $result->blockers->{blocked_withdrawn},           1, 'blocked_withdrawn blocker present' );
+    is( $result->blockers->{wrong_branch}->{right_branch}, $homebranch->branchcode, 'Wrongbranch blocker present' );
+    is( $result->blockers->{blocked_lost},                1,                       'blocked_lost blocker present' );
 
     $schema->storage->txn_rollback;
 };
@@ -397,7 +397,57 @@ subtest 'check() - default short-circuits on first blocker' => sub {
 
     ok( !$result->available, 'item is not available for check-in' );
     is( keys %{ $result->blockers },           1, 'only first blocker reported (short-circuited)' );
-    is( $result->blockers->{BlockedWithdrawn}, 1, 'BlockedWithdrawn is the first blocker' );
+    is( $result->blockers->{blocked_withdrawn}, 1, 'blocked_withdrawn is the first blocker' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'check() - CircConfirmItemParts confirmation' => sub {
+
+    plan tests => 6;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'BlockReturnOfWithdrawnItems', 0 );
+    t::lib::Mocks::mock_preference( 'BlockReturnOfLostItems',      0 );
+    t::lib::Mocks::mock_preference( 'AllowReturnToBranch',         'anywhere' );
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+
+    # Item with materials and pref enabled
+    t::lib::Mocks::mock_preference( 'CircConfirmItemParts', 1 );
+    my $item_with_materials = $builder->build_object(
+        {
+            class => 'Koha::Items',
+            value => { withdrawn => 0, itemlost => 0, materials => '1 CD + 1 booklet' }
+        }
+    );
+
+    my $result = $item_with_materials->checkin_availability( { library => $library->branchcode } );
+
+    ok( $result->needs_confirmation, 'needs_confirmation is true for item with materials' );
+    is( $result->confirmations->{item_parts}, '1 CD + 1 booklet', 'item_parts confirmation carries materials value' );
+
+    # Item without materials - no confirmation
+    my $item_no_materials = $builder->build_object(
+        {
+            class => 'Koha::Items',
+            value => { withdrawn => 0, itemlost => 0, materials => undef }
+        }
+    );
+
+    $result = $item_no_materials->checkin_availability( { library => $library->branchcode } );
+
+    ok( !$result->needs_confirmation, 'no confirmation for item without materials' );
+    is( $result->confirmations->{item_parts}, undef, 'no item_parts confirmation' );
+
+    # Pref disabled - no confirmation even with materials
+    t::lib::Mocks::mock_preference( 'CircConfirmItemParts', 0 );
+
+    $result = $item_with_materials->checkin_availability( { library => $library->branchcode } );
+
+    ok( !$result->needs_confirmation, 'no confirmation when CircConfirmItemParts is off' );
+    is( $result->confirmations->{item_parts}, undef, 'no item_parts confirmation when pref off' );
 
     $schema->storage->txn_rollback;
 };

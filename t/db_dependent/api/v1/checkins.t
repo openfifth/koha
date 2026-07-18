@@ -64,15 +64,15 @@ subtest 'get_availability' => sub {
     # Item not found
     $t->get_ok("//$userid:$password\@/api/v1/checkins/availability?item_id=999999999")->status_is(404);
 
-    # Item not checked out - NotIssued confirmation + token
+    # Item not checked out - not_issued warning + token
     $t->get_ok( "//$userid:$password\@/api/v1/checkins/availability?item_id="
             . $item->id
             . "&library_id="
             . $library->branchcode )
         ->status_is(200)
         ->json_is( '/blockers' => {} )
-        ->json_has('/confirms/NotIssued')
-        ->json_has('/confirmation_token');
+        ->json_has('/warnings/not_issued')
+        ->json_is( '/confirmation_token' => undef );
 
     # Item checked out - no confirmations, no token
     t::lib::Mocks::mock_userenv( { branchcode => $library->branchcode } );
@@ -91,7 +91,7 @@ subtest 'get_availability' => sub {
     $t->get_ok( "//$userid:$password\@/api/v1/checkins/availability?item_id="
             . $withdrawn_item->id
             . "&library_id="
-            . $library->branchcode )->status_is(200)->json_has('/blockers/BlockedWithdrawn');
+            . $library->branchcode )->status_is(200)->json_has('/blockers/blocked_withdrawn');
 
     $schema->storage->txn_rollback;
 };

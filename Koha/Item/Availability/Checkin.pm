@@ -117,14 +117,14 @@ sub check {
         $result->set_context( patron   => $checkout->patron );
     } else {
 
-        # Item not checked out
-        $result->add_confirmation( NotIssued => $item->barcode );
+        # Item not checked out - informational, does not block checkin
+        $result->add_warning( not_issued => $item->barcode );
     }
 
     # Check if item is withdrawn
     if ( $item->withdrawn ) {
         if ( C4::Context->preference("BlockReturnOfWithdrawnItems") ) {
-            $result->add_blocker( BlockedWithdrawn => 1 );
+            $result->add_blocker( blocked_withdrawn => 1 );
             return $result unless $no_short_circuit;
         } else {
             $result->add_warning( withdrawn => 1 );
@@ -136,9 +136,9 @@ sub check {
         $item->can_be_returned_at( { library => $library, to_library => $to_library } );
     unless ($returnallowed) {
         $result->add_blocker(
-            Wrongbranch => {
-                Wrongbranch => $library,
-                Rightbranch => $message
+            wrong_branch => {
+                wrong_branch => $library,
+                right_branch => $message
             }
         );
         return $result unless $no_short_circuit;
@@ -146,7 +146,12 @@ sub check {
 
     # Check if item is lost and blocked
     if ( $item->itemlost && C4::Context->preference("BlockReturnOfLostItems") ) {
-        $result->add_blocker( BlockedLost => 1 );
+        $result->add_blocker( blocked_lost => 1 );
+    }
+
+    # Multi-part item requires staff confirmation before checkin
+    if ( C4::Context->preference("CircConfirmItemParts") && $item->materials ) {
+        $result->add_confirmation( item_parts => $item->materials );
     }
 
     return $result;

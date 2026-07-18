@@ -149,7 +149,12 @@
         description: |
           Checkin blocked or forbidden. Possible `error_code` attribute values:
 
-          * `checkin_blocked` - Item has blockers (withdrawn, lost, wrong branch). See `blockers` object.
+          * `checkin_blocked` - Item has blockers preventing checkin.
+            Possible keys in the `blockers` object:
+            - `blocked_withdrawn` - Item is withdrawn (BlockReturnOfWithdrawnItems enabled)
+            - `blocked_lost` - Item is lost (BlockReturnOfLostItems enabled)
+            - `wrong_branch` - Item cannot be returned at this branch (AllowReturnToBranch policy).
+              Value is an object with `wrong_branch` and `right_branch` keys.
           * `no_permission_for_exempt_fine` - updatecharges.writeoff permission required
         schema:
           $ref: "../swagger.yaml#/definitions/error"
@@ -161,7 +166,11 @@
         description: |
           Confirmation required. Possible `error_code` attribute values:
 
-          * `confirmation_required`
+          * `confirmation_required` - Staff must confirm before checkin proceeds.
+            Possible keys in the `confirms` object:
+            - `item_parts` - Item has accompanying materials (CircConfirmItemParts enabled).
+              Value is the materials description string.
+            Response includes a `confirmation_token` JWT to pass back on retry.
         schema:
           $ref: "../swagger.yaml#/definitions/error"
       "500":
