@@ -811,6 +811,8 @@
                                                             <span>Interlibrary loan unavailable</span>
                                                         [% ELSIF ( prefs.Ill_update ) %]
                                                             <span>Interlibrary loan updated</span>
+                                                        [% ELSIF ( prefs.Ill_disclaimer ) %]
+                                                            <span>Interlibrary loan type disclaimer received</span>
                                                         [% ELSIF ( prefs.Auto_Renewals ) %]
                                                             <span>Auto renewal</span>
                                                         [% ELSIF ( prefs.Hold_Reminder ) %]

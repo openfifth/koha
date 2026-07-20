@@ -40,6 +40,7 @@ use Koha::ILL::Batches;
 use Koha::ILL::Comments;
 use Koha::ILL::Request::Attributes;
 use Koha::ILL::Request::Logger;
+use Koha::ILL::TypeDisclaimerPrompts;
 use Koha::ItemTypes;
 use Koha::Items;
 use Koha::Libraries;
@@ -266,6 +267,20 @@ sub library {
     my ($self) = @_;
 
     return Koha::Library->_new_from_dbic( scalar $self->_result->library );
+}
+
+=head3 type_disclaimer_prompts
+
+    my $prompts = $request->type_disclaimer_prompts;
+
+Returns the linked I<Koha::ILL::TypeDisclaimerPrompts> objects.
+
+=cut
+
+sub type_disclaimer_prompts {
+    my ($self) = @_;
+
+    return Koha::ILL::TypeDisclaimerPrompts->_new_from_dbic( scalar $self->_result->ill_type_disclaimer_prompts );
 }
 
 =head3 extended_attributes
@@ -1926,7 +1941,8 @@ sub send_patron_notice {
     my %message_name = (
         ILL_PICKUP_READY    => 'Ill_ready',
         ILL_REQUEST_UNAVAIL => 'Ill_unavailable',
-        ILL_REQUEST_UPDATE  => 'Ill_update'
+        ILL_REQUEST_UPDATE  => 'Ill_update',
+        ILL_DISCLAIMER      => 'Ill_disclaimer',
     );
 
     # Get the patron's messaging preferences
@@ -1938,7 +1954,7 @@ sub send_patron_notice {
     );
     my @transports = keys %{ $borrower_preferences->{transports} };
 
-    return { result => { fail => [ 'email', 'sms' ], success => [] } } unless @transports;
+    return { result => { disabled => 1, fail => [], success => [] } } unless @transports;
 
     # Notice should come from the library where the request was placed,
     # not the patrons home library
@@ -2077,6 +2093,8 @@ sub get_notice {
 
     my $illrequestattributes = { map { $_->type => $_->value } $self->extended_attributes->as_list };
 
+    my $prompt = $self->type_disclaimer_prompts->find( { patron_id => $self->borrowernumber } );
+
     my $letter = C4::Letters::GetPreparedLetter(
         module                 => 'ill',
         letter_code            => $params->{notice_code},
@@ -2090,11 +2108,20 @@ sub get_notice {
             branches    => $self->branchcode,
         },
         substitute => {
-            ill_bib_title        => $title  ? $title->value  : '',
-            ill_bib_author       => $author ? $author->value : '',
-            ill_full_metadata    => $metastring,
-            additional_text      => $params->{additional_text},
-            illrequestattributes => $illrequestattributes,
+            ill_bib_title              => $title  ? $title->value  : '',
+            ill_bib_author             => $author ? $author->value : '',
+            ill_full_metadata          => $metastring,
+            additional_text            => $params->{additional_text},
+            illrequestattributes       => $illrequestattributes,
+            type_disclaimer_prompt_url => (
+                $prompt
+                ? C4::Context->preference('OPACBaseURL')
+                    . '/cgi-bin/koha/opac-illrequest-type-disclaimer.pl?illrequest_id='
+                    . $self->illrequest_id
+                    . '&uuid='
+                    . $prompt->uuid
+                : ''
+            ),
         }
     );
 

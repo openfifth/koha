@@ -13,4 +13,5 @@ values
 (11, 'Ill_update', 0),
 (12, 'Recall_Waiting', 0),
 (13, 'Recall_Requested', 0),
-(14, 'Patron_Expiry', 0);
+(14, 'Patron_Expiry', 0),
+(15, 'Ill_disclaimer', 0);

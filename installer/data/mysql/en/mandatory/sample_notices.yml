@@ -1182,6 +1182,39 @@ tables:
             - "[% ill_full_metadata %]"
 
         - module: ill
+          code: ILL_DISCLAIMER
+          branchcode: ""
+          name: "ILL request requires accepting disclaimer"
+          is_html: 0
+          title: "Interlibrary loan request requires accepting disclaimer"
+          message_transport_type: email
+          lang: default
+          content:
+            - "Dear [% borrower.firstname %] [% borrower.surname %],"
+            - ""
+            - "The Interlibrary loans request number [% illrequest.illrequest_id %] you placed for:"
+            - ""
+            - "- [% ill_bib_title %] - [% ill_bib_author %]"
+            - ""
+            - "requires accepting a disclaimer."
+            - ""
+            - "You may access the disclaimer at the following URL:"
+            - "  [% type_disclaimer_prompt_url %]"
+            - ""
+            - "Kind regards"
+            - ""
+            - "[% branch.branchname %]"
+            - "[% branch.branchaddress1 %]"
+            - "[% branch.branchaddress2 %]"
+            - "[% branch.branchaddress3 %]"
+            - "[% branch.branchcity %]"
+            - "[% branch.branchstate %]"
+            - "[% branch.branchzip %]"
+            - "[% branch.branchphone %]"
+            - "[% branch.branchillemail %]"
+            - "[% branch.branchemail %]"
+
+        - module: ill
           code: ILL_PARTNER_REQ
           branchcode: ""
           name: "ILL request to partners"
