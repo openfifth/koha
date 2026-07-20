@@ -1466,6 +1466,21 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 ill_type_disclaimer_prompts
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::IllTypeDisclaimerPrompt>
+
+=cut
+
+__PACKAGE__->has_many(
+  "ill_type_disclaimer_prompts",
+  "Koha::Schema::Result::IllTypeDisclaimerPrompt",
+  { "foreign.patron_id" => "self.borrowernumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 illbatches
 
 Type: has_many
@@ -2242,8 +2257,8 @@ Composing rels: L</user_permissions> -> permission
 __PACKAGE__->many_to_many("permissions", "user_permissions", "permission");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-04-14 10:19:11
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:Tptr5nUuS5haVck624FS3Q
+# Created by DBIx::Class::Schema::Loader v0.07053 @ 2026-07-20 09:28:37
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:X4Ve/y+/ThXd6keQ1q8pfA
 
 __PACKAGE__->belongs_to(
   "library",
