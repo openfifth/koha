@@ -239,11 +239,12 @@ END_SQL
         'Ill_ready'        => 5,
         'Ill_unavailable'  => 6,
         'Ill_update'       => 7,
-        'Item_Checkout'    => 8,
-        'Auto_Renewals'    => 9,
-        'Advance_Notice'   => 10,
-        'Item_Due'         => 11,
-        'Item_Check_in'    => 12
+        'Ill_disclaimer'   => 8,
+        'Item_Checkout'    => 9,
+        'Auto_Renewals'    => 10,
+        'Advance_Notice'   => 11,
+        'Item_Due'         => 12,
+        'Item_Check_in'    => 13
     );
 
     @return =
