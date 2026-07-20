@@ -354,6 +354,12 @@
                                     </fieldset>
                                 </form>
                             </div>
+                        [% ELSIF op == 'typedisclaimer_confirmed' %]
+                            <h1>Type Disclaimer Confirmed</h1>
+                            <div id="results" class="page-section">
+                                [% INCLUDE messages %]
+                                <p>Your response to the type disclaimer has been confirmed.</p>
+                            </div>
                         [% ELSIF op == 'historycheck' %]
                             <h1>Request history check</h1>
                             <div id="results" class="page-section">
