@@ -488,6 +488,8 @@
                     [% IF error %]
                         [% IF error == 'migrate_target' %]
                             <div class="alert alert-warning"> The backend you tried to migrate to does not yet support migrations, please try again with an alternative target. </div>
+                        [% ELSIF error == 'no_type_disclaimer' %]
+                            <div class="alert alert-warning"> There is no associated type disclaimer with this request type. </div>
                         [% END %]
                     [% END %]
 
@@ -510,6 +512,9 @@
                             [% fail_methods.push('SMS') %]
                         [% END %]
                         <div class="alert alert-warning"> The requested notice was NOT queued for delivery by [% fail_methods.join(', ') | html %] </div>
+                    [% END %]
+                    [% IF tran_disabled %]
+                        <div class="alert alert-warning"> The requested notice was NOT queued for delivery, as the patron had no messaging preferences enabled. </div>
                     [% END %]
 
                     <h1>Manage ILL request [% request.id_prefix _ request.illrequest_id | html %]</h1>
@@ -613,6 +618,11 @@
                                                 >[% notice.name | html %]</a
                                             ></li
                                         >
+                                    [% END %]
+                                    [% IF Koha.Preference('ILLModuleDisclaimerByType') %]
+                                        <li>
+                                            <a class="dropdown-item" href="/cgi-bin/koha/ill/ill-requests.pl?op=prompt_type_disclaimer&amp;illrequest_id=[% request.illrequest_id | uri %]">Prompt type disclaimer to user</a>
+                                        </li>
                                     [% END %]
                                 </ul>
                             </div>

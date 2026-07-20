@@ -28,5 +28,38 @@ return {
             );
             say_success( $out, 'Created ill_type_disclaimer_prompts table' );
         }
+
+        $dbh->do(
+            q{
+                INSERT IGNORE INTO `message_attributes`
+                    (message_name, `takes_days`)
+                VALUES ('Ill_disclaimer', 0)
+            }
+        );
+        say_success( $out, "Message attribute 'Ill_disclaimer' added" );
+
+        my $ready_id = $dbh->last_insert_id( undef, undef, 'message_attributes', undef );
+        if ( defined $ready_id ) {
+            $dbh->do(
+                qq(INSERT IGNORE INTO message_transports (message_attribute_id, message_transport_type, is_digest, letter_module, letter_code) VALUES ($ready_id, 'email', 0, 'ill', 'ILL_DISCLAIMER');)
+            );
+            $dbh->do(
+                qq(INSERT IGNORE INTO message_transports (message_attribute_id, message_transport_type, is_digest, letter_module, letter_code) VALUES ($ready_id, 'sms', 0, 'ill', 'ILL_DISCLAIMER');)
+            );
+            $dbh->do(
+                qq(INSERT IGNORE INTO message_transports (message_attribute_id, message_transport_type, is_digest, letter_module, letter_code) VALUES ($ready_id, 'phone', 0, 'ill', 'ILL_DISCLAIMER');)
+            );
+
+            # Enable this preference via email for every patron by default
+            $dbh->do(
+                qq(INSERT IGNORE INTO borrower_message_preferences (borrowernumber, message_attribute_id) SELECT borrowernumber, $ready_id FROM borrowers;)
+            );
+
+            $dbh->do(
+                qq(INSERT IGNORE INTO borrower_message_transport_preferences (borrower_message_preference_id, message_transport_type) SELECT borrower_message_preference_id, 'email' FROM borrower_message_preferences WHERE message_attribute_id=$ready_id;)
+            );
+
+            say_success( $out, "Message transports for 'Ill_disclaimer' added" );
+        }
     },
 };

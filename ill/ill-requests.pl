@@ -25,6 +25,7 @@ use C4::Auth   qw( get_template_and_user );
 use C4::Output qw( output_and_exit output_html_with_http_headers );
 use Koha::Notice::Templates;
 use Koha::AuthorisedValues;
+use Koha::DateUtils qw( dt_from_string );
 use Koha::ILL::Comment;
 use Koha::ILL::Requests;
 use Koha::ILL::Request;
@@ -39,6 +40,7 @@ use Koha::Plugins;
 use Try::Tiny   qw( catch try );
 use URI::Escape qw( uri_escape_utf8 );
 use JSON        qw( encode_json );
+use UUID        qw(uuid4);
 
 our $cgi = CGI->new;
 my $illRequests = Koha::ILL::Requests->new;
@@ -117,8 +119,9 @@ if ($backends_available) {
         $template->param(
             notices => $notices,
             request => $request,
-            ( $params->{tran_fail}    ? ( tran_fail    => $params->{tran_fail} )    : () ),
-            ( $params->{tran_success} ? ( tran_success => $params->{tran_success} ) : () ),
+            ( $params->{tran_fail}     ? ( tran_fail     => $params->{tran_fail} )     : () ),
+            ( $params->{tran_success}  ? ( tran_success  => $params->{tran_success} )  : () ),
+            ( $params->{tran_disabled} ? ( tran_disabled => $params->{tran_disabled} ) : () ),
         );
 
         output_and_exit( $cgi, $cookie, $template, 'unknown_ill_request' ) if !$request;
@@ -127,6 +130,9 @@ if ($backends_available) {
         $template->param(
             whole => $backend_result,
         ) if $backend_result;
+
+        $template->param( error => $params->{error} )
+            if $params->{error};
 
     } elsif ( $op eq 'cud-create' ) {
 
@@ -481,6 +487,9 @@ if ($backends_available) {
         if ( $ret->{result} && scalar @{ $ret->{result}->{fail} } > 0 ) {
             $append .= '&tran_fail=' . join( ',', @{ $ret->{result}->{fail} } );
         }
+        if ( $ret->{result} && $ret->{result}->{disabled} ) {
+            $append .= '&tran_disabled=1';
+        }
 
         # Redirect to view the whole request
         print $cgi->redirect(
@@ -498,6 +507,49 @@ if ($backends_available) {
                 "/cgi-bin/koha/ill/ill-requests.pl?op=illview&illrequest_id=" . scalar $params->{illrequest_id} );
             exit;
         }
+    } elsif ( $op eq 'prompt_type_disclaimer' ) {
+        my $illrequest_id = $params->{illrequest_id};
+        my $request       = Koha::ILL::Requests->find($illrequest_id);
+        $params->{stage} = 'form';
+        $params->{type}  = $request->get_type();
+
+        # Verify there is a type disclaimer to show the patron in the OPAC
+        my $type_disclaimer = Koha::ILL::Request::Workflow::TypeDisclaimer->new( $params, 'opac' );
+        unless ( $type_disclaimer->show_type_disclaimer($request) ) {
+            print $cgi->redirect(
+                "/cgi-bin/koha/ill/ill-requests.pl?op=illview&error=no_type_disclaimer&illrequest_id="
+                    . scalar $params->{illrequest_id} );
+            exit;
+        }
+
+        # If a type_disclaimer_prompt already exists, use it to send another email without creating
+        # another one.
+
+        $request->type_disclaimer_prompts->find_or_create(
+            {
+                uuid        => uuid4(),
+                patron_id   => $request->borrowernumber,
+                valid_until => dt_from_string->add( days => 7 ),
+            },
+            { key => 'ill_type_disclaimer_uniq' }
+        );
+
+        my $ret    = $request->send_patron_notice('ILL_DISCLAIMER');
+        my $append = '';
+        if ( $ret->{result} && scalar @{ $ret->{result}->{success} } > 0 ) {
+            $append .= '&tran_success=' . join( ',', @{ $ret->{result}->{success} } );
+        }
+        if ( $ret->{result} && scalar @{ $ret->{result}->{fail} } > 0 ) {
+            $append .= '&tran_fail=' . join( ',', @{ $ret->{result}->{fail} } );
+        }
+        if ( $ret->{result} && $ret->{result}->{disabled} ) {
+            $append .= '&tran_disabled=1';
+        }
+
+        # Redirect to view the whole request
+        print $cgi->redirect(
+            "/cgi-bin/koha/ill/ill-requests.pl?op=illview&illrequest_id=" . scalar $params->{illrequest_id} . $append );
+        exit;
     } elsif ( $op eq 'clear_disclaimer' ) {
         my $illrequest_id   = $params->{illrequest_id};
         my $request         = Koha::ILL::Requests->find($illrequest_id);

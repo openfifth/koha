@@ -1547,7 +1547,7 @@ Attribute: Pages=[% illrequestattributes.pages %]
     my $no_message_preferences_return = $illrq_obj->send_patron_notice('ILL_PICKUP_READY');
     is_deeply(
         $no_message_preferences_return,
-        { result => { fail => [ 'email', 'sms' ], success => [] } },
+        { result => { disabled => 1, fail => [], success => [] } },
         "Correct error when patron has no message preferences"
     );
 
