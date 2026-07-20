@@ -123,7 +123,9 @@ sub type_disclaimer_template_params {
 
     $type_disclaimer->after_request_created($params, $request);
 
-Actions that need to be done after the request has been created
+Actions that need to be done after the request has been created.
+
+Returns 1 on success, 0 on failure.
 
 =cut
 
@@ -134,6 +136,10 @@ sub after_request_created {
         $self->_get_type_disclaimer_sys_pref,
         $params->{type}
     );
+
+    # Validate required parameters before creating record of disclaimer
+    return 0
+        unless $params->{type_disclaimer_value} && $disc_info->{text};
 
     # Store type disclaimer date and value
     my $type_disclaimer_date = {
@@ -159,6 +165,8 @@ sub after_request_created {
         readonly      => 0
     };
     Koha::ILL::Request::Attribute->new($type_disclaimer_text)->store;
+
+    return 1;
 }
 
 =head3 clear_type_disclaimer
