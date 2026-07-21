@@ -298,6 +298,7 @@ $(document).ready(function () {
                 "+strings",
                 "biblio",
                 "comments+count",
+                "completed_type_disclaimer_prompts+count",
                 "extended_attributes",
                 "ill_batch",
                 "library",
@@ -490,6 +491,13 @@ $(document).ready(function () {
                     orderable: true,
                     render: function (data, type, row, meta) {
                         return $date(data);
+                    },
+                },
+                {
+                    data: "completed_type_disclaimer_prompts_count",
+                    orderable: true,
+                    render: function (data, type, row, meta) {
+                        return data > 0 ? 1 : 0;
                     },
                 },
                 {
