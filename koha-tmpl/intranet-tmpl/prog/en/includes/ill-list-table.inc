@@ -20,6 +20,7 @@
             <th scope="col" class="updated_formatted">Updated on</th>
             <th scope="col">Replied</th>
             <th scope="col" class="completed_formatted">Completed on</th>
+            <th scope="col">Type disclaimer prompt replied</th>
             <th scope="col">Access URL</th>
             <th scope="col">Cost</th>
             <th scope="col">Price paid</th>

@@ -119,6 +119,11 @@ properties:
       - integer
       - "null"
     description: The linked comment objects count (x-koha-embed)
+  completed_type_disclaimer_prompts_count:
+    type:
+      - integer
+      - "null"
+    description: The linked completed type disclaimer prompt objects count (x-koha-embed)
   extended_attributes:
     type:
       - array

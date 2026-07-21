@@ -26,6 +26,7 @@
             - biblio
             - comments
             - comments+count
+            - completed_type_disclaimer_prompts+count
             - extended_attributes
             - ill_batch
             - library

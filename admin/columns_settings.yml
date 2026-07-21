@@ -1162,6 +1162,9 @@ modules:
             -
               columnname: completed_formatted
             -
+              columnname: type_disclaimer_prompt_replied
+              is_hidden: 1
+            -
               columnname: accessurl
             -
               columnname: cost
