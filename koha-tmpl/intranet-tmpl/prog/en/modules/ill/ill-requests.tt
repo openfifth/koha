@@ -705,18 +705,14 @@
                                         [% END %]
                                     </li>
                                 [% END %]
-                                [% type_disclaimer_value = request.get_type_disclaimer_value %]
-                                [% IF type_disclaimer_value %]
-                                    <li class="type_disclaimer_value">
-                                        <span class="label type_disclaimer_value">Type disclaimer value:</span>
-                                        [% type_disclaimer_value | html %]
-                                    </li>
-                                [% END %]
-                                [% type_disclaimer_date = request.get_type_disclaimer_date %]
-                                [% IF type_disclaimer_date %]
-                                    <li class="type_disclaimer_date">
-                                        <span class="label type_disclaimer_date">Type disclaimer date:</span>
-                                        [% type_disclaimer_date | $KohaDates with_hours => 1 %]
+                                [% IF Koha.Preference('ILLModuleDisclaimerByType') %]
+                                    <li class="type_disclaimer_modal">
+                                        <span class="label type_disclaimer_value">Type disclaimer:</span>
+                                        [% IF !request.get_type_disclaimer_date %]
+                                            <a href="/cgi-bin/koha/ill/ill-requests.pl?op=fill_in_disclaimer&amp;illrequest_id=[% request.illrequest_id | uri %]">Fill in disclaimer for patron</a>
+                                        [% ELSE %]
+                                            <a id="typeDisclaimerModalOpen" href="#">View details</a>
+                                        [% END %]
                                     </li>
                                 [% END %]
                                 [% IF request.cost.defined %]
@@ -853,6 +849,45 @@
                             </div>
                         </div>
                     </div>
+                    <div id="typeDisclaimerModal" class="modal" tabindex="-1" role="dialog" aria-labelledby="typeDisclaimerModalLabel" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h1 class="modal-title" id="typeDisclaimerModalLabel"> Type Disclaimer</h1>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    [% type_disclaimer_value = request.get_type_disclaimer_value %]
+                                    [% IF type_disclaimer_value %]
+                                        <h2>Value</h2>
+                                        [% type_disclaimer_value | html %]
+                                    [% END %]
+                                    [% type_disclaimer_date = request.get_type_disclaimer_date %]
+                                    [% IF type_disclaimer_date %]
+                                        <h2>Date</h2>
+                                        [% type_disclaimer_date | $KohaDates with_hours => 1 %]
+                                    [% END %]
+                                    [% type_disclaimer_text = request.get_type_disclaimer_text %]
+                                    [% IF type_disclaimer_text %]
+                                        <h2>Text</h2>
+                                        [% type_disclaimer_text | $raw %]
+                                    [% END %]
+                                </div>
+                                <div class="modal-footer">
+                                    <a
+                                        title="Clear disclaimer information"
+                                        id="ill-request-clear-disclaimer"
+                                        class="btn btn-default"
+                                        href="/cgi-bin/koha/ill/ill-requests.pl?op=clear_disclaimer&amp;illrequest_id=[% request.illrequest_id | uri %]"
+                                    >
+                                        <span class="fa-solid fa-file-contract"></span>
+                                        Clear disclaimer information
+                                    </a>
+                                    <button class="btn btn-default" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 [% ELSIF op == 'illlist' %]
                     <!-- illlist -->
                     <h1>
@@ -914,7 +949,7 @@
                             [% INCLUDE 'ill-availability-table.inc' service=service %]
                         [% END %]
                     </div>
-                [% ELSIF op == 'typedisclaimer' %]
+                [% ELSIF op == 'typedisclaimer' || op == 'fill_in_disclaimer' %]
                     <!-- typedisclaimer -->
                     <h1>Request type disclaimer</h1>
                     <div id="results" class="page-section">
@@ -947,7 +982,11 @@
                                     <input type="hidden" name="custom_value" value="[% custom_values.$i | html %]" />
                                     [% i = i + 1 %]
                                 [% END %]
-                                <input type="hidden" name="op" value="cud-create" />
+                                [% IF op == 'typedisclaimer' %]
+                                    <input type="hidden" name="op" value="cud-create" />
+                                [% ELSIF op == 'fill_in_disclaimer' %]
+                                    <input type="hidden" name="op" value="cud-fill_in_disclaimer" />
+                                [% END %]
                                 <input type="hidden" name="stage" value="form" />
                                 <input type="hidden" name="type_disclaimer_submitted" value="1" />
                                 <input type="submit" value="Submit" />
@@ -1175,6 +1214,10 @@
                     },
                 });
             }
+
+            $("#typeDisclaimerModalOpen").click(function (e) {
+                $("#typeDisclaimerModal").modal("show");
+            });
         </script>
         [% INCLUDE 'ill-list-table-strings.inc' %]
         [% INCLUDE 'ill-batch-table-strings.inc' %]
