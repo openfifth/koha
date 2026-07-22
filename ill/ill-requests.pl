@@ -486,6 +486,28 @@ if ($backends_available) {
         print $cgi->redirect(
             "/cgi-bin/koha/ill/ill-requests.pl?op=illview&illrequest_id=" . scalar $params->{illrequest_id} . $append );
         exit;
+    } elsif ( $op eq 'fill_in_disclaimer' || $op eq 'cud-fill_in_disclaimer' ) {
+        my $illrequest_id   = $params->{illrequest_id};
+        my $request         = Koha::ILL::Requests->find($illrequest_id);
+        my $type_disclaimer = Koha::ILL::Request::Workflow::TypeDisclaimer->new( $params, 'staff' );
+        $template->param( $type_disclaimer->type_disclaimer_template_params($params) );
+
+        if ( $op eq 'cud-fill_in_disclaimer' && $params->{type_disclaimer_submitted} && $request->illrequest_id ) {
+            $type_disclaimer->after_request_created( $params, $request );
+            print $cgi->redirect(
+                "/cgi-bin/koha/ill/ill-requests.pl?op=illview&illrequest_id=" . scalar $params->{illrequest_id} );
+            exit;
+        }
+    } elsif ( $op eq 'clear_disclaimer' ) {
+        my $illrequest_id   = $params->{illrequest_id};
+        my $request         = Koha::ILL::Requests->find($illrequest_id);
+        my $type_disclaimer = Koha::ILL::Request::Workflow::TypeDisclaimer->new( $params, 'staff' );
+        $type_disclaimer->clear_type_disclaimer($request);
+
+        # Redirect to view the whole request
+        print $cgi->redirect(
+            "/cgi-bin/koha/ill/ill-requests.pl?op=illview&illrequest_id=" . scalar $params->{illrequest_id} );
+        exit;
     } elsif ( $op eq "batch_list" ) {
 
         # Do not remove, it prevents us falling through to the 'else'
