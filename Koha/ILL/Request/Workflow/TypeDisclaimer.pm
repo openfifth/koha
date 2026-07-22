@@ -161,6 +161,25 @@ sub after_request_created {
     Koha::ILL::Request::Attribute->new($type_disclaimer_text)->store;
 }
 
+=head3 clear_type_disclaimer
+
+    $type_disclaimer->clear_type_disclaimer($request);
+
+Clears the record of the type disclaimer for the given request.
+
+=cut
+
+sub clear_type_disclaimer {
+    my ( $self, $request ) = @_;
+
+    Koha::ILL::Request::Attributes->search(
+        {
+            illrequest_id => $request->illrequest_id,
+            type          => [ "type_disclaimer_date", "type_disclaimer_value", "type_disclaimer_text" ]
+        }
+    )->delete();
+}
+
 =head3 _get_type_disclaimer_info
 
     my $type_disclaimer_info =

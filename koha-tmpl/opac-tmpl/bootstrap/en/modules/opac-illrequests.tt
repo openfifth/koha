@@ -203,6 +203,12 @@
                                             <label for="medium">Request type:</label>
                                             [% IF type %][% type | html %][% ELSE %]<span>N/A</span>[% END %]
                                         </li>
+                                        [% IF Koha.Preference('ILLModuleDisclaimerByType') %]
+                                            <li class="type_disclaimer_modal">
+                                                <label for="type_disclaimer_modal_open">Type disclaimer:</label>
+                                                <a id="type_disclaimer_modal_open" href="#">View details</a>
+                                            </li>
+                                        [% END %]
                                         <li>
                                             <label for="placed">Request placed:</label>
                                             [% request.placed | $KohaDates %]
@@ -244,6 +250,36 @@
                                     </fieldset>
                                 [% END %]
                             </form>
+                            <div id="typeDisclaimerModal" class="modal" tabindex="-1" role="dialog" aria-labelledby="typeDisclaimerModalLabel" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h1 class="modal-title" id="typeDisclaimerModalLabel"> Type Disclaimer</h1>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            [% type_disclaimer_value = request.get_type_disclaimer_value %]
+                                            [% IF type_disclaimer_value %]
+                                                <h2>Type disclaimer value</h2>
+                                                [% type_disclaimer_value | html %]
+                                            [% END %]
+                                            [% type_disclaimer_date = request.get_type_disclaimer_date %]
+                                            [% IF type_disclaimer_date %]
+                                                <h2>Type disclaimer date</h2>
+                                                [% type_disclaimer_date | $KohaDates with_hours => 1 %]
+                                            [% END %]
+                                            [% type_disclaimer_text = request.get_type_disclaimer_text %]
+                                            [% IF type_disclaimer_text %]
+                                                <h2>Type disclaimer text</h2>
+                                                [% type_disclaimer_text | $raw %]
+                                            [% END %]
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button class="btn btn-default" data-bs-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         [% ELSIF op == 'availability' %]
                             <h1>Interlibrary loan item availability</h1>
                             <div id="results">
@@ -523,6 +559,13 @@
         <script nonce="[% Koha.CSPNonce | $raw %]">
             $(document).ready(function () {
                 window.doSearch();
+            });
+        </script>
+    [% END %]
+    [% IF op == 'view' %]
+        <script nonce="[% Koha.CSPNonce | $raw %]">
+            $("#type_disclaimer_modal_open").on("click", function () {
+                $("#typeDisclaimerModal").modal("show");
             });
         </script>
     [% END %]
