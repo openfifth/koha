@@ -23,6 +23,7 @@ use Test::MockModule;
 use t::lib::Mocks;
 use t::lib::TestBuilder;
 
+use Digest::MD5 qw( md5_hex );
 use Koha::Caches;
 
 use Koha::Items;
@@ -152,21 +153,24 @@ subtest '_items_index_ready() tests' => sub {
     $cache->clear_from_cache('elasticsearch_items_index_ready');
     $mock_es->mock( 'get_elasticsearch', sub { die "index_not_found_exception\n" } );
     warning_like { is( $searcher_bib->_items_index_ready, 0, 'returns false when ES throws an exception' ) }
-        qr/rebuild_elasticsearch/, 'warns when ES throws';
+    qr/rebuild_elasticsearch/, 'warns when ES throws';
 
     # Index exists but has no documents
     $cache->clear_from_cache('elasticsearch_items_index_ready');
     my $mock_client = MockESSearchClient->new;
     $mock_es->mock( 'get_elasticsearch', sub { $mock_client } );
     warning_like { is( $searcher_bib->_items_index_ready, 0, 'returns false when items index is empty' ) }
-        qr/rebuild_elasticsearch/, 'warns when items index is empty';
+    qr/rebuild_elasticsearch/, 'warns when items index is empty';
 
     # Index sparsely populated (e.g. single checkout before full rebuild)
     $cache->clear_from_cache('elasticsearch_items_index_ready');
     $mock_client->{count_response} = { count => 1 };
     $mock_items_rs->{count}        = 5000;
     warning_like {
-        is( $searcher_bib->_items_index_ready, 0, 'returns false when items index has far fewer documents than DB items' )
+        is(
+            $searcher_bib->_items_index_ready, 0,
+            'returns false when items index has far fewer documents than DB items'
+        )
     }
     qr/rebuild_elasticsearch/, 'warns when items index is sparsely populated';
 
@@ -317,11 +321,21 @@ SKIP: {
     };
 
     subtest '_get_available_biblionumbers() tests' => sub {
-        plan tests => 2;
+        plan tests => 5;
+
+        my $cache = Koha::Caches->get_instance();
+        $cache->clear_from_cache('elasticsearch_available_biblionumbers');
 
         my $mock_es     = Test::MockModule->new('Koha::SearchEngine::Elasticsearch');
         my $mock_client = MockESSearchClient->new;
-        $mock_es->mock( 'get_elasticsearch', sub { $mock_client } );
+        my $es_calls    = 0;
+        $mock_es->mock(
+            'get_elasticsearch',
+            sub {
+                $es_calls++;
+                return $mock_client;
+            }
+        );
 
         $mock_client->{response} = {
             aggregations => {
@@ -332,17 +346,37 @@ SKIP: {
         my @bns = $searcher->_get_available_biblionumbers();
         is( scalar @bns, 2, '_get_available_biblionumbers returns one entry per bucket' );
         is_deeply( [ sort { $a <=> $b } @bns ], [ 10, 20 ], 'correct biblionumbers returned' );
+        is( $es_calls, 1, 'ES queried on cache miss' );
+
+        # Second call should hit the cache rather than re-scanning the items index
+        @bns = $searcher->_get_available_biblionumbers();
+        is( $es_calls, 1, 'ES not queried again: cached result used on repeat call' );
+        is_deeply( [ sort { $a <=> $b } @bns ], [ 10, 20 ], 'cached biblionumbers are correct' );
+
+        $cache->clear_from_cache('elasticsearch_available_biblionumbers');
     };
 
     subtest '_get_item_facets() tests' => sub {
-        plan tests => 3;
+        plan tests => 7;
+
+        my $cache = Koha::Caches->get_instance();
+        $cache->clear_from_cache( 'elasticsearch_item_facets_' . md5_hex( join( ',', 1, 2, 3 ) ) );
+        $cache->clear_from_cache( 'elasticsearch_item_facets_' . md5_hex( join( ',', 4, 5 ) ) );
 
         my $mock_es     = Test::MockModule->new('Koha::SearchEngine::Elasticsearch');
         my $mock_client = MockESSearchClient->new;
-        $mock_es->mock( 'get_elasticsearch', sub { $mock_client } );
+        my $es_calls    = 0;
+        $mock_es->mock(
+            'get_elasticsearch',
+            sub {
+                $es_calls++;
+                return $mock_client;
+            }
+        );
 
         my $result = $searcher->_get_item_facets( [] );
         is_deeply( $result, {}, '_get_item_facets with empty list returns empty hashref' );
+        is( $es_calls, 0, 'empty list short-circuits without querying ES' );
 
         $mock_client->{response} = {
             aggregations => {
@@ -354,5 +388,17 @@ SKIP: {
         $result = $searcher->_get_item_facets( [ 1, 2, 3 ] );
         ok( exists $result->{itype},    '_get_item_facets returns itype aggregation' );
         ok( exists $result->{location}, '_get_item_facets returns location aggregation' );
+        is( $es_calls, 1, 'ES queried on cache miss' );
+
+        # Same biblionumber set: cached result used, no new ES call
+        $searcher->_get_item_facets( [ 1, 2, 3 ] );
+        is( $es_calls, 1, 'ES not queried again for the same biblionumber set' );
+
+        # Different biblionumber set: cache key differs, ES queried again
+        $searcher->_get_item_facets( [ 4, 5 ] );
+        is( $es_calls, 2, 'ES queried again for a different biblionumber set' );
+
+        $cache->clear_from_cache( 'elasticsearch_item_facets_' . md5_hex( join( ',', 1, 2, 3 ) ) );
+        $cache->clear_from_cache( 'elasticsearch_item_facets_' . md5_hex( join( ',', 4, 5 ) ) );
     };
 }
