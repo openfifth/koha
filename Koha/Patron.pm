@@ -71,6 +71,7 @@ use Koha::Patrons;
 use Koha::Plugins;
 use Koha::Recalls;
 use Koha::Result::Boolean;
+use Koha::Patron::Availability::Hold;
 use Koha::Subscription::Routinglists;
 use Koha::Token;
 use Koha::Virtualshelves;
@@ -1420,6 +1421,9 @@ sub move_to_deleted {
     }
 
 Checks if a patron is allowed to place holds based on various patron conditions.
+This is a thin wrapper around L<Koha::Patron::Availability::Hold/check>, called
+without item/library context so only the patron-level eligibility gates run
+(not the item/rule-scoped count checks, which need that context).
 
 =head4 Parameters
 
@@ -1475,80 +1479,29 @@ sub can_place_holds {
     my $overrides        = $options->{overrides}        // {};
     my $no_short_circuit = $options->{no_short_circuit} // 0;
 
-    my $result = Koha::Result::Boolean->new(1);
-
-    # expired patron check
-    unless ( $overrides->{expired} ) {
-        if ( $self->is_expired && $self->category->effective_BlockExpiredPatronOpacActions_contains('hold') ) {
-            $result->set_value(0);
-            $result->add_message( { message => 'expired', type => 'error' } );
-
-            return $result unless $no_short_circuit;
+    # No item_type_id/library_id is passed, so Koha::Patron::Availability::Hold
+    # only runs the patron-eligibility gates below (expired, debt_limit,
+    # bad_address, card_lost, restricted, hold_limit) and none of its
+    # item/rule-context count checks (holds_per_record, reservesallowed, etc).
+    my $availability = Koha::Patron::Availability::Hold->check(
+        {
+            patron           => $self,
+            overrides        => $overrides,
+            no_short_circuit => $no_short_circuit,
         }
-    }
+    );
 
-    # debt check
-    unless ( $overrides->{debt_limit} ) {
-        my $max_outstanding = C4::Context->preference("maxoutstanding");
-        my $outstanding     = $self->account->balance;
+    my $result = Koha::Result::Boolean->new( $availability->available ? 1 : 0 );
 
-        if ( $max_outstanding && $outstanding && ( $outstanding > $max_outstanding ) ) {
-            $result->set_value(0);
-            $result->add_message(
-                {
-                    message => 'debt_limit', type => 'error',
-                    payload => { total_outstanding => $outstanding, max_outstanding => $max_outstanding }
-                }
-            );
-
-            return $result unless $no_short_circuit;
-        }
-    }
-
-    # check address marked as incorrect
-    unless ( $overrides->{bad_address} ) {
-        if ( $self->gonenoaddress ) {
-            $result->set_value(0);
-            $result->add_message( { message => 'bad_address', type => 'error' } );
-
-            return $result unless $no_short_circuit;
-        }
-    }
-
-    # check lost card
-    unless ( $overrides->{card_lost} ) {
-        if ( $self->lost ) {
-            $result->set_value(0);
-            $result->add_message( { message => 'card_lost', type => 'error' } );
-            return $result unless $no_short_circuit;
-        }
-    }
-
-    # check restrictions
-    unless ( $overrides->{restricted} ) {
-        if ( $self->is_debarred ) {
-            $result->set_value(0);
-            $result->add_message( { message => 'restricted', type => 'error' } );
-
-            return $result unless $no_short_circuit;
-        }
-    }
-
-    # check max reserves
-    unless ( $overrides->{hold_limit} ) {
-        my $max_holds   = C4::Context->preference("maxreserves");
-        my $holds_count = $self->holds->count;
-        if ( $max_holds && ( $holds_count >= $max_holds ) ) {
-            $result->set_value(0);
-            $result->add_message(
-                {
-                    message => 'hold_limit', type => 'error',
-                    payload => { total_holds => $holds_count, max_holds => $max_holds }
-                }
-            );
-
-            return $result unless $no_short_circuit;
-        }
+    for my $message ( keys %{ $availability->blockers } ) {
+        my $value = $availability->blockers->{$message};
+        $result->add_message(
+            {
+                message => $message,
+                type    => 'error',
+                ( ref($value) eq 'HASH' ? ( payload => $value ) : () ),
+            }
+        );
     }
 
     return $result;

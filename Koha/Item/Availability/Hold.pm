@@ -70,7 +70,29 @@ Parameters (hashref):
 
 =item no_short_circuit - collect all blockers instead of returning on first (optional)
 
-=item skip_patron_checks - skip patron-level checks (optional, for biblio-level loop)
+=item skip_patron_checks - skip patron-level checks entirely (eligibility and
+counts), AND skip the item_already_on_hold check (optional). This matches the
+legacy C<ignore_hold_counts> semantics used by callers checking whether an
+item can fill a hold the patron already placed on it - where the patron's own
+existing hold on this exact item must not block the check.
+
+=item skip_patron_count_checks - skip only the chained
+L<Koha::Patron::Availability::Hold> call (eligibility + counts), without
+touching the item_already_on_hold check above (optional). Used by
+L<Koha::Biblio::Availability::Hold> when it has already run patron-level
+checks once before looping items - item_already_on_hold is still genuinely
+item-specific and must still run per item.
+
+=item skip_eligibility_checks - skip only the patron's no-item-context
+eligibility gates (expired, debt_limit, bad_address, card_lost, restricted,
+hold_limit), while still running the item/rule-context count checks
+(optional, for per-item display loops on a page that already shows patron
+eligibility once, separately)
+
+=item cache_counts - memoize the item/rule-context hold-count queries for the
+request lifetime (optional, default off). See
+L<Koha::Patron::Availability::Hold/check> - only safe for read-only per-item
+display loops that won't place a hold between calls.
 
 =back
 
@@ -79,11 +101,15 @@ Parameters (hashref):
 sub check {
     my ( $class, $params ) = @_;
 
-    my $item             = $params->{item};
-    my $patron           = $params->{patron};
-    my $pickup_library   = $params->{pickup_library};
-    my $no_short_circuit = $params->{no_short_circuit} // 0;
-    my $overrides        = $params->{overrides}        // {};
+    my $item                     = $params->{item};
+    my $patron                   = $params->{patron};
+    my $pickup_library           = $params->{pickup_library};
+    my $no_short_circuit         = $params->{no_short_circuit}         // 0;
+    my $overrides                = $params->{overrides}                // {};
+    my $skip_patron_checks       = $params->{skip_patron_checks}       // 0;
+    my $skip_patron_count_checks = $params->{skip_patron_count_checks} // 0;
+    my $skip_eligibility_checks  = $params->{skip_eligibility_checks}  // 0;
+    my $cache_counts             = $params->{cache_counts}             // 0;
 
     my $result = Koha::Result::Availability->new();
 
@@ -94,8 +120,8 @@ sub check {
 
     # FIXME: The reservesallowed == 0 check is duplicated: once here (item-level, as
     # policy gate) and once in Koha::Patron::Availability::Hold (as count check).
-    # The item-level copy exists because skip_patron_checks must not skip the "not
-    # allowed" policy. Consider a dedicated 'skip_count_checks' flag instead.
+    # The item-level copy exists because skip_patron_count_checks/skip_patron_checks
+    # must not skip the "not allowed" policy gate itself.
 
     # IndependentBranches check
     if ( C4::Context->preference('IndependentBranches')
@@ -127,9 +153,15 @@ sub check {
 
     # Already has hold on this item
     # FIXME: DB query — could be deferred after rule lookups (which are cached)
-    if ( $patron->holds->search( { itemnumber => $item->itemnumber } )->count ) {
-        $result->add_blocker( item_already_on_hold => 1 );
-        return $result unless $no_short_circuit;
+    # Skipped when skip_patron_checks is set (legacy ignore_hold_counts
+    # semantics): callers use that flag specifically to check whether an item
+    # can fill a hold the patron already placed on it, where this check would
+    # otherwise always (incorrectly) block.
+    unless ($skip_patron_checks) {
+        if ( $patron->holds->search( { itemnumber => $item->itemnumber } )->count ) {
+            $result->add_blocker( item_already_on_hold => 1 );
+            return $result unless $no_short_circuit;
+        }
     }
 
     # Patron already has this biblio checked out
@@ -214,7 +246,7 @@ sub check {
     }
 
     # Patron-level checks (counts) — run after item checks
-    unless ( $params->{skip_patron_checks} ) {
+    unless ( $skip_patron_checks || $skip_patron_count_checks ) {
         my $patron_result = Koha::Patron::Availability::Hold->check(
             {
                 patron           => $patron,
@@ -224,6 +256,8 @@ sub check {
                 rule_itemtype    => $rule_itemtype,
                 no_short_circuit => $no_short_circuit,
                 overrides        => $overrides,
+                skip_eligibility => $skip_eligibility_checks,
+                cache_counts     => $cache_counts,
             }
         );
 

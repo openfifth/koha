@@ -466,7 +466,14 @@ foreach my $biblioNum (@biblionumbers) {
 
         my $branch = Koha::Policy::Holds->holds_control_library( $item, $patron );
 
-        my $policy_holdallowed = CanItemBeReserved( $patron, $item, undef, { get_from_cache => 1 } )->{status} eq 'OK'
+        my $policy_holdallowed = CanItemBeReserved(
+            $patron, $item, undef,
+            {
+                get_from_cache          => 1,
+                skip_eligibility_checks => 1,
+                cache_counts            => 1,
+            }
+            )->{status} eq 'OK'
             && IsAvailableForItemLevelRequest( $item, $patron, undef );
 
         if ($policy_holdallowed) {
@@ -598,7 +605,14 @@ foreach my $biblioNum (@biblionumbers) {
         foreach my $item (@holdable_items) {
 
             # Check if item is holdable for this patron
-            next unless C4::Reserves::CanItemBeReserved( $patron, $item )->{status} eq 'OK';
+            # skip_eligibility_checks: patron eligibility (expired, debt, etc.) was
+            # already checked once via can_place_holds above; no need to re-check
+            # it for every item just to compute per-item hold fees.
+            next
+                unless C4::Reserves::CanItemBeReserved(
+                $patron, $item, undef,
+                { skip_eligibility_checks => 1, cache_counts => 1 }
+                )->{status} eq 'OK';
 
             my $fee = $item->holds_fee($patron);
 

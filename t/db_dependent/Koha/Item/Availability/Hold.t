@@ -100,7 +100,7 @@ subtest 'Age restriction' => sub {
 
 subtest 'Item already on hold by patron' => sub {
 
-    plan tests => 2;
+    plan tests => 3;
 
     $schema->storage->txn_begin;
 
@@ -122,9 +122,16 @@ subtest 'Item already on hold by patron' => sub {
         }
     );
 
-    my $result = Koha::Item::Availability::Hold->check( { item => $item, patron => $patron, skip_patron_checks => 1 } );
+    my $result = Koha::Item::Availability::Hold->check( { item => $item, patron => $patron } );
     ok( !$result->available,                       'Not available when patron already has hold' );
     ok( $result->blockers->{item_already_on_hold}, 'Blocker is item_already_on_hold' );
+
+    # skip_patron_checks (legacy ignore_hold_counts semantics) is used by callers
+    # checking whether an item can fill a hold the patron already placed on it
+    # (e.g. C4::Circulation's decreaseLoanHighHoldsControl, Koha::Hold->move) -
+    # item_already_on_hold must not block in that scenario.
+    $result = Koha::Item::Availability::Hold->check( { item => $item, patron => $patron, skip_patron_checks => 1 } );
+    ok( $result->available, 'Available when skip_patron_checks set, despite existing hold' );
 
     $schema->storage->txn_rollback;
 };

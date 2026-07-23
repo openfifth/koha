@@ -551,8 +551,14 @@ if (   ( $findborrower && $borrowernumber_hold || $findclub && $club_hold )
 
                     $item->{'holdallowed'} = $branchitemrule->{'holdallowed'};
 
-                    my $can_item_be_reserved =
-                        CanItemBeReserved( $patron, $item_object, undef, { get_from_cache => 1 } )->{status};
+                    my $can_item_be_reserved = CanItemBeReserved(
+                        $patron, $item_object, undef,
+                        {
+                            get_from_cache          => 1,
+                            skip_eligibility_checks => 1,
+                            cache_counts            => 1,
+                        }
+                    )->{status};
                     $item->{not_holdable} = $can_item_be_reserved unless ( $can_item_be_reserved eq 'OK' );
                     $item->{not_holdable} ||= 'notforloan' if ( $item->{notforloanitype} || $item->{notforloan} > 0 );
 
