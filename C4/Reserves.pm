@@ -391,6 +391,10 @@ sub AddReserve {
 
   $params are passed directly through to CanItemBeReserved
 
+  'items' - arrayref of pre-fetched Koha::Item objects for this biblio, to avoid
+  re-fetching the item list when checking the same biblio for multiple patrons
+  in a batch (e.g. club holds) - see Koha::Biblio::Availability::Hold->fetch_items
+
 See CanItemBeReserved() for possible return values.
 
 =cut
@@ -420,6 +424,7 @@ sub CanBookBeReserved {
             pickup_library => $pickup_library,
             overrides      => $params->{overrides},
             ( $params->{itemtype} ? ( item_type_id => $params->{itemtype} ) : () ),
+            ( $params->{items}    ? ( items        => $params->{items} )    : () ),
         }
     );
 

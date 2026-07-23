@@ -26,6 +26,7 @@ use Koha::Club::Template::Fields;
 use base qw(Koha::Object);
 use Koha::Exceptions;
 use Koha::Exceptions::ClubHold;
+use Koha::Biblio::Availability::Hold;
 use Koha::Club::Hold::PatronHold;
 use Koha::Club::Holds;
 use Koha::Clubs;
@@ -80,6 +81,11 @@ sub add {
     my $club_hold = Koha::Club::Hold->new($club_params)->store();
     $club_hold->discard_changes;
 
+    # Fetch the biblio's items once and reuse across every enrolled member's
+    # CanBookBeReserved check below, rather than re-fetching per member (and
+    # per attempt, since default_patron_home can mean two checks per member).
+    my @biblio_items = $itemnumber ? () : Koha::Biblio::Availability::Hold->fetch_items($biblio);
+
     @enrollments = shuffle(@enrollments);
 
     foreach my $enrollment (@enrollments) {
@@ -94,7 +100,10 @@ sub add {
             $can_place_hold =
                 $itemnumber
                 ? C4::Reserves::CanItemBeReserved( $patron, $item, $patron_home )
-                : C4::Reserves::CanBookBeReserved( $patron_id, $params->{biblio_id}, $patron_home );
+                : C4::Reserves::CanBookBeReserved(
+                $patron_id, $params->{biblio_id}, $patron_home,
+                { items => \@biblio_items }
+                );
             $pickup_id = $patron_home if $can_place_hold->{status} eq 'OK';
             unless ( $can_place_hold->{status} eq 'OK' ) {
                 warn "Patron("
@@ -108,7 +117,10 @@ sub add {
             $can_place_hold =
                 $itemnumber
                 ? C4::Reserves::CanItemBeReserved( $patron, $item, $pickup_id )
-                : C4::Reserves::CanBookBeReserved( $patron_id, $params->{biblio_id}, $pickup_id );
+                : C4::Reserves::CanBookBeReserved(
+                $patron_id, $params->{biblio_id}, $pickup_id,
+                { items => \@biblio_items }
+                );
         }
 
         unless ( $can_place_hold->{status} eq 'OK' ) {
