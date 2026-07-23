@@ -92,7 +92,7 @@
                                             <span>Not holdable</span>
                                         [% CASE 'cannot_reserve_from_other_branches' %]
                                             <span>You are from a different library</span>
-                                        [% CASE 'branchNotInHoldGroup' %]
+                                        [% CASE 'branch_not_in_hold_group' %]
                                             <span>Holds are not allowed from your library</span>
                                         [% CASE 'item_already_on_hold' %]
                                             <span>You already have a hold for this item</span>

@@ -209,7 +209,7 @@
                             <span>Target item cannot be placed on hold from other libraries</span>
                         [% CASE 'age_restricted' %]
                             <span>The target record and/or items are age restricted</span>
-                        [% CASE 'alreadypossession' %]
+                        [% CASE 'already_possession' %]
                             <span>Target item is already checked out to patron</span>
                         [% CASE 'no_reserves_allowed' %]
                             <span>No holds are allowed on the target item(s)</span>
@@ -219,7 +219,7 @@
                             <span>Target item has too many holds placed on it</span>
                         [% CASE 'not_reservable' %]
                             <span>Target item cannot be placed on hold</span>
-                        [% CASE 'branchNotInHoldGroup' %]
+                        [% CASE 'branch_not_in_hold_group' %]
                             <span>Target item is not in the local hold group</span>
                         [% CASE 'notforloan' %]
                             <span>Target item is not for loan</span>
@@ -256,7 +256,7 @@
                             <span>Not holdable</span>
                         [% CASE 'cannot_reserve_from_other_branches' %]
                             <span>Patron from a different library</span>
-                        [% CASE 'branchNotInHoldGroup' %]
+                        [% CASE 'branch_not_in_hold_group' %]
                             <span>Holds are not allowed from patron's library</span>
                         [% CASE 'item_already_on_hold' %]
                             <span>Patron already has a hold for failed item(s)</span>
@@ -536,7 +536,7 @@
             </div>
         [% END %]
 
-        [% IF ( no_reserves_allowed || exceeded_maxreserves || exceeded_holds_per_record || alreadyreserved || none_available || none_available_override || alreadypossession || age_restricted || recall ) %]
+        [% IF ( no_reserves_allowed || exceeded_maxreserves || exceeded_holds_per_record || alreadyreserved || none_available || none_available_override || already_possession || age_restricted || recall ) %]
             <div class="alert alert-warning">
                 [% UNLESS ( multi_hold ) %]
                     <h3>Cannot place hold</h3>
@@ -553,7 +553,7 @@
                                 ><strong>Too many holds for this record:</strong> [% INCLUDE 'patron-title.inc' patron => patron no_title => 1 no_cardnumber => 1 hide_patron_infos_if_needed => 1 %] can only place a maximum of
                                 [% max_holds_for_record | html %] hold(s) on this record.</li
                             >
-                        [% ELSIF ( alreadypossession ) %]
+                        [% ELSIF ( already_possession ) %]
                             <li>[% INCLUDE 'patron-title.inc' patron => patron no_title => 1 no_cardnumber => 1 hide_patron_infos_if_needed => 1 hide_patron_infos_if_needed => 1 %] <strong>is already in possession</strong> of one item.</li>
                         [% ELSIF ( alreadyreserved ) %]
                             <li>[% INCLUDE 'patron-title.inc' patron => patron no_title => 1 no_cardnumber => 1 hide_patron_infos_if_needed => 1 %] <strong>already has a hold</strong> on this item.</li>
@@ -990,7 +990,7 @@
                                                                 <span>Not holdable</span>
                                                             [% ELSIF itemloo.not_holdable == 'cannot_reserve_from_other_branches' %]
                                                                 <span>Patron is from different library</span>
-                                                            [% ELSIF itemloo.not_holdable == 'branchNotInHoldGroup' %]
+                                                            [% ELSIF itemloo.not_holdable == 'branch_not_in_hold_group' %]
                                                                 <span>Cannot place hold from patron's library</span>
                                                             [% ELSIF itemloo.not_holdable == 'item_already_on_hold' %]
                                                                 <span>Patron already has hold for this item</span>
