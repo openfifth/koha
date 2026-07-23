@@ -20,6 +20,7 @@ package Koha::Item::Availability::Hold;
 use Modern::Perl;
 
 use C4::Context;
+use Koha::Cache::Memory::Lite;
 use Koha::Policy::Biblio::AgeRestriction;
 use Koha::Policy::Holds;
 use Koha::Patron::Availability::Hold;
@@ -94,6 +95,32 @@ request lifetime (optional, default off). See
 L<Koha::Patron::Availability::Hold/check> - only safe for read-only per-item
 display loops that won't place a hold between calls.
 
+=item cache_transfers - memoize can_be_transferred for the request lifetime,
+keyed on the (holdingbranch, pickup branch, itemtype-or-ccode) combination
+that determines it (optional, default off). Off by default for the same
+reason as cache_counts: a caller that creates/deletes transfer limits
+between calls (as the test suite does) must see a fresh result.
+
+=item held_itemnumbers - hashref of C<< { itemnumber => 1 } >> for every item
+the patron currently holds (optional). When supplied, the
+item_already_on_hold check does an in-memory lookup instead of a fresh
+C<< $patron->holds->search >> query. Used by L<Koha::Biblio::Availability::Hold>
+to compute this once per patron rather than once per item.
+
+=item checked_out_itemnumbers - same shape and purpose as
+C<held_itemnumbers>, for the already_possession check (optional).
+
+=item recalled_itemnumbers - same shape and purpose as C<held_itemnumbers>,
+for the recall check (optional).
+
+=item age_restriction_ok - boolean, the precomputed result of
+C<< Koha::Policy::Biblio::AgeRestriction->check($item->biblio, $patron) >>
+for the item's biblio (optional; true means the patron is NOT age
+restricted, matching that method's own return convention). When defined,
+skips that check (and the C<< $item->biblio >> fetch it requires) entirely -
+safe whenever every item being checked belongs to the same biblio, since age
+restriction only depends on the biblio and patron, never the item.
+
 =back
 
 =cut
@@ -110,6 +137,11 @@ sub check {
     my $skip_patron_count_checks = $params->{skip_patron_count_checks} // 0;
     my $skip_eligibility_checks  = $params->{skip_eligibility_checks}  // 0;
     my $cache_counts             = $params->{cache_counts}             // 0;
+    my $cache_transfers          = $params->{cache_transfers}          // 0;
+    my $held_itemnumbers         = $params->{held_itemnumbers};
+    my $checked_out_itemnumbers  = $params->{checked_out_itemnumbers};
+    my $recalled_itemnumbers     = $params->{recalled_itemnumbers};
+    my $age_restriction_ok       = $params->{age_restriction_ok};
 
     my $result = Koha::Result::Availability->new();
 
@@ -142,9 +174,14 @@ sub check {
     }
 
     # Age restriction
-    # FIXME: This loads $item->biblio — consider moving after cheaper column checks
+    # age_restriction_ok, when supplied, is precomputed once per biblio by
+    # the caller (age restriction never varies by item) - avoids both the
+    # check and the $item->biblio fetch it requires.
     unless ( $overrides->{age_restricted} ) {
-        my $age_check = Koha::Policy::Biblio::AgeRestriction->check( $item->biblio, $patron );
+        my $age_check =
+            defined $age_restriction_ok
+            ? $age_restriction_ok
+            : Koha::Policy::Biblio::AgeRestriction->check( $item->biblio, $patron );
         if ( !$age_check ) {
             $result->add_blocker( age_restricted => 1 );
             return $result unless $no_short_circuit;
@@ -152,13 +189,16 @@ sub check {
     }
 
     # Already has hold on this item
-    # FIXME: DB query — could be deferred after rule lookups (which are cached)
     # Skipped when skip_patron_checks is set (legacy ignore_hold_counts
     # semantics): callers use that flag specifically to check whether an item
     # can fill a hold the patron already placed on it, where this check would
     # otherwise always (incorrectly) block.
     unless ($skip_patron_checks) {
-        if ( $patron->holds->search( { itemnumber => $item->itemnumber } )->count ) {
+        my $already_on_hold =
+            $held_itemnumbers
+            ? exists $held_itemnumbers->{ $item->itemnumber }
+            : $patron->holds->search( { itemnumber => $item->itemnumber } )->count;
+        if ($already_on_hold) {
             $result->add_blocker( item_already_on_hold => 1 );
             return $result unless $no_short_circuit;
         }
@@ -166,16 +206,24 @@ sub check {
 
     # Patron already has this biblio checked out
     unless ( $overrides->{already_possession} ) {
-        if ( !C4::Context->preference('AllowHoldsOnPatronsPossessions')
-            && $patron->checkouts->search( { itemnumber => $item->itemnumber } )->count )
-        {
-            $result->add_blocker( already_possession => 1 );
-            return $result unless $no_short_circuit;
+        if ( !C4::Context->preference('AllowHoldsOnPatronsPossessions') ) {
+            my $in_possession =
+                $checked_out_itemnumbers
+                ? exists $checked_out_itemnumbers->{ $item->itemnumber }
+                : $patron->checkouts->search( { itemnumber => $item->itemnumber } )->count;
+            if ($in_possession) {
+                $result->add_blocker( already_possession => 1 );
+                return $result unless $no_short_circuit;
+            }
         }
     }
 
     # Active recall on this item
-    if ( $patron->recalls->filter_by_current->search( { item_id => $item->itemnumber } )->count ) {
+    my $recalled =
+        $recalled_itemnumbers
+        ? exists $recalled_itemnumbers->{ $item->itemnumber }
+        : $patron->recalls->filter_by_current->search( { item_id => $item->itemnumber } )->count;
+    if ($recalled) {
         $result->add_blocker( recall => 1 );
         return $result unless $no_short_circuit;
     }
@@ -269,16 +317,34 @@ sub check {
     }
 
     # Pickup location validation (last, matching legacy order)
-    # TODO: can_be_transferred is the most expensive check (queries transfer limits).
-    # Keeping it last is correct for short-circuit mode. For no_short_circuit mode,
-    # consider lazy evaluation or caching transfer limit results.
+    # can_be_transferred is memoized per request, keyed on the (holdingbranch,
+    # pickup branch, itemtype-or-ccode) combination that actually determines
+    # its result - multiple items on the same record commonly share a
+    # homebranch, so this avoids re-querying transfer limits for each one.
     if ($pickup_library) {
         if ( !$pickup_library->pickup_location ) {
             $result->add_blocker( library_not_pickup_location => 1 );
             return $result unless $no_short_circuit;
-        } elsif ( !$item->can_be_transferred( { to => $pickup_library } ) ) {
-            $result->add_blocker( cannot_be_transferred => 1 );
-            return $result unless $no_short_circuit;
+        } else {
+            my $can_transfer;
+            my $cache_key;
+            if ($cache_transfers) {
+                my $limittype = C4::Context->preference('BranchTransferLimitsType') // '';
+                $cache_key = sprintf(
+                    "Hold_CanBeTransferred:%s:%s:%s:%s", $item->holdingbranch, $pickup_library->branchcode,
+                    $limittype, $limittype eq 'itemtype' ? $item->effective_itemtype : $item->ccode // ''
+                );
+                $can_transfer = Koha::Cache::Memory::Lite->get_instance()->get_from_cache($cache_key);
+            }
+            unless ( defined $can_transfer ) {
+                $can_transfer = $item->can_be_transferred( { to => $pickup_library } ) ? 1 : 0;
+                Koha::Cache::Memory::Lite->get_instance()->set_in_cache( $cache_key, $can_transfer )
+                    if $cache_transfers;
+            }
+            unless ($can_transfer) {
+                $result->add_blocker( cannot_be_transferred => 1 );
+                return $result unless $no_short_circuit;
+            }
         }
 
         if ( $branchitemrule->{hold_fulfillment_policy} eq 'holdgroup'

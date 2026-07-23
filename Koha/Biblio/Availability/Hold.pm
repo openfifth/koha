@@ -19,9 +19,11 @@ package Koha::Biblio::Availability::Hold;
 
 use Modern::Perl;
 
+use C4::Context;
 use C4::Items qw( get_hostitemnumbers_of );
 use Koha::Items;
 use Koha::Item::Availability::Hold;
+use Koha::Policy::Biblio::AgeRestriction;
 use Koha::Result::Availability;
 
 =head1 NAME
@@ -41,6 +43,14 @@ Koha::Biblio::Availability::Hold - Biblio-level hold availability
 Checks whether a patron can place a biblio-level hold. Runs patron
 eligibility once, then iterates items looking for at least one that
 is holdable. Returns L<Koha::Result::Availability>.
+
+Patron/biblio context that doesn't vary by item (currently-held,
+checked-out, and recalled itemnumbers, and biblio-level age restriction) is
+fetched once before the item loop and passed into each
+L<Koha::Item::Availability::Hold> call, so the per-item check does an
+in-memory lookup instead of a fresh query - the item search itself is not
+yet prefetch-joined (homebranch/transfer-limit lookups still query
+per-item), see bug 43124.
 
 =head1 API
 
@@ -63,6 +73,12 @@ Parameters (hashref):
 =item overrides - hashref of checks to skip (optional)
 
 =item no_short_circuit - collect all blockers (optional)
+
+=item items - arrayref of pre-fetched L<Koha::Item> objects to check
+(optional). When supplied, skips this class's own item/host-item fetch
+entirely - for callers that already have the biblio's item list in hand and
+want to reuse it across multiple C<check()> calls (e.g. checking several
+patrons for the same club hold), rather than re-fetching per call.
 
 =back
 
@@ -99,19 +115,27 @@ sub check {
     }
 
     # Iterate items looking for at least one holdable
-    # TODO: Consider fetching items with a JOIN to avoid N+1 queries in the loop
-    # (e.g., prefetch homebranch for hold group validation).
-    my $items_search = {};
-    $items_search->{itype} = $item_type_id if $item_type_id;
+    # TODO: homebranch/hold-group validation and can_be_transferred still
+    # query per unique branch combination (memoized in
+    # Koha::Item::Availability::Hold, but not prefetched here via JOIN).
+    my @items = $params->{items} ? @{ $params->{items} } : $class->fetch_items( $biblio, $item_type_id );
 
-    my @items = $biblio->items->search($items_search)->as_list;
+    # Pre-warm patron/biblio context that's constant across every item on
+    # this record, so Koha::Item::Availability::Hold->check does an in-memory
+    # lookup per item instead of a fresh query - the whole point of this
+    # class existing rather than callers looping CanItemBeReserved directly.
+    my %held_itemnumbers =
+        map { $_ => 1 } $patron->holds->search( { itemnumber => { '!=' => undef } } )->get_column('itemnumber');
 
-    # Include items linked via host records (analytics)
-    my @hostitemnumbers = C4::Items::get_hostitemnumbers_of( $biblio->biblionumber );
-    if (@hostitemnumbers) {
-        my @host_items = Koha::Items->search( { itemnumber => { -in => \@hostitemnumbers }, %$items_search } )->as_list;
-        push @items, @host_items;
+    my %checked_out_itemnumbers;
+    unless ( C4::Context->preference('AllowHoldsOnPatronsPossessions') ) {
+        %checked_out_itemnumbers = map { $_ => 1 } $patron->checkouts->get_column('itemnumber');
     }
+
+    my %recalled_itemnumbers =
+        map { $_ => 1 } $patron->recalls->filter_by_current->get_column('item_id');
+
+    my $age_restriction_ok = Koha::Policy::Biblio::AgeRestriction->check( $biblio, $patron );
 
     my @item_failures;
     for my $item (@items) {
@@ -122,6 +146,11 @@ sub check {
                 pickup_library           => $pickup_library,
                 overrides                => $overrides,
                 skip_patron_count_checks => 1,
+                held_itemnumbers         => \%held_itemnumbers,
+                checked_out_itemnumbers  => \%checked_out_itemnumbers,
+                recalled_itemnumbers     => \%recalled_itemnumbers,
+                age_restriction_ok       => $age_restriction_ok,
+                cache_transfers          => 1,
             }
         );
         if ( $item_result->available ) {
@@ -140,6 +169,36 @@ sub check {
     $result->set_context( item_failures => \@item_failures ) if @item_failures;
 
     return $result;
+}
+
+=head3 fetch_items
+
+    my @items = Koha::Biblio::Availability::Hold->fetch_items( $biblio, $item_type_id );
+
+Fetches the biblio's items, including items linked via host records
+(analytics), optionally filtered to a single itemtype. This is the same
+list C<check()> builds internally when no C<items> param is given - exposed
+so a caller checking the same biblio against several patrons (e.g. club
+holds) can fetch once and pass the result via C<check()>'s C<items> param to
+every call instead of repeating the fetch per patron.
+
+=cut
+
+sub fetch_items {
+    my ( $class, $biblio, $item_type_id ) = @_;
+
+    my $items_search = {};
+    $items_search->{itype} = $item_type_id if $item_type_id;
+
+    my @items = $biblio->items->search($items_search)->as_list;
+
+    my @hostitemnumbers = C4::Items::get_hostitemnumbers_of( $biblio->biblionumber );
+    if (@hostitemnumbers) {
+        my @host_items = Koha::Items->search( { itemnumber => { -in => \@hostitemnumbers }, %$items_search } )->as_list;
+        push @items, @host_items;
+    }
+
+    return @items;
 }
 
 1;

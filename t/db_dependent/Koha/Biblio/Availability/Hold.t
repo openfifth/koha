@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 use Modern::Perl;
-use Test::More tests => 6;
+use Test::More tests => 7;
 use Test::NoWarnings;
 
 use t::lib::TestBuilder;
@@ -155,6 +155,67 @@ subtest 'Host items (analytics) are considered' => sub {
 
     ok( $result->available, 'Available via host item when biblio has no own items' );
     is( $result->context->{available_item}->itemnumber, $host_item->itemnumber, 'Host item found' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'Query count stays flat as item count scales (bug 43124)' => sub {
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    # Every item is already held by the patron, so each item's check reaches
+    # (and is blocked by) item_already_on_hold - this, together with age
+    # restriction, is precomputed once per biblio rather than queried per
+    # item. If either regresses back to a per-item query, query count grows
+    # with item count instead of staying flat.
+    my $count_queries = sub {
+        my ($n_items) = @_;
+
+        my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+        my $patron =
+            $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $library->branchcode } } );
+        my $biblio = $builder->build_sample_biblio;
+
+        for ( 1 .. $n_items ) {
+            my $item = $builder->build_sample_item(
+                { biblionumber => $biblio->biblionumber, library => $library->branchcode } );
+            $builder->build_object(
+                {
+                    class => 'Koha::Holds',
+                    value => {
+                        itemnumber     => $item->itemnumber,
+                        borrowernumber => $patron->borrowernumber,
+                        biblionumber   => $biblio->biblionumber,
+                    }
+                }
+            );
+        }
+
+        my $trace = q{};
+        open my $fh, '>', \$trace or die $!;
+        $schema->storage->debugfh($fh);
+        $schema->storage->debug(1);
+
+        my $result = Koha::Biblio::Availability::Hold->check( { biblio => $biblio, patron => $patron } );
+
+        $schema->storage->debug(0);
+
+        return ( $result, scalar( () = $trace =~ /^(?:SELECT|INSERT|UPDATE|DELETE)\b/mg ) );
+    };
+
+    my ( $result_10,  $queries_10 )  = $count_queries->(10);
+    my ( $result_100, $queries_100 ) = $count_queries->(100);
+
+    ok( !$result_10->available && !$result_100->available, 'Sanity: both runs correctly find no available item' )
+        or diag("queries for 10 items: $queries_10, queries for 100 items: $queries_100");
+
+    # A regression to per-item queries for either optimization would add
+    # roughly 2 extra queries per extra item (90 extra items here) - a
+    # generous absolute delta catches that while tolerating the couple of
+    # genuinely per-item-type/branch queries (e.g. circulation rule lookups)
+    # that are already cached elsewhere but not eliminated by this bug.
+    cmp_ok( $queries_100 - $queries_10, '<', 20, 'Query count does not scale with item count (10 vs 100 items)' );
 
     $schema->storage->txn_rollback;
 };
