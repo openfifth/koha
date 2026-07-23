@@ -236,8 +236,8 @@ function delSingleRecord(biblionumber) {
     var pos = jQuery.inArray(biblionumber, arrayRecords);
     arrayRecords.splice(pos, 1);
 
-    //if cart is empty, bail
-    if (pos <= -1) {
+    // if pos is -1, the cart is empty, bail
+    if (pos === -1) {
         return;
     }
 

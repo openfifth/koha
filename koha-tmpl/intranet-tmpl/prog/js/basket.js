@@ -270,8 +270,8 @@ function delSingleRecord(biblionumber) {
     var arrayRecords = valCookie.split("/");
     var pos = jQuery.inArray(biblionumber, arrayRecords);
 
-    // the cart is empty, bail
-    if (pos <= 0) {
+    // if pos is -1, the cart is empty, bail
+    if (pos === -1) {
         return;
     }
 
