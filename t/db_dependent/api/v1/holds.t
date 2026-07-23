@@ -400,11 +400,11 @@ subtest 'x-koha-override and AllowHoldPolicyOverride tests' => sub {
         pickup_library_id => $patron->branchcode,
     };
 
-    $can_item_be_reserved_result = { status => 'ageRestricted' };
+    $can_item_be_reserved_result = { status => 'age_restricted' };
 
     $t->post_ok( "//$userid:$password@/api/v1/holds" => json => $post_data )
         ->status_is(403)
-        ->json_is( '/error' => "Hold cannot be placed. Reason: ageRestricted" );
+        ->json_is( '/error' => "Hold cannot be placed. Reason: age_restricted" );
 
     # x-koha-override doesn't override if AllowHoldPolicyOverride not set
     $t->post_ok( "//$userid:$password@/api/v1/holds" => { 'x-koha-override' => 'any' } => json => $post_data )
@@ -412,11 +412,11 @@ subtest 'x-koha-override and AllowHoldPolicyOverride tests' => sub {
 
     t::lib::Mocks::mock_preference( 'AllowHoldPolicyOverride', 1 );
 
-    $can_item_be_reserved_result = { status => 'pickupNotInHoldGroup' };
+    $can_item_be_reserved_result = { status => 'pickup_not_in_hold_group' };
 
     $t->post_ok( "//$userid:$password@/api/v1/holds" => json => $post_data )
         ->status_is(403)
-        ->json_is( '/error' => "Hold cannot be placed. Reason: pickupNotInHoldGroup" );
+        ->json_is( '/error' => "Hold cannot be placed. Reason: pickup_not_in_hold_group" );
 
     # x-koha-override overrides the status
     $t->post_ok( "//$userid:$password@/api/v1/holds" => { 'x-koha-override' => 'any' } => json => $post_data )
@@ -1638,14 +1638,14 @@ subtest 'add() tests' => sub {
         ->status_is(400)
         ->json_is( '/error' => 'The supplied pickup location is not valid' );
 
-    $can_item_be_reserved   = 'notReservable';
+    $can_item_be_reserved   = 'not_reservable';
     $can_biblio_be_reserved = 'OK';
 
     $item_hold_data->{pickup_library_id} = $library_2->branchcode;
 
     $t->post_ok( "//$userid:$password@/api/v1/holds" => json => $item_hold_data )
         ->status_is( 403, 'Item checks performed when both biblio_id and item_id passed (Bug 35053)' )
-        ->json_is( '/error' => 'Hold cannot be placed. Reason: notReservable' );
+        ->json_is( '/error' => 'Hold cannot be placed. Reason: not_reservable' );
 
     $can_item_be_reserved   = 'OK';
     $can_biblio_be_reserved = 'OK';
