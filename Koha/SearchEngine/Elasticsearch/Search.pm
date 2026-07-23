@@ -43,6 +43,7 @@ use Modern::Perl;
 use base qw(Koha::SearchEngine::Elasticsearch);
 use C4::Context;
 use C4::AuthoritiesMarc;
+use Digest::MD5 qw( md5_hex );
 use Koha::Items;
 use Koha::ItemTypes;
 use Koha::AuthorisedValues;
@@ -319,6 +320,11 @@ that have at least one available item.
 sub _get_available_biblionumbers {
     my ($self) = @_;
 
+    my $cache     = Koha::Caches->get_instance();
+    my $cache_key = 'elasticsearch_available_biblionumbers';
+    my $cached    = $cache->get_from_cache($cache_key);
+    return @$cached if defined $cached;
+
     my $items_searcher =
         Koha::SearchEngine::Elasticsearch::Search->new( { index => $Koha::SearchEngine::ITEMS_INDEX } );
     my $elasticsearch = $items_searcher->get_elasticsearch();
@@ -346,6 +352,8 @@ sub _get_available_biblionumbers {
         $after_key = $result->{aggregations}{by_biblio}{after_key};
     } while ( defined $after_key );
 
+    $cache->set_in_cache( $cache_key, \@biblionumbers, { expiry => 15 } );
+
     return @biblionumbers;
 }
 
@@ -368,6 +376,11 @@ sub _get_item_facets {
     my ( $self, $biblionumbers ) = @_;
 
     return {} unless @$biblionumbers;
+
+    my $cache     = Koha::Caches->get_instance();
+    my $cache_key = 'elasticsearch_item_facets_' . md5_hex( join( ',', sort { $a <=> $b } @$biblionumbers ) );
+    my $cached    = $cache->get_from_cache($cache_key);
+    return $cached if defined $cached;
 
     my $limit = C4::Context->preference('FacetMaxCount') || 20;
 
@@ -404,7 +417,10 @@ sub _get_item_facets {
         }
     );
 
-    return $result->{aggregations} // {};
+    my $aggregations = $result->{aggregations} // {};
+    $cache->set_in_cache( $cache_key, $aggregations, { expiry => 15 } );
+
+    return $aggregations;
 }
 
 =head2 search_auth_compat
