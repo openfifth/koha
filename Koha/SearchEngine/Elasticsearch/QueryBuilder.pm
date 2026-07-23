@@ -254,6 +254,104 @@ sub build_query {
     return $res;
 }
 
+=head2 _extract_item_level_constraints
+
+    my $groups = $self->_extract_item_level_constraints($limits);
+
+Scans C<$limits> (already through C<_fix_limit_special_cases>, so branch
+groups/multibranchlimit are resolved but not yet through C<_convert_index_strings>
+or C<_join_queries>) for limits that constrain individual item-level fields
+(item type, collection, location, home library, holding library, availability),
+and returns them as a list of constraint groups suitable for querying the
+items index directly - so combined filters can require a single item to
+satisfy all of them, rather than being checked against the biblio-level
+flattened data as today.
+
+C<$limits> itself is not modified - these constraints are extracted
+(read: copied), not removed, so the existing query string (and its
+established, if imperfect, biblio-level behaviour) remains a safe fallback
+for whoever consumes C<$query> if the items index isn't ready.
+
+Each returned group is one of:
+
+    { field => 'itype', values => ['BOOK', 'AUDIO'] }
+
+    # SearchLimitLibrary set to neither homebranch nor holdingbranch
+    # specifically produces an OR across both fields, not a single one
+    { any_of => { homebranch => [...], holdingbranch => [...] } }
+
+    { available => 1 }
+
+=cut
+
+sub _extract_item_level_constraints {
+    my ( $self, $limits ) = @_;
+
+    my %simple_field_by_alias = (
+        itype         => 'itype',
+        ccode         => 'ccode',
+        loc           => 'location',
+        location      => 'location',
+        homebranch    => 'homebranch',
+        holdingbranch => 'holdingbranch',
+    );
+
+    my %simple;
+    my $any_of_branches;
+    my $available = 0;
+
+    for my $l (@$limits) {
+
+        # Advanced search checkboxes send mc-itype/mc-ccode/mc-loc; clicking an
+        # item type/collection/location/home library/holding library facet on a
+        # results page sends the bare field name instead - both shapes need to
+        # be caught. This never conflicts with the branch-dropdown shape below,
+        # since that one is always wrapped in an outer "(field: "value" ...)" -
+        # starting with a literal "(", which this anchored match excludes.
+        if ( my ( $alias, $raw_value ) = $l =~ /^(?:mc-)?(itype|ccode|loc|location|homebranch|holdingbranch):(.*)$/ ) {
+            my $field = $simple_field_by_alias{$alias};
+
+            # _fix_limit_special_cases' default case quotes generic field:value
+            # limits as field:("value") for safe exact-phrase matching in the
+            # Lucene string. Unwrap that here to get the real value.
+            my ($value) = $raw_value =~ /^\("(.*)"\)$/ ? $1 : $raw_value;
+            $simple{$field}{$value} = 1;
+            next;
+        }
+        if ( $l eq 'available:true' ) {
+            $available = 1;
+            next;
+        }
+
+        # The advanced search "Individual libraries" dropdown goes through
+        # _fix_limit_special_cases' own branch handling instead, driven by the
+        # SearchLimitLibrary syspref: single-field limits look like
+        # (homebranch: "X" OR homebranch: "Y"), and when SearchLimitLibrary is
+        # neither homebranch nor holdingbranch specifically, both fields are
+        # OR'd together in one combined limit instead.
+        if ( $l =~ /homebranch:|holdingbranch:/ ) {
+            my @home    = ( $l =~ /homebranch:\s*"([^"]+)"/g );
+            my @holding = ( $l =~ /holdingbranch:\s*"([^"]+)"/g );
+            if ( @home && @holding ) {
+                $any_of_branches = { homebranch => \@home, holdingbranch => \@holding };
+            } elsif (@home) {
+                $simple{homebranch}{$_} = 1 for @home;
+            } elsif (@holding) {
+                $simple{holdingbranch}{$_} = 1 for @holding;
+            }
+        }
+    }
+
+    my @groups;
+    for my $field ( sort keys %simple ) {
+        push @groups, { field => $field, values => [ sort keys %{ $simple{$field} } ] };
+    }
+    push @groups, { any_of    => $any_of_branches } if $any_of_branches;
+    push @groups, { available => 1 }                if $available;
+
+    return \@groups;
+}
+
 =head2 build_query_compat
 
     my (
@@ -296,6 +394,8 @@ sub build_query_compat {
             : [];
         $limits = $self->_fix_limit_special_cases($orig_limits);
         if ( $params->{suppress} ) { push @$limits, "suppress:false"; }
+
+        my $item_level_constraints = $self->_extract_item_level_constraints($limits);
 
         # Merge the indexes in with the search terms and the operands so that
         # each search thing is a handy unit.
@@ -341,6 +441,7 @@ sub build_query_compat {
         $options{skip_facets}             = $params->{skip_facets};
         $options{field_match_boost_query} = $field_match_boost_query if @$field_match_boost_query;
         $query                            = $self->build_query( $query_str, %options );
+        $query->{_item_level_constraints} = $item_level_constraints if @$item_level_constraints;
     }
 
     # We roughly emulate the CGI parameters of the zebra query builder

@@ -18,7 +18,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 9;
+use Test::More tests => 10;
 use t::lib::Mocks;
 
 use_ok('Koha::SearchEngine::Elasticsearch::QueryBuilder');
@@ -379,6 +379,83 @@ subtest '_join_queries' => sub {
     is(
         $query, '(homebranch:foo) AND itype:(BOOK OR EBOOK) AND location:(SHELF)',
         'should join "mc-" parts with AND if not the same field'
+    );
+};
+
+subtest '_extract_item_level_constraints() tests' => sub {
+    plan tests => 12;
+
+    my $qb = Koha::SearchEngine::Elasticsearch::QueryBuilder->new(
+        { 'index' => $Koha::SearchEngine::Elasticsearch::BIBLIOS_INDEX } );
+
+    my $groups = $qb->_extract_item_level_constraints( [] );
+    is_deeply( $groups, [], 'no limits returns no groups' );
+
+    # Advanced search checkboxes send mc-itype/mc-ccode/mc-loc, quoted as
+    # field:("value") by _fix_limit_special_cases' default case
+    $groups = $qb->_extract_item_level_constraints( ['mc-itype:("BK")'] );
+    is_deeply( $groups, [ { field => 'itype', values => ['BK'] } ], 'mc-itype extracted and unwrapped' );
+
+    # Clicking an item type/collection/location facet sends the bare field
+    # name instead, going through the same generic quoting
+    $groups = $qb->_extract_item_level_constraints( ['ccode:("FIC")'] );
+    is_deeply( $groups, [ { field => 'ccode', values => ['FIC'] } ], 'bare ccode (facet-click shape) extracted' );
+
+    # loc (mc- alias) and location (bare facet-click field) both map to 'location'
+    $groups = $qb->_extract_item_level_constraints( ['mc-loc:("SHELF")'] );
+    is_deeply( $groups, [ { field => 'location', values => ['SHELF'] } ], 'mc-loc aliases to the location field' );
+
+    $groups = $qb->_extract_item_level_constraints( ['location:("SHELF")'] );
+    is_deeply( $groups, [ { field => 'location', values => ['SHELF'] } ], 'bare location field extracted directly' );
+
+    # Multiple values for the same field (e.g. two itype checkboxes ticked)
+    # collect into a single OR group, sorted
+    $groups = $qb->_extract_item_level_constraints( [ 'mc-itype:("BK")', 'mc-itype:("MU")' ] );
+    is_deeply(
+        $groups, [ { field => 'itype', values => [ 'BK', 'MU' ] } ],
+        'multiple values for the same field collect into one group, sorted'
+    );
+
+    $groups = $qb->_extract_item_level_constraints( ['available:true'] );
+    is_deeply( $groups, [ { available => 1 } ], 'available:true extracted' );
+
+    # Clicking the Home/Holding library facet directly - same bare
+    # field:("value") shape as itype/ccode/location
+    $groups = $qb->_extract_item_level_constraints( ['homebranch:("CPL")'] );
+    is_deeply(
+        $groups, [ { field => 'homebranch', values => ['CPL'] } ],
+        'bare homebranch (facet-click shape) extracted'
+    );
+
+    $groups = $qb->_extract_item_level_constraints( ['holdingbranch:("MPL")'] );
+    is_deeply(
+        $groups, [ { field => 'holdingbranch', values => ['MPL'] } ],
+        'bare holdingbranch (facet-click shape) extracted'
+    );
+
+    # Advanced search "Individual libraries" dropdown, SearchLimitLibrary set
+    # to a single field: _fix_limit_special_cases produces a distinctly
+    # different quoted shape (space, no parens) for this one
+    $groups = $qb->_extract_item_level_constraints( ['(homebranch: "CPL")'] );
+    is_deeply(
+        $groups, [ { field => 'homebranch', values => ['CPL'] } ],
+        'a single-field branch-dropdown limit is a simple group'
+    );
+
+    # Same dropdown, SearchLimitLibrary set to neither homebranch nor
+    # holdingbranch: both fields are OR'd together in one combined limit
+    $groups = $qb->_extract_item_level_constraints( ['(homebranch: "CPL" OR holdingbranch: "CPL")'] );
+    is_deeply(
+        $groups, [ { any_of => { homebranch => ['CPL'], holdingbranch => ['CPL'] } } ],
+        'a combined home/holding branch limit becomes an any_of group'
+    );
+
+    # Everything together
+    $groups = $qb->_extract_item_level_constraints( [ 'mc-itype:("BK")', 'ccode:("FIC")', 'available:true' ] );
+    is_deeply(
+        $groups,
+        [ { field => 'ccode', values => ['FIC'] }, { field => 'itype', values => ['BK'] }, { available => 1 } ],
+        'a mix of constraint shapes together are all extracted'
     );
 };
 

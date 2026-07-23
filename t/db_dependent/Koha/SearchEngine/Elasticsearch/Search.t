@@ -101,39 +101,45 @@ is( $searcher->index, 'mydb', 'Testing basic accessor' );
 
 ok( my $query = $builder->build_query('easy'), 'Build a search query' );
 
-subtest '_apply_available_filter() tests' => sub {
+subtest '_apply_item_level_filters() tests' => sub {
     plan tests => 4;
 
     my $mock_search = Test::MockModule->new('Koha::SearchEngine::Elasticsearch::Search');
-    $mock_search->mock( '_get_available_biblionumbers', sub { return ( 1, 2, 3 ) } );
+    $mock_search->mock( '_get_matching_biblionumbers', sub { return ( 1, 2, 3 ) } );
+    $mock_search->mock( '_items_index_ready',          sub { return 1 } );
 
     my $searcher = Koha::SearchEngine::Elasticsearch::Search->new(
         { nodes => ['localhost:9200'], index => $Koha::SearchEngine::BIBLIOS_INDEX } );
 
+    # No constraints attached: query untouched
     my $query = { query => { bool => { must => [ { query_string => { query => 'title:foo' } } ] } } };
-    $searcher->_apply_available_filter($query);
+    $searcher->_apply_item_level_filters($query);
     is(
         $query->{query}{bool}{must}[0]{query_string}{query},
-        'title:foo', 'query without available:true is not modified'
+        'title:foo', 'query without item-level constraints is not modified'
     );
 
-    $query = { query => { bool => { must => [ { query_string => { query => 'available:true' } } ] } } };
-    $searcher->_apply_available_filter($query);
-    ok( exists $query->{query}{bool}{filter}, 'available:true rewrite adds a filter' );
-    is( $query->{query}{bool}{must}[0]{query_string}{query}, '*', 'available:true stripped from query string' );
-
+    # Constraints present, items index ready: adds an ids filter, query string untouched
     $query = {
-        query => {
-            bool => {
-                must => [
-                    { query_string => { query => 'title:foo' } },
-                    { query_string => { query => 'available:true' } },
-                ]
-            }
-        }
+        query                   => { bool => { must => [ { query_string => { query => 'available:true' } } ] } },
+        _item_level_constraints => [ { available => 1 } ],
     };
-    $searcher->_apply_available_filter($query);
-    ok( exists $query->{query}{bool}{filter}, 'available:true found and rewritten when not at must[0]' );
+    $searcher->_apply_item_level_filters($query);
+    ok( exists $query->{query}{bool}{filter}, 'constraints present: adds an ids filter' );
+    is_deeply(
+        $query->{query}{bool}{filter}[0]{ids}{values},
+        [ '1', '2', '3' ],
+        'ids filter contains the matching biblionumbers'
+    );
+
+    # Items index not ready: no filter added, falls back to the (untouched) query string
+    $mock_search->mock( '_items_index_ready', sub { return 0 } );
+    $query = {
+        query                   => { bool => { must => [ { query_string => { query => 'mc-itype:BOOK' } } ] } },
+        _item_level_constraints => [ { field => 'itype', values => ['BOOK'] } ],
+    };
+    $searcher->_apply_item_level_filters($query);
+    ok( !exists $query->{query}{bool}{filter}, 'items index not ready: no filter added, falls back to query string' );
 };
 
 subtest '_items_index_ready() tests' => sub {
@@ -320,11 +326,18 @@ SKIP: {
 
     };
 
-    subtest '_get_available_biblionumbers() tests' => sub {
+    subtest '_get_matching_biblionumbers() tests' => sub {
         plan tests => 5;
 
-        my $cache = Koha::Caches->get_instance();
-        $cache->clear_from_cache('elasticsearch_available_biblionumbers');
+        my $cache        = Koha::Caches->get_instance();
+        my $groups       = [ { field => 'itype', values => ['BOOK'] }, { available => 1 } ];
+        my $other_groups = [ { field => 'itype', values => ['AUDIO'] } ];
+        my $key          = 'elasticsearch_item_level_filter_'
+            . md5_hex( Koha::SearchEngine::Elasticsearch::Search::_item_level_groups_cache_key($groups) );
+        my $other_key = 'elasticsearch_item_level_filter_'
+            . md5_hex( Koha::SearchEngine::Elasticsearch::Search::_item_level_groups_cache_key($other_groups) );
+        $cache->clear_from_cache($key);
+        $cache->clear_from_cache($other_key);
 
         my $mock_es     = Test::MockModule->new('Koha::SearchEngine::Elasticsearch');
         my $mock_client = MockESSearchClient->new;
@@ -343,17 +356,21 @@ SKIP: {
             }
         };
 
-        my @bns = $searcher->_get_available_biblionumbers();
-        is( scalar @bns, 2, '_get_available_biblionumbers returns one entry per bucket' );
+        my @bns = $searcher->_get_matching_biblionumbers($groups);
+        is( scalar @bns, 2, '_get_matching_biblionumbers returns one entry per bucket' );
         is_deeply( [ sort { $a <=> $b } @bns ], [ 10, 20 ], 'correct biblionumbers returned' );
         is( $es_calls, 1, 'ES queried on cache miss' );
 
-        # Second call should hit the cache rather than re-scanning the items index
-        @bns = $searcher->_get_available_biblionumbers();
-        is( $es_calls, 1, 'ES not queried again: cached result used on repeat call' );
-        is_deeply( [ sort { $a <=> $b } @bns ], [ 10, 20 ], 'cached biblionumbers are correct' );
+        # Same constraint set: cached result used, no new ES call
+        $searcher->_get_matching_biblionumbers($groups);
+        is( $es_calls, 1, 'ES not queried again for the same constraint set' );
 
-        $cache->clear_from_cache('elasticsearch_available_biblionumbers');
+        # Different constraint set: cache key differs, ES queried again
+        $searcher->_get_matching_biblionumbers($other_groups);
+        is( $es_calls, 2, 'ES queried again for a different constraint set' );
+
+        $cache->clear_from_cache($key);
+        $cache->clear_from_cache($other_key);
     };
 
     subtest '_get_item_facets() tests' => sub {

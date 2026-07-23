@@ -170,7 +170,7 @@ sub search_compat {
     }
 
     if ( $self->index eq $Koha::SearchEngine::BIBLIOS_INDEX && $self->_items_index_ready ) {
-        $self->_apply_available_filter($query);
+        $self->_apply_item_level_filters($query);
         $query->{aggregations}{_biblionumbers} = { terms => { field => 'biblionumber', size => 9_000 } };
     }
 
@@ -260,45 +260,36 @@ sub _items_index_ready {
     return $ready;
 }
 
-=head2 _apply_available_filter
+=head2 _apply_item_level_filters
 
-    $self->_apply_available_filter($query);
+    $self->_apply_item_level_filters($query);
 
-Rewrites a biblio Elasticsearch query that contains C<available:true> so
-that availability is resolved against the items index rather than the
-biblios index. The items index is updated on every circulation event, so
-it reflects the current availability immediately; the biblios index may lag
-when only circulation fields changed.
+Looks for item-level constraints attached to C<$query> by
+L<Koha::SearchEngine::Elasticsearch::QueryBuilder/_extract_item_level_constraints>
+(item type, collection, location, home/holding library, availability) and,
+if the items index is ready, resolves them as a single combined query
+against the items index - so a bib only matches if one item satisfies all
+of the constraints together, not the bib as a whole.
 
-If the items index is unreachable the query is left unchanged, falling back
-to the C<available:true> field in the biblios index.
+The original query string is left untouched either way: if this succeeds,
+the biblio-level (flattened, cross-item) tokens for the same fields are
+still present and get checked too, redundantly but harmlessly, since any
+bib passing the items-index check would also satisfy that looser check.
+If the items index isn't ready, or the query fails for any reason, nothing
+further happens here - the untouched query string is the existing,
+imperfect-for-combined-filters fallback, same as before this existed.
 
 =cut
 
-sub _apply_available_filter {
+sub _apply_item_level_filters {
     my ( $self, $query ) = @_;
 
-    my $must = eval { $query->{query}{bool}{must} };
-    return unless ref $must eq 'ARRAY';
-
-    my ($qs_container) = grep {
-               ref $_ eq 'HASH'
-            && exists $_->{query_string}
-            && ( $_->{query_string}{query} // '' ) =~ /\(?available:true\)?/
-    } @$must;
-    return unless $qs_container;
-    my $qs_node = $qs_container->{query_string};
+    my $groups = delete $query->{_item_level_constraints};
+    return unless $groups && @$groups;
+    return unless $self->_items_index_ready;
 
     my @biblionumbers;
-    eval { @biblionumbers = $self->_get_available_biblionumbers(); 1 } or return;
-
-    my $available_re = qr/\(?available:true\)?/;
-    my $qs           = $qs_node->{query};
-    $qs =~ s/\s+AND\s+$available_re//i;
-    $qs =~ s/${available_re}\s+AND\s+//i;
-    $qs =~ s/$available_re//i;
-    $qs =~ s/^\s+|\s+$//g;
-    $qs_node->{query} = $qs || '*';
+    eval { @biblionumbers = $self->_get_matching_biblionumbers($groups); 1 } or return;
 
     if (@biblionumbers) {
         push @{ $query->{query}{bool}{filter} },
@@ -308,22 +299,43 @@ sub _apply_available_filter {
     }
 }
 
-=head2 _get_available_biblionumbers
+=head2 _get_matching_biblionumbers
 
-    my @biblionumbers = $self->_get_available_biblionumbers();
+    my @biblionumbers = $self->_get_matching_biblionumbers($groups);
 
-Queries the items Elasticsearch index and returns a list of all biblionumbers
-that have at least one available item.
+Queries the items Elasticsearch index for biblionumbers with at least one
+item satisfying every constraint group together (AND across groups, OR
+within a group's own values - see
+L<Koha::SearchEngine::Elasticsearch::QueryBuilder/_extract_item_level_constraints>
+for the group shapes). Cached briefly, keyed on the exact constraint set,
+since this scans the items index and would otherwise repeat that scan on
+every search using the same filters.
 
 =cut
 
-sub _get_available_biblionumbers {
-    my ($self) = @_;
+sub _get_matching_biblionumbers {
+    my ( $self, $groups ) = @_;
 
     my $cache     = Koha::Caches->get_instance();
-    my $cache_key = 'elasticsearch_available_biblionumbers';
+    my $cache_key = 'elasticsearch_item_level_filter_' . md5_hex( _item_level_groups_cache_key($groups) );
     my $cached    = $cache->get_from_cache($cache_key);
     return @$cached if defined $cached;
+
+    my @must;
+    for my $group (@$groups) {
+        if ( $group->{available} ) {
+            push @must, { term => { available => \1 } };
+        } elsif ( $group->{any_of} ) {
+            push @must,
+                {
+                bool => {
+                    should => [ map { { terms => { $_ => $group->{any_of}{$_} } } } sort keys %{ $group->{any_of} } ]
+                }
+                };
+        } elsif ( $group->{field} ) {
+            push @must, { terms => { $group->{field} => $group->{values} } };
+        }
+    }
 
     my $items_searcher =
         Koha::SearchEngine::Elasticsearch::Search->new( { index => $Koha::SearchEngine::ITEMS_INDEX } );
@@ -341,7 +353,7 @@ sub _get_available_biblionumbers {
         my $result = $elasticsearch->search(
             index => $items_searcher->index_name,
             body  => {
-                query => { term => { available => \1 } },
+                query => { bool => { must => \@must } },
                 size  => 0,
                 aggs  => { by_biblio => { composite => $composite } },
             }
@@ -355,6 +367,33 @@ sub _get_available_biblionumbers {
     $cache->set_in_cache( $cache_key, \@biblionumbers, { expiry => 15 } );
 
     return @biblionumbers;
+}
+
+=head2 _item_level_groups_cache_key
+
+    my $key_str = _item_level_groups_cache_key($groups);
+
+Builds a deterministic string from a set of constraint groups, regardless
+of hash key ordering, suitable for hashing into a cache key.
+
+=cut
+
+sub _item_level_groups_cache_key {
+    my ($groups) = @_;
+
+    my @parts;
+    for my $group (@$groups) {
+        if ( $group->{available} ) {
+            push @parts, 'available';
+        } elsif ( $group->{any_of} ) {
+            my @fields = sort keys %{ $group->{any_of} };
+            push @parts, 'any_of:' . join( ',', map { "$_=" . join( ',', sort @{ $group->{any_of}{$_} } ) } @fields );
+        } elsif ( $group->{field} ) {
+            push @parts, "$group->{field}=" . join( ',', sort @{ $group->{values} } );
+        }
+    }
+
+    return join( '|', sort @parts );
 }
 
 =head2 _get_item_facets
