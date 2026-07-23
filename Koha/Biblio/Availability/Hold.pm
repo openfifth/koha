@@ -117,11 +117,11 @@ sub check {
     for my $item (@items) {
         my $item_result = Koha::Item::Availability::Hold->check(
             {
-                item               => $item,
-                patron             => $patron,
-                pickup_library     => $pickup_library,
-                overrides          => $overrides,
-                skip_patron_checks => 1,
+                item                     => $item,
+                patron                   => $patron,
+                pickup_library           => $pickup_library,
+                overrides                => $overrides,
+                skip_patron_count_checks => 1,
             }
         );
         if ( $item_result->available ) {

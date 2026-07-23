@@ -68,7 +68,7 @@ use C4::Accounts;
 use C4::Biblio      qw( GetMarcFromKohaField );
 use C4::Circulation qw( CheckIfIssuedToPatron GetBranchItemRule );
 use C4::Context;
-use C4::Items qw( CartToShelf get_hostitemnumbers_of );
+use C4::Items qw( CartToShelf );
 use C4::Letters;
 use C4::Log qw( logaction );
 use C4::Members::Messaging;
@@ -437,6 +437,14 @@ sub CanBookBeReserved {
   current params are:
   'ignore_hold_counts' - we use this routine to check if an item can fill a hold - on this case we
   should not check if there are too many holds as we only care about reservability
+  'skip_eligibility_checks' - skip only the patron's no-item-context eligibility gates (expired,
+  debt_limit, bad_address, card_lost, restricted, hold_limit), while still checking item/rule-context
+  hold counts. Use this in per-item display loops on a page that already shows patron eligibility
+  once, separately (e.g. reserve/request.pl's item table, opac-reserve.pl's per-item fee loop) -
+  unlike 'ignore_hold_counts', this does not skip the hold-count checks themselves.
+  'cache_counts' - memoize the item/rule-context hold-count queries for the request lifetime.
+  Only safe for read-only per-item display loops that won't place a hold between calls - off by
+  default so a plain call always sees a fresh count.
 
 @RETURNS { status => OK },              if the Item can be reserved.
          { status => age_restricted },   if the Item is age restricted for this borrower.
@@ -493,11 +501,13 @@ sub CanItemBeReserved {
 
     my $item_availability = Koha::Item::Availability::Hold->check(
         {
-            item               => $item,
-            patron             => $patron,
-            pickup_library     => $pickup_library,
-            skip_patron_checks => $params->{ignore_hold_counts},
-            overrides          => $params->{overrides},
+            item                    => $item,
+            patron                  => $patron,
+            pickup_library          => $pickup_library,
+            skip_patron_checks      => $params->{ignore_hold_counts},
+            skip_eligibility_checks => $params->{skip_eligibility_checks},
+            cache_counts            => $params->{cache_counts},
+            overrides               => $params->{overrides},
         }
     );
     unless ( $item_availability->available ) {
