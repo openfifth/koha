@@ -169,8 +169,9 @@ sub search_compat {
         return $self->_aggregation_scan( $query, $results_per_page, $offset );
     }
 
+    my $item_level_constraint_groups = [];
     if ( $self->index eq $Koha::SearchEngine::BIBLIOS_INDEX && $self->_items_index_ready ) {
-        $self->_apply_item_level_filters($query);
+        $item_level_constraint_groups = $self->_apply_item_level_filters($query) // [];
         $query->{aggregations}{_biblionumbers} = { terms => { field => 'biblionumber', size => 9_000 } };
     }
 
@@ -205,7 +206,8 @@ sub search_compat {
     if ( $self->index eq $Koha::SearchEngine::BIBLIOS_INDEX ) {
         my $bn_agg            = delete $aggregations->{_biblionumbers};
         my @all_biblionumbers = $bn_agg ? map { $_->{key} } @{ $bn_agg->{buckets} // [] } : ();
-        my $item_facets       = eval { $self->_get_item_facets( \@all_biblionumbers ) } // {};
+        my $item_facets =
+            eval { $self->_get_item_facets( \@all_biblionumbers, $item_level_constraint_groups ) } // {};
         $aggregations->{$_} = $item_facets->{$_} for keys %$item_facets;
     }
     my $facets = $self->_convert_facets($aggregations);
@@ -279,17 +281,22 @@ If the items index isn't ready, or the query fails for any reason, nothing
 further happens here - the untouched query string is the existing,
 imperfect-for-combined-filters fallback, same as before this existed.
 
+Returns the constraint groups that were applied (or an empty arrayref if
+none were, e.g. no constraints present or the items index isn't ready), so
+the caller can also scope item-level facets to the same constraints - see
+C<_get_item_facets>.
+
 =cut
 
 sub _apply_item_level_filters {
     my ( $self, $query ) = @_;
 
     my $groups = delete $query->{_item_level_constraints};
-    return unless $groups && @$groups;
-    return unless $self->_items_index_ready;
+    return [] unless $groups && @$groups;
+    return [] unless $self->_items_index_ready;
 
     my @biblionumbers;
-    eval { @biblionumbers = $self->_get_matching_biblionumbers($groups); 1 } or return;
+    eval { @biblionumbers = $self->_get_matching_biblionumbers($groups); 1 } or return [];
 
     if (@biblionumbers) {
         push @{ $query->{query}{bool}{filter} },
@@ -297,6 +304,8 @@ sub _apply_item_level_filters {
     } else {
         $query->{query} = { match_none => {} };
     }
+
+    return $groups;
 }
 
 =head2 _get_matching_biblionumbers
@@ -321,21 +330,7 @@ sub _get_matching_biblionumbers {
     my $cached    = $cache->get_from_cache($cache_key);
     return @$cached if defined $cached;
 
-    my @must;
-    for my $group (@$groups) {
-        if ( $group->{available} ) {
-            push @must, { term => { available => \1 } };
-        } elsif ( $group->{any_of} ) {
-            push @must,
-                {
-                bool => {
-                    should => [ map { { terms => { $_ => $group->{any_of}{$_} } } } sort keys %{ $group->{any_of} } ]
-                }
-                };
-        } elsif ( $group->{field} ) {
-            push @must, { terms => { $group->{field} => $group->{values} } };
-        }
-    }
+    my @must = map { _group_to_query_clause($_) } @$groups;
 
     my $items_searcher =
         Koha::SearchEngine::Elasticsearch::Search->new( { index => $Koha::SearchEngine::ITEMS_INDEX } );
@@ -396,9 +391,60 @@ sub _item_level_groups_cache_key {
     return join( '|', sort @parts );
 }
 
+=head2 _group_to_query_clause
+
+    my $clause = _group_to_query_clause($group);
+
+Converts one item-level constraint group (see
+L<Koha::SearchEngine::Elasticsearch::QueryBuilder/_extract_item_level_constraints>
+for the possible shapes) into its Elasticsearch query clause. Shared by
+C<_get_matching_biblionumbers> (hits) and C<_get_item_facets> (facet
+counts), so both agree on what a group means in ES terms.
+
+=cut
+
+sub _group_to_query_clause {
+    my ($group) = @_;
+
+    if ( $group->{available} ) {
+        return { term => { available => \1 } };
+    } elsif ( $group->{any_of} ) {
+        return { bool =>
+                { should => [ map { { terms => { $_ => $group->{any_of}{$_} } } } sort keys %{ $group->{any_of} } ] } };
+    } elsif ( $group->{field} ) {
+        return { terms => { $group->{field} => $group->{values} } };
+    }
+}
+
+=head2 _group_targets_field
+
+    my $bool = _group_targets_field( $group, $field );
+
+Returns true if C<$group> constrains C<$field> (one of C<itype>, C<location>,
+C<ccode>, C<homebranch>, C<holdingbranch>). Used by C<_get_item_facets> to
+exclude a group from its own facet's aggregation, so a combined filter still
+shows what alternative values for that same field would also produce a hit,
+rather than collapsing every facet down to just the one combination that
+matched. An C<any_of> group constrains both C<homebranch> and
+C<holdingbranch> at once. C<available> groups never target one of these
+fields, since availability isn't one of these facets.
+
+=cut
+
+sub _group_targets_field {
+    my ( $group, $field ) = @_;
+
+    if ( $group->{field} ) {
+        return $group->{field} eq $field;
+    } elsif ( $group->{any_of} ) {
+        return exists $group->{any_of}{$field};
+    }
+    return 0;
+}
+
 =head2 _get_item_facets
 
-    my $item_facets = $self->_get_item_facets(\@biblionumbers);
+    my $item_facets = $self->_get_item_facets( \@biblionumbers, \@groups );
 
 Queries the items Elasticsearch index for the given biblionumbers and returns
 aggregation buckets for item-level facet fields (itype, location, ccode,
@@ -406,22 +452,49 @@ homebranch, holdingbranch). The returned hashref is in the same format as
 ES aggregation results so it can be merged directly into the biblio
 aggregations and processed by C<_convert_facets>.
 
+C<\@groups> are the same item-level constraint groups applied to the search
+itself (see C<_apply_item_level_filters>). Each facet field's own group is
+excluded from its own aggregation (every other active group still applies),
+so e.g. filtering to itype:BOOK + ccode:FICTION still shows what other item
+types would also satisfy ccode:FICTION, rather than only ever showing BOOK.
+Defaults to no groups (unscoped facets, the pre-existing behaviour) if
+omitted.
+
 Returns an empty hashref if the items index is unreachable or no
 biblionumbers are provided.
 
 =cut
 
 sub _get_item_facets {
-    my ( $self, $biblionumbers ) = @_;
+    my ( $self, $biblionumbers, $groups ) = @_;
+    $groups //= [];
 
     return {} unless @$biblionumbers;
 
     my $cache     = Koha::Caches->get_instance();
-    my $cache_key = 'elasticsearch_item_facets_' . md5_hex( join( ',', sort { $a <=> $b } @$biblionumbers ) );
-    my $cached    = $cache->get_from_cache($cache_key);
+    my $cache_key = 'elasticsearch_item_facets_'
+        . md5_hex( join( ',', sort { $a <=> $b } @$biblionumbers ) . '|' . _item_level_groups_cache_key($groups) );
+    my $cached = $cache->get_from_cache($cache_key);
     return $cached if defined $cached;
 
     my $limit = C4::Context->preference('FacetMaxCount') || 20;
+
+    my @facet_fields = qw( itype location ccode homebranch holdingbranch );
+
+    my %aggs;
+    for my $field (@facet_fields) {
+        my @must = map { _group_to_query_clause($_) } grep { !_group_targets_field( $_, $field ) } @$groups;
+
+        $aggs{$field} = {
+            filter => ( @must ? { bool => { must => \@must } } : { match_all => {} } ),
+            aggs   => {
+                values => {
+                    terms => { field        => $field, size => $limit },
+                    aggs  => { biblio_count => { cardinality => { field => 'biblionumber' } } }
+                }
+            }
+        };
+    }
 
     my $items_searcher =
         Koha::SearchEngine::Elasticsearch::Search->new( { index => $Koha::SearchEngine::ITEMS_INDEX } );
@@ -431,35 +504,18 @@ sub _get_item_facets {
         body  => {
             query => { terms => { biblionumber => [ map { $_ + 0 } @$biblionumbers ] } },
             size  => 0,
-            aggs  => {
-                itype => {
-                    terms => { field        => 'itype', size => $limit },
-                    aggs  => { biblio_count => { cardinality => { field => 'biblionumber' } } }
-                },
-                location => {
-                    terms => { field        => 'location', size => $limit },
-                    aggs  => { biblio_count => { cardinality => { field => 'biblionumber' } } }
-                },
-                ccode => {
-                    terms => { field        => 'ccode', size => $limit },
-                    aggs  => { biblio_count => { cardinality => { field => 'biblionumber' } } }
-                },
-                homebranch => {
-                    terms => { field        => 'homebranch', size => $limit },
-                    aggs  => { biblio_count => { cardinality => { field => 'biblionumber' } } }
-                },
-                holdingbranch => {
-                    terms => { field        => 'holdingbranch', size => $limit },
-                    aggs  => { biblio_count => { cardinality => { field => 'biblionumber' } } }
-                },
-            }
+            aggs  => \%aggs,
         }
     );
 
-    my $aggregations = $result->{aggregations} // {};
-    $cache->set_in_cache( $cache_key, $aggregations, { expiry => 15 } );
+    my %aggregations;
+    for my $field (@facet_fields) {
+        $aggregations{$field} = { buckets => $result->{aggregations}{$field}{values}{buckets} // [] };
+    }
 
-    return $aggregations;
+    $cache->set_in_cache( $cache_key, \%aggregations, { expiry => 15 } );
+
+    return \%aggregations;
 }
 
 =head2 search_auth_compat

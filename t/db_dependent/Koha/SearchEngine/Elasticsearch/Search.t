@@ -37,7 +37,7 @@ use Koha::SearchFields;
 
     package MockESSearchClient;
     sub new    { bless { response => {}, count_response => { count => 0 } }, shift }
-    sub search { my ( $self, %args ) = @_; return $self->{response} }
+    sub search { my ( $self, %args ) = @_; $self->{last_body} = $args{body}; return $self->{response} }
     sub count  { my ( $self, %args ) = @_; return $self->{count_response} }
 }
 
@@ -374,11 +374,31 @@ SKIP: {
     };
 
     subtest '_get_item_facets() tests' => sub {
-        plan tests => 7;
+        plan tests => 14;
 
         my $cache = Koha::Caches->get_instance();
-        $cache->clear_from_cache( 'elasticsearch_item_facets_' . md5_hex( join( ',', 1, 2, 3 ) ) );
-        $cache->clear_from_cache( 'elasticsearch_item_facets_' . md5_hex( join( ',', 4, 5 ) ) );
+
+        my $groups        = [ { field => 'itype', values => ['BK'] }, { field => 'ccode', values => ['FIC'] } ];
+        my $any_of_groups = [
+            { field  => 'itype', values => ['BK'] },
+            { any_of => { homebranch => ['CPL'], holdingbranch => ['MPL'] } },
+        ];
+        my $key_123 = 'elasticsearch_item_facets_' . md5_hex( join( ',', 1, 2, 3 ) . '|' );
+        my $key_45  = 'elasticsearch_item_facets_' . md5_hex( join( ',', 4, 5 ) . '|' );
+        my $key_groups =
+            'elasticsearch_item_facets_'
+            . md5_hex(
+            join( ',', 1, 2, 3 ) . '|'
+                . Koha::SearchEngine::Elasticsearch::Search::_item_level_groups_cache_key($groups) );
+        my $key_any_of_groups =
+            'elasticsearch_item_facets_'
+            . md5_hex(
+            join( ',', 1, 2, 3 ) . '|'
+                . Koha::SearchEngine::Elasticsearch::Search::_item_level_groups_cache_key($any_of_groups) );
+        $cache->clear_from_cache($key_123);
+        $cache->clear_from_cache($key_45);
+        $cache->clear_from_cache($key_groups);
+        $cache->clear_from_cache($key_any_of_groups);
 
         my $mock_es     = Test::MockModule->new('Koha::SearchEngine::Elasticsearch');
         my $mock_client = MockESSearchClient->new;
@@ -390,24 +410,30 @@ SKIP: {
                 return $mock_client;
             }
         );
-
         my $result = $searcher->_get_item_facets( [] );
         is_deeply( $result, {}, '_get_item_facets with empty list returns empty hashref' );
         is( $es_calls, 0, 'empty list short-circuits without querying ES' );
 
         $mock_client->{response} = {
             aggregations => {
-                itype    => { buckets => [ { key => 'BK', doc_count => 5 } ] },
-                location => { buckets => [] },
+                itype         => { values => { buckets => [ { key => 'BK', doc_count => 5 } ] } },
+                location      => { values => { buckets => [] } },
+                ccode         => { values => { buckets => [] } },
+                homebranch    => { values => { buckets => [] } },
+                holdingbranch => { values => { buckets => [] } },
             }
         };
 
         $result = $searcher->_get_item_facets( [ 1, 2, 3 ] );
-        ok( exists $result->{itype},    '_get_item_facets returns itype aggregation' );
+        ok( exists $result->{itype}, '_get_item_facets returns itype aggregation' );
+        is_deeply(
+            $result->{itype}{buckets}, [ { key => 'BK', doc_count => 5 } ],
+            'buckets unwrapped from the filter/values aggregation nesting'
+        );
         ok( exists $result->{location}, '_get_item_facets returns location aggregation' );
         is( $es_calls, 1, 'ES queried on cache miss' );
 
-        # Same biblionumber set: cached result used, no new ES call
+        # Same biblionumber set, no constraints: cached result used, no new ES call
         $searcher->_get_item_facets( [ 1, 2, 3 ] );
         is( $es_calls, 1, 'ES not queried again for the same biblionumber set' );
 
@@ -415,7 +441,62 @@ SKIP: {
         $searcher->_get_item_facets( [ 4, 5 ] );
         is( $es_calls, 2, 'ES queried again for a different biblionumber set' );
 
-        $cache->clear_from_cache( 'elasticsearch_item_facets_' . md5_hex( join( ',', 1, 2, 3 ) ) );
-        $cache->clear_from_cache( 'elasticsearch_item_facets_' . md5_hex( join( ',', 4, 5 ) ) );
+        # Constraints present: each facet's own field is excluded from its own
+        # aggregation query, but every other active constraint still applies
+        $searcher->_get_item_facets( [ 1, 2, 3 ], $groups );
+        my $sent_aggs = $mock_client->{last_body}{aggs};
+        is_deeply(
+            $sent_aggs->{itype}{filter},
+            { bool => { must => [ { terms => { ccode => ['FIC'] } } ] } },
+            'itype facet excludes its own constraint but keeps the ccode constraint'
+        );
+        is_deeply(
+            $sent_aggs->{ccode}{filter},
+            { bool => { must => [ { terms => { itype => ['BK'] } } ] } },
+            'ccode facet excludes its own constraint but keeps the itype constraint'
+        );
+        is_deeply(
+            $sent_aggs->{location}{filter},
+            { bool => { must => [ { terms => { itype => ['BK'] } }, { terms => { ccode => ['FIC'] } } ] } },
+            'location facet (targeted by neither constraint) keeps both'
+        );
+
+        # An any_of group (SearchLimitLibrary set to neither homebranch nor
+        # holdingbranch) targets both fields at once, and must be excluded from
+        # both of their facet aggregations, while still applying to unrelated ones
+        $searcher->_get_item_facets( [ 1, 2, 3 ], $any_of_groups );
+        $sent_aggs = $mock_client->{last_body}{aggs};
+        is_deeply(
+            $sent_aggs->{homebranch}{filter},
+            { bool => { must => [ { terms => { itype => ['BK'] } } ] } },
+            'homebranch facet excludes the any_of group but keeps the itype constraint'
+        );
+        is_deeply(
+            $sent_aggs->{holdingbranch}{filter},
+            { bool => { must => [ { terms => { itype => ['BK'] } } ] } },
+            'holdingbranch facet also excludes the same any_of group (it targets both fields)'
+        );
+        is_deeply(
+            $sent_aggs->{itype}{filter},
+            {
+                bool => {
+                    must => [
+                        {
+                            bool => {
+                                should => [
+                                    { terms => { holdingbranch => ['MPL'] } }, { terms => { homebranch => ['CPL'] } }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            },
+            'itype facet (not targeted by the any_of group) still keeps it'
+        );
+
+        $cache->clear_from_cache($key_123);
+        $cache->clear_from_cache($key_45);
+        $cache->clear_from_cache($key_groups);
+        $cache->clear_from_cache($key_any_of_groups);
     };
 }
