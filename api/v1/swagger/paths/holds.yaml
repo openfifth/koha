@@ -127,6 +127,8 @@
             * `hold_date_in_future`
             * `item_biblio_mismatch`
             * `missing_biblio_or_item`
+            * `patron_not_found`
+            * `invalid_pickup_location`
         schema:
           $ref: "../swagger.yaml#/definitions/error"
       "401":
@@ -137,8 +139,6 @@
         description: |
           Hold not allowed. Possible `error_code` attribute values:
 
-            * `invalid_pickup_location`
-            * `patron_not_found`
             * `age_restricted`
             * `damaged`
             * `too_many_reserves`
@@ -152,19 +152,28 @@
             * `pickup_not_in_hold_group`
             * `branch_not_in_hold_group`
             * `library_not_pickup_location`
+            * `library_not_found`
             * `no_item_available`
+            * `no_items`
             * `already_possession`
             * `recall`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Borrower not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "409":
+        description: |
+          Hold not allowed due to patron eligibility. Possible `error_code`
+          attribute values:
+
             * `expired`
             * `debt_limit`
             * `bad_address`
             * `card_lost`
             * `restricted`
             * `hold_limit`
-        schema:
-          $ref: "../swagger.yaml#/definitions/error"
-      "404":
-        description: Borrower not found
         schema:
           $ref: "../swagger.yaml#/definitions/error"
       "500":
