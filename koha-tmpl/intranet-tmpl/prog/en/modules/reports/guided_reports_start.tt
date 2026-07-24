@@ -1660,6 +1660,12 @@
                         <input type="text" id="reportname" name="reportname" value="[% reportname | html %]" size="50" class="required" required="required" />
                         <span class="required">Required</span>
                     </li>
+                    [% IF CAN_user_reports_edit_all_reports %]
+                        <li>
+                            <label for="cardnumber"> Report owner: </label>
+                            <input type="text" name="cardnumber" id="cardnumber" autocomplete="off" type="text" value="[% owner.cardnumber | html %]" />
+                        </li>
+                    [% END %]
                     [% PROCESS group_and_subgroup_selection %]
                     [% IF (public) %]
                         <li>
@@ -2458,6 +2464,13 @@
                                 return $("#create_group").prop("checked") && $("#group_input").val() != "";
                             },
                         },
+                    },
+                });
+
+                patron_autocomplete($("#sql_report_form #cardnumber"), {
+                    "on-select-callback": function (event, ui) {
+                        $("#sql_report_form #cardnumber").val(ui.item.cardnumber);
+                        return false;
                     },
                 });
 

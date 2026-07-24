@@ -743,21 +743,23 @@ Missing POD for update_sql.
 =cut
 
 sub update_sql {
-    my $id           = shift || croak "No Id given";
-    my $fields       = shift;
-    my $sql          = $fields->{sql};
-    my $name         = $fields->{name};
-    my $notes        = $fields->{notes};
-    my $group        = $fields->{group};
-    my $subgroup     = $fields->{subgroup};
-    my $cache_expiry = $fields->{cache_expiry};
-    my $public       = $fields->{public};
+    my $id             = shift || croak "No Id given";
+    my $fields         = shift;
+    my $sql            = $fields->{sql};
+    my $name           = $fields->{name};
+    my $borrowernumber = $fields->{borrowernumber};
+    my $notes          = $fields->{notes};
+    my $group          = $fields->{group};
+    my $subgroup       = $fields->{subgroup};
+    my $cache_expiry   = $fields->{cache_expiry};
+    my $public         = $fields->{public};
 
     $sql =~ s/(\s*\;\s*)$// if defined $sql;    # removes trailing whitespace and /;/
     my $report = Koha::Reports->find($id);
     $report->last_modified(dt_from_string);
     $report->savedsql($sql);
     $report->report_name($name);
+    $report->borrowernumber($borrowernumber);
     $report->notes($notes);
     $report->report_group($group);
     $report->report_subgroup($subgroup);

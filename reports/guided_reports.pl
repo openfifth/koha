@@ -203,11 +203,13 @@ if ( !$op ) {
 
 } elsif ( $op eq 'edit_form' ) {
     if ($report) {
+        my $owner    = Koha::Patrons->find( $report->borrowernumber );
         my $group    = $report->report_group;
         my $subgroup = $report->report_subgroup;
         my $tables   = get_tables();
         $template->param(
             'report_creator'        => $report->borrowernumber,
+            'owner'                 => $owner,
             'sql'                   => $report->savedsql,
             'reportname'            => $report->report_name,
             'groups_with_subgroups' => groups_with_subgroups( $group, $subgroup ),
@@ -229,6 +231,7 @@ if ( !$op ) {
         my $id                 = $report_id;
         my $sql                = $input->param('sql');
         my $reportname         = $input->param('reportname');
+        my $cardnumber         = $input->param('cardnumber');
         my $group              = $input->param('group');
         my $subgroup           = $input->param('subgroup');
         my $notes              = $input->param('notes');
@@ -243,6 +246,21 @@ if ( !$op ) {
         if ( $limit_reports_by_library && !$can_manage_report_limits ) {
             my $existing_limits = $report->get_library_limits;
             @branches = $existing_limits ? map { $_->branchcode } $existing_limits->as_list : ();
+        }
+
+        # validate cardnumber
+        my $logged_in_patron   = Koha::Patrons->find($borrowernumber);
+        my $new_owner          = Koha::Patrons->find( { cardnumber => $cardnumber } );
+        my $new_borrowernumber = $report->borrowernumber;
+
+        if ( $logged_in_patron->has_permission( { reports => 'edit_all_reports' } ) ) {
+
+            # anyone with edit_all_reports can set the owner to anything
+            $new_borrowernumber = $new_owner ? $new_owner->borrowernumber : undef;
+        } else {
+
+            # otherwise, don't change the owner
+            $new_borrowernumber = $report->borrowernumber;
         }
 
         # if we have the units, then we came from creating a report from SQL and thus need to handle converting units
@@ -301,13 +319,14 @@ if ( !$op ) {
                 update_sql(
                     $id,
                     {
-                        sql          => $sql,
-                        name         => $reportname,
-                        group        => $group,
-                        subgroup     => $subgroup,
-                        notes        => $notes,
-                        public       => $public,
-                        cache_expiry => $cache_expiry,
+                        sql            => $sql,
+                        name           => $reportname,
+                        borrowernumber => $new_borrowernumber,
+                        group          => $group,
+                        subgroup       => $subgroup,
+                        notes          => $notes,
+                        public         => $public,
+                        cache_expiry   => $cache_expiry,
                     }
                 );
 
@@ -319,11 +338,14 @@ if ( !$op ) {
                     $editsql = 0;
                 }
 
+                $report->discard_changes;
+                my $owner = Koha::Patrons->find( $report->borrowernumber );
                 $template->param(
                     'save_successful'       => 1,
                     'reportname'            => $reportname,
                     'id'                    => $id,
                     'report_creator'        => $report->borrowernumber,
+                    'owner'                 => $owner,
                     'editsql'               => $editsql,
                     'sql'                   => $sql,
                     'groups_with_subgroups' => groups_with_subgroups( $group, $subgroup ),
@@ -689,11 +711,13 @@ if ( !$op ) {
 
             logaction( "REPORTS", "ADD", $id, "$name | $sql" ) if C4::Context->preference("ReportsLog");
             my $new_report = Koha::Reports->find($id);
+            my $owner      = Koha::Patrons->find( $new_report->borrowernumber );
             $template->param(
                 'save_successful'       => 1,
                 'reportname'            => $name,
                 'id'                    => $id,
                 'report_creator'        => $new_report->borrowernumber,
+                'owner'                 => $owner,
                 'editsql'               => 1,
                 'sql'                   => $sql,
                 'groups_with_subgroups' => groups_with_subgroups( $group, $subgroup ),
@@ -1200,13 +1224,14 @@ if ( $op eq 'list' || $op eq 'convert' ) {
             C4::Reports::Guided::update_sql(
                 $report_id,
                 {
-                    sql          => $updated_sql,
-                    name         => $report->report_name,
-                    group        => $report->report_group,
-                    subgroup     => $report->report_subgroup,
-                    notes        => $report->notes,
-                    public       => $report->public,
-                    cache_expiry => $report->cache_expiry,
+                    sql            => $updated_sql,
+                    name           => $report->report_name,
+                    borrowernumber => $report->borrowernumber,
+                    group          => $report->report_group,
+                    subgroup       => $report->report_subgroup,
+                    notes          => $report->notes,
+                    public         => $report->public,
+                    cache_expiry   => $report->cache_expiry,
                 }
             );
             $template->param( report_converted => $report->report_name );
