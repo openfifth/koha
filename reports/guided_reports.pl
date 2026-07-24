@@ -89,6 +89,8 @@ if (
     $flagsrequired = { 'create_reports' => 1, 'execute_reports' => 1 };            #NOTE: "and" permissions
 } elsif ( $op eq 'cud-delete' ) {
     $flagsrequired = [ 'delete_all_reports', 'delete_own_reports' ];
+} elsif ( $op eq 'bulk_transfer' || $op eq 'cud-bulk_transfer_confirm' || $op eq 'cud-bulk_transfer_execute' ) {
+    $flagsrequired = 'edit_all_reports';
 } else {
 
     #NOTE: You should never get here
@@ -747,6 +749,36 @@ if ( !$op ) {
     } else {
         print $input->redirect('/cgi-bin/koha/reports/guided_reports.pl?op=list');
     }
+    exit;
+} elsif ( $op eq 'bulk_transfer' ) {
+    $template->param( bulk_transfer => 1 );
+} elsif ( $op eq 'cud-bulk_transfer_confirm' ) {
+    my $from_cardnumber = $input->param('from');
+    my $to_cardnumber   = $input->param('to');
+
+    my $from_patron    = Koha::Patrons->find( { cardnumber => $from_cardnumber } );
+    my $transfer_count = Koha::Reports->search( { borrowernumber => $from_patron->borrowernumber } )->count;
+
+    $template->param(
+        bulk_transfer_confirm => 1,
+        from                  => $from_cardnumber,
+        to                    => $to_cardnumber,
+        transfer_count        => $transfer_count
+    );
+} elsif ( $op eq 'cud-bulk_transfer_execute' ) {
+    my $from_cardnumber = $input->param('from');
+    my $to_cardnumber   = $input->param('to');
+
+    my $from_patron = Koha::Patrons->find( { cardnumber => $from_cardnumber } );
+    my $to_patron   = Koha::Patrons->find( { cardnumber => $to_cardnumber } );
+
+    Koha::Reports->search( { borrowernumber => $from_patron->borrowernumber } )->update(
+        {
+            borrowernumber => $to_patron->borrowernumber,
+        }
+    );
+
+    print $input->redirect('/cgi-bin/koha/reports/guided_reports.pl?op=list');
     exit;
 } elsif ( $op eq 'cud-share' ) {
     my $lang     = $input->param('mana_language') || '';
