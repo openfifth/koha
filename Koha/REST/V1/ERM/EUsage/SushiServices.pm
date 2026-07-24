@@ -25,6 +25,7 @@ use LWP::UserAgent;
 use Scalar::Util qw( blessed );
 use JSON         qw( from_json decode_json encode_json );
 use Try::Tiny    qw( catch try );
+use URI;
 
 use Koha::Exceptions;
 
@@ -47,9 +48,20 @@ sub get {
 
     my $service_url = $query_params_array[0]->{url};
 
+    my $scheme = $service_url ? URI->new($service_url)->scheme : undef;
+    unless ( $scheme && lc($scheme) eq 'https' ) {
+        return $c->render(
+            status  => 400,
+            openapi => { error => "Only https URLs are allowed", error_code => 'invalid_query' }
+        );
+    }
+
     my $request = HTTP::Request->new( GET => $service_url );
 
-    my $ua       = LWP::UserAgent->new;
+    my $ua = LWP::UserAgent->new(
+        protocols_allowed => ['https'],
+        timeout           => 5,
+    );
     my $response = $ua->simple_request($request);
 
     if ( $response->code >= 400 ) {
