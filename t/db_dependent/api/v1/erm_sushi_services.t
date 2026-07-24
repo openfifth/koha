@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 2;
+use Test::More tests => 3;
 use Test::Mojo;
 use Test::Warn;
 
@@ -110,6 +110,43 @@ subtest 'get() tests' => sub {
         or diag "This is not a new error within Koha, the following new field(s) have been added to the API response: "
         . join( ', ', @new_fields_in_response )
         . '. They should be added to the API definition';
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'get() rejects non-https url schemes (bug 43076)' => sub {
+
+    plan tests => 15;
+
+    $schema->storage->txn_begin;
+
+    my $librarian = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { flags => 2**28 }
+        }
+    );
+    my $password = 'thePassword123';
+    $librarian->set_password( { password => $password, skip_validation => 1 } );
+    my $userid = $librarian->userid;
+
+    for my $case (
+        { url => 'file:///etc/passwd',  label => 'file scheme rejected (local file read)' },
+        { url => 'http://example.com/', label => 'plain http scheme rejected (SSRF)' },
+        { url => 'ftp://example.com/',  label => 'ftp scheme rejected' },
+        { url => '',                    label => 'empty url rejected' },
+        )
+    {
+        my $q = encode_json( { "url" => $case->{url} } );
+        $t->get_ok("//$userid:$password\@/api/v1/erm/sushi_service?q=$q")
+            ->status_is(400)
+            ->json_is( '/error_code' => 'invalid_query', $case->{label} );
+    }
+
+    my $q = encode_json( {} );
+    $t->get_ok("//$userid:$password\@/api/v1/erm/sushi_service?q=$q")
+        ->status_is(400)
+        ->json_is( '/error_code' => 'invalid_query', 'missing url field rejected' );
 
     $schema->storage->txn_rollback;
 };
