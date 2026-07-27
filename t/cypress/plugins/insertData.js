@@ -147,6 +147,7 @@ const insertSampleBiblio = async ({
             holds_count,
             bundle_items_lost_count,
             analytics_count,
+            biblio_links,
             effective_not_for_loan_status,
             effective_item_type_id,
             home_library,

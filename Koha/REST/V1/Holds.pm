@@ -102,7 +102,9 @@ sub add {
         if ( $item_id and $biblio_id ) {
 
             $biblio = Koha::Biblios->find($biblio_id);
-            $item   = $biblio->items->find($item_id);
+
+            # The item may be linked to this record (e.g. bound-with)
+            $item = $biblio->items( { linked_items => 1 } )->find($item_id);
 
             # check they are consistent
             unless ($item) {

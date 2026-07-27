@@ -486,6 +486,7 @@
             - bundle_items_not_lost+count
             - course_item.course_reserves.course
             - analytics_count
+            - biblio_links
             - cover_image_ids
             - item_group_item.item_group.description
             - serial_item.serial

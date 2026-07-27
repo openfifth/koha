@@ -1,0 +1,45 @@
+---
+type: object
+properties:
+  item_biblio_link_id:
+    type: integer
+    readOnly: true
+    description: Internal identifier for the link
+  item_id:
+    type: integer
+    description: Internal identifier for the linked item
+  biblio_id:
+    type: integer
+    readOnly: true
+    description: Internal identifier for the linked bibliographic record
+  link_type:
+    type: string
+    description: Type of link, from the ITEM_BIBLIO_LINK_TYPE authorised value category (e.g. binding, analytic)
+  display_order:
+    type:
+      - integer
+      - "null"
+    description: Optional explicit ordering among links
+  created_on:
+    type: string
+    format: date-time
+    readOnly: true
+    description: Date and time the link was created
+  item:
+    type:
+      - object
+      - "null"
+    readOnly: true
+    description: The linked item (x-koha-embed)
+  biblio:
+    type:
+      - object
+      - "null"
+    readOnly: true
+    description: The linked bibliographic record (x-koha-embed)
+additionalProperties: false
+required:
+  - item_biblio_link_id
+  - item_id
+  - biblio_id
+  - link_type

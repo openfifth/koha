@@ -267,7 +267,8 @@ sub get_items {
         # FIXME We need to order_by serial.publisheddate if we have _order_by=+me.serial_issue_number
         # FIXME Do we always need host_items => 1 or depending on a flag?
         # FIXME Should we prefetch => ['issue','branchtransfer']?
-        my $items_rs = $biblio->items( { host_items => 1 } )->search_ordered( {}, { join => 'biblioitem' } );
+        my $items_rs =
+            $biblio->items( { host_items => 1, linked_items => 1 } )->search_ordered( {}, { join => 'biblioitem' } );
         $items_rs = $items_rs->filter_by_bookable if $bookable_only;
 
         if ($group_by_status) {
