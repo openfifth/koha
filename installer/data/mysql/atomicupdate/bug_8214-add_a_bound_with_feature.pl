@@ -28,5 +28,23 @@ return {
             );
             say_success( $out, "Added new table 'item_biblio_links'" );
         }
+
+        $dbh->do(
+            q{
+            INSERT IGNORE INTO authorised_value_categories (category_name, is_system)
+            VALUES ('ITEM_BIBLIO_LINK_TYPE', 1)
+        }
+        );
+        say_success( $out, "Added new authorised value category 'ITEM_BIBLIO_LINK_TYPE'" );
+
+        $dbh->do(
+            q{
+            INSERT IGNORE INTO authorised_values (category, authorised_value, lib, lib_opac)
+            VALUES
+                ('ITEM_BIBLIO_LINK_TYPE', 'binding', 'Bound-with', 'Bound-with'),
+                ('ITEM_BIBLIO_LINK_TYPE', 'analytic', 'Analytic', 'Analytic')
+        }
+        );
+        say_success( $out, "Added authorised values 'binding' and 'analytic' to category 'ITEM_BIBLIO_LINK_TYPE'" );
     },
 };
