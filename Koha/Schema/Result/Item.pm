@@ -780,6 +780,21 @@ __PACKAGE__->might_have(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 item_biblio_links
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::ItemBiblioLink>
+
+=cut
+
+__PACKAGE__->has_many(
+  "item_biblio_links",
+  "Koha::Schema::Result::ItemBiblioLink",
+  { "foreign.itemnumber" => "self.itemnumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 item_bundles_hosts
 
 Type: has_many
@@ -991,8 +1006,8 @@ __PACKAGE__->might_have(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-01-22 21:05:23
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:d/Q+Ym3pNstyDcgjVhLykQ
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-07-27 09:55:17
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:tyQsEpYA+lGUUV/bRzwuGg
 
 __PACKAGE__->belongs_to( biblioitem => "Koha::Schema::Result::Biblioitem", "biblioitemnumber" );
 
