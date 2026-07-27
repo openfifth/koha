@@ -157,6 +157,12 @@ __PACKAGE__->belongs_to(
 # Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-07-27 09:55:17
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:4LIyGwfXkHtUqSEpBDez8Q
 
+sub koha_object_class {
+    'Koha::Item::BiblioLink';
+}
 
-# You can replace this text with custom code or comments, and it will be preserved on regeneration
+sub koha_objects_class {
+    'Koha::Item::BiblioLinks';
+}
+
 1;
