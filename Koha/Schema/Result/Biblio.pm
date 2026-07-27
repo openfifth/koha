@@ -400,6 +400,21 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 item_biblio_links
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::ItemBiblioLink>
+
+=cut
+
+__PACKAGE__->has_many(
+  "item_biblio_links",
+  "Koha::Schema::Result::ItemBiblioLink",
+  { "foreign.biblionumber" => "self.biblionumber" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 item_groups
 
 Type: has_many
@@ -656,8 +671,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-02-24 16:20:04
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:vJ2DesuhA1j09zJFBJVvVw
+# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-07-27 09:55:17
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:d5N51Wa/6xIKLWSoK0CCzw
 
 __PACKAGE__->has_many(
   "biblioitem",
