@@ -67,6 +67,7 @@ INSERT INTO permissions (module_bit, code, description) VALUES
    ( 9, 'edit_items_restricted', 'Limit item modification to subfields defined in the SubfieldsToAllowForRestrictedEditing preference (please note that edit_item is still required)'),
    ( 9, 'delete_all_items', 'Delete all items at once'),
    ( 9, 'manage_item_groups', 'Create, update and delete item groups, add or remove items from a item groups'),
+   ( 9, 'manage_item_biblio_links', 'Create and remove links between items and bibliographic records (e.g. bound-with)'),
    ( 9, 'manage_item_editor_templates', 'Update and delete item editor template owned by others'),
    ( 9, 'edit_any_item', 'Edit any item regardless of home library'),
    ( 9, 'edit_locked_records', 'Edit locked records'),

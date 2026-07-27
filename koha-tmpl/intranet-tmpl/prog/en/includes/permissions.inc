@@ -302,6 +302,9 @@
     [%- CASE 'manage_item_groups' -%]
         <span class="sub_permission manage_item_groups_subpermission"> Create, update and delete item groups, add or remove items from an item group </span>
         <span class="permissioncode">([% name | html %])</span>
+    [%- CASE 'manage_item_biblio_links' -%]
+        <span class="sub_permission manage_item_biblio_links_subpermission"> Create and remove links between items and bibliographic records (e.g. bound-with) </span>
+        <span class="permissioncode">([% name | html %])</span>
     [%- CASE 'manage_item_editor_templates' -%]
         <span class="sub_permission manage_item_editor_templates_subpermission"> Create, update and delete item editor templates owned by others </span>
         <span class="permissioncode">([% name | html %])</span>
