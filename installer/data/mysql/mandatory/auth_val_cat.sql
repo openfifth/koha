@@ -119,3 +119,8 @@ VALUES
 INSERT IGNORE INTO authorised_value_categories (category_name, is_system)
 VALUES
     ('EDIFACT_SI', 0);
+
+-- For item to bibliographic record links
+INSERT IGNORE INTO authorised_value_categories (category_name, is_system)
+VALUES
+    ('ITEM_BIBLIO_LINK_TYPE', 1);

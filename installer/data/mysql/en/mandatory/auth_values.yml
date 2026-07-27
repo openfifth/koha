@@ -55,6 +55,16 @@ tables:
           lib: "Cash"
           lib_opac: "Cash"
 
+        - category: "ITEM_BIBLIO_LINK_TYPE"
+          authorised_value: "binding"
+          lib: "Bound-with"
+          lib_opac: "Bound-with"
+
+        - category: "ITEM_BIBLIO_LINK_TYPE"
+          authorised_value: "analytic"
+          lib: "Analytic"
+          lib_opac: "Analytic"
+
   - authorised_values:
       translatable: [ lib ]
       multiline: []
