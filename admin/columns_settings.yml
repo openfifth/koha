@@ -555,6 +555,8 @@ modules:
             -
               columnname: itemnotes_nonpublic
             -
+              columnname: boundwith
+            -
               columnname: hostrecord
             -
               columnname: usedin

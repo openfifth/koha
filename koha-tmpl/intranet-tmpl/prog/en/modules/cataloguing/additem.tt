@@ -34,6 +34,37 @@
 [% INCLUDE 'calendar.inc' %]
 [% INCLUDE 'str/cataloging_additem.inc' %]
 [% Asset.js("js/cataloging_additem.js") | $raw %]
+[% IF Koha.Preference('EnableBoundWithItems') && CAN_user_editcatalogue_manage_item_biblio_links %]
+    <script nonce="[% Koha.CSPNonce | $raw %]">
+        $(document).ready(function () {
+            $(".bound-with-unlink").on("click", function (e) {
+                e.preventDefault();
+                const link_id = $(this).data("link-id");
+                if (!confirm(_("Are you sure you want to remove the bound-with link between this item and this record?"))) return;
+                const url = "/api/v1/biblios/[% biblio.biblionumber | html %]/item_biblio_links/" + link_id;
+                $.ajax({ url: url, method: "DELETE" })
+                    .done(function () {
+                        window.location.reload();
+                    })
+                    .fail(function (err) {
+                        if (err.status == 409 && err.responseJSON && err.responseJSON.error_code == "holds_exist") {
+                            if (confirm(_("Holds exist for this item on this record and will be stranded. Remove the link anyway?"))) {
+                                $.ajax({ url: url + "?force=1", method: "DELETE" })
+                                    .done(function () {
+                                        window.location.reload();
+                                    })
+                                    .fail(function (forced_err) {
+                                        alert(forced_err.responseJSON ? forced_err.responseJSON.error : forced_err.status);
+                                    });
+                            }
+                        } else {
+                            alert(err.responseJSON ? err.responseJSON.error : err.status);
+                        }
+                    });
+            });
+        });
+    </script>
+[% END %]
 <style nonce="[% Koha.CSPNonce | $raw %]">
     .flatpickr_wrapper input {
         width: 100%;
@@ -136,15 +167,27 @@
                                             <a class="btn btn-default btn-xs dropdown-toggle" id="itemactions[% item.itemnumber | html %]" role="button" data-bs-toggle="dropdown" href="#"> Actions </a>
                                             <ul class="dropdown-menu" role="menu" aria-labelledby="itemactions[% item.itemnumber | html %]">
                                                 [% IF item.biblionumber != biblio.biblionumber %]
-                                                    [%# Host item %]
-                                                    <li
-                                                        ><a href="additem.pl?op=edititem&amp;biblionumber=[% item.biblionumber | uri %]&amp;itemnumber=[% item.itemnumber | uri %]#edititem">Edit in host</a> &nbsp;
-                                                        <a
-                                                            class="delete"
-                                                            href="/cgi-bin/koha/cataloguing/additem.pl?op=delinkitem&amp;biblionumber=[% biblio.biblionumber | html %]&amp;hostitemnumber=[% item.itemnumber | html %]&amp;searchid=[% searchid | html %]"
-                                                            >Unlink</a
-                                                        ></li
-                                                    >
+                                                    [% IF item.bound_with_link_id %]
+                                                        [%# Bound-with item, the item record lives on another record %]
+                                                        <li
+                                                            ><a class="dropdown-item" href="additem.pl?op=edititem&amp;biblionumber=[% item.biblionumber | uri %]&amp;itemnumber=[% item.itemnumber | uri %]#edititem"
+                                                                >Edit item on its home record</a
+                                                            ></li
+                                                        >
+                                                        [% IF CAN_user_editcatalogue_manage_item_biblio_links %]
+                                                            <li><a class="dropdown-item bound-with-unlink" data-link-id="[% item.bound_with_link_id | html %]" href="#">Remove bound-with link</a></li>
+                                                        [% END %]
+                                                    [% ELSE %]
+                                                        [%# Host item %]
+                                                        <li
+                                                            ><a href="additem.pl?op=edititem&amp;biblionumber=[% item.biblionumber | uri %]&amp;itemnumber=[% item.itemnumber | uri %]#edititem">Edit in host</a> &nbsp;
+                                                            <a
+                                                                class="delete"
+                                                                href="/cgi-bin/koha/cataloguing/additem.pl?op=delinkitem&amp;biblionumber=[% biblio.biblionumber | html %]&amp;hostitemnumber=[% item.itemnumber | html %]&amp;searchid=[% searchid | html %]"
+                                                                >Unlink</a
+                                                            ></li
+                                                        >
+                                                    [% END %]
                                                 [% ELSE %]
                                                     [% UNLESS item.nomod %]
                                                         <li

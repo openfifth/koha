@@ -191,9 +191,36 @@ my $patron             = Koha::Patrons->find($borrowernumber);
 my $include_lost_items = !$patron->category->hidelostitems || $showallitems;
 my $items_params       = {
     ( $invalid_marc_record ? () : ( host_items => 1 ) ),
+    linked_items => 1,
 };
 my $all_items        = $biblio->items($items_params);
 my $items_to_display = $all_items->search( { $include_lost_items ? () : ( itemlost => 0 ) } );
+
+if ( C4::Context->preference('EnableBoundWithItems') ) {
+    my %peers;
+
+    # Every record in the volume is either the native record of one of the
+    # volume's items, or bound to one of them by a binding link
+    my @volume_items = (
+        $biblio->items->as_list,
+        map { $_->item } $biblio->item_biblio_links->search( { link_type => 'binding' } )->as_list
+    );
+    for my $item (@volume_items) {
+        $peers{ $item->biblionumber } //= { biblio => $item->biblio, display_order => undef };
+        for my $link ( $item->biblio_links->search( { link_type => 'binding' } )->as_list ) {
+            $peers{ $link->biblionumber } //= { biblio => $link->biblio, display_order => $link->display_order };
+        }
+    }
+    delete $peers{$biblionumber};
+
+    my @bound_with_peers =
+        map { $_->{biblio} }
+        sort {
+        ( $a->{display_order} // 999_999_999 ) <=> ( $b->{display_order} // 999_999_999 )
+            or $a->{biblio}->title cmp $b->{biblio}->title
+        } values %peers;
+    $template->param( bound_with_peers => \@bound_with_peers );
+}
 
 my $dat = &GetBiblioData($biblionumber);
 

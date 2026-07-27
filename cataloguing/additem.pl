@@ -695,9 +695,14 @@ if ($op) {
 # now, build existiing item list
 
 my @items;
-for my $item ( $biblio->items->as_list, $biblio->host_items->as_list ) {
+my %bound_with_link_ids =
+    map { $_->itemnumber => $_->id } $biblio->item_biblio_links->search( { link_type => 'binding' } )->as_list;
+my %seen_itemnumbers;
+for my $item ( $biblio->items->as_list, $biblio->host_items->as_list, $biblio->linked_items->as_list ) {
+    next if $seen_itemnumbers{ $item->itemnumber }++;
     my $i = $item->columns_to_str;
-    $i->{nomod} = 1 unless $patron->can_edit_items_from( $item->homebranch );
+    $i->{nomod}              = 1 unless $patron->can_edit_items_from( $item->homebranch );
+    $i->{bound_with_link_id} = $bound_with_link_ids{ $item->itemnumber };
     push @items, $i;
 }
 

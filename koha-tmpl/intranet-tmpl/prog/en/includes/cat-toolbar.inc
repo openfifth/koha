@@ -111,6 +111,11 @@
                         </li>
                     [% END %]
                 [% END %]
+                [% IF Koha.Preference('EnableBoundWithItems') && CAN_user_editcatalogue_manage_item_biblio_links %]
+                    <li>
+                        <a class="dropdown-item" id="boundwith-toolbar-link" href="/cgi-bin/koha/catalogue/detail.pl?biblionumber=[% biblionumber | uri %]#boundwith">Bound-with link</a>
+                    </li>
+                [% END %]
                 [% IF ( LocalCoverImages || OPACLocalCoverImages) %]
                     [% IF ( CAN_user_tools_upload_local_cover_images ) %]
                         <li>

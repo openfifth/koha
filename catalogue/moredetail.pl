@@ -114,7 +114,14 @@ if ( $hostitems->count ) {
     push @items, $hostitems->as_list;
 }
 
-my $totalcount  = $all_items->count;
+# Items linked to this record through item_biblio_links (e.g. bound-with)
+my %seen_itemnumbers = map  { $_->itemnumber => 1 } @items;
+my @linked_items     = grep { !$seen_itemnumbers{ $_->itemnumber } } $biblio->linked_items->as_list;
+push @items, @linked_items;
+
+# The host and linked items are always shown, only the record's own lost
+# items can be hidden
+my $totalcount  = $all_items->count + $hostitems->count + scalar @linked_items;
 my $showncount  = scalar @items;
 my $hiddencount = $totalcount - $showncount;
 $data->{'count'}       = $totalcount;
@@ -164,6 +171,10 @@ foreach my $item (@items) {
     if ( $item->biblionumber ne $biblionumber ) {
         $item_info->{hostbiblionumber} = $item->biblionumber;
         $item_info->{hosttitle}        = $item->biblio->title;
+    }
+
+    if ( C4::Context->preference('EnableBoundWithItems') ) {
+        $item_info->{bound_with_biblios} = [ $item->linked_biblios( { link_type => 'binding' } )->as_list ];
     }
 
     # FIXME The acquisition code below could be improved using methods from Koha:: objects
