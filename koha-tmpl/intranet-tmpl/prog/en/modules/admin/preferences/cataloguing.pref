@@ -94,6 +94,12 @@ Cataloging:
                    0: "Don't enable"
             - the item groups feature to allow collecting groups of items on a record together.
         -
+            - pref: EnableBoundWithItems
+              choices:
+                   1: Enable
+                   0: "Don't enable"
+            - the bound-with feature to allow linking one item to multiple bibliographic records. Note that a full search engine reindex is required after enabling this feature and creating links, so that availability appears on all linked records.
+        -
             - Use the item type of the
             - pref: item-level_itypes
               choices:

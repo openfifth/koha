@@ -274,6 +274,7 @@ INSERT INTO systempreferences ( `variable`, `value` ) VALUES
 ('EnableAdvancedCatalogingEditor','0'),
 ('EnableBooking','1'),
 ('EnableBorrowerFiles','0'),
+('EnableBoundWithItems','0'),
 ('EnableExpiredPasswordReset', '0'),
 ('EnableItemGroupHolds','0'),
 ('EnableItemGroups','0'),

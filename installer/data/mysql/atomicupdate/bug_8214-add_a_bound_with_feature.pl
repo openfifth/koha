@@ -46,5 +46,21 @@ return {
         }
         );
         say_success( $out, "Added authorised values 'binding' and 'analytic' to category 'ITEM_BIBLIO_LINK_TYPE'" );
+
+        $dbh->do(
+            q{
+            INSERT IGNORE INTO systempreferences (variable, value, options, explanation, type)
+            VALUES ('EnableBoundWithItems', '0', NULL, 'Enable the bound-with feature to allow linking one item to multiple bibliographic records', 'YesNo')
+        }
+        );
+        say_success( $out, "Added new system preference 'EnableBoundWithItems'" );
+
+        $dbh->do(
+            q{
+            INSERT IGNORE INTO permissions (module_bit, code, description)
+            VALUES (9, 'manage_item_biblio_links', 'Create and remove links between items and bibliographic records (e.g. bound-with)')
+        }
+        );
+        say_success( $out, "Added new permission 'manage_item_biblio_links'" );
     },
 };
