@@ -505,11 +505,23 @@ if ($OpacBrowseResults) {
 $items = Koha::Items->search_ordered(
     [
         'me.biblionumber' => $biblionumber,
-        'me.itemnumber'   => { -in => [ $biblio->host_items->get_column('itemnumber') ] }
+        'me.itemnumber'   => {
+            -in => [
+                $biblio->host_items->get_column('itemnumber'),
+                $biblio->linked_items->get_column('itemnumber'),
+            ]
+        }
     ],
     { prefetch => [ 'issue', 'homebranch', 'holdingbranch' ] }
 )->filter_by_visible_in_opac( { patron => $patron } )
     unless $specific_item;
+
+my %bound_with_itemnumbers;
+if ( C4::Context->preference('EnableBoundWithItems') ) {
+    %bound_with_itemnumbers =
+        map { $_->itemnumber => 1 } $biblio->item_biblio_links->search( { link_type => 'binding' } )->as_list;
+}
+$template->param( bound_with_peers => $biblio->bound_with_peers );
 
 my $dat      = &GetBiblioData($biblionumber);
 my $HideMARC = $record_processor->filters->[0]->should_hide_marc(
@@ -688,7 +700,7 @@ if ( C4::Context->preference('OPACAcquisitionDetails') ) {
 }
 
 # Count the number of items that allow holds at the 'All libraries' rule level
-my $holdable_items = $biblio->items->filter_by_for_hold->count;
+my $holdable_items = $biblio->items( { host_items => 1, linked_items => 1 } )->filter_by_for_hold->count;
 
 # If we have a patron we need to check their policies for holds in the loop below
 # If we don't have a patron, then holdable items determines holdability
@@ -758,6 +770,19 @@ if ( not $viewallitems and $items->count > $max_items_to_display ) {
             qw(ccode materials enumchron copynumber itemnotes location_description uri barcode itemcallnumber))
         {
             $itemfields{$field} = 1 if $item_info->{$field};
+        }
+
+        if ( C4::Context->preference('EnableBoundWithItems') ) {
+            my @binding_biblios = $item->linked_biblios( { link_type => 'binding' } )->as_list;
+            if ( @binding_biblios or $bound_with_itemnumbers{ $item->itemnumber } ) {
+                my @peer_biblios = grep { $_->biblionumber != $biblionumber } @binding_biblios;
+                unshift @peer_biblios, $item->biblio if $item->biblionumber != $biblionumber;
+                $item_info->{bound_with}         = 1;
+                $item_info->{bound_with_biblios} = \@peer_biblios;
+
+                # The bound-with note renders in the call number column, make sure it shows
+                $itemfields{itemcallnumber} = 1;
+            }
         }
 
         # FIXME The following must be Koha::Item->serial

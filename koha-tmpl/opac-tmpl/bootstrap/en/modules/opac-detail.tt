@@ -572,6 +572,15 @@
                         [% END # / IF serialcollection %]
 
                         [% WRAPPER tab_panel tabname="holdings" %]
+                            [% IF bound_with_peers && bound_with_peers.size %]
+                                <div id="bound_with_peers" class="results_summary">
+                                    <span class="label">Also bound in this volume:</span>
+                                    [% FOREACH peer IN bound_with_peers %]
+                                        <a href="/cgi-bin/koha/opac-detail.pl?biblionumber=[% peer.biblionumber | uri %]">[% peer.title | html %]</a>
+                                        [%- UNLESS loop.last %];[% END %]
+                                    [% END %]
+                                </div>
+                            [% END %]
                             [% IF too_many_items %]
                                 <p>This record has many physical items ([% items_count | html %]). <a href="/cgi-bin/koha/opac-detail.pl?biblionumber=[% biblio.biblionumber | uri %]&amp;viewallitems=1">View all the physical items.</a></p>
                             [% ELSIF ( itemloop.size ) %]

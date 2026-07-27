@@ -822,6 +822,51 @@ sub linked_items {
     return Koha::Items->search( { "me.itemnumber" => { -in => \@itemnumbers } } );
 }
 
+=head3 bound_with_peers
+
+    my $peers = $biblio->bound_with_peers;
+
+Returns the other bibliographic records in the physical volume(s) this record
+belongs to through bound-with (binding) links: for each of the volume's items
+(this record's own items and the items bound to it), the item's native record
+and every record it is bound to, minus this record itself.
+
+Returns an arrayref of Koha::Biblio objects, ordered by the links'
+display_order when set, then by title. Returns an empty arrayref unless the
+EnableBoundWithItems system preference is enabled.
+
+=cut
+
+sub bound_with_peers {
+    my ($self) = @_;
+
+    return [] unless C4::Context->preference('EnableBoundWithItems');
+
+    my %peers;
+
+    # Every record in the volume is either the native record of one of the
+    # volume's items, or bound to one of them by a binding link
+    my @volume_items = (
+        $self->items->as_list,
+        map { $_->item } $self->item_biblio_links->search( { link_type => 'binding' } )->as_list
+    );
+    for my $item (@volume_items) {
+        $peers{ $item->biblionumber } //= { biblio => $item->biblio, display_order => undef };
+        for my $link ( $item->biblio_links->search( { link_type => 'binding' } )->as_list ) {
+            $peers{ $link->biblionumber } //= { biblio => $link->biblio, display_order => $link->display_order };
+        }
+    }
+    delete $peers{ $self->biblionumber };
+
+    return [
+        map { $_->{biblio} }
+        sort {
+            ( $a->{display_order} // 999_999_999 ) <=> ( $b->{display_order} // 999_999_999 )
+                or $a->{biblio}->title cmp $b->{biblio}->title
+        } values %peers
+    ];
+}
+
 =head3 itemtype
 
 my $itemtype = $biblio->itemtype();
