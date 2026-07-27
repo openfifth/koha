@@ -59,6 +59,21 @@ const islands: Map<string, WebComponentDynamicImport> = new Map([
             },
         },
     ],
+    [
+        "bound-with-modal",
+        {
+            importFn: async () => {
+                const module = await import(
+                    /* webpackChunkName: "bound-with-modal" */
+                    "../components/Islands/BoundWithModal.vue"
+                );
+                return module.default;
+            },
+            config: {
+                stores: [],
+            },
+        },
+    ],
 ]);
 
 /**
