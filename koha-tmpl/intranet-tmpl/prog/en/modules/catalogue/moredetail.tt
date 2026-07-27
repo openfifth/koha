@@ -206,6 +206,29 @@
                     </div>
                     <!-- /.listgroup -->
 
+                    [% IF Koha.Preference('EnableBoundWithItems') && ( ITEM_DAT.bound_with_biblios.size || ITEM_DAT.hostbiblionumber ) %]
+                        <div class="listgroup bound-with">
+                            <h4>Bound-with</h4>
+                            <div class="rows">
+                                <ol class="bibliodetails">
+                                    [% IF ITEM_DAT.hostbiblionumber %]
+                                        <li class="bound_with_native">
+                                            <span class="label">Item record lives on:</span>
+                                            <a href="/cgi-bin/koha/catalogue/detail.pl?biblionumber=[% ITEM_DAT.hostbiblionumber | uri %]">[% ITEM_DAT.hosttitle | html %]</a>
+                                        </li>
+                                    [% END %]
+                                    [% FOREACH bound_biblio IN ITEM_DAT.bound_with_biblios %]
+                                        <li class="bound_with_peer">
+                                            <span class="label">Bound with:</span>
+                                            <a href="/cgi-bin/koha/catalogue/detail.pl?biblionumber=[% bound_biblio.biblionumber | uri %]">[% bound_biblio.title | html %]</a>
+                                        </li>
+                                    [% END %]
+                                </ol>
+                            </div>
+                        </div>
+                        <!-- /.listgroup -->
+                    [% END %]
+
                     <div class="listgroup">
                         <h4>
                             <span>Statuses</span>

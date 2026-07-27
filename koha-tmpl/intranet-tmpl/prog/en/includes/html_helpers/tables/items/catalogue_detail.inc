@@ -35,6 +35,7 @@
                 <th id="[% tab | html %]_materials" data-colname="materials">Materials specified</th>
                 <th id="[% tab | html %]_itemnotes" data-colname="itemnotes">Public notes</th>
                 <th id="[% tab | html %]_itemnotes_nonpublic" data-colname="itemnotes_nonpublic">Non-public notes</th>
+                <th id="[% tab | html %]_boundwith" data-colname="boundwith">Bound-with</th>
                 <th id="[% tab | html %]_hostrecord" data-colname="hostrecord">Host records</th>
                 <th id="[% tab | html %]_usedin" data-colname="usedin">Used in</th>
                 <th id="[% tab | html %]_create_analytics" data-colname="create_analytics"></th>
@@ -138,6 +139,7 @@
             UseCourseReserves: [% Koha.Preference('UseCourseReserves') ? 1 : 0 | html %],
             ClaimReturnedLostValue: [% Koha.Preference('ClaimReturnedLostValue') || 0 | html %],
             EasyAnalyticalRecords: [% Koha.Preference('EasyAnalyticalRecords') ? 1 : 0| html %],
+            EnableBoundWithItems: [% Koha.Preference('EnableBoundWithItems') ? 1 : 0 | html %],
             SeparateHoldings: [% Koha.Preference('SeparateHoldings') ? 1 : 0 | html %],
             SeparateHoldingsBranch: "[% Koha.Preference('SeparateHoldingsBranch') || 'homebranch' | html %]",
             item_level_itypes: [% item_level_itypes ? 1 : 0 | html %],
@@ -147,6 +149,7 @@
         });
         Koha.addPermissions({
             CAN_user_editcatalogue_edit_items: [% (CAN_user_editcatalogue_edit_items || CAN_user_editcatalogue_fast_cataloging && is_fast_add) ? 1 : 0 | html %],
+            CAN_user_editcatalogue_manage_item_biblio_links: [% CAN_user_editcatalogue_manage_item_biblio_links ? 1 : 0 | html %],
         });
         const logged_in_branchcode = '[% Branches.GetLoggedInBranchcode() | html %]';
 
@@ -331,6 +334,14 @@
             embed.push("biblio.title");
         }
 
+        if (Koha.prefs.EnableBoundWithItems) {
+            // For bound-with items
+            if (!Koha.prefs.EasyAnalyticalRecords) {
+                embed.push("biblio.title");
+            }
+            embed.push("biblio_links", "biblio_links.biblio.title");
+        }
+
         if (analyze) {
             embed.push("analytics_count");
         }
@@ -358,6 +369,7 @@
             cover_image: !!Koha.prefs.LocalCoverImages,
             itype: !!Koha.prefs.item_level_itypes,
             item_group: !!Koha.prefs.EnableItemGroups,
+            boundwith: !!Koha.prefs.EnableBoundWithItems,
             hostrecord: !!Koha.prefs.EasyAnalyticalRecords,
             usedin: !!analyze,
             create_analytics: !!analyze,
@@ -844,6 +856,33 @@
                     },
                 },
                 {
+                    data: "biblio_links",
+                    searchable: false,
+                    orderable: false,
+                    render: function (data, type, row, meta) {
+                        if (!Koha.prefs.EnableBoundWithItems) return "";
+                        const binding_links = (row.biblio_links || []).filter(l => l.link_type == "binding");
+                        if (!binding_links.length) return "";
+                        const is_native = row.biblio_id == biblionumber;
+                        const bound_here = binding_links.some(l => l.biblio_id == biblionumber);
+                        // A foreign row not bound to this record (e.g. an analytic host item) keeps its own display
+                        if (!is_native && !bound_here) return "";
+                        let peers = [];
+                        if (!is_native) {
+                            peers.push({ biblio_id: row.biblio_id, title: row.biblio ? row.biblio.title : row.biblio_id });
+                        }
+                        binding_links.forEach(l => {
+                            if (l.biblio_id == biblionumber) return;
+                            peers.push({ biblio_id: l.biblio_id, title: l.biblio ? l.biblio.title : l.biblio_id });
+                        });
+                        let nodes = '<span class="bound_with_label">%s</span>'.format(_("Bound-with"));
+                        peers.forEach(p => {
+                            nodes += '<br/><a href="/cgi-bin/koha/catalogue/detail.pl?biblionumber=%s">%s</a>'.format(p.biblio_id, escape_str(p.title));
+                        });
+                        return nodes;
+                    },
+                },
+                {
                     data: "biblio.title",
                     searchable: false,
                     orderable: true,
@@ -929,6 +968,9 @@
                         }
                         if (bundlesEnabled) {
                             nodes += '<button class="btn btn-default btn-xs details-control"><i class="fa fa-folder"></i> %s</button>'.format(_("Manage bundle (%s|%s)").format(row.bundle_items_not_lost_count, row.bundle_items_lost_count));
+                        }
+                        if (Koha.prefs.EnableBoundWithItems && Koha.permissions.CAN_user_editcatalogue_manage_item_biblio_links) {
+                            nodes += ' <button class="btn btn-default btn-xs bound-with-manage"><i class="fa fa-link"></i> %s</button>'.format(_("Bound-with links"));
                         }
 
                         return nodes;
