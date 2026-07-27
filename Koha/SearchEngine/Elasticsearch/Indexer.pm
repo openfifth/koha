@@ -342,6 +342,15 @@ sub index_records {
     }
 }
 
+=head2 _get_record($record_id)
+
+Returns the MARC::Record to index for C<$record_id>, or undef if it does
+not exist. For the biblios index the record has its own items embedded,
+plus the items linked to it through bound-with relationships, so that
+those items are searchable on every record they are bound to.
+
+=cut
+
 sub _get_record {
     my ( $self, $record_id ) = @_;
 
@@ -349,7 +358,7 @@ sub _get_record {
 
     if ( $self->index eq $Koha::SearchEngine::BIBLIOS_INDEX ) {
         my $biblio = Koha::Biblios->find($record_id);
-        $record = $biblio->metadata_record( { embed_items => 1 } )
+        $record = $biblio->metadata_record( { embed_items => 1, linked_items => 1 } )
             if $biblio;
     } else {
         $record = C4::AuthoritiesMarc::GetAuthority($record_id);

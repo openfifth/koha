@@ -152,7 +152,7 @@ sub get_all_biblios_iterator {
             my $row = $rs->next();
             return if !$row;
             my $next = eval {
-                my $marc = $row->metadata_record( { embed_items => 1 } );
+                my $marc = $row->metadata_record( { embed_items => 1, linked_items => 1 } );
                 $class->new( $marc, $row->biblionumber );
             };
             if ($@) {

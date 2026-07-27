@@ -33,6 +33,7 @@ use C4::Log         qw( logaction );
 
 use Koha::BackgroundJob::BatchUpdateBiblioHoldsQueue;
 use Koha::Biblio::ItemGroups;
+use Koha::Biblios;
 use Koha::Checkouts;
 use Koha::CirculationRules;
 use Koha::Courses;
@@ -45,6 +46,7 @@ use Koha::Exceptions::Item::Transfer;
 use Koha::Item::Attributes;
 use Koha::Item::Availability::Checkin;
 use Koha::Exceptions::Item::Bundle;
+use Koha::Item::BiblioLinks;
 use Koha::Item::Transfer::Limits;
 use Koha::Item::Transfers;
 use Koha::ItemTypes;
@@ -248,12 +250,13 @@ sub store {
             ? logaction( "CATALOGUING", "ADD",    $self->itemnumber, 'item', undef, $self )
             : logaction( "CATALOGUING", "MODIFY", $self->itemnumber, $self,  undef, $original );
     }
-    my $indexer = Koha::SearchEngine::Indexer->new( { index => $Koha::SearchEngine::BIBLIOS_INDEX } );
-    $indexer->index_records( $self->biblionumber, "specialUpdate", "biblioserver" )
+    my @affected_biblionumbers = ( $self->biblionumber, @{ $self->linked_biblionumbers } );
+    my $indexer                = Koha::SearchEngine::Indexer->new( { index => $Koha::SearchEngine::BIBLIOS_INDEX } );
+    $indexer->index_records( \@affected_biblionumbers, "specialUpdate", "biblioserver" )
         unless $params->{skip_record_index};
     $self->_after_item_action_hooks( { action => $action } );
 
-    Koha::BackgroundJob::BatchUpdateBiblioHoldsQueue->new->enqueue( { biblio_ids => [ $self->biblionumber ] } )
+    Koha::BackgroundJob::BatchUpdateBiblioHoldsQueue->new->enqueue( { biblio_ids => \@affected_biblionumbers } )
         unless $params->{skip_holds_queue}
         or !C4::Context->preference('RealTimeHoldsQueue');
 
@@ -295,6 +298,9 @@ sub delete {
     # Get the item group so we can delete it later if it has no items left
     my $item_group = C4::Context->preference('EnableItemGroups') ? $self->item_group : undef;
 
+    # Capture the linked biblionumbers now, the link rows are removed by cascade on deletion
+    my $linked_biblionumbers = $self->linked_biblionumbers;
+
     my $serial_item = $self->serial_item;
 
     my $result = $self->SUPER::delete;
@@ -313,8 +319,9 @@ sub delete {
     # Delete the item group if it has no items left
     $item_group->delete if ( $item_group && $item_group->items->count == 0 );
 
-    my $indexer = Koha::SearchEngine::Indexer->new( { index => $Koha::SearchEngine::BIBLIOS_INDEX } );
-    $indexer->index_records( $self->biblionumber, "specialUpdate", "biblioserver" )
+    my @affected_biblionumbers = ( $self->biblionumber, @$linked_biblionumbers );
+    my $indexer                = Koha::SearchEngine::Indexer->new( { index => $Koha::SearchEngine::BIBLIOS_INDEX } );
+    $indexer->index_records( \@affected_biblionumbers, "specialUpdate", "biblioserver" )
         unless $params->{skip_record_index};
 
     $self->_after_item_action_hooks( { action => 'delete' } );
@@ -322,7 +329,7 @@ sub delete {
     logaction( "CATALOGUING", "DELETE", $self->itemnumber, "item", undef, $self )
         if C4::Context->preference("CataloguingLog");
 
-    Koha::BackgroundJob::BatchUpdateBiblioHoldsQueue->new->enqueue( { biblio_ids => [ $self->biblionumber ] } )
+    Koha::BackgroundJob::BatchUpdateBiblioHoldsQueue->new->enqueue( { biblio_ids => \@affected_biblionumbers } )
         unless $params->{skip_holds_queue}
         or !C4::Context->preference('RealTimeHoldsQueue');
 
@@ -359,7 +366,13 @@ returns 1 if the item is safe to delete,
 
 "linked_analytics" if the item has linked analytic records.
 
-"last_item_for_hold" if the item is the last one on a record on which a biblio-level hold is placed
+"last_item_for_hold" if the item is the last one on a record on which a biblio-level hold is placed.
+The records the item is linked to through item_biblio_links (e.g. bound-with) are checked too,
+as deleting the item also removes their links to it.
+
+When the item is safe to delete but is linked to other bibliographic records
+through item_biblio_links, a non-blocking 'linked_biblios' warning message is
+attached, as deleting the item also removes those links.
 
 =cut
 
@@ -393,11 +406,39 @@ sub safe_to_delete {
         }
         )->count;
 
+    # A linked record (e.g. bound-with) loses this item too. Block when it is
+    # the record's only item source and biblio-level holds would be stranded
+    unless ($error) {
+        for my $linked_biblionumber ( @{ $self->linked_biblionumbers } ) {
+            my $other_item_sources =
+                Koha::Items->search( { biblionumber => $linked_biblionumber } )->count +
+                Koha::Item::BiblioLinks->search(
+                {
+                    biblionumber => $linked_biblionumber,
+                    itemnumber   => { '!=' => $self->itemnumber },
+                }
+                )->count;
+            next if $other_item_sources;
+
+            if ( Koha::Biblios->find($linked_biblionumber)->holds->search( { itemnumber => undef } )->count ) {
+                $error = "last_item_for_hold";
+                last;
+            }
+        }
+    }
+
     if ($error) {
         return Koha::Result::Boolean->new(0)->add_message( { message => $error } );
     }
 
-    return Koha::Result::Boolean->new(1);
+    my $result = Koha::Result::Boolean->new(1);
+
+    # Not blocking, but deleting the item will also remove its links to other
+    # bibliographic records, which lose their attached holdings
+    $result->add_message( { message => 'linked_biblios', type => 'warning' } )
+        if @{ $self->linked_biblionumbers };
+
+    return $result;
 }
 
 =head3 move_to_deleted
@@ -565,6 +606,61 @@ sub item_group_item {
     my $rs = $self->_result->item_group_item;
     return unless $rs;
     return Koha::Biblio::ItemGroup::Item->_new_from_dbic($rs);
+}
+
+=head3 biblio_links
+
+    my $links = $item->biblio_links;
+
+Returns the Koha::Item::BiblioLinks linking this item to bibliographic records
+other than the one its item record lives on, regardless of link type.
+
+=cut
+
+sub biblio_links {
+    my ($self) = @_;
+    my $links_rs = $self->_result->item_biblio_links;
+    return Koha::Item::BiblioLinks->_new_from_dbic($links_rs);
+}
+
+=head3 linked_biblios
+
+    my $biblios = $item->linked_biblios;
+    my $biblios = $item->linked_biblios( { link_type => 'binding' } );
+
+Returns the Koha::Biblios this item is linked to through item_biblio_links,
+optionally restricted to a link type.
+
+=cut
+
+sub linked_biblios {
+    my ( $self, $params ) = @_;
+
+    my $search = {};
+    $search->{link_type} = $params->{link_type} if $params->{link_type};
+
+    my @biblionumbers = $self->_result->item_biblio_links->search($search)->get_column('biblionumber')->all;
+
+    return Koha::Biblios->search( { biblionumber => { -in => \@biblionumbers } } );
+}
+
+=head3 linked_biblionumbers
+
+    my $biblionumbers = $item->linked_biblionumbers;
+
+Returns an arrayref of the biblionumbers this item is linked to through
+item_biblio_links, regardless of link type. Returns an empty arrayref unless
+the EnableBoundWithItems system preference is enabled, so callers on hot paths
+pay no cost when the feature is off.
+
+=cut
+
+sub linked_biblionumbers {
+    my ($self) = @_;
+
+    return [] unless C4::Context->preference('EnableBoundWithItems');
+
+    return [ $self->_result->item_biblio_links->get_column('biblionumber')->all ];
 }
 
 =head3 return_claims
@@ -2371,9 +2467,25 @@ sub move_to_biblio {
         }
     )->store( { skip_record_index => $params->{skip_record_index} } );
 
+    # A link to the destination record is redundant now that the item record
+    # lives there. The holds it carries follow the item below, so they are not
+    # stranded
+    for my $link ( $self->biblio_links->search( { biblionumber => $to_biblionumber } )->as_list ) {
+        $link->delete(
+            {
+                force             => 1,
+                skip_record_index => $params->{skip_record_index},
+                skip_holds_queue  => 1,
+            }
+        );
+    }
+
     unless ( $params->{skip_record_index} ) {
         my $indexer = Koha::SearchEngine::Indexer->new( { index => $Koha::SearchEngine::BIBLIOS_INDEX } );
-        $indexer->index_records( $from_biblionumber, "specialUpdate", "biblioserver" );
+        $indexer->index_records(
+            [ $from_biblionumber, @{ $self->linked_biblionumbers } ], "specialUpdate",
+            "biblioserver"
+        );
     }
 
     # Acquisition orders

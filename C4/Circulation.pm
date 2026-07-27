@@ -2119,9 +2119,10 @@ sub AddIssue {
                 }
             );
 
-            # Rebuilding holds queue here to ensure the item is removed from current queue
+            # Rebuilding holds queue here to ensure the item is removed from current queue.
+            # The records the item is linked to (e.g. bound-with) share it, so they are updated too
             Koha::BackgroundJob::BatchUpdateBiblioHoldsQueue->new->enqueue(
-                { biblio_ids => [ $item_object->biblionumber ] } )
+                { biblio_ids => [ $item_object->biblionumber, @{ $item_object->linked_biblionumbers } ] } )
                 if C4::Context->preference('RealTimeHoldsQueue');
         }
     }
@@ -2556,7 +2557,10 @@ sub AddReturn {
             $messages->{'Wrongbranch'} = $blockers->{Wrongbranch};
             $doreturn = 0;
             my $indexer = Koha::SearchEngine::Indexer->new( { index => $Koha::SearchEngine::BIBLIOS_INDEX } );
-            $indexer->index_records( $item->biblionumber, "specialUpdate", "biblioserver" );
+            $indexer->index_records(
+                [ $item->biblionumber, @{ $item->linked_biblionumbers } ], "specialUpdate",
+                "biblioserver"
+            );
             return ( $doreturn, $messages, $issue, $patron_unblessed );
         }
         if ( $blockers->{BlockedLost} ) {
@@ -2607,7 +2611,10 @@ sub AddReturn {
                     . Dumper( $issue->unblessed );
 
                 my $indexer = Koha::SearchEngine::Indexer->new( { index => $Koha::SearchEngine::BIBLIOS_INDEX } );
-                $indexer->index_records( $item->biblionumber, "specialUpdate", "biblioserver" );
+                $indexer->index_records(
+                    [ $item->biblionumber, @{ $item->linked_biblionumbers } ], "specialUpdate",
+                    "biblioserver"
+                );
 
                 return (
                     0, { WasReturned => 0, DataCorrupted => $error }, $issue,
@@ -2940,7 +2947,10 @@ sub AddReturn {
     }
 
     my $indexer = Koha::SearchEngine::Indexer->new( { index => $Koha::SearchEngine::BIBLIOS_INDEX } );
-    $indexer->index_records( $item->biblionumber, "specialUpdate", "biblioserver" );
+    $indexer->index_records(
+        [ $item->biblionumber, @{ $item->linked_biblionumbers } ], "specialUpdate",
+        "biblioserver"
+    );
 
     if ( $doreturn and $issue ) {
         my $checkin = Koha::Old::Checkouts->find( $issue->id );
@@ -3901,7 +3911,10 @@ sub AddRenewal {
 
         # We index now, after the transaction is committed
         my $indexer = Koha::SearchEngine::Indexer->new( { index => $Koha::SearchEngine::BIBLIOS_INDEX } );
-        $indexer->index_records( $item_object->biblionumber, "specialUpdate", "biblioserver" );
+        $indexer->index_records(
+            [ $item_object->biblionumber, @{ $item_object->linked_biblionumbers } ], "specialUpdate",
+            "biblioserver"
+        );
     }
 
     return $datedue;

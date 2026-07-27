@@ -50,6 +50,7 @@ use Koha::Checkouts;
 use Koha::CirculationRules;
 use Koha::Exceptions;
 use Koha::ILL::Requests;
+use Koha::Item::BiblioLinks;
 use Koha::Item::Transfer::Limits;
 use Koha::Items;
 use Koha::Libraries;
@@ -138,6 +139,7 @@ sub record_schema {
         {
             [
                 embed_items         => 1 | 0,
+                linked_items        => 1 | 0,
                 interface           => 'opac' | 'intranet',
                 patron              => $patron,
                 expand_coded_fields => 1 | 0
@@ -147,6 +149,11 @@ sub record_schema {
 
 Returns the metadata serialized as appropriate for the metadata object
 type. Currently only I<MARC::Record> objects are returned.
+
+The optional I<linked_items> param, used with I<embed_items>, also embeds the
+items linked to this record through item_biblio_links (e.g. bound-with items).
+It is meant for the search engine indexers, so availability is indexed on all
+linked records. Exports and other consumers get the record's own items only.
 
 =cut
 
@@ -168,11 +175,12 @@ sub metadata_record {
 
         if ( $params->{embed_items} ) {
             push @filters, 'EmbedItems';
+            my $items = $self->items( { linked_items => $params->{linked_items} } );
             if ( $params->{interface} && $params->{interface} eq 'opac' ) {
-                $options->{items} = $self->items->filter_by_visible_in_opac(
+                $options->{items} = $items->filter_by_visible_in_opac(
                     { ( $params->{patron} ? ( patron => $params->{patron} ) : () ) } )->as_list;
             } else {
-                $options->{items} = $self->items->as_list;
+                $options->{items} = $items->as_list;
             }
         }
 
@@ -704,9 +712,11 @@ sub old_checkouts {
 
 =head3 items
 
-my $items = $biblio->items({ [ host_items => 1 ] });
+my $items = $biblio->items({ [ host_items => 1, linked_items => 1 ] });
 
 The optional param host_items allows you to include 'analytical' items.
+The optional param linked_items allows you to include items linked to this
+record through item_biblio_links (e.g. bound-with items).
 
 Returns the related Koha::Items object for this biblio
 
@@ -717,12 +727,20 @@ sub items {
 
     my $items_rs = $self->_result->items;
 
-    return Koha::Items->_new_from_dbic($items_rs)
-        unless $params->{host_items} && C4::Context->preference('EasyAnalyticalRecords');
+    my $host_items   = $params->{host_items}   && C4::Context->preference('EasyAnalyticalRecords');
+    my $linked_items = $params->{linked_items} && C4::Context->preference('EnableBoundWithItems');
 
-    my @itemnumbers      = $items_rs->get_column('itemnumber')->all;
-    my $host_itemnumbers = $self->_host_itemnumbers();
-    push @itemnumbers, @{$host_itemnumbers};
+    return Koha::Items->_new_from_dbic($items_rs)
+        unless $host_items || $linked_items;
+
+    my @itemnumbers = $items_rs->get_column('itemnumber')->all;
+    push @itemnumbers, @{ $self->_host_itemnumbers() } if $host_items;
+    push @itemnumbers, $self->_result->item_biblio_links->get_column('itemnumber')->all
+        if $linked_items;
+
+    my %seen;
+    @itemnumbers = grep { !$seen{$_}++ } @itemnumbers;
+
     return Koha::Items->search( { "me.itemnumber" => { -in => \@itemnumbers } } );
 }
 
@@ -780,6 +798,42 @@ sub _host_itemnumbers {
         push @itemnumbers, $field->subfield('9');
     }
     return \@itemnumbers;
+}
+
+=head3 item_biblio_links
+
+    my $links = $biblio->item_biblio_links;
+
+Returns the Koha::Item::BiblioLinks rows linking items to this record,
+regardless of link type.
+
+=cut
+
+sub item_biblio_links {
+    my ($self) = @_;
+    my $links_rs = $self->_result->item_biblio_links;
+    return Koha::Item::BiblioLinks->_new_from_dbic($links_rs);
+}
+
+=head3 linked_items
+
+    my $linked_items = $biblio->linked_items;
+
+Return the items linked to this record through item_biblio_links (e.g.
+bound-with items), regardless of link type. Returns an empty resultset unless
+the EnableBoundWithItems system preference is enabled.
+
+=cut
+
+sub linked_items {
+    my ($self) = @_;
+
+    return Koha::Items->new->empty
+        unless C4::Context->preference('EnableBoundWithItems');
+
+    my @itemnumbers = $self->_result->item_biblio_links->get_column('itemnumber')->all;
+
+    return Koha::Items->search( { "me.itemnumber" => { -in => \@itemnumbers } } );
 }
 
 =head3 itemtype
