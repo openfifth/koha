@@ -150,6 +150,8 @@ definitions:
     $ref: ./definitions/invoice.yaml
   item:
     $ref: ./definitions/item.yaml
+  item_biblio_link:
+    $ref: ./definitions/item_biblio_link.yaml
   item_group:
     $ref: ./definitions/item_group.yaml
   item_type:
@@ -319,6 +321,10 @@ paths:
     $ref: "./paths/biblios.yaml#/~1biblios~1{biblio_id}~1items~1{item_id}"
   "/biblios/{biblio_id}/pickup_locations":
     $ref: "./paths/biblios.yaml#/~1biblios~1{biblio_id}~1pickup_locations"
+  "/biblios/{biblio_id}/item_biblio_links":
+    $ref: "./paths/biblios_item_biblio_links.yaml#/~1biblios~1{biblio_id}~1item_biblio_links"
+  "/biblios/{biblio_id}/item_biblio_links/{item_biblio_link_id}":
+    $ref: "./paths/biblios_item_biblio_links.yaml#/~1biblios~1{biblio_id}~1item_biblio_links~1{item_biblio_link_id}"
   "/biblios/{biblio_id}/item_groups":
     $ref: "./paths/biblios_item_groups.yaml#/~1biblios~1{biblio_id}~1item_groups"
   "/biblios/{biblio_id}/item_groups/{item_group_id}":
@@ -1422,6 +1428,9 @@ tags:
   - description: "Manage import batches\n"
     name: import_batches
     x-displayName: Import batches
+  - description: "Manage links between items and bibliographic records\n"
+    name: item_biblio_links
+    x-displayName: Item biblio links
   - description: "Manage item groups\n"
     name: item_groups
     x-displayName: Item groups

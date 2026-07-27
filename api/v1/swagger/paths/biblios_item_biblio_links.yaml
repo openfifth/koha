@@ -1,0 +1,211 @@
+---
+"/biblios/{biblio_id}/item_biblio_links":
+  get:
+    x-mojo-to: Biblios::ItemBiblioLinks#list
+    operationId: listItemBiblioLinks
+    tags:
+      - item_biblio_links
+    summary: List item biblio links for a bibliographic record
+    parameters:
+      - name: biblio_id
+        in: path
+        description: Internal identifier for the linked bibliographic record
+        required: true
+        type: string
+      - name: x-koha-embed
+        in: header
+        required: false
+        description: Embed list sent as a request header
+        type: array
+        items:
+          type: string
+          enum:
+            - item
+            - item.biblio
+            - biblio
+        collectionFormat: csv
+      - "$ref": "../swagger.yaml#/parameters/match"
+      - "$ref": "../swagger.yaml#/parameters/order_by"
+      - "$ref": "../swagger.yaml#/parameters/page"
+      - "$ref": "../swagger.yaml#/parameters/per_page"
+      - "$ref": "../swagger.yaml#/parameters/q_param"
+      - "$ref": "../swagger.yaml#/parameters/q_body"
+    produces:
+      - application/yaml
+    responses:
+      "200":
+        description: A list of item biblio links
+        schema:
+          type: array
+          items:
+            "$ref": "../swagger.yaml#/definitions/item_biblio_link"
+      "400":
+        description: |
+          Bad request. Possible `error_code` attribute values:
+
+            * `invalid_query`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "401":
+        description: Authentication required
+        schema:
+          "$ref": "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          "$ref": "../swagger.yaml#/definitions/error"
+      "404":
+        description: Bibliographic record not found
+        schema:
+          "$ref": "../swagger.yaml#/definitions/error"
+      "500":
+        description: Internal server error
+        schema:
+          "$ref": "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          "$ref": "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        catalogue: "1"
+  post:
+    x-mojo-to: Biblios::ItemBiblioLinks#add
+    operationId: addItemBiblioLink
+    tags:
+      - item_biblio_links
+    summary: Link an item to a bibliographic record
+    parameters:
+      - name: biblio_id
+        in: path
+        description: Internal identifier for the bibliographic record to link the item to
+        required: true
+        type: string
+      - name: body
+        in: body
+        description: A JSON object describing the link
+        required: true
+        schema:
+          type: object
+          properties:
+            item_id:
+              type: integer
+              description: Internal identifier for the item to link
+            link_type:
+              type: string
+              description: Type of link, from the ITEM_BIBLIO_LINK_TYPE authorised value category (e.g. binding, analytic)
+            display_order:
+              type:
+                - integer
+                - "null"
+              description: Optional explicit ordering among links
+          required:
+            - item_id
+            - link_type
+          additionalProperties: false
+    produces:
+      - application/yaml
+    responses:
+      "201":
+        description: A successfully created item biblio link
+        schema:
+          "$ref": "../swagger.yaml#/definitions/item_biblio_link"
+      "400":
+        description: |
+          Bad request. Possible `error_code` attribute values:
+
+            * `feature_disabled`
+            * `invalid_link_type`
+        schema:
+          "$ref": "../swagger.yaml#/definitions/error"
+      "401":
+        description: Authentication required
+        schema:
+          "$ref": "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          "$ref": "../swagger.yaml#/definitions/error"
+      "404":
+        description: Bibliographic record not found
+        schema:
+          "$ref": "../swagger.yaml#/definitions/error"
+      "409":
+        description: Conflict in creating resource
+        schema:
+          "$ref": "../swagger.yaml#/definitions/error"
+      "500":
+        description: Internal server error
+        schema:
+          "$ref": "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          "$ref": "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        editcatalogue: "manage_item_biblio_links"
+"/biblios/{biblio_id}/item_biblio_links/{item_biblio_link_id}":
+  delete:
+    x-mojo-to: Biblios::ItemBiblioLinks#delete
+    operationId: deleteItemBiblioLink
+    tags:
+      - item_biblio_links
+    summary: Remove a link between an item and a bibliographic record
+    parameters:
+      - name: biblio_id
+        in: path
+        description: Internal identifier for the linked bibliographic record
+        required: true
+        type: string
+      - name: item_biblio_link_id
+        in: path
+        description: Internal identifier for the link
+        required: true
+        type: string
+      - name: force
+        in: query
+        description: Remove the link even if holds exist for the item on the linked record
+        required: false
+        type: boolean
+    produces:
+      - application/yaml
+    responses:
+      "204":
+        description: Item biblio link removed
+        schema:
+          type: string
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "401":
+        description: Authentication required
+        schema:
+          "$ref": "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          "$ref": "../swagger.yaml#/definitions/error"
+      "404":
+        description: Item biblio link not found
+        schema:
+          "$ref": "../swagger.yaml#/definitions/error"
+      "409":
+        description: |
+          Conflict. Possible `error_code` attribute values:
+
+            * `holds_exist`
+        schema:
+          "$ref": "../swagger.yaml#/definitions/error"
+      "500":
+        description: Internal server error
+        schema:
+          "$ref": "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          "$ref": "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        editcatalogue: "manage_item_biblio_links"

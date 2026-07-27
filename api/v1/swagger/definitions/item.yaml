@@ -263,6 +263,9 @@ properties:
   return_claims:
     type: array
     description: An array of all return claims associated with this item
+  biblio_links:
+    type: array
+    description: An array of the links between this item and other bibliographic records
   return_claim:
     type:
       - object
