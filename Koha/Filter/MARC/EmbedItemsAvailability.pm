@@ -33,6 +33,8 @@ Filter to embed items not on loan count information into MARC records.
 use Modern::Perl;
 
 use C4::Biblio qw( GetMarcFromKohaField );
+use C4::Context;
+use Koha::Item::BiblioLinks;
 use Koha::Items;
 
 use base qw(Koha::RecordProcessor::Base);
@@ -67,6 +69,16 @@ sub filter {
     return $newrecord;
 }
 
+=head2 _processrecord
+
+    my $record = _processrecord($record);
+
+Counts the items not on loan for the record and stores the count in
+999$x. When EnableBoundWithItems is enabled the items linked to the record
+through bound-with relationships are counted as well.
+
+=cut
+
 sub _processrecord {
 
     my $record = shift;
@@ -77,12 +89,20 @@ sub _processrecord {
         ? $record->field($biblionumber_field)->subfield($biblionumber_subfield)
         : $record->field($biblionumber_field)->data();
 
-    my $not_onloan_items = Koha::Items->search(
-        {
-            biblionumber => $biblionumber,
-            onloan       => undef,
-        }
-    )->count;
+    my $conditions = { onloan => undef };
+    if ( C4::Context->preference('EnableBoundWithItems') ) {
+
+        # Availability includes the items linked to this record (e.g. bound-with)
+        my @linked_itemnumbers =
+            Koha::Item::BiblioLinks->search( { biblionumber => $biblionumber } )->get_column('itemnumber');
+        $conditions->{-or} = [
+            { biblionumber => $biblionumber },
+            { itemnumber   => { -in => \@linked_itemnumbers } },
+        ];
+    } else {
+        $conditions->{biblionumber} = $biblionumber;
+    }
+    my $not_onloan_items = Koha::Items->search($conditions)->count;
 
     # check for field 999
     my $destination_field = $record->field('999');
