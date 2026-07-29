@@ -184,6 +184,12 @@ export default {
                             return $date(row.end_date);
                         },
                     },
+                    componentProps: {
+                        required: {
+                            type: "boolean",
+                            value: true,
+                        },
+                    },
                 },
                 {
                     name: "status",
