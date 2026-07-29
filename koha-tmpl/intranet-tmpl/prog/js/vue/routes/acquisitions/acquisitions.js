@@ -25,7 +25,7 @@ export const routes = [
             {
                 path: "/cgi-bin/koha/acquisitions/order_management",
                 title: $__("Order management"),
-                icon: "fa fa-basket-shopping",
+                icon: "fa fa-cart-shopping",
                 children: [
                     {
                         is_navigation_item: false,
@@ -36,7 +36,7 @@ export const routes = [
                     {
                         path: "purchase_orders",
                         title: $__("Purchase orders"),
-                        icon: "fa fa-gift",
+                        icon: "fa fa-basket-shopping",
                         resource:
                             "Acquisitions/OrderManagement/PurchaseOrderResource.vue",
                         children: [
@@ -128,7 +128,7 @@ export const routes = [
             {
                 path: "/cgi-bin/koha/acquisitions/suggestions",
                 title: $__("Suggestions"),
-                icon: "fa fa-question",
+                icon: "fa fa-lightbulb",
                 resource: "Acquisitions/OrderManagement/SuggestionResource.vue",
                 children: [
                     {
@@ -144,7 +144,7 @@ export const routes = [
             {
                 href: "/cgi-bin/koha/acquisition/vendors",
                 title: $__("Vendors"),
-                icon: "fa fa-cart-shopping",
+                icon: "fa fa-shop",
             },
             {
                 path: "/cgi-bin/koha/acquisitions/finances",
@@ -160,7 +160,7 @@ export const routes = [
                     {
                         path: "fiscal_periods",
                         title: $__("Fiscal periods"),
-                        icon: "fa fa-money-check",
+                        icon: "fa fa-calendar-days",
                         resource:
                             "Acquisitions/Finances/FiscalPeriodResource.vue",
                         children: [
