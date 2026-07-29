@@ -26,6 +26,7 @@ use Koha::Exceptions::Config;
 use Koha::Exceptions::Elasticsearch;
 use Koha::Filter::MARC::EmbedSeeFromHeadings;
 use Koha::I18N qw(__);
+use Koha::Item::BiblioLinks;
 use Koha::SearchFields;
 use Koha::SearchMarcMaps;
 use Koha::Caches;
@@ -895,13 +896,23 @@ sub marc_records_to_documents {
             my $field = $record->field($tag);
             if ($field) {
                 my $biblionumber = $field->is_control_field ? $field->data : $field->subfield($code);
-                my $avail_items  = Koha::Items->search(
-                    {
-                        biblionumber => $biblionumber,
-                        onloan       => undef,
-                        itemlost     => 0,
-                    }
-                )->count;
+                my $conditions   = {
+                    onloan   => undef,
+                    itemlost => 0,
+                };
+                if ( C4::Context->preference('EnableBoundWithItems') ) {
+
+                    # Availability includes the items linked to this record (e.g. bound-with)
+                    my @linked_itemnumbers =
+                        Koha::Item::BiblioLinks->search( { biblionumber => $biblionumber } )->get_column('itemnumber');
+                    $conditions->{-or} = [
+                        { biblionumber => $biblionumber },
+                        { itemnumber   => { -in => \@linked_itemnumbers } },
+                    ];
+                } else {
+                    $conditions->{biblionumber} = $biblionumber;
+                }
+                my $avail_items = Koha::Items->search($conditions)->count;
 
                 $record_document->{available} = $avail_items ? \1 : \0;
             }

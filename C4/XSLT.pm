@@ -38,6 +38,7 @@ use C4::Context;
 use C4::Koha   qw( xml_escape );
 use C4::Biblio qw( GetAuthorisedValueDesc GetFrameworkCode GetMarcStructure );
 use Koha::AuthorisedValues;
+use Koha::Item::BiblioLinks;
 use Koha::ItemTypes;
 use Koha::Plugins;
 use Koha::RecordProcessor;
@@ -351,7 +352,18 @@ sub buildKohaItemsNamespace {
         if $hidden_items;
 
     unless ( $items_rs && ref($items_rs) eq 'Koha::Items' ) {
-        $query->{'me.biblionumber'} = $biblionumber;
+        if ( C4::Context->preference('EnableBoundWithItems') ) {
+
+            # Availability includes the items linked to this record (e.g. bound-with)
+            my @linked_itemnumbers =
+                Koha::Item::BiblioLinks->search( { biblionumber => $biblionumber } )->get_column('itemnumber');
+            $query->{'-or'} = [
+                { 'me.biblionumber' => $biblionumber },
+                { 'me.itemnumber'   => { -in => \@linked_itemnumbers } },
+            ];
+        } else {
+            $query->{'me.biblionumber'} = $biblionumber;
+        }
         $items_rs = Koha::Items->new;
     }
 
