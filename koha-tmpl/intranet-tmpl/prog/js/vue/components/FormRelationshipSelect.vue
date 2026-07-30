@@ -4,17 +4,27 @@
             relatedResource => relatedResource[relationshipOptionLabelAttr]
         "
         :id="name"
-        :reduce="relatedResource => relatedResource[relationshipRequiredKey]"
+        :reduce="reduceOption"
         :options="relatedResourcesOptions"
         :required="required && !resource[name]"
         :multiple="allowMultipleChoices"
+        :filterable="!serverSearch"
         :filter-by="filterRelatedResourcesOptions"
         v-model="resource[name]"
         :disabled="shouldBeDisabled"
-        :placeholder="!relatedResourcesLoaded ? $__('Loading...') : ''"
+        :placeholder="
+            serverSearch
+                ? searchPlaceholder
+                : !relatedResourcesLoaded
+                  ? $__('Loading...')
+                  : ''
+        "
+        @search="onSearch"
     >
         <template v-slot:option="relatedResource">
-            {{ relatedResource[relationshipOptionLabelAttr] }}
+            <slot name="option" v-bind="relatedResource">
+                {{ relatedResource[relationshipOptionLabelAttr] }}
+            </slot>
         </template>
         <template #search="{ attributes, events }">
             <input
@@ -28,8 +38,10 @@
 </template>
 
 <script>
-import { computed, onBeforeMount, ref } from "vue";
+import { computed, onBeforeMount, onBeforeUnmount, ref } from "vue";
+import vSelect from "vue-select";
 export default {
+    components: { "v-select": vSelect },
     props: {
         relationshipOptionLabelAttr: String | null,
         relationshipAPIClient: Object | null,
@@ -43,12 +55,39 @@ export default {
             type: Object,
             default: {},
         },
+        serverSearch: {
+            type: Boolean,
+            default: false,
+        },
+        searchQueryBuilder: {
+            type: Function,
+            default: null,
+        },
+        searchParams: {
+            type: Object,
+            default: () => ({}),
+        },
+        searchMinLength: {
+            type: Number,
+            default: 3,
+        },
+        searchPlaceholder: {
+            type: String,
+            default: "",
+        },
     },
     setup(props) {
         const relatedResources = ref(null);
         const relatedResourcesLoaded = ref(false);
+        let searchTimer = null;
+        let searchSequence = 0;
 
         onBeforeMount(() => {
+            if (props.serverSearch) {
+                relatedResources.value = [];
+                relatedResourcesLoaded.value = true;
+                return;
+            }
             const relatedResourcesClient = props.relationshipAPIClient;
             relatedResourcesClient.getAll(props.query).then(
                 result => {
@@ -58,6 +97,55 @@ export default {
                 error => {}
             );
         });
+        onBeforeUnmount(() => clearTimeout(searchTimer));
+
+        // v-select 'search' event emits: this.$emit("search", this.search, this.toggleLoading)
+        const onSearch = (searchTerm, loading) => {
+            if (!props.serverSearch) return;
+            clearTimeout(searchTimer);
+            if (
+                searchTerm.length < props.searchMinLength &&
+                !/^\d+$/.test(searchTerm)
+            ) {
+                relatedResources.value = [];
+                loading(false);
+                return;
+            }
+            loading(true);
+            searchTimer = setTimeout(() => {
+                const currentSearchNumber = ++searchSequence;
+                props.relationshipAPIClient
+                    .getAll(buildSearchQuery(searchTerm), {
+                        // getAll would otherwise send _per_page=-1 (all rows)
+                        _per_page: 20,
+                        ...props.searchParams,
+                    })
+                    .then(
+                        result => {
+                            if (currentSearchNumber != searchSequence) return;
+                            relatedResources.value = result;
+                            loading(false);
+                        },
+                        error => loading(false)
+                    );
+            }, 300);
+        };
+
+        // Without a custom builder, match the label attribute on "contains"
+        const buildSearchQuery = searchTerm =>
+            props.searchQueryBuilder
+                ? props.searchQueryBuilder(searchTerm)
+                : {
+                      [props.relationshipOptionLabelAttr]: {
+                          "-like": `%${searchTerm}%`,
+                      },
+                  };
+
+        const reduceOption = relatedResource =>
+            props.relationshipRequiredKey
+                ? relatedResource[props.relationshipRequiredKey]
+                : relatedResource;
+
         const relatedResourcesOptions = computed(() => {
             return relatedResources.value?.map(resource => ({
                 ...resource,
@@ -80,8 +168,10 @@ export default {
             relatedResources,
             relatedResourcesLoaded,
             relatedResourcesOptions,
+            reduceOption,
             shouldBeDisabled,
             filterRelatedResourcesOptions,
+            onSearch,
         };
     },
 };

@@ -138,20 +138,36 @@
                             </p>
                             <h2>{{ $__("Add links") }}</h2>
                             <div class="form-group">
-                                <label for="bound-with-biblionumbers"
-                                    >{{ $__("Record number(s)") }}:
+                                <label for="bound-with-targets"
+                                    >{{ $__("Records to link") }}:
                                 </label>
-                                <input
-                                    id="bound-with-biblionumbers"
-                                    v-model.trim="biblionumbers"
-                                    type="text"
-                                    size="30"
-                                    @keyup.enter="addLinks"
-                                />
+                                <FormRelationshipSelect
+                                    name="targets"
+                                    :resource="linkTarget"
+                                    :allowMultipleChoices="true"
+                                    :serverSearch="true"
+                                    :relationshipAPIClient="biblioClient"
+                                    relationshipOptionLabelAttr="title"
+                                    :searchQueryBuilder="buildBiblioQuery"
+                                    :searchPlaceholder="
+                                        $__(
+                                            'Title, author, ISBN or record number'
+                                        )
+                                    "
+                                >
+                                    <template #option="biblio">
+                                        <strong>{{ biblio.title }}</strong>
+                                        <template v-if="biblio.author">
+                                            / {{ biblio.author }}</template
+                                        >
+                                        ({{ $__("Record number") }}
+                                        {{ biblio.biblio_id }})
+                                    </template>
+                                </FormRelationshipSelect>
                                 <div class="hint">
                                     {{
                                         $__(
-                                            "Enter one or more biblionumbers, separated by spaces or commas"
+                                            "Search by title, author or ISBN, or enter a record number directly"
                                         )
                                     }}
                                 </div>
@@ -201,7 +217,7 @@
                         <template v-else>
                             <button
                                 class="btn btn-primary"
-                                :disabled="saving || !biblionumbers.length"
+                                :disabled="saving || !linkTarget.targets.length"
                                 @click="addLinks"
                             >
                                 <i class="fa fa-link"></i>
@@ -222,17 +238,23 @@
 <script>
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { $__ } from "@koha-vue/i18n";
+import { APIClient } from "../../fetch/api-client.js";
+import FormRelationshipSelect from "../FormRelationshipSelect.vue";
+import "vue-select/dist/vue-select.css";
 
 export default {
+    components: { FormRelationshipSelect },
     props: {
         biblionumber: String,
     },
     setup(props) {
+        const biblioClient = APIClient.biblio.biblios;
+
         const visible = ref(false);
         const mode = ref("item");
         const item = ref(null);
         const barcode = ref("");
-        const biblionumbers = ref("");
+        const linkTarget = ref({ targets: [] });
         const unlinking = ref(null);
         const holdsWarning = ref(false);
         const saving = ref(false);
@@ -252,10 +274,34 @@ export default {
                 ? link.biblio.title
                 : link.biblio_id;
 
+        const excludedBiblioIds = computed(() => [
+            ...(item.value ? [item.value.biblio_id] : []),
+            ...bindingLinks.value.map(link => link.biblio_id),
+            ...linkTarget.value.targets.map(target => target.biblio_id),
+        ]);
+
+        const buildBiblioQuery = term => {
+            const clauses = [
+                { "me.title": { "-like": `%${term}%` } },
+                { "me.author": { "-like": `%${term}%` } },
+            ];
+            if (/^\d+$/.test(term))
+                clauses.push({ "me.biblio_id": Number(term) });
+            const isbn = term.replace(/[\s-]/g, "");
+            if (/^\d{9}[\dXx]$/.test(isbn) || /^\d{13}$/.test(isbn))
+                clauses.push({ isbn: { "-like": `%${isbn}%` } });
+            return {
+                "-and": [
+                    { "-or": clauses },
+                    { "me.biblio_id": { "-not_in": excludedBiblioIds.value } },
+                ],
+            };
+        };
+
         const reset = () => {
             item.value = null;
             barcode.value = "";
-            biblionumbers.value = "";
+            linkTarget.value = { targets: [] };
             unlinking.value = null;
             holdsWarning.value = false;
             saving.value = false;
@@ -308,27 +354,27 @@ export default {
         };
 
         const addLinks = async () => {
-            const targets = biblionumbers.value
-                .split(/[\s,;]+/)
-                .filter(Boolean);
+            const targets = linkTarget.value.targets;
             if (!targets.length || saving.value) return;
             saving.value = true;
             error.value = null;
             const failures = [];
+            const remaining = [];
             for (const target of targets) {
-                if (!/^\d+$/.test(target)) {
-                    failures.push(
-                        `${target}: ${$__("not a valid record number")}`
-                    );
-                    continue;
-                }
-                const result = await postLink(target, item.value.item_id);
+                const result = await postLink(
+                    target.biblio_id,
+                    item.value.item_id
+                );
                 if (!result.ok) {
                     const body = await result.json().catch(() => ({}));
-                    failures.push(`${target}: ${body.error || result.status}`);
+                    failures.push(
+                        `${target.title}: ${body.error || result.status}`
+                    );
+                    remaining.push(target);
                 }
             }
             if (failures.length) {
+                linkTarget.value = { targets: remaining };
                 error.value = failures.join("; ");
                 saving.value = false;
             } else {
@@ -384,7 +430,9 @@ export default {
             mode,
             item,
             barcode,
-            biblionumbers,
+            biblioClient,
+            linkTarget,
+            buildBiblioQuery,
             unlinking,
             holdsWarning,
             saving,
