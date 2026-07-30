@@ -42,6 +42,7 @@ use Koha::DateUtils qw( dt_from_string );
 use C4::Search      qw( enabled_staff_search_views );
 
 use Koha::Biblios;
+use Koha::Item::BiblioLinks;
 use Koha::Checkouts;
 use Koha::Holds;
 use Koha::CirculationRules;
@@ -439,6 +440,10 @@ if (   ( $findborrower && $borrowernumber_hold || $findclub && $club_hold )
             push @items, @host_items;
         }
 
+        # Items linked to this record (e.g. bound-with)
+        my %seen_itemnumbers = map { $_->itemnumber => 1 } @items;
+        push @items, grep { !$seen_itemnumbers{ $_->itemnumber } } $biblio->linked_items->as_list;
+
         unless (@items) {
 
             # FIXME Then why do we continue?
@@ -478,7 +483,16 @@ if (   ( $findborrower && $borrowernumber_hold || $findclub && $club_hold )
                 $item->{itemtype} = $itemtypes->{ $item_object->effective_itemtype };
 
                 if ( $item->{biblionumber} ne $biblio->biblionumber ) {
-                    $item->{hosttitle} = Koha::Biblios->find( $item->{biblionumber} )->title;
+                    $item->{hosttitle}  = Koha::Biblios->find( $item->{biblionumber} )->title;
+                    $item->{bound_with} = 1
+                        if C4::Context->preference('EnableBoundWithItems')
+                        && Koha::Item::BiblioLinks->search(
+                        {
+                            itemnumber   => $item->{itemnumber},
+                            biblionumber => $biblio->biblionumber,
+                            link_type    => 'binding',
+                        }
+                        )->count;
                 }
 
                 # if the item is currently on loan, we display its return date and

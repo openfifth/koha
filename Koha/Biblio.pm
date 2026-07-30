@@ -514,7 +514,7 @@ sub pickup_locations {
     my $memory_cache = Koha::Cache::Memory::Lite->get_instance();
     my @pickup_locations;
     my $location_items;
-    foreach my $item ( $self->items->as_list ) {
+    foreach my $item ( $self->items( { host_items => 1, linked_items => 1 } )->as_list ) {
         my $cache_key = sprintf "Pickup_locations:%s:%s:%s:%s:%s",
             $item->itype, $item->homebranch, $item->holdingbranch, $item->ccode || "", $patron->branchcode || "";
         my $item_pickup_locations = $memory_cache->get_from_cache($cache_key);

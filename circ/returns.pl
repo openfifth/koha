@@ -51,6 +51,7 @@ use Koha::CirculationRules;
 use Koha::DateUtils qw( dt_from_string );
 use Koha::Holds;
 use Koha::Item::Transfers;
+use Koha::Biblios;
 use Koha::Items;
 use Koha::Patrons;
 use Koha::Recalls;
@@ -136,10 +137,13 @@ if ( $query->param('reserve_id') && $op eq 'cud-affect_reserve' ) {
         my ( undef, $nextreservinfo, undef ) = CheckReserves( $item, C4::Context->preference('ConfirmFutureHolds') );
         if ( $userenv_branch ne $nextreservinfo->{'branchcode'} ) {
             my $patron = Koha::Patrons->find( $nextreservinfo->{'borrowernumber'} );
+
+            # The hold may be stored against another record the item is linked to (e.g. bound-with)
+            my $hold_biblio = Koha::Biblios->find( $nextreservinfo->{biblionumber} ) // $biblio;
             $template->param(
-                itemtitle        => $biblio->title,
-                itembiblionumber => $biblio->biblionumber,
-                iteminfo         => $biblio->author,
+                itemtitle        => $hold_biblio->title,
+                itembiblionumber => $hold_biblio->biblionumber,
+                iteminfo         => $hold_biblio->author,
                 patron           => $patron,
                 diffbranch       => 1,
             );
@@ -622,10 +626,13 @@ if ( $messages->{'ResFound'} ) {
         );
 
         if ($diffBranchSend) {
+
+            # The hold may be stored against another record the item is linked to (e.g. bound-with)
+            my $hold_biblio = Koha::Biblios->find( $reserve->{biblionumber} ) // $biblio;
             $template->param(
-                itemtitle        => $biblio->title,
-                itembiblionumber => $biblio->biblionumber,
-                iteminfo         => $biblio->author,
+                itemtitle        => $hold_biblio->title,
+                itembiblionumber => $hold_biblio->biblionumber,
+                iteminfo         => $hold_biblio->author,
                 diffbranch       => 1,
             );
         }
@@ -639,14 +646,18 @@ if ( $messages->{'ResFound'} ) {
     }
 
     # same params for Waiting or Reserved
+    # The hold may be stored against another record the item is linked to (e.g. bound-with)
+    my $hold_biblio = Koha::Biblios->find( $reserve->{biblionumber} );
     $template->param(
-        found          => 1,
-        patron         => $patron,
-        barcode        => $barcode,
-        destbranch     => $reserve->{'branchcode'},
-        reservenotes   => $reserve->{'reservenotes'},
-        reserve_id     => $reserve->{reserve_id},
-        bormessagepref => $holdmsgpreferences->{'transports'},
+        found             => 1,
+        patron            => $patron,
+        barcode           => $barcode,
+        destbranch        => $reserve->{'branchcode'},
+        reservenotes      => $reserve->{'reservenotes'},
+        reserve_id        => $reserve->{reserve_id},
+        hold_biblionumber => $reserve->{biblionumber},
+        hold_title        => $hold_biblio ? $hold_biblio->title : undef,
+        bormessagepref    => $holdmsgpreferences->{'transports'},
         C4::Context->preference('DisplayAddHoldGroups')
             && $reserve->{hold_group_id} ? ( hold_group_id => $reserve->{hold_group_id} ) : (),
     );

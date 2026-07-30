@@ -33,6 +33,7 @@ use C4::Overdues;
 
 use Koha::AuthorisedValues;
 use Koha::Biblios;
+use Koha::Item::BiblioLinks;
 use Koha::CirculationRules;
 use Koha::DateUtils qw( dt_from_string );
 use Koha::Items;
@@ -343,7 +344,12 @@ foreach my $biblioNumber (@biblionumbers) {
     my $items = Koha::Items->search_ordered(
         [
             'me.biblionumber' => $biblioNumber,
-            'me.itemnumber'   => { -in => [ $biblio->host_items->get_column('itemnumber') ] }
+            'me.itemnumber'   => {
+                -in => [
+                    $biblio->host_items->get_column('itemnumber'),
+                    $biblio->linked_items->get_column('itemnumber'),
+                ]
+            }
         ],
         { prefetch => [ 'issue', 'homebranch', 'holdingbranch' ] }
     )->filter_by_visible_in_opac( { patron => $patron } );
@@ -462,6 +468,15 @@ foreach my $biblioNum (@biblionumbers) {
         if ( $item_info->{biblionumber} ne $biblioNum ) {
             $item_info->{hostbiblionumber} = $item->biblionumber;
             $item_info->{hosttitle}        = Koha::Biblios->find( $item_info->{biblionumber} )->title;
+            $item_info->{bound_with}       = 1
+                if C4::Context->preference('EnableBoundWithItems')
+                && Koha::Item::BiblioLinks->search(
+                {
+                    itemnumber   => $item->itemnumber,
+                    biblionumber => $biblioNum,
+                    link_type    => 'binding',
+                }
+                )->count;
         }
 
         my $branch = Koha::Policy::Holds->holds_control_library( $item, $patron );

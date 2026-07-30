@@ -83,6 +83,7 @@ use Koha::Database;
 use Koha::DateUtils qw( dt_from_string output_pref );
 use Koha::Holds;
 use Koha::HoldGroup;
+use Koha::Item::BiblioLinks;
 use Koha::ItemTypes;
 use Koha::Items;
 use Koha::Libraries;
@@ -438,12 +439,18 @@ sub CanBookBeReserved {
 
     #get items linked via host records
     my @hostitemnumbers = get_hostitemnumbers_of($biblionumber);
-    if (@hostitemnumbers) {
+
+    #get items linked through item_biblio_links (e.g. bound-with)
+    my @linked_itemnumbers;
+    @linked_itemnumbers = Koha::Item::BiblioLinks->search( { biblionumber => $biblionumber } )->get_column('itemnumber')
+        if C4::Context->preference('EnableBoundWithItems');
+
+    if ( @hostitemnumbers or @linked_itemnumbers ) {
         $items = Koha::Items->search(
             {
                 -or => [
                     biblionumber => $biblionumber,
-                    itemnumber   => { -in => \@hostitemnumbers }
+                    itemnumber   => { -in => [ @hostitemnumbers, @linked_itemnumbers ] }
                 ]
             }
         );
@@ -839,7 +846,11 @@ sub CheckReserves {
     }
 
     # Find this item in the reserves
-    my @reserves = _Findgroupreserve( $item->biblionumber, $item->itemnumber, $lookahead_days, $ignore_borrowers );
+    # Holds may be stored against any record the item is linked to (e.g. bound-with)
+    my @reserves = _Findgroupreserve(
+        [ $item->biblionumber, @{ $item->linked_biblionumbers } ],
+        $item->itemnumber, $lookahead_days, $ignore_borrowers
+    );
 
     # $priority and $highest are used to find the most important item
     # in the list returned by &_Findgroupreserve. (The lower $priority,
@@ -1537,7 +1548,20 @@ AllowHoldsOnDamagedItems or 'holdallowed' own/sibling library)
 sub ItemsAnyAvailableAndNotRestricted {
     my $param = shift;
 
-    my @items = Koha::Items->search( { biblionumber => $param->{biblionumber} } )->as_list;
+    my $conditions = { biblionumber => $param->{biblionumber} };
+    if ( C4::Context->preference('EnableBoundWithItems') ) {
+
+        # The items linked to this record (e.g. bound-with) count too
+        my @linked_itemnumbers =
+            Koha::Item::BiblioLinks->search( { biblionumber => $param->{biblionumber} } )->get_column('itemnumber');
+        $conditions = {
+            -or => [
+                biblionumber => $param->{biblionumber},
+                itemnumber   => { -in => \@linked_itemnumbers },
+            ]
+        };
+    }
+    my @items = Koha::Items->search($conditions)->as_list;
 
     foreach my $i (@items) {
         my $reserves_control_branch = Koha::Policy::Holds->holds_control_library( $i, $param->{patron} );
@@ -1811,6 +1835,10 @@ Looks for a holds-queue based item-specific match first, then for a holds-queue 
 first match found.  If neither, then we look for non-holds-queue based holds.
 Lookahead is the number of days to look in advance.
 
+C<$biblionumber> may be a single biblionumber or an arrayref of biblionumbers,
+as an item may be linked to several records (e.g. bound-with), all of which
+can carry holds for it.
+
 C<&_Findgroupreserve> returns :
 C<@results> is an array of references-to-hash whose keys are mostly
 fields from the reserves table of the Koha database, plus
@@ -1828,6 +1856,10 @@ All return values will respect any borrowernumbers passed as arrayref in $ignore
 sub _Findgroupreserve {
     my ( $biblionumber, $itemnumber, $lookahead, $ignore_borrowers ) = @_;
     my $dbh = C4::Context->dbh;
+
+    # The item may be linked to several records (e.g. bound-with), all of
+    # which can carry holds for it
+    my $biblionumbers = ref $biblionumber eq 'ARRAY' ? $biblionumber : [$biblionumber];
 
     my $skip_non_target_holds_query     = Koha::HoldGroup::skip_non_target_holds_query('sql');
     my $skip_non_target_holds_query_sql = $skip_non_target_holds_query ? " $skip_non_target_holds_query" : '';
@@ -1870,7 +1902,8 @@ sub _Findgroupreserve {
     }
     return @results if @results;
 
-    my $query = qq{
+    my $biblionumber_placeholders = join( ',', ('?') x @$biblionumbers );
+    my $query                     = qq{
         SELECT reserves.biblionumber               AS biblionumber,
                reserves.borrowernumber             AS borrowernumber,
                reserves.reservedate                AS reservedate,
@@ -1888,7 +1921,7 @@ sub _Findgroupreserve {
                reserves.item_group_id              AS item_group_id,
                reserves.hold_group_id              AS hold_group_id
         FROM reserves
-        WHERE reserves.biblionumber = ?
+        WHERE reserves.biblionumber IN ($biblionumber_placeholders)
           AND (reserves.itemnumber IS NULL OR reserves.itemnumber = ?)
           AND reserves.reservedate <= DATE_ADD(NOW(),INTERVAL ? DAY)
           AND suspend = 0
@@ -1896,7 +1929,7 @@ sub _Findgroupreserve {
           ORDER BY priority
     };
     $sth = $dbh->prepare($query);
-    $sth->execute( $biblionumber, $itemnumber, $lookahead || 0 );
+    $sth->execute( @$biblionumbers, $itemnumber, $lookahead || 0 );
     @results = ();
     while ( my $data = $sth->fetchrow_hashref ) {
         push( @results, $data )

@@ -359,8 +359,35 @@ sub GetItemsAvailableToFillHoldRequestsForBib {
                        AND withdrawn = 0";
     $items_query .= "  AND damaged = 0" unless C4::Context->preference('AllowHoldsOnDamagedItems');
     $items_query .= "  AND items.onloan IS NULL
-                       AND (itemtypes.notforloan IS NULL OR itemtypes.notforloan = 0)
-                       AND items.itemnumber NOT IN (
+                       AND (itemtypes.notforloan IS NULL OR itemtypes.notforloan = 0)";
+
+    my @params;
+    if ( C4::Context->preference('EnableBoundWithItems') ) {
+
+        # Items linked to this record (e.g. bound-with) can fill its holds too.
+        # A shared item may be targeted or queued through any of the records it
+        # is linked to, so the exclusions cannot be restricted to this
+        # biblionumber
+        $items_query .= " AND items.itemnumber NOT IN (
+                           SELECT itemnumber
+                           FROM reserves
+                           WHERE itemnumber IS NOT NULL
+                           AND (found IS NOT NULL OR priority = 0)
+                        )
+                        AND items.itemnumber NOT IN (
+                           SELECT itemnumber
+                           FROM tmp_holdsqueue
+                           WHERE itemnumber IS NOT NULL
+                        )
+                       AND (items.biblionumber = ? OR items.itemnumber IN (
+                           SELECT itemnumber
+                           FROM item_biblio_links
+                           WHERE biblionumber = ?
+                       ))
+                       AND branchtransfers.itemnumber IS NULL";
+        @params = ( $biblionumber, $biblionumber );
+    } else {
+        $items_query .= " AND items.itemnumber NOT IN (
                            SELECT itemnumber
                            FROM reserves
                            WHERE biblionumber = ?
@@ -374,8 +401,8 @@ sub GetItemsAvailableToFillHoldRequestsForBib {
                         )
                        AND items.biblionumber = ?
                        AND branchtransfers.itemnumber IS NULL";
-
-    my @params = ( $biblionumber, $biblionumber, $biblionumber );
+        @params = ( $biblionumber, $biblionumber, $biblionumber );
+    }
     if ( $branches_to_use && @$branches_to_use ) {
         $items_query .= " AND holdingbranch IN (" . join( ",", map { "?" } @$branches_to_use ) . ")";
         push @params, @$branches_to_use;

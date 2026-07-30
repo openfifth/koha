@@ -1041,7 +1041,12 @@
                                             [% IF itemdata_ccode %]
                                                 <td> [% IF ( itemloo.ccode ) %][% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.ccode', authorised_value => itemloo.ccode ) | html %][% END %] </td>
                                             [% END %]
-                                            <td> [% itemloo.itemcallnumber | html %] </td>
+                                            <td>
+                                                [% itemloo.itemcallnumber | html %]
+                                                [% IF itemloo.bound_with %]
+                                                    <span class="bound_with_note">Bound-with item &mdash; the item record lives on [% itemloo.hosttitle | html %]</span>
+                                                [% END %]
+                                            </td>
                                             <td> [% IF ( itemloo.copynumber ) %][% itemloo.copynumber | html %][% ELSE %]&nbsp;[% END %] </td>
                                             [% IF itemdata_enumchron %]
                                                 <td> [% itemloo.enumchron | html %] </td>
