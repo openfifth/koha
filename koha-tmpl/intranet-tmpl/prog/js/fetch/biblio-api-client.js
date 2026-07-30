@@ -5,6 +5,18 @@ export class BiblioAPIClient {
         });
     }
 
+    get biblios() {
+        return {
+            getAll: (query, params) =>
+                this.httpClient.getAll({
+                    endpoint: "biblios",
+                    query,
+                    params,
+                    headers: { Accept: "application/json" },
+                }),
+        };
+    }
+
     get items() {
         return {
             get: id =>
