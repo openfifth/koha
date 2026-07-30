@@ -38,6 +38,7 @@ use Koha::Biblios;
 use Koha::Database;
 use Koha::DateUtils qw (dt_from_string output_pref);
 use Koha::Checkouts;
+use Koha::Item::BiblioLink;
 use Koha::Old::Checkouts;
 
 use Mojo::JSON qw(encode_json);
@@ -172,7 +173,7 @@ subtest 'get() tests' => sub {
 
 subtest 'get_items() tests' => sub {
 
-    plan tests => 13;
+    plan tests => 19;
 
     $schema->storage->txn_begin;
 
@@ -207,6 +208,34 @@ subtest 'get_items() tests' => sub {
         "//$userid:$password@/api/v1/biblios/" . $biblio->biblionumber . "/items" => { "x-koha-embed" => "+strings" } )
         ->status_is(200)
         ->json_has( '/0/_strings/home_library_id/str' => $item_1->holding_branch->branchname, '_strings are embedded' );
+
+    # Items linked to the record (e.g. bound-with) are listed with its own items
+    t::lib::Mocks::mock_preference( 'EnableBoundWithItems', 1 );
+    t::lib::Mocks::mock_preference( 'RealTimeHoldsQueue',   0 );
+    my $other_biblio = $builder->build_sample_biblio();
+    my $linked_item  = $builder->build_sample_item( { biblionumber => $other_biblio->biblionumber } );
+    Koha::Item::BiblioLink->new(
+        {
+            itemnumber   => $linked_item->itemnumber,
+            biblionumber => $biblio->biblionumber,
+            link_type    => 'binding',
+        }
+    )->store( { skip_record_index => 1 } );
+
+    $t->get_ok( "//$userid:$password@/api/v1/biblios/" . $biblio->biblionumber . "/items?_order_by=item_id" )
+        ->status_is(200)
+        ->json_is(
+        '' => [ $item_1->to_api, $item_2->to_api, $linked_item->to_api ],
+        'The linked item is returned with the record items'
+        );
+
+    t::lib::Mocks::mock_preference( 'EnableBoundWithItems', 0 );
+    $t->get_ok( "//$userid:$password@/api/v1/biblios/" . $biblio->biblionumber . "/items?_order_by=item_id" )
+        ->status_is(200)
+        ->json_is(
+        '' => [ $item_1->to_api, $item_2->to_api ],
+        'Linked items are not returned when EnableBoundWithItems is disabled'
+        );
 
     subtest 'first_hold+strings' => sub {
 

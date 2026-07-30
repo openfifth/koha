@@ -17,7 +17,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 20;
+use Test::More tests => 21;
 use Test::NoWarnings;
 use Test::MockModule;
 use Test::Mojo;
@@ -38,6 +38,7 @@ use Koha::Database;
 use Koha::DateUtils qw( dt_from_string output_pref );
 use Koha::Biblios;
 use Koha::Biblioitems;
+use Koha::Item::BiblioLink;
 use Koha::Items;
 use Koha::CirculationRules;
 use Koha::Old::Holds;
@@ -2163,6 +2164,77 @@ subtest 'Bug 40866: API hold creation with override logs confirmations' => sub {
         ['HOLD_POLICY_OVERRIDE'],
         'HOLD_POLICY_OVERRIDE logged in confirmations array'
     );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'add() item-level hold on a bound-with (linked) item tests' => sub {
+
+    plan tests => 6;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'EnableBoundWithItems', 1 );
+    t::lib::Mocks::mock_preference( 'RealTimeHoldsQueue',   0 );
+
+    # Make sure pickup location checks doesn't get in the middle
+    my $mock_biblio = Test::MockModule->new('Koha::Biblio');
+    $mock_biblio->mock( 'pickup_locations', sub { return Koha::Libraries->search; } );
+    my $mock_item = Test::MockModule->new('Koha::Item');
+    $mock_item->mock( 'pickup_locations', sub { return Koha::Libraries->search } );
+
+    # A librarian with the reserveforothers flag
+    my $librarian = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => {
+                categorycode => $categorycode,
+                branchcode   => $branchcode,
+                flags        => 64,
+            }
+        }
+    );
+    $librarian->set_password( { password => $password, skip_validation => 1 } );
+    my $librarian_userid = $librarian->userid;
+
+    my $native_biblio = $builder->build_sample_biblio;
+    my $linked_biblio = $builder->build_sample_biblio;
+    my $item   = $builder->build_sample_item( { biblionumber => $native_biblio->biblionumber, itype => $itemtype } );
+    my $patron = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => {
+                categorycode => $categorycode,
+                branchcode   => $branchcode,
+            }
+        }
+    );
+
+    # The item record lives on the native record, the hold is placed on the linked record
+    Koha::Item::BiblioLink->new(
+        {
+            itemnumber   => $item->itemnumber,
+            biblionumber => $linked_biblio->biblionumber,
+            link_type    => 'binding',
+        }
+    )->store( { skip_record_index => 1 } );
+
+    my $data = {
+        patron_id         => $patron->borrowernumber,
+        biblio_id         => $linked_biblio->biblionumber,
+        item_id           => $item->itemnumber,
+        pickup_library_id => $branchcode,
+    };
+
+    t::lib::Mocks::mock_preference( 'EnableBoundWithItems', 0 );
+    $t->post_ok( "//$librarian_userid:$password@/api/v1/holds" => json => $data )
+        ->status_is(400)
+        ->json_like( '/error', qr/doesn't belong to biblio/ );
+
+    t::lib::Mocks::mock_preference( 'EnableBoundWithItems', 1 );
+    $t->post_ok( "//$librarian_userid:$password@/api/v1/holds" => json => $data )
+        ->status_is(201)
+        ->json_is( '/biblio_id' => $linked_biblio->biblionumber );
 
     $schema->storage->txn_rollback;
 };

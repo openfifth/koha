@@ -21,7 +21,7 @@ use Modern::Perl;
 use utf8;
 
 use Test::NoWarnings;
-use Test::More tests => 43;
+use Test::More tests => 46;
 use Test::Exception;
 use Test::MockModule;
 use Test::Warn;
@@ -4148,6 +4148,242 @@ subtest 'holds_fee() tests' => sub {
     # Test without patron
     $fee = $item->holds_fee(undef);
     is( $fee, 0, 'Item holds_fee returns 0 when no patron provided' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'biblio_links, linked_biblios and linked_biblionumbers tests' => sub {
+
+    plan tests => 14;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'EnableBoundWithItems', 1 );
+    t::lib::Mocks::mock_preference( 'RealTimeHoldsQueue',   0 );
+
+    my $native_biblio   = $builder->build_sample_biblio();
+    my $linked_biblio_1 = $builder->build_sample_biblio();
+    my $linked_biblio_2 = $builder->build_sample_biblio();
+    my $item            = $builder->build_sample_item( { biblionumber => $native_biblio->biblionumber } );
+
+    is( $item->biblio_links->count, 0, 'Item has no biblio links yet' );
+    is_deeply( $item->linked_biblionumbers, [], 'linked_biblionumbers returns an empty arrayref without links' );
+
+    Koha::Item::BiblioLink->new(
+        {
+            itemnumber   => $item->itemnumber,
+            biblionumber => $linked_biblio_1->biblionumber,
+            link_type    => 'binding',
+        }
+    )->store( { skip_record_index => 1 } );
+    Koha::Item::BiblioLink->new(
+        {
+            itemnumber   => $item->itemnumber,
+            biblionumber => $linked_biblio_2->biblionumber,
+            link_type    => 'analytic',
+        }
+    )->store( { skip_record_index => 1 } );
+
+    is( $item->biblio_links->count,                                 2, 'Item has two biblio links' );
+    is( $item->linked_biblios->count,                               2, 'linked_biblios returns links of all types' );
+    is( $item->linked_biblios( { link_type => 'binding' } )->count, 1, 'linked_biblios can filter by link_type' );
+    is(
+        $item->linked_biblios( { link_type => 'binding' } )->next->biblionumber,
+        $linked_biblio_1->biblionumber, 'link_type filter returns the expected biblio'
+    );
+    is_deeply(
+        [ sort { $a <=> $b } @{ $item->linked_biblionumbers } ],
+        [ sort { $a <=> $b } ( $linked_biblio_1->biblionumber, $linked_biblio_2->biblionumber ) ],
+        'linked_biblionumbers returns all linked biblionumbers'
+    );
+
+    t::lib::Mocks::mock_preference( 'EnableBoundWithItems', 0 );
+    is_deeply(
+        $item->linked_biblionumbers, [],
+        'linked_biblionumbers returns an empty arrayref when EnableBoundWithItems is disabled'
+    );
+    t::lib::Mocks::mock_preference( 'EnableBoundWithItems', 1 );
+
+    my $safe_to_delete = $item->safe_to_delete;
+    ok( $safe_to_delete, 'Item with links is still safe to delete' );
+    is(
+        scalar( grep { $_->message eq 'linked_biblios' } @{ $safe_to_delete->messages } ), 1,
+        'safe_to_delete carries a non-blocking linked_biblios warning'
+    );
+
+    my @indexed_biblionumbers;
+    my $engine       = C4::Context->preference('SearchEngine') // 'Zebra';
+    my $indexer_mock = Test::MockModule->new("Koha::SearchEngine::${engine}::Indexer");
+    $indexer_mock->mock(
+        'index_records',
+        sub {
+            my ( $self, $ids ) = @_;
+            push @indexed_biblionumbers, ref $ids eq 'ARRAY' ? @$ids : $ids;
+        }
+    );
+
+    my @queued_biblionumbers;
+    my $holds_queue_mock = Test::MockModule->new('Koha::BackgroundJob::BatchUpdateBiblioHoldsQueue');
+    $holds_queue_mock->mock(
+        'enqueue',
+        sub {
+            my ( $self, $args ) = @_;
+            push @queued_biblionumbers, @{ $args->{biblio_ids} };
+        }
+    );
+    t::lib::Mocks::mock_preference( 'RealTimeHoldsQueue', 1 );
+
+    my @expected_biblionumbers = sort { $a <=> $b }
+        ( $native_biblio->biblionumber, $linked_biblio_1->biblionumber, $linked_biblio_2->biblionumber );
+
+    $item->itemnotes('bound-with update')->store;
+    is_deeply(
+        [ sort { $a <=> $b } @indexed_biblionumbers ], \@expected_biblionumbers,
+        'store() reindexes the native biblio and all linked biblios'
+    );
+    is_deeply(
+        [ sort { $a <=> $b } @queued_biblionumbers ], \@expected_biblionumbers,
+        'store() queues a holds queue update for the native biblio and all linked biblios'
+    );
+
+    @indexed_biblionumbers = ();
+    @queued_biblionumbers  = ();
+    $item->delete;
+    is_deeply(
+        [ sort { $a <=> $b } @indexed_biblionumbers ], \@expected_biblionumbers,
+        'delete() reindexes the native biblio and all linked biblios'
+    );
+    is_deeply(
+        [ sort { $a <=> $b } @queued_biblionumbers ], \@expected_biblionumbers,
+        'delete() queues a holds queue update for the native biblio and all linked biblios'
+    );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'safe_to_delete() with bound-with (linked) items tests' => sub {
+
+    plan tests => 5;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'EnableBoundWithItems', 1 );
+    t::lib::Mocks::mock_preference( 'RealTimeHoldsQueue',   0 );
+
+    my $native_biblio = $builder->build_sample_biblio();
+    my $linked_biblio = $builder->build_sample_biblio();
+    my $item          = $builder->build_sample_item( { biblionumber => $native_biblio->biblionumber } );
+
+    # A second item on the native record, so the item is not its last one
+    $builder->build_sample_item( { biblionumber => $native_biblio->biblionumber } );
+
+    Koha::Item::BiblioLink->new(
+        {
+            itemnumber   => $item->itemnumber,
+            biblionumber => $linked_biblio->biblionumber,
+            link_type    => 'binding',
+        }
+    )->store( { skip_record_index => 1 } );
+
+    ok( $item->safe_to_delete, 'A linked item is safe to delete when the linked record has no holds' );
+
+    $builder->build_object(
+        {
+            class => 'Koha::Holds',
+            value => {
+                biblionumber => $linked_biblio->biblionumber,
+                itemnumber   => undef,
+                found        => undef,
+            }
+        }
+    );
+
+    my $result = $item->safe_to_delete;
+    ok( !$result, 'Not safe to delete when a linked record with a biblio-level hold would lose its only item' );
+    is( $result->messages->[0]->message, 'last_item_for_hold', 'last_item_for_hold is reported' );
+
+    my $own_item = $builder->build_sample_item( { biblionumber => $linked_biblio->biblionumber } );
+    ok( $item->safe_to_delete, 'Safe to delete once the linked record has an item of its own' );
+    $own_item->delete( { skip_record_index => 1 } );
+
+    t::lib::Mocks::mock_preference( 'EnableBoundWithItems', 0 );
+    ok( $item->safe_to_delete, 'Linked records are not checked when EnableBoundWithItems is disabled' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'move_to_biblio() with bound-with (linked) items tests' => sub {
+
+    plan tests => 4;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'EnableBoundWithItems', 1 );
+    t::lib::Mocks::mock_preference( 'RealTimeHoldsQueue',   0 );
+
+    my $source_biblio = $builder->build_sample_biblio();
+    my $target_biblio = $builder->build_sample_biblio();
+    my $other_biblio  = $builder->build_sample_biblio();
+    my $item          = $builder->build_sample_item( { biblionumber => $source_biblio->biblionumber } );
+
+    for my $biblio ( $target_biblio, $other_biblio ) {
+        Koha::Item::BiblioLink->new(
+            {
+                itemnumber   => $item->itemnumber,
+                biblionumber => $biblio->biblionumber,
+                link_type    => 'binding',
+            }
+        )->store( { skip_record_index => 1 } );
+    }
+
+    # An item-level hold placed on the target record through the link
+    my $hold = $builder->build_object(
+        {
+            class => 'Koha::Holds',
+            value => {
+                biblionumber => $target_biblio->biblionumber,
+                itemnumber   => $item->itemnumber,
+                found        => undef,
+            }
+        }
+    );
+
+    my @indexed_biblionumbers;
+    my $engine       = C4::Context->preference('SearchEngine') // 'Zebra';
+    my $indexer_mock = Test::MockModule->new("Koha::SearchEngine::${engine}::Indexer");
+    $indexer_mock->mock(
+        'index_records',
+        sub {
+            my ( $self, $ids ) = @_;
+            push @indexed_biblionumbers, ref $ids eq 'ARRAY' ? @$ids : $ids;
+        }
+    );
+
+    $item->move_to_biblio($target_biblio);
+
+    is(
+        Koha::Item::BiblioLinks->search(
+            { itemnumber => $item->itemnumber, biblionumber => $target_biblio->biblionumber }
+        )->count,
+        0,
+        'The link to the destination record is removed, the item record lives there now'
+    );
+    is(
+        Koha::Item::BiblioLinks->search(
+            { itemnumber => $item->itemnumber, biblionumber => $other_biblio->biblionumber }
+        )->count,
+        1,
+        'The links to other records are kept'
+    );
+    $hold->discard_changes;
+    is(
+        $hold->biblionumber, $target_biblio->biblionumber,
+        'The item-level hold placed through the link stays on the destination record'
+    );
+    ok(
+        ( grep { $_ == $other_biblio->biblionumber } @indexed_biblionumbers ),
+        'The remaining linked record is reindexed'
+    );
 
     $schema->storage->txn_rollback;
 };

@@ -19,7 +19,7 @@ use Modern::Perl;
 use utf8;
 
 use Test::NoWarnings;
-use Test::More tests => 78;
+use Test::More tests => 79;
 use Test::Exception;
 use Test::MockModule;
 use Test::Deep qw( cmp_deeply );
@@ -46,6 +46,7 @@ use C4::Members::Messaging qw( SetMessagingPreference );
 use Koha::DateUtils        qw( dt_from_string output_pref );
 use Koha::Database;
 use Koha::Bookings;
+use Koha::Item::BiblioLink;
 use Koha::Items;
 use Koha::Item::Transfers;
 use Koha::Checkouts;
@@ -8871,6 +8872,67 @@ subtest 'Bug 41728: AddReturn marks the linked ISO18626 request as LoanCompleted
     $iso18626_request->discard_changes;
     is( $iso18626_request->status, 'LoanCompleted', 'AddReturn marks the linked ISO18626 request as LoanCompleted' );
     ok( $iso18626_request->messages->count > 0, 'AddReturn sends a supplyingAgencyMessage for the completed loan' );
+};
+
+subtest 'AddIssue and AddReturn with bound-with (linked) items reindex the linked records' => sub {
+
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'EnableBoundWithItems', 1 );
+    t::lib::Mocks::mock_preference( 'RealTimeHoldsQueue',   0 );
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron  = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { branchcode => $library->branchcode }
+        }
+    );
+    t::lib::Mocks::mock_userenv( { patron => $patron, branchcode => $library->branchcode } );
+
+    my $native_biblio = $builder->build_sample_biblio();
+    my $linked_biblio = $builder->build_sample_biblio();
+    my $item          = $builder->build_sample_item(
+        {
+            biblionumber => $native_biblio->biblionumber,
+            library      => $library->branchcode,
+        }
+    );
+    Koha::Item::BiblioLink->new(
+        {
+            itemnumber   => $item->itemnumber,
+            biblionumber => $linked_biblio->biblionumber,
+            link_type    => 'binding',
+        }
+    )->store( { skip_record_index => 1 } );
+
+    my @indexed_biblionumbers;
+    my $engine       = C4::Context->preference('SearchEngine') // 'Zebra';
+    my $indexer_mock = Test::MockModule->new("Koha::SearchEngine::${engine}::Indexer");
+    $indexer_mock->mock(
+        'index_records',
+        sub {
+            my ( $self, $ids ) = @_;
+            push @indexed_biblionumbers, ref $ids eq 'ARRAY' ? @$ids : $ids;
+        }
+    );
+
+    AddIssue( $patron, $item->barcode );
+    ok(
+        ( grep { $_ == $linked_biblio->biblionumber } @indexed_biblionumbers ),
+        'AddIssue reindexes the linked record'
+    );
+
+    @indexed_biblionumbers = ();
+    AddReturn( $item->barcode, $library->branchcode );
+    ok(
+        ( grep { $_ == $linked_biblio->biblionumber } @indexed_biblionumbers ),
+        'AddReturn reindexes the linked record'
+    );
+
+    $schema->storage->txn_rollback;
 };
 
 $schema->storage->txn_rollback;
