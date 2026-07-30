@@ -21,12 +21,13 @@ use File::Temp;
 use File::Path qw/make_path/;
 use MARC::Record;
 use Test::NoWarnings;
-use Test::More tests => 5;
+use Test::More tests => 6;
 use Test::Warn;
 use t::lib::TestBuilder;
 use t::lib::Mocks;
 
 use Koha::Database;
+use Koha::Item::BiblioLink;
 use Koha::Libraries;
 use Koha::ItemTypes;
 
@@ -305,6 +306,45 @@ subtest 'buildKohaItemsNamespace() including/omitting items tests' => sub {
     like( $xml, qr{<homebranch>$library_1_name</homebranch>}, '$item_1 present in the XML' );
     like( $xml, qr{<homebranch>$library_2_name</homebranch>}, '$item_2 present in the XML' );
     like( $xml, qr{<homebranch>$library_3_name</homebranch>}, '$item_3 present in the XML' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'buildKohaItemsNamespace() linked items (bound-with) tests' => sub {
+    plan tests => 3;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'EnableBoundWithItems', 1 );
+    t::lib::Mocks::mock_preference( 'RealTimeHoldsQueue',   0 );
+
+    my $native_biblio = $builder->build_sample_biblio;
+    my $linked_biblio = $builder->build_sample_biblio;
+    my $library       = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $item = $builder->build_sample_item( { biblionumber => $native_biblio->biblionumber, library => $library->id } );
+
+    my $library_name = $library->branchname;
+
+    my $xml = C4::XSLT::buildKohaItemsNamespace( $linked_biblio->biblionumber, [] );
+    unlike( $xml, qr{<homebranch>$library_name</homebranch>}, 'Unlinked bib does not include the item' );
+
+    Koha::Item::BiblioLink->new(
+        {
+            itemnumber   => $item->itemnumber,
+            biblionumber => $linked_biblio->biblionumber,
+            link_type    => 'binding',
+        }
+    )->store( { skip_record_index => 1 } );
+
+    $xml = C4::XSLT::buildKohaItemsNamespace( $linked_biblio->biblionumber, [] );
+    like( $xml, qr{<homebranch>$library_name</homebranch>}, 'Linked bib includes the shared item' );
+
+    t::lib::Mocks::mock_preference( 'EnableBoundWithItems', 0 );
+    $xml = C4::XSLT::buildKohaItemsNamespace( $linked_biblio->biblionumber, [] );
+    unlike(
+        $xml, qr{<homebranch>$library_name</homebranch>},
+        'Linked item not included when EnableBoundWithItems is disabled'
+    );
 
     $schema->storage->txn_rollback;
 };

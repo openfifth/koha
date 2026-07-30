@@ -36,6 +36,7 @@ use List::Util qw( any );
 use C4::AuthoritiesMarc qw( AddAuthority );
 use C4::Biblio;
 
+use Koha::Item::BiblioLink;
 use Koha::SearchEngine::Elasticsearch;
 use Koha::SearchEngine::Elasticsearch::Search;
 
@@ -1225,7 +1226,7 @@ subtest 'Koha::SearchEngine::Elasticsearch::marc_records_to_documents with Inclu
 };
 
 subtest 'marc_records_to_documents should set the "available" field' => sub {
-    plan tests => 8;
+    plan tests => 10;
 
     t::lib::Mocks::mock_preference( 'marcflavour', 'MARC21' );
     my $dbh = C4::Context->dbh;
@@ -1284,6 +1285,32 @@ subtest 'marc_records_to_documents should set the "available" field' => sub {
     is_deeply(
         $docs->[0]->{available}, \1,
         'a biblio with at least one item that has no particular status is available'
+    );
+
+    # Bound-with: a biblio whose only availability comes through a linked item
+    t::lib::Mocks::mock_preference( 'EnableBoundWithItems', 1 );
+    t::lib::Mocks::mock_preference( 'RealTimeHoldsQueue',   0 );
+    my $linked_biblio = $builder->build_sample_biblio;
+    my $linked_record = $linked_biblio->metadata->record;
+    Koha::Item::BiblioLink->new(
+        {
+            itemnumber   => $item2->itemnumber,
+            biblionumber => $linked_biblio->biblionumber,
+            link_type    => 'binding',
+        }
+    )->store( { skip_record_index => 1 } );
+
+    $docs = $see->marc_records_to_documents( [$linked_record] );
+    is_deeply(
+        $docs->[0]->{available}, \1,
+        'a biblio with no items of its own but an available linked item is available'
+    );
+
+    t::lib::Mocks::mock_preference( 'EnableBoundWithItems', 0 );
+    $docs = $see->marc_records_to_documents( [$linked_record] );
+    is_deeply(
+        $docs->[0]->{available}, \0,
+        'linked items are not considered when EnableBoundWithItems is disabled'
     );
 };
 

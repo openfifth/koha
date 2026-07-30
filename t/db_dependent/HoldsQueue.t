@@ -9,7 +9,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 65;
+use Test::More tests => 66;
 use Data::Dumper;
 
 use C4::Calendar;
@@ -18,6 +18,7 @@ use C4::Members;
 use C4::Circulation qw( AddIssue AddReturn );
 use Koha::Database;
 use Koha::DateUtils qw( dt_from_string );
+use Koha::Item::BiblioLink;
 use Koha::Items;
 use Koha::Holds;
 use Koha::CirculationRules;
@@ -2533,4 +2534,86 @@ subtest "Test unallocated option" => sub {
         $hold->timestamp, $after_rebuild_timestamp,
         "Previously allocated hold not updated when unallocated passed and others are allocated"
     );
+};
+
+subtest 'GetItemsAvailableToFillHoldRequestsForBib with bound-with (linked) items tests' => sub {
+
+    plan tests => 4;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'EnableBoundWithItems', 1 );
+    t::lib::Mocks::mock_preference( 'RealTimeHoldsQueue',   0 );
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron  = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { branchcode => $library->branchcode }
+        }
+    );
+    my $native_biblio = $builder->build_sample_biblio();
+    my $linked_biblio = $builder->build_sample_biblio();
+    my $shared_item   = $builder->build_sample_item(
+        {
+            biblionumber => $native_biblio->biblionumber,
+            library      => $library->branchcode,
+        }
+    );
+
+    Koha::Item::BiblioLink->new(
+        {
+            itemnumber   => $shared_item->itemnumber,
+            biblionumber => $linked_biblio->biblionumber,
+            link_type    => 'binding',
+        }
+    )->store( { skip_record_index => 1 } );
+
+    my $available = C4::HoldsQueue::GetItemsAvailableToFillHoldRequestsForBib( $linked_biblio->biblionumber );
+    is(
+        scalar( grep { $_->{itemnumber} == $shared_item->itemnumber } @$available ), 1,
+        'The shared item can fill holds on the linked record'
+    );
+
+    t::lib::Mocks::mock_preference( 'EnableBoundWithItems', 0 );
+    $available = C4::HoldsQueue::GetItemsAvailableToFillHoldRequestsForBib( $linked_biblio->biblionumber );
+    is(
+        scalar(@$available), 0,
+        'The shared item is not considered when EnableBoundWithItems is disabled'
+    );
+    t::lib::Mocks::mock_preference( 'EnableBoundWithItems', 1 );
+
+    # The shared item is already targeted by a hold on the native record: it
+    # must not be offered to fill holds on the linked record as well
+    my $reserve_id = AddReserve(
+        {
+            branchcode     => $library->branchcode,
+            borrowernumber => $patron->borrowernumber,
+            biblionumber   => $native_biblio->biblionumber,
+            itemnumber     => $shared_item->itemnumber,
+            priority       => 0,
+            found          => 'W',
+        }
+    );
+    $available = C4::HoldsQueue::GetItemsAvailableToFillHoldRequestsForBib( $linked_biblio->biblionumber );
+    is(
+        scalar( grep { $_->{itemnumber} == $shared_item->itemnumber } @$available ), 0,
+        'An item targeted under the native record is not offered for the linked record'
+    );
+
+    # ... same when the item is already in the queue under the native record
+    Koha::Holds->find($reserve_id)->cancel;
+    $dbh->do(
+        "INSERT INTO tmp_holdsqueue (biblionumber, itemnumber, surname, firstname, borrowernumber)
+         VALUES (?, ?, '', '', ?)",
+        undef,
+        $native_biblio->biblionumber, $shared_item->itemnumber, $patron->borrowernumber
+    );
+    $available = C4::HoldsQueue::GetItemsAvailableToFillHoldRequestsForBib( $linked_biblio->biblionumber );
+    is(
+        scalar( grep { $_->{itemnumber} == $shared_item->itemnumber } @$available ), 0,
+        'An item queued under the native record is not offered for the linked record'
+    );
+
+    $schema->storage->txn_rollback;
 };

@@ -18,7 +18,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 2;
+use Test::More tests => 3;
 use Test::MockModule;
 
 use t::lib::Mocks;
@@ -29,6 +29,7 @@ use MARC::Record;
 use C4::Biblio qw( GetMarcFromKohaField AddBiblio );
 use Koha::Biblios;
 use Koha::Database;
+use Koha::Item::BiblioLink;
 use Koha::RecordProcessor;
 
 my $schema  = Koha::Database->schema();
@@ -135,6 +136,64 @@ subtest 'EmbedItemsAvailability tests' => sub {
     # Apply filter
     $processor->process($record);
     is( $record->subfield( '999', 'x' ), 1, 'There is only one item with undef onloan' );
+
+    $schema->storage->txn_rollback();
+};
+
+subtest 'EmbedItemsAvailability linked items (bound-with) tests' => sub {
+
+    plan tests => 2;
+
+    $schema->storage->txn_begin();
+
+    my $biblio = Test::MockModule->new('C4::Biblio');
+    $biblio->mock(
+        'GetMarcFromKohaField',
+        sub {
+            my ($kohafield) = @_;
+            if ( $kohafield eq 'biblio.biblionumber' ) {
+                return ( '999', 'c' );
+            } else {
+                my $func_ref = $biblio->original('GetMarcFromKohaField');
+                &$func_ref($kohafield);
+            }
+        }
+    );
+
+    t::lib::Mocks::mock_preference( 'marcflavour',          'MARC21' );
+    t::lib::Mocks::mock_preference( 'EnableBoundWithItems', 1 );
+    t::lib::Mocks::mock_preference( 'RealTimeHoldsQueue',   0 );
+
+    my ( $native_biblionumber, undef ) = AddBiblio( MARC::Record->new(), '' );
+    my ( $linked_biblionumber, undef ) = AddBiblio( MARC::Record->new(), '' );
+
+    my $item = $builder->build_sample_item(
+        {
+            biblionumber => $native_biblionumber,
+            onloan       => undef,
+        }
+    );
+    Koha::Item::BiblioLink->new(
+        {
+            itemnumber   => $item->itemnumber,
+            biblionumber => $linked_biblionumber,
+            link_type    => 'binding',
+        }
+    )->store( { skip_record_index => 1 } );
+
+    my $processor = Koha::RecordProcessor->new( { filters => ('EmbedItemsAvailability') } );
+
+    my $record = Koha::Biblios->find($linked_biblionumber)->metadata->record;
+    $processor->process($record);
+    is( $record->field('999')->subfield('x'), 1, 'The linked bib counts the shared item as not on loan' );
+
+    t::lib::Mocks::mock_preference( 'EnableBoundWithItems', 0 );
+    $record = Koha::Biblios->find($linked_biblionumber)->metadata->record;
+    $processor->process($record);
+    is(
+        $record->field('999')->subfield('x'), 0,
+        'The linked item is not counted when EnableBoundWithItems is disabled'
+    );
 
     $schema->storage->txn_rollback();
 };

@@ -17,7 +17,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 71;
+use Test::More tests => 72;
 use Test::NoWarnings;
 use Test::MockModule;
 use Test::Warn;
@@ -38,6 +38,7 @@ use C4::Reserves
     qw( AddReserve AlterPriority CheckReserves FixPriority ModReserve ModReserveAffect ReserveSlip CalculatePriority CanBookBeReserved IsAvailableForItemLevelRequest MoveReserve CanItemBeReserved MergeHolds ToggleLowestPriority );
 use Koha::ActionLogs;
 use Koha::Biblios;
+use Koha::Item::BiblioLink;
 use Koha::Caches;
 use Koha::DateUtils qw( dt_from_string output_pref );
 use Koha::Holds;
@@ -2394,6 +2395,80 @@ subtest 'Hold limit rules count grouped holds as a single unit' => sub {
     $patron->holds->search( { hold_group_id => undef } )->delete;
     $res = CanItemBeReserved( $patron, $items[3], $library->id );
     is( $res->{status}, 'OK', 'max_holds: only 1 hold group present, count = 1, limit of 2 not reached' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'CheckReserves on bound-with (linked) items tests' => sub {
+
+    plan tests => 7;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'EnableBoundWithItems', 1 );
+    t::lib::Mocks::mock_preference( 'RealTimeHoldsQueue',   0 );
+
+    my $library     = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $hold_patron = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { branchcode => $library->branchcode }
+        }
+    );
+    my $native_biblio = $builder->build_sample_biblio();
+    my $linked_biblio = $builder->build_sample_biblio();
+    my $shared_item   = $builder->build_sample_item(
+        {
+            biblionumber => $native_biblio->biblionumber,
+            library      => $library->branchcode,
+        }
+    );
+
+    Koha::Item::BiblioLink->new(
+        {
+            itemnumber   => $shared_item->itemnumber,
+            biblionumber => $linked_biblio->biblionumber,
+            link_type    => 'binding',
+        }
+    )->store( { skip_record_index => 1 } );
+
+    # Biblio-level hold stored against the linked record
+    my $reserve_id = AddReserve(
+        {
+            branchcode     => $library->branchcode,
+            borrowernumber => $hold_patron->borrowernumber,
+            biblionumber   => $linked_biblio->biblionumber,
+            priority       => 1,
+        }
+    );
+
+    my ( $status, $reserve ) = CheckReserves($shared_item);
+    is( $status,                  'Reserved',  'A biblio-level hold on the linked record traps the shared item' );
+    is( $reserve->{reserve_id},   $reserve_id, 'The linked record hold is returned' );
+    is( $reserve->{biblionumber}, $linked_biblio->biblionumber, 'The hold is stored against the linked record' );
+
+    t::lib::Mocks::mock_preference( 'EnableBoundWithItems', 0 );
+    ($status) = CheckReserves($shared_item);
+    ok( !$status, 'Linked record holds are not trapped when EnableBoundWithItems is disabled' );
+    t::lib::Mocks::mock_preference( 'EnableBoundWithItems', 1 );
+
+    Koha::Holds->find($reserve_id)->cancel;
+
+    # Item-level hold stored against the linked record
+    my $item_level_reserve_id = AddReserve(
+        {
+            branchcode     => $library->branchcode,
+            borrowernumber => $hold_patron->borrowernumber,
+            biblionumber   => $linked_biblio->biblionumber,
+            itemnumber     => $shared_item->itemnumber,
+            priority       => 1,
+        }
+    );
+
+    ( $status, $reserve ) = CheckReserves($shared_item);
+    is( $status,                'Reserved', 'An item-level hold on the linked record traps the shared item' );
+    is( $reserve->{reserve_id}, $item_level_reserve_id,   'The item-level linked record hold is returned' );
+    is( $reserve->{itemnumber}, $shared_item->itemnumber, 'The hold targets the shared item' );
 
     $schema->storage->txn_rollback;
 };

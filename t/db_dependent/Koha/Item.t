@@ -21,7 +21,7 @@ use Modern::Perl;
 use utf8;
 
 use Test::NoWarnings;
-use Test::More tests => 42;
+use Test::More tests => 43;
 use Test::Exception;
 use Test::MockModule;
 use Test::Warn;
@@ -4002,6 +4002,100 @@ subtest 'holds_fee() tests' => sub {
     # Test without patron
     $fee = $item->holds_fee(undef);
     is( $fee, 0, 'Item holds_fee returns 0 when no patron provided' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'biblio_links, linked_biblios and linked_biblionumbers tests' => sub {
+
+    plan tests => 12;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'EnableBoundWithItems', 1 );
+    t::lib::Mocks::mock_preference( 'RealTimeHoldsQueue',   0 );
+
+    my $native_biblio   = $builder->build_sample_biblio();
+    my $linked_biblio_1 = $builder->build_sample_biblio();
+    my $linked_biblio_2 = $builder->build_sample_biblio();
+    my $item            = $builder->build_sample_item( { biblionumber => $native_biblio->biblionumber } );
+
+    is( $item->biblio_links->count, 0, 'Item has no biblio links yet' );
+    is_deeply( $item->linked_biblionumbers, [], 'linked_biblionumbers returns an empty arrayref without links' );
+
+    Koha::Item::BiblioLink->new(
+        {
+            itemnumber   => $item->itemnumber,
+            biblionumber => $linked_biblio_1->biblionumber,
+            link_type    => 'binding',
+        }
+    )->store( { skip_record_index => 1 } );
+    Koha::Item::BiblioLink->new(
+        {
+            itemnumber   => $item->itemnumber,
+            biblionumber => $linked_biblio_2->biblionumber,
+            link_type    => 'analytic',
+        }
+    )->store( { skip_record_index => 1 } );
+
+    is( $item->biblio_links->count,                                 2, 'Item has two biblio links' );
+    is( $item->linked_biblios->count,                               2, 'linked_biblios returns links of all types' );
+    is( $item->linked_biblios( { link_type => 'binding' } )->count, 1, 'linked_biblios can filter by link_type' );
+    is(
+        $item->linked_biblios( { link_type => 'binding' } )->next->biblionumber,
+        $linked_biblio_1->biblionumber, 'link_type filter returns the expected biblio'
+    );
+    is_deeply(
+        [ sort { $a <=> $b } @{ $item->linked_biblionumbers } ],
+        [ sort { $a <=> $b } ( $linked_biblio_1->biblionumber, $linked_biblio_2->biblionumber ) ],
+        'linked_biblionumbers returns all linked biblionumbers'
+    );
+
+    t::lib::Mocks::mock_preference( 'EnableBoundWithItems', 0 );
+    is_deeply(
+        $item->linked_biblionumbers, [],
+        'linked_biblionumbers returns an empty arrayref when EnableBoundWithItems is disabled'
+    );
+    t::lib::Mocks::mock_preference( 'EnableBoundWithItems', 1 );
+
+    my $safe_to_delete = $item->safe_to_delete;
+    ok( $safe_to_delete, 'Item with links is still safe to delete' );
+    is(
+        scalar( grep { $_->message eq 'linked_biblios' } @{ $safe_to_delete->messages } ), 1,
+        'safe_to_delete carries a non-blocking linked_biblios warning'
+    );
+
+    my @indexed_biblionumbers;
+    my $engine       = C4::Context->preference('SearchEngine') // 'Zebra';
+    my $indexer_mock = Test::MockModule->new("Koha::SearchEngine::${engine}::Indexer");
+    $indexer_mock->mock(
+        'index_records',
+        sub {
+            my ( $self, $ids ) = @_;
+            push @indexed_biblionumbers, ref $ids eq 'ARRAY' ? @$ids : $ids;
+        }
+    );
+
+    $item->itemnotes('bound-with update')->store;
+    is_deeply(
+        [ sort { $a <=> $b } @indexed_biblionumbers ],
+        [
+            sort { $a <=> $b }
+                ( $native_biblio->biblionumber, $linked_biblio_1->biblionumber, $linked_biblio_2->biblionumber )
+        ],
+        'store() reindexes the native biblio and all linked biblios'
+    );
+
+    @indexed_biblionumbers = ();
+    $item->delete;
+    is_deeply(
+        [ sort { $a <=> $b } @indexed_biblionumbers ],
+        [
+            sort { $a <=> $b }
+                ( $native_biblio->biblionumber, $linked_biblio_1->biblionumber, $linked_biblio_2->biblionumber )
+        ],
+        'delete() reindexes the native biblio and all linked biblios'
+    );
 
     $schema->storage->txn_rollback;
 };
