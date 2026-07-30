@@ -496,7 +496,15 @@
                                                                             [% IF ( itemLoo.ccode ) %][% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.ccode', authorised_value => itemLoo.ccode, opac => 1 ) | html %][% END %]</td
                                                                         >
                                                                     [% END %]
-                                                                    <td class="call_no">[% itemLoo.itemcallnumber | html %]</td>
+                                                                    <td class="call_no">
+                                                                        [% itemLoo.itemcallnumber | html %]
+                                                                        [% IF itemLoo.bound_with %]
+                                                                            <span class="bound_with_note">
+                                                                                Bound-with item &mdash; the item record lives on
+                                                                                <a href="/cgi-bin/koha/opac-detail.pl?biblionumber=[% itemLoo.hostbiblionumber | uri %]">[% itemLoo.hosttitle | html %]</a>
+                                                                            </span>
+                                                                        [% END %]
+                                                                    </td>
                                                                     [% IF ( itemdata_enumchron ) %]
                                                                         <td class="vol_info">[% itemLoo.enumchron | html %]</td>
                                                                     [% END %]
