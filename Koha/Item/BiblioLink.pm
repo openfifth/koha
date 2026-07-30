@@ -25,6 +25,7 @@ use Koha::BackgroundJob::BatchUpdateBiblioHoldsQueue;
 use Koha::Biblios;
 use Koha::Exceptions::Item::BiblioLink;
 use Koha::Holds;
+use Koha::Item::BiblioLinks;
 use Koha::Items;
 use Koha::SearchEngine;
 use Koha::SearchEngine::Indexer;
@@ -103,10 +104,14 @@ sub store {
     $link->delete;
     $link->delete( { force => 1 } );
 
-Overloaded I<delete> method that refuses to remove the link while holds exist
-for the item on the linked bibliographic record (throws
+Overloaded I<delete> method that refuses to remove the link when doing so
+would strand holds on the linked bibliographic record (throws
 I<Koha::Exceptions::Item::BiblioLink::HoldsExist>) unless I<force> is passed,
 and triggers a reindex and holds queue update of the linked record.
+
+Stranded holds are item-level holds on the linked record targeting the item,
+and, when this link is the record's only source of items, its biblio-level
+holds.
 
 $params can take the same optional 'skip_record_index' and 'skip_holds_queue'
 parameters as Koha::Item->delete.
@@ -117,13 +122,34 @@ sub delete {
     my ( $self, $params ) = @_;
 
     unless ( $params->{force} ) {
-        my $holds_count = Koha::Holds->search(
+        my $item_level_holds = Koha::Holds->search(
             {
                 biblionumber => $self->biblionumber,
                 itemnumber   => $self->itemnumber,
             }
         )->count;
-        Koha::Exceptions::Item::BiblioLink::HoldsExist->throw if $holds_count;
+
+        my $stranded_biblio_level_holds = 0;
+        unless ($item_level_holds) {
+            my $other_item_sources =
+                Koha::Items->search( { biblionumber => $self->biblionumber } )->count +
+                Koha::Item::BiblioLinks->search(
+                {
+                    biblionumber => $self->biblionumber,
+                    id           => { '!=' => $self->id },
+                }
+                )->count;
+            $stranded_biblio_level_holds = Koha::Holds->search(
+                {
+                    biblionumber => $self->biblionumber,
+                    itemnumber   => undef,
+                }
+                )->count
+                unless $other_item_sources;
+        }
+
+        Koha::Exceptions::Item::BiblioLink::HoldsExist->throw
+            if $item_level_holds or $stranded_biblio_level_holds;
     }
 
     my $result = $self->SUPER::delete;
