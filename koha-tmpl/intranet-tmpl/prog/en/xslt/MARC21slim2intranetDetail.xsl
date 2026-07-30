@@ -1158,6 +1158,22 @@
             </span>
         </xsl:if>
 
+        <!-- 501 - With note (e.g. bound with), displayed as-is: the note text
+             conventionally carries its own 'Bound with:' or 'With:' prefix -->
+        <xsl:if test="marc:datafield[@tag=501]">
+            <span class="results_summary with_note">
+                <ul class="resource_list">
+                    <xsl:for-each select="marc:datafield[@tag=501]">
+                        <li>
+                            <xsl:call-template name="subfieldSelectSpan">
+                                <xsl:with-param name="codes">a</xsl:with-param>
+                            </xsl:call-template>
+                        </li>
+                    </xsl:for-each>
+                </ul>
+            </span>
+        </xsl:if>
+
          <!-- 583 -->
          <xsl:if test="marc:datafield[@tag=583]">
             <span class="results_summary actionnote">
