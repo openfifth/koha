@@ -1059,8 +1059,8 @@
     <!-- /#elasticPreview.modal -->
 [% END %]
 
-[% IF Koha.Preference('EnableBoundWithItems') && CAN_user_editcatalogue_manage_item_biblio_links %]
-    <bound-with-modal biblionumber="[% biblionumber | html %]"></bound-with-modal>
+[% IF Koha.Preference('EnableBoundWithItems') %]
+    <bound-with-modal biblionumber="[% biblionumber | html %]" can-manage="[% CAN_user_editcatalogue_manage_item_biblio_links ? 1 : 0 | html %]"></bound-with-modal>
 [% END %]
 
 <div class="modal" id="modal-item-group-create" tabindex="-1" role="dialog" aria-labelledby="modal-item-group-create-label">
@@ -2500,14 +2500,14 @@
             });
         </script>
     [% END # /IF EnableItemGroups %]
-    [% IF Koha.Preference('EnableBoundWithItems') && CAN_user_editcatalogue_manage_item_biblio_links %]
+    [% IF Koha.Preference('EnableBoundWithItems') %]
         <script nonce="[% Koha.CSPNonce | $raw %]">
             $(document).ready(function () {
-                // Bound-with link management, handled by the <bound-with-modal> island
-                $("body").on("click", ".bound-with-manage", function (e) {
+                // Bound-with link viewing/management, handled by the <bound-with-modal> island
+                $("body").on("click", ".bound-with-manage, .bound-with-view", function (e) {
                     e.preventDefault();
                     let row = $(this).closest("table").DataTable().row($(this).closest("tr")).data();
-                    window.dispatchEvent(new CustomEvent("bound-with:open", { detail: { item: row } }));
+                    window.dispatchEvent(new CustomEvent("bound-with:open", { detail: { item: row, manage: $(this).hasClass("bound-with-manage") } }));
                 });
                 $("#boundwith-toolbar-link").on("click", function (e) {
                     e.preventDefault();

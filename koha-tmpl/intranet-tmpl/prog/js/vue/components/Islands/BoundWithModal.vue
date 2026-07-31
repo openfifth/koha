@@ -17,11 +17,18 @@
                             {{ $__("Remove bound-with link") }}
                         </h1>
                         <h1
-                            v-else
+                            v-else-if="managing"
                             class="modal-title"
                             id="bound-with-modal-label"
                         >
                             {{ $__("Bound-with links") }}
+                        </h1>
+                        <h1
+                            v-else
+                            class="modal-title"
+                            id="bound-with-modal-label"
+                        >
+                            {{ $__("Bound-with records") }}
                         </h1>
                         <button
                             type="button"
@@ -101,7 +108,7 @@
                                 <thead>
                                     <tr>
                                         <th>{{ $__("Record") }}</th>
-                                        <th>&nbsp;</th>
+                                        <th v-if="managing">&nbsp;</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -117,7 +124,7 @@
                                                 >{{ biblioTitle(link) }}</a
                                             >
                                         </td>
-                                        <td>
+                                        <td v-if="managing">
                                             <button
                                                 class="btn btn-default btn-xs"
                                                 @click="confirmUnlink(link)"
@@ -136,42 +143,44 @@
                                     )
                                 }}
                             </p>
-                            <h2>{{ $__("Add links") }}</h2>
-                            <div class="form-group">
-                                <label for="bound-with-targets"
-                                    >{{ $__("Records to link") }}:
-                                </label>
-                                <FormRelationshipSelect
-                                    name="targets"
-                                    :resource="linkTarget"
-                                    :allowMultipleChoices="true"
-                                    :serverSearch="true"
-                                    :relationshipAPIClient="biblioClient"
-                                    relationshipOptionLabelAttr="title"
-                                    :searchQueryBuilder="buildBiblioQuery"
-                                    :searchPlaceholder="
-                                        $__(
-                                            'Title, author, ISBN or record number'
-                                        )
-                                    "
-                                >
-                                    <template #option="biblio">
-                                        <strong>{{ biblio.title }}</strong>
-                                        <template v-if="biblio.author">
-                                            / {{ biblio.author }}</template
-                                        >
-                                        ({{ $__("Record number") }}
-                                        {{ biblio.biblio_id }})
-                                    </template>
-                                </FormRelationshipSelect>
-                                <div class="hint">
-                                    {{
-                                        $__(
-                                            "Search by title, author or ISBN, or enter a record number directly"
-                                        )
-                                    }}
+                            <template v-if="managing">
+                                <h2>{{ $__("Add links") }}</h2>
+                                <div class="form-group">
+                                    <label for="bound-with-targets"
+                                        >{{ $__("Records to link") }}:
+                                    </label>
+                                    <FormRelationshipSelect
+                                        name="targets"
+                                        :resource="linkTarget"
+                                        :allowMultipleChoices="true"
+                                        :serverSearch="true"
+                                        :relationshipAPIClient="biblioClient"
+                                        relationshipOptionLabelAttr="title"
+                                        :searchQueryBuilder="buildBiblioQuery"
+                                        :searchPlaceholder="
+                                            $__(
+                                                'Title, author, ISBN or record number'
+                                            )
+                                        "
+                                    >
+                                        <template #option="biblio">
+                                            <strong>{{ biblio.title }}</strong>
+                                            <template v-if="biblio.author">
+                                                / {{ biblio.author }}</template
+                                            >
+                                            ({{ $__("Record number") }}
+                                            {{ biblio.biblio_id }})
+                                        </template>
+                                    </FormRelationshipSelect>
+                                    <div class="hint">
+                                        {{
+                                            $__(
+                                                "Search by title, author or ISBN, or enter a record number directly"
+                                            )
+                                        }}
+                                    </div>
                                 </div>
-                            </div>
+                            </template>
                         </template>
                     </div>
                     <div class="modal-footer">
@@ -216,6 +225,7 @@
                         </template>
                         <template v-else>
                             <button
+                                v-if="managing"
                                 class="btn btn-primary"
                                 :disabled="saving || !linkTarget.targets.length"
                                 @click="addLinks"
@@ -246,12 +256,16 @@ export default {
     components: { FormRelationshipSelect },
     props: {
         biblionumber: String,
+        canManage: String,
     },
     setup(props) {
         const biblioClient = APIClient.biblio.biblios;
 
+        const manageAllowed = computed(() => props.canManage == "1");
+
         const visible = ref(false);
         const mode = ref("item");
+        const managing = ref(false);
         const item = ref(null);
         const barcode = ref("");
         const linkTarget = ref({ targets: [] });
@@ -299,6 +313,7 @@ export default {
         };
 
         const reset = () => {
+            managing.value = false;
             item.value = null;
             barcode.value = "";
             linkTarget.value = { targets: [] };
@@ -313,8 +328,12 @@ export default {
             if (event.detail && event.detail.item) {
                 item.value = event.detail.item;
                 mode.value = "item";
+                managing.value = !!(event.detail.manage && manageAllowed.value);
             } else {
+                // Barcode mode adds a link, so it needs the manage permission
+                if (!manageAllowed.value) return;
                 mode.value = "barcode";
+                managing.value = true;
             }
             visible.value = true;
         };
@@ -428,6 +447,7 @@ export default {
         return {
             visible,
             mode,
+            managing,
             item,
             barcode,
             biblioClient,

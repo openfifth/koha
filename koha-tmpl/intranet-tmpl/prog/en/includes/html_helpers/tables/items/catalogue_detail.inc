@@ -859,19 +859,10 @@
                                   const bound_here = binding_links.some(l => l.biblio_id == biblionumber);
                                   // A foreign row not bound to this record (e.g. an analytic host item) keeps its own display
                                   if (!is_native && !bound_here) return "";
-                                  let peers = [];
-                                  if (!is_native) {
-                                      peers.push({ biblio_id: row.biblio_id, title: row.biblio ? row.biblio.title : row.biblio_id });
-                                  }
-                                  binding_links.forEach(l => {
-                                      if (l.biblio_id == biblionumber) return;
-                                      peers.push({ biblio_id: l.biblio_id, title: l.biblio ? l.biblio.title : l.biblio_id });
-                                  });
-                                  let nodes = '<span class="bound_with_label">%s</span>'.format(_("Bound-with"));
-                                  peers.forEach(p => {
-                                      nodes += '<br/><a href="/cgi-bin/koha/catalogue/detail.pl?biblionumber=%s">%s</a>'.format(p.biblio_id, escape_str(p.title));
-                                  });
-                                  return nodes;
+                                  // The peer count matches binding_links.length from both perspectives:
+                                  // a foreign row's links include the current record (not a peer) while
+                                  // the record the item lives on (no link row) is a peer
+                                  return '<button class="btn btn-default btn-xs bound-with-view"><i class="fa fa-eye"></i> %s</button>'.format(_("View (%s)").format(binding_links.length));
                               },
                           },
                       ]
