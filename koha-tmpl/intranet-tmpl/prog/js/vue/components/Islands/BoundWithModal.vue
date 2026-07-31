@@ -17,11 +17,18 @@
                             {{ $__("Remove bound-with link") }}
                         </h1>
                         <h1
-                            v-else
+                            v-else-if="managing"
                             class="modal-title"
                             id="bound-with-modal-label"
                         >
                             {{ $__("Bound-with links") }}
+                        </h1>
+                        <h1
+                            v-else
+                            class="modal-title"
+                            id="bound-with-modal-label"
+                        >
+                            {{ $__("Bound-with records") }}
                         </h1>
                         <button
                             type="button"
@@ -39,13 +46,12 @@
                             <p>
                                 {{
                                     $__(
-                                        "Are you sure you want to remove the bound-with link between item"
+                                        "Are you sure you want to remove the bound-with link between item %s and %s?"
+                                    ).format(
+                                        item.external_id,
+                                        biblioTitle(unlinking)
                                     )
                                 }}
-                                <strong>{{ item.external_id }}</strong>
-                                {{ $__("and") }}
-                                <strong>{{ biblioTitle(unlinking) }}</strong
-                                >?
                             </p>
                             <div
                                 v-if="holdsWarning"
@@ -83,9 +89,11 @@
 
                         <template v-else-if="item">
                             <p>
-                                {{ $__("Item") }}
-                                <strong>{{ item.external_id }}</strong> &mdash;
-                                {{ $__("the item record lives on") }}
+                                <strong>{{
+                                    $__("Item %s").format(item.external_id)
+                                }}</strong>
+                                <br />
+                                {{ $__("The item record lives on:") }}
                                 <a :href="detailLink(item.biblio_id)">{{
                                     item.biblio && item.biblio.title
                                         ? item.biblio.title
@@ -101,7 +109,7 @@
                                 <thead>
                                     <tr>
                                         <th>{{ $__("Record") }}</th>
-                                        <th>&nbsp;</th>
+                                        <th v-if="managing">&nbsp;</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -117,7 +125,7 @@
                                                 >{{ biblioTitle(link) }}</a
                                             >
                                         </td>
-                                        <td>
+                                        <td v-if="managing">
                                             <button
                                                 class="btn btn-default btn-xs"
                                                 @click="confirmUnlink(link)"
@@ -136,42 +144,49 @@
                                     )
                                 }}
                             </p>
-                            <h2>{{ $__("Add links") }}</h2>
-                            <div class="form-group">
-                                <label for="bound-with-targets"
-                                    >{{ $__("Records to link") }}:
-                                </label>
-                                <FormRelationshipSelect
-                                    name="targets"
-                                    :resource="linkTarget"
-                                    :allowMultipleChoices="true"
-                                    :serverSearch="true"
-                                    :relationshipAPIClient="biblioClient"
-                                    relationshipOptionLabelAttr="title"
-                                    :searchQueryBuilder="buildBiblioQuery"
-                                    :searchPlaceholder="
-                                        $__(
-                                            'Title, author, ISBN or record number'
-                                        )
-                                    "
-                                >
-                                    <template #option="biblio">
-                                        <strong>{{ biblio.title }}</strong>
-                                        <template v-if="biblio.author">
-                                            / {{ biblio.author }}</template
-                                        >
-                                        ({{ $__("Record number") }}
-                                        {{ biblio.biblio_id }})
-                                    </template>
-                                </FormRelationshipSelect>
-                                <div class="hint">
-                                    {{
-                                        $__(
-                                            "Search by title, author or ISBN, or enter a record number directly"
-                                        )
-                                    }}
+                            <template v-if="managing">
+                                <h2>{{ $__("Add links") }}</h2>
+                                <div class="form-group">
+                                    <label for="bound-with-targets"
+                                        >{{ $__("Records to link") }}:
+                                    </label>
+                                    <FormRelationshipSelect
+                                        name="targets"
+                                        :resource="linkTarget"
+                                        :allowMultipleChoices="true"
+                                        :serverSearch="true"
+                                        :relationshipAPIClient="
+                                            biblioClient.biblios
+                                        "
+                                        relationshipOptionLabelAttr="title"
+                                        :searchQueryBuilder="buildBiblioQuery"
+                                        :searchPlaceholder="
+                                            $__(
+                                                'Title, author, ISBN or record number'
+                                            )
+                                        "
+                                    >
+                                        <template #option="biblio">
+                                            <strong>{{ biblio.title }}</strong>
+                                            <template v-if="biblio.author">
+                                                / {{ biblio.author }}</template
+                                            >
+                                            {{
+                                                $__(
+                                                    "(Record number %s)"
+                                                ).format(biblio.biblio_id)
+                                            }}
+                                        </template>
+                                    </FormRelationshipSelect>
+                                    <div class="hint">
+                                        {{
+                                            $__(
+                                                "Search by title, author or ISBN, or enter a record number directly"
+                                            )
+                                        }}
+                                    </div>
                                 </div>
-                            </div>
+                            </template>
                         </template>
                     </div>
                     <div class="modal-footer">
@@ -216,6 +231,7 @@
                         </template>
                         <template v-else>
                             <button
+                                v-if="managing"
                                 class="btn btn-primary"
                                 :disabled="saving || !linkTarget.targets.length"
                                 @click="addLinks"
@@ -246,12 +262,16 @@ export default {
     components: { FormRelationshipSelect },
     props: {
         biblionumber: String,
+        canManage: String,
     },
     setup(props) {
-        const biblioClient = APIClient.biblio.biblios;
+        const biblioClient = APIClient.biblio;
+
+        const manageAllowed = computed(() => props.canManage == "1");
 
         const visible = ref(false);
         const mode = ref("item");
+        const managing = ref(false);
         const item = ref(null);
         const barcode = ref("");
         const linkTarget = ref({ targets: [] });
@@ -299,6 +319,7 @@ export default {
         };
 
         const reset = () => {
+            managing.value = false;
             item.value = null;
             barcode.value = "";
             linkTarget.value = { targets: [] };
@@ -313,8 +334,12 @@ export default {
             if (event.detail && event.detail.item) {
                 item.value = event.detail.item;
                 mode.value = "item";
+                managing.value = !!(event.detail.manage && manageAllowed.value);
             } else {
+                // Barcode mode adds a link, so it needs the manage permission
+                if (!manageAllowed.value) return;
                 mode.value = "barcode";
+                managing.value = true;
             }
             visible.value = true;
         };
@@ -323,22 +348,24 @@ export default {
             visible.value = false;
         };
 
+        // Error bodies of the API responses, {} when there is none
+        const responseBody = response => response.json().catch(() => ({}));
+
         const postLink = (biblioId, itemId) =>
-            fetch(`/api/v1/biblios/${biblioId}/item_biblio_links`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ item_id: itemId, link_type: "binding" }),
+            biblioClient.item_biblio_links.create({
+                biblio_id: biblioId,
+                item_id: itemId,
+                link_type: "binding",
             });
 
         const linkByBarcode = async () => {
             if (!barcode.value.length || saving.value) return;
             saving.value = true;
             error.value = null;
-            const response = await fetch(
-                `/api/v1/items?external_id=${encodeURIComponent(barcode.value)}`
-            );
-            const found = response.ok ? await response.json() : [];
-            if (!found.length) {
+            const found = await APIClient.item.items
+                .getAll(undefined, { external_id: barcode.value })
+                .catch(() => []);
+            if (!found || !found.length) {
                 error.value = $__("No item found with this barcode");
                 saving.value = false;
                 return;
@@ -347,7 +374,7 @@ export default {
             if (result.ok) {
                 window.location.reload();
             } else {
-                const body = await result.json().catch(() => ({}));
+                const body = await responseBody(result);
                 error.value = body.error || result.status;
                 saving.value = false;
             }
@@ -366,7 +393,7 @@ export default {
                     item.value.item_id
                 );
                 if (!result.ok) {
-                    const body = await result.json().catch(() => ({}));
+                    const body = await responseBody(result);
                     failures.push(
                         `${target.title}: ${body.error || result.status}`
                     );
@@ -398,14 +425,15 @@ export default {
             if (saving.value) return;
             saving.value = true;
             error.value = null;
-            const url =
-                `/api/v1/biblios/${unlinking.value.biblio_id}/item_biblio_links/${unlinking.value.item_biblio_link_id}` +
-                (force ? "?force=1" : "");
-            const result = await fetch(url, { method: "DELETE" });
+            const result = await biblioClient.item_biblio_links.delete({
+                biblio_id: unlinking.value.biblio_id,
+                item_biblio_link_id: unlinking.value.item_biblio_link_id,
+                force,
+            });
             if (result.status == 204) {
                 window.location.reload();
             } else {
-                const body = await result.json().catch(() => ({}));
+                const body = await responseBody(result);
                 if (result.status == 409 && body.error_code == "holds_exist") {
                     holdsWarning.value = true;
                 } else {
@@ -428,6 +456,7 @@ export default {
         return {
             visible,
             mode,
+            managing,
             item,
             barcode,
             biblioClient,
