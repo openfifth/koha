@@ -146,8 +146,14 @@
                 >
             [% END %]
             <li>Float: [% register.starting_float | $Price %]</li>
-            <li>Total income: [% accountlines.credits_total * -1 | $Price %] (<span title="Bankable payment types: [% cashup_type_labels_str | html %]">bankable</span>: [% accountlines.credits_total(payment_type => cashup_payment_type_codes) * -1 | $Price %])</li>
-            <li>Total outgoing: [% accountlines.debits_total * -1 | $Price %] (<span title="Bankable payment types: [% cashup_type_labels_str | html %]">bankable</span>: [% accountlines.debits_total( payment_type => cashup_payment_type_codes) * -1 | $Price %])</li>
+            <li
+                >Total income: [% accountlines.credits_total * -1 | $Price %] (<span title="Bankable payment types: [% cashup_type_labels_str | html %]">bankable</span>:
+                [% accountlines.credits_total(payment_type => cashup_payment_type_codes) * -1 | $Price %])</li
+            >
+            <li
+                >Total outgoing: [% accountlines.debits_total * -1 | $Price %] (<span title="Bankable payment types: [% cashup_type_labels_str | html %]">bankable</span>:
+                [% accountlines.debits_total( payment_type => cashup_payment_type_codes) * -1 | $Price %])</li
+            >
             <li>Total bankable: [% total_bankable | $Price %]</li>
         </ul>
 
