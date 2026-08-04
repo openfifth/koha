@@ -336,12 +336,19 @@ const useAllocationModal = ({
                                 onSuccess?.();
                             },
                             error => {
+                                const breachAmount =
+                                    error?.result?.breach_amount;
                                 setWarning(
-                                    breachAmountMessage.format(
-                                        formatValueWithCurrency(
-                                            error.result.breach_amount
-                                        )
-                                    )
+                                    breachAmount != null
+                                        ? breachAmountMessage.format(
+                                              formatValueWithCurrency(
+                                                  breachAmount
+                                              )
+                                          )
+                                        : error?.error ||
+                                              $__(
+                                                  "An error occurred while creating the allocation"
+                                              )
                                 );
                             }
                         );
@@ -943,14 +950,17 @@ const calculateDistributedAmount = (distribution, orderLine) => {
 
 /**
  * Returns a RelationshipTableDisplay tab config for the allocations table.
- * Columns: Timestamp, Type, Amount, Reference, Note.
+ * Columns: Timestamp, Type, Amount, Reference, Note, plus "Destination fund"
+ * on funds, which is only populated for outgoing transfers.
  *
- * @param {Object} params
- * @param {string} params.entity - "fund" or "ledger"; determines the filter key used to scope rows.
+ * @param {Object}   params
+ * @param {string}   params.entity   - "fund" or "ledger"; determines the filter key used to scope rows.
+ * @param {Object}   [params.router] - Vue Router instance; when given, destination funds link to their page.
  * @returns {Object} Tab config object suitable for use in appendToShow.
  */
-const useAllocationTableConfig = ({ entity }) => {
+const useAllocationTableConfig = ({ entity, router }) => {
     const filterKey = entity + "_id";
+    const isFund = entity === "fund";
     return {
         type: "component",
         name: $__("Allocations"),
@@ -1010,6 +1020,38 @@ const useAllocationTableConfig = ({ entity }) => {
                                 );
                             },
                         },
+                        ...(isFund
+                            ? [
+                                  {
+                                      title: $__("Destination fund"),
+                                      data: "transferred_to_fund.name",
+                                      searchable: false,
+                                      orderable: false,
+                                      render: function (data, type, row, meta) {
+                                          const destination =
+                                              row.transferred_to_fund;
+                                          if (!destination) return "";
+                                          const name = escape_str(
+                                              `${destination.name}`
+                                          );
+                                          if (!router) return name;
+                                          return (
+                                              '<a href="' +
+                                              router.resolve({
+                                                  name: "FundShow",
+                                                  params: {
+                                                      fund_id:
+                                                          destination.fund_id,
+                                                  },
+                                              }).href +
+                                              '">' +
+                                              name +
+                                              "</a>"
+                                          );
+                                      },
+                                  },
+                              ]
+                            : []),
                         {
                             title: $__("Reference"),
                             data: "reference",
@@ -1028,6 +1070,9 @@ const useAllocationTableConfig = ({ entity }) => {
                         "allocations",
                     table_settings: null,
                     add_filters: true,
+                    ...(isFund && {
+                        options: { embed: "transferred_to_fund" },
+                    }),
                     filters_options: {
                         type: [
                             { _id: "INITIAL", _str: $__("Initial") },

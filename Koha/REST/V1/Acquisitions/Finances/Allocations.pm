@@ -27,6 +27,7 @@ use Koha::Acquisition::Finances::Funds;
 use Koha::Acquisition::Finances::Ledgers;
 use Koha::Acquisition::Finances::Allocation;
 use Koha::Acquisition::Finances::Allocations;
+use Koha::Exceptions::Acquisition::Finances;
 use Koha::Exceptions::Acquisition::Finances::LimitExceeded;
 
 use C4::Context;
@@ -113,14 +114,13 @@ sub add {
                 my $change_type = $body->{type} eq 'TRANSFER' ? 'DECREASE' : $body->{type};
                 $is_parent_amount_breached =
                     $entity->update_amount( { type => $change_type, value => $body->{allocation_amount} } );
+
+                # Breaches are thrown rather than rendered here: txn_do only rolls back when
+                # this block dies, so returning early would commit every amount already stored
                 if ($is_parent_amount_breached) {
-                    return $c->render(
-                        status  => 400,
-                        openapi => {
-                            error          => 'Amount has been breached', result => $is_parent_amount_breached,
-                            dialog_confirm => 1
-                        }
-                    ) unless $is_parent_amount_breached->{within_limit};
+                    Koha::Exceptions::Acquisition::Finances::AmountBreached->throw(
+                        result => $is_parent_amount_breached )
+                        unless $is_parent_amount_breached->{within_limit};
                 }
                 $allocation->store->discard_changes;
 
@@ -135,13 +135,9 @@ sub add {
 
                     my $transfer_allocation = Koha::Acquisition::Finances::Allocation->new_from_api($transfer);
                     if ($is_parent_amount_breached) {
-                        return $c->render(
-                            status  => 400,
-                            openapi => {
-                                error          => 'Amount has been breached', result => $is_parent_amount_breached,
-                                dialog_confirm => 1
-                            }
-                        ) unless $is_parent_amount_breached->{within_limit};
+                        Koha::Exceptions::Acquisition::Finances::AmountBreached->throw(
+                            result => $is_parent_amount_breached )
+                            unless $is_parent_amount_breached->{within_limit};
                     }
                     $transfer_allocation->store->discard_changes;
                 }
@@ -157,6 +153,15 @@ sub add {
         my $to_api_mapping = Koha::Acquisition::Finances::Allocation->new->to_api_mapping;
 
         if ( blessed $_ ) {
+            if ( $_->isa('Koha::Exceptions::Acquisition::Finances::AmountBreached') ) {
+                return $c->render(
+                    status  => 400,
+                    openapi => {
+                        error          => 'Amount has been breached', result => $_->result,
+                        dialog_confirm => 1
+                    }
+                );
+            }
             if ( $_->isa('Koha::Exceptions::Acquisition::Finances::LimitExceeded') ) {
                 return $c->render(
                     status  => 400,

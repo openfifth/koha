@@ -28,6 +28,11 @@ use Exception::Class (
         isa         => 'Koha::Exceptions::Acquisition::Finances',
         description => 'Spend limit has been exceeded',
         fields      => [ 'data_type', 'amount' ]
+    },
+    'Koha::Exceptions::Acquisition::Finances::AmountBreached' => {
+        isa         => 'Koha::Exceptions::Acquisition::Finances',
+        description => 'A parent amount would be breached',
+        fields      => ['result']
     }
 );
 
@@ -44,6 +49,13 @@ Generic Nasket exception
 =head2 Koha::Exceptions::Acquisition::Finances::LimitExceeded
 
 Exception to be used when a new fund allocation will breach a spending limit
+
+=head2 Koha::Exceptions::Acquisition::Finances::AmountBreached
+
+Exception to be used when an amount change would breach the parent object's amount.
+Carries the C<{ within_limit, breach_amount }> hashref returned by
+C<validate_child_object_amounts_against_parent_amount> in C<result>, so the caller
+can report the breach after the transaction has been rolled back.
 
 =cut
 

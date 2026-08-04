@@ -79,6 +79,13 @@ properties:
     description: Fund
     items:
       $ref: "acq_fund.yaml"
+  transferred_to_fund:
+    type:
+      - object
+      - "null"
+    description: Destination fund of a transfer
+    items:
+      $ref: "acq_fund.yaml"
   owner:
     type: object
     description: Owner of the ledger

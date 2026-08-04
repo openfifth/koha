@@ -719,7 +719,12 @@ export default {
             const { resource } = componentData;
             return [
                 ...(resource.allocations?.length
-                    ? [useAllocationTableConfig({ entity: "fund" })]
+                    ? [
+                          useAllocationTableConfig({
+                              entity: "fund",
+                              router: baseResource.router,
+                          }),
+                      ]
                     : []),
                 ...(resource.sub_funds?.length
                     ? [

@@ -18,7 +18,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 8;
+use Test::More tests => 9;
 use Test::Mojo;
 
 use t::lib::TestBuilder;
@@ -242,7 +242,7 @@ subtest 'add() to fund tests' => sub {
 
 subtest 'add() transfer between funds tests' => sub {
 
-    plan tests => 11;
+    plan tests => 16;
 
     $schema->storage->txn_begin;
 
@@ -301,6 +301,77 @@ subtest 'add() transfer between funds tests' => sub {
         ->status_is(200)
         ->json_is( '/1/fund_id'             => $dest_fund->fund_id )
         ->json_is( '/1/is_transferred_from' => $source_fund->fund_id );
+
+    # The destination fund is embeddable on the outgoing half of the transfer only
+    $t->get_ok( "//$userid:$password@/api/v1/acquisitions/allocations" => { 'x-koha-embed' => 'transferred_to_fund' } )
+        ->status_is(200)
+        ->json_is( '/0/transferred_to_fund/fund_id' => $dest_fund->fund_id )
+        ->json_is( '/0/transferred_to_fund/name'    => $dest_fund->name )
+        ->json_is( '/1/transferred_to_fund'         => undef );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'add() transfer breaching the destination limit tests' => sub {
+
+    plan tests => 8;
+
+    $schema->storage->txn_begin;
+
+    my $librarian = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { flags => 1 }     # superlibrarian
+        }
+    );
+    my $password = 'thePassword123';
+    $librarian->set_password( { password => $password, skip_validation => 1 } );
+    my $userid = $librarian->userid;
+
+    my $source_fund = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Funds',
+            value => { fund_amount => 5000, parent_fund_id => undef }
+        }
+    );
+
+    # Destination ledger has no room left, so crediting it breaches the parent amount
+    my $dest_ledger = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Ledgers',
+            value => { ledger_amount => 100 }
+        }
+    );
+    my $dest_fund = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Funds',
+            value => { ledger_id => $dest_ledger->ledger_id, fund_amount => 100, parent_fund_id => undef }
+        }
+    );
+
+    my $transfer = {
+        fund_id           => $source_fund->fund_id,
+        is_transferred_to => $dest_fund->fund_id,
+        allocation_amount => 500,
+        type              => 'TRANSFER',
+    };
+
+    $t->post_ok( "//$userid:$password@/api/v1/acquisitions/allocations" => json => $transfer )
+        ->status_is(400)
+        ->json_is( '/error'                => 'Amount has been breached' )
+        ->json_is( '/result/breach_amount' => 500 )
+        ->json_is( '/result/within_limit'  => 0 );
+
+    # The whole transfer must be rolled back, not just the half that breached
+    is( $source_fund->discard_changes->fund_amount + 0, 5000, 'Source fund was not debited' );
+    is( $dest_fund->discard_changes->fund_amount + 0,   100,  'Destination fund was not credited' );
+    is(
+        Koha::Acquisition::Finances::Allocations->search(
+            { fund_id => [ $source_fund->fund_id, $dest_fund->fund_id ] }
+        )->count,
+        0,
+        'No allocation was stored'
+    );
 
     $schema->storage->txn_rollback;
 };

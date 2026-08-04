@@ -21,6 +21,7 @@ use Modern::Perl;
 use base qw(Koha::Acquisition::Finances::BaseObject);
 
 use Koha::Acquisition::Finances::Fund;
+use Koha::Acquisition::Finances::Funds;
 use Koha::Acquisition::Finances::FiscalPeriod;
 use Koha::Acquisition::Finances::Ledger;
 use Koha::Patron;
@@ -60,6 +61,26 @@ sub delete {
     my $deleted = $self->_result()->delete;
 
     return $self;
+}
+
+=head3 transferred_to_fund
+
+    my $destination_fund = $allocation->transferred_to_fund;
+
+Returns the destination C<Koha::Acquisition::Finances::Fund> of an outgoing fund
+transfer, or C<undef> when this allocation is not one.
+
+C<is_transferred_to> holds a fund id on fund allocations and a ledger id on ledger
+allocations, so the fund is only looked up when C<fund_id> is set.
+
+=cut
+
+sub transferred_to_fund {
+    my ($self) = @_;
+
+    return unless $self->fund_id && $self->is_transferred_to;
+
+    return Koha::Acquisition::Finances::Funds->find( $self->is_transferred_to );
 }
 
 =head3 _object_hierarchy

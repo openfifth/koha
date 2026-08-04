@@ -20,6 +20,7 @@
           - fiscal_period
           - ledger
           - fund
+          - transferred_to_fund
           - owner
         collectionFormat: csv
       - $ref: "../swagger.yaml#/parameters/match"
@@ -172,6 +173,7 @@
           - fiscal_period
           - ledger
           - fund
+          - transferred_to_fund
           - owner
         collectionFormat: csv
     produces:
