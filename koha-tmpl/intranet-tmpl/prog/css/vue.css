@@ -65,3 +65,8 @@ tr.tree-child-row > td.tree-control::before {
 tr.tree-child-row-collapsing {
     animation: tree-row-collapse 0.15s ease-in forwards;
 }
+/* v-select dropdowns using append-to-body are moved to the end of <body>,
+   outside the modal's stacking context, so they must beat the dialog z-index */
+body > .vs__dropdown-menu {
+    --vs-dropdown-z-index: 10000;
+}

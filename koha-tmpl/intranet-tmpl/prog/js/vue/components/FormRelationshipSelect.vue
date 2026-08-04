@@ -12,6 +12,7 @@
         :required="isRequired"
         :multiple="allowMultipleChoices"
         :filter-by="filterRelatedResourcesOptions"
+        :append-to-body="inDialog"
         v-model="resource[name]"
         :disabled="shouldBeDisabled"
         :placeholder="!relatedResourcesLoaded ? $__('Loading...') : ''"
@@ -44,7 +45,7 @@
 </template>
 
 <script>
-import { computed, onBeforeMount, ref, watch } from "vue";
+import { computed, inject, onBeforeMount, ref, watch } from "vue";
 
 export default {
     props: {
@@ -68,6 +69,10 @@ export default {
         const relatedResources = ref(null);
         const relatedResourcesLoaded = ref(false);
         const queryParameters = ref(props.query);
+
+        // Inside a modal the dropdown is cut off by the modal body's overflow,
+        // so render it at the end of <body> instead
+        const inDialog = inject("inDialog", false);
 
         onBeforeMount(() => {
             const relatedResourcesClient = props.relationshipAPIClient;
@@ -132,6 +137,7 @@ export default {
             filterRelatedResourcesOptions,
             queryParameters,
             isRequired,
+            inDialog,
         };
     },
     emits: ["resourcesLoaded"],

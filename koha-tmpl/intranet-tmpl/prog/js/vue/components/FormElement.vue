@@ -119,6 +119,7 @@
             :required="resource[attr.name] == null && required"
             :disabled="disabled"
             :multiple="attr.allowMultipleChoices"
+            :append-to-body="inDialog"
             @update:modelValue="
                 attr.onSelected && attr.onSelected($event, options, resource)
             "
@@ -272,7 +273,7 @@ import FormRelationshipSelect from "./FormRelationshipSelect.vue";
 import ToolTip from "./ToolTip.vue";
 import InputRadio from "./Elements/InputRadio.vue";
 import { useBaseElement } from "../composables/base-element.js";
-import { computed, defineAsyncComponent, ref } from "vue";
+import { computed, defineAsyncComponent, inject, ref } from "vue";
 import { loadComponent } from "@koha-vue/loaders/componentResolver";
 import PatronSearch from "./PatronSearch.vue";
 
@@ -285,6 +286,9 @@ export default {
     },
     setup(props) {
         const baseElement = useBaseElement({ ...props });
+        // Inside a modal the dropdown is cut off by the modal body's overflow,
+        // so render it at the end of <body> instead
+        const inDialog = inject("inDialog", false);
         const selectRequiredKey = av => {
             if (props.attr.requiredKey == "package_id")
                 return parseInt(av[props.attr.requiredKey]);
@@ -397,6 +401,7 @@ export default {
             getPlaceholder,
             getHint,
             required,
+            inDialog,
         };
     },
     name: "FormElement",

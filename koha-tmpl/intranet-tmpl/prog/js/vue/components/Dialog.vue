@@ -176,6 +176,7 @@
 <script>
 import {
     inject,
+    provide,
     watch,
     nextTick,
     ref,
@@ -204,6 +205,10 @@ export default {
             customModal,
         } = storeToRefs(mainStore);
         const { removeMessages, removeConfirmationMessages } = mainStore;
+
+        // Lets form elements know they are rendered inside a modal, where an
+        // absolutely positioned dropdown would be cut off by the modal body
+        provide("inDialog", true);
 
         const fp_config = ref(flatpickr_defaults);
 
