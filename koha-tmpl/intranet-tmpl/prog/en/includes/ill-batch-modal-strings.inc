@@ -24,6 +24,7 @@
     var ill_batch_metadata_more = _("More");
     var ill_batch_metadata_less = _("Less");
     var ill_batch_select_all_backend = _("Apply to all rows:");
+    var ill_batch_select_all_waiting = _("Waiting for all rows to finish checking availability");
     var ill_batch_available_via = _("Available via");
     var ill_batch_metadata = {
         doi: _("DOI"),
