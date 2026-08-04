@@ -89,7 +89,7 @@ export default {
                             : "",
                 },
                 {
-                    title: $__("Code"),
+                    title: $__("Fund code"),
                     data: "code",
                     searchable: true,
                     orderable: true,
@@ -99,7 +99,7 @@ export default {
                             : "",
                 },
                 {
-                    title: $__("Name"),
+                    title: $__("Fund name"),
                     data: "name",
                     searchable: true,
                     orderable: true,

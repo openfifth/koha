@@ -258,14 +258,20 @@ export default {
                     name: "name",
                     required: true,
                     type: "text",
-                    label: $__("Name"),
+                    label:
+                        props.routeAction === "list"
+                            ? $__("Fund name")
+                            : $__("Name"),
                     group: $__("Information and status"),
                 },
                 {
                     name: "code",
                     required: true,
                     type: "text",
-                    label: $__("Code"),
+                    label:
+                        props.routeAction === "list"
+                            ? $__("Fund code")
+                            : $__("Code"),
                     group: $__("Information and status"),
                 },
                 {

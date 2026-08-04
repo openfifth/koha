@@ -132,7 +132,7 @@ export default {
                     name: "name",
                     required: true,
                     type: "text",
-                    label: $__("Name"),
+                    label: $__("Fiscal period name"),
                     group: $__("Information and status"),
                 },
                 {

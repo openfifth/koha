@@ -216,7 +216,10 @@ export default {
                     name: "name",
                     required: true,
                     type: "text",
-                    label: $__("Name"),
+                    label:
+                        props.routeAction === "list"
+                            ? $__("Ledger name")
+                            : $__("Name"),
                     group: $__("Information and status"),
                 },
                 {
