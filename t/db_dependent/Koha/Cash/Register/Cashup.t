@@ -707,7 +707,9 @@ subtest 'summary_session_boundaries' => sub {
         # Establish a prior session boundary safely in the past, so this test
         # exercises the start/end-both-defined branch rather than the
         # no-previous-cashup fallback.
-        my $cashup1 = $register5->add_cashup( { manager_id => $manager->id, amount => '0.00' } );
+        my $cashup1 = $register5->add_cashup(
+            { manager_id => $manager->id, reconciliations => [ { payment_type => 'CASH', actual_amount => '0.00' } ] }
+        );
         $cashup1->_result->update( { timestamp => dt_from_string('2026-01-01 09:00:00') } );
 
         my $cash_fine = $account->add_debit( { amount => '5.00', type => 'OVERDUE', interface => 'cron' } );
@@ -733,7 +735,9 @@ subtest 'summary_session_boundaries' => sub {
         );
 
         # No delay: the cashup lands in the same second as the payments above.
-        my $cashup2 = $register5->add_cashup( { manager_id => $manager->id, amount => '5.00' } );
+        my $cashup2 = $register5->add_cashup(
+            { manager_id => $manager->id, reconciliations => [ { payment_type => 'CASH', actual_amount => '5.00' } ] }
+        );
         my $summary = $cashup2->summary;
 
         is( $summary->{total} + 0, 5.9, 'Total includes payments made in the same second as the cashup' );
