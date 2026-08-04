@@ -695,4 +695,71 @@ describe("AutoILLBackendPriority syspref", () => {
         ).click();
         cy.get("input[name='auto_backend_0']").eq(1).should("be.checked");
     });
+
+    it("AutoILLBackendPriority: Select-all bar is disabled while rows are still being checked", function () {
+        // ILL toolbar
+        cy.visit("/cgi-bin/koha/ill/ill-requests.pl");
+        cy.get("#ill-batch-backend-dropdown").should("not.exist");
+        cy.get(".ill-toolbar a.btn-default")
+            .contains("New ILL requests batch")
+            .click();
+        cy.wait("@get-batchstatuses");
+
+        // Modal
+        cy.get("#ill-batch-modal").should("be.visible");
+
+        // Create a batch
+        cy.get("#ill-batch-modal #name").type("select-all disabled test batch");
+        cy.get("#ill-batch-modal #batchcardnumber").type("42");
+        cy.get("#ill-batch-modal #branchcode").select("Centerville");
+        cy.get("#ill-batch-modal #button_create_batch").click();
+        cy.get("#ill-batch-modal #add_batch_items").should("be.visible");
+
+        // Delay the metadata lookup to create a window mid-processing.
+        cy.intercept("GET", "/api/v1/contrib/pubmed/esummary*", {
+            statusCode: 200,
+            body: pubmedid_metadata_response,
+            delay: 1000,
+        }).as("get-pubmedid-metadata");
+        cy.intercept("POST", "/api/v1/contrib/pubmed/parse_to_ill", {
+            statusCode: 200,
+            body: parse_to_ill_response,
+        }).as("get-parse_to_ill");
+        cy.intercept(
+            "GET",
+            "/api/v1/contrib/pluginbackend/ill_backend_availability_pluginbackend*",
+            {
+                statusCode: 200,
+                body: { success: "" },
+            }
+        ).as("get-backend-availability");
+
+        cy.get("#ill-batch-modal #identifiers_input").type("123{enter}456");
+        cy.get("#ill-batch-modal #process-button")
+            .contains("Process identifiers")
+            .click();
+
+        // Bar is visible but disabled while checks are in flight
+        cy.get("#batch-auto-backend-select-all").should("be.visible");
+        cy.get(
+            "#batch-auto-backend-select-all input[value='PluginBackend']"
+        ).should("be.disabled");
+        cy.get("#batch-auto-backend-select-all input[value='Standard']").should(
+            "be.disabled"
+        );
+
+        cy.wait("@get-pubmedid-metadata");
+        cy.wait("@get-parse_to_ill");
+        cy.wait("@get-backend-availability");
+        // Wait for all rows to finish processing
+        cy.get("#create-requests").should("not.have.css", "display", "none");
+
+        // Enabled again once processing finishes
+        cy.get(
+            "#batch-auto-backend-select-all input[value='PluginBackend']"
+        ).should("not.be.disabled");
+        cy.get("#batch-auto-backend-select-all input[value='Standard']").should(
+            "not.be.disabled"
+        );
+    });
 });

@@ -569,6 +569,20 @@
         container.addEventListener("change", selectAllBackendHandler);
     }
 
+    // Disable the select-all bar while checks are still in progress.
+    function setSelectAllBackendDisabled(disabled) {
+        var container = document.getElementById(
+            "batch-auto-backend-select-all"
+        );
+        var waiting_message = disabled ? ill_batch_select_all_waiting : "";
+        container
+            .querySelectorAll('input[name="select_all_backend"]')
+            .forEach(function (input) {
+                input.disabled = disabled;
+                input.closest("label").title = waiting_message;
+            });
+    }
+
     function storeBackendSelectionEventListener() {
         identifierTable.addEventListener("change", function (ev) {
             if (ev.target.name && ev.target.name.startsWith("auto_backend_")) {
@@ -842,6 +856,7 @@
         if (content.length === 0) return;
 
         disableProcessButton();
+        setSelectAllBackendDisabled(true);
         var label = document.getElementById("progress-label").firstChild;
         label.innerHTML = ill_batch_retrieving_metadata;
         showProgress();
@@ -978,6 +993,7 @@
             newData[i] = row;
             tableContent.data = newData;
         }
+        setSelectAllBackendDisabled(false);
     }
 
     function disableProcessButton() {
