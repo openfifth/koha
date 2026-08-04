@@ -103,15 +103,23 @@ const buildFundTreeOptions = funds => {
  * @param {Object}  [params]
  * @param {boolean} [params.positiveOnly=true] - When true, rejects negative values;
  *   when false, allows a leading minus sign.
+ * @param {number}  [params.decimalPlaces=2]   - Maximum number of decimal places allowed.
  * @returns {{ formErrorHandler: Function, formErrorMessage: string }}
  *   `formErrorHandler` is a predicate that returns true when the value is valid;
  *   `formErrorMessage` is the i18n error string to display on failure.
  */
-const applyNumberValidation = ({ positiveOnly = true } = {}) => ({
+const applyNumberValidation = ({
+    positiveOnly = true,
+    decimalPlaces = 2,
+} = {}) => ({
     formErrorHandler: value => {
+        // An empty field has no format to be wrong about - required fields are
+        // enforced separately when the form is submitted. Without this, the null
+        // emitted on blurring an empty input is stringified to "null" and fails.
+        if (value === null || value === undefined || value === "") return true;
         const pattern = positiveOnly
-            ? /^\d*(\.\d{0,2})*$/
-            : /^[\-]?\d*(\.\d{0,2})*$/;
+            ? new RegExp(`^\\d*(\\.\\d{0,${decimalPlaces}})*$`)
+            : new RegExp(`^[\\-]?\\d*(\\.\\d{0,${decimalPlaces}})*$`);
         return pattern.test(value) && (!positiveOnly || Number(value) >= 0);
     },
     formErrorMessage: positiveOnly
@@ -481,6 +489,60 @@ const useDuplicateModal = ({
      * @param {Array}  resourceAttrs - The resource's attribute definitions, used to build form inputs.
      */
     const openDuplicateModal = (resource, resourceAttrs) => {
+        const baseAmount = resource.ledger_amount || 0;
+
+        /**
+         * Applies the entered percentage, and any rounding multiple, to the original
+         * ledger amount. Mirrors what the API does when it creates the new ledger.
+         *
+         * @param {Object} fields - Live dialog input values.
+         * @returns {number} The amount the new ledger will be created with.
+         */
+        const calculateAdjustedAmount = fields => {
+            const percentage = parseFloat(fields.adjust_by_percent) || 0;
+            const multiple = parseFloat(fields.round_to_multiple) || 0;
+            const adjusted = new BigNumber(baseAmount).times(
+                new BigNumber(1).plus(new BigNumber(percentage).div(100))
+            );
+            if (multiple > 0) {
+                return adjusted
+                    .div(multiple)
+                    .integerValue(BigNumber.ROUND_DOWN)
+                    .times(multiple)
+                    .toNumber();
+            }
+            return formatFloatingPoint(adjusted.toNumber());
+        };
+
+        /**
+         * Derives the percentage that turns the original ledger amount into the
+         * entered new ledger amount.
+         *
+         * @param {Object} fields - Live dialog input values.
+         * @returns {number|null} The percentage, or null when there is no original
+         *   amount to scale from or no new amount has been entered.
+         */
+        const calculateAdjustmentPercent = fields => {
+            const newAmount = parseFloat(fields.new_ledger_amount);
+            if (!baseAmount || !Number.isFinite(newAmount)) return null;
+            return new BigNumber(newAmount)
+                .minus(baseAmount)
+                .div(baseAmount)
+                .times(100)
+                .toNumber();
+        };
+
+        /**
+         * Whether the entered amount differs from the original ledger amount.
+         *
+         * @param {Object} fields - Live dialog input values.
+         * @returns {boolean} True when an adjustment has been made.
+         */
+        const isAmountAdjusted = fields => {
+            const newAmount = parseFloat(fields.new_ledger_amount);
+            return Number.isFinite(newAmount) && newAmount !== baseAmount;
+        };
+
         const groups = [
             {
                 label: $__("Information and status"),
@@ -544,38 +606,47 @@ const useDuplicateModal = ({
                         name: "adjust_by_percent",
                         type: "number",
                         label: $__("Adjust the amounts by a percentage"),
-                        ...applyNumberValidation({ positiveOnly: false }),
+                        toolTip: $__(
+                            "Enter either a percentage or a new ledger amount, each one is calculated from the other. Fund amounts are always adjusted by the percentage."
+                        ),
+                        onChange: fields => {
+                            fields.new_ledger_amount =
+                                calculateAdjustedAmount(fields);
+                            if (!isAmountAdjusted(fields))
+                                fields.round_to_multiple = null;
+                        },
+                        ...applyNumberValidation({
+                            positiveOnly: false,
+                            decimalPlaces: 6,
+                        }),
                     },
                     {
                         name: "round_to_multiple",
                         type: "number",
                         label: $__("Round to a multiple of"),
-                        disabled: resource => !resource.adjust_by_percent,
+                        disabled: fields =>
+                            !baseAmount || !isAmountAdjusted(fields),
                         toolTip: $__(
-                            "If you entered a value in 'Change amounts by', Koha will calculate the amounts automatically. You can force it to round down the amounts. For example, entering '100', will round down the amounts to the hundreds (5542 will become 5500)."
+                            "Once the amounts have been adjusted, you can force Koha to round them down. For example, entering '100', will round down the amounts to the hundreds (5542 will become 5500)."
                         ),
+                        onChange: fields => {
+                            fields.new_ledger_amount =
+                                calculateAdjustedAmount(fields);
+                        },
                         ...applyNumberValidation(),
                     },
                     {
                         name: "new_ledger_amount",
-                        type: "display",
+                        type: "number",
                         label: $__("New ledger amount"),
-                        format: (value, fields) => {
-                            const base = resource.ledger_amount || 0;
-                            const percentage =
-                                parseFloat(fields.adjust_by_percent) || 0;
-                            const multiple =
-                                parseFloat(fields.round_to_multiple) || 0;
-                            let adjusted = base + (base * percentage) / 100;
-                            if (multiple > 0) {
-                                adjusted =
-                                    Math.trunc(adjusted / multiple) * multiple;
-                            }
-                            return formatValueWithCurrency(
-                                adjusted,
-                                resource.currency
-                            );
+                        defaultValue: baseAmount,
+                        onChange: fields => {
+                            fields.adjust_by_percent =
+                                calculateAdjustmentPercent(fields);
+                            if (!isAmountAdjusted(fields))
+                                fields.round_to_multiple = null;
                         },
+                        ...applyNumberValidation(),
                     },
                     {
                         name: "set_funds_to_zero",
@@ -621,13 +692,22 @@ const useDuplicateModal = ({
                     status: inputFields.status,
                     locked: inputFields.locked ?? false,
                     currency: resource.currency,
-                    ledger_amount: resource.ledger_amount || 0,
+                    // The API applies `adjust_by_percent` to the original amount to
+                    // reach the new one, which is how the copied funds get scaled too.
+                    // With no original amount to scale from, no percentage can express
+                    // the change, so the entered amount is sent as-is instead.
+                    ledger_amount:
+                        baseAmount ||
+                        parseFloat(inputFields.new_ledger_amount) ||
+                        0,
                     oe_warning_percent:
                         (inputFields.oe_warning_percent || 0) / 100,
                     oe_warning_amount: inputFields.oe_warning_amount || null,
                     managing_branch: inputFields.managing_branch || null,
                     owner_id: inputFields.owner_id || null,
-                    adjust_by_percent: inputFields.adjust_by_percent || null,
+                    adjust_by_percent: baseAmount
+                        ? inputFields.adjust_by_percent || null
+                        : null,
                     round_to_multiple: inputFields.round_to_multiple || null,
                     set_funds_to_zero: inputFields.set_funds_to_zero || false,
                 };
