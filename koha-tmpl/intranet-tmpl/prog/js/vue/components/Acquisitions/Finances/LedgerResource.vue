@@ -52,7 +52,16 @@ export default {
             setConfirmationDialog,
             setWarning,
             setMessage,
-            onSuccess: () => refetchResource?.(),
+            onSuccess: newLedger => {
+                if (newLedger?.ledger_id) {
+                    baseResource.router.push({
+                        name: "LedgerShow",
+                        params: { ledger_id: newLedger.ledger_id },
+                    });
+                } else {
+                    refetchResource?.();
+                }
+            },
         });
 
         const { openRolloverModal } = useRolloverModal({

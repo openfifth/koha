@@ -406,7 +406,8 @@ const useAllocationModal = ({
  * @param {Function} params.setConfirmationDialog - Store action that opens a confirmation modal.
  * @param {Function} params.setWarning            - Store action that displays a warning banner.
  * @param {Function} params.setMessage            - Store action that displays a success banner.
- * @param {Function} [params.onSuccess]           - Optional callback invoked after a successful duplicate.
+ * @param {Function} [params.onSuccess]           - Optional callback invoked after a successful
+ *   duplicate. Receives the newly created ledger as returned by the API.
  * @returns {{ openDuplicateModal: Function }}
  */
 const useDuplicateModal = ({
@@ -682,11 +683,11 @@ const useDuplicateModal = ({
                         await APIClient.acquisition.ledgers
                             .duplicate(resource.ledger_id, body)
                             .then(
-                                () => {
+                                newLedger => {
                                     setMessage(
-                                        $__("Ledger rolled over successfully")
+                                        $__("Ledger duplicated successfully")
                                     );
-                                    onSuccess?.();
+                                    onSuccess?.(newLedger);
                                 },
                                 () => {
                                     setWarning(
