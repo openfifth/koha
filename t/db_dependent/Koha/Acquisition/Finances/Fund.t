@@ -18,7 +18,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 9;
+use Test::More tests => 10;
 
 use t::lib::TestBuilder;
 
@@ -92,6 +92,41 @@ subtest 'sub_funds() tests' => sub {
     my $embedded = $parent_fund->sub_funds( { embed_children => 1 } );
     is( ref($embedded),     'ARRAY', 'sub_funds with embed_children returns an array ref' );
     is( scalar(@$embedded), 3,       'embed_children returns all nested sub-funds' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'all_sub_funds() tests' => sub {
+
+    plan tests => 3;
+
+    $schema->storage->txn_begin;
+
+    my $parent_fund = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Funds',
+            value => { parent_fund_id => undef }
+        }
+    );
+
+    is( scalar( @{ $parent_fund->all_sub_funds } ), 0, 'No sub-funds initially' );
+
+    my $sub_fund = $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Funds',
+            value => { parent_fund_id => $parent_fund->fund_id }
+        }
+    );
+    $builder->build_object(
+        {
+            class => 'Koha::Acquisition::Finances::Funds',
+            value => { parent_fund_id => $sub_fund->fund_id }
+        }
+    );
+
+    my $all_sub_funds = $parent_fund->all_sub_funds;
+    is( ref($all_sub_funds),     'ARRAY', 'all_sub_funds returns an array ref' );
+    is( scalar(@$all_sub_funds), 2,       'all_sub_funds returns sub-funds at every depth' );
 
     $schema->storage->txn_rollback;
 };

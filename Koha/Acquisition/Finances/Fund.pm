@@ -96,6 +96,21 @@ sub sub_funds {
     return $sub_funds;
 }
 
+=head3 all_sub_funds
+
+    my $all_sub_funds = $fund->all_sub_funds;
+
+Returns a flattened arrayref of all nested sub-funds at every depth. Exposed as an API embed so
+clients can build the full fund hierarchy from a single request.
+
+=cut
+
+sub all_sub_funds {
+    my ($self) = @_;
+
+    return $self->sub_funds( { embed_children => 1 } );
+}
+
 =head3 parent_fund
 
 Returns the parent C<Koha::Acquisition::Finances::Fund> for this sub-fund, or C<undef> if

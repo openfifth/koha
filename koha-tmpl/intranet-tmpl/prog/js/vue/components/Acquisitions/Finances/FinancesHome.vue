@@ -69,6 +69,16 @@ export default {
         const tableOptions = ref({
             columns: [
                 {
+                    title: $__("Fund name"),
+                    data: "name",
+                    searchable: true,
+                    orderable: true,
+                    render: data =>
+                        data
+                            ? `<a href="#" class="showFund">${escape_str(data)}</a>`
+                            : "",
+                },
+                {
                     title: $__("Fiscal period"),
                     data: "ledger.fiscal_period.name",
                     searchable: true,
@@ -99,16 +109,6 @@ export default {
                             : "",
                 },
                 {
-                    title: $__("Fund name"),
-                    data: "name",
-                    searchable: true,
-                    orderable: true,
-                    render: data =>
-                        data
-                            ? `<a href="#" class="showFund">${escape_str(data)}</a>`
-                            : "",
-                },
-                {
                     title: $__("Managing library"),
                     data: "managing_library.name",
                     searchable: true,
@@ -131,38 +131,69 @@ export default {
                     data: "summary",
                     searchable: false,
                     orderable: false,
-                    render: data => data?.orders_status_new ?? 0,
+                    render: (data, type, row) =>
+                        formatValueWithCurrency(
+                            data?.orders_status_new ?? 0,
+                            row.currency
+                        ),
                 },
                 {
                     title: $__("Ordered"),
                     data: "summary",
                     searchable: false,
                     orderable: false,
-                    render: data => data?.ordered ?? 0,
+                    render: (data, type, row) =>
+                        formatValueWithCurrency(
+                            data?.ordered ?? 0,
+                            row.currency
+                        ),
                 },
                 {
                     title: $__("Spent"),
                     data: "summary",
                     searchable: false,
                     orderable: false,
-                    render: data => data?.spent ?? 0,
+                    render: (data, type, row) =>
+                        formatValueWithCurrency(data?.spent ?? 0, row.currency),
                 },
             ],
             actions: {
-                0: ["showFiscalPeriod"],
-                1: ["showLedger"],
-                2: ["showFund"],
+                0: ["showFund"],
+                1: ["showFiscalPeriod"],
+                2: ["showLedger"],
                 3: ["showFund"],
             },
-            url: "/api/v1/acquisitions/funds",
+            // Only root funds are rows; their descendants arrive via the
+            // all_sub_funds embed and are rendered as tree children. A null value
+            // cannot go through default_filters, which skips falsy values.
+            url:
+                "/api/v1/acquisitions/funds?" +
+                new URLSearchParams({
+                    q: JSON.stringify({ "me.parent_fund_id": null }),
+                }),
             options: {
-                embed: "summary,ledger.fiscal_period,managing_library",
-                order: [[2, "asc"]],
+                embed: [
+                    "summary",
+                    "ledger.fiscal_period",
+                    "managing_library",
+                    "all_sub_funds",
+                    "all_sub_funds.summary",
+                    "all_sub_funds.ledger.fiscal_period",
+                    "all_sub_funds.managing_library",
+                ].join(","),
+                order: [[3, "asc"]],
                 dom: '<"top pager"<"table_entries"ip>>tr<"bottom pager"ip>',
             },
             table_settings: null,
             add_filters: true,
             default_filters: { "me.status": true },
+            tree: {
+                childrenField: "all_sub_funds",
+                idField: "fund_id",
+                parentField: "parent_fund_id",
+                defaultExpanded: true,
+                column: "name",
+            },
         });
 
         return {

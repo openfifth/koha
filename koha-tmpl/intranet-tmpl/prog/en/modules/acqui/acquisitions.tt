@@ -14,6 +14,7 @@
     [% END %]</title
 >
 [% INCLUDE 'doc-head-close.inc' %]
+[% Asset.css("lib/jquery/plugins/treetable/stylesheets/jquery.treetable.css") | $raw %]
 </head>
 
 <body id="acq_acquisitions" class="acq">

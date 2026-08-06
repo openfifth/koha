@@ -313,13 +313,11 @@ modules:
       funds:
         columns:
             -
-              columnname: fund_id
+              columnname: name
             -
               columnname: fiscal_period
             -
               columnname: ledger
-            -
-              columnname: name
             -
               columnname: code
             -

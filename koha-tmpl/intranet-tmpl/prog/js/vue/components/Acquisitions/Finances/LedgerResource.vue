@@ -674,10 +674,10 @@ export default {
                               resourceName: $__("fund"),
                               resourceNamePlural: $__("funds"),
                               tree: {
-                                  childrenField: "sub_funds",
+                                  childrenField: "all_sub_funds",
                                   idField: "fund_id",
                                   parentField: "parent_fund_id",
-                                  defaultExpanded: false,
+                                  defaultExpanded: true,
                               },
                               router: baseResource.router,
                           }),

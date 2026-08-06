@@ -150,10 +150,30 @@ export default {
             additionalToolbarButtons,
             resourceAttrs: [
                 {
+                    name: "name",
+                    required: true,
+                    type: "text",
+                    label:
+                        props.routeAction === "list"
+                            ? $__("Fund name")
+                            : $__("Name"),
+                    group: $__("Information and status"),
+                },
+                {
+                    name: "code",
+                    required: true,
+                    type: "text",
+                    label:
+                        props.routeAction === "list"
+                            ? $__("Fund code")
+                            : $__("Code"),
+                    group: $__("Information and status"),
+                },
+                {
                     name: "fund_id",
                     label: $__("ID"),
                     type: "text",
-                    hideIn: ["Form", "Show"],
+                    hideIn: ["Form", "Show", "List"],
                 },
                 {
                     name: "fiscal_period_name",
@@ -253,26 +273,6 @@ export default {
                         },
                     },
                     hideIn: ["List"],
-                },
-                {
-                    name: "name",
-                    required: true,
-                    type: "text",
-                    label:
-                        props.routeAction === "list"
-                            ? $__("Fund name")
-                            : $__("Name"),
-                    group: $__("Information and status"),
-                },
-                {
-                    name: "code",
-                    required: true,
-                    type: "text",
-                    label:
-                        props.routeAction === "list"
-                            ? $__("Fund code")
-                            : $__("Code"),
-                    group: $__("Information and status"),
                 },
                 {
                     name: "description",
@@ -533,7 +533,7 @@ export default {
             table_settings: fund_table_settings,
             add_filters: true,
             options: {
-                embed: "sub_funds,allocations,parent_fund,fiscal_period,ledger",
+                embed: "all_sub_funds,all_sub_funds.fiscal_period,all_sub_funds.ledger,allocations,parent_fund,fiscal_period,ledger",
             },
             filters_options: {
                 ...(authorisedValues.value.av_fund_type.length && {
@@ -544,8 +544,8 @@ export default {
             ...(!props.embedded && {
                 actions: {
                     0: ["show"],
-                    2: ["fiscal-period-show"],
-                    3: ["ledger-show"],
+                    1: ["fiscal-period-show"],
+                    2: ["ledger-show"],
                     "-1": [
                         ...(baseResource.isUserPermitted("editFund")
                             ? ["edit"]
@@ -556,8 +556,14 @@ export default {
                                       delete: {
                                           text: $__("Delete"),
                                           icon: "fa fa-trash",
+                                          // Nested rows carry no children field
+                                          // of their own, so fall back to the
+                                          // flag the tree stamps on them.
                                           should_display: row =>
-                                              !row.sub_funds?.length,
+                                              !(
+                                                  row._tree_has_children ??
+                                                  row.all_sub_funds?.length
+                                              ),
                                       },
                                   },
                               ]
@@ -566,10 +572,14 @@ export default {
                 },
             }),
             tree: {
-                childrenField: "sub_funds",
+                childrenField: "all_sub_funds",
                 idField: "fund_id",
                 parentField: "parent_fund_id",
-                defaultExpanded: false,
+                defaultExpanded: true,
+                // Indent the fund name rather than the leading id column, so the
+                // hierarchy reads the way it does on acqui-home.pl (where the id
+                // columns are hidden and the indenter lands on a text column).
+                column: "name",
             },
         };
 
@@ -736,10 +746,10 @@ export default {
                               resourceName: $__("sub fund"),
                               resourceNamePlural: $__("sub funds"),
                               tree: {
-                                  childrenField: "sub_funds",
+                                  childrenField: "all_sub_funds",
                                   idField: "fund_id",
                                   parentField: "parent_fund_id",
-                                  defaultExpanded: false,
+                                  defaultExpanded: true,
                               },
                               router: baseResource.router,
                           }),

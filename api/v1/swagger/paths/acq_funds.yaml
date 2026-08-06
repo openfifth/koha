@@ -22,6 +22,12 @@
           - allocations
           - owner
           - sub_funds
+          - all_sub_funds
+          - all_sub_funds.fiscal_period
+          - all_sub_funds.ledger
+          - all_sub_funds.ledger.fiscal_period
+          - all_sub_funds.managing_library
+          - all_sub_funds.summary
           - parent_fund
           - summary
           - managing_library

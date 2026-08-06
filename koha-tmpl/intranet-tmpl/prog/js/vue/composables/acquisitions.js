@@ -1255,6 +1255,12 @@ const useFundTableConfig = ({
                         data: "fund_amount",
                         searchable: true,
                         orderable: true,
+                        render: function (data, type, row, meta) {
+                            return formatValueWithCurrency(
+                                row.fund_amount,
+                                row.currency
+                            );
+                        },
                     },
                     {
                         title: $__("Status"),
@@ -1278,7 +1284,7 @@ const useFundTableConfig = ({
                     ],
                 },
                 actions: {
-                    [tree ? 1 : 0]: [
+                    0: [
                         {
                             showFund: {
                                 callback: (fund, dt, event) => {

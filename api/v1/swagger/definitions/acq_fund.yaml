@@ -110,6 +110,11 @@ properties:
     description: List of sub_funds
     items:
       $ref: "acq_fund.yaml"
+  all_sub_funds:
+    type: array
+    description: Flattened list of sub_funds at every depth
+    items:
+      $ref: "acq_fund.yaml"
   owner:
     type:
       - object
