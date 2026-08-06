@@ -1461,6 +1461,14 @@
                         [% IF batch_state_dropboxmode %]<input type="hidden" name="dropboxmode" value="[% batch_state_dropboxmode | html %]" />[% END %]
                         [% IF batch_state_return_date_override %]<input type="hidden" name="return_date_override" value="[% batch_state_return_date_override | html %]" />[% END %]
                         [% IF batch_state_forgivemanualholdsexpire %]<input type="hidden" name="forgivemanualholdsexpire" value="[% batch_state_forgivemanualholdsexpire | html %]" />[% END %]
+                        [%# Carry the "Checked-in items" list forward: @checkins is rebuilt from these hidden inputs on every request, and this form is separate from #checkin-form, so without this the list would vanish as soon as the batch pauses for confirmation. %]
+                        [% FOREACH checkin IN checkins %]
+                            <input type="hidden" name="checkin_counter" value="[% loop.count | html %]" />
+                            <input type="hidden" name="checkin_barcode_[% loop.count | html %]" value="[% checkin.barcode | html %]" />
+                            <input type="hidden" name="checkin_duedate_[% loop.count | html %]" value="[% checkin.duedate | html %]" />
+                            <input type="hidden" name="checkin_borrowernumber_[% loop.count | html %]" value="[% checkin.borrowernumber | html %]" />
+                            <input type="hidden" name="checkin_not_returned_[% loop.count | html %]" value="[% checkin.not_returned | html %]" />
+                        [% END %]
                         <div class="modal-content">
                             <div class="modal-header">
                                 <h3 class="modal-title" id="batchConfirmLabel">Batch paused: confirmation required</h3>
