@@ -1,6 +1,6 @@
 [% FOREACH code IN messages.keys %]
     [% IF code == 'WasTransfered' %]
-        <div class="alert alert-info">Item transferred to [% messages.TransferTo %]</div>
+        <div class="alert alert-info">Item transferred to [% messages.TransferTo | html %]</div>
     [% ELSIF code == 'NeedsTransfer' %]
         <div class="alert alert-warning">Item needs transfer</div>
     [% ELSIF code == 'RecallNeedsTransfer' %]
@@ -20,11 +20,11 @@
     [% ELSIF code == 'BadBarcode' %]
         <div class="alert alert-warning">Bad barcode</div>
     [% ELSIF code == 'TransferArrived' %]
-        <div class="alert alert-info">Transfer arrived from [% messages.TransferArrived %]</div>
+        <div class="alert alert-info">Transfer arrived from [% messages.TransferArrived | html %]</div>
     [% ELSIF code == 'TransferredRecall' %]
         <div class="alert alert-info">Recalled item has been transferred</div>
     [% ELSIF code == 'WrongTransfer' %]
-        <div class="alert alert-warning">This item is still on transfer to [% messages.WrongTransfer %]</div>
+        <div class="alert alert-warning">This item is still on transfer to [% messages.WrongTransfer | html %]</div>
     [% ELSIF code == 'Wrongbranch' %]
         <div class="alert alert-warning">This item cannot be returned to this branch</div>
     [% ELSIF code == 'UpdateLastSeenError' %]
@@ -51,6 +51,6 @@
     [% ELSIF code.match('Transfer(To|Trigger)|WrongTransferItem|WasReturned') # ignore %]
 
     [% ELSE # unexpected codes %]
-        <div class="alert alert-warning">Received code [% code %] from AddReturn. Contact support.</div>
+        <div class="alert alert-warning">Received code [% code | html %] from AddReturn. Contact support.</div>
     [% END %]
 [% END %]

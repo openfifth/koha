@@ -1391,7 +1391,12 @@
                             </td>
                             <td>
                                 [% IF result.checkinmsg %]
-                                    <div class="alert alert-[% result.checkinmsgtype || 'info' %]">[% result.checkinmsg | html %]</div>
+                                    [% IF result.checkinmsgtype == 'alert' %]
+                                        [% SET result_checkinmsg_class = 'warning' %]
+                                    [% ELSE %]
+                                        [% SET result_checkinmsg_class = 'info' %]
+                                    [% END %]
+                                    <div class="alert alert-[% result_checkinmsg_class | html %]">[% result.checkinmsg | html %]</div>
                                 [% END %]
                                 [% INCLUDE 'checkin-messages.inc' messages=result.messages %]
                             </td>
@@ -1719,7 +1724,7 @@
         function ApplyBatchCheckinSettings() {
             // check local storage key, fallback to system preference
             var batch_mode_settings = localStorage.getItem("batch_mode_settings") ||
-                '[% Koha.Preference('BatchCheckinDefaults') %]';
+                '[% Koha.Preference('BatchCheckinDefaults') | html %]';
 
             if ( batch_mode_settings.match('BATCH_CHECKIN_ENABLED') ) {
                 $('#batch-mode-toggle').prop('checked', true).trigger('change');
@@ -1732,23 +1737,23 @@
             }
 
             // Automatic hold capture depends on HoldsAutoFill
-            if ( "[% Koha.Preference('HoldsAutoFill') %]" == "1" )
+            if ( "[% Koha.Preference('HoldsAutoFill') | html %]" == "1" )
                 $('#batch-mode-confirm-hold')
-                    .attr('title', '[% t("Forced by preference HoldsAutoFill") %]' )
+                    .attr('title', '[% t("Forced by preference HoldsAutoFill") | html %]' )
                     .prop('checked', true).prop('disabled', true);
             else if ( batch_mode_settings.match('BATCH_CHECKIN_CONFIRM_HOLD') )
                 $('#batch-mode-confirm-hold').prop('checked', true);
 
             // Automatic transfer creation depends on AutomaticItemReturn
-            if ( "[% Koha.Preference('AutomaticItemReturn') %]" == "1" )
+            if ( "[% Koha.Preference('AutomaticItemReturn') | html %]" == "1" )
                 $('#batch-mode-confirm-transfer')
-                    .attr('title', '[% t("Forced by preference AutomaticItemReturn") %]' )
+                    .attr('title', '[% t("Forced by preference AutomaticItemReturn") | html %]' )
                     .prop('checked', true).prop('disabled', true);
             else if ( batch_mode_settings.match('BATCH_CHECKIN_CONFIRM_TRANSFER') )
                 $('#batch-mode-confirm-transfer').prop('checked', true);
         }
         function ChangeBatchCheckinSettings() {
-            // if user does not want to keep, we remove his settings in localStorage
+            // if user does not want to keep, we remove their settings in localStorage
             if( !$('#batch-mode-keep-selection').prop('checked') ) {
                 localStorage.removeItem("batch_mode_settings");
                 return;
