@@ -1,11 +1,30 @@
 <template>
-    <DataTable
-        :columns="tableColumns"
-        :options="{ ...dataTablesDefaults, ...allOptions }"
-        ref="table"
-    >
-        <slot></slot>
-    </DataTable>
+    <div>
+        <div v-if="tree" class="toolbar btn-toolbar tree-toolbar">
+            <span class="actions">
+                <a
+                    href="#"
+                    class="tree-expand-all"
+                    @click.prevent="expandAll"
+                    >{{ $__("Expand all") }}</a
+                >
+                |
+                <a
+                    href="#"
+                    class="tree-collapse-all"
+                    @click.prevent="collapseAll"
+                    >{{ $__("Collapse all") }}</a
+                >
+            </span>
+        </div>
+        <DataTable
+            :columns="tableColumns"
+            :options="{ ...dataTablesDefaults, ...allOptions }"
+            ref="table"
+        >
+            <slot></slot>
+        </DataTable>
+    </div>
 </template>
 
 <script>
@@ -115,11 +134,12 @@ export default {
             return dt;
         };
 
-        // Tree behaviour (expandable child rows) is encapsulated in this
-        // composable; it self-registers its lifecycle hooks and no-ops when
-        // props.tree is null. Call it before the registrations below so the
-        // tree-control column is prepended and its handler torn down in order.
-        useTreeTable({
+        // Tree behaviour (indented, expandable descendant rows) is encapsulated
+        // in this composable; it self-registers its lifecycle hooks and no-ops
+        // when props.tree is null. Call it before the registrations below so the
+        // indenter is injected before an Actions column is appended and its
+        // handlers are torn down in order.
+        const { expandAll, collapseAll } = useTreeTable({
             tree: props.tree,
             tableRef: table,
             tableColumns,
@@ -304,6 +324,8 @@ export default {
             allOptions,
             redraw,
             useTableObject,
+            expandAll,
+            collapseAll,
         };
     },
     components: {
