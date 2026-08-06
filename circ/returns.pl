@@ -268,6 +268,11 @@ sub process_batch_checkin_item {
         } else {
             Koha::Logger->get->warn(
                 "Hold $resFound->{reserve_id} for item " . $item->itemnumber . " not found during batch confirm" );
+
+            # Surface the failure in the batch row: the item was still
+            # returned, but the librarian needs to know the hold was NOT
+            # captured, or they will assume ResFound already means it was.
+            $messages->{HoldConfirmFailed} = $resFound->{reserve_id};
         }
     }
 
@@ -561,8 +566,12 @@ if ( $batch_barcodes && $op eq 'cud-checkin' ) {
     if (@batch_results) {
         my @plain   = map { _batch_result_to_plain($_) } @batch_results;
         my $encoded = eval { encode_json( \@plain ) };
-        Koha::Logger->get->warn("Failed to encode batch_completed_results JSON: $@") if $@;
-        $template->param( batch_completed_json => $encoded )                         if $encoded;
+        if ($@) {
+            Koha::Logger->get->warn("Failed to encode batch_completed_results JSON: $@");
+            $template->param( batch_json_encode_failed => 1 );
+        } else {
+            $template->param( batch_completed_json => $encoded );
+        }
     }
     if (@remaining_for_confirm) {
         $template->param( batch_remaining_barcodes => join( "\n", @remaining_for_confirm ) );
@@ -582,9 +591,13 @@ if (
     )
 {
     my @completed;
+    my $batch_json_decode_failed;
     if ( length $batch_completed_json_in ) {
         my $decoded = eval { decode_json($batch_completed_json_in) };
-        Koha::Logger->get->warn("Failed to decode batch_completed_results JSON: $@") if $@;
+        if ($@) {
+            Koha::Logger->get->warn("Failed to decode batch_completed_results JSON: $@");
+            $batch_json_decode_failed = 1;
+        }
         @completed = @{$decoded} if $decoded && ref $decoded eq 'ARRAY';
     }
 
@@ -714,13 +727,18 @@ if (
         batch_state_dropboxmode              => scalar $query->param('dropboxmode'),
         batch_state_return_date_override     => scalar $query->param('return_date_override'),
         batch_state_forgivemanualholdsexpire => scalar $query->param('forgivemanualholdsexpire'),
+        batch_json_decode_failed             => $batch_json_decode_failed,
     );
 
     if (@completed) {
         my @plain   = map { _batch_result_to_plain($_) } @completed;
         my $encoded = eval { encode_json( \@plain ) };
-        Koha::Logger->get->warn("Failed to encode batch_completed_results JSON: $@") if $@;
-        $template->param( batch_completed_json => $encoded )                         if $encoded;
+        if ($@) {
+            Koha::Logger->get->warn("Failed to encode batch_completed_results JSON: $@");
+            $template->param( batch_json_encode_failed => 1 );
+        } else {
+            $template->param( batch_completed_json => $encoded );
+        }
     }
     if (@still_remaining) {
         $template->param( batch_remaining_barcodes => join( "\n", @still_remaining ) );

@@ -15,6 +15,8 @@
         <div class="alert alert-danger">Patron is restricted</div>
     [% ELSIF code == 'ResFound' %]
         <div class="alert alert-warning">Hold found</div>
+    [% ELSIF code == 'HoldConfirmFailed' %]
+        <div class="alert alert-danger">Hold could not be confirmed automatically; check the holds queue for this item.</div>
     [% ELSIF code == 'RecallFound' %]
         <div class="alert alert-warning">Recall found</div>
     [% ELSIF code == 'BadBarcode' %]

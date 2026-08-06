@@ -1334,6 +1334,15 @@
     </form>
     <!-- /#checkin-form -->
 
+    [% IF batch_json_decode_failed %]
+        <div class="alert alert-danger">
+            Could not restore the previous batch state. Any items already checked in were still checked in, but results shown before this confirmation have been lost -- please re-check remaining barcodes if unsure.
+        </div>
+    [% END %]
+    [% IF batch_json_encode_failed %]
+        <div class="alert alert-warning"> Could not save this batch's state for the confirmation step. If the batch pauses for confirmation, resuming it may lose track of items already processed -- verify results carefully. </div>
+    [% END %]
+
     [% IF ( batch_results.size ) %]
         <div class="page-section">
             <h2>Batch return results</h2>
@@ -1451,7 +1460,7 @@
                                         Item <strong>[% pending_confirm_title | html %]</strong> (barcode <code>[% pending_confirm_barcode | html %]</code>) is a bundle. Confirm the bundle contents before returning.
                                     [% END %]
                                 </p>
-                                <p class="text-muted"> [% remaining_count %] item[% IF remaining_count != 1 %]s[% END %] still pending in this batch after this one. </p>
+                                <p class="text-muted"> [% remaining_count | html %] item[% IF remaining_count != 1 %]s[% END %] still pending in this batch after this one. </p>
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-default" id="batch-confirm-cancel">Cancel batch</button>
