@@ -1354,6 +1354,7 @@
                         <th>Title</th>
                         <th>Patron</th>
                         <th>Messages</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1408,6 +1409,18 @@
                                     <div class="alert alert-[% result_checkinmsg_class | html %]">[% result.checkinmsg | html %]</div>
                                 [% END %]
                                 [% INCLUDE 'checkin-messages.inc' messages=result.messages %]
+                            </td>
+                            <td>
+                                [% IF result.messages.HoldTransfer && result.transfer_reserve_id %]
+                                    <button type="button" class="btn btn-default btn-xs openWin" data-url="hold-transfer-slip.pl?reserve_id=[% result.transfer_reserve_id | uri %]"><i class="fa fa-print"></i> Print transfer slip</button>
+                                [% ELSIF result.messages.WasTransfered && result.messages.TransferTo && result.itemnumber %]
+                                    <button
+                                        type="button"
+                                        class="btn btn-default btn-xs openWin"
+                                        data-url="transfer-slip.pl?transferitem=[% result.itemnumber | uri %]&amp;barcode=[% result.barcode | uri %]&amp;branchcode=[% result.messages.TransferTo | uri %]&amp;op=slip"
+                                        ><i class="fa fa-print"></i> Print transfer slip</button
+                                    >
+                                [% END %]
                             </td>
                         </tr>
                     [% END %]

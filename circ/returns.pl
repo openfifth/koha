@@ -187,6 +187,7 @@ sub process_batch_checkin_item {
     # Populate flat scalar fields so the template can render from both
     # freshly-built results and results restored from a JSON round-trip
     # (see batch confirm flow further down).
+    $result{itemnumber} = $item->itemnumber;
     my $biblio = $item->biblio;
     if ($biblio) {
         $result{title}        = $biblio->title;
@@ -265,6 +266,15 @@ sub process_batch_checkin_item {
             if $branch ne $resFound->{branchcode};
         if ($hold) {
             confirm_hold( $item, $hold, $diffBranchSend, $desk_id );
+
+            # confirm_hold() silently creates and dispatches a transfer to
+            # the hold's pickup library when it differs from this branch --
+            # surface that in the batch row, or the librarian has no way to
+            # know this item still needs to travel elsewhere.
+            if ($diffBranchSend) {
+                $messages->{HoldTransfer} = $hold->pickup_library->branchname;
+                $result{transfer_reserve_id} = $hold->reserve_id;
+            }
         } else {
             Koha::Logger->get->warn(
                 "Hold $resFound->{reserve_id} for item " . $item->itemnumber . " not found during batch confirm" );
@@ -463,8 +473,8 @@ sub _batch_result_to_plain {
     my %plain;
     for my $k (
         qw( barcode status success needs_confirm bundle_confirm
-        checkinmsg checkinmsgtype title biblionumber
-        borrower_firstname borrower_surname borrowernumber )
+        checkinmsg checkinmsgtype title biblionumber itemnumber
+        transfer_reserve_id borrower_firstname borrower_surname borrowernumber )
         )
     {
         $plain{$k} = $result->{$k} if exists $result->{$k};
