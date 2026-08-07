@@ -148,6 +148,15 @@ sub repair_wrong_transfer {
     my $old_transfer = $item->get_transfer;
     return unless $old_transfer;
 
+    # Cancel the stale transfer explicitly before requesting its replacement.
+    # request_transfer()'s own dedup check matches on frombranch/tobranch/reason,
+    # and since the replacement copies tobranch/reason from $old_transfer, that
+    # check would otherwise find $old_transfer itself still live and hand it
+    # straight back -- silently skipping the replace whenever the item's
+    # current holding branch equals the stale transfer's frombranch (e.g. the
+    # item never actually left and was checked in again at the same branch).
+    $old_transfer->cancel( { reason => 'WrongTransfer', force => 1 } );
+
     return $item->request_transfer(
         {
             to            => $old_transfer->to_library,
