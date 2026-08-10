@@ -29,6 +29,9 @@
             [% IF ( linkType=='seealso' ) %]
                 [% IF ( authid ) %]
                     <a href="[% authidurl | url %][% authid | uri %]">[% heading | html %]</a>
+                    [% IF chooser %]
+                        <a class="btn btn-xs btn-default" href="javascript:doauth('[% authid | html %]', '[% index | html %]', '')"><i class="fa fa-plus"></i> Choose</a>
+                    [% END %]
                 [% ELSE %]
                     <a href="[% searchurl | url %][% heading | uri %]">[% heading | html %]</a>
                 [% END %]

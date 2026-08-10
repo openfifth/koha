@@ -3061,6 +3061,10 @@ fieldset > .toptabs {
 .authref {
     font-style: normal;
     text-indent: 4em;
+
+    .btn {
+        text-indent: 0;
+    }
 }
 
 .seefrom,

@@ -99,7 +99,7 @@
                             [% IF line.html %]
                                 [% line.html | $raw %]
                             [% ELSE %]
-                                [% PROCESS authresult summary=line.summary authid=line.authid auth_preview=1 %]
+                                [% PROCESS authresult summary=line.summary authid=line.authid auth_preview=1 chooser=1 %]
                             [% END %]
                         </td>
                         <td>[% line.summary.label | html %]</td>
