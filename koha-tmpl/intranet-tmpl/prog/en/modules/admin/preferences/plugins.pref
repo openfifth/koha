@@ -1,0 +1,12 @@
+Plugins:
+    Installation:
+        -
+            - "Require plugins to be at least "
+            - pref: PluginStoreMinimumLevel
+              default: ""
+              choices:
+                  "": "no minimum level (off)"
+                  INCOMPLETE: "Incomplete"
+                  STRUCTURAL: "Structural"
+                  CERTIFIED: "Certified"
+            - " on the plugin store to be installable. Only applies to plugins with a known plugin-store origin; plugins with no known origin (manual uploads, or search results from a configured plugin_repos entry) are unaffected by this setting."
