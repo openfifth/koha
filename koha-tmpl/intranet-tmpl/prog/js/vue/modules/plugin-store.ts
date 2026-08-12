@@ -29,4 +29,16 @@ const rootComponent = app.use(i18n).use(pinia).use(router);
 app.provide("mainStore", mainStore);
 app.provide("navigationStore", navigationStore);
 
-app.mount("#plugin-store");
+const { removeMessages } = mainStore;
+router.beforeEach((to, from) => {
+    navigationStore.$patch({
+        current: to.matched,
+        params: to.params || {},
+        from,
+    });
+    removeMessages();
+});
+
+router.isReady().then(() => {
+    app.mount("#plugin-store");
+});

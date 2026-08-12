@@ -24,7 +24,7 @@
                 const installed_plugins = [];
             [% END %]
             const koha_version = [% To.json(Koha.Version) | $raw %];
-            const plugin_store_url = [% To.json(plugin_store_url) | $raw %];
+            const plugin_store_url = "[% To.json(plugin_store_url) | $raw %]";
         </script>
         [% Asset.js("js/vue/dist/plugin-store.js") | $raw %]
     [% END %]
