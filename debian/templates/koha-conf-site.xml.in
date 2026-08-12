@@ -418,6 +418,11 @@ __END_SRU_PUBLICSERVER__
       server. e.g. Antarctica/South_Pole -->
  <timezone>__TIMEZONE__</timezone>
 
+ <!-- Base URL of the community Koha plugin store, used by the staff
+      interface's Plugin store page to discover and fetch plugins. No
+      trailing slash, e.g. https://plugin-store.example.org -->
+ <plugin_store_url>https://plugin-store.koha-ptfs.co.uk</plugin_store_url>
+
  <!-- This is the bcrypt settings used to generated anonymized content -->
  <bcrypt_settings>__BCRYPT_SETTINGS__</bcrypt_settings>
 
