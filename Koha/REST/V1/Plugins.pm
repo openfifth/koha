@@ -41,57 +41,54 @@ Installs the uploaded plugin
 sub add {
     my $c = shift->openapi->valid_input or return;
 
-    my $body = $c->req->json;
-    my $kpz_url = delete $body->{kpz_url} // [];
+    my $body    = $c->req->json;
+    my $kpz_url = $body->{kpz_url};
 
-    use File::Fetch;
-    my $ff = File::Fetch->new( uri => $kpz_url );
-    my $file = $ff->fetch() or die $ff->error;
+    return $c->render( status => 400, openapi => { error => 'Missing kpz_url' } )
+        unless $kpz_url;
 
-    my $mojo_file = Mojo::Asset::File->new( path => $file );
-
-    my $uploadfile = $mojo_file->to_file;
-    my $uploadfilename = $c->param('filename');
-
+    my ($uploadfilename) = $kpz_url =~ m{([^/]+)$};
 
     my $plugins_restricted = C4::Context->config("plugins_restricted");
     my $plugins_dir        = C4::Context->config("pluginsdir");
     $plugins_dir = ref($plugins_dir) eq 'ARRAY' ? $plugins_dir->[0] : $plugins_dir;
 
-    my $dirname = File::Temp::tempdir( CLEANUP => 1 );
-
-    my $filesuffix;
-    $filesuffix = $1 if $uploadfilename =~ m/(\..+)$/i;
-    my ( $tfh, $tempfile ) = File::Temp::tempfile( SUFFIX => $filesuffix, UNLINK => 1 );
-
     my %errors;
-    $errors{'NOTKPZ'} = 1 if ( $uploadfilename !~ /\.kpz$/i );
-    $errors{'NOWRITETEMP'}    = 1 unless ( -w $dirname );
+    $errors{'NOTKPZ'}         = 1 if ( $uploadfilename !~ /\.kpz$/i );
     $errors{'NOWRITEPLUGINS'} = 1 unless ( -w $plugins_dir );
 
-    $errors{'RESTRICTED'}  = 1 unless ( !$plugins_restricted );
-    $errors{'EMPTYUPLOAD'} = 1 unless ( length($uploadfile) > 0 );
+    # Stopgap only: rejects every install while plugins_restricted is on --
+    # there's no allowlist check against anything yet, only the ability to
+    # reject, which is the correct fail-closed tradeoff for closing an
+    # active security gap quickly. Task 4 replaces this whole block with
+    # Koha::Plugins::Install, checked against the plugin's actual origin
+    # repo, which can actually pass.
+    $errors{'RESTRICTED'} = 1 if $plugins_restricted;
 
-    my $ae = Archive::Extract->new( archive => $uploadfile->path, type => 'zip' );
+    # Checked before downloading anything, deliberately -- no point fetching
+    # a URL we're going to reject regardless of its contents.
+    return $c->render( status => 403, openapi => { error => 'Install rejected', details => \%errors } )
+        if %errors;
+
+    use File::Fetch;
+    my $ff   = File::Fetch->new( uri => $kpz_url );
+    my $file = eval { $ff->fetch };
+    return $c->render( status => 500, openapi => { error => 'Could not download kpz_url' } )
+        unless $file;
+
+    my $ae = Archive::Extract->new( archive => $file, type => 'zip' );
     unless ( $ae->extract( to => $plugins_dir ) ) {
-        warn "ERROR: " . $ae->error;
-        $errors{'UZIPFAIL'} = $uploadfilename;
-        exit;
+        return $c->render( status => 500, openapi => { error => 'Could not unzip kpz_url' } );
     }
 
-    # Install plugins; verbose not needed, we redirect to plugins-home.
-    # FIXME There is no good way to verify the install below; we need an
-    # individual plugin install.
     Koha::Plugins->new->InstallPlugins( { verbose => 0 } );
-
 
     return try {
         return $c->render(
             status  => 201,
-            openapi => $kpz_url
+            openapi => { success => 'Plugin installed' }
         );
-    }
-    catch {
+    } catch {
         $c->unhandled_exception($_);
     };
 }
