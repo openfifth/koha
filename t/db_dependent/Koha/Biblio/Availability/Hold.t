@@ -6,6 +6,7 @@ use Test::NoWarnings;
 
 use t::lib::TestBuilder;
 use t::lib::Mocks;
+use t::lib::QueryCounter;
 
 use MARC::Field;
 use Koha::Database;
@@ -192,16 +193,13 @@ subtest 'Query count stays flat as item count scales (bug 43124)' => sub {
             );
         }
 
-        my $trace = q{};
-        open my $fh, '>', \$trace or die $!;
-        $schema->storage->debugfh($fh);
-        $schema->storage->debug(1);
+        my ( $result, $stats ) = t::lib::QueryCounter->measure(
+            sub {
+                return Koha::Biblio::Availability::Hold->check( { biblio => $biblio, patron => $patron } );
+            }
+        );
 
-        my $result = Koha::Biblio::Availability::Hold->check( { biblio => $biblio, patron => $patron } );
-
-        $schema->storage->debug(0);
-
-        return ( $result, scalar( () = $trace =~ /^(?:SELECT|INSERT|UPDATE|DELETE)\b/mg ) );
+        return ( $result, $stats->{queries} );
     };
 
     my ( $result_10,  $queries_10 )  = $count_queries->(10);

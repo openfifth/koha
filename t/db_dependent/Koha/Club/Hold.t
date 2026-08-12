@@ -31,6 +31,7 @@ use Koha::Database;
 use Koha::DateUtils qw(dt_from_string);
 use Scalar::Util    qw(blessed);
 
+use t::lib::QueryCounter;
 use t::lib::TestBuilder;
 
 my $builder = t::lib::TestBuilder->new;
@@ -157,27 +158,25 @@ subtest 'add reuses the item fetch across club members (bug 43124)' => sub {
             );
         }
 
-        my $trace = q{};
-        open my $fh, '>', \$trace or die $!;
-        $schema->storage->debugfh($fh);
-        $schema->storage->debug(1);
-
-        Koha::Club::Hold::add(
-            {
-                club_id           => $club->id,
-                biblio_id         => $item->biblionumber,
-                pickup_library_id => $library->branchcode,
+        my ( undef, $stats ) = t::lib::QueryCounter->measure(
+            sub {
+                Koha::Club::Hold::add(
+                    {
+                        club_id           => $club->id,
+                        biblio_id         => $item->biblionumber,
+                        pickup_library_id => $library->branchcode,
+                    }
+                );
+                return;
             }
         );
-
-        $schema->storage->debug(0);
 
         # Match only the plain "all items of this biblio" query that
         # fetch_items/check issue (WHERE `me`.`biblionumber` = ? with no
         # other predicate) - other per-patron item lookups elsewhere in
         # AddReserve (e.g. filtered by notforloan) are out of this bug's
         # scope and would otherwise make this assertion too strict.
-        return scalar( () = $trace =~ /FROM `items` `me` WHERE \( `me`\.`biblionumber` = \? \):/g );
+        return scalar( () = $stats->{trace} =~ /FROM `items` `me` WHERE \( `me`\.`biblionumber` = \? \):/g );
     };
 
     my $queries_2 = $count_item_table_queries->(2);
