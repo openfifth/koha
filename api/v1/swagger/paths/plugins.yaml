@@ -8,6 +8,15 @@
     summary: Add and install a plugin
     produces:
       - application/json
+    parameters:
+      - name: body
+        in: body
+        schema:
+          type: object
+          properties:
+            kpz_url:
+              type: string
+              description: URL to the plugin kpz file
     responses:
       "200":
         description: Successful plugin install

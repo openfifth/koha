@@ -20,6 +20,7 @@ use Modern::Perl;
 use Test::More tests => 2;
 use Test::NoWarnings;
 use Test::Mojo;
+use Test::MockModule;
 
 use t::lib::TestBuilder;
 use t::lib::Mocks;
@@ -32,9 +33,9 @@ my $builder = t::lib::TestBuilder->new;
 my $t = Test::Mojo->new('Koha::REST::V1');
 t::lib::Mocks::mock_preference( 'RESTBasicAuth', 1 );
 
-subtest 'add() respects plugins_restricted' => sub {
+subtest 'add()' => sub {
 
-    plan tests => 2;
+    plan tests => 6;
 
     $schema->storage->txn_begin;
 
@@ -48,12 +49,36 @@ subtest 'add() respects plugins_restricted' => sub {
     $patron->set_password( { password => $password, skip_validation => 1 } );
     my $userid = $patron->userid;
 
-    t::lib::Mocks::mock_config( 'plugins_restricted', 1 );
     t::lib::Mocks::mock_config( 'enable_plugins',     1 );
+    t::lib::Mocks::mock_config( 'plugins_restricted', 0 );
 
-    $t->post_ok(
-        "//$userid:$password\@/api/v1/plugins" => json => { kpz_url => 'https://evil.example.com/plugin.kpz' } )
-        ->status_is( 403, 'A kpz_url with an unresolvable plugin-store origin is rejected, not silently installed' );
+    my $store_module   = Test::MockModule->new('Koha::Plugins::Store');
+    my $install_module = Test::MockModule->new('Koha::Plugins::Install');
+    my $fetch_module   = Test::MockModule->new('File::Fetch');
+
+    $fetch_module->mock( fetch => sub { return '/tmp/does-not-matter.kpz' } );
+
+    $store_module->mock(
+        lookup_by_kpz_url => sub {
+            return {
+                repo_url           => 'https://github.com/openfifth/koha-plugin-coverflow',
+                certification_tier => 'CERTIFIED'
+            };
+        }
+    );
+
+    $install_module->mock( install => sub { return ( 1, { digest => 'abc123' } ) } );
+
+    $t->post_ok( "//$userid:$password\@/api/v1/plugins" => json => { kpz_url => 'https://example.com/plugin.kpz' } )
+        ->status_is( 201, 'A successful install returns 201' );
+
+    $install_module->mock( install => sub { return ( 0, { RESTRICTED => 1 } ) } );
+
+    $t->post_ok( "//$userid:$password\@/api/v1/plugins" => json => { kpz_url => 'https://example.com/plugin.kpz' } )
+        ->status_is( 403, 'A rejected install (per Koha::Plugins::Install) returns 403, not a silent install' );
+
+    $t->post_ok( "//$userid:$password\@/api/v1/plugins" => json => {} )
+        ->status_is( 400, 'Missing kpz_url is a 400, not a crash' );
 
     $schema->storage->txn_rollback;
 };

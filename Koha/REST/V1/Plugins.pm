@@ -19,7 +19,9 @@ use Modern::Perl;
 
 use Mojo::Base 'Mojolicious::Controller';
 
-use Archive::Extract;
+use File::Fetch;
+use Koha::Plugins::Install;
+use Koha::Plugins::Store;
 
 use Koha::Plugins;
 use C4::Context;
@@ -41,47 +43,32 @@ Installs the uploaded plugin
 sub add {
     my $c = shift->openapi->valid_input or return;
 
-    my $body    = $c->req->json;
+    my $body    = $c->req->json // {};
     my $kpz_url = $body->{kpz_url};
 
     return $c->render( status => 400, openapi => { error => 'Missing kpz_url' } )
         unless $kpz_url;
 
-    my ($uploadfilename) = $kpz_url =~ m{([^/]+)$};
+    my $lookup = Koha::Plugins::Store->lookup_by_kpz_url($kpz_url);
 
-    my $plugins_restricted = C4::Context->config("plugins_restricted");
-    my $plugins_dir        = C4::Context->config("pluginsdir");
-    $plugins_dir = ref($plugins_dir) eq 'ARRAY' ? $plugins_dir->[0] : $plugins_dir;
-
-    my %errors;
-    $errors{'NOTKPZ'}         = 1 if ( $uploadfilename !~ /\.kpz$/i );
-    $errors{'NOWRITEPLUGINS'} = 1 unless ( -w $plugins_dir );
-
-    # Stopgap only: rejects every install while plugins_restricted is on --
-    # there's no allowlist check against anything yet, only the ability to
-    # reject, which is the correct fail-closed tradeoff for closing an
-    # active security gap quickly. Task 4 replaces this whole block with
-    # Koha::Plugins::Install, checked against the plugin's actual origin
-    # repo, which can actually pass.
-    $errors{'RESTRICTED'} = 1 if $plugins_restricted;
-
-    # Checked before downloading anything, deliberately -- no point fetching
-    # a URL we're going to reject regardless of its contents.
-    return $c->render( status => 403, openapi => { error => 'Install rejected', details => \%errors } )
-        if %errors;
-
-    use File::Fetch;
     my $ff   = File::Fetch->new( uri => $kpz_url );
     my $file = eval { $ff->fetch };
     return $c->render( status => 500, openapi => { error => 'Could not download kpz_url' } )
         unless $file;
 
-    my $ae = Archive::Extract->new( archive => $file, type => 'zip' );
-    unless ( $ae->extract( to => $plugins_dir ) ) {
-        return $c->render( status => 500, openapi => { error => 'Could not unzip kpz_url' } );
-    }
+    my ($filename) = $kpz_url =~ m{([^/]+)$};
 
-    Koha::Plugins->new->InstallPlugins( { verbose => 0 } );
+    my ( $ok, $result ) = Koha::Plugins::Install->install(
+        {
+            kpz_path           => $file,
+            filename           => $filename,
+            repo_url           => $lookup ? $lookup->{repo_url}           : undef,
+            certification_tier => $lookup ? $lookup->{certification_tier} : undef,
+        }
+    );
+
+    return $c->render( status => 403, openapi => { error => 'Install rejected', details => $result } )
+        unless $ok;
 
     return try {
         return $c->render(
