@@ -34,7 +34,7 @@ subtest 'returns an error when no plugin store is configured' => sub {
 };
 
 subtest 'filters by name/description, case-insensitively' => sub {
-    plan tests => 3;
+    plan tests => 4;
 
     t::lib::Mocks::mock_config( 'plugin_store_url', 'http://store.example.com' );
     t::lib::Mocks::mock_preference( 'Version', '26.06.00.000' );
@@ -57,6 +57,7 @@ subtest 'filters by name/description, case-insensitively' => sub {
     is( scalar @$errors,                 0,                  'no errors' );
     is( scalar @$results,                1,                  'exactly one matching plugin' );
     is( $results->[0]->{result}->{name}, 'CoverFlow plugin', 'the matching plugin is returned' );
+    is( $results->[0]->{repo}->{name},   'a',                'repo.name contains extracted org, not full URL' );
 };
 
 subtest 'reports an error when the store is unreachable' => sub {

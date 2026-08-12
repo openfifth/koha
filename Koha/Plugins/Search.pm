@@ -18,6 +18,7 @@ package Koha::Plugins::Search;
 use Modern::Perl;
 
 use Mojo::UserAgent;
+use Mojo::URL;
 
 use C4::Context;
 
@@ -68,9 +69,18 @@ sub search {
 
         for my $release ( @{ $plugin->{releases} // [] } ) {
             my ($install_name) = ( $release->{kpz_url} // '' ) =~ m{([^/]+)$};
+
+            # Extract owner/org from repo_url (e.g. https://github.com/openfifth/koha-plugin-coverflow -> openfifth)
+            my $repo_owner = $plugin->{repo_url} // '';
+            if ($repo_owner) {
+                my $url      = Mojo::URL->new($repo_owner);
+                my @segments = grep { length } @{ $url->path->parts };
+                $repo_owner = $segments[0] // $repo_owner;
+            }
+
             push @results,
                 {
-                repo   => { name => $plugin->{repo_url} },
+                repo   => { name => $repo_owner },
                 result => {
                     name         => $plugin->{name},
                     description  => $plugin->{description},
