@@ -28,6 +28,13 @@
           additionalProperties: false
       "201":
         description: Plugin added
+      "400":
+        description: |
+          Bad request. Possible `error_code` attribute values:
+
+          * `missing_kpz_url`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
       "401":
         description: Authentication required
         schema:
