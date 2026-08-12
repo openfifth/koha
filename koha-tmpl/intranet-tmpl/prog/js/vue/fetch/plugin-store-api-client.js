@@ -11,9 +11,7 @@ export class PluginStoreAPIClient extends HttpClient {
         return {
             getStoreAll: koha_version_release =>
                 this.getAll({
-                    //FIXME: plugin store URL should come from koha-conf.xml (?)
-                    endpoint:
-                        "https://plugin-store.koha-ptfs.co.uk/api/plugins",
+                    endpoint: `${plugin_store_url}/api/plugins`,
                     params: {
                         koha_version_release: koha_version_release
                             ? koha_version_release

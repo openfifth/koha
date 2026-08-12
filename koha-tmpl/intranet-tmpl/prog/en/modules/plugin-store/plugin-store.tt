@@ -2,9 +2,7 @@
 [% USE To %]
 [% SET footerjs = 1 %]
 [% INCLUDE 'doc-head-open.inc' %]
-<title>
-    Plugins store &rsaquo; Koha
-</title>
+<title> Plugins store &rsaquo; Koha </title>
 [% INCLUDE 'doc-head-close.inc' %]
 </head>
 
@@ -13,22 +11,22 @@
     [% INCLUDE 'prefs-admin-search.inc' %]
 [% END %]
 
-<div id="plugin-store"> <!-- this is closed in intranet-bottom.inc -->
+<div id="plugin-store">
+    <!-- this is closed in intranet-bottom.inc -->
 
-[% MACRO jsinclude BLOCK %]
-    [% INCLUDE 'calendar.inc' %]
-    [% INCLUDE 'datatables.inc' %]
-
-    <script>
-        [% IF ( installed_plugins ) %]
-            const installed_plugins = [% To.json(installed_plugins) | $raw %] || [];
-        [% ELSE %]
-            const installed_plugins = [];
-        [% END %]
-        const koha_version = [% To.json(Koha.Version) | $raw %];
-    </script>
-
-    [% Asset.js("js/vue/dist/plugin-store.js") | $raw %]
-
-[% END %]
-[% INCLUDE 'intranet-bottom.inc' %]
+    [% MACRO jsinclude BLOCK %]
+        [% INCLUDE 'calendar.inc' %]
+        [% INCLUDE 'datatables.inc' %]
+        <script>
+            [% IF ( installed_plugins ) %]
+                const installed_plugins = [% To.json(installed_plugins) | $raw %] || [];
+            [% ELSE %]
+                const installed_plugins = [];
+            [% END %]
+            const koha_version = [% To.json(Koha.Version) | $raw %];
+            const plugin_store_url = [% To.json(plugin_store_url) | $raw %];
+        </script>
+        [% Asset.js("js/vue/dist/plugin-store.js") | $raw %]
+    [% END %]
+    [% INCLUDE 'intranet-bottom.inc' %]
+</div>

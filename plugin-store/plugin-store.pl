@@ -41,7 +41,10 @@ my ( $plugins, $failures ) = Koha::Plugins->new()->GetPlugins(
     }
 );
 
-my @installed_plugins = map { {'metadata'=>$_->{metadata}, 'class'=>$_->{class}}; } @$plugins;
-$template->param( installed_plugins            => \@installed_plugins );
+my @installed_plugins = map { { 'metadata' => $_->{metadata}, 'class' => $_->{class} }; } @$plugins;
+$template->param(
+    installed_plugins => \@installed_plugins,
+    plugin_store_url  => C4::Context->config('plugin_store_url'),
+);
 
 output_html_with_http_headers $input, $cookie, $template->output;

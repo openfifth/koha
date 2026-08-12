@@ -19,27 +19,28 @@
 </template>
 
 <script>
-import { APIClient } from "../../fetch/api-client.js"
-import { inject, ref } from "vue"
-import Toolbar from "../Toolbar.vue"
-import ToolbarButton from "../ToolbarButton.vue"
-import KohaTable from "../KohaTable.vue"
+import { APIClient } from "../../fetch/api-client.js";
+import { inject, ref } from "vue";
+import Toolbar from "../Toolbar.vue";
+import ToolbarButton from "../ToolbarButton.vue";
+import KohaTable from "../KohaTable.vue";
 
 export default {
     setup() {
         const { setConfirmationDialog, setMessage, setWarning } =
-            inject("mainStore")
+            inject("mainStore");
 
         return {
             koha_version,
+            plugin_store_url,
             installed_plugins,
             setConfirmationDialog,
             setMessage,
             setWarning,
-        }
+        };
     },
     data: function () {
-        let component = this
+        let component = this;
         return {
             tableOptions: {
                 columns: [
@@ -49,12 +50,13 @@ export default {
                         searchable: false,
                         orderable: false,
                         render: function (data, type, row, meta) {
-                            //FIXME: plugin store URL should come from koha-conf.xml (?)
                             return (
-                                '<img style="display:block; margin: 0 auto;" src = "https://plugin-store.koha-ptfs.co.uk/img/' +
+                                '<img style="display:block; margin: 0 auto;" src = "' +
+                                plugin_store_url +
+                                "/img/" +
                                 row.thumbnail +
                                 '" width="250px"/>'
-                            )
+                            );
                         },
                     },
                     {
@@ -82,12 +84,12 @@ export default {
                         orderable: false,
                         render: function (data, type, row, meta) {
                             if (component.pluginHasNoReleases(row)) {
-                                return '<span class="badge text-bg-warning"> No releases available for this Koha version!</span>'
+                                return '<span class="badge text-bg-warning"> No releases available for this Koha version!</span>';
                             }
-                            if (!data || data.length === 0) return "N/A"
+                            if (!data || data.length === 0) return "N/A";
                             let most_recent_release =
-                                component.getMostRecentRelease(row)
-                            return most_recent_release.version
+                                component.getMostRecentRelease(row);
+                            return most_recent_release.version;
                         },
                     },
                     {
@@ -98,9 +100,9 @@ export default {
                         render: function (data, type, row, meta) {
                             let installed = component.installed_plugins.find(
                                 ip => ip.class === row.class_name
-                            )
-                            if (!installed) return "N/A"
-                            let returnHTML = installed.metadata.version
+                            );
+                            if (!installed) return "N/A";
+                            let returnHTML = installed.metadata.version;
                             if (
                                 !component.installedPluginVersionIsLatest(
                                     installed,
@@ -108,12 +110,12 @@ export default {
                                 )
                             ) {
                                 returnHTML +=
-                                    ' <span class="badge text-bg-warning"> Update available</span>'
+                                    ' <span class="badge text-bg-warning"> Update available</span>';
                             } else {
                                 returnHTML +=
-                                    ' <span class="badge text-bg-success"> Up to date!</span>'
+                                    ' <span class="badge text-bg-success"> Up to date!</span>';
                             }
-                            return returnHTML
+                            return returnHTML;
                         },
                     },
                 ],
@@ -170,11 +172,11 @@ export default {
             },
             before_route_entered: false,
             building_table: false,
-        }
+        };
     },
     methods: {
         getTableActions: function () {
-            let component = this
+            let component = this;
             //FIXME: Can't figure out how to get kohatable to wait for installed_plugins before rendering
             return {
                 "-1": [
@@ -186,11 +188,11 @@ export default {
                                 let installed =
                                     component.installed_plugins.find(
                                         ip => ip.class === row.class_name
-                                    )
+                                    );
                                 let no_releases =
-                                    component.pluginHasNoReleases(row)
+                                    component.pluginHasNoReleases(row);
 
-                                return installed || no_releases ? 0 : 1
+                                return installed || no_releases ? 0 : 1;
                             },
                         },
                     },
@@ -202,27 +204,27 @@ export default {
                                 let installed =
                                     component.installed_plugins.find(
                                         ip => ip.class === row.class_name
-                                    )
-                                if (!installed) return 0
+                                    );
+                                if (!installed) return 0;
                                 if (
                                     !component.installedPluginVersionIsLatest(
                                         installed,
                                         row
                                     )
                                 ) {
-                                    return 1
+                                    return 1;
                                 }
-                                return 0
+                                return 0;
                             },
                         },
                     },
                 ],
-            }
+            };
         },
         doInstall: function (plugin, dt, event) {
             //FIXME: This is installing the most recent release, not checking any koha version or anything
-            let most_recent_release = this.getMostRecentRelease(plugin)
-            const client = APIClient.plugin_store
+            let most_recent_release = this.getMostRecentRelease(plugin);
+            const client = APIClient.plugin_store;
             client.plugins
                 .create({
                     kpz_url: most_recent_release.kpz_url,
@@ -233,15 +235,15 @@ export default {
                             this.$__(
                                 'Plugin has been installed. <a href="/cgi-bin/koha/plugins/plugins-home.pl">Manage plugins</a>'
                             )
-                        )
+                        );
                     },
                     error => {}
-                )
+                );
         },
         doUpdate: function (plugin, dt, event) {
             //FIXME: This is installing the first release, not checking any koha version or anything
-            let most_recent_release = this.getMostRecentRelease(plugin)
-            const client = APIClient.plugin_store
+            let most_recent_release = this.getMostRecentRelease(plugin);
+            const client = APIClient.plugin_store;
             client.plugins
                 .create({
                     kpz_url: most_recent_release.kpz_url,
@@ -252,54 +254,56 @@ export default {
                             this.$__(
                                 'Plugin has been updated. <a href="/cgi-bin/koha/plugins/plugins-home.pl">Manage plugins</a>'
                             )
-                        )
+                        );
                     },
                     error => {}
-                )
+                );
         },
         installedPluginVersionIsLatest: function (
             installed_plugin,
             candidate_plugin
         ) {
             if (!installed_plugin) {
-                return 0
+                return 0;
             }
             let most_recent_release =
-                this.getMostRecentRelease(candidate_plugin)
+                this.getMostRecentRelease(candidate_plugin);
             if (
                 installed_plugin.metadata.version ===
                 most_recent_release.version
             ) {
-                return 1
+                return 1;
             }
-            return 0
+            return 0;
         },
         getMostRecentRelease: function (candidate_plugin) {
             return candidate_plugin.releases.reduce(
                 (most_recent, release) => {
-                    const most_recent_date = new Date(most_recent.date_released)
-                    const release_date = new Date(release.date_released)
+                    const most_recent_date = new Date(
+                        most_recent.date_released
+                    );
+                    const release_date = new Date(release.date_released);
                     return release_date > most_recent_date
                         ? release
-                        : most_recent
+                        : most_recent;
                 },
                 { date_released: 0 }
-            )
+            );
         },
         pluginHasNoReleases: function (plugin) {
-            return !plugin.releases || plugin.releases.length === 0
+            return !plugin.releases || plugin.releases.length === 0;
         },
         table_url: function () {
-            //FIXME: plugin store URL should come from koha-conf.xml (?)
             return (
-                "https://plugin-store.koha-ptfs.co.uk/api/plugins?koha_version_release=" +
+                this.plugin_store_url +
+                "/api/plugins?koha_version_release=" +
                 this.koha_version.release
-            )
+            );
         },
     },
     components: { Toolbar, ToolbarButton, KohaTable },
     name: "StorePluginsList",
-}
+};
 </script>
 <style>
 td {
