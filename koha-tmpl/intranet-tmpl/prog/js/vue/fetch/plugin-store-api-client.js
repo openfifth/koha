@@ -23,6 +23,11 @@ export class PluginStoreAPIClient extends HttpClient {
                     endpoint: "/api/v1/plugins",
                     body: plugin,
                 }),
+            upload: formData =>
+                this.postForm({
+                    endpoint: "/api/v1/plugins/upload",
+                    body: formData,
+                }),
         };
     }
 }

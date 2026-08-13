@@ -31,13 +31,16 @@ class HttpClient {
         headers = {},
         options = {},
         return_response = false,
-        mark_submitting = false
+        mark_submitting = false,
+        skip_default_headers = false
     ) {
         let res, error;
         if (mark_submitting) submitting();
         await fetch(this._baseURL + endpoint, {
             ...options,
-            headers: { ...this._headers, ...headers },
+            headers: skip_default_headers
+                ? { ...headers }
+                : { ...this._headers, ...headers },
         })
             .then(response => {
                 if (!response.ok) {
@@ -162,6 +165,23 @@ class HttpClient {
             },
             params.return_response ?? true,
             params.mark_submitting ?? true
+        );
+    }
+
+    postForm(params = {}) {
+        let csrf_token = { "CSRF-TOKEN": this.csrf_token };
+        let headers = { ...csrf_token, ...params.headers };
+        return this._fetchJSON(
+            params.endpoint,
+            headers,
+            {
+                ...params.options,
+                body: params.body,
+                method: "POST",
+            },
+            params.return_response ?? false,
+            params.mark_submitting ?? true,
+            true
         );
     }
 
