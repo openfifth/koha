@@ -80,7 +80,7 @@ $(document).ready(function () {
                                     }
                                 ) +
                                 "</td><td>- " +
-                                out.total.format_price() +
+                                Number(out.total).format_price() +
                                 "</td></tr>"
                         );
                     } else {
@@ -88,7 +88,7 @@ $(document).ready(function () {
                             "<tr><td>" +
                                 escape_str(out.credit_type.description) +
                                 "</td><td>- " +
-                                out.total.format_price() +
+                                Number(out.total).format_price() +
                                 "</td></tr>"
                         );
                     }
@@ -99,7 +99,7 @@ $(document).ready(function () {
                         "<tr><td>" +
                             escape_str(income.debit_type.description) +
                             "</td><td>" +
-                            income.total.format_price() +
+                            Number(income.total).format_price() +
                             "</td></tr>"
                     );
                 }
@@ -136,7 +136,7 @@ $(document).ready(function () {
                     "<tr class='total-row'><td><strong>" +
                         totalLabel +
                         "</strong></td><td><strong>" +
-                        data.summary.total.format_price() +
+                        Number(data.summary.total).format_price() +
                         "</strong></td></tr>"
                 );
 
@@ -169,7 +169,7 @@ $(document).ready(function () {
                             "<tr><td><strong>" +
                                 expectedLabel +
                                 "</strong></td><td><strong>" +
-                                cashCollected.format_price() +
+                                Number(cashCollected).format_price() +
                                 "</strong></td></tr>"
                         );
 
@@ -181,7 +181,7 @@ $(document).ready(function () {
                             "<tr><td><strong>" +
                                 actualLabel +
                                 "</strong></td><td><strong>" +
-                                actualAmount.format_price() +
+                                Number(actualAmount).format_price() +
                                 "</strong></td></tr>"
                         );
                     } else {
@@ -194,7 +194,7 @@ $(document).ready(function () {
                             "<tr><td><strong>" +
                                 cashLabel +
                                 "</strong></td><td><strong>" +
-                                cashCollected.format_price() +
+                                Number(cashCollected).format_price() +
                                 "</strong></td></tr>"
                         );
                     }
@@ -203,7 +203,7 @@ $(document).ready(function () {
                 // 3. Other payment types collected (excluding CASH)
                 for (type of data.summary.total_grouped) {
                     if (
-                        type.total !== 0 &&
+                        Number(type.total) !== 0 &&
                         type.payment_type !== "Cash" &&
                         type.payment_type !== "CASH"
                     ) {
@@ -224,7 +224,7 @@ $(document).ready(function () {
                             "<tr><td><strong>" +
                                 paymentTypeLabel +
                                 "</strong></td><td><strong>" +
-                                type.total.format_price() +
+                                Number(type.total).format_price() +
                                 "</strong></td></tr>"
                         );
                     }
