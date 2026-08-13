@@ -236,8 +236,8 @@ subtest 'summary' => sub {
     is( ref( $summary->{payout_grouped} ),      'ARRAY', "payout_grouped contains an arrayref" );
     is( scalar @{ $summary->{payout_grouped} }, 1,       "payout_grouped contains 1 transaction" );
     is_deeply( $summary->{payout_grouped}, $expected_payout_grouped, "payout_grouped arrayref is correct" );
-    is( $summary->{payout_total}, $expected_payout_total, "payout_total is correct" );
-    is( $summary->{total},        $expected_total,        "total equals expected_total" );
+    is( $summary->{payout_total}, $expected_payout_total,             "payout_total is correct" );
+    is( $summary->{total},        sprintf( "%.2f", $expected_total ), "total equals expected_total" );
 
     # Backdate cashup1 so we can add a new cashup to check 'previous'
     $cashup1->timestamp( \'NOW() - INTERVAL 12 MINUTE' )->store();
@@ -297,7 +297,7 @@ subtest 'summary' => sub {
     is( ref( $summary->{payout_grouped} ),      'ARRAY', "payout_grouped contains Koha::Account::Lines" );
     is( scalar @{ $summary->{payout_grouped} }, 0,       "payout_grouped contains 0 transactions" );
     is_deeply( $summary->{payout_grouped}, $expected_payout_grouped, "payout_grouped arrayref is correct" );
-    is( $summary->{total}, $expected_total, "total equals expected_total" );
+    is( $summary->{total}, sprintf( "%.2f", $expected_total ), "total equals expected_total" );
 
     # Backdate cashup2 so we can add a new cashup to check
     $cashup2->timestamp( \'NOW() - INTERVAL 6 MINUTE' )->store();
@@ -364,7 +364,7 @@ subtest 'summary' => sub {
     is( ref( $summary->{payout_grouped} ),      'ARRAY', "payout_grouped contains Koha::Account::Lines" );
     is( scalar @{ $summary->{payout_grouped} }, 1,       "payout_grouped contains 0 transactions" );
     is_deeply( $summary->{payout_grouped}, $expected_payout_grouped, "payout_grouped arrayref is correct" );
-    is( $summary->{total}, $expected_total, "total equals expected_total" );
+    is( $summary->{total}, sprintf( "%.2f", $expected_total ), "total equals expected_total" );
 
     $schema->storage->txn_rollback;
 };

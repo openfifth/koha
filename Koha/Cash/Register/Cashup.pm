@@ -186,7 +186,9 @@ sub summary {
         # Flip sign to match the convention used for `total` above:
         # positive = net amount collected (i.e. removed from register at cashup),
         # negative = net amount paid out (i.e. needed to be added to register).
-        push @total_grouped, { payment_type => $type->lib, total => $typed_total * -1 };
+        # sprintf rounds away the extra precision MySQL's SUM() can return
+        # over our 4-decimal-place stored amounts.
+        push @total_grouped, { payment_type => $type->lib, total => sprintf( "%.2f", $typed_total * -1 ) };
     }
 
     # Check for reconciliation lines separately (for footer display only)
@@ -230,7 +232,7 @@ sub summary {
         income_total            => abs($income_total),
         payout_grouped          => \@payout,
         payout_total            => abs($payout_total),
-        total                   => $total * -1,
+        total                   => sprintf( "%.2f", $total * -1 ),
         total_grouped           => \@total_grouped,
         reconciliations_grouped => \@reconciliations_grouped,
     };
