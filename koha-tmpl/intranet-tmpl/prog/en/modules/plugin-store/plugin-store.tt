@@ -18,11 +18,6 @@
         [% INCLUDE 'calendar.inc' %]
         [% INCLUDE 'datatables.inc' %]
         <script>
-            [% IF ( installed_plugins ) %]
-                const installed_plugins = [% To.json(installed_plugins) | $raw %] || [];
-            [% ELSE %]
-                const installed_plugins = [];
-            [% END %]
             const koha_version = [% To.json(Koha.Version) | $raw %];
             const plugin_store_url = "[% To.json(plugin_store_url) | $raw %]";
         </script>

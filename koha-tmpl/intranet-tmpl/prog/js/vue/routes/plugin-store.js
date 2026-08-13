@@ -1,27 +1,27 @@
 import { markRaw } from "vue";
 
-import StorePluginsList from "../components/Plugin-store/StorePluginsList.vue";
+import Home from "../components/Plugin-store/Home.vue";
 
 import { $__ } from "../i18n";
 
 export const routes = [
     {
         path: "/cgi-bin/koha/plugin-store/plugin-store.pl",
-        redirect: "/cgi-bin/koha/plugin-store/store-plugins",
+        redirect: "/cgi-bin/koha/plugin-store/home",
         is_default: true,
         is_base: true,
-        title: $__("Plugins store"),
+        title: $__("Plugins"),
         children: [
             {
-                path: "/cgi-bin/koha/plugin-store/store-plugins",
-                title: $__("Store plugins"),
-                icon: "fa fa-check-circle",
+                path: "/cgi-bin/koha/plugin-store/home",
+                title: $__("Home"),
+                icon: "fa fa-puzzle-piece",
                 is_end_node: true,
                 children: [
                     {
                         path: "",
-                        name: "StorePluginsList",
-                        component: markRaw(StorePluginsList),
+                        name: "Home",
+                        component: markRaw(Home),
                     },
                 ],
             },
