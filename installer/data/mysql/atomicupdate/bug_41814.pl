@@ -2,7 +2,7 @@ use Modern::Perl;
 use Koha::Installer::Output qw(say_warning say_success say_info);
 
 return {
-    bug_number  => "41900",
+    bug_number  => "41814",
     description => "Add a new system preference for PatronAgeRestriction",
     up          => sub {
         my ($args) = @_;
