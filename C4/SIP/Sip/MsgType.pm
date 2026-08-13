@@ -506,6 +506,10 @@ sub build_patron_status {
         }
 
         my $msg = $patron->screen_msg;
+        if ( defined $msg ) {
+            $msg =~ s/\n/ /g;
+            $msg =~ s/\r//g;
+        }
         $msg  .= ' -- ' . INVALID_PW if $patron_pwd && !$password_rc;
         $resp .= maybe_add( FID_SCREEN_MSG, $msg, $server );
 
@@ -1151,6 +1155,10 @@ sub handle_patron_info {
         $resp .= maybe_add( FID_INET_PROFILE, $patron->inet_privileges($server), $server );
 
         my $msg = $patron->screen_msg;
+        if ( defined $msg ) {
+            $msg =~ s/\n/ /g;
+            $msg =~ s/\r//g;
+        }
         if ( defined($patron_pwd) && !$password_rc ) {
             $msg .= ' -- ' . INVALID_PW;
         }
