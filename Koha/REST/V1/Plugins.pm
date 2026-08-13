@@ -22,6 +22,7 @@ use Mojo::Base 'Mojolicious::Controller';
 use File::Fetch;
 use Koha::Plugins::Install;
 use Koha::Plugins::Store;
+use Mojo::JSON qw( true false );
 
 use Koha::Plugins;
 use C4::Context;
@@ -78,6 +79,50 @@ sub add {
     } catch {
         $c->unhandled_exception($_);
     };
+}
+
+=head3 list
+
+List installed plugins
+
+=cut
+
+sub list {
+    my $c = shift->openapi->valid_input or return;
+
+    my $capability = $c->param('capability');
+
+    my ( $plugins, $failures ) = Koha::Plugins->new()->GetPlugins(
+        {
+            all    => 1,
+            errors => 1,
+        }
+    );
+
+    my @result = map {
+        my $plugin   = $_;
+        my $metadata = $plugin->get_metadata // {};
+        {
+            class           => $plugin->{class},
+            name            => $metadata->{name},
+            description     => $metadata->{description},
+            author          => $metadata->{author},
+            version         => $metadata->{version},
+            minimum_version => $metadata->{minimum_version},
+            maximum_version => $metadata->{maximum_version},
+            date_updated    => $metadata->{date_updated},
+            is_enabled      => $plugin->is_enabled       ? true : false,
+            can_configure   => $plugin->can('configure') ? true : false,
+            can_tool        => $plugin->can('tool')      ? true : false,
+            can_report      => $plugin->can('report')    ? true : false,
+            can_admin       => $plugin->can('admin')     ? true : false,
+        };
+    } @$plugins;
+
+    @result = grep { $_->{ 'can_' . $capability } } @result
+        if $capability;
+
+    return $c->render( status => 200, openapi => \@result );
 }
 
 1;

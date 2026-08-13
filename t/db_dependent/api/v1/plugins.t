@@ -17,10 +17,12 @@
 
 use Modern::Perl;
 
-use Test::More tests => 2;
+use Test::More tests => 3;
 use Test::NoWarnings;
 use Test::Mojo;
 use Test::MockModule;
+use Test::MockObject;
+use Mojo::JSON;
 
 use t::lib::TestBuilder;
 use t::lib::Mocks;
@@ -92,6 +94,75 @@ subtest 'add()' => sub {
         403,
         'When Store lookup returns undef, delegation to Install with undef repo_url works correctly'
         );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'list()' => sub {
+
+    plan tests => 10;
+
+    $schema->storage->txn_begin;
+
+    my $password = 'thePassword123';
+    my $patron   = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { flags => 2**19 }    # plugins flag
+        }
+    );
+    $patron->set_password( { password => $password, skip_validation => 1 } );
+    my $userid = $patron->userid;
+
+    t::lib::Mocks::mock_config( 'enable_plugins', 1 );
+
+    my $enabled_plugin = Test::MockObject->new;
+    $enabled_plugin->{class} = 'Koha::Plugin::Test::Enabled';
+    $enabled_plugin->set_always(
+        'get_metadata',
+        {
+            name            => 'Enabled Test Plugin',
+            description     => 'A plugin for testing',
+            author          => 'Koha',
+            version         => '1.0.0',
+            minimum_version => '24.05',
+            maximum_version => undef,
+            date_updated    => '2026-01-01',
+        }
+    );
+    $enabled_plugin->set_always( 'is_enabled', 1 );
+    $enabled_plugin->mock( 'configure', sub { return 1 } );
+
+    my $disabled_plugin = Test::MockObject->new;
+    $disabled_plugin->{class} = 'Koha::Plugin::Test::Disabled';
+    $disabled_plugin->set_always(
+        'get_metadata',
+        {
+            name        => 'Disabled Test Plugin',
+            description => 'Another plugin for testing',
+            author      => 'Koha',
+            version     => '2.0.0',
+        }
+    );
+    $disabled_plugin->set_always( 'is_enabled', 0 );
+
+    my $plugins_module = Test::MockModule->new('Koha::Plugins');
+    $plugins_module->mock(
+        'GetPlugins',
+        sub { return ( [ $enabled_plugin, $disabled_plugin ], [] ); }
+    );
+
+    $t->get_ok("//$userid:$password\@/api/v1/plugins")
+        ->status_is(200)
+        ->json_is( '/0/class'         => 'Koha::Plugin::Test::Enabled' )
+        ->json_is( '/0/is_enabled'    => Mojo::JSON->true )
+        ->json_is( '/0/can_configure' => Mojo::JSON->true )
+        ->json_is( '/1/is_enabled'    => Mojo::JSON->false );
+
+    $t->get_ok("//$userid:$password\@/api/v1/plugins?capability=configure")
+        ->status_is(200)
+        ->json_is( '/0/class' => 'Koha::Plugin::Test::Enabled' )
+        ->json_hasnt('/1');
 
     $schema->storage->txn_rollback;
 };

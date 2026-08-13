@@ -1,5 +1,69 @@
 ---
 /plugins:
+  get:
+    x-mojo-to: Plugins#list
+    operationId: listPlugins
+    tags:
+      - plugins
+    summary: List installed plugins
+    produces:
+      - application/json
+    parameters:
+      - description: Restrict the list to plugins with this capability
+        in: query
+        name: capability
+        required: false
+        type: string
+        enum:
+          - configure
+          - tool
+          - report
+          - admin
+    responses:
+      "200":
+        description: A list of installed plugins
+        schema:
+          type: array
+          items:
+            type: object
+            properties:
+              class:
+                type: string
+              name:
+                type: string
+              description:
+                type: string
+              author:
+                type: string
+              version:
+                type: string
+              minimum_version:
+                type: [string, "null"]
+              maximum_version:
+                type: [string, "null"]
+              date_updated:
+                type: [string, "null"]
+              is_enabled:
+                type: boolean
+              can_configure:
+                type: boolean
+              can_tool:
+                type: boolean
+              can_report:
+                type: boolean
+              can_admin:
+                type: boolean
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        plugins: "*"
   post:
     x-mojo-to: Plugins#add
     operationId: addPlugin
