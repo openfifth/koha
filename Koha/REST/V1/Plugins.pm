@@ -25,6 +25,7 @@ use Koha::Plugins::Store;
 use Mojo::JSON qw( true false );
 
 use Koha::Plugins;
+use Koha::Plugins::Handler;
 use C4::Context;
 use C4::Auth;
 use Koha::Auth::Permissions;
@@ -144,6 +145,28 @@ sub config {
         status  => 200,
         openapi => { permissions => $permissions },
     );
+}
+
+=head3 update
+
+Enable or disable an installed plugin
+
+=cut
+
+sub update {
+    my $c = shift->openapi->valid_input or return;
+
+    my $plugin_class = $c->param('plugin_class');
+    my $body         = $c->req->json // {};
+
+    return $c->render( status => 400, openapi => { error => 'Missing is_enabled' } )
+        unless exists $body->{is_enabled};
+
+    my $method = $body->{is_enabled} ? 'enable' : 'disable';
+
+    Koha::Plugins::Handler->run( { class => $plugin_class, method => $method } );
+
+    return $c->render( status => 200, openapi => { success => 'Plugin updated' } );
 }
 
 1;

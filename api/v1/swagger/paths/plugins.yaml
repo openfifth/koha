@@ -149,3 +149,49 @@
     x-koha-authorization:
       permissions:
         plugins: "*"
+"/plugins/{plugin_class}":
+  put:
+    x-mojo-to: Plugins#update
+    operationId: updatePlugin
+    tags:
+      - plugins
+    summary: Enable or disable a plugin
+    produces:
+      - application/json
+    parameters:
+      - description: Plugin class name
+        in: path
+        name: plugin_class
+        required: true
+        type: string
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            is_enabled:
+              type: boolean
+    responses:
+      "200":
+        description: Plugin updated
+        schema:
+          type: object
+          properties:
+            success:
+              type: string
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        plugins: manage

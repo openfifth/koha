@@ -17,7 +17,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 4;
+use Test::More tests => 5;
 use Test::NoWarnings;
 use Test::Mojo;
 use Test::MockModule;
@@ -189,6 +189,55 @@ subtest 'config()' => sub {
         ->status_is(200)
         ->json_has('/permissions')
         ->json_is( '/permissions/CAN_user_plugins_manage' => Mojo::JSON->true );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'update()' => sub {
+
+    plan tests => 11;
+
+    $schema->storage->txn_begin;
+
+    my $password = 'thePassword123';
+    my $patron   = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { flags => 2**19 }
+        }
+    );
+    $patron->set_password( { password => $password, skip_validation => 1 } );
+    my $userid = $patron->userid;
+
+    t::lib::Mocks::mock_config( 'enable_plugins', 1 );
+
+    my $handler_module = Test::MockModule->new('Koha::Plugins::Handler');
+    my @run_calls;
+    $handler_module->mock(
+        'run',
+        sub {
+            my ( $class, $args ) = @_;
+            push @run_calls, $args;
+            return 1;
+        }
+    );
+
+    $t->put_ok(
+        "//$userid:$password\@/api/v1/plugins/Koha::Plugin::Test" => json => { is_enabled => Mojo::JSON->true } )
+        ->status_is(200)
+        ->json_is( '/success' => 'Plugin updated' );
+
+    is( $run_calls[0]->{class},  'Koha::Plugin::Test', 'Handler->run called with the right class' );
+    is( $run_calls[0]->{method}, 'enable',             'is_enabled true dispatches to enable' );
+
+    $t->put_ok(
+        "//$userid:$password\@/api/v1/plugins/Koha::Plugin::Test" => json => { is_enabled => Mojo::JSON->false } )
+        ->status_is(200);
+    is( $run_calls[1]->{method}, 'disable', 'is_enabled false dispatches to disable' );
+
+    $t->put_ok( "//$userid:$password\@/api/v1/plugins/Koha::Plugin::Test" => json => {} )
+        ->status_is(400)
+        ->json_is( '/error' => 'Missing is_enabled' );
 
     $schema->storage->txn_rollback;
 };
