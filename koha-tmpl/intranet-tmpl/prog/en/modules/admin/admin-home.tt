@@ -158,7 +158,7 @@
                 <h3>Plugins</h3>
                 <dl>
                     [% IF CAN_user_plugins_manage || CAN_user_plugins_configure %]
-                        <dt><a href="/cgi-bin/koha/plugins/plugins-home.pl">Manage plugins</a></dt>
+                        <dt><a href="/cgi-bin/koha/plugin-store/plugin-store.pl">Manage plugins</a></dt>
                         <dd>View, manage, configure and run plugins.</dd>
                     [% END %]
                     [% IF ( CAN_user_plugins_admin && admin_plugins ) %]

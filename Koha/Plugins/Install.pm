@@ -47,9 +47,8 @@ returns C<(1, { digest => $sha256_hex })>. On failure returns C<(0, \%errors)> w
 keys are any of C<NOTKPZ>, C<NOWRITEPLUGINS>, C<RESTRICTED>, C<BELOWMINIMUMLEVEL>, C<UNZIPFAIL> --
 never installs anything if any check fails.
 
-This is the single place both C<plugins/plugins-upload.pl> and
-C<Koha::REST::V1::Plugins::add()> should call, so the two entry points can never drift into
-having different security checks again.
+This is called by the plugin management REST API endpoint (C<Koha::REST::V1::Plugins::add()>)
+to ensure consistent security checks.
 
 =cut
 

@@ -45,7 +45,7 @@
             [% END %]
         [% END %]
         [% WRAPPER breadcrumb_item %]
-            <a href="/cgi-bin/koha/plugins/plugins-home.pl">Plugins</a>
+            <a href="/cgi-bin/koha/plugin-store/plugin-store.pl">Plugins</a>
         [% END %]
         [% WRAPPER breadcrumb_item bc_active= 1 %]
             [% IF ( plugin_title ) %][% plugin_title | html %][% ELSE %]<span>Plugin</span>[% END %]

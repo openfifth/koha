@@ -35,9 +35,8 @@ Koha::Plugins::Search
     my ( $results, $errors ) = Koha::Plugins::Search->search($term);
 
 Searches the configured plugin-store for plugins compatible with this Koha's own version, whose
-name or description contains C<$term> (case-insensitive). Returns C<( \@results, \@errors )> in
-the same shape C<plugins/plugins-home.pl>'s template already expects from the legacy
-GitHub/GitLab search (a list of C<{ repo => {...}, result => {...} }> hashes).
+name or description contains C<$term> (case-insensitive). Returns C<( \@results, \@errors )> as
+a list of C<{ repo => {...}, result => {...} }> hashes.
 
 =cut
 

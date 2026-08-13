@@ -85,7 +85,7 @@ sub run {
 
 Deletes a plugin.
 
-Called in plugins/plugins-uninstall.pl.
+Called by the plugin management REST API endpoint.
 
 =cut
 

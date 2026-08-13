@@ -273,7 +273,7 @@ sub get_plugin_http_path {
 sub go_home {
     my ( $self, $params ) = @_;
 
-    print $self->{'cgi'}->redirect("/cgi-bin/koha/plugins/plugins-home.pl");
+    print $self->{'cgi'}->redirect("/cgi-bin/koha/plugin-store/plugin-store.pl");
 }
 
 =head2 output_html

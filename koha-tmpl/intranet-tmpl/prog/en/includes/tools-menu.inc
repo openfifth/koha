@@ -78,7 +78,7 @@
                 <li><a href="/cgi-bin/koha/tools/quotes.pl">Quote editor</a></li>
             [% END %]
             [% IF ( plugins_enabled && CAN_user_plugins_tool ) %]
-                <li><a href="/cgi-bin/koha/plugins/plugins-home.pl?method=tool">Tool plugins</a></li>
+                <li><a href="/cgi-bin/koha/plugin-store/plugin-store.pl">Tool plugins</a></li>
             [% END %]
             [% IF ( CAN_user_tools_upload_general_files ) %]
                 <li><a href="/cgi-bin/koha/tools/upload.pl">Uploads</a></li>

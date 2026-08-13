@@ -28,7 +28,7 @@
     [% IF plugins_enabled %]
         <h5>Report plugins</h5>
         <ul>
-            <li><a href="/cgi-bin/koha/plugins/plugins-home.pl?method=report">Report plugins</a></li>
+            <li><a href="/cgi-bin/koha/plugin-store/plugin-store.pl">Report plugins</a></li>
         </ul>
     [% END %]
 

@@ -79,7 +79,7 @@
                         <div class="rep_plugins">
                             <h2>Report plugins</h2>
                             <ul>
-                                <li><a href="/cgi-bin/koha/plugins/plugins-home.pl?method=report">Report plugins</a></li>
+                                <li><a href="/cgi-bin/koha/plugin-store/plugin-store.pl">Report plugins</a></li>
                             </ul>
                         </div>
                     [% END %]
