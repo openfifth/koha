@@ -15,6 +15,8 @@ describe("Plugin manager", () => {
                         description: "A plugin for testing",
                         author: "Koha",
                         version: "1.0.0",
+                        minimum_version: "22.11.00",
+                        maximum_version: null,
                         is_enabled: true,
                         can_configure: false,
                         can_tool: false,
@@ -50,6 +52,8 @@ describe("Plugin manager", () => {
                         description: "A plugin for testing",
                         author: "Koha",
                         version: "1.0.0",
+                        minimum_version: "22.11.00",
+                        maximum_version: null,
                         is_enabled,
                         can_configure: false,
                         can_tool: false,
@@ -75,7 +79,12 @@ describe("Plugin manager", () => {
 
         cy.visit("/cgi-bin/koha/plugin-store/plugin-store.pl");
         cy.wait("@getPlugins");
-        cy.get("table tbody").contains("Disable").click();
+        cy.get("table tbody").contains("Actions").click();
+        // force: true -- see comment in the uninstall test below; the
+        // dropdown's own open/close animation races Cypress's visibility
+        // check in this AUT, though a real click at these coordinates does
+        // land on the link.
+        cy.get("table tbody").contains("Disable").click({ force: true });
         cy.wait("@updatePlugin");
         cy.wait("@getPlugins");
         cy.get("table tbody").contains("Disabled");
@@ -93,6 +102,8 @@ describe("Plugin manager", () => {
                         description: "A plugin for testing",
                         author: "Koha",
                         version: "1.0.0",
+                        minimum_version: "22.11.00",
+                        maximum_version: null,
                         is_enabled,
                         can_configure: false,
                         can_tool: false,
@@ -118,8 +129,6 @@ describe("Plugin manager", () => {
 
         cy.visit("/cgi-bin/koha/plugin-store/plugin-store.pl");
         cy.wait("@getPlugins");
-        // Try to find Uninstall in the table body, retry up to 15s
-        //
         // force: true -- since the page now embeds the full admin sidebar
         // (Islands AdminMenu), Cypress's actionability check intermittently
         // reports this link as covered by its own column's <th>. Verified
@@ -129,8 +138,9 @@ describe("Plugin manager", () => {
         // Not a real layout bug -- a real click at this element's coordinates
         // does land on the link.
         cy.get("table tbody", { timeout: 15000 })
-            .contains("Uninstall")
+            .contains("Actions")
             .click({ force: true });
+        cy.get("table tbody").contains("Uninstall").click({ force: true });
         cy.get("#confirmation.modal").contains(
             "Are you sure you want to uninstall Test Plugin?"
         );

@@ -177,6 +177,9 @@ export default {
                         sortable: false,
                         render: (data, type, row) => {
                             let content = [];
+                            let item_class = props.actions_menu
+                                ? "dropdown-item"
+                                : "btn btn-default btn-xs";
                             props.actions["-1"].forEach(action => {
                                 if (typeof action === "object") {
                                     let action_name = Object.keys(action)[0];
@@ -194,30 +197,42 @@ export default {
 
                                     if (should_display) {
                                         content.push(
-                                            `<a class="${action_name} btn btn-default btn-xs" role="button"><i class="${action[action_name].icon}"></i> ${action[action_name].text}</a>`
+                                            `<a class="${action_name} ${item_class}" role="button"><i class="${action[action_name].icon}"></i> ${action[action_name].text}</a>`
                                         );
                                     }
                                 } else if (action == "edit") {
                                     content.push(
-                                        '<a class="edit btn btn-default btn-xs" role="button"><i class="fa fa-pencil"></i> ' +
+                                        `<a class="edit ${item_class}" role="button"><i class="fa fa-pencil"></i> ` +
                                             $__("Edit") +
                                             "</a>"
                                     );
                                 } else if (action == "delete") {
                                     content.push(
-                                        '<a class="delete btn btn-default btn-xs" role="button"><i class="fa fa-trash"></i> ' +
+                                        `<a class="delete ${item_class}" role="button"><i class="fa fa-trash"></i> ` +
                                             $__("Delete") +
                                             "</a>"
                                     );
                                 } else if (action == "remove") {
                                     content.push(
-                                        '<a class="remove btn btn-default btn-xs" role="button"><i class="fa fa-remove"></i> ' +
+                                        `<a class="remove ${item_class}" role="button"><i class="fa fa-remove"></i> ` +
                                             $__("Remove") +
                                             "</a>"
                                     );
                                 }
                             });
-                            return content.join(" ");
+
+                            if (!props.actions_menu) {
+                                return content.join(" ");
+                            }
+
+                            if (!content.length) return "";
+
+                            return `<div class="btn-group dropup">
+                                <a class="btn btn-default btn-xs dropdown-toggle" role="button" data-bs-toggle="dropdown" href="#">${$__("Actions")}</a>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    ${content.map(c => `<li>${c}</li>`).join("")}
+                                </ul>
+                            </div>`;
                         },
                     },
                 ];
@@ -302,6 +317,11 @@ export default {
         actions: {
             type: Object,
             default: {},
+        },
+        actions_menu: {
+            type: Boolean,
+            required: false,
+            default: false,
         },
         options: {
             type: Object,

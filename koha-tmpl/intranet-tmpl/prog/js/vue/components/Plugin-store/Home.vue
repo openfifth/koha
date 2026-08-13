@@ -36,6 +36,10 @@
             <KohaTable
                 ref="table"
                 v-bind="tableOptions"
+                @configure="doConfigure"
+                @tool="doRunTool"
+                @report="doRunReport"
+                @admin="doRunAdmin"
                 @enable="doEnable"
                 @disable="doDisable"
                 @uninstall="doUninstall"
@@ -77,7 +81,25 @@ export default {
                     { title: "Name", data: "name" },
                     { title: "Description", data: "description" },
                     { title: "Author", data: "author" },
-                    { title: "Version", data: "version" },
+                    {
+                        title: "Version",
+                        data: "version",
+                        render: (data, type, row) => {
+                            const release = this.mostRecentRelease(row);
+                            if (!release || release.version === data) {
+                                return data;
+                            }
+                            return `${data} <span class="badge text-bg-warning">Update available (${release.version})</span>`;
+                        },
+                    },
+                    {
+                        title: "Koha support",
+                        data: "minimum_version",
+                        render: (data, type, row) =>
+                            row.maximum_version
+                                ? `${row.minimum_version} - ${row.maximum_version}`
+                                : row.minimum_version,
+                    },
                     {
                         title: "Status",
                         data: "is_enabled",
@@ -86,17 +108,10 @@ export default {
                                 ? '<span class="badge text-bg-success">Enabled</span>'
                                 : '<span class="badge text-bg-warning">Disabled</span>',
                     },
-                    {
-                        title: "Update available",
-                        data: "class",
-                        render: (data, type, row) =>
-                            this.updateAvailable(row)
-                                ? '<span class="badge text-bg-warning">Update available</span>'
-                                : "",
-                    },
                 ],
                 url: () => this.table_url(),
                 actions: this.getTableActions(),
+                actions_menu: true,
                 default_filters: {},
             },
         };
@@ -148,6 +163,58 @@ export default {
             return {
                 "-1": [
                     {
+                        configure: {
+                            text: this.$__("Configure"),
+                            icon: "fa fa-cog fa-fw",
+                            should_display: row =>
+                                row.can_configure &&
+                                component.isUserPermitted(
+                                    "CAN_user_plugins_configure"
+                                )
+                                    ? 1
+                                    : 0,
+                        },
+                    },
+                    {
+                        tool: {
+                            text: this.$__("Run tool"),
+                            icon: "fa fa-wrench fa-fw",
+                            should_display: row =>
+                                row.can_tool &&
+                                component.isUserPermitted(
+                                    "CAN_user_plugins_tool"
+                                )
+                                    ? 1
+                                    : 0,
+                        },
+                    },
+                    {
+                        report: {
+                            text: this.$__("Run report"),
+                            icon: "fa fa-table fa-fw",
+                            should_display: row =>
+                                row.can_report &&
+                                component.isUserPermitted(
+                                    "CAN_user_plugins_report"
+                                )
+                                    ? 1
+                                    : 0,
+                        },
+                    },
+                    {
+                        admin: {
+                            text: this.$__("Run admin tool"),
+                            icon: "fa fa-wrench fa-fw",
+                            should_display: row =>
+                                row.can_admin &&
+                                component.isUserPermitted(
+                                    "CAN_user_plugins_admin"
+                                )
+                                    ? 1
+                                    : 0,
+                        },
+                    },
+                    {
                         disable: {
                             text: this.$__("Disable"),
                             icon: "fa fa-pause",
@@ -184,16 +251,19 @@ export default {
                 ],
             };
         },
-        updateAvailable(row) {
-            if (!this.storeCatalog) return false;
+        mostRecentRelease(row) {
+            if (!this.storeCatalog) return null;
             const storeEntry = this.storeCatalog.find(
                 p => p.class_name === row.class
             );
-            if (!storeEntry || !storeEntry.releases?.length) return false;
-            const mostRecent = storeEntry.releases.reduce((a, b) =>
+            if (!storeEntry || !storeEntry.releases?.length) return null;
+            return storeEntry.releases.reduce((a, b) =>
                 new Date(b.date_released) > new Date(a.date_released) ? b : a
             );
-            return mostRecent.version !== row.version;
+        },
+        updateAvailable(row) {
+            const release = this.mostRecentRelease(row);
+            return !!release && release.version !== row.version;
         },
         table_url() {
             return this.typeFilter
@@ -209,6 +279,25 @@ export default {
                 this.storeCatalog = result;
                 this.$refs.table.redraw(this.table_url());
             });
+        },
+        runPlugin(plugin, method) {
+            window.location.href =
+                "/cgi-bin/koha/plugins/run.pl?class=" +
+                encodeURIComponent(plugin.class) +
+                "&method=" +
+                method;
+        },
+        doConfigure(plugin) {
+            this.runPlugin(plugin, "configure");
+        },
+        doRunTool(plugin) {
+            this.runPlugin(plugin, "tool");
+        },
+        doRunReport(plugin) {
+            this.runPlugin(plugin, "report");
+        },
+        doRunAdmin(plugin) {
+            this.runPlugin(plugin, "admin");
         },
         doEnable(plugin) {
             this.setPluginEnabled(plugin, true);
@@ -240,18 +329,13 @@ export default {
             );
         },
         doUpdatePlugin(plugin) {
-            const storeEntry = this.storeCatalog.find(
-                p => p.class_name === plugin.class
-            );
-            if (!storeEntry || !storeEntry.releases?.length) {
+            const release = this.mostRecentRelease(plugin);
+            if (!release) {
                 this.setMessage(this.$__("Update information not available."));
                 return;
             }
-            const mostRecent = storeEntry.releases.reduce((a, b) =>
-                new Date(b.date_released) > new Date(a.date_released) ? b : a
-            );
             const client = APIClient.plugin_store;
-            client.plugins.create({ kpz_url: mostRecent.kpz_url }).then(() => {
+            client.plugins.create({ kpz_url: release.kpz_url }).then(() => {
                 this.setMessage(this.$__("Plugin updated."));
                 this.refreshList();
             });
