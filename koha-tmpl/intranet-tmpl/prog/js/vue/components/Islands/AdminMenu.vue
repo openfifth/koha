@@ -220,7 +220,7 @@
                 <li>
                     <a
                         :ref="el => templateRefs.push(el)"
-                        href="/cgi-bin/koha/plugins/plugins-home.pl"
+                        href="/cgi-bin/koha/plugin-store/plugin-store.pl"
                         >{{ $__("Plugins") }}</a
                     >
                 </li>
