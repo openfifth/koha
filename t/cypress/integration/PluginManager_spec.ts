@@ -40,6 +40,42 @@ describe("Plugin manager", () => {
         cy.get("table tbody").contains("Enabled");
     });
 
+    it("Should flag a plugin outside its supported Koha version range", () => {
+        cy.intercept("GET", "**/api/v1/plugins*", req => {
+            req.reply({
+                statusCode: 200,
+                body: [
+                    {
+                        class: "Koha::Plugin::Test",
+                        name: "Test Plugin",
+                        description: "A plugin for testing",
+                        author: "Koha",
+                        version: "1.0.0",
+                        minimum_version: "1.00.00",
+                        maximum_version: "20.05.00",
+                        is_enabled: true,
+                        can_configure: false,
+                        can_tool: false,
+                        can_report: false,
+                        can_admin: false,
+                    },
+                ],
+            });
+        });
+        cy.intercept("GET", "**/api/v1/plugins/config*", req => {
+            req.reply({
+                statusCode: 200,
+                body: {
+                    permissions: { CAN_user_plugins_manage: true },
+                },
+            });
+        });
+
+        cy.visit("/cgi-bin/koha/plugin-store/plugin-store.pl");
+        cy.get("table tbody").contains("1.00.00 - 20.05.00");
+        cy.get("table tbody").contains("Not supported");
+    });
+
     it("Should disable and re-enable a plugin", () => {
         let is_enabled = true;
         cy.intercept("GET", "**/api/v1/plugins*", req => {

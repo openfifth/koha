@@ -95,10 +95,15 @@ export default {
                     {
                         title: "Koha support",
                         data: "minimum_version",
-                        render: (data, type, row) =>
-                            row.maximum_version
+                        render: (data, type, row) => {
+                            const range = row.maximum_version
                                 ? `${row.minimum_version} - ${row.maximum_version}`
-                                : row.minimum_version,
+                                : row.minimum_version;
+                            if (this.kohaVersionSupported(row)) {
+                                return range;
+                            }
+                            return `${range} <span class="badge text-bg-danger">Not supported</span>`;
+                        },
                     },
                     {
                         title: "Status",
@@ -264,6 +269,31 @@ export default {
         updateAvailable(row) {
             const release = this.mostRecentRelease(row);
             return !!release && release.version !== row.version;
+        },
+        compareVersions(a, b) {
+            const pa = a.split(".").map(Number);
+            const pb = b.split(".").map(Number);
+            for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+                const diff = (pa[i] || 0) - (pb[i] || 0);
+                if (diff) return diff;
+            }
+            return 0;
+        },
+        kohaVersionSupported(row) {
+            const current = koha_version.maintenance;
+            if (
+                row.minimum_version &&
+                this.compareVersions(current, row.minimum_version) < 0
+            ) {
+                return false;
+            }
+            if (
+                row.maximum_version &&
+                this.compareVersions(current, row.maximum_version) > 0
+            ) {
+                return false;
+            }
+            return true;
         },
         table_url() {
             return this.typeFilter
