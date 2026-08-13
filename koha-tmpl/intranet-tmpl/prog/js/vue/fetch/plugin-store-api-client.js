@@ -36,6 +36,15 @@ export class PluginStoreAPIClient extends HttpClient {
                     endpoint: "/api/v1/plugins/upload",
                     body: formData,
                 }),
+            update: (plugin_class, body) =>
+                this.put({
+                    endpoint: `/api/v1/plugins/${encodeURIComponent(plugin_class)}`,
+                    body,
+                }),
+            remove: plugin_class =>
+                this.delete({
+                    endpoint: `/api/v1/plugins/${encodeURIComponent(plugin_class)}`,
+                }),
         };
     }
 }
