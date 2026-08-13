@@ -5,11 +5,12 @@
 
 use Modern::Perl;
 use Test::NoWarnings;
-use Test::More tests => 24;
+use Test::More tests => 25;
 use Test::Warn;
 
 use DateTime;
 
+use Koha::Acquisition::Currencies;
 use Koha::Database;
 use t::lib::TestBuilder;
 use t::lib::Mocks;
@@ -41,6 +42,24 @@ my $transaction = C4::SIP::ILS::Transaction::RenewAll->new();
 is( ref $transaction,                  "C4::SIP::ILS::Transaction::RenewAll", "New transaction created" );
 is( $transaction->patron($sip_patron), $sip_patron,                           "Patron assigned to transaction" );
 isnt( $transaction->do_renew_all, undef, "RenewAll on zero items" );
+
+subtest sip_currency => sub {
+    plan tests => 2;
+
+    Koha::Acquisition::Currencies->search( { active => 1 } )->update( { active => 0 } );
+
+    my $transaction = C4::SIP::ILS::Transaction->new();
+    is( $transaction->sip_currency, 'USD', "sip_currency defaults to USD when there is no active currency" );
+
+    $builder->build(
+        {
+            source => 'Currency',
+            value  => { isocode => 'GBP', active => 1 },
+        }
+    );
+    $transaction = C4::SIP::ILS::Transaction->new();
+    is( $transaction->sip_currency, 'GBP', "sip_currency uses the active currency's isocode when one is configured" );
+};
 
 subtest fill_holds_at_checkout => sub {
     plan tests => 6;
