@@ -893,11 +893,11 @@ if ( C4::Context->preference('EnhancedMessagingPreferences') ) {
     $template->param( TalkingTechItivaPhone => C4::Context->preference("TalkingTechItivaPhoneNotification") );
 
     # Print notice charging context - category-based
-    if ($patron && $patron->category && $patron->category->print_notice_charge > 0) {
+    if ( $patron && $patron->category && $patron->category->print_notice_charge > 0 ) {
         $template->param(
-            print_notice_charging => 1,
+            print_notice_charging      => 1,
             print_notice_charge_amount => $patron->category->print_notice_charge,
-            patron_has_email => $patron->notice_email_address,
+            patron_has_email           => $patron->notice_email_address,
         );
     }
 
