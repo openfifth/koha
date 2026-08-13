@@ -17,12 +17,13 @@
 
 use Modern::Perl;
 
-use Test::More tests => 6;
+use Test::More tests => 7;
 use Test::NoWarnings;
 use Test::Mojo;
 use Test::MockModule;
 use Test::MockObject;
 use Mojo::JSON;
+use File::Temp;
 
 use t::lib::TestBuilder;
 use t::lib::Mocks;
@@ -274,6 +275,47 @@ subtest 'delete()' => sub {
     $t->delete_ok("//$userid:$password\@/api/v1/plugins/Koha::Plugin::Test")->status_is(204);
 
     is( $deleted_class, 'Koha::Plugin::Test', 'Handler->delete called with the right class' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'upload()' => sub {
+
+    plan tests => 6;
+
+    $schema->storage->txn_begin;
+
+    my $password = 'thePassword123';
+    my $patron   = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { flags => 2**19 }
+        }
+    );
+    $patron->set_password( { password => $password, skip_validation => 1 } );
+    my $userid = $patron->userid;
+
+    t::lib::Mocks::mock_config( 'enable_plugins',     1 );
+    t::lib::Mocks::mock_config( 'plugins_restricted', 0 );
+
+    my $install_module = Test::MockModule->new('Koha::Plugins::Install');
+    $install_module->mock( 'install', sub { return ( 1, {} ) } );
+
+    my $upload_dir = File::Temp::tempdir( CLEANUP => 1 );
+    my $kpz_path   = "$upload_dir/test-plugin.kpz";
+    open my $fh, '>', $kpz_path or die $!;
+    print $fh 'not a real zip, just bytes for the upload test';
+    close $fh;
+
+    $t->post_ok( "//$userid:$password\@/api/v1/plugins/upload" => form => { file => { file => $kpz_path } } )
+        ->status_is(201)
+        ->json_is( '/success' => 'Plugin installed' );
+
+    t::lib::Mocks::mock_config( 'plugins_restricted', 1 );
+    $t->post_ok( "//$userid:$password\@/api/v1/plugins/upload" => form => { file => { file => $kpz_path } } )
+        ->status_is(403);
+
+    is( $t->tx->res->json->{error}, 'RESTRICTED', 'plugins_restricted rejects manual upload with RESTRICTED' );
 
     $schema->storage->txn_rollback;
 };

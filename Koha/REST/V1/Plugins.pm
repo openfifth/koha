@@ -20,6 +20,7 @@ use Modern::Perl;
 use Mojo::Base 'Mojolicious::Controller';
 
 use File::Fetch;
+use File::Temp;
 use Koha::Plugins::Install;
 use Koha::Plugins::Store;
 use Mojo::JSON qw( true false );
@@ -183,6 +184,43 @@ sub delete {
     Koha::Plugins::Handler->delete( { class => $plugin_class } );
 
     return $c->render_resource_deleted;
+}
+
+=head3 upload
+
+Upload and install a plugin from a local .kpz file
+
+=cut
+
+sub upload {
+    my $c = shift->openapi->valid_input or return;
+
+    return $c->render( status => 403, openapi => { error => 'RESTRICTED' } )
+        if C4::Context->config('plugins_restricted');
+
+    my $upload = $c->req->upload('file');
+    return $c->render( status => 400, openapi => { error => 'EMPTYUPLOAD' } )
+        unless $upload;
+
+    my $dirname = File::Temp::tempdir( CLEANUP => 1 );
+    my ($filesuffix) = $upload->filename =~ m/(\..+)$/i;
+    my ( undef, $tempfile ) = File::Temp::tempfile( DIR => $dirname, SUFFIX => $filesuffix // '', UNLINK => 1 );
+    $upload->move_to($tempfile);
+
+    my ( $ok, $result ) = Koha::Plugins::Install->install(
+        {
+            kpz_path => $tempfile,
+            filename => $upload->filename,
+        }
+    );
+
+    return $c->render( status => 403, openapi => { error => ( keys %$result )[0] // 'unknown_error' } )
+        unless $ok;
+
+    return $c->render(
+        status  => 201,
+        openapi => { success => 'Plugin installed' }
+    );
 }
 
 1;

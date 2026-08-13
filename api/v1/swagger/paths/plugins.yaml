@@ -223,3 +223,51 @@
     x-koha-authorization:
       permissions:
         plugins: manage
+"/plugins/upload":
+  post:
+    x-mojo-to: Plugins#upload
+    operationId: uploadPlugin
+    tags:
+      - plugins
+    summary: Upload and install a plugin from a local file
+    consumes:
+      - multipart/form-data
+    produces:
+      - application/json
+    parameters:
+      - name: file
+        in: formData
+        required: true
+        type: file
+        description: The .kpz plugin file
+    responses:
+      "201":
+        description: Plugin installed
+        schema:
+          type: object
+          properties:
+            success:
+              type: string
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: |
+          Access forbidden. Possible `error` attribute values:
+
+          * `RESTRICTED`
+          * `NOTKPZ`
+          * `UZIPFAIL`
+          * `NOWRITEPLUGINS`
+          * `NOWRITETEMP`
+          * `EMPTYUPLOAD`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        plugins: manage
