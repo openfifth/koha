@@ -17,7 +17,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 3;
+use Test::More tests => 4;
 use Test::NoWarnings;
 use Test::Mojo;
 use Test::MockModule;
@@ -163,6 +163,32 @@ subtest 'list()' => sub {
         ->status_is(200)
         ->json_is( '/0/class' => 'Koha::Plugin::Test::Enabled' )
         ->json_hasnt('/1');
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'config()' => sub {
+
+    plan tests => 4;
+
+    $schema->storage->txn_begin;
+
+    my $password = 'thePassword123';
+    my $patron   = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { flags => 2**19 }    # plugins flag (full access)
+        }
+    );
+    $patron->set_password( { password => $password, skip_validation => 1 } );
+    my $userid = $patron->userid;
+
+    t::lib::Mocks::mock_config( 'enable_plugins', 1 );
+
+    $t->get_ok("//$userid:$password\@/api/v1/plugins/config")
+        ->status_is(200)
+        ->json_has('/permissions')
+        ->json_is( '/permissions/CAN_user_plugins_manage' => Mojo::JSON->true );
 
     $schema->storage->txn_rollback;
 };

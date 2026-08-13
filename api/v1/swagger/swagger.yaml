@@ -577,6 +577,8 @@ paths:
     $ref: ./paths/patron_categories.yaml#/~1patron_categories
   /plugins:
     $ref: ./paths/plugins.yaml#/~1plugins
+  "/plugins/config":
+    $ref: "./paths/plugins.yaml#/~1plugins~1config"
   /preservation/config:
     $ref: ./paths/preservation_config.yaml#/~1preservation~1config
   /preservation/trains:

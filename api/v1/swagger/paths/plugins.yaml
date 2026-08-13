@@ -121,3 +121,31 @@
     x-koha-authorization:
       permissions:
         plugins: 1
+"/plugins/config":
+  get:
+    x-mojo-to: Plugins#config
+    operationId: getPluginsConfig
+    tags:
+      - plugins
+    summary: Get the plugins config
+    produces:
+      - application/json
+    responses:
+      "200":
+        description: The plugins config
+        schema:
+          type: object
+          properties:
+            permissions:
+              type: object
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        plugins: "*"

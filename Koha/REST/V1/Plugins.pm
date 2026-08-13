@@ -26,6 +26,8 @@ use Mojo::JSON qw( true false );
 
 use Koha::Plugins;
 use C4::Context;
+use C4::Auth;
+use Koha::Auth::Permissions;
 
 =head1 NAME
 
@@ -123,6 +125,25 @@ sub list {
         if $capability;
 
     return $c->render( status => 200, openapi => \@result );
+}
+
+=head3 config
+
+Return the current user's plugin-related permissions
+
+=cut
+
+sub config {
+    my $c = shift->openapi->valid_input or return;
+
+    my $patron      = $c->stash('koha.user');
+    my $userflags   = C4::Auth::haspermission( $patron->userid );
+    my $permissions = Koha::Auth::Permissions->get_authz_from_flags( { flags => $userflags } );
+
+    return $c->render(
+        status  => 200,
+        openapi => { permissions => $permissions },
+    );
 }
 
 1;
