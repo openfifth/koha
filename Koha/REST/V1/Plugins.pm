@@ -23,13 +23,37 @@ use File::Fetch;
 use File::Temp;
 use Koha::Plugins::Install;
 use Koha::Plugins::Store;
-use Mojo::JSON qw( true false );
+use Mojo::JSON qw( true false decode_json );
 
 use Koha::Plugins;
 use Koha::Plugins::Handler;
 use C4::Context;
 use C4::Auth;
 use Koha::Auth::Permissions;
+
+=head2 Internal methods
+
+=head3 _search_terms
+
+Recursively collects every string value out of a decoded C<q> query-filter
+structure, to use as free-text search terms. C<q> is built by
+_dt_default_ajax to express DBIC-style filters; the plugin list isn't backed
+by a DBIC resultset, so rather than interpreting the full filter language we
+treat every string literal found in it as a term to substring-match against
+the searchable columns -- adequate for the small, non-paginated dataset a
+list of installed plugins actually is.
+
+=cut
+
+sub _search_terms {
+    my ($value) = @_;
+
+    return ()       unless defined $value;
+    return ($value) unless ref $value;
+    return map { _search_terms($_) } @$value        if ref $value eq 'ARRAY';
+    return map { _search_terms($_) } values %$value if ref $value eq 'HASH';
+    return ();
+}
 
 =head1 NAME
 
@@ -125,6 +149,53 @@ sub list {
 
     @result = grep { $_->{ 'can_' . $capability } } @result
         if $capability;
+
+    # KohaTable always drives this endpoint through DataTables' serverSide
+    # mode, so it always sends _page/_per_page, and sends _order_by/q
+    # whenever the table is sorted or searched. The list isn't backed by a
+    # DBIC resultset, so pagination/sorting/searching are applied here by
+    # hand instead of via the generic $c->objects->search helper.
+    my @search_terms =
+        map { _search_terms($_) } grep { defined } map {
+        eval { decode_json($_) }
+        } @{ $c->every_param('q') };
+    if (@search_terms) {
+        @result = grep {
+            my $row = $_;
+            my $matched;
+            for my $term (@search_terms) {
+                $matched = 1
+                    if grep { defined $row->{$_} && lc( $row->{$_} ) =~ /\Q\L$term\E/ } qw(name description author);
+            }
+            $matched;
+        } @result;
+    }
+
+    if ( my ($order_by) = @{ $c->every_param('_order_by') } ) {
+        my ( $dir, $column ) = $order_by =~ /^([+-]?)(?:me\.)?(\w+)$/;
+        if ($column) {
+            @result = sort {
+                my ( $x, $y ) = ( $a->{$column} // '', $b->{$column} // '' );
+                ( $dir eq '-' ) ? ( $y cmp $x ) : ( $x cmp $y );
+            } @result;
+        }
+    }
+
+    my $total    = scalar @result;
+    my $page     = $c->param('_page') || 1;
+    my $per_page = $c->param('_per_page') // C4::Context->preference('RESTdefaultPageSize') // 20;
+
+    if ( $per_page != -1 ) {
+        my $offset = ( $page - 1 ) * $per_page;
+        @result = splice( @result, $offset, $per_page ) if $offset < @result;
+        @result = ()                                    if $offset >= $total;
+    }
+
+    $c->add_pagination_headers( { total => $total, page => $page, per_page => $per_page } );
+
+    if ( my $request_id = $c->req->headers->header('x-koha-request-id') ) {
+        $c->res->headers->add( 'x-koha-request-id' => $request_id );
+    }
 
     return $c->render( status => 200, openapi => \@result );
 }

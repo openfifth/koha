@@ -48,10 +48,22 @@ class HttpClient {
                         let message;
                         if (text) {
                             let json = JSON.parse(text);
-                            message =
-                                json.error ||
-                                json.errors.map(e => e.message).join("\n") ||
-                                json;
+                            if (Array.isArray(json)) {
+                                // Mojolicious::Plugin::OpenAPI request
+                                // validation failures are a bare array of
+                                // {message, path} objects, not {error}/{errors}
+                                message = json
+                                    .map(e => e.message || e)
+                                    .join("\n");
+                            } else if (json.error) {
+                                message = json.error;
+                            } else if (Array.isArray(json.errors)) {
+                                message = json.errors
+                                    .map(e => e.message)
+                                    .join("\n");
+                            } else {
+                                message = json;
+                            }
                         } else {
                             message = response.statusText;
                         }
