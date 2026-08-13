@@ -195,3 +195,31 @@
     x-koha-authorization:
       permissions:
         plugins: manage
+  delete:
+    x-mojo-to: Plugins#delete
+    operationId: deletePlugin
+    tags:
+      - plugins
+    summary: Uninstall a plugin
+    produces:
+      - application/json
+    parameters:
+      - description: Plugin class name
+        in: path
+        name: plugin_class
+        required: true
+        type: string
+    responses:
+      "204":
+        description: Plugin uninstalled
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        plugins: manage

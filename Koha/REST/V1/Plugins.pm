@@ -169,4 +169,20 @@ sub update {
     return $c->render( status => 200, openapi => { success => 'Plugin updated' } );
 }
 
+=head3 delete
+
+Uninstall a plugin
+
+=cut
+
+sub delete {
+    my $c = shift->openapi->valid_input or return;
+
+    my $plugin_class = $c->param('plugin_class');
+
+    Koha::Plugins::Handler->delete( { class => $plugin_class } );
+
+    return $c->render_resource_deleted;
+}
+
 1;

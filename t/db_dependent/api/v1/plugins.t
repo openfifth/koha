@@ -17,7 +17,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 5;
+use Test::More tests => 6;
 use Test::NoWarnings;
 use Test::Mojo;
 use Test::MockModule;
@@ -238,6 +238,42 @@ subtest 'update()' => sub {
     $t->put_ok( "//$userid:$password\@/api/v1/plugins/Koha::Plugin::Test" => json => {} )
         ->status_is(400)
         ->json_is( '/error' => 'Missing is_enabled' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'delete()' => sub {
+
+    plan tests => 3;
+
+    $schema->storage->txn_begin;
+
+    my $password = 'thePassword123';
+    my $patron   = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { flags => 2**19 }
+        }
+    );
+    $patron->set_password( { password => $password, skip_validation => 1 } );
+    my $userid = $patron->userid;
+
+    t::lib::Mocks::mock_config( 'enable_plugins', 1 );
+
+    my $handler_module = Test::MockModule->new('Koha::Plugins::Handler');
+    my $deleted_class;
+    $handler_module->mock(
+        'delete',
+        sub {
+            my ( $class, $args ) = @_;
+            $deleted_class = $args->{class};
+            return 1;
+        }
+    );
+
+    $t->delete_ok("//$userid:$password\@/api/v1/plugins/Koha::Plugin::Test")->status_is(204);
+
+    is( $deleted_class, 'Koha::Plugin::Test', 'Handler->delete called with the right class' );
 
     $schema->storage->txn_rollback;
 };
