@@ -4,7 +4,7 @@
             <button
                 v-if="isUserPermitted('CAN_user_plugins_manage')"
                 class="btn btn-default"
-                @click="searchModalOpen = true"
+                @click="openSearchModal"
             >
                 <i class="fa-solid fa-magnifying-glass"></i> Search for new
                 plugins
@@ -12,7 +12,7 @@
             <button
                 v-if="isUserPermitted('CAN_user_plugins_manage')"
                 class="btn btn-default"
-                @click="uploadModalOpen = true"
+                @click="openUploadModal"
             >
                 <i class="fa fa-upload"></i> Upload plugin
             </button>
@@ -42,18 +42,6 @@
                 @update="doUpdatePlugin"
             ></KohaTable>
         </div>
-
-        <SearchModal
-            v-if="searchModalOpen"
-            :installed_plugins="installedPlugins"
-            @close="searchModalOpen = false"
-            @installed="refreshList"
-        />
-        <UploadModal
-            v-if="uploadModalOpen"
-            @close="uploadModalOpen = false"
-            @uploaded="refreshList"
-        />
     </div>
 </template>
 
@@ -62,29 +50,27 @@ import { inject, ref } from "vue";
 import { storeToRefs } from "pinia";
 import { APIClient } from "../../fetch/api-client.js";
 import KohaTable from "../KohaTable.vue";
-import SearchModal from "./SearchModal.vue";
-import UploadModal from "./UploadModal.vue";
 
 export default {
     setup() {
         const pluginStoreStore = inject("pluginStoreStore");
         const storeRefs = storeToRefs(pluginStoreStore);
         const { isUserPermitted } = pluginStoreStore;
-        const { setMessage, setConfirmationDialog } = inject("mainStore");
+        const { setMessage, setConfirmationDialog, setComponentDialog } =
+            inject("mainStore");
 
         return {
             userPermissions: storeRefs.userPermissions,
             isUserPermitted,
             setMessage,
             setConfirmationDialog,
+            setComponentDialog,
         };
     },
     data() {
         return {
             installedPlugins: [],
             storeCatalog: null,
-            searchModalOpen: false,
-            uploadModalOpen: false,
             typeFilter: "",
             tableOptions: {
                 columns: [
@@ -126,6 +112,37 @@ export default {
         });
     },
     methods: {
+        openSearchModal() {
+            this.setComponentDialog({
+                title: this.$__("Search for new plugins"),
+                cancel_label: this.$__("Close"),
+                componentPath:
+                    "@koha-vue/components/Plugin-store/SearchModal.vue",
+                componentProps: {
+                    installed_plugins: this.installedPlugins,
+                },
+                componentListeners: {
+                    installed: () => {
+                        this.refreshList();
+                        this.setComponentDialog(null);
+                    },
+                },
+            });
+        },
+        openUploadModal() {
+            this.setComponentDialog({
+                title: this.$__("Upload plugin"),
+                cancel_label: this.$__("Close"),
+                componentPath:
+                    "@koha-vue/components/Plugin-store/UploadModal.vue",
+                componentListeners: {
+                    uploaded: () => {
+                        this.refreshList();
+                        this.setComponentDialog(null);
+                    },
+                },
+            });
+        },
         getTableActions() {
             let component = this;
             return {
@@ -247,7 +264,7 @@ export default {
             this.$refs.table.redraw(this.table_url());
         },
     },
-    components: { KohaTable, SearchModal, UploadModal },
+    components: { KohaTable },
     name: "Home",
 };
 </script>

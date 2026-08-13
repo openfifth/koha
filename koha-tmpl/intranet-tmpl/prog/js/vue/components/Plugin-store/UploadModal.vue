@@ -1,42 +1,25 @@
 <template>
-    <div class="modal show d-block" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">{{ $__("Upload plugin") }}</h5>
-                    <button
-                        type="button"
-                        class="btn-close"
-                        @click="$emit('close')"
-                    ></button>
-                </div>
-                <div class="modal-body">
-                    <div v-if="error" class="alert alert-warning">
-                        {{ error }}
-                    </div>
-                    <p class="hint">
-                        {{ $__("NOTE: Only KPZ file format is supported.") }}
-                    </p>
-                    <input
-                        type="file"
-                        accept=".kpz"
-                        @change="onFileChange"
-                        ref="fileInput"
-                    />
-                </div>
-                <div class="modal-footer">
-                    <button
-                        class="btn btn-primary"
-                        :disabled="!selectedFile"
-                        @click="submit"
-                    >
-                        {{ $__("Upload") }}
-                    </button>
-                    <button class="btn btn-default" @click="$emit('close')">
-                        {{ $__("Cancel") }}
-                    </button>
-                </div>
-            </div>
+    <div>
+        <div v-if="error" class="alert alert-warning">
+            {{ error }}
+        </div>
+        <p class="hint">
+            {{ $__("NOTE: Only KPZ file format is supported.") }}
+        </p>
+        <input
+            type="file"
+            accept=".kpz"
+            @change="onFileChange"
+            ref="fileInput"
+        />
+        <div class="mt-3">
+            <button
+                class="btn btn-primary"
+                :disabled="!selectedFile"
+                @click="submit"
+            >
+                {{ $__("Upload") }}
+            </button>
         </div>
     </div>
 </template>
@@ -62,7 +45,7 @@ const ERROR_MESSAGES = {
 
 export default {
     name: "UploadModal",
-    emits: ["close", "uploaded"],
+    emits: ["uploaded"],
     setup() {
         const { setMessage } = inject("mainStore");
         return { setMessage };
@@ -87,7 +70,6 @@ export default {
                 () => {
                     this.setMessage(this.$__("Plugin has been installed."));
                     this.$emit("uploaded");
-                    this.$emit("close");
                 },
                 error => {
                     this.error = this.$__(
