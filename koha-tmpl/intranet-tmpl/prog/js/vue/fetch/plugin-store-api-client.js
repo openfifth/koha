@@ -18,6 +18,14 @@ export class PluginStoreAPIClient extends HttpClient {
                             : "",
                     },
                 }),
+            getAll: () =>
+                this.getAll({
+                    endpoint: "/api/v1/plugins",
+                }),
+            getConfig: () =>
+                this.get({
+                    endpoint: "/api/v1/plugins/config",
+                }),
             create: plugin =>
                 this.post({
                     endpoint: "/api/v1/plugins",
