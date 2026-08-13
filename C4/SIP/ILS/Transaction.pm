@@ -8,6 +8,7 @@ use Carp;
 use strict;
 use warnings;
 use C4::Context;
+use Koha::Acquisition::Currencies;
 use Koha::DateUtils qw( dt_from_string );
 use Koha::Checkouts;
 
@@ -20,7 +21,7 @@ my %fields = (
     transaction_id => undef,
     sip_fee_type   => '01',     # Other/Unknown
     fee_amount     => undef,
-    sip_currency   => 'USD',    # FIXME: why hardcoded?
+    sip_currency   => 'USD',    # Fallback used when no active currency is configured
     screen_msg     => '',
     print_line     => '',
     fee_ack        => 'N',
@@ -34,6 +35,11 @@ sub new {
         _permitted => \%fields,
         %fields,
     };
+
+    my $active_currency = Koha::Acquisition::Currencies->get_active;
+    $self->{sip_currency} = $active_currency->isocode
+        if $active_currency && $active_currency->isocode;
+
     return bless $self, $class;
 }
 
