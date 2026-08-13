@@ -59,6 +59,7 @@
 
 <script>
 import { inject, ref } from "vue";
+import { storeToRefs } from "pinia";
 import { APIClient } from "../../fetch/api-client.js";
 import KohaTable from "../KohaTable.vue";
 import SearchModal from "./SearchModal.vue";
@@ -67,11 +68,13 @@ import UploadModal from "./UploadModal.vue";
 export default {
     setup() {
         const pluginStoreStore = inject("pluginStoreStore");
+        const storeRefs = storeToRefs(pluginStoreStore);
+        const { isUserPermitted } = pluginStoreStore;
         const { setMessage, setConfirmationDialog } = inject("mainStore");
 
         return {
-            userPermissions: pluginStoreStore.userPermissions,
-            isUserPermitted: pluginStoreStore.isUserPermitted,
+            userPermissions: storeRefs.userPermissions,
+            isUserPermitted,
             setMessage,
             setConfirmationDialog,
         };
@@ -112,10 +115,11 @@ export default {
             },
         };
     },
-    beforeCreate() {
+    created() {
         const client = APIClient.plugin_store;
         client.plugins.getConfig().then(result => {
-            this.userPermissions.value = result.permissions;
+            this.userPermissions = result.permissions;
+            this.$refs.table.redraw(this.table_url());
         });
         client.plugins.getAll().then(result => {
             this.installedPlugins = result;
