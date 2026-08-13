@@ -1,8 +1,14 @@
 [% USE raw %]
 [% USE To %]
 [% SET footerjs = 1 %]
+[% PROCESS 'i18n.inc' %]
 [% INCLUDE 'doc-head-open.inc' %]
-<title> Plugins store &rsaquo; Koha </title>
+<title
+    >[% FILTER collapse %]
+        [% t("Plugins") | html %]
+        &rsaquo; [% t("Administration") | html %] &rsaquo; [% t("Koha") | html %]
+    [% END %]</title
+>
 [% INCLUDE 'doc-head-close.inc' %]
 </head>
 
@@ -11,17 +17,22 @@
     [% INCLUDE 'prefs-admin-search.inc' %]
 [% END %]
 
-<div id="plugin-store">
-    <!-- this is closed in intranet-bottom.inc -->
+[% WRAPPER 'sub-header.inc' %]
+    <div id="vue-breadcrumbs-container"></div>
+[% END #/ WRAPPER sub-header.inc %]
 
-    [% MACRO jsinclude BLOCK %]
-        [% INCLUDE 'calendar.inc' %]
-        [% INCLUDE 'datatables.inc' %]
-        <script>
-            const koha_version = [% To.json(Koha.Version) | $raw %];
-            const plugin_store_url = "[% To.json(plugin_store_url) | $raw %]";
-        </script>
-        [% Asset.js("js/vue/dist/plugin-store.js") | $raw %]
-    [% END %]
-    [% INCLUDE 'intranet-bottom.inc' %]
-</div>
+[% WRAPPER 'main-container.inc' aside='admin-menu' %]
+    <div id="plugin-store"></div>
+[% END #/ WRAPPER main-container.inc %]
+
+[% MACRO jsinclude BLOCK %]
+    [% INCLUDE 'calendar.inc' %]
+    [% INCLUDE 'datatables.inc' %]
+    <script>
+        const koha_version = [% To.json(Koha.Version) | $raw %];
+        const plugin_store_url = "[% To.json(plugin_store_url) | $raw %]";
+    </script>
+    [% Asset.js("js/vue/dist/plugin-store.js") | $raw %]
+[% END %]
+
+[% INCLUDE 'intranet-bottom.inc' %]

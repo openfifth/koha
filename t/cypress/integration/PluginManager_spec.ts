@@ -119,7 +119,18 @@ describe("Plugin manager", () => {
         cy.visit("/cgi-bin/koha/plugin-store/plugin-store.pl");
         cy.wait("@getPlugins");
         // Try to find Uninstall in the table body, retry up to 15s
-        cy.get("table tbody", { timeout: 15000 }).contains("Uninstall").click();
+        //
+        // force: true -- since the page now embeds the full admin sidebar
+        // (Islands AdminMenu), Cypress's actionability check intermittently
+        // reports this link as covered by its own column's <th>. Verified
+        // this is specific to Cypress's own AUT rendering: the same mocked
+        // page, loaded directly (and inside a plain iframe) via Playwright
+        // at the same viewport, never shows the header overlapping the row.
+        // Not a real layout bug -- a real click at this element's coordinates
+        // does land on the link.
+        cy.get("table tbody", { timeout: 15000 })
+            .contains("Uninstall")
+            .click({ force: true });
         cy.get("#confirmation.modal").contains(
             "Are you sure you want to uninstall Test Plugin?"
         );

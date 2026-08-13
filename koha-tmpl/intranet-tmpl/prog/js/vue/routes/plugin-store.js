@@ -6,20 +6,20 @@ import { $__ } from "../i18n";
 
 export const routes = [
     {
-        path: "/cgi-bin/koha/plugin-store/plugin-store.pl",
-        redirect: "/cgi-bin/koha/plugin-store/home",
+        path: "",
+        href: "/cgi-bin/koha/admin/admin-home.pl",
         is_default: true,
         is_base: true,
-        title: $__("Plugins"),
+        title: $__("Administration"),
         children: [
             {
-                path: "/cgi-bin/koha/plugin-store/home",
-                title: $__("Home"),
-                icon: "fa fa-puzzle-piece",
+                path: "/cgi-bin/koha/plugin-store/plugin-store.pl",
+                redirect: "/cgi-bin/koha/plugin-store/home",
+                title: $__("Plugins"),
                 is_end_node: true,
                 children: [
                     {
-                        path: "",
+                        path: "/cgi-bin/koha/plugin-store/home",
                         name: "Home",
                         component: markRaw(Home),
                     },
