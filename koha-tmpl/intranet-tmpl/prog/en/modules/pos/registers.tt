@@ -484,6 +484,19 @@
                 form.find("#selected_operation").val("cud-cashup");
                 form.submit();
             });
+
+            // Auto-open the cashup summary modal after a single-register
+            // cashup redirects here with a #cashup-<id> hash (see
+            // pos/registers.pl POST/REDIRECT/GET).
+            var cashupHash = window.location.hash;
+            if ( cashupHash && cashupHash.indexOf("#cashup-") === 0 ) {
+                var cashupId = cashupHash.substring(8);
+                var $cashupButton = $('[data-cashup="' + cashupId + '"]');
+                if ( $cashupButton.length ) {
+                    $cashupButton[0].click();
+                    history.replaceState(null, null, window.location.pathname + window.location.search);
+                }
+            }
         });
     </script>
 [% END %]

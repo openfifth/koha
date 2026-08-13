@@ -168,6 +168,7 @@ if ( $op eq 'cud-cashup_start' ) {
         my @register_ids     = split( ',', $registerid_param );
         my @errors           = ();
         my $success_count    = 0;
+        my $last_cashup;
 
         # The Complete cashup modal posts actual_amount_<TYPE> +
         # reconciliation_note_<TYPE> for every configured payment type. The
@@ -216,7 +217,7 @@ if ( $op eq 'cud-cashup_start' ) {
                             @{ $register->cashup_payment_types_breakdown } ];
                 }
 
-                $register->add_cashup( \%cashup_params );
+                $last_cashup = $register->add_cashup( \%cashup_params );
                 $success_count++;
             };
             if ($@) {
@@ -252,6 +253,12 @@ if ( $op eq 'cud-cashup_start' ) {
 
             if (@params) {
                 $redirect_url .= "?" . join( "&", @params );
+            }
+
+            # A single successful cashup gets a hash fragment so the page can
+            # auto-open its summary modal (see registers.tt document ready).
+            if ( $success_count == 1 && @register_ids == 1 && $last_cashup ) {
+                $redirect_url .= "#cashup-" . $last_cashup->id;
             }
 
             print $input->redirect($redirect_url);
