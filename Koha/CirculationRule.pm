@@ -21,6 +21,7 @@ use Modern::Perl;
 
 use base qw(Koha::Object);
 
+use Koha::Cache::Memory::Lite;
 use Koha::Libraries;
 use Koha::Patron::Categories;
 use Koha::ItemTypes;
@@ -81,6 +82,71 @@ sub clone {
     $cloned_rule->{branchcode} = $to_branch;
     delete $cloned_rule->{id};
     return Koha::CirculationRule->new($cloned_rule)->store;
+}
+
+=head3 store
+
+    $rule->store;
+
+Stores the rule and then clears the circulation rule cache.
+
+=cut
+
+sub store {
+    my ( $self, @params ) = @_;
+
+    my $result = $self->SUPER::store(@params);
+
+    $self->flush_cache;
+
+    return $result;
+}
+
+=head3 delete
+
+    $rule->delete;
+
+Deletes the rule and then clears the circulation rule cache.
+
+=cut
+
+sub delete {
+    my ( $self, @params ) = @_;
+
+    my $result = $self->SUPER::delete(@params);
+
+    $self->flush_cache;
+
+    return $result;
+}
+
+=head3 flush_cache
+
+    Koha::CirculationRule->flush_cache;
+
+Clears every memoized circulation rule value that
+L<Koha::CirculationRules/get_effective_rule_value> holds for this request.
+
+A rule is looked up by scope (rule name, category, library, item type) rather
+than by row, and one row can answer a lookup at several scopes, so there is no
+way to expire only the entries that a single write affects. Clear all of them.
+
+This lives here, on the object, so that every write goes through it. Writes
+reach the table by more routes than
+L<Koha::CirculationRules/set_rule>: C<clone> stores a new rule directly, and
+the staff interface deletes rules through the result set. Before this, such a
+write left the cache holding a value that no longer existed.
+
+=cut
+
+sub flush_cache {
+    my $memory_cache = Koha::Cache::Memory::Lite->get_instance;
+
+    for my $key ( $memory_cache->all_keys ) {
+        $memory_cache->clear_from_cache($key) if $key =~ m{^CircRules:};
+    }
+
+    return;
 }
 
 =head3 _type

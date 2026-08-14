@@ -21,7 +21,7 @@ use Modern::Perl;
 
 use Benchmark;
 use Test::NoWarnings;
-use Test::More tests => 9;
+use Test::More tests => 10;
 use Test::Deep qw( cmp_methods );
 use Test::Exception;
 
@@ -30,6 +30,7 @@ use Koha::Database;
 
 use t::lib::Mocks;
 use t::lib::TestBuilder;
+use t::lib::QueryCounter;
 use Koha::Cache::Memory::Lite;
 
 my $schema  = Koha::Database->new->schema;
@@ -1202,3 +1203,67 @@ sub _prepare_tests_for_rule_scope_combinations {
 
     return \@tests, $order;
 }
+
+subtest 'get_effective_rule_value() caches a false value (bug 43126)' => sub {
+
+    plan tests => 6;
+
+    $schema->storage->txn_begin;
+
+    my $branchcode   = $builder->build( { source => 'Branch' } )->{branchcode};
+    my $categorycode = $builder->build( { source => 'Category' } )->{categorycode};
+    my $itemtype     = $builder->build( { source => 'Itemtype' } )->{itemtype};
+
+    my $lookup = sub {
+        return Koha::CirculationRules->get_effective_rule_value(
+            {
+                rule_name    => 'reservesallowed',
+                categorycode => $categorycode,
+                itemtype     => $itemtype,
+                branchcode   => $branchcode,
+            }
+        );
+    };
+
+    # This rule has no value for the scope above, so the effective value is
+    # false. A bare false value in the cache cannot be told apart from a cache
+    # miss, so this used to query on every call.
+    Koha::Cache::Memory::Lite->get_instance->flush();
+
+    my ( $first,  $first_stats )  = t::lib::QueryCounter->measure($lookup);
+    my ( $second, $second_stats ) = t::lib::QueryCounter->measure($lookup);
+
+    ok( !$first, 'The effective value is false' );
+    is( $second, $first, 'The cached call returns the same value' );
+
+    cmp_ok( $first_stats->{queries}, '>', 0, 'The first call queries' );
+    is( $second_stats->{queries}, 0, 'The second call is served from the cache' );
+
+    # A write must expire the cache, whichever route it takes. set_rule is the
+    # documented one, but the staff interface deletes through the result set and
+    # clone stores a rule object directly.
+    Koha::CirculationRules->set_rule(
+        {
+            rule_name    => 'reservesallowed',
+            categorycode => $categorycode,
+            itemtype     => $itemtype,
+            branchcode   => $branchcode,
+            rule_value   => 3,
+        }
+    );
+
+    is( $lookup->(), 3, 'set_rule expires the cache' );
+
+    Koha::CirculationRules->search(
+        {
+            rule_name    => 'reservesallowed',
+            categorycode => $categorycode,
+            itemtype     => $itemtype,
+            branchcode   => $branchcode,
+        }
+    )->next->delete;
+
+    ok( !$lookup->(), 'A delete through the result set expires the cache too' );
+
+    $schema->storage->txn_rollback;
+};

@@ -29,6 +29,7 @@ use Time::Fake;
 use C4::Circulation qw( AddIssue LostItem AddReturn );
 use C4::Context;
 use C4::Serials qw( NewIssue AddItem2Serial );
+use Koha::CirculationRules;
 use Koha::Item;
 use Koha::Item::Transfer::Limits;
 use Koha::Items;
@@ -881,16 +882,14 @@ subtest 'store' => sub {
 
             # Set processingreturn_policy to '0' so processing fee is retained
             # these tests are just for lostreturn
-            my $processingreturn_rule = $builder->build(
+            # Set through set_rule rather than straight into the table.
+            # A direct insert leaves the memoized rule value in place, and this
+            # rule is read before it is set.
+            Koha::CirculationRules->set_rule(
                 {
-                    source => 'CirculationRule',
-                    value  => {
-                        branchcode   => undef,
-                        categorycode => undef,
-                        itemtype     => undef,
-                        rule_name    => 'processingreturn',
-                        rule_value   => '0'
-                    }
+                    branchcode => undef,
+                    rule_name  => 'processingreturn',
+                    rule_value => '0'
                 }
             );
 
@@ -1315,16 +1314,11 @@ subtest 'store' => sub {
             t::lib::Mocks::mock_userenv( { patron => $manager, branchcode => $manager->branchcode } );
 
             # Set lostreturn_policy to 'restore' for tests
-            my $specific_rule_restore = $builder->build(
+            Koha::CirculationRules->set_rule(
                 {
-                    source => 'CirculationRule',
-                    value  => {
-                        branchcode   => $manager->branchcode,
-                        categorycode => undef,
-                        itemtype     => undef,
-                        rule_name    => 'lostreturn',
-                        rule_value   => 'restore'
-                    }
+                    branchcode => $manager->branchcode,
+                    rule_name  => 'lostreturn',
+                    rule_value => 'restore'
                 }
             );
 
@@ -1416,16 +1410,11 @@ subtest 'store' => sub {
             # Set lostreturn_policy to 'restore' for tests
             my $manager = $builder->build_object( { class => "Koha::Patrons" } );
             t::lib::Mocks::mock_userenv( { patron => $manager, branchcode => $manager->branchcode } );
-            my $specific_rule_restore = $builder->build(
+            Koha::CirculationRules->set_rule(
                 {
-                    source => 'CirculationRule',
-                    value  => {
-                        branchcode   => $manager->branchcode,
-                        categorycode => undef,
-                        itemtype     => undef,
-                        rule_name    => 'lostreturn',
-                        rule_value   => 'restore'
-                    }
+                    branchcode => $manager->branchcode,
+                    rule_name  => 'lostreturn',
+                    rule_value => 'restore'
                 }
             );
 
@@ -1540,16 +1529,11 @@ subtest 'store' => sub {
             # Set lostreturn_policy to 'restore' for tests
             my $manager = $builder->build_object( { class => "Koha::Patrons" } );
             t::lib::Mocks::mock_userenv( { patron => $manager, branchcode => $manager->branchcode } );
-            my $specific_rule_restore = $builder->build(
+            Koha::CirculationRules->set_rule(
                 {
-                    source => 'CirculationRule',
-                    value  => {
-                        branchcode   => $manager->branchcode,
-                        categorycode => undef,
-                        itemtype     => undef,
-                        rule_name    => 'lostreturn',
-                        rule_value   => 'restore'
-                    }
+                    branchcode => $manager->branchcode,
+                    rule_name  => 'lostreturn',
+                    rule_value => 'restore'
                 }
             );
 

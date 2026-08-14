@@ -335,13 +335,18 @@ sub get_effective_rule_value {
     my $cache_key    = sprintf "CircRules:%s:%s:%s:%s", $rule_name // q{},
         $categorycode // q{}, $branchcode // q{}, $itemtype // q{};
 
+    # The value is wrapped in a hashref so that a false one caches too. A bare
+    # value cannot be told apart from a cache miss, because get_from_cache
+    # returns undef for both, so every rule that is unset, 0 or an empty string
+    # used to query again on each call. Those are common: a caller that checks
+    # the same rule once per item on a record paid for one query per item.
     my $cached = $memory_cache->get_from_cache($cache_key);
-    return $cached if $cached;
+    return $cached->{value} if ref $cached eq 'HASH';
 
     my $rule = $self->get_effective_rule($params);
 
     my $value = $rule ? $rule->rule_value : undef;
-    $memory_cache->set_in_cache( $cache_key, $value );
+    $memory_cache->set_in_cache( $cache_key, { value => $value } );
     return $value;
 }
 
@@ -447,10 +452,10 @@ sub set_rule {
         }
     }
 
-    my $memory_cache = Koha::Cache::Memory::Lite->get_instance;
-    for my $k ( $memory_cache->all_keys ) {
-        $memory_cache->clear_from_cache($k) if $k =~ m{^CircRules:};
-    }
+    # Koha::CirculationRule's store and delete clear this cache themselves, so
+    # the writes above have already done it. Kept for the paths that take no
+    # write at all, and as the one obvious place a reader would look.
+    Koha::CirculationRule->flush_cache;
 
     $rule = Koha::CirculationRule->new(
         { rule_name => $rule_name, branchcode => $branchcode, categorycode => $categorycode, itemtype => $itemtype } )
