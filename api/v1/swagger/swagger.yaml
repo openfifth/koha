@@ -559,6 +559,8 @@ paths:
     $ref: "./paths/patrons_extended_attributes.yaml#/~1patrons~1{patron_id}~1extended_attributes"
   "/patrons/{patron_id}/extended_attributes/{extended_attribute_id}":
     $ref: "./paths/patrons_extended_attributes.yaml#/~1patrons~1{patron_id}~1extended_attributes~1{extended_attribute_id}"
+  "/patrons/{patron_id}/hold_eligibility":
+    $ref: "./paths/patrons.yaml#/~1patrons~1{patron_id}~1hold_eligibility"
   "/patrons/{patron_id}/holds":
     $ref: "./paths/patrons_holds.yaml#/~1patrons~1{patron_id}~1holds"
   "/patrons/{patron_id}/hold_groups":

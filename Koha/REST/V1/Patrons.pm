@@ -21,6 +21,7 @@ use Mojo::Base 'Mojolicious::Controller';
 
 use Koha::Database;
 use Koha::Exceptions;
+use Koha::Patron::Availability::Hold;
 use Koha::Patrons;
 use C4::Letters qw( GetPreparedLetter EnqueueLetter SendQueuedMessages );
 
@@ -498,6 +499,46 @@ sub guarantors_can_see_checkouts {
                 openapi => { error => 'The current configuration doesn\'t allow the requested action.' }
             );
         }
+    } catch {
+        $c->unhandled_exception($_);
+    };
+}
+
+=head3 hold_eligibility
+
+Controller function that reports whether a patron is allowed to place holds.
+
+Reports only the patron-level gates (expired, debt_limit, bad_address,
+card_lost, restricted, hold_limit). Those gates need no item context, so a
+screen can ask for them once rather than once for each item it lists. Use
+C</biblios/{biblio_id}/holdability> or C</items/{item_id}/holdability> for a
+verdict on a record or an item.
+
+=cut
+
+sub hold_eligibility {
+    my $c = shift->openapi->valid_input or return;
+
+    return try {
+        my $patron = Koha::Patrons->find( $c->param('patron_id') );
+
+        return $c->render_resource_not_found("Patron")
+            unless $patron;
+
+        # No item_type_id and no library_id go in, so the class runs only the
+        # patron eligibility gates and none of its count checks.
+        my $availability = Koha::Patron::Availability::Hold->check(
+            {
+                patron           => $patron,
+                overrides        => $c->stash('koha.overrides'),
+                no_short_circuit => 1,
+            }
+        );
+
+        return $c->render(
+            status  => 200,
+            openapi => $availability->to_api
+        );
     } catch {
         $c->unhandled_exception($_);
     };

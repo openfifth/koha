@@ -740,3 +740,62 @@
     x-koha-authorization:
       permissions:
         ill: "1"
+"/patrons/{patron_id}/hold_eligibility":
+  get:
+    x-mojo-to: Patrons#hold_eligibility
+    operationId: getPatronHoldEligibility
+    tags:
+      - patrons
+    summary: Get a patron's hold eligibility
+    description: |
+      Reports whether the patron is allowed to place holds at all.
+
+      Covers only the patron-level gates, which need no item context: `expired`,
+      `debt_limit`, `bad_address`, `card_lost`, `restricted` and `hold_limit`.
+      A screen can therefore ask for them once instead of once for each item it
+      lists.
+
+      Every blocker is reported, not only the first one.
+
+      For a verdict on a record or on a single item, which also covers the
+      circulation rules and the item's own state, use
+      `/biblios/{biblio_id}/holdability` or `/items/{item_id}/holdability`.
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/patron_id_pp"
+    produces:
+      - application/json
+    responses:
+      "200":
+        description: The patron's hold eligibility
+        schema:
+          $ref: "../swagger.yaml#/definitions/availability"
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Patron not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        reserveforothers: place_holds
