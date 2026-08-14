@@ -17,7 +17,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 7;
+use Test::More tests => 8;
 use Test::NoWarnings;
 use Test::MockModule;
 use File::Temp   qw(tempdir tempfile);
@@ -26,6 +26,8 @@ use Archive::Zip qw(:CONSTANTS);
 use t::lib::Mocks;
 
 use Koha::Plugins::Install;
+use Crypt::PK::Ed25519;
+use Mojo::JSON qw(encode_json);
 
 my $plugins_dir = tempdir( CLEANUP => 1 );
 t::lib::Mocks::mock_config( 'pluginsdir', $plugins_dir );
@@ -114,4 +116,57 @@ subtest 'certification tier below PluginStoreMinimumLevel is rejected' => sub {
     );
     ok( !$ok, 'install is rejected when below the configured minimum level' );
     is( $result->{BELOWMINIMUMLEVEL}, 1, 'BELOWMINIMUMLEVEL error set' );
+};
+
+subtest '_verify_signature' => sub {
+    plan tests => 5;
+
+    my $keypair = Crypt::PK::Ed25519->new;
+    $keypair->generate_key;
+    my $public_key_pem  = $keypair->export_key_pem('public');
+    my $private_key_pem = $keypair->export_key_pem('private');
+
+    my $manifest = encode_json(
+        {
+            slug         => 'widget',
+            version      => '1.0.0',
+            kpz_url      => 'https://example.com/widget.kpz',
+            digest       => 'abc123',
+            published_at => '2026-01-01T00:00:00Z',
+        }
+    );
+    my $signer    = Crypt::PK::Ed25519->new( \$private_key_pem );
+    my $signature = MIME::Base64::encode_base64( $signer->sign_message($manifest), '' );
+
+    my $install_module = Test::MockModule->new('Koha::Plugins::Install');
+    $install_module->mock( _store_public_key => sub { return $public_key_pem } );
+
+    ok(
+        Koha::Plugins::Install->_verify_signature( $manifest, $signature, 'abc123' ),
+        'a valid signature over the matching digest verifies'
+    );
+
+    ok(
+        !Koha::Plugins::Install->_verify_signature( $manifest, $signature, 'wrongdigest' ),
+        'a valid signature over a NON-matching digest fails -- the manifest is for a different file'
+    );
+
+    ( my $tampered_manifest = $manifest ) =~ s/widget/tampered/;
+    ok(
+        !Koha::Plugins::Install->_verify_signature( $tampered_manifest, $signature, 'abc123' ),
+        'a tampered manifest fails signature verification'
+    );
+
+    my $other_keypair = Crypt::PK::Ed25519->new;
+    $other_keypair->generate_key;
+    my $wrong_signature = MIME::Base64::encode_base64( $other_keypair->sign_message($manifest), '' );
+    ok(
+        !Koha::Plugins::Install->_verify_signature( $manifest, $wrong_signature, 'abc123' ),
+        'a signature from the wrong keypair fails'
+    );
+
+    ok(
+        !Koha::Plugins::Install->_verify_signature( 'not valid json', $signature, 'abc123' ),
+        'malformed manifest JSON fails cleanly rather than dying'
+    );
 };

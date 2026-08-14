@@ -21,6 +21,9 @@ use List::Util  qw(any);
 use Digest::SHA qw(sha256_hex);
 use Mojo::URL;
 use Archive::Extract;
+use Crypt::PK::Ed25519;
+use MIME::Base64 qw(decode_base64);
+use Mojo::JSON   qw(decode_json);
 
 use C4::Context;
 use Koha::Plugins;
@@ -51,6 +54,15 @@ This is called by the plugin management REST API endpoint (C<Koha::REST::V1::Plu
 to ensure consistent security checks.
 
 =cut
+
+# The real community plugin-store's Ed25519 public key. Deployments (or dev/testing
+# environments pointed at a different store, e.g. a self-hosted mirror) can override
+# via koha-conf.xml's plugin_store_public_key -- see _store_public_key below.
+use constant DEFAULT_STORE_PUBLIC_KEY => <<'PEM';
+-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEA7RcwcVqFedy1ILYWF7C74l1osE4+2fH/WcVIhydbfu4=
+-----END PUBLIC KEY-----
+PEM
 
 sub install {
     my ( $class, $params ) = @_;
@@ -95,6 +107,28 @@ sub _digest {
     open my $fh, '<:raw', $kpz_path or die "Could not open $kpz_path: $!";
     local $/;
     return sha256_hex(<$fh>);
+}
+
+sub _store_public_key {
+    my ($class) = @_;
+    return C4::Context->config('plugin_store_public_key') // DEFAULT_STORE_PUBLIC_KEY;
+}
+
+sub _verify_signature {
+    my ( $class, $signed_manifest_json, $signature_b64, $digest ) = @_;
+
+    my $manifest = eval { decode_json($signed_manifest_json) };
+    return 0 unless $manifest;
+    return 0 unless ( $manifest->{digest} // '' ) eq ( $digest // '' );
+
+    my $public_key_pem = $class->_store_public_key;
+    my $pk             = eval { Crypt::PK::Ed25519->new( \$public_key_pem ) };
+    return 0 unless $pk;
+
+    my $signature = eval { decode_base64($signature_b64) };
+    return 0 unless $signature;
+
+    return eval { $pk->verify_message( $signature, $signed_manifest_json ) } ? 1 : 0;
 }
 
 my %EXPECTED_HOST = ( github => 'github.com', gitlab => 'gitlab.com' );
