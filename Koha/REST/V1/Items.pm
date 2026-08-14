@@ -21,7 +21,10 @@ use Mojo::Base 'Mojolicious::Controller';
 
 use C4::Circulation qw( barcodedecode );
 
+use Koha::Item::Availability::Hold;
 use Koha::Items;
+use Koha::Libraries;
+use Koha::Patrons;
 
 use List::MoreUtils qw( any );
 use Try::Tiny       qw( catch try );
@@ -226,29 +229,130 @@ sub pickup_locations {
 
         my $pl_set = $item->pickup_locations( { patron => $patron } );
 
-        my @response = ();
-        if ( C4::Context->preference('AllowHoldPolicyOverride') ) {
+        return $c->render(
+            status  => 200,
+            openapi => _pickup_locations_response( $c, $pl_set )
+        );
+    } catch {
+        $c->unhandled_exception($_);
+    };
+}
 
-            my $libraries_rs = Koha::Libraries->search( { pickup_location => 1 } );
-            my $libraries    = $c->objects->search($libraries_rs);
+=head3 _pickup_locations_response
 
-            @response = map {
+    my $libraries = _pickup_locations_response( $c, $pl_set );
+
+Builds the pickup locations list that the API returns, from the
+I<Koha::Libraries> set that C<< $item->pickup_locations >> gives back.
+
+Every library in the response carries a C<needs_override> flag. When
+C<AllowHoldPolicyOverride> is off, the response holds only the valid pickup
+locations, and the flag is always false. When the preference is on, the response
+holds every pickup location in the system, and the flag marks the ones that the
+circulation rules do not permit. The staff interface uses the flag to show those
+libraries as a choice that needs an override.
+
+Shared by C<pickup_locations> and C<holdability>.
+
+=cut
+
+sub _pickup_locations_response {
+    my ( $c, $pl_set ) = @_;
+
+    if ( C4::Context->preference('AllowHoldPolicyOverride') ) {
+
+        my $libraries_rs = Koha::Libraries->search( { pickup_location => 1 } );
+        my $libraries    = $c->objects->search($libraries_rs);
+
+        return [
+            map {
                 my $library = $_;
                 $library->{needs_override} =
                     ( any { $_->branchcode eq $library->{library_id} } @{ $pl_set->as_list } )
                     ? Mojo::JSON->false
                     : Mojo::JSON->true;
                 $library;
-            } @{$libraries};
-        } else {
+            } @{$libraries}
+        ];
+    }
 
-            my $pickup_locations = $c->objects->search($pl_set);
-            @response = map { $_->{needs_override} = Mojo::JSON->false; $_; } @{$pickup_locations};
+    my $pickup_locations = $c->objects->search($pl_set);
+
+    return [ map { $_->{needs_override} = Mojo::JSON->false; $_; } @{$pickup_locations} ];
+}
+
+=head3 holdability
+
+Controller function that reports whether a patron can place a hold on an item.
+
+=cut
+
+sub holdability {
+    my $c = shift->openapi->valid_input or return;
+
+    my $item = Koha::Items->find( $c->param('item_id') );
+
+    return $c->render_resource_not_found("Item")
+        unless $item;
+
+    my $patron = Koha::Patrons->find( $c->param('patron_id') );
+
+    unless ($patron) {
+        return $c->render(
+            status  => 400,
+            openapi => {
+                error      => 'Patron not found',
+                error_code => 'patron_not_found',
+            }
+        );
+    }
+
+    my $pickup_library;
+    my $pickup_library_id = $c->param('pickup_library_id');
+
+    if ($pickup_library_id) {
+
+        $pickup_library = Koha::Libraries->find($pickup_library_id);
+
+        unless ($pickup_library) {
+            return $c->render(
+                status  => 400,
+                openapi => {
+                    error      => 'Library not found',
+                    error_code => 'library_not_found',
+                }
+            );
+        }
+    }
+
+    my $include_pickup_locations = $c->param('include_pickup_locations');
+
+    # These are read above rather than passed to the query builder, so remove
+    # them before any helper that inspects the request parameters runs.
+    $c->req->params->remove($_) for qw( patron_id pickup_library_id include_pickup_locations );
+
+    return try {
+
+        my $availability = Koha::Item::Availability::Hold->check(
+            {
+                item             => $item,
+                patron           => $patron,
+                pickup_library   => $pickup_library,
+                overrides        => $c->stash('koha.overrides'),
+                no_short_circuit => 1,
+            }
+        );
+
+        my $response = $availability->to_api;
+
+        if ($include_pickup_locations) {
+            $response->{pickup_locations} =
+                _pickup_locations_response( $c, $item->pickup_locations( { patron => $patron } ) );
         }
 
         return $c->render(
             status  => 200,
-            openapi => \@response
+            openapi => $response
         );
     } catch {
         $c->unhandled_exception($_);

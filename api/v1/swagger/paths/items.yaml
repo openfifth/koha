@@ -409,6 +409,85 @@
     x-koha-authorization:
       permissions:
         circulation: 1
+"/items/{item_id}/holdability":
+  get:
+    x-mojo-to: Items#holdability
+    operationId: getItemHoldability
+    summary: Get whether a patron can place a hold on an item
+    description: |
+      Reports whether the given patron can place a hold on this item.
+
+      Covers the item's own state, the circulation rules, and the patron's
+      eligibility and hold counts. Every blocker is reported, not only the first
+      one.
+
+      Pass `pickup_library_id` to also check the pickup location rules, which
+      can add the `library_not_pickup_location`, `cannot_be_transferred` and
+      `pickup_not_in_hold_group` blockers.
+
+      Pass `include_pickup_locations` to get the valid pickup locations in the
+      same response, which saves a second call to
+      `/items/{item_id}/pickup_locations`.
+    tags:
+      - items
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/item_id_pp"
+      - name: patron_id
+        in: query
+        description: Internal patron identifier
+        required: true
+        type: integer
+      - name: pickup_library_id
+        in: query
+        description: Internal library identifier of the intended pickup library
+        required: false
+        type: string
+      - name: include_pickup_locations
+        in: query
+        description: Include the valid pickup locations in the response
+        required: false
+        type: boolean
+    produces:
+      - application/json
+    responses:
+      "200":
+        description: The item's holdability for this patron
+        schema:
+          $ref: "../swagger.yaml#/definitions/item_holdability"
+      "400":
+        description: |
+          Bad request. Possible `error_code` attribute values:
+
+            * `patron_not_found`
+            * `library_not_found`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Item not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        reserveforothers: place_holds
 "/items/{item_id}/pickup_locations":
   get:
     x-mojo-to: Items#pickup_locations

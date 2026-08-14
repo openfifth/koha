@@ -1,0 +1,43 @@
+---
+type: object
+properties:
+  available:
+    description: Whether the patron can place a hold on this item. False when the blockers list is not empty
+    type: boolean
+  needs_confirmation:
+    description: Whether the hold needs confirmation first. True when the confirmations list is not empty
+    type: boolean
+  blockers:
+    description: Conditions that prevent the hold
+    type: array
+    items:
+      $ref: availability_reason.yaml
+  confirmations:
+    description: Conditions that need confirmation before the hold can be placed
+    type: array
+    items:
+      $ref: availability_reason.yaml
+  warnings:
+    description: Conditions that do not prevent the hold
+    type: array
+    items:
+      $ref: availability_reason.yaml
+  pickup_locations:
+    description: |
+      The valid pickup locations for this item and patron.
+
+      Present only when the request sets `include_pickup_locations` to true.
+      Each library carries a `needs_override` flag. When `AllowHoldPolicyOverride`
+      is off, the list holds only the valid locations and the flag is always
+      false. When the preference is on, the list holds every pickup location and
+      the flag marks the ones that the circulation rules do not permit.
+    type: array
+    items:
+      $ref: library.yaml
+additionalProperties: false
+required:
+  - available
+  - needs_confirmation
+  - blockers
+  - confirmations
+  - warnings
