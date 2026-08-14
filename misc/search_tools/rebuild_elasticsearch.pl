@@ -177,8 +177,8 @@ unless ( $index_authorities || $index_biblios || $index_items ) {
     $index_authorities = $index_biblios = 1;
 }
 
-if ( $processes && ( @biblionumbers || @authids ) ) {
-    die "Argument p|processes cannot be combined with bn|bnumber or ai|authid";
+if ( $processes && ( @biblionumbers || @authids || @itemnumbers ) ) {
+    die "Argument p|processes cannot be combined with bn|bnumber, ai|authid or in|itemnumber";
 }
 
 pod2usage(1)                                 if $help;
@@ -268,7 +268,7 @@ if ($index_authorities) {
 }
 if ($index_items) {
     _log( 1, "Indexing items\n" );
-    _do_reindex_items( \@itemnumbers );
+    _do_reindex_items( \@itemnumbers, \%iterator_options );
 }
 
 if ( $slice_index == 0 ) {
@@ -406,16 +406,22 @@ sub _handle_response {
 
 =head2 _do_reindex_items
 
-    _do_reindex_items(\@itemnumbers);
+    _do_reindex_items(\@itemnumbers, \%iterator_options);
 
 Reindexes items into the items Elasticsearch index. If C<@itemnumbers> is
 non-empty, only those items are reindexed; otherwise all items are indexed.
 Items are indexed from the database, not from MARC records.
 
+C<%iterator_options>, when it contains a C<slice> key (as set up for
+C<--processes>), is honoured the same way as for biblios/authorities: each
+process only handles its own slice of the items table, partitioned by
+C<mod(itemnumber, count) = index>.
+
 =cut
 
 sub _do_reindex_items {
-    my ($itemnumbers) = @_;
+    my ( $itemnumbers, $options ) = @_;
+    $options //= {};
 
     my $indexer =
         Koha::SearchEngine::Elasticsearch::Indexer->new( { index => $Koha::SearchEngine::Elasticsearch::ITEMS_INDEX } );
@@ -426,11 +432,18 @@ sub _do_reindex_items {
         return;
     }
 
+    my $search_terms = {};
+    if ( $options->{slice} ) {
+        my $slice_count  = $options->{slice}->{count};
+        my $slice_modulo = $options->{slice}->{index};
+        $search_terms = \[ 'mod(itemnumber, ?) = ?', $slice_count, $slice_modulo ];
+    }
+
     my $count        = 0;
     my $commit_count = $commit;
     my @id_buffer;
 
-    my $items = Koha::Items->search( {}, { order_by => { -asc => 'itemnumber' } } );
+    my $items = Koha::Items->search( $search_terms, { order_by => { -asc => 'itemnumber' } } );
     while ( my $item = $items->next ) {
         $count++;
         _log( 2, $item->itemnumber . "\n" );
