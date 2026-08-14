@@ -27,36 +27,12 @@
 // Import Select2 helpers
 import "./select2";
 import "./flatpickr.js";
-
-// Error on JS warnings
-function safeToString(arg) {
-    try {
-        return JSON.stringify(arg);
-    } catch (e) {
-        return `[object ${arg.constructor?.name || typeof arg}]`;
-    }
-}
-
-function stringifyArgs(args) {
-    return args.map(safeToString).join(" ");
-}
-Cypress.on("window:before:load", win => {
-    win.console.warn = (...args) => {
-        console.log(args);
-        const message = stringifyArgs(args);
-        throw new Error(`JS Warning detected: ${message}`);
-    };
-    win.console.log = (...args) => {
-        const message = stringifyArgs(args);
-        if (message.match(/DataTables warning: /)) {
-            throw new Error(`DataTables warning detected in log: ${message}`);
-        }
-    };
-});
+import "./vue-select";
+import "./console-hooks";
 
 // Handle common application errors gracefully in booking modal tests
 // This prevents test failures from known JS errors that don't affect functionality
-Cypress.on("uncaught:exception", (err, runnable) => {
+Cypress.on("uncaught:exception", err => {
     // Return false to prevent the error from failing the test
     // These errors can occur when the booking modal JS has timing issues
     if (
@@ -65,10 +41,7 @@ Cypress.on("uncaught:exception", (err, runnable) => {
     ) {
         return false;
     }
-    return true;
-});
 
-Cypress.on("uncaught:exception", err => {
     // Ignoring 'ResizeObserver loop limit exceeded' message from DataTables
     if (err.message.match(/ResizeObserver loop limit exceeded/)) {
         return false;
