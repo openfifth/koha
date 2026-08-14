@@ -259,19 +259,6 @@ sub check {
         return $result unless $no_short_circuit;
     }
 
-    # Retrieve the rule object to get the itemtype the rule was defined for.
-    # A rule with itemtype=undef (wildcard) means all holds count against it;
-    # a specific itemtype means only holds for that itemtype count.
-    my $reservesallowed_rule_obj = Koha::CirculationRules->get_effective_rule(
-        {
-            categorycode => $patron->categorycode,
-            branchcode   => $reserves_control_branch,
-            itemtype     => $item->effective_itemtype,
-            rule_name    => 'reservesallowed',
-        }
-    );
-    my $rule_itemtype = $reservesallowed_rule_obj ? $reservesallowed_rule_obj->itemtype : undef;
-
     unless ( $overrides->{not_reservable} ) {
         if ( $branchitemrule->{holdallowed} eq 'not_allowed' ) {
             $result->add_blocker( not_reservable => 1 );
@@ -295,6 +282,27 @@ sub check {
 
     # Patron-level checks (counts) — run after item checks
     unless ( $skip_patron_checks || $skip_patron_count_checks ) {
+
+        # Retrieve the rule object to get the itemtype the rule was defined for.
+        # A rule with itemtype=undef (wildcard) means all holds count against it;
+        # a specific itemtype means only holds for that itemtype count.
+        #
+        # Fetched here rather than with the rule values above because it is only
+        # ever used to scope the hold counting below, and get_effective_rule is
+        # not memoized the way get_effective_rule_value is. A caller that skips
+        # the count checks - notably the per-item loop in
+        # Koha::Biblio::Availability::Hold - would otherwise pay for this query
+        # once per item and discard the answer.
+        my $reservesallowed_rule_obj = Koha::CirculationRules->get_effective_rule(
+            {
+                categorycode => $patron->categorycode,
+                branchcode   => $reserves_control_branch,
+                itemtype     => $item->effective_itemtype,
+                rule_name    => 'reservesallowed',
+            }
+        );
+        my $rule_itemtype = $reservesallowed_rule_obj ? $reservesallowed_rule_obj->itemtype : undef;
+
         my $patron_result = Koha::Patron::Availability::Hold->check(
             {
                 patron           => $patron,

@@ -1,0 +1,57 @@
+---
+type: object
+properties:
+  available:
+    description: Whether the patron can place a hold on this record. False when the blockers list is not empty
+    type: boolean
+  needs_confirmation:
+    description: Whether the hold needs confirmation first. True when the confirmations list is not empty
+    type: boolean
+  blockers:
+    description: |
+      Conditions that prevent the hold.
+
+      Holds both the patron-level reasons and the record-level ones. The record
+      is blocked by `no_item_available` when it has items but none of them can
+      fill the hold, and by `no_items` when it has no items at all.
+    type: array
+    items:
+      $ref: availability_reason.yaml
+  confirmations:
+    description: Conditions that need confirmation before the hold can be placed
+    type: array
+    items:
+      $ref: availability_reason.yaml
+  warnings:
+    description: Conditions that do not prevent the hold
+    type: array
+    items:
+      $ref: availability_reason.yaml
+  items:
+    description: A count of the record's items, and which of them can fill the hold
+    type: object
+    properties:
+      total:
+        description: The number of items checked, which includes items linked from host records
+        type: integer
+      holdable:
+        description: How many of those items can fill the hold for this patron
+        type: integer
+      first_holdable_item_id:
+        description: Internal identifier of the first item that can fill the hold, or null when none can
+        type:
+          - integer
+          - "null"
+    additionalProperties: false
+    required:
+      - total
+      - holdable
+      - first_holdable_item_id
+additionalProperties: false
+required:
+  - available
+  - needs_confirmation
+  - blockers
+  - confirmations
+  - warnings
+  - items

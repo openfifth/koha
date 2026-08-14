@@ -32,6 +32,8 @@ definitions:
     $ref: ./definitions/booking.yaml
   booking_patch:
     $ref: ./definitions/booking_patch.yaml
+  biblio_holdability:
+    $ref: ./definitions/biblio_holdability.yaml
   bundle_link:
     $ref: ./definitions/bundle_link.yaml
   cash_register:
@@ -319,6 +321,8 @@ paths:
     $ref: "./paths/biblios.yaml#/~1biblios~1{biblio_id}~1bookings"
   "/biblios/{biblio_id}/checkouts":
     $ref: "./paths/biblios.yaml#/~1biblios~1{biblio_id}~1checkouts"
+  "/biblios/{biblio_id}/holdability":
+    $ref: "./paths/biblios.yaml#/~1biblios~1{biblio_id}~1holdability"
   "/biblios/{biblio_id}/items":
     $ref: "./paths/biblios.yaml#/~1biblios~1{biblio_id}~1items"
   "/biblios/{biblio_id}/items/{item_id}":

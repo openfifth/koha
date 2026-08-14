@@ -19,8 +19,11 @@ use Modern::Perl;
 
 use Mojo::Base 'Mojolicious::Controller';
 
+use Koha::Biblio::Availability::Hold;
 use Koha::Biblios;
 use Koha::DateUtils;
+use Koha::Libraries;
+use Koha::Patrons;
 use Koha::Ratings;
 use Koha::RecordSources;
 use C4::Biblio qw( DelBiblio AddBiblio ModBiblio );
@@ -523,6 +526,96 @@ sub pickup_locations {
         return $c->render(
             status  => 200,
             openapi => \@response
+        );
+    } catch {
+        $c->unhandled_exception($_);
+    };
+}
+
+=head3 holdability
+
+Controller function that reports whether a patron can place a hold on a record.
+
+=cut
+
+sub holdability {
+    my $c = shift->openapi->valid_input or return;
+
+    my $biblio = Koha::Biblios->find( $c->param('biblio_id') );
+
+    return $c->render_resource_not_found("Bibliographic record")
+        unless $biblio;
+
+    my $patron = Koha::Patrons->find( $c->param('patron_id') );
+
+    unless ($patron) {
+        return $c->render(
+            status  => 400,
+            openapi => {
+                error      => 'Patron not found',
+                error_code => 'patron_not_found',
+            }
+        );
+    }
+
+    my $pickup_library;
+    my $pickup_library_id = $c->param('pickup_library_id');
+
+    if ($pickup_library_id) {
+
+        $pickup_library = Koha::Libraries->find($pickup_library_id);
+
+        unless ($pickup_library) {
+            return $c->render(
+                status  => 400,
+                openapi => {
+                    error      => 'Library not found',
+                    error_code => 'library_not_found',
+                }
+            );
+        }
+    }
+
+    my $item_type_id = $c->param('item_type_id');
+
+    # These are read above rather than passed to the query builder, so remove
+    # them before any helper that inspects the request parameters runs.
+    $c->req->params->remove($_) for qw( patron_id pickup_library_id item_type_id );
+
+    return try {
+
+        my $availability = Koha::Biblio::Availability::Hold->check(
+            {
+                biblio         => $biblio,
+                patron         => $patron,
+                pickup_library => $pickup_library,
+                overrides      => $c->stash('koha.overrides'),
+                ( $item_type_id ? ( item_type_id => $item_type_id ) : () ),
+
+                # Report every blocker rather than the first one, and check
+                # every item rather than stopping at the first holdable one.
+                # Together these let a single call answer both "can this patron
+                # hold this record" and "how many of its items could fill it".
+                no_short_circuit => 1,
+                summarise_items  => 1,
+            }
+        );
+
+        my $response = $availability->to_api;
+
+        my $item_results = $availability->context->{item_results} // [];
+
+        $response->{items} = {
+            total                  => scalar @{$item_results},
+            holdable               => scalar( grep { $_->{available} } @{$item_results} ),
+            first_holdable_item_id => $availability->context->{available_item}
+            ? $availability->context->{available_item}->itemnumber
+            : undef,
+        };
+
+        return $c->render(
+            status  => 200,
+            openapi => $response
         );
     } catch {
         $c->unhandled_exception($_);

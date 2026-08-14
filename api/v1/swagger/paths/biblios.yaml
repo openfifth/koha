@@ -672,6 +672,85 @@
     x-koha-authorization:
       permissions:
         editcatalogue: edit_items
+"/biblios/{biblio_id}/holdability":
+  get:
+    x-mojo-to: Biblios#holdability
+    operationId: getBiblioHoldability
+    tags:
+      - biblios
+    summary: Get whether a patron can place a hold on a record
+    description: |
+      Reports whether the given patron can place a hold on this record, and how
+      many of its items could fill that hold.
+
+      Replaces a `CanBookBeReserved` call followed by a loop over the record's
+      items. One call covers the patron's eligibility, the circulation rules and
+      every item, including items linked from host records.
+
+      Every blocker is reported, not only the first one. The record is blocked by
+      `no_item_available` when it has items but none can fill the hold, and by
+      `no_items` when it has no items at all.
+
+      Pass `pickup_library_id` to also check the pickup location rules. Pass
+      `item_type_id` to limit the item check to a single item type.
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/biblio_id_pp"
+      - name: patron_id
+        in: query
+        description: Internal patron identifier
+        required: true
+        type: integer
+      - name: pickup_library_id
+        in: query
+        description: Internal library identifier of the intended pickup library
+        required: false
+        type: string
+      - name: item_type_id
+        in: query
+        description: Limit the item check to this item type
+        required: false
+        type: string
+    produces:
+      - application/json
+    responses:
+      "200":
+        description: The record's holdability for this patron
+        schema:
+          $ref: "../swagger.yaml#/definitions/biblio_holdability"
+      "400":
+        description: |
+          Bad request. Possible `error_code` attribute values:
+
+            * `patron_not_found`
+            * `library_not_found`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Bibliographic record not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        reserveforothers: place_holds
 "/biblios/{biblio_id}/pickup_locations":
   get:
     x-mojo-to: Biblios#pickup_locations

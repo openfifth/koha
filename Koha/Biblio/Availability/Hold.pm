@@ -80,6 +80,24 @@ entirely - for callers that already have the biblio's item list in hand and
 want to reuse it across multiple C<check()> calls (e.g. checking several
 patrons for the same club hold), rather than re-fetching per call.
 
+=item summarise_items - check every item rather than stopping at the first
+holdable one, and record the verdict for each in
+C<< context->{item_results} >> as
+C<< [ { itemnumber => $id, available => 0|1, blockers => {...} } ] >>
+(optional, default off).
+
+Off by default because the whole point of the item loop is to stop as soon as
+one item can fill the hold - a caller that only needs a yes/no answer must not
+pay for the rest of the record. Turn it on for a caller that reports how many
+items are holdable, e.g. C<GET /biblios/{biblio_id}/holdability>.
+
+The extra items cost no extra queries beyond the per-item checks themselves:
+the patron/biblio context is still fetched once before the loop, exactly as it
+is when this option is off.
+
+C<< context->{available_item} >> still holds the first holdable item, and the
+C<no_item_available> blocker is still set only when no item is holdable.
+
 =back
 
 =cut
@@ -93,6 +111,7 @@ sub check {
     my $item_type_id     = $params->{item_type_id};
     my $overrides        = $params->{overrides}        // {};
     my $no_short_circuit = $params->{no_short_circuit} // 0;
+    my $summarise_items  = $params->{summarise_items}  // 0;
 
     # Patron eligibility + count checks
     my $patron_check_params = {
@@ -138,6 +157,9 @@ sub check {
     my $age_restriction_ok = Koha::Policy::Biblio::AgeRestriction->check( $biblio, $patron );
 
     my @item_failures;
+    my @item_results;
+    my $available_item;
+
     for my $item (@items) {
         my $item_result = Koha::Item::Availability::Hold->check(
             {
@@ -153,20 +175,39 @@ sub check {
                 cache_transfers          => 1,
             }
         );
+
         if ( $item_result->available ) {
-            $result->set_context( available_item => $item );
-            return $result;
+
+            # Keep the first holdable item, so the context is the same whether
+            # or not the loop runs on.
+            unless ($available_item) {
+                $available_item = $item;
+                $result->set_context( available_item => $item );
+            }
+
+            return $result unless $summarise_items;
+        } else {
+            push @item_failures, {
+                itemnumber => $item->itemnumber,
+                blockers   => $item_result->blockers,
+            };
         }
-        push @item_failures, {
+
+        push @item_results, {
             itemnumber => $item->itemnumber,
+            available  => $item_result->available ? 1 : 0,
             blockers   => $item_result->blockers,
-        };
+            }
+            if $summarise_items;
     }
 
     # No item available
-    $result->add_blocker( no_item_available => 1 ) unless @items == 0;
-    $result->add_blocker( no_items => 1 ) if @items == 0;
+    unless ($available_item) {
+        $result->add_blocker( no_item_available => 1 ) unless @items == 0;
+        $result->add_blocker( no_items          => 1 ) if @items == 0;
+    }
     $result->set_context( item_failures => \@item_failures ) if @item_failures;
+    $result->set_context( item_results  => \@item_results )  if $summarise_items;
 
     return $result;
 }
