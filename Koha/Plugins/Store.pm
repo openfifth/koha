@@ -61,11 +61,47 @@ sub lookup_by_kpz_url {
             return {
                 repo_url           => $plugin->{repo_url},
                 certification_tier => $release->{certification_tier},
+                signed_manifest    => $release->{signed_manifest},
+                signature          => $release->{signature},
             };
         }
     }
 
     return;
+}
+
+=head3 lookup_by_digest
+
+    my $info = Koha::Plugins::Store->lookup_by_digest($digest);
+    # { signed_manifest => '...', signature => '...', certification_tier => '...' } or undef
+
+Queries the configured plugin-store's digest-lookup endpoint
+(C<GET /api/plugins/verify?digest=...>) for a published version matching the given SHA-256
+digest -- used for manually-uploaded files, which have no C<kpz_url> to match against the
+discovery listing C<lookup_by_kpz_url> consults. Returns C<undef> if C<plugin_store_url>
+isn't configured, the store isn't reachable, or no published version has that digest.
+
+=cut
+
+sub lookup_by_digest {
+    my ( $class, $digest ) = @_;
+
+    my $store_url = C4::Context->config('plugin_store_url');
+    return unless $store_url;
+
+    my $ua = Mojo::UserAgent->new;
+    my $tx = $ua->get("$store_url/api/plugins/verify?digest=$digest");
+
+    return unless $tx->res->code && $tx->res->code == 200;
+
+    my $result = eval { $tx->res->json };
+    return unless $result;
+
+    return {
+        signed_manifest    => $result->{signed_manifest},
+        signature          => $result->{signature},
+        certification_tier => $result->{certification_tier},
+    };
 }
 
 1;
