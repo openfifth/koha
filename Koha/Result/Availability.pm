@@ -19,6 +19,8 @@ package Koha::Result::Availability;
 
 use Modern::Perl;
 
+use Mojo::JSON;
+
 =head1 NAME
 
 Koha::Result::Availability - Base class for availability check results
@@ -228,6 +230,98 @@ sub to_hashref {
         warnings => $self->{warnings},
         %{ $self->{context} },
     };
+}
+
+=head3 to_api
+
+    my $api_representation = $result->to_api;
+
+Returns a hashref that represents this result on the REST API:
+
+    {
+        available          => Mojo::JSON->true,
+        needs_confirmation => Mojo::JSON->false,
+        blockers           => [ { code => 'damaged' } ],
+        confirmations      => [],
+        warnings           => [],
+    }
+
+The three reason lists hold one hashref for each reason. Every hashref has a
+C<code> key. A hashref also has a C<payload> key when the reason carries extra
+detail. See C<_reasons_to_api> below.
+
+Note that the response holds no C<context> data. The context holds live objects
+(for example a L<Koha::Item>), so each caller selects and renders the context
+data that the caller needs.
+
+=cut
+
+sub to_api {
+    my ($self) = @_;
+
+    return {
+        available          => $self->available          ? Mojo::JSON->true : Mojo::JSON->false,
+        needs_confirmation => $self->needs_confirmation ? Mojo::JSON->true : Mojo::JSON->false,
+        blockers           => $self->_reasons_to_api( $self->blockers ),
+        confirmations      => $self->_reasons_to_api( $self->confirmations ),
+        warnings           => $self->_reasons_to_api( $self->warnings ),
+    };
+}
+
+=head3 _reasons_to_api
+
+    my $reasons = $result->_reasons_to_api( $result->blockers );
+
+Changes one reasons hashref into the arrayref that the API returns. Reasons are
+held internally as C<< { $code => $value } >>, where C<$value> is one of three
+things: the number 1, a count limit, or a hashref of detail. The API needs one
+declared type for the whole list, so each reason becomes
+C<< { code => $code } >> plus an optional C<payload> hashref:
+
+=over 4
+
+=item * A hashref value becomes the payload. C<debt_limit> and C<hold_limit> use
+this form.
+
+=item * A C<too_many_*> code carries a count limit, which becomes
+C<< { limit => $value } >>. This matches how C<C4::Reserves::CanItemBeReserved>
+already reports the same limits.
+
+=item * Any other value carries no detail, so the reason has no payload.
+
+=back
+
+The method sorts the codes. Perl hash order is not stable, and a stable response
+lets a test compare the whole list.
+
+=cut
+
+sub _reasons_to_api {
+    my ( $self, $reasons ) = @_;
+
+    my @api_reasons;
+
+    for my $code ( sort keys %{$reasons} ) {
+
+        my $value  = $reasons->{$code};
+        my $reason = { code => $code };
+
+        if ( ref($value) eq 'HASH' ) {
+
+            # Copy the payload. The caller must not be able to change the
+            # result object through the response.
+            $reason->{payload} = {%$value};
+        } elsif ( $code =~ m{^too_many_} && defined $value && $value =~ m{^\d+$} ) {
+
+            # Cast the limit. Circulation rule values arrive as strings, and the
+            # API must render a limit as a number.
+            $reason->{payload} = { limit => 0 + $value };
+        }
+
+        push @api_reasons, $reason;
+    }
+
+    return \@api_reasons;
 }
 
 =head1 AUTHOR

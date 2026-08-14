@@ -12,6 +12,10 @@ definitions:
     $ref: ./definitions/advancededitormacro.yaml
   allows_renewal:
     $ref: ./definitions/allows_renewal.yaml
+  availability:
+    $ref: ./definitions/availability.yaml
+  availability_reason:
+    $ref: ./definitions/availability_reason.yaml
   authorised_value:
     $ref: ./definitions/authorised_value.yaml
   authorised_value_category:

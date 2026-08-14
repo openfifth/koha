@@ -1,0 +1,31 @@
+---
+type: object
+properties:
+  available:
+    description: Whether the action can proceed. False when the blockers list is not empty
+    type: boolean
+  needs_confirmation:
+    description: Whether the action needs confirmation first. True when the confirmations list is not empty
+    type: boolean
+  blockers:
+    description: Conditions that prevent the action
+    type: array
+    items:
+      $ref: availability_reason.yaml
+  confirmations:
+    description: Conditions that need confirmation before the action can proceed
+    type: array
+    items:
+      $ref: availability_reason.yaml
+  warnings:
+    description: Conditions that do not prevent the action
+    type: array
+    items:
+      $ref: availability_reason.yaml
+additionalProperties: false
+required:
+  - available
+  - needs_confirmation
+  - blockers
+  - confirmations
+  - warnings

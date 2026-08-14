@@ -1,0 +1,48 @@
+---
+type: object
+properties:
+  code:
+    description: |
+      Machine-readable reason code.
+
+      The list matches the codes that the Koha::*::Availability::Hold classes
+      set. Keep it in step with the add_blocker, add_confirmation and
+      add_warning calls in Koha/Patron/Availability/Hold.pm,
+      Koha/Item/Availability/Hold.pm and Koha/Biblio/Availability/Hold.pm.
+    type: string
+    enum:
+      - age_restricted
+      - already_possession
+      - bad_address
+      - branch_not_in_hold_group
+      - cannot_be_transferred
+      - cannot_reserve_from_other_branches
+      - card_lost
+      - damaged
+      - debt_limit
+      - expired
+      - hold_limit
+      - item_already_on_hold
+      - library_not_pickup_location
+      - no_item_available
+      - no_items
+      - no_reserves_allowed
+      - not_reservable
+      - pickup_not_in_hold_group
+      - recall
+      - restricted
+      - too_many_holds_for_this_record
+      - too_many_reserves
+      - too_many_reserves_today
+  payload:
+    description: |
+      Extra detail about the reason, when the reason carries any.
+
+      A `too_many_*` code carries `limit`, the count that the patron reached.
+      `debt_limit` carries `total_outstanding` and `max_outstanding`.
+      `hold_limit` carries `total_holds` and `max_holds`.
+    type: object
+    additionalProperties: true
+additionalProperties: false
+required:
+  - code

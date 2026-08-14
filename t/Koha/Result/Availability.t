@@ -19,8 +19,10 @@
 
 use Modern::Perl;
 
-use Test::More tests => 9;
+use Test::More tests => 14;
 use Test::NoWarnings;
+
+use Mojo::JSON qw( encode_json );
 
 use Koha::Result::Availability;
 
@@ -138,4 +140,117 @@ subtest 'to_hashref()' => sub {
     is( $hashref->{warnings}->{warning1}, 'w1',          'warnings included' );
     is( $hashref->{item},                 'test_item',   'context item included at top level' );
     is( $hashref->{patron},               'test_patron', 'context patron included at top level' );
+};
+
+subtest 'to_api() with an empty result' => sub {
+
+    plan tests => 5;
+
+    my $api = Koha::Result::Availability->new->to_api;
+
+    ok( $api->{available},           'available is true when there is no blocker' );
+    ok( !$api->{needs_confirmation}, 'needs_confirmation is false when there is no confirmation' );
+    is_deeply( $api->{blockers},      [], 'blockers is an empty array' );
+    is_deeply( $api->{confirmations}, [], 'confirmations is an empty array' );
+    is_deeply( $api->{warnings},      [], 'warnings is an empty array' );
+};
+
+subtest 'to_api() with a value of 1' => sub {
+
+    plan tests => 3;
+
+    my $result = Koha::Result::Availability->new->add_blocker( damaged => 1 );
+    my $api    = $result->to_api;
+
+    ok( !$api->{available}, 'available is false when there is a blocker' );
+    is_deeply( $api->{blockers}, [ { code => 'damaged' } ], 'A value of 1 carries no payload' );
+    ok( !exists $api->{blockers}->[0]->{payload}, 'The payload key is absent rather than undefined' );
+};
+
+subtest 'to_api() with a hashref value' => sub {
+
+    plan tests => 2;
+
+    my $payload = { total_outstanding => 12.5, max_outstanding => 5 };
+    my $result  = Koha::Result::Availability->new->add_blocker( debt_limit => $payload );
+
+    is_deeply(
+        $result->to_api->{blockers},
+        [ { code => 'debt_limit', payload => { total_outstanding => 12.5, max_outstanding => 5 } } ],
+        'A hashref value becomes the payload'
+    );
+
+    $result->to_api->{blockers}->[0]->{payload}->{max_outstanding} = 999;
+
+    is(
+        $payload->{max_outstanding}, 5,
+        'A change to the response does not reach the result object'
+    );
+};
+
+subtest 'to_api() with a count limit' => sub {
+
+    plan tests => 4;
+
+    my @cases = (
+        { code => 'too_many_reserves',              limit => 3 },
+        { code => 'too_many_reserves_today',        limit => 2 },
+        { code => 'too_many_holds_for_this_record', limit => 1 },
+    );
+
+    for my $case (@cases) {
+
+        my $result = Koha::Result::Availability->new->add_blocker( $case->{code} => $case->{limit} );
+
+        is_deeply(
+            $result->to_api->{blockers},
+            [ { code => $case->{code}, payload => { limit => $case->{limit} } } ],
+            sprintf( 'The %s code carries its limit, even a limit of 1', $case->{code} )
+        );
+    }
+
+    # Circulation rule values arrive from the database as strings. The API must
+    # render a limit as a number.
+    my $result = Koha::Result::Availability->new->add_blocker( too_many_reserves => '4' );
+
+    like(
+        encode_json( $result->to_api->{blockers} ),
+        qr/"limit":4/,
+        'A limit encodes as a JSON number rather than a string'
+    );
+};
+
+subtest 'to_api() with confirmations, warnings and a stable order' => sub {
+
+    plan tests => 5;
+
+    my $result = Koha::Result::Availability->new;
+    $result->add_confirmation( recall => 1 );
+    $result->add_warning( withdrawn => 1 );
+    $result->add_blocker( restricted  => 1 );
+    $result->add_blocker( damaged     => 1 );
+    $result->add_blocker( bad_address => 1 );
+
+    # The context holds live objects, so to_api must leave it out. The
+    # availability definition sets additionalProperties to false, so a context
+    # key in the response would fail API validation.
+    $result->set_context( available_item => 'an object' );
+
+    my $api = $result->to_api;
+
+    ok( $api->{needs_confirmation}, 'needs_confirmation is true when there is a confirmation' );
+    is_deeply( $api->{confirmations}, [ { code => 'recall' } ],    'Confirmations are rendered' );
+    is_deeply( $api->{warnings},      [ { code => 'withdrawn' } ], 'Warnings are rendered' );
+
+    is_deeply(
+        [ map { $_->{code} } @{ $api->{blockers} } ],
+        [ 'bad_address', 'damaged', 'restricted' ],
+        'The codes are sorted, so the response is stable'
+    );
+
+    is_deeply(
+        [ sort keys %{$api} ],
+        [ 'available', 'blockers', 'confirmations', 'needs_confirmation', 'warnings' ],
+        'The response holds no context data and no other key'
+    );
 };
