@@ -79,7 +79,7 @@ API, `Test::More`/`Test::Mojo`/`Test::MockModule`.
 - Modify: `debian/control:36-37` and `debian/control:288-289` (Build-Depends and Depends —
   both blocks list the same packages; `libcryptx-perl` sorts alphabetically immediately
   after `libcrypt-openssl-rsa-perl` and before `libdata-ical-perl` in both places)
-- Modify: `etc/koha-conf.xml.in` and `debian/templates/koha-conf-site.xml.in` (new
+- Modify: `etc/koha-conf.xml` and `debian/templates/koha-conf-site.xml.in` (new
   `plugin_store_public_key` entry, documented alongside the existing `plugin_repos` block)
 - Test: `t/Koha/Plugins/Install.t`
 
@@ -270,7 +270,7 @@ unaffected.
 
 - [ ] **Step 7: Document `plugin_store_public_key` in the config templates**
 
-In `etc/koha-conf.xml.in`, find the existing `<plugin_repos>` block (search for
+In `etc/koha-conf.xml`, find the existing `<plugin_repos>` block (search for
 `<plugin_repos>`) and add immediately after its closing `</plugin_repos>`:
 
 ```xml
@@ -291,7 +291,7 @@ relative location (immediately after that file's own `</plugin_repos>`).
 - [ ] **Step 8: Commit**
 
 ```bash
-git add cpanfile debian/control etc/koha-conf.xml.in debian/templates/koha-conf-site.xml.in \
+git add cpanfile debian/control etc/koha-conf.xml debian/templates/koha-conf-site.xml.in \
   Koha/Plugins/Install.pm t/Koha/Plugins/Install.t
 git commit -m "Bug 35837: Add Ed25519 signature verification to Koha::Plugins::Install"
 ```
@@ -302,7 +302,7 @@ git commit -m "Bug 35837: Add Ed25519 signature verification to Koha::Plugins::I
 
 **Files:**
 - Modify: `Koha/Plugins/Install.pm` (`install()`, new config doc)
-- Modify: `etc/koha-conf.xml.in` and `debian/templates/koha-conf-site.xml.in`
+- Modify: `etc/koha-conf.xml` and `debian/templates/koha-conf-site.xml.in`
   (`plugins_allow_unsigned`)
 - Test: `t/Koha/Plugins/Install.t`
 
@@ -471,7 +471,7 @@ Same command as Step 2. Expected: all 12 subtests in the file PASS.
 
 - [ ] **Step 5: Document `plugins_allow_unsigned` in the config templates**
 
-In `etc/koha-conf.xml.in`, immediately after the `<plugins_restart>1</plugins_restart>`
+In `etc/koha-conf.xml`, immediately after the `<plugins_restart>1</plugins_restart>`
 line (right before the existing `<plugin_repos>` block):
 
 ```xml
@@ -490,7 +490,7 @@ relative position (after that file's own `plugins_restart` entry).
 
 ```bash
 git add Koha/Plugins/Install.pm t/Koha/Plugins/Install.t \
-  etc/koha-conf.xml.in debian/templates/koha-conf-site.xml.in
+  etc/koha-conf.xml debian/templates/koha-conf-site.xml.in
 git commit -m "Bug 35837: Gate unsigned plugin installs behind plugins_allow_unsigned"
 ```
 
