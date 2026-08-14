@@ -509,6 +509,21 @@
         description: Return the items grouped by status
         required: false
         type: boolean
+      - name: holdability
+        in: query
+        description: |
+          Add a `holdability` attribute to each item in the response, reporting
+          whether the patron named by `patron_id` can place a hold on it.
+
+          Only the items on the requested page are checked, so pair this with
+          `_per_page` rather than asking for a whole large record at once.
+        required: false
+        type: boolean
+      - name: patron_id
+        in: query
+        description: Internal patron identifier. Required when `holdability` is set
+        required: false
+        type: integer
     consumes:
       - application/json
     produces:
@@ -525,6 +540,8 @@
           Bad request. Possible `error_code` attribute values:
 
             * `invalid_query`
+            * `missing_patron_id`
+            * `patron_not_found`
         schema:
           $ref: "../swagger.yaml#/definitions/error"
       "401":

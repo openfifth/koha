@@ -347,4 +347,12 @@ properties:
       - array
       - "null"
     description: The status of the item
+  holdability:
+    description: |
+      Whether a given patron can place a hold on this item.
+
+      Present only on `GET /biblios/{biblio_id}/items` when the request sets
+      `holdability` to true and names a `patron_id`. Use
+      `GET /items/{item_id}/holdability` for one item on its own.
+    $ref: availability.yaml
 additionalProperties: false

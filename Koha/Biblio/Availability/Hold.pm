@@ -143,18 +143,7 @@ sub check {
     # this record, so Koha::Item::Availability::Hold->check does an in-memory
     # lookup per item instead of a fresh query - the whole point of this
     # class existing rather than callers looping CanItemBeReserved directly.
-    my %held_itemnumbers =
-        map { $_ => 1 } $patron->holds->search( { itemnumber => { '!=' => undef } } )->get_column('itemnumber');
-
-    my %checked_out_itemnumbers;
-    unless ( C4::Context->preference('AllowHoldsOnPatronsPossessions') ) {
-        %checked_out_itemnumbers = map { $_ => 1 } $patron->checkouts->get_column('itemnumber');
-    }
-
-    my %recalled_itemnumbers =
-        map { $_ => 1 } $patron->recalls->filter_by_current->get_column('item_id');
-
-    my $age_restriction_ok = Koha::Policy::Biblio::AgeRestriction->check( $biblio, $patron );
+    my $context = $class->build_patron_context( { biblio => $biblio, patron => $patron } );
 
     my @item_failures;
     my @item_results;
@@ -168,11 +157,8 @@ sub check {
                 pickup_library           => $pickup_library,
                 overrides                => $overrides,
                 skip_patron_count_checks => 1,
-                held_itemnumbers         => \%held_itemnumbers,
-                checked_out_itemnumbers  => \%checked_out_itemnumbers,
-                recalled_itemnumbers     => \%recalled_itemnumbers,
-                age_restriction_ok       => $age_restriction_ok,
                 cache_transfers          => 1,
+                %{$context},
             }
         );
 
@@ -210,6 +196,53 @@ sub check {
     $result->set_context( item_results  => \@item_results )  if $summarise_items;
 
     return $result;
+}
+
+=head3 build_patron_context
+
+    my $context = Koha::Biblio::Availability::Hold->build_patron_context(
+        { biblio => $biblio, patron => $patron } );
+
+    my $result = Koha::Item::Availability::Hold->check(
+        { item => $item, patron => $patron, %$context } );
+
+Reads the patron and biblio context that does not vary from one item of a record
+to the next, and returns it as a hashref of C<check()> parameters for
+L<Koha::Item::Availability::Hold>: C<held_itemnumbers>,
+C<checked_out_itemnumbers>, C<recalled_itemnumbers> and C<age_restriction_ok>.
+
+C<check()> calls this once before its item loop, so each item does an in-memory
+lookup rather than its own query. It is public so that a caller running its own
+item loop - such as the C<holdability> embed on
+C<GET /biblios/{biblio_id}/items>, which only checks the items on the page the
+request asked for - gets the same saving from the same code, rather than from a
+copy that drifts.
+
+=cut
+
+sub build_patron_context {
+    my ( $class, $params ) = @_;
+
+    my $biblio = $params->{biblio};
+    my $patron = $params->{patron};
+
+    my %held_itemnumbers =
+        map { $_ => 1 } $patron->holds->search( { itemnumber => { '!=' => undef } } )->get_column('itemnumber');
+
+    my %checked_out_itemnumbers;
+    unless ( C4::Context->preference('AllowHoldsOnPatronsPossessions') ) {
+        %checked_out_itemnumbers = map { $_ => 1 } $patron->checkouts->get_column('itemnumber');
+    }
+
+    my %recalled_itemnumbers =
+        map { $_ => 1 } $patron->recalls->filter_by_current->get_column('item_id');
+
+    return {
+        held_itemnumbers        => \%held_itemnumbers,
+        checked_out_itemnumbers => \%checked_out_itemnumbers,
+        recalled_itemnumbers    => \%recalled_itemnumbers,
+        age_restriction_ok      => Koha::Policy::Biblio::AgeRestriction->check( $biblio, $patron ),
+    };
 }
 
 =head3 fetch_items

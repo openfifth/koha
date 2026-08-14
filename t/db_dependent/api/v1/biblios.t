@@ -20,7 +20,7 @@ use Modern::Perl;
 use utf8;
 use Encode;
 
-use Test::More tests => 16;
+use Test::More tests => 17;
 use Test::NoWarnings;
 use Test::MockModule;
 use Test::Mojo;
@@ -35,6 +35,7 @@ use C4::Auth;
 use C4::Circulation qw( AddIssue AddReturn );
 
 use Koha::Biblios;
+use Koha::CirculationRules;
 use Koha::Database;
 use Koha::DateUtils qw (dt_from_string output_pref);
 use Koha::Checkouts;
@@ -2541,6 +2542,95 @@ subtest 'merge() tests' => sub {
         ->tx->res->body;
     like( $result, qr/Using mij/, "Update with Marc-in-json record" );
     unlike( $result, qr/$title_1/, "Change all record with dat in the 'datarecord' field" );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'get_items() holdability tests' => sub {
+
+    plan tests => 24;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'AllowHoldsOnDamagedItems', 0 );
+    t::lib::Mocks::mock_preference( 'maxreserves',              0 );
+    t::lib::Mocks::mock_preference( 'maxoutstanding',           0 );
+
+    # holds_per_record defaults to 1, which would block the patron before any
+    # item is looked at.
+    Koha::CirculationRules->set_rules(
+        {
+            categorycode => undef,
+            branchcode   => undef,
+            itemtype     => undef,
+            rules        => { reservesallowed => 100, holds_per_record => 100 }
+        }
+    );
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries', value => { pickup_location => 1 } } );
+
+    # Superlibrarian, because this subtest also calls /items/{item_id}/holdability
+    my $librarian = $builder->build_object(
+        { class => 'Koha::Patrons', value => { flags => 1, branchcode => $library->branchcode } } );
+    my $password = 'thePassword123';
+    $librarian->set_password( { password => $password, skip_validation => 1 } );
+    my $userid = $librarian->userid;
+
+    my $patron =
+        $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $library->branchcode } } );
+    my $patron_id = $patron->borrowernumber;
+
+    my $biblio = $builder->build_sample_biblio;
+    my $good   = $builder->build_sample_item(
+        { biblionumber => $biblio->biblionumber, library => $library->branchcode, damaged => 0 } );
+    my $damaged = $builder->build_sample_item(
+        { biblionumber => $biblio->biblionumber, library => $library->branchcode, damaged => 1 } );
+
+    my $biblio_id = $biblio->biblionumber;
+    my $base      = "//$userid:$password@/api/v1/biblios/$biblio_id/items";
+
+    # Without the parameter, nothing changes. This is the regression guard for
+    # every existing caller of this endpoint.
+    my $plain = $t->get_ok("$base?_order_by=item_id")->status_is(200)->tx->res->json;
+
+    ok( !exists $plain->[0]->{holdability}, 'No holdability attribute when the parameter is absent' );
+
+    # With the parameter, each item on the page carries its own verdict
+    $t->get_ok("$base?_order_by=item_id&holdability=1&patron_id=$patron_id")
+        ->status_is(200)
+        ->json_is( '/0/item_id'               => $good->itemnumber )
+        ->json_is( '/0/holdability/available' => Mojo::JSON->true )
+        ->json_is( '/0/holdability/blockers'  => [] )
+        ->json_is( '/1/item_id'               => $damaged->itemnumber )
+        ->json_is( '/1/holdability/available' => Mojo::JSON->false )
+        ->json_is( '/1/holdability/blockers'  => [ { code => 'damaged' } ] );
+
+    # The embedded verdict must agree with the single-item endpoint
+    my $embedded = $t->tx->res->json->[1]->{holdability};
+
+    my $standalone =
+        $t->get_ok( "//$userid:$password@/api/v1/items/" . $damaged->itemnumber . "/holdability?patron_id=$patron_id" )
+        ->status_is(200)
+        ->tx->res->json;
+
+    is_deeply( $embedded, $standalone, 'The embedded verdict matches GET /items/{item_id}/holdability' );
+
+    # Pagination still applies, and only the requested page is checked
+    $t->get_ok("$base?_order_by=item_id&holdability=1&patron_id=$patron_id&_per_page=1&_page=2")
+        ->status_is(200)
+        ->json_is( '/0/item_id'               => $damaged->itemnumber )
+        ->json_is( '/0/holdability/available' => Mojo::JSON->false );
+
+    is( $t->tx->res->headers->header('X-Total-Count'), 2, 'The total count covers the whole record, not the page' );
+
+    # Error cases
+    $t->get_ok("$base?holdability=1")->status_is(400)->json_is( '/error_code' => 'missing_patron_id' );
+
+    my $deleted    = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $deleted_id = $deleted->borrowernumber;
+    $deleted->delete;
+
+    $t->get_ok("$base?holdability=1&patron_id=$deleted_id")->json_is( '/error_code' => 'patron_not_found' );
 
     $schema->storage->txn_rollback;
 };

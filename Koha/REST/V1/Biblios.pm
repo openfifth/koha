@@ -21,6 +21,7 @@ use Mojo::Base 'Mojolicious::Controller';
 
 use Koha::Biblio::Availability::Hold;
 use Koha::Biblios;
+use Koha::Item::Availability::Hold;
 use Koha::DateUtils;
 use Koha::Libraries;
 use Koha::Patrons;
@@ -262,8 +263,39 @@ sub get_items {
     my $group_by_status = $c->param('group_by_status');
     $c->req->params->remove('group_by_status');
 
+    my $holdability = $c->param('holdability');
+    my $patron_id   = $c->param('patron_id');
+    $c->req->params->remove($_) for qw( holdability patron_id );
+
     return $c->render_resource_not_found("Bibliographic record")
         unless $biblio;
+
+    my $patron;
+
+    if ($holdability) {
+
+        unless ($patron_id) {
+            return $c->render(
+                status  => 400,
+                openapi => {
+                    error      => 'A patron_id is required to report holdability',
+                    error_code => 'missing_patron_id',
+                }
+            );
+        }
+
+        $patron = Koha::Patrons->find($patron_id);
+
+        unless ($patron) {
+            return $c->render(
+                status  => 400,
+                openapi => {
+                    error      => 'Patron not found',
+                    error_code => 'patron_not_found',
+                }
+            );
+        }
+    }
 
     return try {
 
@@ -292,7 +324,17 @@ sub get_items {
         }
 
         # FIXME We need to order_by serial.publisheddate if we have _order_by=+me.serial_issue_number
-        my $items = $c->objects->search($items_rs);
+        #
+        # Split into the three steps that objects->search makes, so that the
+        # item objects for this page are available below. to_api discards them,
+        # and refetching them by id would repeat a query already paid for.
+        my $paged_items_rs = $c->objects->search_rs($items_rs);
+        $c->add_pagination_headers();
+
+        my @item_objects = $paged_items_rs->as_list;
+        my $items        = [ map { $c->objects->to_api($_) } @item_objects ];
+
+        _embed_holdability( $c, $biblio, $patron, $items, \@item_objects ) if $holdability;
 
         return $c->render(
             status  => 200,
@@ -301,6 +343,56 @@ sub get_items {
     } catch {
         $c->unhandled_exception($_);
     };
+}
+
+=head3 _embed_holdability
+
+    _embed_holdability( $c, $biblio, $patron, $items, $item_objects );
+
+Adds a C<holdability> key to each item hashref in I<$items>, in place.
+
+I<$items> and I<$item_objects> describe the same items in the same order: the
+caller built the first by mapping C<to_api> over the second.
+
+Only the items on the requested page are checked. That is what keeps this
+endpoint inside its budget: a 500-item record still costs one page's worth of
+checks, not five hundred.
+
+The per-record context is read once through
+L<Koha::Biblio::Availability::Hold/build_patron_context> and handed to every
+item, so the page costs a constant number of queries rather than a few per item.
+
+C<cache_counts> and C<cache_transfers> are safe here because this is a read-only
+display loop: nothing places a hold between one item and the next.
+
+=cut
+
+sub _embed_holdability {
+    my ( $c, $biblio, $patron, $items, $item_objects ) = @_;
+
+    return unless @{$items};
+
+    my $context = Koha::Biblio::Availability::Hold->build_patron_context( { biblio => $biblio, patron => $patron } );
+
+    my $overrides = $c->stash('koha.overrides');
+
+    for my $index ( 0 .. $#{$items} ) {
+
+        $items->[$index]->{holdability} = Koha::Item::Availability::Hold->check(
+            {
+                item                     => $item_objects->[$index],
+                patron                   => $patron,
+                overrides                => $overrides,
+                no_short_circuit         => 1,
+                skip_patron_count_checks => 1,
+                cache_counts             => 1,
+                cache_transfers          => 1,
+                %{$context},
+            }
+        )->to_api;
+    }
+
+    return;
 }
 
 =head3 add_item
