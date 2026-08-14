@@ -61,7 +61,7 @@ to ensure consistent security checks.
 
 # The real community plugin-store's Ed25519 public key. Deployments (or dev/testing
 # environments pointed at a different store, e.g. a self-hosted mirror) can override
-# via koha-conf.xml's plugin_store_public_key -- see _store_public_key below.
+# via koha-conf.xml's plugin_store_public_key_file -- see _store_public_key below.
 use constant DEFAULT_STORE_PUBLIC_KEY => <<'PEM';
 -----BEGIN PUBLIC KEY-----
 MCowBQYDK2VwAyEA7RcwcVqFedy1ILYWF7C74l1osE4+2fH/WcVIhydbfu4=
@@ -129,7 +129,14 @@ sub _digest {
 
 sub _store_public_key {
     my ($class) = @_;
-    return C4::Context->config('plugin_store_public_key') // DEFAULT_STORE_PUBLIC_KEY;
+
+    my $key_file = C4::Context->config('plugin_store_public_key_file');
+    return DEFAULT_STORE_PUBLIC_KEY unless $key_file;
+
+    open my $fh, '<', $key_file
+        or die "Could not open plugin_store_public_key_file ($key_file): $!";
+    local $/;
+    return <$fh>;
 }
 
 sub _verify_signature {

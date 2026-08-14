@@ -282,13 +282,11 @@
         <service>github</service>
     </repo>
  </plugin_repos>
- <!-- Override the Ed25519 public key used to verify the plugin store's signatures.
-      Only needed for development/testing against an alternate or self-hosted store.
-      Production deployments should rely on the key baked into Koha core. Paste your
-      Ed25519 public key in standard PEM format (including its BEGIN/END header and
-      footer lines) as the content of this element.
- <plugin_store_public_key>
- </plugin_store_public_key>
+ <!-- Path to a PEM file containing the Ed25519 public key used to verify the plugin
+      store's signatures. Only needed for development/testing against an alternate or
+      self-hosted store. Production deployments should rely on the key baked into Koha
+      core. The file must be readable by the user Koha runs as.
+ <plugin_store_public_key_file>/path/to/plugin-store-public-key.pem</plugin_store_public_key_file>
  -->
 
  <koha_xslt_security>
