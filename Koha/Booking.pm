@@ -203,7 +203,8 @@ sub store {
                     {
                         start_date => $self->start_date,
                         end_date   => $self->end_date,
-                        booking_id => $self->in_storage ? $self->booking_id : undef
+                        booking_id => $self->in_storage ? $self->booking_id : undef,
+                        item_id    => $self->item_id,
                     }
                     );
             }

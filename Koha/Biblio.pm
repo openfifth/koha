@@ -354,7 +354,10 @@ sub can_be_edited {
 
 Returns a boolean denoting whether the passed booking can be made without clashing.
 
-Optionally, you may pass a booking id to exclude from the checks; This is helpful when you are updating an existing booking.
+Optionally, you may pass a booking id to exclude from the checks. This is
+helpful when you are updating an existing booking. When C<item_id> identifies
+that booking's assigned item, the item remains in the availability pool if it
+has since become unbookable.
 
 =cut
 
@@ -365,10 +368,29 @@ sub check_booking {
     my $end_date   = dt_from_string( $params->{end_date} );
     my $booking_id = $params->{booking_id};
 
-    my $bookable_items = $self->bookable_items;
-    my $total_bookable = $bookable_items->count;
+    my $bookable_items    = $self->bookable_items;
+    my $bookable_item_ids = [ $bookable_items->get_column('itemnumber') ];
 
-    my $dtf               = Koha::Database->new->schema->storage->datetime_parser;
+    # An edit must retain the booking's assigned item if it has since become
+    # unbookable. Only grandfather the item already assigned to this booking;
+    # an unrelated unbookable item must not increase the available pool.
+    if ( defined($booking_id) && defined( my $item_id = $params->{item_id} ) ) {
+        my %is_bookable = map { $_ => 1 } @{$bookable_item_ids};
+        my $booking     = $self->bookings->find($booking_id);
+        push @{$bookable_item_ids}, $item_id
+            if !$is_bookable{$item_id}
+            && $booking
+            && defined $booking->item_id
+            && $booking->item_id == $item_id;
+    }
+
+    my $total_bookable = @{$bookable_item_ids};
+
+    my $dtf = Koha::Database->new->schema->storage->datetime_parser;
+
+    # Bookings assigned to items outside the effective pool must not consume
+    # its capacity. This matters when an item type becomes unbookable while an
+    # existing booking retains its own assigned item for editing.
     my $existing_bookings = $self->bookings(
         {
             '-and' => [
@@ -392,7 +414,8 @@ sub check_booking {
                         }
                     ]
                 },
-                { status => { '-not_in' => [ 'cancelled', 'completed' ] } }
+                { status  => { '-not_in' => [ 'cancelled', 'completed' ] } },
+                { item_id => { '-in'     => $bookable_item_ids } }
             ]
         }
     );
@@ -404,8 +427,6 @@ sub check_booking {
 
     # Only count checkouts on bookable items; checkouts on non-bookable
     # sibling items should not reduce the pool of available bookable items.
-    my $bookable_item_ids = [ $bookable_items->reset->get_column('itemnumber') ];
-
     my $checkouts = $self->current_checkouts->search(
         {
             date_due        => { '>=' => $dtf->format_datetime($start_date) },
