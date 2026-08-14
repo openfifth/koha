@@ -39,16 +39,20 @@ Koha::Plugins::Install
 =head3 install
 
     my ( $ok, $result ) = Koha::Plugins::Install->install({
-        kpz_path           => $local_path_to_kpz,
+        kpz_path            => $local_path_to_kpz,
         filename            => $original_filename,     # used for the .kpz extension check
         repo_url            => $repo_url,               # optional; the plugin's origin repo, if known
         certification_tier  => $tier,                   # optional; the plugin-store's tier for this version, if known
+        signed_manifest     => $signed_manifest_json,   # optional; the plugin-store's signed manifest for this version, if known
+        signature           => $signature_b64,          # optional; the plugin-store's signature over signed_manifest, if known
+        confirm_unsigned    => $bool,                    # optional; bypasses UNSIGNEDCONFIRMREQUIRED once the caller has confirmed
     });
 
 Validates, then extracts and installs, a plugin already downloaded to a local path. On success
 returns C<(1, { digest => $sha256_hex })>. On failure returns C<(0, \%errors)> where C<%errors>
-keys are any of C<NOTKPZ>, C<NOWRITEPLUGINS>, C<RESTRICTED>, C<BELOWMINIMUMLEVEL>, C<UNZIPFAIL> --
-never installs anything if any check fails.
+keys are any of C<NOTKPZ>, C<NOWRITEPLUGINS>, C<RESTRICTED>, C<SIGNATUREMISMATCH>, C<UNSIGNED>,
+C<UNSIGNEDCONFIRMREQUIRED>, C<BELOWMINIMUMLEVEL>, C<UNZIPFAIL> -- never installs anything if any
+check fails.
 
 This is called by the plugin management REST API endpoint (C<Koha::REST::V1::Plugins::add()>)
 to ensure consistent security checks.
@@ -67,10 +71,13 @@ PEM
 sub install {
     my ( $class, $params ) = @_;
 
-    my $kpz_path = $params->{kpz_path};
-    my $filename = $params->{filename} // '';
-    my $repo_url = $params->{repo_url};
-    my $tier     = $params->{certification_tier};
+    my $kpz_path         = $params->{kpz_path};
+    my $filename         = $params->{filename} // '';
+    my $repo_url         = $params->{repo_url};
+    my $tier             = $params->{certification_tier};
+    my $signed_manifest  = $params->{signed_manifest};
+    my $signature        = $params->{signature};
+    my $confirm_unsigned = $params->{confirm_unsigned};
 
     my %errors;
     $errors{NOTKPZ} = 1 if $filename !~ /\.kpz$/i;
@@ -79,17 +86,28 @@ sub install {
     $plugins_dir = ref($plugins_dir) eq 'ARRAY' ? $plugins_dir->[0] : $plugins_dir;
     $errors{NOWRITEPLUGINS} = 1 unless -w $plugins_dir;
 
-    $errors{RESTRICTED}        = 1 unless $class->_repo_allowed($repo_url);
+    $errors{RESTRICTED} = 1 unless $class->_repo_allowed($repo_url);
+
+    # Computed here (rather than after the early-return below, as before) because the
+    # signature check needs it -- the manifest's own digest must match this exact file,
+    # not merely verify against something the store once signed.
+    my $digest = $class->_digest($kpz_path);
+
+    if ( $signed_manifest && $signature ) {
+        $errors{SIGNATUREMISMATCH} = 1
+            unless $class->_verify_signature( $signed_manifest, $signature, $digest );
+    } else {
+        my $allow_unsigned = C4::Context->config('plugins_allow_unsigned') // 1;
+        if ( !$allow_unsigned ) {
+            $errors{UNSIGNED} = 1;
+        } elsif ( !$confirm_unsigned ) {
+            $errors{UNSIGNEDCONFIRMREQUIRED} = 1;
+        }
+    }
+
     $errors{BELOWMINIMUMLEVEL} = 1 unless $class->_meets_minimum_level($tier);
 
     return ( 0, \%errors ) if %errors;
-
-    # Digest is computed and returned for callers to log/record. It is not
-    # yet checked against anything -- the store doesn't sign versions yet
-    # (spec §4.3 / build-order step 6). This is a deliberate no-op, not an
-    # oversight: once the store signs, verification slots in right here,
-    # before extraction, without any call site needing to change.
-    my $digest = $class->_digest($kpz_path);
 
     my $ae = Archive::Extract->new( archive => $kpz_path, type => 'zip' );
     unless ( $ae->extract( to => $plugins_dir ) ) {

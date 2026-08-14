@@ -17,7 +17,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 8;
+use Test::More tests => 12;
 use Test::NoWarnings;
 use Test::MockModule;
 use File::Temp   qw(tempdir tempfile);
@@ -52,7 +52,8 @@ subtest 'rejects a non-.kpz filename' => sub {
 subtest 'unrestricted install with no known repo_url succeeds' => sub {
     plan tests => 1;
     t::lib::Mocks::mock_config( 'plugins_restricted', 0 );
-    my ( $ok, $result ) = Koha::Plugins::Install->install( { kpz_path => _fixture_kpz(), filename => 'plugin.kpz' } );
+    my ( $ok, $result ) = Koha::Plugins::Install->install(
+        { kpz_path => _fixture_kpz(), filename => 'plugin.kpz', confirm_unsigned => 1 } );
     ok( $ok, 'install succeeds when plugins_restricted is off, even with no known repo_url' );
 };
 
@@ -95,9 +96,10 @@ subtest 'restricted install: an exact, correctly-hosted org match is allowed' =>
     );
     my ( $ok, $result ) = Koha::Plugins::Install->install(
         {
-            kpz_path => _fixture_kpz(),
-            filename => 'plugin.kpz',
-            repo_url => 'https://github.com/bywatersolutions/koha-plugin-coverflow',
+            kpz_path         => _fixture_kpz(),
+            filename         => 'plugin.kpz',
+            repo_url         => 'https://github.com/bywatersolutions/koha-plugin-coverflow',
+            confirm_unsigned => 1,
         }
     );
     ok( $ok, 'a repo_url exactly matching an allowed org on the right host is allowed' );
@@ -169,4 +171,54 @@ subtest '_verify_signature' => sub {
         !Koha::Plugins::Install->_verify_signature( 'not valid json', $signature, 'abc123' ),
         'malformed manifest JSON fails cleanly rather than dying'
     );
+};
+
+subtest 'a present, invalid signature is SIGNATUREMISMATCH regardless of plugins_allow_unsigned' => sub {
+    plan tests => 2;
+    t::lib::Mocks::mock_config( 'plugins_restricted',     0 );
+    t::lib::Mocks::mock_config( 'plugins_allow_unsigned', 1 );
+    my ( $ok, $result ) = Koha::Plugins::Install->install(
+        {
+            kpz_path        => _fixture_kpz(),
+            filename        => 'plugin.kpz',
+            signed_manifest => '{"digest":"not-the-real-digest"}',
+            signature       => 'ZmFrZQ==',    # base64 of 'fake' -- decodes fine, verifies against nothing real
+        }
+    );
+    ok( !$ok, 'install is rejected when a signature is present but does not verify' );
+    is( $result->{SIGNATUREMISMATCH}, 1, 'SIGNATUREMISMATCH error set' );
+};
+
+subtest 'an absent signature is UNSIGNED when plugins_allow_unsigned is off' => sub {
+    plan tests => 2;
+    t::lib::Mocks::mock_config( 'plugins_restricted',     0 );
+    t::lib::Mocks::mock_config( 'plugins_allow_unsigned', 0 );
+    my ( $ok, $result ) = Koha::Plugins::Install->install( { kpz_path => _fixture_kpz(), filename => 'plugin.kpz' } );
+    ok( !$ok, 'install is rejected outright with no signature and unsigned installs disabled' );
+    is( $result->{UNSIGNED}, 1, 'UNSIGNED error set' );
+};
+
+subtest 'an absent signature requires confirmation when plugins_allow_unsigned is on (the default)' => sub {
+    plan tests => 3;
+    t::lib::Mocks::mock_config( 'plugins_restricted',     0 );
+    t::lib::Mocks::mock_config( 'plugins_allow_unsigned', 1 );
+
+    my ( $ok, $result ) = Koha::Plugins::Install->install( { kpz_path => _fixture_kpz(), filename => 'plugin.kpz' } );
+    ok( !$ok, 'install is not performed on the first, unconfirmed attempt' );
+    is( $result->{UNSIGNEDCONFIRMREQUIRED}, 1, 'UNSIGNEDCONFIRMREQUIRED error set' );
+
+    ( $ok, $result ) = Koha::Plugins::Install->install(
+        { kpz_path => _fixture_kpz(), filename => 'plugin.kpz', confirm_unsigned => 1 } );
+    ok( $ok, 'the same request with confirm_unsigned set proceeds to install' );
+};
+
+subtest 'plugins_allow_unsigned defaults to enabled when unset' => sub {
+    plan tests => 1;
+    t::lib::Mocks::mock_config( 'plugins_restricted', 0 );
+
+    # deliberately NOT calling mock_config('plugins_allow_unsigned', ...) -- confirms
+    # the C4::Context->config('plugins_allow_unsigned') // 1 default takes effect
+    my ( $ok, $result ) = Koha::Plugins::Install->install(
+        { kpz_path => _fixture_kpz(), filename => 'plugin.kpz', confirm_unsigned => 1 } );
+    ok( $ok, 'an unconfigured plugins_allow_unsigned behaves as enabled (matches pre-existing behavior)' );
 };

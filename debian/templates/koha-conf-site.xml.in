@@ -441,6 +441,11 @@ __END_SRU_PUBLICSERVER__
 
  <plugins_restricted>1</plugins_restricted>
  <plugins_restart>1</plugins_restart>
+ <!-- Whether a plugin with no known signature from the configured plugin store may be
+      installed at all (after an explicit confirmation prompt in the staff client). Set
+      to 0 to require every install to have a valid store signature. Defaults to enabled
+      (1) when this entry is absent, to preserve support for private/in-house plugins. -->
+ <plugins_allow_unsigned>1</plugins_allow_unsigned>
  <plugin_repos>
     <!--
     <repo>
