@@ -2967,7 +2967,7 @@ subtest 'store() tests' => sub {
 
     subtest 'skip biblio re-index for circ-only field changes' => sub {
 
-        plan tests => 4;
+        plan tests => 6;
 
         $schema->storage->txn_begin;
 
@@ -3001,6 +3001,18 @@ subtest 'store() tests' => sub {
         $index_calls = 0;
         $item->set( { notforloan => 1 } )->store;
         is( $index_calls, 1, 'biblio re-indexed when non-circ field changed even when items index ready' );
+
+        $item->set( { notforloan => 0 } )->store;
+
+        my $transfer_branch = $builder->build_object( { class => 'Koha::Libraries' } )->branchcode;
+        $index_calls = 0;
+        $item->set( { holdingbranch => $transfer_branch } )->store;
+        is( $index_calls, 1, 'biblio re-indexed when holdingbranch changes alone (transfer)' );
+
+        my $checkout_branch = $builder->build_object( { class => 'Koha::Libraries' } )->branchcode;
+        $index_calls = 0;
+        $item->set( { holdingbranch => $checkout_branch, onloan => '2026-06-25' } )->store;
+        is( $index_calls, 0, 'biblio not re-indexed when holdingbranch changes alongside onloan (checkout)' );
 
         $schema->storage->txn_rollback;
     };

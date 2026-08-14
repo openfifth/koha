@@ -277,7 +277,12 @@ sub store {
         && C4::Context->preference("SearchEngine") eq 'Elasticsearch'
         && %updated_columns )
     {
-        if ( all { exists $ITEM_CIRC_FIELDS{$_} } keys %updated_columns ) {
+        my $is_branch_transfer =
+               exists $updated_columns{holdingbranch}
+            && !exists $updated_columns{onloan}
+            && !exists $updated_columns{issues};
+
+        if ( !$is_branch_transfer && all { exists $ITEM_CIRC_FIELDS{$_} } keys %updated_columns ) {
             require Koha::SearchEngine::Elasticsearch::Search;
             my $searcher =
                 Koha::SearchEngine::Elasticsearch::Search->new( { index => $Koha::SearchEngine::BIBLIOS_INDEX } );
