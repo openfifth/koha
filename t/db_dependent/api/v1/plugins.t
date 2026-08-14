@@ -38,7 +38,7 @@ t::lib::Mocks::mock_preference( 'RESTBasicAuth', 1 );
 
 subtest 'add()' => sub {
 
-    plan tests => 8;
+    plan tests => 17;
 
     $schema->storage->txn_begin;
 
@@ -79,6 +79,33 @@ subtest 'add()' => sub {
 
     $t->post_ok( "//$userid:$password\@/api/v1/plugins" => json => { kpz_url => 'https://example.com/plugin.kpz' } )
         ->status_is( 403, 'A rejected install (per Koha::Plugins::Install) returns 403, not a silent install' );
+
+    is(
+        $t->tx->res->json->{error}, 'RESTRICTED',
+        'the harmonized error shape reports a single code, matching upload()'
+    );
+
+    $install_module->mock( install => sub { return ( 0, { SIGNATUREMISMATCH => 1, BELOWMINIMUMLEVEL => 1 } ) } );
+    $t->post_ok( "//$userid:$password\@/api/v1/plugins" => json => { kpz_url => 'https://example.com/plugin.kpz' } )
+        ->status_is(403);
+    is(
+        $t->tx->res->json->{error}, 'SIGNATUREMISMATCH',
+        'when multiple errors are present, SIGNATUREMISMATCH is reported ahead of BELOWMINIMUMLEVEL'
+    );
+
+    $install_module->mock(
+        install => sub {
+            my ( $class, $params ) = @_;
+            return ( 1, { digest                  => 'abc123' } ) if $params->{confirm_unsigned};
+            return ( 0, { UNSIGNEDCONFIRMREQUIRED => 1 } );
+        }
+    );
+    $t->post_ok( "//$userid:$password\@/api/v1/plugins" => json => { kpz_url => 'https://example.com/plugin.kpz' } )
+        ->status_is(403)
+        ->json_is( '/error' => 'UNSIGNEDCONFIRMREQUIRED' );
+    $t->post_ok( "//$userid:$password\@/api/v1/plugins" => json =>
+            { kpz_url => 'https://example.com/plugin.kpz', confirm_unsigned => \1 } )
+        ->status_is( 201, 'confirm_unsigned is threaded through to install()' );
 
     $t->post_ok( "//$userid:$password\@/api/v1/plugins" => json => {} )
         ->status_is( 400, 'Missing kpz_url is a 400, not a crash' );
@@ -344,7 +371,7 @@ subtest 'delete()' => sub {
 
 subtest 'upload()' => sub {
 
-    plan tests => 6;
+    plan tests => 11;
 
     $schema->storage->txn_begin;
 
@@ -379,6 +406,22 @@ subtest 'upload()' => sub {
         ->status_is(403);
 
     is( $t->tx->res->json->{error}, 'RESTRICTED', 'plugins_restricted rejects manual upload with RESTRICTED' );
+
+    t::lib::Mocks::mock_config( 'plugins_restricted', 0 );
+    $install_module->mock(
+        'install',
+        sub {
+            my ( $class, $params ) = @_;
+            return ( 1, {} ) if $params->{confirm_unsigned};
+            return ( 0, { UNSIGNEDCONFIRMREQUIRED => 1 } );
+        }
+    );
+    $t->post_ok( "//$userid:$password\@/api/v1/plugins/upload" => form => { file => { file => $kpz_path } } )
+        ->status_is(403)
+        ->json_is( '/error' => 'UNSIGNEDCONFIRMREQUIRED' );
+    $t->post_ok( "//$userid:$password\@/api/v1/plugins/upload" => form =>
+            { file => { file => $kpz_path }, confirm_unsigned => 1 } )
+        ->status_is( 201, 'confirm_unsigned is threaded through upload() to install()' );
 
     $schema->storage->txn_rollback;
 };

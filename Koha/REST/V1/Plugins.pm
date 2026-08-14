@@ -72,8 +72,9 @@ Installs the uploaded plugin
 sub add {
     my $c = shift->openapi->valid_input or return;
 
-    my $body    = $c->req->json // {};
-    my $kpz_url = $body->{kpz_url};
+    my $body             = $c->req->json // {};
+    my $kpz_url          = $body->{kpz_url};
+    my $confirm_unsigned = $body->{confirm_unsigned};
 
     return $c->render( status => 400, openapi => { error => 'Missing kpz_url' } )
         unless $kpz_url;
@@ -93,10 +94,13 @@ sub add {
             filename           => $filename,
             repo_url           => $lookup ? $lookup->{repo_url}           : undef,
             certification_tier => $lookup ? $lookup->{certification_tier} : undef,
+            signed_manifest    => $lookup ? $lookup->{signed_manifest}    : undef,
+            signature          => $lookup ? $lookup->{signature}          : undef,
+            confirm_unsigned   => $confirm_unsigned,
         }
     );
 
-    return $c->render( status => 403, openapi => { error => 'Install rejected', details => $result } )
+    return $c->render( status => 403, openapi => { error => _priority_error($result) } )
         unless $ok;
 
     return try {
@@ -278,20 +282,52 @@ sub upload {
     my ( undef, $tempfile ) = File::Temp::tempfile( DIR => $dirname, SUFFIX => $filesuffix // '', UNLINK => 1 );
     $upload->move_to($tempfile);
 
+    my $digest = Koha::Plugins::Install->_digest($tempfile);
+    my $lookup = Koha::Plugins::Store->lookup_by_digest($digest);
+
+    my $confirm_unsigned = $c->req->body_params->param('confirm_unsigned');
+
     my ( $ok, $result ) = Koha::Plugins::Install->install(
         {
-            kpz_path => $tempfile,
-            filename => $upload->filename,
+            kpz_path           => $tempfile,
+            filename           => $upload->filename,
+            certification_tier => $lookup ? $lookup->{certification_tier} : undef,
+            signed_manifest    => $lookup ? $lookup->{signed_manifest}    : undef,
+            signature          => $lookup ? $lookup->{signature}          : undef,
+            confirm_unsigned   => $confirm_unsigned,
         }
     );
 
-    return $c->render( status => 403, openapi => { error => ( keys %$result )[0] // 'unknown_error' } )
+    return $c->render( status => 403, openapi => { error => _priority_error($result) } )
         unless $ok;
 
     return $c->render(
         status  => 201,
         openapi => { success => 'Plugin installed' }
     );
+}
+
+=head3 _priority_error
+
+    my $code = _priority_error($errors_hashref);
+
+Picks a single error code to report from Koha::Plugins::Install::install()'s C<%errors>
+hash, in a fixed priority order -- deliberately NOT C<(keys %$errors)[0]>, since Perl hash
+key order is randomized per-instance and must never be relied on for anything meaningful.
+
+=cut
+
+sub _priority_error {
+    my ($errors) = @_;
+
+    for my $code (
+        qw(NOTKPZ NOWRITEPLUGINS RESTRICTED SIGNATUREMISMATCH UNSIGNED UNSIGNEDCONFIRMREQUIRED BELOWMINIMUMLEVEL UNZIPFAIL)
+        )
+    {
+        return $code if $errors->{$code};
+    }
+
+    return ( keys %$errors )[0] // 'unknown_error';
 }
 
 1;

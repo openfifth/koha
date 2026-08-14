@@ -87,6 +87,9 @@
             kpz_url:
               type: string
               description: URL to the plugin kpz file
+            confirm_unsigned:
+              type: boolean
+              description: Set true to proceed with an unsigned/unverified plugin after the caller has confirmed with the user
     responses:
       "200":
         description: Successful plugin install
@@ -110,7 +113,14 @@
         schema:
           $ref: "../swagger.yaml#/definitions/error"
       "403":
-        description: Access forbidden
+        description: |
+          Access forbidden. Possible `error` attribute values:
+
+          * `RESTRICTED`
+          * `SIGNATUREMISMATCH`
+          * `UNSIGNED`
+          * `UNSIGNEDCONFIRMREQUIRED`
+          * `BELOWMINIMUMLEVEL`
         schema:
           $ref: "../swagger.yaml#/definitions/error"
       "500":
@@ -246,6 +256,11 @@
         required: true
         type: file
         description: The .kpz plugin file
+      - name: confirm_unsigned
+        in: formData
+        required: false
+        type: boolean
+        description: Set true to proceed with an unsigned/unverified plugin after the caller has confirmed with the user
     responses:
       "201":
         description: Plugin installed
@@ -272,6 +287,10 @@
           * `NOWRITEPLUGINS`
           * `NOWRITETEMP`
           * `EMPTYUPLOAD`
+          * `SIGNATUREMISMATCH`
+          * `UNSIGNED`
+          * `UNSIGNEDCONFIRMREQUIRED`
+          * `BELOWMINIMUMLEVEL`
         schema:
           $ref: "../swagger.yaml#/definitions/error"
     x-koha-authorization:
