@@ -53,6 +53,7 @@
 import { inject, ref } from "vue";
 import { storeToRefs } from "pinia";
 import { APIClient } from "../../fetch/api-client.js";
+import { ERROR_MESSAGES } from "./errorMessages.js";
 import KohaTable from "../KohaTable.vue";
 
 export default {
@@ -60,13 +61,18 @@ export default {
         const pluginStoreStore = inject("pluginStoreStore");
         const storeRefs = storeToRefs(pluginStoreStore);
         const { isUserPermitted } = pluginStoreStore;
-        const { setMessage, setConfirmationDialog, setComponentDialog } =
-            inject("mainStore");
+        const {
+            setMessage,
+            setError,
+            setConfirmationDialog,
+            setComponentDialog,
+        } = inject("mainStore");
 
         return {
             userPermissions: storeRefs.userPermissions,
             isUserPermitted,
             setMessage,
+            setError,
             setConfirmationDialog,
             setComponentDialog,
         };
@@ -358,17 +364,46 @@ export default {
                 }
             );
         },
-        doUpdatePlugin(plugin) {
+        doUpdatePlugin(plugin, confirmUnsigned = false) {
             const release = this.mostRecentRelease(plugin);
             if (!release) {
                 this.setMessage(this.$__("Update information not available."));
                 return;
             }
             const client = APIClient.plugin_store;
-            client.plugins.create({ kpz_url: release.kpz_url }).then(() => {
-                this.setMessage(this.$__("Plugin updated."));
-                this.refreshList();
-            });
+            client.plugins
+                .create({
+                    kpz_url: release.kpz_url,
+                    ...(confirmUnsigned ? { confirm_unsigned: true } : {}),
+                })
+                .then(
+                    () => {
+                        this.setMessage(this.$__("Plugin updated."));
+                        this.refreshList();
+                    },
+                    error => {
+                        if (error.message === "UNSIGNEDCONFIRMREQUIRED") {
+                            this.setConfirmationDialog(
+                                {
+                                    title: this.$__(
+                                        "This plugin isn't signed by the plugin store. It may be a private/in-house plugin the store has never seen, or one published before this store supported signing. Update anyway?"
+                                    ),
+                                    accept_label:
+                                        this.$__("Yes, update anyway"),
+                                    cancel_label: this.$__("No, cancel"),
+                                },
+                                () => this.doUpdatePlugin(plugin, true)
+                            );
+                            return;
+                        }
+                        this.setError(
+                            this.$__(
+                                ERROR_MESSAGES[error.message] ||
+                                    "An unknown error has occurred."
+                            )
+                        );
+                    }
+                );
         },
         refreshList() {
             const client = APIClient.plugin_store;

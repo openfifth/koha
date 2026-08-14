@@ -16,7 +16,7 @@
             <button
                 class="btn btn-primary"
                 :disabled="!selectedFile"
-                @click="submit"
+                @click="submit(false)"
             >
                 {{ $__("Upload") }}
             </button>
@@ -26,29 +26,15 @@
 
 <script>
 import { APIClient } from "../../fetch/api-client.js";
+import { ERROR_MESSAGES } from "./errorMessages.js";
 import { inject } from "vue";
-
-const ERROR_MESSAGES = {
-    NOTKPZ: "The upload file does not appear to be a kpz file.",
-    UNZIPFAIL:
-        "The file failed to unpack. Please verify the integrity of the zip file and retry.",
-    NOWRITEPLUGINS:
-        "Cannot unpack file to the plugins directory. Please verify that the web server user can write to the plugins directory.",
-    RESTRICTED:
-        "Cannot install plugin from unknown source whilst plugin restriction is enabled.",
-    NOWRITETEMP:
-        "This server is not able to create/write to the necessary temporary directory.",
-    EMPTYUPLOAD: "The upload file appears to be empty.",
-    BELOWMINIMUMLEVEL:
-        "This plugin does not meet the site's minimum certification level.",
-};
 
 export default {
     name: "UploadModal",
     emits: ["uploaded"],
     setup() {
-        const { setMessage } = inject("mainStore");
-        return { setMessage };
+        const { setMessage, setConfirmationDialog } = inject("mainStore");
+        return { setMessage, setConfirmationDialog };
     },
     data() {
         return {
@@ -60,10 +46,11 @@ export default {
         onFileChange(event) {
             this.selectedFile = event.target.files[0] || null;
         },
-        submit() {
+        submit(confirmUnsigned = false) {
             this.error = null;
             const formData = new FormData();
             formData.append("file", this.selectedFile);
+            if (confirmUnsigned) formData.append("confirm_unsigned", "1");
 
             const client = APIClient.plugin_store;
             client.plugins.upload(formData).then(
@@ -72,6 +59,19 @@ export default {
                     this.$emit("uploaded");
                 },
                 error => {
+                    if (error.message === "UNSIGNEDCONFIRMREQUIRED") {
+                        this.setConfirmationDialog(
+                            {
+                                title: this.$__(
+                                    "This plugin isn't signed by the plugin store. It may be a private/in-house plugin the store has never seen, or one published before this store supported signing. Install anyway?"
+                                ),
+                                accept_label: this.$__("Yes, install anyway"),
+                                cancel_label: this.$__("No, cancel"),
+                            },
+                            () => this.submit(true)
+                        );
+                        return;
+                    }
                     this.error = this.$__(
                         ERROR_MESSAGES[error.message] ||
                             "An unknown error has occurred."

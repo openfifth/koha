@@ -47,6 +47,7 @@
 
 <script>
 import { APIClient } from "../../fetch/api-client.js";
+import { ERROR_MESSAGES } from "./errorMessages.js";
 import { inject } from "vue";
 
 export default {
@@ -56,8 +57,9 @@ export default {
     },
     emits: ["installed"],
     setup() {
-        const { setError, setMessage } = inject("mainStore");
-        return { koha_version, setError, setMessage };
+        const { setError, setMessage, setConfirmationDialog } =
+            inject("mainStore");
+        return { koha_version, setError, setMessage, setConfirmationDialog };
     },
     data() {
         return {
@@ -104,15 +106,47 @@ export default {
                 new Date(b.date_released) > new Date(a.date_released) ? b : a
             );
         },
-        install(plugin) {
+        install(plugin, confirmUnsigned = false) {
             const release = this.mostRecentRelease(plugin);
             const client = APIClient.plugin_store;
-            client.plugins.create({ kpz_url: release.kpz_url }).then(() => {
-                this.setMessage(
-                    this.$__("%s has been installed.").format(plugin.name)
+            client.plugins
+                .create({
+                    kpz_url: release.kpz_url,
+                    ...(confirmUnsigned ? { confirm_unsigned: true } : {}),
+                })
+                .then(
+                    () => {
+                        this.setMessage(
+                            this.$__("%s has been installed.").format(
+                                plugin.name
+                            )
+                        );
+                        this.$emit("installed");
+                    },
+                    error => {
+                        if (error.message === "UNSIGNEDCONFIRMREQUIRED") {
+                            this.setConfirmationDialog(
+                                {
+                                    title: this.$__(
+                                        "This plugin isn't signed by the plugin store. It may be a private/in-house plugin the store has never seen, or one published before this store supported signing. Install anyway?"
+                                    ),
+                                    accept_label: this.$__(
+                                        "Yes, install anyway"
+                                    ),
+                                    cancel_label: this.$__("No, cancel"),
+                                },
+                                () => this.install(plugin, true)
+                            );
+                            return;
+                        }
+                        this.setError(
+                            this.$__(
+                                ERROR_MESSAGES[error.message] ||
+                                    "An unknown error has occurred."
+                            )
+                        );
+                    }
                 );
-                this.$emit("installed");
-            });
         },
     },
 };
