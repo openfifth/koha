@@ -1741,6 +1741,7 @@ sub searchResults {
     # instead of one Koha::Items->search per item inside the loop.
     my %opac_visible_itemnumbers;
     my $opac_visibility_prefetched = 0;
+    my %prescanned_records;
     if ($is_opac) {
         my @all_itemnumbers;
         for ( my $i = $offset ; $i <= $times - 1 ; $i++ ) {
@@ -1752,6 +1753,7 @@ sub searchResults {
                 $mr = new_record_from_zebra( 'biblioserver', $marcresults->[$i] );
             }
             next unless $mr;
+            $prescanned_records{$i} = $mr;
             push @all_itemnumbers,
                 grep { defined }
                 map { $_->subfield( $subfieldstosearch{itemnumber} ) } $mr->field($itemtag);
@@ -1767,12 +1769,12 @@ sub searchResults {
     # loop through all of the records we've retrieved
     for ( my $i = $offset ; $i <= $times - 1 ; $i++ ) {
 
-        my $marcrecord;
-        if ($scan) {
+        my $marcrecord = $prescanned_records{$i};
+        if ( !$marcrecord && $scan ) {
 
             # For Scan searches we built USMARC data
             $marcrecord = MARC::Record->new_from_usmarc( $marcresults->[$i] );
-        } else {
+        } elsif ( !$marcrecord ) {
 
             # Normal search, render from Zebra's output
             $marcrecord = new_record_from_zebra(
