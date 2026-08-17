@@ -27,11 +27,12 @@ require C4::Context;
 use open ':std', ':encoding(utf8)';
 
 use Test::NoWarnings;
-use Test::More tests => 5;
+use Test::More tests => 6;
 use Test::MockModule;
 use Test::Warn;
 use t::lib::Mocks;
 use t::lib::Mocks::Zebra;
+use t::lib::TestBuilder;
 
 use Koha::Caches;
 
@@ -53,13 +54,15 @@ sub matchesExplodedTerms {
     like( $query, qr/$match/, $message );
 }
 
-our $QueryStemming     = 0;
-our $QueryAutoTruncate = 0;
-our $QueryWeightFields = 0;
-our $QueryFuzzy        = 0;
-our $SearchEngine      = 'Zebra';
-our $marcflavour       = 'MARC21';
-our $htdocs            = File::Spec->rel2abs( dirname($0) );
+our $QueryStemming              = 0;
+our $QueryAutoTruncate          = 0;
+our $QueryWeightFields          = 0;
+our $QueryFuzzy                 = 0;
+our $SearchEngine               = 'Zebra';
+our $marcflavour                = 'MARC21';
+our $hidelostitems              = 0;
+our $OpacHiddenItemsHidesRecord = 0;
+our $htdocs                     = File::Spec->rel2abs( dirname($0) );
 my @htdocs = split /\//, $htdocs;
 $htdocs[-2] = 'koha-tmpl';
 $htdocs[-1] = 'opac-tmpl';
@@ -89,6 +92,10 @@ $contextmodule->mock(
             return 20;
         } elsif ( $pref eq 'OpacHiddenItems' ) {
             return '';
+        } elsif ( $pref eq 'hidelostitems' ) {
+            return $hidelostitems;
+        } elsif ( $pref eq 'OpacHiddenItemsHidesRecord' ) {
+            return $OpacHiddenItemsHidesRecord;
         } elsif ( $pref eq 'opacthemes' ) {
             return 'bootstrap';
         } elsif ( $pref eq 'OPACLanguages' ) {
@@ -172,6 +179,12 @@ $contextmodule->mock(
             return q{};
         } elsif ( $pref eq 'FacetSortingLocale' ) {
             return 'default';
+        } elsif ( $pref eq 'CataloguingLog' ) {
+            return 0;
+        } elsif ( $pref eq 'RealTimeHoldsQueue' ) {
+            return 0;
+        } elsif ( $pref eq 'Pseudonymization' ) {
+            return 0;
         } else {
             warn
                 "The syspref $pref was requested but I don't know what to say; this indicates that the test requires updating"
@@ -327,6 +340,137 @@ subtest 'searchResults branch-specific counts for Bug 37883' => sub {
 
     # Test that global counts still include all items from all branches
     is( $results[0]->{availablecount}, 2, 'Global available count: 2 items available at all branches' );
+};
+
+subtest 'searchResults() OPAC item visibility batching' => sub {
+    plan tests => 7;
+
+    use C4::Search qw( searchResults );
+
+    my $schema = Koha::Database->new->schema;
+    $schema->storage->txn_begin;
+
+    my $builder = t::lib::TestBuilder->new;
+
+    local $hidelostitems              = 1;
+    local $OpacHiddenItemsHidesRecord = 1;
+
+    my $itemtype = $builder->build_object( { class => 'Koha::ItemTypes' } )->itemtype;
+
+    my $build_biblio_with_biblioitem = sub {
+        my ($title) = @_;
+        my $biblio = $builder->build_object( { class => 'Koha::Biblios', value => { title => $title } } );
+        $builder->build_object(
+            { class => 'Koha::Biblioitems', value => { biblionumber => $biblio->biblionumber, itemtype => $itemtype } }
+        );
+        return $biblio;
+    };
+
+    my $visible_biblio = $build_biblio_with_biblioitem->('Visible');
+    my $visible_item = $builder->build_sample_item( { biblionumber => $visible_biblio->biblionumber, itemlost => 0 } );
+
+    my $hidden_biblio = $build_biblio_with_biblioitem->('Hidden');
+    my $hidden_item   = $builder->build_sample_item( { biblionumber => $hidden_biblio->biblionumber, itemlost => 1 } );
+
+    my $empty_biblio = $build_biblio_with_biblioitem->('Empty');
+
+    my $build_marc = sub {
+        my ( $biblio, $item ) = @_;
+        my $record = MARC::Record->new();
+        $record->add_fields(
+            [ '999', ' ', ' ', c => $biblio->biblionumber, d => $biblio->biblionumber ],
+            [ '245', ' ', ' ', a => $biblio->title ],
+        );
+        $record->add_fields(
+            [
+                '952', ' ', ' ',
+                a   => $item->homebranch,
+                b   => $item->holdingbranch,
+                p   => $item->barcode,
+                y   => $item->itype,
+                '9' => $item->itemnumber,
+                '0' => 0,
+                '1' => $item->itemlost,
+                '4' => 0,
+                '7' => 0,
+                q   => '',
+            ]
+        ) if $item;
+        return $record;
+    };
+    my $record_for_zebra_search = sub { $build_marc->(@_)->as_xml() };
+    my $record_for_scan_search  = sub { $build_marc->(@_)->as_usmarc() };
+
+    my @results = searchResults(
+        { interface => 'opac' },
+        'test query',
+        3, 10, 0, 0,
+        [
+            $record_for_zebra_search->( $visible_biblio, $visible_item ),
+            $record_for_zebra_search->( $hidden_biblio,  $hidden_item ),
+            $record_for_zebra_search->( $empty_biblio,   undef ),
+        ]
+    );
+
+    my %seen = map { $_->{biblionumber} => 1 } @results;
+
+    ok( $seen{ $visible_biblio->biblionumber }, 'biblio with a visible item is returned' );
+    ok( !$seen{ $hidden_biblio->biblionumber }, 'biblio whose only item is lost/hidden is not returned' );
+    ok( $seen{ $empty_biblio->biblionumber },   'biblio with no items in the same batch is unaffected' );
+
+    my @empty_only_results = searchResults(
+        { interface => 'opac' },
+        'test query',
+        1, 10, 0, 0,
+        [ $record_for_zebra_search->( $empty_biblio, undef ) ]
+    );
+    is( scalar @empty_only_results, 1, 'a page with no items at all falls back cleanly, no crash' );
+
+    my @scan_records = (
+        $record_for_scan_search->( $visible_biblio, $visible_item ),
+        $record_for_scan_search->( $hidden_biblio,  $hidden_item ),
+    );
+
+    my $marc_mock                = Test::MockModule->new('MARC::Record');
+    my $original_new_from_usmarc = MARC::Record->can('new_from_usmarc');
+    my $prescan_parses_to_fail   = scalar @scan_records;
+    my $parse_attempts           = 0;
+    $marc_mock->mock(
+        'new_from_usmarc',
+        sub {
+            $parse_attempts++;
+            return $parse_attempts <= $prescan_parses_to_fail ? undef : $original_new_from_usmarc->(@_);
+        }
+    );
+
+    my $items_mock            = Test::MockModule->new('Koha::Items');
+    my $original_items_search = Koha::Items->can('search');
+    my $per_item_lookups_ran  = 0;
+    $items_mock->mock(
+        'search',
+        sub {
+            my ( $class, $params ) = @_;
+            my $is_single_item_lookup = ref( $params->{itemnumber} ) ne 'HASH';
+            $per_item_lookups_ran++ if $is_single_item_lookup;
+            return $original_items_search->(@_);
+        }
+    );
+
+    my $scan             = 1;
+    my @fallback_results = searchResults(
+        { interface => 'opac' },
+        'test query',
+        scalar(@scan_records), 10, 0, $scan,
+        \@scan_records
+    );
+
+    my %fallback_seen = map { $_->{biblionumber} => 1 } @fallback_results;
+
+    ok( $fallback_seen{ $visible_biblio->biblionumber }, 'fallback: visible item still shown' );
+    ok( !$fallback_seen{ $hidden_biblio->biblionumber }, 'fallback: hidden item still filtered' );
+    ok( $per_item_lookups_ran,                           'per-item (non-batched) visibility query actually ran' );
+
+    $schema->storage->txn_rollback;
 };
 
 sub run_marc21_search_tests {
