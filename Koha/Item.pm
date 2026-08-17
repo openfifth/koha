@@ -373,7 +373,16 @@ sub delete {
     return $result;
 }
 
-=head3 update_es_index
+=head3 _update_es_index
+
+    $item->_update_es_index( $action, $skip_index );
+
+Adds or removes this item from the items Elasticsearch index. C<$action> is
+either C<update> or C<delete>; C<$skip_index> skips the call entirely (used
+for bulk operations that will reindex items separately). Does nothing unless
+the Elasticsearch search engine is in use. Errors talking to Elasticsearch
+are caught and warned about rather than propagated, so a reindexing failure
+doesn't block the underlying store/delete.
 
 =cut
 
