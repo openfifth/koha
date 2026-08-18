@@ -35,7 +35,7 @@ Koha::Plugins::Store
     # { repo_url => '...', certification_tier => '...' } or undef
 
 Queries the configured plugin-store's public discovery API
-(C<GET /api/plugins?koha_version_release=...>) for the plugin version whose C<kpz_url> exactly
+(C<GET /api/v1/plugins?koha_version=...&_per_page=-1>) for the plugin version whose C<kpz_url> exactly
 matches the one given, returning its origin C<repo_url> and C<certification_tier> if found.
 Returns C<undef> if C<plugin_store_url> isn't configured, the store isn't reachable, or no
 release matches.
@@ -50,7 +50,7 @@ sub lookup_by_kpz_url {
 
     my $koha_version = C4::Context->preference('Version');
     my $ua           = Mojo::UserAgent->new;
-    my $tx           = $ua->get("$store_url/api/plugins?koha_version_release=$koha_version");
+    my $tx           = $ua->get("$store_url/api/v1/plugins?koha_version=$koha_version&_per_page=-1");
 
     return unless $tx->res->code && $tx->res->code == 200;
 
@@ -76,7 +76,7 @@ sub lookup_by_kpz_url {
     # { signed_manifest => '...', signature => '...', certification_tier => '...' } or undef
 
 Queries the configured plugin-store's digest-lookup endpoint
-(C<GET /api/plugins/verify?digest=...>) for a published version matching the given SHA-256
+(C<GET /api/v1/plugins/verify?digest=...>) for a published version matching the given SHA-256
 digest -- used for manually-uploaded files, which have no C<kpz_url> to match against the
 discovery listing C<lookup_by_kpz_url> consults. Returns C<undef> if C<plugin_store_url>
 isn't configured, the store isn't reachable, or no published version has that digest.
@@ -90,7 +90,7 @@ sub lookup_by_digest {
     return unless $store_url;
 
     my $ua = Mojo::UserAgent->new;
-    my $tx = $ua->get("$store_url/api/plugins/verify?digest=$digest");
+    my $tx = $ua->get("$store_url/api/v1/plugins/verify?digest=$digest");
 
     return unless $tx->res->code && $tx->res->code == 200;
 
