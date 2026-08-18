@@ -83,7 +83,7 @@ class HttpClient {
                 if (mark_submitting) submitted();
             });
 
-        if (error) throw Error(error);
+        if (error) throw error;
 
         return res;
     }
