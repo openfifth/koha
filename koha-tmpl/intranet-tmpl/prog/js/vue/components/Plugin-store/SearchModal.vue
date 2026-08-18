@@ -85,7 +85,7 @@ export default {
             );
         },
     },
-    beforeCreate() {
+    created() {
         this.fetchCatalog();
     },
     methods: {
