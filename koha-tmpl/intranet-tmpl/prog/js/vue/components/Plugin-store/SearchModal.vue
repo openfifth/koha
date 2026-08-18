@@ -1,5 +1,8 @@
 <template>
     <div>
+        <div class="alert alert-danger" v-if="installError">
+            {{ installError }}
+        </div>
         <div class="row mb-3">
             <div class="col-md-8">
                 <input
@@ -152,6 +155,7 @@ export default {
             perPage: 20,
             totalCount: 0,
             sortOrder: "name",
+            installError: null,
         };
     },
     computed: {
@@ -242,6 +246,7 @@ export default {
             );
         },
         install(plugin, confirmUnsigned = false) {
+            this.installError = null;
             const release = this.mostRecentRelease(plugin);
             const client = APIClient.plugin_store;
             client.plugins
@@ -274,11 +279,9 @@ export default {
                             );
                             return;
                         }
-                        this.setError(
-                            this.$__(
-                                ERROR_MESSAGES[error.message] ||
-                                    "An unknown error has occurred."
-                            )
+                        this.installError = this.$__(
+                            ERROR_MESSAGES[error.message] ||
+                                "An unknown error has occurred."
                         );
                     }
                 );
