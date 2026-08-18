@@ -9,13 +9,13 @@ export class PluginStoreAPIClient extends HttpClient {
 
     get plugins() {
         return {
-            getStoreAll: koha_version_release =>
+            getStoreAll: (koha_version, q) =>
                 this.getAll({
-                    endpoint: `${plugin_store_url}/api/plugins`,
+                    endpoint: `${plugin_store_url}/api/v1/plugins`,
                     params: {
-                        koha_version_release: koha_version_release
-                            ? koha_version_release
-                            : "",
+                        koha_version: koha_version || "",
+                        ...(q ? { q } : {}),
+                        _per_page: 100,
                     },
                 }),
             getAll: () =>

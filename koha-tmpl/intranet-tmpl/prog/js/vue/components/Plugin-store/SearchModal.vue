@@ -65,41 +65,47 @@ export default {
         return {
             storeCatalog: [],
             searchTerm: "",
+            searchDebounceTimer: null,
         };
     },
     computed: {
-        availablePlugins() {
+        filteredPlugins() {
             const installedClasses = this.installed_plugins.map(p => p.class);
             return this.storeCatalog.filter(
                 p => !installedClasses.includes(p.class_name)
             );
         },
-        filteredPlugins() {
-            if (!this.searchTerm) return this.availablePlugins;
-            const term = this.searchTerm.toLowerCase();
-            return this.availablePlugins.filter(p =>
-                [p.name, p.description, p.author].some(
-                    field => field && field.toLowerCase().includes(term)
-                )
+    },
+    watch: {
+        searchTerm() {
+            clearTimeout(this.searchDebounceTimer);
+            this.searchDebounceTimer = setTimeout(
+                () => this.fetchCatalog(),
+                300
             );
         },
     },
     beforeCreate() {
-        const client = APIClient.plugin_store;
-        client.plugins.getStoreAll(this.koha_version?.release).then(
-            result => {
-                this.storeCatalog = result;
-            },
-            () => {
-                this.setError(
-                    this.$__(
-                        "The plugin store could not be reached. Please check your internet connection and try again."
-                    )
-                );
-            }
-        );
+        this.fetchCatalog();
     },
     methods: {
+        fetchCatalog() {
+            const client = APIClient.plugin_store;
+            client.plugins
+                .getStoreAll(this.koha_version?.release, this.searchTerm)
+                .then(
+                    result => {
+                        this.storeCatalog = result;
+                    },
+                    () => {
+                        this.setError(
+                            this.$__(
+                                "The plugin store could not be reached. Please check your internet connection and try again."
+                            )
+                        );
+                    }
+                );
+        },
         mostRecentRelease(plugin) {
             if (!plugin.releases || !plugin.releases.length) return null;
             return plugin.releases.reduce((a, b) =>
