@@ -101,8 +101,13 @@
         v-if="componentDialog"
         id="component"
     >
-        <div class="modal-dialog">
-            <div class="modal-content modal-lg">
+        <div
+            :class="
+                'modal-dialog' +
+                (componentDialog.size ? ' ' + componentDialog.size : '')
+            "
+        >
+            <div class="modal-content">
                 <div class="modal-header alert-warning component">
                     <h1 v-html="componentDialog.title"></h1>
                 </div>

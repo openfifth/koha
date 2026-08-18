@@ -142,6 +142,7 @@ export default {
             this.setComponentDialog({
                 title: this.$__("Search for new plugins"),
                 cancel_label: this.$__("Close"),
+                size: "modal-xl",
                 componentPath:
                     "@koha-vue/components/Plugin-store/SearchModal.vue",
                 componentProps: {
