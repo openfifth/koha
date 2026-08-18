@@ -312,10 +312,24 @@ export default {
         },
         checkForUpdates() {
             const client = APIClient.plugin_store;
-            client.plugins.getStoreAll(koha_version.release).then(result => {
-                this.storeCatalog = result;
-                this.$refs.table.redraw(this.table_url());
-            });
+            client.plugins
+                .getStoreAll(koha_version.release)
+                .then(
+                    response => response.json(),
+                    () => {
+                        this.setError(
+                            this.$__(
+                                "The plugin store could not be reached. Please check your internet connection and try again."
+                            )
+                        );
+                    }
+                )
+                .then(result => {
+                    if (result) {
+                        this.storeCatalog = result;
+                        this.$refs.table.redraw(this.table_url());
+                    }
+                });
         },
         runPlugin(plugin, method) {
             window.location.href =

@@ -216,6 +216,13 @@ export default {
                 )
                 .then(result => {
                     if (result) this.storeCatalog = result;
+                })
+                .catch(() => {
+                    this.setError(
+                        this.$__(
+                            "The plugin store could not be reached. Please check your internet connection and try again."
+                        )
+                    );
                 });
         },
         changeSort() {
