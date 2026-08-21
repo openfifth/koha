@@ -1091,7 +1091,9 @@ sub SendQueuedMessages {
 
             # Check for scalar or array in exclude_letter_code
             ref( $params->{exclude_letter_code} )
-                && @{ $params->{exclude_letter_code} } ? ( letter_code => { '-not_in' => $params->{exclude_letter_code} } ) : (),
+                && @{ $params->{exclude_letter_code} }
+            ? ( letter_code => { '-not_in' => $params->{exclude_letter_code} } )
+            : (),
             !ref( $params->{exclude_letter_code} )
                 && $params->{exclude_letter_code} ? ( letter_code => { '!=' => $params->{exclude_letter_code} } ) : (),
 
