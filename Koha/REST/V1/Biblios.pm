@@ -714,6 +714,146 @@ sub holdability {
     };
 }
 
+=head3 holdability_batch
+
+Controller function that reports holdability for several patrons, or for several
+items, in one call.
+
+=cut
+
+sub holdability_batch {
+    my $c = shift->openapi->valid_input or return;
+
+    my $biblio = Koha::Biblios->find( $c->param('biblio_id') );
+
+    return $c->render_resource_not_found("Bibliographic record")
+        unless $biblio;
+
+    my $body       = $c->req->json;
+    my $patron_ids = $body->{patron_ids};
+    my $item_ids   = $body->{item_ids} // [];
+
+    my $pickup_library;
+
+    if ( $body->{pickup_library_id} ) {
+
+        $pickup_library = Koha::Libraries->find( $body->{pickup_library_id} );
+
+        unless ($pickup_library) {
+            return $c->render(
+                status  => 400,
+                openapi => {
+                    error      => 'Library not found',
+                    error_code => 'library_not_found',
+                }
+            );
+        }
+    }
+
+    my $item_type_id = $body->{item_type_id};
+
+    return try {
+
+        my $overrides = $c->stash('koha.overrides');
+
+        # Fetch the record's items once, however many patrons are checked
+        # against them. This is what fetch_items and check()'s items parameter
+        # were added for: a club hold asks the same record about every member.
+        my @items       = Koha::Biblio::Availability::Hold->fetch_items( $biblio, $item_type_id );
+        my %items_by_id = map { $_->itemnumber => $_ } @items;
+
+        my @results;
+
+        for my $patron_id ( @{$patron_ids} ) {
+
+            my $patron = Koha::Patrons->find($patron_id);
+
+            # An unknown id becomes an entry of its own rather than failing the
+            # whole request. One stale id in a club must not cost the caller
+            # every other verdict it asked for.
+            unless ($patron) {
+                push @results,
+                    {
+                    patron_id  => $patron_id,
+                    error      => 'Patron not found',
+                    error_code => 'patron_not_found',
+                    };
+                next;
+            }
+
+            unless ( @{$item_ids} ) {
+
+                push @results,
+                    {
+                    patron_id => $patron_id,
+                    %{ Koha::Biblio::Availability::Hold->check(
+                            {
+                                biblio           => $biblio,
+                                patron           => $patron,
+                                pickup_library   => $pickup_library,
+                                overrides        => $overrides,
+                                items            => \@items,
+                                no_short_circuit => 1,
+                                ( $item_type_id ? ( item_type_id => $item_type_id ) : () ),
+                            }
+                        )->to_api
+                    },
+                    };
+
+                next;
+            }
+
+            # Read the per-record context once for this patron, then reuse it
+            # for every item the request named.
+            my $context =
+                Koha::Biblio::Availability::Hold->build_patron_context( { biblio => $biblio, patron => $patron } );
+
+            for my $item_id ( @{$item_ids} ) {
+
+                my $item = $items_by_id{$item_id};
+
+                unless ($item) {
+                    push @results,
+                        {
+                        patron_id  => $patron_id,
+                        item_id    => $item_id,
+                        error      => 'Item not found on this bibliographic record',
+                        error_code => 'item_not_found',
+                        };
+                    next;
+                }
+
+                push @results,
+                    {
+                    patron_id => $patron_id,
+                    item_id   => $item_id,
+                    %{ Koha::Item::Availability::Hold->check(
+                            {
+                                item             => $item,
+                                patron           => $patron,
+                                pickup_library   => $pickup_library,
+                                overrides        => $overrides,
+                                no_short_circuit => 1,
+                                cache_counts     => 1,
+                                cache_transfers  => 1,
+                                %{$context},
+                            }
+                        )->to_api
+                    },
+                    };
+            }
+        }
+
+        # 200, not 201: this reports on the record, it creates nothing.
+        return $c->render(
+            status  => 200,
+            openapi => \@results
+        );
+    } catch {
+        $c->unhandled_exception($_);
+    };
+}
+
 =head3 get_items_public
 
 Controller function that handles retrieving biblio's items, for unprivileged

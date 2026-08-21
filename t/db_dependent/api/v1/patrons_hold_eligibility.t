@@ -36,14 +36,12 @@ t::lib::Mocks::mock_preference( 'RESTBasicAuth', 1 );
 
 my $password = 'thePassword123';
 
-=head2 build_staff_user
-
-    my ( $userid, $patron ) = build_staff_user();
-
-Builds a staff user that holds the reserveforothers > place_holds permission,
-which is the permission that this endpoint needs.
-
-=cut
+# build_staff_user
+#
+#     my ( $userid, $patron ) = build_staff_user();
+#
+# Builds a staff user that holds the reserveforothers > place_holds permission,
+# which is the permission that this endpoint needs.
 
 sub build_staff_user {
 

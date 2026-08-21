@@ -161,19 +161,17 @@ subtest 'Host items (analytics) are considered' => sub {
     $schema->storage->txn_rollback;
 };
 
-=head2 build_biblio_held_throughout
-
-    my ( $biblio, $patron ) = build_biblio_held_throughout($n_items);
-
-Builds a biblio whose every item the patron already holds, so that each item's
-check reaches (and is blocked by) item_already_on_hold.
-
-The circulation rules must be permissive here. holds_per_record defaults to 1,
-so without a rule the patron trips too_many_holds_for_this_record and the check
-returns before the item loop ever runs - which would make any assertion about
-per-item query counts meaningless.
-
-=cut
+# build_biblio_held_throughout
+#
+#     my ( $biblio, $patron ) = build_biblio_held_throughout($n_items);
+#
+# Builds a biblio whose every item the patron already holds, so that each item's
+# check reaches (and is blocked by) item_already_on_hold.
+#
+# The circulation rules must be permissive here. holds_per_record defaults to 1,
+# so without a rule the patron trips too_many_holds_for_this_record and the check
+# returns before the item loop ever runs - which would make any assertion about
+# per-item query counts meaningless.
 
 sub build_biblio_held_throughout {
     my ($n_items) = @_;

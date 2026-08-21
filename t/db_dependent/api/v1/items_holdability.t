@@ -38,14 +38,12 @@ t::lib::Mocks::mock_preference( 'RESTBasicAuth', 1 );
 
 my $password = 'thePassword123';
 
-=head2 build_staff_user
-
-    my $userid = build_staff_user();
-
-Builds a staff user that holds the reserveforothers > place_holds permission,
-which is the permission that this endpoint needs.
-
-=cut
+# build_staff_user
+#
+#     my $userid = build_staff_user();
+#
+# Builds a staff user that holds the reserveforothers > place_holds permission,
+# which is the permission that this endpoint needs.
 
 sub build_staff_user {
 
@@ -67,14 +65,12 @@ sub build_staff_user {
     return $staff->userid;
 }
 
-=head2 allow_holds
-
-    allow_holds();
-
-Sets a permissive default circulation rule, so that a test only has to set up
-the condition that it is actually about.
-
-=cut
+# allow_holds
+#
+#     allow_holds();
+#
+# Sets a permissive default circulation rule, so that a test only has to set up
+# the condition that it is actually about.
 
 sub allow_holds {
 
