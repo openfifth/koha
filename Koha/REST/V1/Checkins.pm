@@ -201,6 +201,7 @@ sub add {
                     openapi => {
                         error      => 'Confirmation required',
                         error_code => 'confirmation_required',
+                        item       => $item->to_api( { embed => { biblio => {} } } ),
                         %{ $availability->to_api },
                     }
                 );

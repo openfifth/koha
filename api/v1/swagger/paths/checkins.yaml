@@ -172,7 +172,7 @@
               Value is the materials description string.
             Response includes a `confirmation_token` JWT to pass back on retry.
         schema:
-          $ref: "../swagger.yaml#/definitions/error"
+          $ref: "../swagger.yaml#/definitions/checkin_availability"
       "500":
         description: |
           Internal server error. Possible `error_code` attribute values:

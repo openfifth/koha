@@ -1,6 +1,12 @@
 ---
 type: object
 properties:
+  error:
+    type: string
+    description: Error message
+  error_code:
+    type: string
+    description: Error code identifier
   blockers:
     type: object
     description: Blocking issues that prevent checkin
@@ -15,4 +21,7 @@ properties:
       - string
       - "null"
     description: JWT token for confirming the checkin
+  item:
+    type: object
+    description: The item requiring confirmation
 additionalProperties: false
