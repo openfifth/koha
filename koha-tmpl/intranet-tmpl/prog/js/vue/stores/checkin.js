@@ -8,6 +8,7 @@ export const useCheckinStore = defineStore("checkin", () => {
     const checkins = ref([]);
     const processing = ref(false);
     const lastError = ref(null);
+    const _inflight = new Set();
 
     const maxItems = policy.max_returned_items || 20;
 
@@ -35,6 +36,12 @@ export const useCheckinStore = defineStore("checkin", () => {
      * On 200 with hold/transfer/recall: marks as needs_action.
      */
     async function checkin(barcode, options = {}) {
+        // Prevent double-scan: reject if this barcode has a request in-flight
+        if (_inflight.has(barcode)) {
+            return { status: "duplicate", data: null };
+        }
+        _inflight.add(barcode);
+
         processing.value = true;
         lastError.value = null;
 
@@ -126,6 +133,7 @@ export const useCheckinStore = defineStore("checkin", () => {
             lastError.value = "Network error. Please try again.";
             return { status: "error", data: null };
         } finally {
+            _inflight.delete(barcode);
             processing.value = false;
         }
     }
@@ -222,10 +230,14 @@ export const useCheckinStore = defineStore("checkin", () => {
                     );
                     break;
                 case "confirm_transfer":
-                    data = await client.checkins.confirmTransfer(checkinId);
+                    if (entry.transfer_id) {
+                        data = await client.checkins.confirmTransfer(checkinId);
+                    }
                     break;
                 case "cancel_transfer":
-                    data = await client.checkins.cancelTransfer(checkinId);
+                    if (entry.transfer_id) {
+                        data = await client.checkins.cancelTransfer(checkinId);
+                    }
                     break;
                 case "confirm_recall":
                     data = await client.checkins.confirmRecall(checkinId);

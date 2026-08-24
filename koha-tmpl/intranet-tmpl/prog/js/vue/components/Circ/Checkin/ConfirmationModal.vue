@@ -1,13 +1,10 @@
 <template>
     <div
         v-if="item"
-        class="modal modal-lg show d-block audio-alert-action"
-        :class="{ 'non-blocking': isNonBlockingTransfer }"
+        class="modal modal-lg show d-block audio-alert-action non-blocking"
         tabindex="-1"
         role="dialog"
-        :aria-modal="isNonBlockingTransfer ? 'false' : 'true'"
-        data-bs-backdrop="static"
-        data-bs-keyboard="false"
+        aria-modal="false"
     >
         <div class="modal-dialog">
             <div class="modal-content">
@@ -16,8 +13,8 @@
                 </div>
 
                 <div class="modal-body">
-                    <!-- Item info -->
-                    <p v-if="itemTitle">
+                    <!-- Item info (not shown for transfers - they render their own) -->
+                    <p v-if="itemTitle && item._action_type !== 'transfer'">
                         <a
                             v-if="biblioId"
                             :href="`/cgi-bin/koha/catalogue/detail.pl?biblionumber=${biblioId}`"
@@ -63,13 +60,47 @@
 
                     <!-- Post-checkin: Transfer needed -->
                     <template v-if="item._action_type === 'transfer'">
-                        <h4>{{ $__("Transfer required") }}</h4>
-                        <div v-if="transferInfo" class="mb-3">
+                        <!-- Item info -->
+                        <p>
+                            <a
+                                v-if="item.item && item.item.biblio"
+                                :href="`/cgi-bin/koha/catalogue/detail.pl?biblionumber=${item.item.biblio.biblio_id}`"
+                                >{{ itemBarcode }}: {{ itemTitle }}</a
+                            >
+                            <span v-else>{{ itemBarcode }}</span>
+                        </p>
+
+                        <!-- Reason for transfer -->
+                        <div
+                            v-if="transferInfo && transferInfo.trigger"
+                            class="alert alert-info"
+                        >
+                            <h5>{{ $__("Reason for transfer") }}</h5>
                             <p>
-                                <strong>{{
-                                    $__("Please return this item to:")
-                                }}</strong>
-                                {{ transferInfo.to_library }}
+                                {{
+                                    formatTransferTrigger(transferInfo.trigger)
+                                }}
+                            </p>
+                        </div>
+
+                        <!-- Check in messages -->
+                        <div
+                            v-if="item.messages && item.messages.length"
+                            class="alert alert-warning"
+                        >
+                            <h5>{{ $__("Check in message") }}</h5>
+                            <p>{{ itemBarcode }}: {{ itemTitle }}</p>
+                            <p
+                                v-for="msg in item.messages.filter(
+                                    m =>
+                                        m.message !== 'wrong_transfer' &&
+                                        m.message !== 'needs_transfer' &&
+                                        m.message !== 'transferred'
+                                )"
+                                :key="msg.message"
+                                class="text-danger"
+                            >
+                                {{ formatMessage(msg) }}
                             </p>
                         </div>
                     </template>
@@ -231,10 +262,6 @@
         </div>
     </div>
     <!-- Backdrop -->
-    <div
-        v-if="item && !isNonBlockingTransfer"
-        class="modal-backdrop show"
-    ></div>
 </template>
 
 <script>
@@ -317,8 +344,22 @@ export default {
             if (!props.item) return "";
             if (isPreCheckin.value) return $__("Please confirm check in");
             if (props.item._action_type === "hold") return $__("Hold found");
-            if (props.item._action_type === "transfer")
-                return $__("Transfer required");
+            if (props.item._action_type === "transfer") {
+                const msgs = props.item.messages || [];
+                const wrongTransfer = msgs.find(
+                    m => m.message === "wrong_transfer"
+                );
+                if (wrongTransfer) {
+                    const dest = wrongTransfer.payload?.to_library || "";
+                    return $__(
+                        "Wrong transfer detected, please return item to: %s"
+                    ).replace("%s", dest);
+                }
+                return $__("Please return this item to: %s").replace(
+                    "%s",
+                    transferInfo.value?.to_library || ""
+                );
+            }
             if (props.item._action_type === "recall")
                 return $__("Recall found");
             return $__("Action required");
@@ -385,6 +426,37 @@ export default {
             return labels[key] || key.replace(/_/g, " ");
         }
 
+        function formatTransferTrigger(trigger) {
+            const triggers = {
+                Manual: $__("Manual"),
+                StockrotationAdvance: $__("Stock rotation advance"),
+                StockrotationRepatriation: $__("Stock rotation repatriation"),
+                ReturnToHome: $__("Return to home library"),
+                ReturnToHolding: $__("Return to holding library"),
+                RotatingCollection: $__("Rotating collection"),
+                Reserve: $__("Hold"),
+                LostReserve: $__("Lost hold"),
+                CancelReserve: $__("Cancelled hold"),
+                TransferCancellation: $__(
+                    "Transfer was cancelled whilst in transit"
+                ),
+                Recall: $__("Recall"),
+                RecallCancellation: $__("Cancelled recall"),
+            };
+            return triggers[trigger] || trigger;
+        }
+
+        function formatMessage(msg) {
+            const labels = {
+                not_issued: $__("Not checked out."),
+                local_use: $__("Local use recorded"),
+                was_lost: $__("Was lost, now found"),
+                withdrawn: $__("Item is withdrawn"),
+                was_returned: $__("Already returned"),
+            };
+            return labels[msg.message] || msg.message.replace(/_/g, " ");
+        }
+
         function printAndResolveHold() {
             const reserveId = holdInfo.value?.reserve_id || props.item?.hold_id;
             if (reserveId) {
@@ -425,6 +497,8 @@ export default {
             transferInfo,
             recallInfo,
             formatWarning,
+            formatTransferTrigger,
+            formatMessage,
             printAndResolveHold,
             printAndResolveTransfer,
             printAndResolveRecall,

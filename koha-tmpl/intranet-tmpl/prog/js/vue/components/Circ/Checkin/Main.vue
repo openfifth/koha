@@ -105,17 +105,10 @@ export default {
             Object.assign(checkinOptions, options);
         }
 
-        // Block barcode input when a blocking modal is active
-        const isInputBlocked = computed(() => {
-            if (!activeModalItem.value) return false;
-            const actionType = activeModalItem.value._action_type;
-            // Holds always block (original UI behavior)
-            if (actionType === "hold") return true;
-            // Transfers block only when policy says so
-            if (actionType === "transfer" && policy.value.transfers_block)
-                return true;
-            return false;
-        });
+        // Async mode: input is never blocked. Staff can keep scanning
+        // while modals are showing. Items needing attention queue as
+        // yellow rows and modals show one at a time.
+        const isInputBlocked = computed(() => false);
 
         // Refocus barcode input when focus leaves to non-interactive elements
         // (e.g., sidebar toggle button, page chrome clicks)
