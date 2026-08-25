@@ -136,6 +136,9 @@
     [%- CASE 'manage_circ_rules' -%]
         <span class="sub_permission manage_circ_rules_subpermission"> Manage circulation rules </span>
         <span class="permissioncode">([% name | html %])</span>
+    [%- CASE 'manage_circ_triggers' -%]
+        <span class="sub_permission manage_circ_triggers_subpermission"> Manage overdue notice triggers </span>
+        <span class="permissioncode">([% name | html %])</span>
     [%- CASE 'manage_sysprefs' -%]
         <span class="sub_permission manage_sysprefs_subpermission"> Manage system preferences </span>
         <span class="permissioncode">([% name | html %])</span>
