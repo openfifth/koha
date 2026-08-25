@@ -124,6 +124,12 @@
                 </ol>
             </fieldset>
         [% END %]
+        [% IF unauthenticated_ill && !logged_in_user %]
+            <label class="checkbox-label" for="save_unauth_consent">
+                <input type="checkbox" id="save_unauth_consent" />
+                <span>Remember me (do not use on public computers)</span>
+            </label>
+        [% END %]
         <fieldset class="action">
             <input id="ill-submit" class="btn btn-primary" type="submit" value="Create" />
             <a class="cancel" href="/cgi-bin/koha/opac-illrequests.pl">Cancel</a>
@@ -154,18 +160,23 @@
         ];
 
         $(document).ready(function() {
+            let have_past_data = false;
             for(const key of prefill_form_values) {
                 const val = sessionStorage.getItem(prefix + key);
                 if(!val) continue;
                 if($("#" + key).val()) continue;
+
+                have_past_data = true;
                 $("#" + key).val(val);
             }
+            $("#save_unauth_consent").prop("checked", have_past_data);
         });
 
         $("#create_form").on("submit", function() {
+            const have_consent = $("#save_unauth_consent").is(":checked");
             for(const key of prefill_form_values) {
                 const val = $("#" + key).val();
-                if(val) {
+                if(have_consent && val) {
                     sessionStorage.setItem(prefix + key, val);
                 } else {
                     sessionStorage.removeItem(prefix + key);
