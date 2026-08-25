@@ -800,6 +800,12 @@ Circulation:
             - 'patron(s) to return an item. This setting is independent of the <a href="/cgi-bin/koha/admin/preferences.pl?op=search&searchfield=opacreadinghistory">opacreadinghistory</a> and <a href="/cgi-bin/koha/admin/preferences.pl?op=search&searchfield=AnonymousPatron">AnonymousPatron</a> system preferences. Leave empty or set to 0 to disable the preference.'
     Holds policy:
         -
+            - pref: UseNewHoldsInterface
+              choices:
+                  1: Use
+                  0: "Don't use"
+            - "the new holds interface in the staff interface."
+        -
             - Default the holds ratio report to
             - pref: HoldRatioDefault
               class: integer

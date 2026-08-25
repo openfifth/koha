@@ -65,6 +65,8 @@ my ( $template, $borrowernumber, $cookie, $flags ) = get_template_and_user(
     }
 );
 
+$template->param( use_new_holds_interface => C4::Context->preference('UseNewHoldsInterface') );
+
 my $showallitems = $input->param('showallitems');
 my $pickup       = $input->param('pickup');
 
