@@ -1,7 +1,21 @@
+function _query(params = {}) {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== "") {
+            query.append(key, value);
+        }
+    });
+    const qs = query.toString();
+    return qs ? "?" + qs : "";
+}
+
 export class CirculationAPIClient {
     constructor(HttpClient) {
         this.httpClient = new HttpClient({
             baseURL: "/cgi-bin/koha/svc/",
+        });
+        this.restClient = new HttpClient({
+            baseURL: "/api/v1/",
         });
     }
 
@@ -69,6 +83,41 @@ export class CirculationAPIClient {
                         "Content-Type":
                             "application/x-www-form-urlencoded;charset=utf-8",
                     },
+                }),
+        };
+    }
+
+    get holdability() {
+        return {
+            biblio: (biblio_id, params) =>
+                this.restClient.get({
+                    endpoint:
+                        "biblios/" +
+                        biblio_id +
+                        "/holdability" +
+                        _query(params),
+                }),
+            biblioBatch: (biblio_id, body) =>
+                this.restClient.post({
+                    endpoint: "biblios/" + biblio_id + "/holdability/batch",
+                    body,
+                }),
+            item: (item_id, params) =>
+                this.restClient.get({
+                    endpoint:
+                        "items/" + item_id + "/holdability" + _query(params),
+                }),
+            patron: patron_id =>
+                this.restClient.get({
+                    endpoint: "patrons/" + patron_id + "/hold_eligibility",
+                }),
+            biblioItems: (biblio_id, params) =>
+                this.restClient.get({
+                    endpoint:
+                        "biblios/" +
+                        biblio_id +
+                        "/items" +
+                        _query({ ...params, holdability: true }),
                 }),
         };
     }
