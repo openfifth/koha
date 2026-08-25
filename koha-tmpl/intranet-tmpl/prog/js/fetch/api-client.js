@@ -187,6 +187,7 @@ export const APIClient = {
         () => import("./authorised-values-api-client.js")
     ),
     acquisition: createClientProxy(() => import("./acquisition-api-client.js")),
+    biblio: createClientProxy(() => import("./biblio-api-client.js")),
     booking: createClientProxy(() => import("./booking-api-client.js")),
     cataloguing: createClientProxy(() => import("./cataloguing-api-client.js")),
     circulation: createClientProxy(() => import("./circulation-api-client.js")),

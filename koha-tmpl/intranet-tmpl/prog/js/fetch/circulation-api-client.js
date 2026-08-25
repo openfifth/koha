@@ -121,6 +121,32 @@ export class CirculationAPIClient {
                 }),
         };
     }
+
+    get holds() {
+        return {
+            create: (body, overrides = []) =>
+                this.restClient.post({
+                    endpoint: "holds",
+                    body,
+                    headers: overrides.length
+                        ? { "x-koha-override": overrides.join(",") }
+                        : {},
+                }),
+        };
+    }
+
+    get pickupLocations() {
+        return {
+            biblio: (biblio_id, params) =>
+                this.restClient.get({
+                    endpoint:
+                        "biblios/" +
+                        biblio_id +
+                        "/pickup_locations" +
+                        _query(params),
+                }),
+        };
+    }
 }
 
 export default CirculationAPIClient;

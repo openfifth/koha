@@ -5,6 +5,15 @@ export class BiblioAPIClient {
         });
     }
 
+    get(id) {
+        return this.httpClient.get({
+            endpoint: "biblios/" + id,
+            headers: {
+                Accept: "application/json",
+            },
+        });
+    }
+
     get items() {
         return {
             get: id =>
