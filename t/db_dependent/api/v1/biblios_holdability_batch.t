@@ -119,7 +119,7 @@ subtest 'Several patrons, one verdict for each' => sub {
         ->json_is( '/0/available' => Mojo::JSON->true )
         ->json_is( '/1/patron_id' => $restricted->borrowernumber )
         ->json_is( '/1/available' => Mojo::JSON->false )
-        ->json_is( '/1/blockers'  => [ { code => 'restricted' } ] )
+        ->json_is( '/1/blockers'  => [ { code => 'restricted', overridable => Mojo::JSON->true } ] )
         ->json_hasnt( '/0/item_id', 'A record-level verdict carries no item_id' );
 
     $schema->storage->txn_rollback;
@@ -160,7 +160,7 @@ subtest 'Several items for one patron' => sub {
         ->json_is( '/0/available' => Mojo::JSON->true )
         ->json_is( '/1/item_id'   => $damaged->itemnumber )
         ->json_is( '/1/available' => Mojo::JSON->false )
-        ->json_is( '/1/blockers'  => [ { code => 'damaged' } ] );
+        ->json_is( '/1/blockers'  => [ { code => 'damaged', overridable => Mojo::JSON->true } ] );
 
     $schema->storage->txn_rollback;
 };
@@ -246,6 +246,8 @@ subtest 'The verdicts match the single-call endpoints' => sub {
         ->tx->res->json;
 
     delete $single_record->{items};
+    delete $single_record->{hold_fee};
+    delete $single_record->{prospective_priority};
     delete $batch_record->{patron_id};
 
     is_deeply( $batch_record, $single_record, 'The record-level verdict matches GET /biblios/{biblio_id}/holdability' );
@@ -453,7 +455,7 @@ subtest 'item_type_id limits the items considered' => sub {
     # one leaves nothing to fill the hold.
     $t->post_ok( $url => json => { patron_ids => [$patron_id], item_type_id => $wanted->itemtype } )
         ->status_is(200)
-        ->json_is( '/0/blockers' => [ { code => 'no_items' } ] );
+        ->json_is( '/0/blockers' => [ { code => 'no_items', overridable => Mojo::JSON->false } ] );
 
     # Filtering to the item's own type leaves it holdable, and its id is now
     # resolvable for a per-item entry.

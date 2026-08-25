@@ -34,6 +34,13 @@ properties:
       - too_many_holds_for_this_record
       - too_many_reserves
       - too_many_reserves_today
+  overridable:
+    description: |
+      Whether the `x-koha-override` header can bypass this reason. The
+      complete set of override-able codes is
+      Koha::Result::Availability::OVERRIDABLE_CODES - keep this description
+      in step with it, not the enum above (most codes are not override-able).
+    type: boolean
   payload:
     description: |
       Extra detail about the reason, when the reason carries any.
@@ -46,3 +53,4 @@ properties:
 additionalProperties: false
 required:
   - code
+  - overridable

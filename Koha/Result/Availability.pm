@@ -21,6 +21,30 @@ use Modern::Perl;
 
 use Mojo::JSON;
 
+=head1 CONSTANTS
+
+=head2 OVERRIDABLE_CODES
+
+The reason codes that L<Koha::Item::Availability::Hold> and
+L<Koha::Patron::Availability::Hold> actually respect via
+C<< $overrides->{$code} >>. Keep this in step with those C<unless>
+checks - C<_reasons_to_api> reads it to set each reason's C<overridable>
+flag, so the API and its callers never need a second copy of this list.
+
+If this constant and an actual override check ever drift, the failure mode
+is safe: a code missing here just doesn't get offered as override-able even
+though sending the header would have worked - never the other way round.
+
+=cut
+
+use constant OVERRIDABLE_CODES => {
+    map { $_ => 1 }
+        qw(
+        expired debt_limit bad_address card_lost restricted hold_limit
+        damaged age_restricted already_possession not_reservable
+        )
+};
+
 =head1 NAME
 
 Koha::Result::Availability - Base class for availability check results
@@ -241,14 +265,16 @@ Returns a hashref that represents this result on the REST API:
     {
         available          => Mojo::JSON->true,
         needs_confirmation => Mojo::JSON->false,
-        blockers           => [ { code => 'damaged' } ],
+        blockers           => [ { code => 'damaged', overridable => Mojo::JSON->true } ],
         confirmations      => [],
         warnings           => [],
     }
 
 The three reason lists hold one hashref for each reason. Every hashref has a
-C<code> key. A hashref also has a C<payload> key when the reason carries extra
-detail. See C<_reasons_to_api> below.
+C<code> key and an C<overridable> key (whether C<x-koha-override> can bypass
+this reason - see C<OVERRIDABLE_CODES> above). A hashref also has a
+C<payload> key when the reason carries extra detail. See C<_reasons_to_api>
+below.
 
 Note that the response holds no C<context> data. The context holds live objects
 (for example a L<Koha::Item>), so each caller selects and renders the context
@@ -276,7 +302,8 @@ Changes one reasons hashref into the arrayref that the API returns. Reasons are
 held internally as C<< { $code => $value } >>, where C<$value> is one of three
 things: the number 1, a count limit, or a hashref of detail. The API needs one
 declared type for the whole list, so each reason becomes
-C<< { code => $code } >> plus an optional C<payload> hashref:
+C<< { code => $code, overridable => $bool } >> plus an optional C<payload>
+hashref:
 
 =over 4
 
@@ -304,7 +331,10 @@ sub _reasons_to_api {
     for my $code ( sort keys %{$reasons} ) {
 
         my $value  = $reasons->{$code};
-        my $reason = { code => $code };
+        my $reason = {
+            code        => $code,
+            overridable => ( OVERRIDABLE_CODES->{$code} ? Mojo::JSON->true : Mojo::JSON->false ),
+        };
 
         if ( ref($value) eq 'HASH' ) {
 

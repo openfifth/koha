@@ -95,7 +95,7 @@ sub allow_holds {
 
 subtest 'A record with a holdable item' => sub {
 
-    plan tests => 8;
+    plan tests => 10;
 
     $schema->storage->txn_begin;
 
@@ -126,14 +126,16 @@ subtest 'A record with a holdable item' => sub {
         ->json_is( '/blockers'                     => [] )
         ->json_is( '/items/total'                  => 3 )
         ->json_is( '/items/holdable'               => 1 )
-        ->json_is( '/items/first_holdable_item_id' => $good->itemnumber );
+        ->json_is( '/items/first_holdable_item_id' => $good->itemnumber )
+        ->json_is( '/hold_fee'                     => 0 )
+        ->json_is( '/prospective_priority'         => 1 );
 
     $schema->storage->txn_rollback;
 };
 
 subtest 'A record whose items are all blocked' => sub {
 
-    plan tests => 6;
+    plan tests => 7;
 
     $schema->storage->txn_begin;
 
@@ -156,10 +158,11 @@ subtest 'A record whose items are all blocked' => sub {
 
     $t->get_ok("//$userid:$password@/api/v1/biblios/$biblio_id/holdability?patron_id=$patron_id")
         ->status_is(200)
-        ->json_is( '/available'                    => Mojo::JSON->false )
-        ->json_is( '/blockers'                     => [ { code => 'no_item_available' } ] )
-        ->json_is( '/items/holdable'               => 0 )
-        ->json_is( '/items/first_holdable_item_id' => undef );
+        ->json_is( '/available'      => Mojo::JSON->false )
+        ->json_is( '/blockers'       => [ { code => 'no_item_available', overridable => Mojo::JSON->false } ] )
+        ->json_is( '/items/holdable' => 0 )
+        ->json_is( '/items/first_holdable_item_id' => undef )
+        ->json_is( '/hold_fee'                     => undef );
 
     $schema->storage->txn_rollback;
 };
@@ -182,7 +185,7 @@ subtest 'A record with no items' => sub {
     $t->get_ok("//$userid:$password@/api/v1/biblios/$biblio_id/holdability?patron_id=$patron_id")
         ->status_is(200)
         ->json_is( '/available'   => Mojo::JSON->false )
-        ->json_is( '/blockers'    => [ { code => 'no_items' } ] )
+        ->json_is( '/blockers'    => [ { code => 'no_items', overridable => Mojo::JSON->false } ] )
         ->json_is( '/items/total' => 0 );
 
     $schema->storage->txn_rollback;
@@ -217,7 +220,7 @@ subtest 'A patron-level blocker still reports the item counts' => sub {
     $t->get_ok("//$userid:$password@/api/v1/biblios/$biblio_id/holdability?patron_id=$patron_id")
         ->status_is(200)
         ->json_is( '/available'      => Mojo::JSON->false )
-        ->json_is( '/blockers'       => [ { code => 'restricted' } ] )
+        ->json_is( '/blockers'       => [ { code => 'restricted', overridable => Mojo::JSON->true } ] )
         ->json_is( '/items/total'    => 2 )
         ->json_is( '/items/holdable' => 2 );
 
@@ -302,8 +305,13 @@ subtest 'The verdict matches the availability class' => sub {
     )->to_api;
 
     delete $response->{items};
+    delete $response->{hold_fee};
+    delete $response->{prospective_priority};
 
-    is_deeply( $response, $expected, 'The endpoint returns what the availability class reports, plus the item counts' );
+    is_deeply(
+        $response, $expected,
+        'The endpoint returns what the availability class reports, plus the item counts, the fee and the queue position'
+    );
 
     $schema->storage->txn_rollback;
 };

@@ -2603,7 +2603,7 @@ subtest 'get_items() holdability tests' => sub {
         ->json_is( '/0/holdability/blockers'  => [] )
         ->json_is( '/1/item_id'               => $damaged->itemnumber )
         ->json_is( '/1/holdability/available' => Mojo::JSON->false )
-        ->json_is( '/1/holdability/blockers'  => [ { code => 'damaged' } ] );
+        ->json_is( '/1/holdability/blockers'  => [ { code => 'damaged', overridable => Mojo::JSON->true } ] );
 
     # The embedded verdict must agree with the single-item endpoint
     my $embedded = $t->tx->res->json->[1]->{holdability};

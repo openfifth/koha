@@ -19,7 +19,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 14;
+use Test::More tests => 15;
 use Test::NoWarnings;
 
 use Mojo::JSON qw( encode_json );
@@ -163,7 +163,11 @@ subtest 'to_api() with a value of 1' => sub {
     my $api    = $result->to_api;
 
     ok( !$api->{available}, 'available is false when there is a blocker' );
-    is_deeply( $api->{blockers}, [ { code => 'damaged' } ], 'A value of 1 carries no payload' );
+    is_deeply(
+        $api->{blockers},
+        [ { code => 'damaged', overridable => Mojo::JSON->true } ],
+        'A value of 1 carries no payload'
+    );
     ok( !exists $api->{blockers}->[0]->{payload}, 'The payload key is absent rather than undefined' );
 };
 
@@ -176,7 +180,13 @@ subtest 'to_api() with a hashref value' => sub {
 
     is_deeply(
         $result->to_api->{blockers},
-        [ { code => 'debt_limit', payload => { total_outstanding => 12.5, max_outstanding => 5 } } ],
+        [
+            {
+                code        => 'debt_limit',
+                overridable => Mojo::JSON->true,
+                payload     => { total_outstanding => 12.5, max_outstanding => 5 }
+            }
+        ],
         'A hashref value becomes the payload'
     );
 
@@ -204,7 +214,13 @@ subtest 'to_api() with a count limit' => sub {
 
         is_deeply(
             $result->to_api->{blockers},
-            [ { code => $case->{code}, payload => { limit => $case->{limit} } } ],
+            [
+                {
+                    code        => $case->{code},
+                    overridable => Mojo::JSON->false,
+                    payload     => { limit => $case->{limit} }
+                }
+            ],
             sprintf( 'The %s code carries its limit, even a limit of 1', $case->{code} )
         );
     }
@@ -217,6 +233,23 @@ subtest 'to_api() with a count limit' => sub {
         encode_json( $result->to_api->{blockers} ),
         qr/"limit":4/,
         'A limit encodes as a JSON number rather than a string'
+    );
+};
+
+subtest 'to_api() sets overridable from OVERRIDABLE_CODES' => sub {
+
+    plan tests => 2;
+
+    my $result = Koha::Result::Availability->new;
+    $result->add_blocker( damaged               => 1 );
+    $result->add_blocker( cannot_be_transferred => 1 );
+
+    my $blockers = { map { $_->{code} => $_->{overridable} } @{ $result->to_api->{blockers} } };
+
+    is( $blockers->{damaged}, Mojo::JSON->true, 'An override-able code is flagged overridable' );
+    is(
+        $blockers->{cannot_be_transferred}, Mojo::JSON->false,
+        'A code that is not in OVERRIDABLE_CODES is flagged not overridable'
     );
 };
 
@@ -239,8 +272,16 @@ subtest 'to_api() with confirmations, warnings and a stable order' => sub {
     my $api = $result->to_api;
 
     ok( $api->{needs_confirmation}, 'needs_confirmation is true when there is a confirmation' );
-    is_deeply( $api->{confirmations}, [ { code => 'recall' } ],    'Confirmations are rendered' );
-    is_deeply( $api->{warnings},      [ { code => 'withdrawn' } ], 'Warnings are rendered' );
+    is_deeply(
+        $api->{confirmations},
+        [ { code => 'recall', overridable => Mojo::JSON->false } ],
+        'Confirmations are rendered'
+    );
+    is_deeply(
+        $api->{warnings},
+        [ { code => 'withdrawn', overridable => Mojo::JSON->false } ],
+        'Warnings are rendered'
+    );
 
     is_deeply(
         [ map { $_->{code} } @{ $api->{blockers} } ],

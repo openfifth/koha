@@ -137,7 +137,7 @@ subtest 'A damaged item, and the damaged override' => sub {
     $t->get_ok("//$userid:$password@/api/v1/items/$item_id/holdability?patron_id=$patron_id")
         ->status_is(200)
         ->json_is( '/available' => Mojo::JSON->false )
-        ->json_is( '/blockers'  => [ { code => 'damaged' } ] );
+        ->json_is( '/blockers'  => [ { code => 'damaged', overridable => Mojo::JSON->true } ] );
 
     $t->get_ok( "//$userid:$password@/api/v1/items/$item_id/holdability?patron_id=$patron_id" =>
             { 'x-koha-override' => 'damaged' } )->json_is( '/available' => Mojo::JSON->true );
@@ -176,7 +176,7 @@ subtest 'An item the patron already has on hold' => sub {
     $t->get_ok("//$userid:$password@/api/v1/items/$item_id/holdability?patron_id=$patron_id")
         ->status_is(200)
         ->json_is( '/available' => Mojo::JSON->false )
-        ->json_is( '/blockers'  => [ { code => 'item_already_on_hold' } ] );
+        ->json_is( '/blockers'  => [ { code => 'item_already_on_hold', overridable => Mojo::JSON->false } ] );
 
     $schema->storage->txn_rollback;
 };
@@ -220,11 +220,12 @@ subtest 'A pickup library with a transfer limit' => sub {
 
     $t->get_ok(
         "//$userid:$password@/api/v1/items/$item_id/holdability?patron_id=$patron_id&pickup_library_id=" . $pickup->id )
-        ->json_is( '/blockers' => [ { code => 'cannot_be_transferred' } ] );
+        ->json_is( '/blockers' => [ { code => 'cannot_be_transferred', overridable => Mojo::JSON->false } ] );
 
     # A library that is not flagged as a pickup location at all
     $t->get_ok( "//$userid:$password@/api/v1/items/$item_id/holdability?patron_id=$patron_id&pickup_library_id="
-            . $no_hold->id )->json_is( '/blockers' => [ { code => 'library_not_pickup_location' } ] );
+            . $no_hold->id )
+        ->json_is( '/blockers' => [ { code => 'library_not_pickup_location', overridable => Mojo::JSON->false } ] );
 
     $schema->storage->txn_rollback;
 };

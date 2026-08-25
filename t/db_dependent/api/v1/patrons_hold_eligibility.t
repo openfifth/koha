@@ -104,7 +104,7 @@ subtest 'A restricted patron' => sub {
     $t->get_ok("//$userid:$password@/api/v1/patrons/$id/hold_eligibility")
         ->status_is(200)
         ->json_is( '/available' => Mojo::JSON->false )
-        ->json_is( '/blockers'  => [ { code => 'restricted' } ] )
+        ->json_is( '/blockers'  => [ { code => 'restricted', overridable => Mojo::JSON->true } ] )
         ->json_hasnt( '/blockers/0/payload', 'A restricted blocker carries no payload' );
 
     $schema->storage->txn_rollback;
@@ -179,7 +179,10 @@ subtest 'Every blocker is reported, and x-koha-override clears them' => sub {
         "//$userid:$password@/api/v1/patrons/$id/hold_eligibility" => { 'x-koha-override' => 'expired,debt_limit' } )
         ->status_is(200)
         ->json_is( '/available' => Mojo::JSON->false )
-        ->json_is( '/blockers'  => [ { code => 'bad_address' } ], 'The overridden blockers are gone' );
+        ->json_is(
+        '/blockers' => [ { code => 'bad_address', overridable => Mojo::JSON->true } ],
+        'The overridden blockers are gone'
+        );
 
     $schema->storage->txn_rollback;
 };
