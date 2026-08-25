@@ -32,11 +32,12 @@ import LeftMenu from "../../LeftMenu.vue";
 import Dialog from "../../Dialog.vue";
 import "vue-select/dist/vue-select.css";
 import { storeToRefs } from "pinia";
+import { APIClient } from "../../../fetch/api-client.js";
 
 export default {
     setup() {
         const holdsStore = inject("holdsStore");
-        const { authorisedValues } = storeToRefs(holdsStore);
+        const { authorisedValues, sysprefs } = storeToRefs(holdsStore);
         const { loadAuthorisedValues } = holdsStore;
 
         const mainStore = inject("mainStore");
@@ -47,17 +48,25 @@ export default {
         onBeforeMount(() => {
             loading();
 
-            loadAuthorisedValues(authorisedValues.value, holdsStore).then(
-                () => {
-                    loaded();
-                    initialized.value = true;
-                }
-            );
+            const fetchSysprefs = APIClient.sysprefs.sysprefs
+                .get("AllowHoldPolicyOverride")
+                .then(result => {
+                    sysprefs.value.AllowHoldPolicyOverride = result.value;
+                });
+
+            Promise.all([
+                loadAuthorisedValues(authorisedValues.value, holdsStore),
+                fetchSysprefs,
+            ]).then(() => {
+                loaded();
+                initialized.value = true;
+            });
         });
 
         return {
             holdsStore,
             authorisedValues,
+            sysprefs,
             setError,
             loading,
             loaded,

@@ -1,3 +1,7 @@
+import { markRaw } from "vue";
+
+import PlaceHold from "../../components/Circulation/Holds/PlaceHold.vue";
+
 import { $__ } from "@koha-vue/i18n";
 
 export const routes = [
@@ -6,6 +10,14 @@ export const routes = [
         is_default: true,
         is_base: true,
         title: $__("Circulation"),
-        children: [],
+        children: [
+            {
+                path: "/cgi-bin/koha/reserve/request.pl",
+                name: "PlaceHold",
+                component: markRaw(PlaceHold),
+                title: $__("Place a hold"),
+                is_navigation_item: false,
+            },
+        ],
     },
 ];
