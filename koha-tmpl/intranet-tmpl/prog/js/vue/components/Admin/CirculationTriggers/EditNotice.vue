@@ -125,7 +125,7 @@
         </ol>
     </fieldset>
     <div v-else-if="editMode === 'add' || editMode === 'edit'">
-        <p>{{ $__("Loading circulation rules...") }}</p>
+        <p>{{ $__("Loading current notice settings...") }}</p>
     </div>
 </template>
 
