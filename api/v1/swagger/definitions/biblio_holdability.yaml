@@ -47,6 +47,14 @@ properties:
       - total
       - holdable
       - first_holdable_item_id
+  hold_fee:
+    description: The fee that will apply if this hold is placed, if any
+    type:
+      - number
+      - "null"
+  prospective_priority:
+    description: The queue position this hold would take if placed now
+    type: integer
 additionalProperties: false
 required:
   - available
@@ -55,3 +63,5 @@ required:
   - confirmations
   - warnings
   - items
+  - hold_fee
+  - prospective_priority

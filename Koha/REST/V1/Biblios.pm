@@ -27,8 +27,9 @@ use Koha::Libraries;
 use Koha::Patrons;
 use Koha::Ratings;
 use Koha::RecordSources;
-use C4::Biblio qw( DelBiblio AddBiblio ModBiblio );
-use C4::Search qw( FindDuplicate );
+use C4::Biblio   qw( DelBiblio AddBiblio ModBiblio );
+use C4::Reserves qw( CalculatePriority );
+use C4::Search   qw( FindDuplicate );
 
 use C4::Auth qw( haspermission );
 use C4::Barcodes::ValueBuilder;
@@ -704,6 +705,15 @@ sub holdability {
             ? $availability->context->{available_item}->itemnumber
             : undef,
         };
+
+        # holds_fee mirrors what reserve/request.pl already does: the fee
+        # that would apply is the cheapest holdable item's own hold_fee rule.
+        my $available_item = $availability->context->{available_item};
+        $response->{hold_fee} =
+            $available_item ? ( 0 + ( $available_item->holds_fee($patron) // 0 ) ) : undef;
+
+        # The priority a new hold would take if placed right now.
+        $response->{prospective_priority} = CalculatePriority( $biblio->biblionumber );
 
         return $c->render(
             status  => 200,
