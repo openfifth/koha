@@ -15,6 +15,32 @@
             @toggle-options="showOptions = !showOptions"
         />
 
+        <!-- Active settings indicators (visible when panel is collapsed) -->
+        <div
+            v-if="!showOptions && hasActiveSettings"
+            class="checkin-active-settings mt-1"
+        >
+            <span
+                v-if="checkinOptions.exempt_fine"
+                class="badge text-bg-warning me-1"
+            >
+                <i class="fa fa-check"></i> {{ $__("Fines forgiven") }}
+            </span>
+            <span
+                v-if="checkinOptions.dropbox_mode"
+                class="badge text-bg-warning me-1"
+            >
+                <i class="fa fa-check"></i> {{ $__("Book drop mode") }}
+            </span>
+            <span
+                v-if="checkinOptions.return_date"
+                class="badge text-bg-warning me-1"
+            >
+                <i class="fa fa-check"></i> {{ $__("Return date:") }}
+                {{ checkinOptions.return_date }}
+            </span>
+        </div>
+
         <CheckinOptions
             v-show="showOptions"
             ref="checkinOptionsRef"
@@ -138,6 +164,13 @@ export default {
         // while modals are showing. Items needing attention queue as
         // yellow rows and modals show one at a time.
         const isInputBlocked = computed(() => false);
+
+        const hasActiveSettings = computed(
+            () =>
+                checkinOptions.exempt_fine ||
+                checkinOptions.dropbox_mode ||
+                checkinOptions.return_date
+        );
 
         // Detailed messages for the most recent checkin (shown as alert boxes)
         const lastCheckinMessages = computed(() => {
@@ -377,6 +410,7 @@ export default {
             pendingItems,
             activeModalItem,
             isInputBlocked,
+            hasActiveSettings,
             lastCheckinMessages,
             showOptions,
             showClaimModal,

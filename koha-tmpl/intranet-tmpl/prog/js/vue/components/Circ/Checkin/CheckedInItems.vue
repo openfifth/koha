@@ -39,11 +39,16 @@
                     }}
                 </td>
                 <td>
-                    {{
+                    <a
+                        v-if="checkin.item && checkin.item.biblio"
+                        :href="`/cgi-bin/koha/catalogue/moredetail.pl?biblionumber=${checkin.item.biblio.biblio_id}&itemnumber=${checkin.item.item_id}#item${checkin.item.item_id}`"
+                        >{{ checkin.item.external_id }}</a
+                    >
+                    <span v-else>{{
                         checkin.item
                             ? checkin.item.external_id
                             : checkin._barcode || ""
-                    }}
+                    }}</span>
                 </td>
                 <td>
                     {{
