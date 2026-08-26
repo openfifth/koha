@@ -130,6 +130,16 @@
                         class="mt-1"
                     >
                         <button
+                            v-if="checkin._action_type === 'claim'"
+                            class="btn btn-xs btn-outline-warning"
+                            :title="$__('Resolve claim')"
+                            @click="$emit('resolve-claim', checkin)"
+                        >
+                            <i class="fa fa-gavel"></i>
+                            {{ $__("Resolve claim") }}
+                        </button>
+                        <button
+                            v-else
                             class="btn btn-xs btn-outline-primary"
                             :title="$__('Resolve')"
                             @click="$emit('show-modal', checkin)"
@@ -178,7 +188,7 @@ export default {
             required: true,
         },
     },
-    emits: ["show-modal"],
+    emits: ["show-modal", "resolve-claim"],
     setup() {
         const store = useCheckinStore();
 
@@ -254,6 +264,8 @@ export default {
                     return $__("Transfer needed");
                 case "recall":
                     return $__("Recall found");
+                case "claim":
+                    return $__("Claimed returned");
                 default:
                     return $__("Action needed");
             }
@@ -304,6 +316,8 @@ export default {
                 lost_item_fee_charged: $__("Lost fee charged"),
                 lost_item_fee_restored: $__("Lost fee restored"),
                 processing_fee_refunded: $__("Processing fee refunded"),
+                return_claim: $__("Claimed returned"),
+                claim_auto_resolved: $__("Claim resolved"),
             };
             return labels[msg.message] || msg.message.replace(/_/g, " ");
         }

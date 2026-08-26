@@ -37,6 +37,16 @@
                             }}</strong>
                             {{ item._confirms.item_parts }}
                         </div>
+                        <div
+                            v-if="item._confirms.items_bundle"
+                            class="alert alert-info"
+                        >
+                            <strong>{{
+                                $__(
+                                    "This item is a bundle. Please verify bundle contents before confirming check in."
+                                )
+                            }}</strong>
+                        </div>
                     </template>
 
                     <!-- Post-checkin: Hold found -->
@@ -180,6 +190,18 @@
                                 }}</strong>
                             </p>
                         </div>
+                    </template>
+
+                    <!-- Post-checkin: Return claim -->
+                    <template v-if="item._action_type === 'claim'">
+                        <h4>{{ $__("Item was claimed returned") }}</h4>
+                        <p>
+                            {{
+                                $__(
+                                    "This item has an active return claim. Please resolve it."
+                                )
+                            }}
+                        </p>
                     </template>
 
                     <!-- Warnings -->
@@ -339,6 +361,28 @@
                             {{ $__("Print slip and confirm (P)") }}
                         </button>
                     </template>
+
+                    <!-- Claim action buttons -->
+                    <template v-if="item._action_type === 'claim'">
+                        <button
+                            type="button"
+                            class="btn btn-warning"
+                            accesskey="y"
+                            @click="$emit('resolve-claim', item)"
+                        >
+                            <i class="fa fa-gavel"></i>
+                            {{ $__("Resolve claim (Y)") }}
+                        </button>
+                        <button
+                            type="button"
+                            class="btn btn-default deny"
+                            accesskey="n"
+                            @click="$emit('dismiss', item)"
+                        >
+                            <i class="fa fa-times"></i>
+                            {{ $__("Dismiss (N)") }}
+                        </button>
+                    </template>
                 </div>
             </div>
         </div>
@@ -365,7 +409,7 @@ export default {
             default: false,
         },
     },
-    emits: ["confirm", "dismiss", "resolve"],
+    emits: ["confirm", "dismiss", "resolve", "resolve-claim"],
     setup(props, { emit }) {
         const store = useCheckinStore();
         const { policy } = storeToRefs(store);
@@ -462,6 +506,7 @@ export default {
             }
             if (props.item._action_type === "recall")
                 return $__("Recall found");
+            if (props.item._action_type === "claim") return $__("Return claim");
             return $__("Action required");
         });
 

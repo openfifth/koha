@@ -154,6 +154,11 @@ sub check {
         $result->add_confirmation( item_parts => $item->materials );
     }
 
+    # Bundle items require content verification before checkin
+    if ( $item->is_bundle ) {
+        $result->add_confirmation( items_bundle => 1 );
+    }
+
     return $result;
 }
 

@@ -301,6 +301,9 @@ export const useCheckinStore = defineStore("checkin", () => {
         ) {
             return "recall";
         }
+        if (messages.some(m => m.message === "return_claim")) {
+            return "claim";
+        }
         return null;
     }
 

@@ -23,7 +23,11 @@
         />
 
         <!-- Detailed messages for the last checkin -->
-        <div v-if="lastCheckinMessages.length" class="mt-3">
+        <div
+            v-if="lastCheckinMessages.length"
+            class="mt-3"
+            @click="onMessagesClick"
+        >
             <div
                 v-for="msg in lastCheckinMessages"
                 :key="msg.message"
@@ -53,6 +57,7 @@
             :checkins="checkins"
             class="mt-4"
             @show-modal="showModalFor"
+            @resolve-claim="onResolveClaimFromRow"
         />
 
         <!-- Confirmation panel — shows one pending item at a time -->
@@ -62,6 +67,14 @@
             @confirm="onConfirm"
             @dismiss="onDismiss"
             @resolve="onResolve"
+            @resolve-claim="onResolveClaimFromModal"
+        />
+
+        <ResolveClaimModal
+            :claim-id="activeClaimId"
+            :visible="showClaimModal"
+            @resolved="onClaimResolved"
+            @close="showClaimModal = false"
         />
     </div>
 </template>
@@ -82,6 +95,7 @@ import BarcodeInput from "./BarcodeInput.vue";
 import CheckedInItems from "./CheckedInItems.vue";
 import CheckinOptions from "./CheckinOptions.vue";
 import ConfirmationModal from "./ConfirmationModal.vue";
+import ResolveClaimModal from "./ResolveClaimModal.vue";
 import { $__ } from "@koha-vue/i18n";
 
 export default {
@@ -90,6 +104,7 @@ export default {
         CheckedInItems,
         CheckinOptions,
         ConfirmationModal,
+        ResolveClaimModal,
     },
     setup() {
         const store = useCheckinStore();
@@ -105,6 +120,8 @@ export default {
         const checkinOptionsRef = ref(null);
         const activeModalItem = ref(null);
         const showOptions = ref(false);
+        const showClaimModal = ref(false);
+        const activeClaimId = ref(null);
 
         const checkinOptions = reactive({
             dropbox_mode: false,
@@ -222,14 +239,8 @@ export default {
                         alertClass: "alert-info",
                     });
                 }
-                if (msg.message === "return_claim" && msg.payload) {
-                    detailed.push({
-                        text: $__(
-                            'Item was claimed returned. <a href="/cgi-bin/koha/circ/returns.pl?claim_id=%s" class="btn btn-xs btn-warning">Resolve claim</a>'
-                        ).replace("%s", msg.payload.claim_id),
-                        alertClass: "alert-warning",
-                    });
-                }
+                // return_claim is handled by the row (yellow + resolve button)
+                // No alert needed
                 if (msg.message === "claim_auto_resolved") {
                     detailed.push({
                         text: $__(
@@ -281,6 +292,52 @@ export default {
             activeModalItem.value = item;
         }
 
+        function onMessagesClick(e) {
+            const btn = e.target.closest(".resolve-claim-btn");
+            if (btn) {
+                activeClaimId.value = parseInt(btn.dataset.claimId);
+                showClaimModal.value = true;
+            }
+        }
+
+        function onResolveClaimFromRow(checkin) {
+            const claimMsg = (checkin.messages || []).find(
+                m => m.message === "return_claim"
+            );
+            if (claimMsg && claimMsg.payload) {
+                activeClaimId.value = claimMsg.payload.claim_id;
+                showClaimModal.value = true;
+            }
+        }
+
+        function onResolveClaimFromModal(item) {
+            // Close the confirmation modal and open the resolve claim modal
+            activeModalItem.value = null;
+            const claimMsg = (item.messages || []).find(
+                m => m.message === "return_claim"
+            );
+            if (claimMsg && claimMsg.payload) {
+                activeClaimId.value = claimMsg.payload.claim_id;
+                showClaimModal.value = true;
+            }
+        }
+
+        function onClaimResolved() {
+            showClaimModal.value = false;
+            // Mark the claim row as resolved
+            const idx = checkins.value.findIndex(
+                c => c._action_type === "claim" && c._status === "needs_action"
+            );
+            if (idx !== -1) {
+                checkins.value[idx] = {
+                    ...checkins.value[idx],
+                    _status: "success",
+                    _action_type: null,
+                };
+            }
+            activeClaimId.value = null;
+        }
+
         async function onConfirm(item) {
             await store.confirmPending(item);
             _advanceModal();
@@ -322,12 +379,18 @@ export default {
             isInputBlocked,
             lastCheckinMessages,
             showOptions,
+            showClaimModal,
+            activeClaimId,
             barcodeInputRef,
             checkinOptionsRef,
             checkinOptions,
             onOptionsUpdate,
             onBarcodeScan,
             showModalFor,
+            onMessagesClick,
+            onResolveClaimFromRow,
+            onResolveClaimFromModal,
+            onClaimResolved,
             onConfirm,
             onDismiss,
             onResolve,
