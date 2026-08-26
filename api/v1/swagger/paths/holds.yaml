@@ -264,12 +264,16 @@
         items:
           type: string
           enum:
+            - age_restricted
+            - already_possession
             - any
             - bad_address
             - card_lost
+            - damaged
             - debt_limit
             - expired
             - hold_limit
+            - not_reservable
             - restricted
         collectionFormat: csv
     consumes:

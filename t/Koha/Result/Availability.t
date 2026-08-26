@@ -19,11 +19,13 @@
 
 use Modern::Perl;
 
-use Test::More tests => 15;
+use Test::More tests => 16;
 use Test::NoWarnings;
 
 use Mojo::JSON qw( encode_json );
+use YAML::XS   qw( LoadFile );
 
+use C4::Context;
 use Koha::Result::Availability;
 
 subtest 'new() creates empty result' => sub {
@@ -293,5 +295,32 @@ subtest 'to_api() with confirmations, warnings and a stable order' => sub {
         [ sort keys %{$api} ],
         [ 'available', 'blockers', 'confirmations', 'needs_confirmation', 'warnings' ],
         'The response holds no context data and no other key'
+    );
+};
+
+subtest 'OVERRIDABLE_CODES stays in step with the addHold x-koha-override enum' => sub {
+
+    plan tests => 1;
+
+    # OVERRIDABLE_CODES is what Koha::Item::Availability::Hold and
+    # Koha::Patron::Availability::Hold actually respect via
+    # $overrides->{$code} (see the constant's own POD) - both are reachable
+    # through POST /holds (addHold), via CanItemBeReserved/CanBookBeReserved.
+    # addHold validates its x-koha-override header against this enum before
+    # the controller ever runs, so a code missing here would advertise
+    # overridable => true in a holdability response and then be rejected
+    # outright the moment a caller actually tries to override it.
+    my $paths_file = C4::Context->config('intranetdir') . '/api/v1/swagger/paths/holds.yaml';
+    my $spec        = LoadFile($paths_file);
+    my ($override_param) =
+        grep { $_->{name} eq 'x-koha-override' } @{ $spec->{'/holds'}{post}{parameters} };
+
+    my %enum = map { $_ => 1 } @{ $override_param->{items}{enum} };
+
+    my @missing = sort grep { !$enum{$_} } keys %{ Koha::Result::Availability::OVERRIDABLE_CODES() };
+
+    is_deeply(
+        \@missing, [],
+        "Every OVERRIDABLE_CODES key is offered by addHold's x-koha-override enum"
     );
 };
