@@ -76,7 +76,14 @@ sub startup {
                 try {
                     my $xml = $c->req->body;
 
-                    my $parser    = XML::LibXML->new();
+                    if ( _unsafe_xml_body($xml) ) {
+                        return $c->render(
+                            status => 400,
+                            json   => { error => 'Invalid XML request body' }
+                        );
+                    }
+
+                    my $parser    = safe_xml_parser();
                     my $doc       = $parser->parse_string($xml);
                     my $root      = $doc->documentElement();
                     my $spec_file = $self->home->rel_file("api/v1/swagger/swagger_bundle.json");
@@ -330,6 +337,42 @@ sub validate_json_payload {
 
     # Return 1 if the payload is valid, 0 otherwise
     return $errors ? 0 : 1;
+}
+
+=head3 safe_xml_parser
+
+    my $parser = safe_xml_parser();
+
+Hardened XML::LibXML parser: entity expansion, external DTD loading,
+and network access disabled, to block XXE (file read, SSRF).
+
+Doesn't stop internal-entity DoS alone - see C<_unsafe_xml_body>.
+
+=cut
+
+sub safe_xml_parser {
+    my $parser = XML::LibXML->new();
+    $parser->expand_entities(0);
+    $parser->load_ext_dtd(0);
+    $parser->no_network(1);
+    return $parser;
+}
+
+=head3 _unsafe_xml_body
+
+    my $bool = _unsafe_xml_body($xml);
+
+True if C<$xml> has a DOCTYPE, or a NUL byte (used to hide a DOCTYPE
+in UTF-16/32-encoded bodies).
+
+=cut
+
+sub _unsafe_xml_body {
+    my ($xml) = @_;
+    return 0 unless defined $xml;
+    return 1 if $xml =~ /\x00/;
+    return 1 if $xml =~ /<!DOCTYPE/i;
+    return 0;
 }
 
 =head3 parse_xml

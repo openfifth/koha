@@ -17,10 +17,14 @@
 
 use Modern::Perl;
 
+use Encode qw( encode );
+
 use Test::NoWarnings;
-use Test::More tests => 2;
+use Test::More tests => 3;
 use Test::Mojo;
 use Test::Warn;
+
+use Koha::REST::V1;
 
 subtest 'Type definition tests' => sub {
 
@@ -41,4 +45,31 @@ subtest 'Type definition tests' => sub {
     is( $types->type('marcxml'), 'application/marcxml+xml',  'application/marcxml+xml is defined' );
     is( $types->type('mij'),     'application/marc-in-json', 'application/marc-in-json is defined' );
     is( $types->type('marc'),    'application/marc',         'application/marc is defined' );
+};
+
+subtest 'safe_xml_parser and _unsafe_xml_body (Bug 43376 - XXE) tests' => sub {
+
+    plan tests => 8;
+
+    my $doctype_xml = '<!DOCTYPE foo [ <!ENTITY x "y"> ]><foo/>';
+
+    ok( Koha::REST::V1::_unsafe_xml_body($doctype_xml),      '_unsafe_xml_body detects a DOCTYPE declaration' );
+    ok( !Koha::REST::V1::_unsafe_xml_body('<foo>bar</foo>'), '_unsafe_xml_body allows DOCTYPE-free XML' );
+    ok( Koha::REST::V1::_unsafe_xml_body("<foo>\x00</foo>"), '_unsafe_xml_body detects a NUL byte' );
+    ok(
+        Koha::REST::V1::_unsafe_xml_body( encode( 'UTF-16LE', $doctype_xml ) ),
+        '_unsafe_xml_body detects a DOCTYPE hidden behind UTF-16 encoding'
+    );
+
+    my $parser = Koha::REST::V1::safe_xml_parser();
+
+    my $xxe_xml = q{<?xml version="1.0"?>
+<!DOCTYPE root [ <!ENTITY xxe SYSTEM "file:///etc/hostname"> ]>
+<root>&xxe;</root>};
+    my $doc = $parser->parse_string($xxe_xml);
+    is( $doc->documentElement->textContent, '', 'safe_xml_parser does not expand external (SYSTEM) entities' );
+
+    is( $parser->no_network,      1, 'safe_xml_parser disables network access' );
+    is( $parser->load_ext_dtd,    0, 'safe_xml_parser disables external DTD loading' );
+    is( $parser->expand_entities, 0, 'safe_xml_parser disables entity expansion' );
 };
