@@ -5487,6 +5487,20 @@ sub _attach_messages_to_checkin {
         );
     }
 
+    # Item type checkin message
+    if ( $checkin->item ) {
+        my $itemtype = Koha::ItemTypes->find( $checkin->item->effective_itemtype );
+        if ( $itemtype && $itemtype->checkinmsg ) {
+            $checkin->add_message(
+                {
+                    message => 'item_type_checkinmsg',
+                    type    => $itemtype->checkinmsgtype || 'message',
+                    payload => { text => $itemtype->checkinmsg },
+                }
+            );
+        }
+    }
+
     return;
 }
 

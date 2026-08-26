@@ -193,6 +193,15 @@ export default {
                         alertClass: "alert-warning",
                     });
                 }
+                if (msg.message === "item_type_checkinmsg" && msg.payload) {
+                    detailed.push({
+                        text: msg.payload.text,
+                        alertClass:
+                            msg.type === "alert"
+                                ? "alert-warning"
+                                : "alert-info",
+                    });
+                }
             }
             return detailed;
         });
