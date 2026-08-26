@@ -22,6 +22,18 @@
             @update:options="onOptionsUpdate"
         />
 
+        <!-- Detailed messages for the last checkin -->
+        <div v-if="lastCheckinMessages.length" class="mt-3">
+            <div
+                v-for="msg in lastCheckinMessages"
+                :key="msg.message"
+                class="alert"
+                :class="msg.alertClass"
+            >
+                <p class="mb-0" v-html="msg.text"></p>
+            </div>
+        </div>
+
         <!-- Pending items count indicator -->
         <div
             v-if="pendingItems.length > 1"
@@ -110,6 +122,71 @@ export default {
         // yellow rows and modals show one at a time.
         const isInputBlocked = computed(() => false);
 
+        // Detailed messages for the most recent checkin (shown as alert boxes)
+        const lastCheckinMessages = computed(() => {
+            if (!checkins.value.length) return [];
+            const latest = checkins.value[0];
+            if (latest._status !== "success") return [];
+            const messages = latest.messages || [];
+            const detailed = [];
+            const feeMessages = {
+                lost_item_fee_refunded: {
+                    text: $__(
+                        "A refund for the lost item charge has been applied to the borrowing patron's account."
+                    ),
+                    alertClass: "alert-info",
+                },
+                lost_item_fee_charged: {
+                    text: $__(
+                        "A refund for the lost item charge has been applied, and a new overdue charge has been calculated."
+                    ),
+                    alertClass: "alert-info",
+                },
+                lost_item_fee_restored: {
+                    text: $__(
+                        "A refund for the lost item charge has been applied and any forgiven overdue fines have been reverted."
+                    ),
+                    alertClass: "alert-info",
+                },
+                lost_item_payment_not_refunded: {
+                    text: $__(
+                        "The payment for the lost item is older than the refund threshold. No refund applied."
+                    ),
+                    alertClass: "alert-warning",
+                },
+                processing_fee_refunded: {
+                    text: $__(
+                        "A refund for the lost item processing charge has been applied to the borrowing patron's account."
+                    ),
+                    alertClass: "alert-info",
+                },
+                was_lost: {
+                    text: $__("Item was lost, now found."),
+                    alertClass: "alert-info",
+                },
+                debarred: {
+                    text: $__("Patron is now restricted."),
+                    alertClass: "alert-warning",
+                },
+                previously_debarred: {
+                    text: $__("Reminder: Patron was earlier restricted."),
+                    alertClass: "alert-warning",
+                },
+                indefinitely_debarred: {
+                    text: $__(
+                        "Reminder: Patron has an indefinite restriction."
+                    ),
+                    alertClass: "alert-warning",
+                },
+            };
+            for (const msg of messages) {
+                if (feeMessages[msg.message]) {
+                    detailed.push(feeMessages[msg.message]);
+                }
+            }
+            return detailed;
+        });
+
         // Refocus barcode input when focus leaves to non-interactive elements
         // (e.g., sidebar toggle button, page chrome clicks)
         function handleDocumentClick(e) {
@@ -188,6 +265,7 @@ export default {
             pendingItems,
             activeModalItem,
             isInputBlocked,
+            lastCheckinMessages,
             showOptions,
             barcodeInputRef,
             checkinOptionsRef,
