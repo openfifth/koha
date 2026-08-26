@@ -45,7 +45,13 @@
                             : checkin._barcode || ""
                     }}
                 </td>
-                <td>{{ checkin.item ? checkin.item.home_library_id : "" }}</td>
+                <td>
+                    {{
+                        checkin.item
+                            ? libraryName(checkin.item.home_library_id)
+                            : ""
+                    }}
+                </td>
                 <td>
                     {{ patronDisplay(checkin) }}
                     <button
@@ -176,6 +182,11 @@ export default {
     setup() {
         const store = useCheckinStore();
 
+        function libraryName(branchcode) {
+            if (!branchcode) return "";
+            return store.libraries[branchcode] || branchcode;
+        }
+
         function formatDueDate(checkin) {
             if (!checkin.checkout || !checkin.checkout.due_date) return "—";
             const dueDate = new Date(checkin.checkout.due_date);
@@ -301,6 +312,7 @@ export default {
             formatDueDate,
             isOverdue,
             audioAlertClass,
+            libraryName,
             rowClass,
             patronDisplay,
             actionLabel,

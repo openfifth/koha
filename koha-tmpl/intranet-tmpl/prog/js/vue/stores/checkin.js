@@ -5,8 +5,22 @@ import { APIClient } from "../fetch/api-client.js";
 export const useCheckinStore = defineStore("checkin", () => {
     const policy = reactive(window.__MODULE_POLICY__ || {});
     const libraryId = window.__LIBRARY_ID__ || null;
+    const tableSettings = window.__TABLE_SETTINGS__ || {};
+    const libraries = ref({});
     const checkins = ref([]);
     const processing = ref(false);
+
+    // Fetch libraries for name resolution
+    fetch("/api/v1/libraries?_per_page=-1")
+        .then(r => r.json())
+        .then(libs => {
+            const map = {};
+            for (const lib of libs) {
+                map[lib.library_id] = lib.name;
+            }
+            libraries.value = map;
+        })
+        .catch(() => {});
     const lastError = ref(null);
     const _inflight = new Set();
 
@@ -322,6 +336,8 @@ export const useCheckinStore = defineStore("checkin", () => {
 
     return {
         policy,
+        libraries,
+        tableSettings,
         checkins,
         processing,
         lastError,
