@@ -150,8 +150,8 @@ sub send_message {
     if ( $response->is_success ) {
         my $content = $response->decoded_content;
 
-        if ($content) {
-            my $parser = XML::LibXML->new();
+        if ( $content && !Koha::REST::V1::_unsafe_xml_body($content) ) {
+            my $parser = Koha::REST::V1::safe_xml_parser();
             my $doc;
             eval { $doc = $parser->parse_string($content); };
 
