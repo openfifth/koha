@@ -1,4 +1,6 @@
 <template>
+    <!-- TODO: Wire TablesSettings column visibility toggle -->
+    <!-- TODO: Add DataTables export buttons (CSV/Copy/Print) -->
     <table
         v-if="checkins.length"
         class="table table-striped"
@@ -6,12 +8,51 @@
     >
         <thead>
             <tr>
-                <th>{{ $__("Due date") }}</th>
-                <th>{{ $__("Title") }}</th>
-                <th>{{ $__("Author") }}</th>
-                <th>{{ $__("Barcode") }}</th>
-                <th>{{ $__("Home library") }}</th>
-                <th>{{ $__("Patron") }}</th>
+                <th v-if="isColumnVisible('due_date')">
+                    {{ $__("Due date") }}
+                </th>
+                <th v-if="isColumnVisible('title')">
+                    {{ $__("Title") }}
+                </th>
+                <th v-if="isColumnVisible('author')">
+                    {{ $__("Author") }}
+                </th>
+                <th v-if="isColumnVisible('barcode')">
+                    {{ $__("Barcode") }}
+                </th>
+                <th v-if="isColumnVisible('homelibrary')">
+                    {{ $__("Home library") }}
+                </th>
+                <th v-if="isColumnVisible('transferlibrary')">
+                    {{ $__("Transfer to") }}
+                </th>
+                <th v-if="isColumnVisible('transferreason')">
+                    {{ $__("Transfer reason") }}
+                </th>
+                <th v-if="isColumnVisible('location')">
+                    {{ $__("Shelving location") }}
+                </th>
+                <th v-if="isColumnVisible('itemcallnumber')">
+                    {{ $__("Call number") }}
+                </th>
+                <th v-if="isColumnVisible('dateaccessioned')">
+                    {{ $__("Date acquired") }}
+                </th>
+                <th v-if="isColumnVisible('record_type')">
+                    {{ $__("Record-level itemtype") }}
+                </th>
+                <th v-if="isColumnVisible('itype')">
+                    {{ $__("Item type") }}
+                </th>
+                <th v-if="isColumnVisible('ccode')">
+                    {{ $__("Collection") }}
+                </th>
+                <th v-if="isColumnVisible('borrower')">
+                    {{ $__("Patron") }}
+                </th>
+                <th v-if="isColumnVisible('itemnote')">
+                    {{ $__("Note") }}
+                </th>
                 <th>{{ $__("Status / Messages") }}</th>
             </tr>
         </thead>
@@ -21,8 +62,14 @@
                 :key="checkin.checkin_id || `pending-${index}`"
                 :class="rowClass(checkin)"
             >
-                <td v-html="formatDueDate(checkin)"></td>
-                <td>
+                <!-- Due date -->
+                <td
+                    v-if="isColumnVisible('due_date')"
+                    v-html="formatDueDate(checkin)"
+                ></td>
+
+                <!-- Title -->
+                <td v-if="isColumnVisible('title')">
                     <a
                         v-if="checkin.item && checkin.item.biblio"
                         :href="`/cgi-bin/koha/catalogue/detail.pl?biblionumber=${checkin.item.biblio.biblio_id}`"
@@ -31,14 +78,18 @@
                     </a>
                     <span v-else>—</span>
                 </td>
-                <td>
+
+                <!-- Author -->
+                <td v-if="isColumnVisible('author')">
                     {{
                         checkin.item && checkin.item.biblio
                             ? checkin.item.biblio.author
                             : ""
                     }}
                 </td>
-                <td>
+
+                <!-- Barcode -->
+                <td v-if="isColumnVisible('barcode')">
                     <a
                         v-if="checkin.item && checkin.item.biblio"
                         :href="`/cgi-bin/koha/catalogue/moredetail.pl?biblionumber=${checkin.item.biblio.biblio_id}&itemnumber=${checkin.item.item_id}#item${checkin.item.item_id}`"
@@ -50,22 +101,79 @@
                             : checkin._barcode || ""
                     }}</span>
                 </td>
-                <td>
+
+                <!-- Home library -->
+                <td v-if="isColumnVisible('homelibrary')">
                     {{
                         checkin.item
                             ? libraryName(checkin.item.home_library_id)
                             : ""
                     }}
                 </td>
-                <td>
+
+                <!-- Transfer to -->
+                <td v-if="isColumnVisible('transferlibrary')">
+                    {{ transferToLibrary(checkin) }}
+                </td>
+
+                <!-- Transfer reason -->
+                <td v-if="isColumnVisible('transferreason')">
+                    {{ transferReason(checkin) }}
+                </td>
+
+                <!-- Shelving location -->
+                <td v-if="isColumnVisible('location')">
+                    {{ checkin.item ? checkin.item.location || "" : "" }}
+                </td>
+
+                <!-- Call number -->
+                <td v-if="isColumnVisible('itemcallnumber')">
+                    {{ checkin.item ? checkin.item.callnumber || "" : "" }}
+                </td>
+
+                <!-- Date acquired -->
+                <td v-if="isColumnVisible('dateaccessioned')">
+                    {{
+                        checkin.item && checkin.item.acquisition_date
+                            ? formatDate(checkin.item.acquisition_date)
+                            : ""
+                    }}
+                </td>
+
+                <!-- Record-level itemtype -->
+                <td v-if="isColumnVisible('record_type')">
+                    {{
+                        checkin.item && checkin.item.biblio
+                            ? checkin.item.biblio.item_type_id || ""
+                            : ""
+                    }}
+                </td>
+
+                <!-- Item type -->
+                <td v-if="isColumnVisible('itype')">
+                    {{ checkin.item ? checkin.item.item_type_id || "" : "" }}
+                </td>
+
+                <!-- Collection -->
+                <td v-if="isColumnVisible('ccode')">
+                    {{ checkin.item ? checkin.item.collection_code || "" : "" }}
+                </td>
+
+                <!-- Patron -->
+                <td v-if="isColumnVisible('borrower')">
                     {{ patronDisplay(checkin) }}
-                    <button
+                    <span
                         v-if="
-                            checkin._status === 'success' &&
                             checkin.checkout &&
-                            checkin.checkout.patron_id &&
-                            checkin.checkout.patron
+                            checkin.checkout.patron &&
+                            checkin.checkout.patron.checkouts_count
                         "
+                        class="badge bg-info-subtle"
+                    >
+                        {{ checkin.checkout.patron.checkouts_count }}
+                    </span>
+                    <button
+                        v-if="showPrintSlipButton(checkin)"
                         class="btn btn-xs btn-outline-secondary ms-1"
                         :title="$__('Print checkin slip')"
                         @click="printCheckinSlip(checkin.checkout.patron_id)"
@@ -74,6 +182,34 @@
                         {{ $__("Print checkin slip") }}
                     </button>
                 </td>
+
+                <!-- Note -->
+                <td v-if="isColumnVisible('itemnote')">
+                    <span
+                        v-if="
+                            checkin.checkout &&
+                            checkin.checkout.patron &&
+                            checkin.checkout.patron.borrowernotes
+                        "
+                        class="circ-hlt patron-note"
+                    >
+                        {{ checkin.checkout.patron.borrowernotes }}
+                    </span>
+                    <span
+                        v-if="checkin.item && checkin.item.itemnotes"
+                        class="circ-hlt item-note-public"
+                    >
+                        {{ checkin.item.itemnotes }}
+                    </span>
+                    <span
+                        v-if="checkin.item && checkin.item.itemnotes_nonpublic"
+                        class="circ-hlt item-note-nonpublic"
+                    >
+                        {{ checkin.item.itemnotes_nonpublic }}
+                    </span>
+                </td>
+
+                <!-- Status / Messages (always visible) -->
                 <td>
                     <!-- Status indicator for pending items -->
                     <span
@@ -197,6 +333,18 @@ export default {
     setup() {
         const store = useCheckinStore();
 
+        /**
+         * Check if a column is visible based on tableSettings.
+         * Columns default to visible if not found in settings.
+         */
+        function isColumnVisible(columnname) {
+            const columns = store.tableSettings?.columns;
+            if (!columns || !Array.isArray(columns)) return true;
+            const col = columns.find(c => c.columnname === columnname);
+            if (!col) return true;
+            return !col.is_hidden || col.is_hidden === "0";
+        }
+
         function libraryName(branchcode) {
             if (!branchcode) return "";
             return store.libraries[branchcode] || branchcode;
@@ -211,6 +359,12 @@ export default {
                 return `<span class="overdue">${formatted} (${$__("overdue")})</span>`;
             }
             return formatted;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return "";
+            const d = new Date(dateStr);
+            return d.toLocaleDateString();
         }
 
         function isOverdue(checkin) {
@@ -261,6 +415,27 @@ export default {
             return "";
         }
 
+        /**
+         * Show print slip button only if:
+         * - checkin was successful
+         * - checkout and patron data exist
+         * - patron privacy is not 2 ("Never") — graceful fallback if not embedded
+         */
+        function showPrintSlipButton(checkin) {
+            if (checkin._status !== "success") return false;
+            if (
+                !checkin.checkout ||
+                !checkin.checkout.patron_id ||
+                !checkin.checkout.patron
+            )
+                return false;
+            const privacy = checkin.checkout.patron.privacy;
+            // If privacy data is available and is 2, hide the button
+            if (privacy !== undefined && privacy !== null && privacy >= 2)
+                return false;
+            return true;
+        }
+
         function actionLabel(checkin) {
             switch (checkin._action_type) {
                 case "hold":
@@ -284,6 +459,49 @@ export default {
                     m.message === "wrong_transfer"
             );
             return msg?.payload?.to_library || "";
+        }
+
+        /**
+         * Get transfer-to library name for the Transfer to column.
+         */
+        function transferToLibrary(checkin) {
+            const dest = transferDestination(checkin);
+            if (!dest) return "";
+            return libraryName(dest);
+        }
+
+        /**
+         * Get the transfer reason for the Transfer reason column.
+         */
+        function transferReason(checkin) {
+            const msg = (checkin.messages || []).find(
+                m =>
+                    m.message === "needs_transfer" ||
+                    m.message === "transferred" ||
+                    m.message === "wrong_transfer"
+            );
+            if (!msg?.payload?.trigger) return "";
+            return formatTransferTrigger(msg.payload.trigger);
+        }
+
+        function formatTransferTrigger(trigger) {
+            const triggers = {
+                Manual: $__("Manual"),
+                StockrotationAdvance: $__("Stock rotation advance"),
+                StockrotationRepatriation: $__("Stock rotation repatriation"),
+                ReturnToHome: $__("Return to home library"),
+                ReturnToHolding: $__("Return to holding library"),
+                RotatingCollection: $__("Rotating collection"),
+                Reserve: $__("Hold"),
+                LostReserve: $__("Lost hold"),
+                CancelReserve: $__("Cancelled hold"),
+                TransferCancellation: $__(
+                    "Transfer was cancelled whilst in transit"
+                ),
+                Recall: $__("Recall"),
+                RecallCancellation: $__("Cancelled recall"),
+            };
+            return triggers[trigger] || trigger;
         }
 
         function displayMessages(checkin) {
@@ -328,14 +546,19 @@ export default {
         }
 
         return {
+            isColumnVisible,
             formatDueDate,
+            formatDate,
             isOverdue,
             audioAlertClass,
             libraryName,
             rowClass,
             patronDisplay,
+            showPrintSlipButton,
             actionLabel,
             transferDestination,
+            transferToLibrary,
+            transferReason,
             displayMessages,
             badgeClass,
             formatMessage,

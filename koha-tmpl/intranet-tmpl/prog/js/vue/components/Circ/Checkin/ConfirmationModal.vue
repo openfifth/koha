@@ -240,6 +240,7 @@
                     </template>
 
                     <!-- Hold action buttons -->
+                    <!-- TODO: Add hold group cancel button (DisplayAddHoldGroups) -->
                     <template v-if="item._action_type === 'hold'">
                         <button
                             type="button"
