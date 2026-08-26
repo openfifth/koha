@@ -222,6 +222,22 @@ export default {
                         alertClass: "alert-info",
                     });
                 }
+                if (msg.message === "return_claim" && msg.payload) {
+                    detailed.push({
+                        text: $__(
+                            'Item was claimed returned. <a href="/cgi-bin/koha/circ/returns.pl?claim_id=%s" class="btn btn-xs btn-warning">Resolve claim</a>'
+                        ).replace("%s", msg.payload.claim_id),
+                        alertClass: "alert-warning",
+                    });
+                }
+                if (msg.message === "claim_auto_resolved") {
+                    detailed.push({
+                        text: $__(
+                            "Previously claimed returned item has been checked in. Claim automatically resolved."
+                        ),
+                        alertClass: "alert-info",
+                    });
+                }
             }
             return detailed;
         });
