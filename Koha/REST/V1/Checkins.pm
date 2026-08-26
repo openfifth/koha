@@ -87,12 +87,13 @@ sub add {
     my $c    = shift->openapi->valid_input or return;
     my $user = $c->stash('koha.user');
 
-    my $body        = $c->req->json;
-    my $item_id     = $body->{item_id};
-    my $barcode     = $body->{external_id};
-    my $exemptfine  = $body->{exempt_fine};
-    my $return_date = $body->{return_date};
-    my $dropboxmode = $body->{dropbox_mode};
+    my $body                     = $c->req->json;
+    my $item_id                  = $body->{item_id};
+    my $barcode                  = $body->{external_id};
+    my $exemptfine               = $body->{exempt_fine};
+    my $return_date              = $body->{return_date};
+    my $dropboxmode              = $body->{dropbox_mode};
+    my $verified_bundle_barcodes = $body->{verified_bundle_barcodes};
 
     # Default to the logged in user's library, same fallback AddReturn
     # itself applies, so the dry-run availability check and the checkin
@@ -231,6 +232,20 @@ sub add {
             $msg->{payload} = $_->payload if defined $_->payload;
             $msg;
         } @{ $checkin->object_messages };
+
+        # Process bundle verification if barcodes were provided
+        if ( $verified_bundle_barcodes && $item->is_bundle ) {
+            my $bundle_result = $checkin->verify_bundle( { verified_barcodes => $verified_bundle_barcodes } );
+            push @messages, {
+                message => 'bundle_verified',
+                type    => 'info',
+                payload => {
+                    verified   => scalar @{ $bundle_result->{verified} },
+                    missing    => scalar @{ $bundle_result->{missing} },
+                    unexpected => scalar @{ $bundle_result->{unexpected} },
+                },
+            } if $bundle_result;
+        }
 
         my $response = $c->objects->find( Koha::Checkins->new, $checkin->id );
         $response->{messages} = \@messages if @messages;

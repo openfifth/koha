@@ -20,6 +20,7 @@ use Modern::Perl;
 use Koha::Database;
 use Koha::Account::Credits;
 use Koha::Account::Debits;
+use Koha::DateUtils qw( dt_from_string );
 use Koha::Desks;
 use Koha::Holds;
 use Koha::Items;
@@ -375,6 +376,75 @@ sub confirm_recall {
 }
 
 =head2 Internal methods
+
+=head3 verify_bundle
+
+    $checkin->verify_bundle( { verified_barcodes => \@barcodes } );
+
+Processes bundle verification after checkin. Verified items get their
+lost status cleared. Missing items (expected but not verified) are
+marked as lost using C<BundleLostValue>. Unexpected items (verified
+but not in the bundle) are removed from the bundle.
+
+Returns a hashref with keys: verified, missing, unexpected.
+
+=cut
+
+sub verify_bundle {
+    my ( $self, $params ) = @_;
+
+    my $verified_barcodes = $params->{verified_barcodes} || [];
+    my $item              = $self->item;
+
+    require Koha::Items;
+    require Koha::ItemTypes;
+    require C4::Context;
+
+    my $BundleLostValue = C4::Context->preference('BundleLostValue') || 1;
+
+    # Build lookup of expected bundle items
+    my $expected = { map { $_->barcode => $_ } $item->bundle_items->as_list };
+
+    my @verified;
+    my @unexpected;
+    my @missing;
+
+    # Process verified barcodes
+    if (@$verified_barcodes) {
+        my $verify_items = Koha::Items->search( { barcode => { 'in' => $verified_barcodes } } );
+        while ( my $vi = $verify_items->next ) {
+
+            # Clear lost status
+            $vi->itemlost(0);
+            $vi->datelastseen( dt_from_string() );
+
+            if ( delete $expected->{ $vi->barcode } ) {
+                push @verified, $vi;
+            } else {
+
+                # Not expected — remove from bundle
+                $vi->remove_from_bundle;
+                push @unexpected, $vi;
+            }
+            $vi->store;
+        }
+    }
+
+    # Mark remaining expected items as lost
+    for my $barcode ( keys %$expected ) {
+        my $missing_item = $expected->{$barcode};
+        unless ( $missing_item->itemlost ) {
+            $missing_item->itemlost($BundleLostValue)->store;
+            push @missing, $missing_item;
+        }
+    }
+
+    return {
+        verified   => \@verified,
+        missing    => \@missing,
+        unexpected => \@unexpected,
+    };
+}
 
 =head3 _type
 

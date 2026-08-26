@@ -19,7 +19,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 19;
+use Test::More tests => 20;
 use Test::Exception;
 use Test::NoWarnings;
 use Test::Warn;
@@ -585,7 +585,6 @@ subtest 'confirm_hold() tests' => sub {
     is( $transfer->tobranch, $pickup_library->branchcode, 'Transfer destination is pickup library' );
     ok( $transfer->datesent, 'Transfer set in transit (datesent populated)' );
 
-
     $schema->storage->txn_rollback;
 };
 
@@ -660,7 +659,6 @@ subtest 'cancel_hold() tests' => sub {
     ok( $old_hold2, 'Hold moved to old_reserves (with reason)' );
     is( $old_hold2->cancellation_reason, 'PATRON_REQUEST', 'Cancellation reason stored' );
 
-
     $schema->storage->txn_rollback;
 };
 
@@ -701,7 +699,6 @@ subtest 'confirm_transfer() tests' => sub {
     $checkin->confirm_transfer;
     $transfer->discard_changes;
     is( $transfer->datesent, $datesent, 'confirm_transfer is idempotent on already-sent transfer' );
-
 
     # Test that confirm_transfer returns self for chaining
     my $result = $checkin->confirm_transfer;
@@ -747,7 +744,6 @@ subtest 'cancel_transfer() tests' => sub {
     $transfer->discard_changes;
     ok( $transfer->datecancelled, 'Transfer has datecancelled set' );
     is( $transfer->cancellation_reason, 'Manual', 'Cancellation reason is Manual' );
-
 
     $schema->storage->txn_rollback;
 };
@@ -845,6 +841,48 @@ subtest 'confirm_recall() tests' => sub {
     $recall->discard_changes;
     ok( $recall->in_transit, 'confirm_recall is idempotent on in-transit recall' );
 
+    $schema->storage->txn_rollback;
+};
+
+subtest 'verify_bundle' => sub {
+    plan tests => 5;
+
+    $schema->storage->txn_begin;
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $user = $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $library->branchcode } } );
+    my $patron =
+        $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $library->branchcode } } );
+
+    # Create a bundle host with 3 component items
+    my $host  = $builder->build_sample_item( { library => $library->branchcode } );
+    my $comp1 = $builder->build_sample_item( { library => $library->branchcode } );
+    my $comp2 = $builder->build_sample_item( { library => $library->branchcode } );
+    my $comp3 = $builder->build_sample_item( { library => $library->branchcode } );
+
+    $host->add_to_bundle($comp1);
+    $host->add_to_bundle($comp2);
+    $host->add_to_bundle($comp3);
+
+    t::lib::Mocks::mock_userenv( { branchcode => $library->branchcode, borrowernumber => $user->borrowernumber } );
+    t::lib::Mocks::mock_preference( 'BundleLostValue', 1 );
+
+    # Issue and return the bundle to create a checkin
+    C4::Circulation::AddIssue( $patron, $host->barcode );
+    my ( $doreturn, $messages, $issue, $borrower, $checkin ) =
+        C4::Circulation::AddReturn( $host->barcode, $library->branchcode );
+
+    ok( $checkin, 'Checkin created for bundle item' );
+
+    # Verify with 2 of 3 barcodes — comp3 should be marked lost
+    my $result = $checkin->verify_bundle( { verified_barcodes => [ $comp1->barcode, $comp2->barcode ] } );
+
+    is( scalar @{ $result->{verified} },   2, '2 items verified' );
+    is( scalar @{ $result->{missing} },    1, '1 item marked as missing' );
+    is( scalar @{ $result->{unexpected} }, 0, '0 unexpected items' );
+
+    $comp3->discard_changes;
+    is( $comp3->itemlost, 1, 'Missing item marked as lost with BundleLostValue' );
 
     $schema->storage->txn_rollback;
 };

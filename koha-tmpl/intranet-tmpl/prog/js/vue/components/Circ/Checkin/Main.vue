@@ -102,6 +102,14 @@
             @resolved="onClaimResolved"
             @close="showClaimModal = false"
         />
+
+        <BundleVerificationModal
+            :visible="showBundleModal"
+            :item-id="bundleItemId"
+            :barcode="bundleBarcode"
+            @confirm="onBundleConfirm"
+            @cancel="showBundleModal = false"
+        />
     </div>
 </template>
 
@@ -122,6 +130,7 @@ import CheckedInItems from "./CheckedInItems.vue";
 import CheckinOptions from "./CheckinOptions.vue";
 import ConfirmationModal from "./ConfirmationModal.vue";
 import ResolveClaimModal from "./ResolveClaimModal.vue";
+import BundleVerificationModal from "./BundleVerificationModal.vue";
 import { $__ } from "@koha-vue/i18n";
 
 export default {
@@ -131,6 +140,7 @@ export default {
         CheckinOptions,
         ConfirmationModal,
         ResolveClaimModal,
+        BundleVerificationModal,
     },
     setup() {
         const store = useCheckinStore();
@@ -148,6 +158,9 @@ export default {
         const showOptions = ref(false);
         const showClaimModal = ref(false);
         const activeClaimId = ref(null);
+        const showBundleModal = ref(false);
+        const bundleItemId = ref(null);
+        const bundleBarcode = ref("");
 
         const checkinOptions = reactive({
             dropbox_mode: false,
@@ -372,7 +385,35 @@ export default {
         }
 
         async function onConfirm(item) {
+            // For bundle items, show the verification modal instead of confirming directly
+            if (item._confirms && item._confirms.items_bundle) {
+                activeModalItem.value = null;
+                bundleItemId.value = item.item?.item_id || null;
+                bundleBarcode.value =
+                    item._barcode || item.item?.external_id || "";
+                showBundleModal.value = true;
+                // Store the item for later confirmation
+                _pendingBundleItem = item;
+                return;
+            }
             await store.confirmPending(item);
+            _advanceModal();
+        }
+
+        let _pendingBundleItem = null;
+
+        async function onBundleConfirm(result) {
+            showBundleModal.value = false;
+            if (_pendingBundleItem) {
+                // Pass verified barcodes through options — they will be
+                // included in the POST /checkins body alongside the JWT
+                if (result.verify) {
+                    _pendingBundleItem._options.verified_bundle_barcodes =
+                        result.scanned || [];
+                }
+                await store.confirmPending(_pendingBundleItem);
+                _pendingBundleItem = null;
+            }
             _advanceModal();
         }
 
@@ -415,6 +456,9 @@ export default {
             showOptions,
             showClaimModal,
             activeClaimId,
+            showBundleModal,
+            bundleItemId,
+            bundleBarcode,
             barcodeInputRef,
             checkinOptionsRef,
             checkinOptions,
@@ -425,6 +469,7 @@ export default {
             onResolveClaimFromRow,
             onResolveClaimFromModal,
             onClaimResolved,
+            onBundleConfirm,
             onConfirm,
             onDismiss,
             onResolve,

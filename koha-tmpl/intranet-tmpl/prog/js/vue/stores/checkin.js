@@ -170,6 +170,9 @@ export const useCheckinStore = defineStore("checkin", () => {
             if (entry._options.dropbox_mode) body.dropbox_mode = true;
             if (entry._options.return_date)
                 body.return_date = entry._options.return_date;
+            if (entry._options.verified_bundle_barcodes)
+                body.verified_bundle_barcodes =
+                    entry._options.verified_bundle_barcodes;
 
             const response = await client.checkins.create(body, {
                 confirmation: entry._confirmation_token,

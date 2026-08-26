@@ -90,6 +90,13 @@
             dropbox_mode:
               type: boolean
               description: Use book drop mode (calculate return date as last open day)
+            verified_bundle_barcodes:
+              type:
+                - array
+                - "null"
+              items:
+                type: string
+              description: Barcodes of items verified as present in the bundle (only for bundle items)
           additionalProperties: false
       - name: confirmation
         in: query
