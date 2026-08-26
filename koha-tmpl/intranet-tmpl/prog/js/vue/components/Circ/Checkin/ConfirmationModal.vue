@@ -188,12 +188,29 @@
                             <i class="fa fa-times"></i>
                             {{ $__("Ignore (I)") }}
                         </button>
+                        <select
+                            v-if="holdCancellationReasons.length"
+                            v-model="selectedCancelReason"
+                            class="form-select form-select-sm d-inline-block"
+                            style="width: auto"
+                        >
+                            <option value="">
+                                {{ $__("No reason given") }}
+                            </option>
+                            <option
+                                v-for="reason in holdCancellationReasons"
+                                :key="reason.authorised_value"
+                                :value="reason.authorised_value"
+                            >
+                                {{ reason.description }}
+                            </option>
+                        </select>
                         <button
                             type="button"
                             class="btn btn-danger"
                             :disabled="confirming"
                             accesskey="x"
-                            @click="$emit('resolve', item, 'cancel_hold')"
+                            @click="cancelHold"
                         >
                             <i class="fa fa-trash-can"></i>
                             {{ $__("Cancel hold (X)") }}
@@ -270,6 +287,7 @@ import { storeToRefs } from "pinia";
 import { useCheckinStore } from "../../../stores/checkin.js";
 import { $__ } from "@koha-vue/i18n";
 import { printHoldSlip, printTransferSlip } from "./slip-printer.js";
+import { APIClient } from "../../../fetch/api-client.js";
 
 export default {
     props: {
@@ -288,6 +306,23 @@ export default {
         const { policy } = storeToRefs(store);
 
         const autoConfirmTimer = ref(null);
+        const holdCancellationReasons = ref([]);
+        const selectedCancelReason = ref("");
+
+        // Fetch HOLD_CANCELLATION authorised values once
+        APIClient.authorised_values.values
+            .get("HOLD_CANCELLATION")
+            .then(reasons => {
+                holdCancellationReasons.value = reasons || [];
+            })
+            .catch(() => {});
+
+        function cancelHold() {
+            emit("resolve", props.item, "cancel_hold", {
+                reason: selectedCancelReason.value || undefined,
+            });
+            selectedCancelReason.value = "";
+        }
 
         // Non-blocking transfer: muted style when transfers_block is false
         const isNonBlockingTransfer = computed(
@@ -499,6 +534,9 @@ export default {
             formatWarning,
             formatTransferTrigger,
             formatMessage,
+            holdCancellationReasons,
+            selectedCancelReason,
+            cancelHold,
             printAndResolveHold,
             printAndResolveTransfer,
             printAndResolveRecall,
