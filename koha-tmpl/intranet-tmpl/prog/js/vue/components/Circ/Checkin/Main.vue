@@ -183,6 +183,16 @@ export default {
                 if (feeMessages[msg.message]) {
                     detailed.push(feeMessages[msg.message]);
                 }
+                if (msg.message === "in_bundle" && msg.payload) {
+                    detailed.push({
+                        text: $__(
+                            'This item belongs to a bundle. <a href="/cgi-bin/koha/catalogue/detail.pl?biblionumber=%s">View host item</a> — <button class="btn btn-xs btn-warning remove-from-bundle" data-item-id="%s">Remove from bundle</button>'
+                        )
+                            .replace("%s", latest.item?.biblio?.biblio_id || "")
+                            .replace("%s", msg.payload.host_item_id || ""),
+                        alertClass: "alert-warning",
+                    });
+                }
             }
             return detailed;
         });
