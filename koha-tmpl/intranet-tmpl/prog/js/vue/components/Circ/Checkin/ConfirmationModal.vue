@@ -41,21 +41,86 @@
 
                     <!-- Post-checkin: Hold found -->
                     <template v-if="item._action_type === 'hold'">
-                        <h4>{{ $__("Hold found") }}</h4>
-                        <div v-if="holdInfo" class="mb-3">
-                            <p>
-                                <strong>{{ $__("Hold for:") }}</strong>
-                                {{ holdPatronDescription }}
-                            </p>
-                            <p v-if="holdLibrary">
+                        <h4>{{ $__("Hold for:") }}</h4>
+                        <ul
+                            v-if="item.hold && item.hold.patron"
+                            class="list-unstyled"
+                        >
+                            <li>
+                                <strong>
+                                    <a
+                                        :href="`/cgi-bin/koha/circ/circulation.pl?borrowernumber=${item.hold.patron.patron_id}`"
+                                    >
+                                        {{ item.hold.patron.surname }},
+                                        {{ item.hold.patron.firstname }}
+                                    </a>
+                                </strong>
+                                <span
+                                    v-if="item.hold.patron.category_id"
+                                    class="patron-category"
+                                >
+                                    — {{ item.hold.patron.category_id }}
+                                </span>
+                            </li>
+                            <li
+                                v-if="
+                                    item.hold.patron.address ||
+                                    item.hold.patron.city
+                                "
+                            >
+                                {{
+                                    [
+                                        item.hold.patron.address,
+                                        item.hold.patron.city,
+                                        item.hold.patron.state,
+                                        item.hold.patron.postal_code,
+                                    ]
+                                        .filter(Boolean)
+                                        .join(", ")
+                                }}
+                            </li>
+                            <li v-if="item.hold.patron.phone">
+                                {{ item.hold.patron.phone }}
+                            </li>
+                            <li v-if="item.hold.patron.email">
+                                <a :href="`mailto:${item.hold.patron.email}`">{{
+                                    item.hold.patron.email
+                                }}</a>
+                            </li>
+                            <li v-if="item.hold.patron.sms_number">
+                                <a
+                                    :href="`tel:${item.hold.patron.sms_number}`"
+                                    >{{ item.hold.patron.sms_number }}</a
+                                >
+                            </li>
+                            <li
+                                v-if="item.hold.patron.restricted"
+                                class="text-danger"
+                            >
                                 <strong>{{
-                                    needsTransfer
-                                        ? $__("Transfer to:")
-                                        : $__("Hold at:")
+                                    $__("Patron is RESTRICTED")
                                 }}</strong>
-                                {{ holdLibrary }}
-                            </p>
-                        </div>
+                            </li>
+                            <li
+                                v-if="item.hold.patron.incorrect_address"
+                                class="text-danger"
+                            >
+                                {{ $__("Patron's address is in doubt") }}
+                            </li>
+                        </ul>
+                        <p v-else-if="holdInfo">
+                            <strong>{{ $__("Hold for:") }}</strong>
+                            {{ holdPatronDescription }}
+                        </p>
+
+                        <p v-if="holdLibrary">
+                            <strong>{{
+                                needsTransfer
+                                    ? $__("Transfer to:")
+                                    : $__("Hold at:")
+                            }}</strong>
+                            {{ holdLibrary }}
+                        </p>
                     </template>
 
                     <!-- Post-checkin: Transfer needed -->
