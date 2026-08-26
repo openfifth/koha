@@ -202,6 +202,26 @@ export default {
                                 : "alert-info",
                     });
                 }
+                if (msg.message === "patron_has_fines" && msg.payload) {
+                    detailed.push({
+                        text: $__(
+                            'Patron has outstanding fines of %s. <a href="/cgi-bin/koha/members/pay.pl?borrowernumber=%s">Make payment</a>'
+                        )
+                            .replace("%s", msg.payload.balance)
+                            .replace("%s", msg.payload.patron_id),
+                        alertClass: "alert-warning",
+                    });
+                }
+                if (msg.message === "patron_has_waiting_holds" && msg.payload) {
+                    detailed.push({
+                        text: $__(
+                            'Patron has %s hold(s) waiting for pickup. <a href="/cgi-bin/koha/circ/circulation.pl?borrowernumber=%s">Check out to this patron</a>'
+                        )
+                            .replace("%s", msg.payload.waiting_count)
+                            .replace("%s", msg.payload.patron_id),
+                        alertClass: "alert-info",
+                    });
+                }
             }
             return detailed;
         });

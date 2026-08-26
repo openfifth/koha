@@ -5501,6 +5501,47 @@ sub _attach_messages_to_checkin {
         }
     }
 
+    # Patron fines notification (FineNotifyAtCheckin)
+    if ( C4::Context->preference('FineNotifyAtCheckin') && $checkin->checkout_id ) {
+        my $patron = $checkin->checkout ? $checkin->checkout->patron : undef;
+        if ($patron) {
+            my $balance = $patron->account->balance;
+            if ( $balance > 0 ) {
+                $checkin->add_message(
+                    {
+                        message => 'patron_has_fines',
+                        type    => 'warning',
+                        payload => {
+                            patron_id => $patron->borrowernumber,
+                            balance   => sprintf( "%.2f", $balance ),
+                        },
+                    }
+                );
+            }
+        }
+    }
+
+    # Patron waiting holds notification (WaitingNotifyAtCheckin)
+    if ( C4::Context->preference('WaitingNotifyAtCheckin') && $checkin->checkout_id ) {
+        my $patron = $checkin->checkout ? $checkin->checkout->patron : undef;
+        if ($patron) {
+            my $waiting =
+                $patron->holds->search( { found => 'W', branchcode => C4::Context->userenv->{branch} } )->count;
+            if ( $waiting > 0 ) {
+                $checkin->add_message(
+                    {
+                        message => 'patron_has_waiting_holds',
+                        type    => 'info',
+                        payload => {
+                            patron_id     => $patron->borrowernumber,
+                            waiting_count => $waiting,
+                        },
+                    }
+                );
+            }
+        }
+    }
+
     return;
 }
 
