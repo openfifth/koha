@@ -7,16 +7,15 @@
                 :biblio-id="biblio.biblio_id"
                 :patron-id="patron.patron_id"
                 :pickup-library-id="formData.pickup_library_id"
-                @eligibility="available = true"
-                @blocked="available = false"
-                @override-requested="handleOverrideRequested"
+                @eligibility="handleEligibility"
+                @blocked="handleBlocked"
             />
 
             <div v-if="errorMessage" class="alert alert-danger">
                 {{ errorMessage }}
             </div>
 
-            <form @submit.prevent="placeHold()">
+            <form @submit.prevent="handleSubmit">
                 <fieldset class="rows">
                     <ol>
                         <li>
@@ -26,22 +25,20 @@
                                 :index="0"
                             />
                         </li>
-                        <template v-if="available">
-                            <li
-                                v-for="(attr, index) in restFields"
-                                :key="attr.name"
-                            >
-                                <FormElement
-                                    :resource="formData"
-                                    :attr="attr"
-                                    :index="index + 1"
-                                />
-                            </li>
-                        </template>
+                        <li
+                            v-for="(attr, index) in restFields"
+                            :key="attr.name"
+                        >
+                            <FormElement
+                                :resource="formData"
+                                :attr="attr"
+                                :index="index + 1"
+                            />
+                        </li>
                     </ol>
                 </fieldset>
 
-                <fieldset v-if="available" class="action">
+                <fieldset v-if="canSubmit" class="action">
                     <button
                         type="submit"
                         class="btn btn-primary"
@@ -72,7 +69,7 @@ import { APIClient } from "../../../fetch/api-client.js";
 import FormElement from "../../FormElement.vue";
 import Toast from "../../Elements/Toast.vue";
 import HoldabilityShield from "./HoldabilityShield.vue";
-import { useMainStore } from "../../../stores/main.js";
+import { useHoldOverrideConfirmation } from "../../../composables/hold-override-confirmation.js";
 import { $__ } from "@koha-vue/i18n";
 
 export default {
@@ -83,10 +80,20 @@ export default {
         patron: { type: Object, required: true }, // { patron_id, library_id, branchname }
     },
     setup(props) {
-        const { setConfirmationDialog } = useMainStore();
+        const { requestHoldOverride } = useHoldOverrideConfirmation();
 
-        // Set by HoldabilityShield.vue's @eligibility/@blocked events.
+        // Set by HoldabilityShield.vue's @eligibility/@blocked events -
+        // HoldabilityShield only reports what it found, it doesn't decide
+        // anything about the form itself.
         const available = ref(false);
+        const overridable = ref(false);
+        const blockedReasons = ref([]);
+
+        // Whether the "Place hold" button at the bottom of the form has
+        // anything to do at all - either place the hold directly, or open
+        // the override confirmation first. There's only ever one button;
+        // this is the one thing gating whether it's shown.
+        const canSubmit = computed(() => available.value || overridable.value);
 
         const formData = reactive({
             pickup_library_id: props.patron.library_id,
@@ -108,6 +115,7 @@ export default {
             name: "pickup_library_id",
             type: "component",
             label: $__("Pickup library"),
+            required: true, // reserves.branchcode is NOT NULL in the DB
             componentPath:
                 "@koha-vue/components/Circulation/Holds/PickupLibrarySelect.vue",
             componentProps: {
@@ -124,7 +132,11 @@ export default {
             },
         }));
 
-        // Only rendered once the hold is actually placeable.
+        // Always rendered, even while blocked - the override flow is
+        // triggered by this same form's submit button (see handleSubmit),
+        // so hiding these fields while blocked only ever discarded
+        // whatever the user had already typed, it never actually gated
+        // anything.
         const restFields = computed(() => [
             { name: "expiration_date", type: "date", label: $__("Expires") },
             {
@@ -135,22 +147,32 @@ export default {
             },
         ]);
 
-        // HoldabilityShield only tells us what's blocking the hold - asking
-        // the user to confirm the override, and what confirming means here
-        // (retry the placement with those codes), is this component's job.
-        const handleOverrideRequested = reasons => {
-            setConfirmationDialog(
-                {
-                    title: $__("Override required"),
-                    message:
-                        "<ul>" +
-                        reasons.map(r => `<li>${r.label}</li>`).join("") +
-                        "</ul>",
-                    accept_label: $__("Override"),
-                    cancel_label: $__("Cancel"),
-                },
-                () => placeHold(reasons.map(r => r.code))
-            );
+        const handleEligibility = () => {
+            available.value = true;
+            overridable.value = false;
+        };
+
+        const handleBlocked = ({ blockers, overridable: canOverride }) => {
+            available.value = false;
+            overridable.value = canOverride;
+            blockedReasons.value = blockers;
+        };
+
+        // The single entry point for the "Place hold" button: place the
+        // hold directly when it's already available, otherwise - if
+        // there's an overridable block - show the override confirmation
+        // first and only place the hold if the user accepts it. What
+        // confirming means here (retry the placement with those codes) is
+        // this component's job; HoldabilityShield only ever tells us what
+        // was blocked.
+        const handleSubmit = () => {
+            if (available.value) {
+                placeHold();
+            } else if (overridable.value) {
+                requestHoldOverride(blockedReasons.value).then(codes => {
+                    if (codes) placeHold(codes);
+                });
+            }
         };
 
         const placeHold = (overrides = []) => {
@@ -190,15 +212,16 @@ export default {
         };
 
         return {
-            available,
+            canSubmit,
             pickupLibraryField,
             restFields,
             formData,
             placing,
             holdPlaced,
             errorMessage,
-            handleOverrideRequested,
-            placeHold,
+            handleEligibility,
+            handleBlocked,
+            handleSubmit,
             toastVisible,
             toastMessage,
         };

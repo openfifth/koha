@@ -14,7 +14,7 @@
                 </div>
 
                 <div class="col-md-2 order-sm-2 order-md-1">
-                    <LeftMenu :title="$__('Holds')"></LeftMenu>
+                    <!-- <LeftMenu :title="$__('Holds')"></LeftMenu> -->
                 </div>
             </div>
         </div>

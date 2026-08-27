@@ -407,7 +407,7 @@ const insertSamplePatron = async ({
         generatedCategory = await buildSampleObject({
             object: "patron_category",
         });
-        query({
+        await query({
             sql: "INSERT INTO categories(categorycode, description) VALUES (?, ?)",
             values: [
                 generatedCategory.patron_category_id,

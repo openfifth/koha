@@ -39,14 +39,6 @@
                         {{ blockerLabel(b.code) }}
                     </li>
                 </ul>
-                <button
-                    v-if="canOverride"
-                    type="button"
-                    class="btn btn-warning btn-sm"
-                    @click="requestOverride"
-                >
-                    {{ $__("Override") }}
-                </button>
             </div>
         </template>
     </div>
@@ -122,16 +114,15 @@ export default {
         // background-refreshed) resolves available - the parent needs this
         // to decide whether to show its own form.
         "eligibility",
-        // Array<{ code, label, overridable }>, whenever a check resolves
-        // unavailable - lets a caller react (e.g. hide its own form) without
-        // duplicating the label lookup this component already owns.
+        // { blockers: Array<{ code, label, overridable }>, overridable },
+        // whenever a check resolves unavailable - lets a caller react (e.g.
+        // hide its own form) without duplicating the label lookup this
+        // component already owns. `overridable` is the same "every blocker
+        // is overridable and the syspref allows it" check this component
+        // already needs for its own purposes - included here rather than
+        // left for the caller to re-derive, since this is a pure reporter
+        // now and has no button of its own to gate with it any more.
         "blocked",
-        // Array<{ code, label, overridable }>, fired when the user clicks
-        // this component's own Override button - *before* any confirmation.
-        // This component only knows what was blocked, not what confirming
-        // or retrying means in every context, so both the modal and the
-        // retry stay the caller's job.
-        "override-requested",
     ],
     setup(props, { emit }) {
         const mainStore = useMainStore();
@@ -165,7 +156,10 @@ export default {
             if (result.available) {
                 emit("eligibility", result);
             } else {
-                emit("blocked", enrichBlockers(result.blockers));
+                emit("blocked", {
+                    blockers: enrichBlockers(result.blockers),
+                    overridable: canOverride.value,
+                });
             }
         };
 
@@ -213,13 +207,6 @@ export default {
             }
         };
 
-        const requestOverride = () => {
-            emit(
-                "override-requested",
-                enrichBlockers(holdability.value.blockers)
-            );
-        };
-
         onMounted(check);
         // Any of the three re-checks - not just a patron change, as before
         // this component owned the fetch. A different pickup library can
@@ -234,9 +221,7 @@ export default {
         return {
             initialized,
             holdability,
-            canOverride,
             blockerLabel,
-            requestOverride,
         };
     },
 };

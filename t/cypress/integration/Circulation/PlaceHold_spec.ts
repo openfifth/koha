@@ -348,12 +348,12 @@ describe("Place a hold (bib-level, UseNewHoldsInterface)", () => {
 
     describe("with AllowHoldPolicyOverride on", () => {
         // Mixed blockers, not a single non-overridable one, deliberately:
-        // the interesting case is proving canOverride's `.every()` gate -
-        // one overridable blocker alongside one that isn't must still hide
-        // the button. A single non-overridable blocker wouldn't tell us
-        // whether the gate checks "every" or just "some" blocker is
-        // overridable; this does.
-        it("hides the Override button when any blocker is not overridable", () => {
+        // the interesting case is proving the "every blocker is overridable"
+        // gate - one overridable blocker alongside one that isn't must still
+        // leave the form with no way to submit. A single non-overridable
+        // blocker wouldn't tell us whether the gate checks "every" or just
+        // "some" blocker is overridable; this does.
+        it("offers no way to submit when any blocker is not overridable", () => {
             setPrefOnce("AllowHoldPolicyOverride", "1");
             cy.task("query", {
                 sql: "UPDATE borrowers SET lost = 1 WHERE borrowernumber = ?",
@@ -383,17 +383,17 @@ describe("Place a hold (bib-level, UseNewHoldsInterface)", () => {
                     );
                 }
             );
-            cy.get(".holdability-shield button.btn-warning").should(
-                "not.exist"
-            );
             // The pickup-library field stays reachable while blocked; only
-            // the rest of the form (and the submit button) is gated.
+            // the submit button (the only route to placing or overriding
+            // the hold) is gated.
             cy.get(".express-bib-level-hold button[type=submit]").should(
                 "not.exist"
             );
         });
 
         it("overrides a blocked hold via the confirm dialog and places it", () => {
+            const expirationDate = dayjs().add(14, "day").format("YYYY-MM-DD");
+
             setPrefOnce("AllowHoldPolicyOverride", "1");
             cy.task("query", {
                 sql: "UPDATE borrowers SET lost = 1 WHERE borrowernumber = ?",
@@ -403,28 +403,43 @@ describe("Place a hold (bib-level, UseNewHoldsInterface)", () => {
             visit();
             waitForBootstrap();
 
-            cy.get(".express-bib-level-hold button[type=submit]").should(
-                "not.exist"
-            );
+            // There's only ever one button - "Place hold" - and it's
+            // already visible for a blocked-but-overridable hold, since
+            // clicking it is how the override confirmation gets triggered
+            // in the first place. HoldabilityShield itself renders no
+            // button at all any more, just the reasons.
+            cy.get(".express-bib-level-hold button[type=submit]")
+                .should("exist")
+                .and("contain.text", "Place hold");
             cy.get(".holdability-shield .alert.alert-danger ul li")
                 .should("have.length", 1)
                 .and("have.text", "The patron's card has been reported lost");
 
+            // The expiration date/notes fields must stay reachable while
+            // blocked, same as the pickup library field - this is the
+            // user's only chance to set them before the override flow
+            // (triggered by the same submit button below) places the hold.
+            cy.get("#expiration_date").selectFlatpickrDate(expirationDate);
+            cy.get("#notes").type("Cypress override note");
+
             // Cancel path first: no confirmation, no request.
             cy.intercept("POST", "/api/v1/holds").as("createHoldCancelled");
-            cy.get(".holdability-shield button.btn-warning")
-                .should("have.text", "Override")
-                .click();
+            cy.get(".express-bib-level-hold button[type=submit]").click();
             cy.get("#confirmation.modal").should("be.visible");
             cy.get("#confirmation #close_modal").click();
             // v-if="confirmation" removes the modal from the DOM entirely
             // on cancel, rather than just CSS-hiding it.
             cy.get("#confirmation.modal").should("not.exist");
             cy.get("@createHoldCancelled.all").should("have.length", 0);
+            // Cancelling leaves the hold unplaced, with the same button
+            // still there to try again.
+            cy.get(".express-bib-level-hold button[type=submit]").should(
+                "exist"
+            );
 
             // Now confirm.
             cy.intercept("POST", "/api/v1/holds").as("createHold");
-            cy.get(".holdability-shield button.btn-warning").click();
+            cy.get(".express-bib-level-hold button[type=submit]").click();
             cy.get("#confirmation.modal").should("be.visible");
             cy.get("#confirmation .modal-header h1").should(
                 "have.text",
@@ -440,6 +455,10 @@ describe("Place a hold (bib-level, UseNewHoldsInterface)", () => {
                     "x-koha-override",
                     "card_lost"
                 );
+                expect(request.body).to.include({
+                    expiration_date: expirationDate,
+                    notes: "Cypress override note",
+                });
                 expect(response.statusCode).to.eq(201);
             });
 
@@ -580,7 +599,7 @@ describe("Place a hold (bib-level, UseNewHoldsInterface)", () => {
     });
 
     describe("with AllowHoldPolicyOverride off", () => {
-        it("keeps the Override button hidden", () => {
+        it("offers no way to submit even for an otherwise-overridable blocker", () => {
             setPrefOnce("AllowHoldPolicyOverride", "0");
             cy.task("query", {
                 sql: "UPDATE borrowers SET lost = 1 WHERE borrowernumber = ?",
@@ -600,11 +619,8 @@ describe("Place a hold (bib-level, UseNewHoldsInterface)", () => {
             // from that race.
             reloadUntil(
                 $body =>
-                    $body.find(".holdability-shield button.btn-warning")
+                    $body.find(".express-bib-level-hold button[type=submit]")
                         .length === 0
-            );
-            cy.get(".holdability-shield button.btn-warning").should(
-                "not.exist"
             );
             cy.get(".express-bib-level-hold button[type=submit]").should(
                 "not.exist"
