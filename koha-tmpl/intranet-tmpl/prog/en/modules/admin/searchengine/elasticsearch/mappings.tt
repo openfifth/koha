@@ -582,7 +582,11 @@
                             </div>
 
                             <h3>Relevance boosts</h3>
-                            <div class="hint">Boost or penalize search results based on specific field values. A weight greater than 1 promotes results; less than 1 demotes them.</div>
+                            <div class="hint"
+                                >Boost or penalize search results based on specific field values. A weight greater than 1 promotes results; less than 1 demotes them. This multiplies a result's existing relevance score, it does not force
+                                boosted results to the top &mdash; the effect is strongest on searches where results otherwise score similarly, and can be less visible on fuzzy/wildcard searches where relevance scores already vary a lot
+                                between results.</div
+                            >
                             <div id="value_boost_errors"></div>
                             <table id="value_boosts_table">
                                 <thead>
