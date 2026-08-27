@@ -22,7 +22,7 @@
             <div v-if="holdability.hold_fee" class="alert alert-info py-2">
                 {{
                     $__("A fee of %s applies to this hold.").format(
-                        holdability.hold_fee
+                        Number(holdability.hold_fee).format_price()
                     )
                 }}
             </div>

@@ -158,6 +158,7 @@ const insertSampleBiblio = async ({
             in_bundle,
             cover_image_ids,
             localuse,
+            holdability,
             ...rest
         }) => rest
     );
@@ -577,6 +578,18 @@ const deleteSampleObjects = async allObjects => {
             whereColumn: "title_id",
         },
         category: {
+            plural: "categories",
+            table: "categories",
+            whereColumn: "categorycode",
+            idField: "patron_category_id",
+        },
+        // insertSamplePatron/insertSampleHold return their generated
+        // category under the key `patron_category`, not `category` - which
+        // meant it was silently never matched here (falling through to
+        // `plural = type`, a bucket name absent from deletionOrder below,
+        // so the DELETE for it never ran). Same table as `category` above;
+        // this just lets that return shape resolve to it too.
+        patron_category: {
             plural: "categories",
             table: "categories",
             whereColumn: "categorycode",
