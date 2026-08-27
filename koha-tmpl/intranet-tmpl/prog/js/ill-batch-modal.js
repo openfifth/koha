@@ -129,6 +129,12 @@
     // Handler reference for the select-all backend listener (for proper cleanup)
     var selectAllBackendHandler = null;
 
+    // Handler reference for the select-all backend Apply button (for proper cleanup)
+    var selectAllBackendApplyHandler = null;
+
+    // The backend name currently selected in the select-all bar, pending Apply
+    var selectAllBackendPendingValue = null;
+
     // Keep track of submission API calls that are in progress
     // so we don't duplicate them
     var submissionSent = {};
@@ -497,6 +503,18 @@
                 .removeEventListener("change", selectAllBackendHandler);
             selectAllBackendHandler = null;
         }
+        if (selectAllBackendApplyHandler) {
+            var applyButton = document.getElementById(
+                "select-all-backend-apply"
+            );
+            if (applyButton) {
+                applyButton.removeEventListener(
+                    "click",
+                    selectAllBackendApplyHandler
+                );
+            }
+            selectAllBackendApplyHandler = null;
+        }
     }
 
     function buildSelectAllBackend() {
@@ -504,6 +522,7 @@
             "batch-auto-backend-select-all"
         );
         container.innerHTML = "";
+        selectAllBackendPendingValue = null;
 
         var label = document.createElement("strong");
         label.textContent = ill_batch_select_all_backend + " ";
@@ -528,6 +547,15 @@
             lbl.appendChild(document.createTextNode(" " + name));
             container.appendChild(lbl);
         });
+
+        var applyButton = document.createElement("button");
+        applyButton.type = "button";
+        applyButton.id = "select-all-backend-apply";
+        applyButton.className = "btn btn-primary btn-xs";
+        applyButton.textContent = ill_batch_select_all_apply;
+        applyButton.setAttribute("disabled", true);
+        applyButton.setAttribute("aria-disabled", true);
+        container.appendChild(applyButton);
     }
 
     function isBackendEnabled(backend) {
@@ -543,9 +571,21 @@
         var container = document.getElementById(
             "batch-auto-backend-select-all"
         );
+        var applyButton = document.getElementById("select-all-backend-apply");
+
+        // Radio changes only record the pending selection; nothing is
+        // applied to the table until the Apply button is clicked
         selectAllBackendHandler = function (ev) {
             if (ev.target.name !== "select_all_backend") return;
-            var selectedValue = ev.target.value;
+            selectAllBackendPendingValue = ev.target.value;
+            applyButton.removeAttribute("disabled");
+            applyButton.removeAttribute("aria-disabled");
+        };
+        container.addEventListener("change", selectAllBackendHandler);
+
+        selectAllBackendApplyHandler = function () {
+            if (!selectAllBackendPendingValue) return;
+            var selectedValue = selectAllBackendPendingValue;
             tableContent.data = tableContent.data.map(function (row) {
                 if (
                     Array.isArray(row.auto_backends) &&
@@ -566,7 +606,7 @@
                 return row;
             });
         };
-        container.addEventListener("change", selectAllBackendHandler);
+        applyButton.addEventListener("click", selectAllBackendApplyHandler);
     }
 
     // Disable the select-all bar while checks are still in progress.
@@ -581,6 +621,17 @@
                 input.disabled = disabled;
                 input.closest("label").title = waiting_message;
             });
+
+        var applyButton = document.getElementById("select-all-backend-apply");
+        if (applyButton) {
+            if (disabled || !selectAllBackendPendingValue) {
+                applyButton.setAttribute("disabled", true);
+                applyButton.setAttribute("aria-disabled", true);
+            } else {
+                applyButton.removeAttribute("disabled");
+                applyButton.removeAttribute("aria-disabled");
+            }
+        }
     }
 
     function storeBackendSelectionEventListener() {
