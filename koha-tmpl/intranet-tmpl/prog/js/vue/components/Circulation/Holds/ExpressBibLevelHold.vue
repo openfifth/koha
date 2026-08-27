@@ -16,23 +16,32 @@
                 {{ errorMessage }}
             </div>
 
-            <form v-if="available" @submit.prevent="placeHold()">
+            <form @submit.prevent="placeHold()">
                 <fieldset class="rows">
                     <ol>
-                        <li
-                            v-for="(attr, index) in formFields"
-                            :key="attr.name"
-                        >
+                        <li>
                             <FormElement
                                 :resource="formData"
-                                :attr="attr"
-                                :index="index"
+                                :attr="pickupLibraryField"
+                                :index="0"
                             />
                         </li>
+                        <template v-if="available">
+                            <li
+                                v-for="(attr, index) in restFields"
+                                :key="attr.name"
+                            >
+                                <FormElement
+                                    :resource="formData"
+                                    :attr="attr"
+                                    :index="index + 1"
+                                />
+                            </li>
+                        </template>
                     </ol>
                 </fieldset>
 
-                <fieldset class="action">
+                <fieldset v-if="available" class="action">
                     <button
                         type="submit"
                         class="btn btn-primary"
@@ -92,26 +101,31 @@ export default {
         const toastVisible = ref(false);
         const toastMessage = ref("");
 
-        const formFields = computed(() => [
-            {
-                name: "pickup_library_id",
-                type: "component",
-                label: $__("Pickup library"),
-                componentPath:
-                    "@koha-vue/components/Circulation/Holds/PickupLibrarySelect.vue",
-                componentProps: {
-                    biblioId: { type: "string", value: props.biblio.biblio_id },
-                    patronId: { type: "string", value: props.patron.patron_id },
-                    defaultLibraryId: {
-                        type: "string",
-                        value: props.patron.library_id,
-                    },
-                    defaultLibraryName: {
-                        type: "string",
-                        value: props.patron.branchname,
-                    },
+        // Always rendered, even while blocked - it's the one field that
+        // can actually resolve a pickup-library-specific block
+        // (cannot_be_transferred, library_not_pickup_location).
+        const pickupLibraryField = computed(() => ({
+            name: "pickup_library_id",
+            type: "component",
+            label: $__("Pickup library"),
+            componentPath:
+                "@koha-vue/components/Circulation/Holds/PickupLibrarySelect.vue",
+            componentProps: {
+                biblioId: { type: "string", value: props.biblio.biblio_id },
+                patronId: { type: "string", value: props.patron.patron_id },
+                defaultLibraryId: {
+                    type: "string",
+                    value: props.patron.library_id,
+                },
+                defaultLibraryName: {
+                    type: "string",
+                    value: props.patron.branchname,
                 },
             },
+        }));
+
+        // Only rendered once the hold is actually placeable.
+        const restFields = computed(() => [
             { name: "expiration_date", type: "date", label: $__("Expires") },
             {
                 name: "notes",
@@ -177,7 +191,8 @@ export default {
 
         return {
             available,
-            formFields,
+            pickupLibraryField,
+            restFields,
             formData,
             placing,
             holdPlaced,
