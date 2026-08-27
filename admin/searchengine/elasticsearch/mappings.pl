@@ -17,6 +17,7 @@
 
 use Modern::Perl;
 use CGI;
+use JSON         qw( encode_json );
 use Scalar::Util qw( looks_like_number );
 use List::Util   qw( first );
 use C4::Output   qw( output_html_with_http_headers );
@@ -34,6 +35,23 @@ use Koha::SearchFieldValueBoosts;
 
 use Try::Tiny                 qw( catch try );
 use Module::Load::Conditional qw( can_load );
+
+=head2 output_ajax_response
+
+    output_ajax_response( $input, $data );
+
+Prints C<$data> as a JSON response and exits immediately, bypassing the
+rest of this script. Used by the relevance boosts table so it can be
+updated in place via fetch(), without a full page reload.
+
+=cut
+
+sub output_ajax_response {
+    my ( $input, $data ) = @_;
+    print $input->header( -type => 'application/json', -charset => 'UTF-8' );
+    print encode_json($data);
+    exit;
+}
 
 my $input = CGI->new;
 my ( $template, $borrowernumber, $cookie ) = get_template_and_user(
@@ -216,30 +234,57 @@ if ( $op eq 'cud-edit' ) {
     my $search_field_id = $input->param('value_boost_search_field_id');
     my $value           = $input->param('value_boost_value');
     my $weight          = $input->param('value_boost_weight');
+    my $ajax            = $input->param('ajax');
 
     if ( !$search_field_id || !defined $value || $value eq '' ) {
         push @errors, { type => 'error', code => 'invalid_value_boost_params' };
+        output_ajax_response( $input, { success => JSON::false, code => 'invalid_value_boost_params' } )
+            if $ajax;
     } elsif ( !looks_like_number($weight) || $weight <= 0 ) {
         push @errors, { type => 'error', code => 'invalid_value_boost_weight', weight => $weight };
+        output_ajax_response(
+            $input,
+            { success => JSON::false, code => 'invalid_value_boost_weight', weight => $weight }
+        ) if $ajax;
     } else {
         my $boost = Koha::SearchFieldValueBoosts->find( { search_field_id => $search_field_id, value => $value } );
         if ($boost) {
             $boost->weight($weight)->store;
         } else {
-            Koha::SearchFieldValueBoost->new(
+            $boost = Koha::SearchFieldValueBoost->new(
                 { search_field_id => $search_field_id, value => $value, weight => $weight } )->store;
         }
         Koha::SearchEngine::Elasticsearch->clear_search_fields_cache();
         push @messages, { type => 'message', code => 'success_on_update' };
+
+        if ($ajax) {
+            my $search_field = Koha::SearchFields->find($search_field_id);
+            output_ajax_response(
+                $input,
+                {
+                    success => JSON::true,
+                    boost   => {
+                        id              => $boost->id,
+                        search_field_id => $boost->search_field_id,
+                        field_name      => $search_field->name,
+                        field_label     => $search_field->label,
+                        value           => $boost->value,
+                        weight          => $boost->weight,
+                    },
+                }
+            );
+        }
     }
 } elsif ( $op eq 'cud-delete-value-boost' ) {
-    my $id = $input->param('value_boost_id');
+    my $id   = $input->param('value_boost_id');
+    my $ajax = $input->param('ajax');
     if ($id) {
         my $boost = Koha::SearchFieldValueBoosts->find($id);
         $boost->delete if $boost;
         Koha::SearchEngine::Elasticsearch->clear_search_fields_cache();
         push @messages, { type => 'message', code => 'success_on_update' };
     }
+    output_ajax_response( $input, { success => JSON::true } ) if $ajax;
 }
 
 my @indexes;
