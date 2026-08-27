@@ -710,6 +710,10 @@
                     $row.find("td").eq(2).text(boost.weight);
                     $("#value_boosts_table tbody").append($row);
 
+                    if (boost.match_count === 0) {
+                        $("#value_boost_errors").append($('<div class="alert alert-warning"></div>').text("This boost currently matches 0 records in the index — check the value for typos or missing punctuation."));
+                    }
+
                     $("#value_boost_value").val("");
                     $("#value_boost_weight").val("1.00");
                 });

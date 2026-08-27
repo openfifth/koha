@@ -26,6 +26,7 @@ use C4::Log;
 
 use Koha::SearchEngine::Elasticsearch;
 use Koha::SearchEngine::Elasticsearch::QueryBuilder;
+use Koha::SearchEngine::Elasticsearch::Search;
 use Koha::SearchMarcMaps;
 use Koha::SearchFields;
 use Koha::Caches;
@@ -259,6 +260,11 @@ if ( $op eq 'cud-edit' ) {
 
         if ($ajax) {
             my $search_field = Koha::SearchFields->find($search_field_id);
+            my $match_count  = eval {
+                Koha::SearchEngine::Elasticsearch::Search->new(
+                    { index => $Koha::SearchEngine::Elasticsearch::BIBLIOS_INDEX } )
+                    ->count( { query => { term => { $search_field->name . '__facet' => $value } } } );
+            };
             output_ajax_response(
                 $input,
                 {
@@ -270,6 +276,7 @@ if ( $op eq 'cud-edit' ) {
                         field_label     => $search_field->label,
                         value           => $boost->value,
                         weight          => $boost->weight,
+                        match_count     => $match_count,
                     },
                 }
             );
