@@ -2,6 +2,7 @@
 [% USE Koha %]
 [% USE Asset %]
 [% USE AuthorisedValues %]
+[% USE ItemTypes %]
 [% SET footerjs = 1 %]
 [% PROCESS 'i18n.inc' %]
 [% INCLUDE 'doc-head-open.inc' %]
@@ -614,11 +615,27 @@
                                         <td>
                                             <select name="value_boost_search_field_id" id="value_boost_search_field_id" form="add_value_boost_form">
                                                 [% FOREACH f IN facetable_fields %]
-                                                    <option value="[% f.id | html %]">[% f.label | html %] ([% f.name | html %])</option>
+                                                    <option value="[% f.id | html %]" data-name="[% f.name | html %]" data-av-category="[% f.authorised_value_category | html %]">[% f.label | html %] ([% f.name | html %])</option>
                                                 [% END %]
                                             </select>
                                         </td>
-                                        <td><input type="text" name="value_boost_value" id="value_boost_value" form="add_value_boost_form" placeholder="e.g. BK" /></td>
+                                        <td>
+                                            <input type="text" name="value_boost_value" id="value_boost_value" form="add_value_boost_form" placeholder="Value" />
+                                            <select name="value_boost_value" id="value_boost_value_itype" form="add_value_boost_form" disabled style="display: none">
+                                                [% FOREACH it IN ItemTypes.Get %]
+                                                    <option value="[% it.itemtype | html %]">[% ItemTypes.GetDescription(it.itemtype) | html %] ([% it.itemtype | html %])</option>
+                                                [% END %]
+                                            </select>
+                                            [% FOREACH f IN facetable_fields %]
+                                                [% IF f.authorised_value_category %]
+                                                    <select name="value_boost_value" id="value_boost_value_av_[% f.id | html %]" form="add_value_boost_form" disabled style="display: none">
+                                                        [% FOREACH av IN AuthorisedValues.GetAuthValueDropbox(f.authorised_value_category) %]
+                                                            <option value="[% av.authorised_value | html %]">[% av.lib | html %]</option>
+                                                        [% END %]
+                                                    </select>
+                                                [% END %]
+                                            [% END %]
+                                        </td>
                                         <td><input type="text" inputmode="decimal" pattern="[0-9\.]*" name="value_boost_weight" id="value_boost_weight" form="add_value_boost_form" value="1.00" /></td>
                                         <td>
                                             <button type="button" id="add_value_boost_button" class="btn btn-default btn-xs"><i class="fa fa-plus"></i> Add</button>
@@ -678,6 +695,27 @@
             );
         }
 
+        function update_value_boost_input() {
+            var $selected = $("#value_boost_search_field_id option:selected");
+            var av_category = $selected.data("av-category");
+            var field_name = $selected.data("name");
+
+            $("#value_boost_value, #value_boost_value_itype, [id^='value_boost_value_av_']").prop("disabled", true).hide();
+
+            if (field_name === "itype") {
+                $("#value_boost_value_itype").prop("disabled", false).show();
+            } else if (av_category) {
+                $("#value_boost_value_av_" + $selected.val())
+                    .prop("disabled", false)
+                    .show();
+            } else {
+                $("#value_boost_value").prop("disabled", false).show();
+            }
+        }
+
+        $("#value_boost_search_field_id").on("change", update_value_boost_input);
+        update_value_boost_input();
+
         function value_boost_error_message(json) {
             if (json.code === "invalid_value_boost_params") {
                 return "A search field and value are required to add a relevance boost.";
@@ -716,6 +754,7 @@
 
                     $("#value_boost_value").val("");
                     $("#value_boost_weight").val("1.00");
+                    update_value_boost_input();
                 });
         });
 
