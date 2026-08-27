@@ -583,6 +583,7 @@
 
                             <h3>Relevance boosts</h3>
                             <div class="hint">Boost or penalize search results based on specific field values. A weight greater than 1 promotes results; less than 1 demotes them.</div>
+                            <div id="value_boost_errors"></div>
                             <table id="value_boosts_table">
                                 <thead>
                                     <tr>
@@ -594,7 +595,7 @@
                                 </thead>
                                 <tbody>
                                     [% FOREACH boost IN value_boosts %]
-                                        <tr>
+                                        <tr data-id="[% boost.id | html %]" data-search-field-id="[% boost.search_field_id | html %]" data-value="[% boost.value | html %]">
                                             <td>[% boost.field_label | html %] ([% boost.field_name | html %])</td>
                                             <td>[% boost.value | html %]</td>
                                             <td>[% boost.weight | html %]</td>
@@ -616,7 +617,7 @@
                                         <td><input type="text" name="value_boost_value" id="value_boost_value" form="add_value_boost_form" placeholder="e.g. BK" /></td>
                                         <td><input type="text" inputmode="decimal" pattern="[0-9\.]*" name="value_boost_weight" id="value_boost_weight" form="add_value_boost_form" value="1.00" /></td>
                                         <td>
-                                            <button type="submit" form="add_value_boost_form" class="btn btn-default btn-xs"><i class="fa fa-plus"></i> Add</button>
+                                            <button type="button" id="add_value_boost_button" class="btn btn-default btn-xs"><i class="fa fa-plus"></i> Add</button>
                                         </td>
                                     </tr>
                                 </tfoot>
@@ -642,10 +643,12 @@
     <form id="add_value_boost_form" method="post" action="/cgi-bin/koha/admin/searchengine/elasticsearch/mappings.pl">
         [% INCLUDE 'csrf-token.inc' %]
         <input type="hidden" name="op" value="cud-edit-value-boost" />
+        <input type="hidden" name="ajax" value="1" />
     </form>
     <form id="delete_value_boost_form" method="post" action="/cgi-bin/koha/admin/searchengine/elasticsearch/mappings.pl">
         [% INCLUDE 'csrf-token.inc' %]
         <input type="hidden" name="op" value="cud-delete-value-boost" />
+        <input type="hidden" name="ajax" value="1" />
         <input type="hidden" name="value_boost_id" id="delete_value_boost_id" value="" />
     </form>
 [% END %]
@@ -654,9 +657,71 @@
     [% INCLUDE 'datatables.inc' %]
     [% Asset.js("js/elasticsearch-mappings.js") | $raw %]
     <script nonce="[% Koha.CSPNonce | $raw %]">
+        function value_boost_row_html(boost) {
+            return (
+                '<tr data-id="' +
+                boost.id +
+                '" data-search-field-id="' +
+                boost.search_field_id +
+                '" data-value="' +
+                $("<div>").text(boost.value).html() +
+                '">' +
+                "<td></td><td></td><td></td>" +
+                '<td><button type="button" class="btn btn-default btn-xs delete-value-boost" data-id="' +
+                boost.id +
+                '"><i class="fa fa-trash"></i> Delete</button></td>' +
+                "</tr>"
+            );
+        }
+
+        function value_boost_error_message(json) {
+            if (json.code === "invalid_value_boost_params") {
+                return "A search field and value are required to add a relevance boost.";
+            }
+            if (json.code === "invalid_value_boost_weight") {
+                return "Invalid boost weight '" + json.weight + "', must be a positive decimal number.";
+            }
+            return "An error occurred.";
+        }
+
+        $("#add_value_boost_button").on("click", function () {
+            var form = document.getElementById("add_value_boost_form");
+            fetch(form.action, { method: "POST", body: new FormData(form) })
+                .then(response => response.json())
+                .then(json => {
+                    $("#value_boost_errors").empty();
+                    if (!json.success) {
+                        $("#value_boost_errors").append($('<div class="alert alert-error"></div>').text(value_boost_error_message(json)));
+                        return;
+                    }
+
+                    var boost = json.boost;
+                    $('#value_boosts_table tbody tr[data-search-field-id="' + boost.search_field_id + '"][data-value="' + $("<div>").text(boost.value).html() + '"]').remove();
+
+                    var $row = $(value_boost_row_html(boost));
+                    $row.find("td")
+                        .eq(0)
+                        .text(boost.field_label + " (" + boost.field_name + ")");
+                    $row.find("td").eq(1).text(boost.value);
+                    $row.find("td").eq(2).text(boost.weight);
+                    $("#value_boosts_table tbody").append($row);
+
+                    $("#value_boost_value").val("");
+                    $("#value_boost_weight").val("1.00");
+                });
+        });
+
         $(document).on("click", ".delete-value-boost", function () {
-            $("#delete_value_boost_id").val($(this).data("id"));
-            $("#delete_value_boost_form").submit();
+            var id = $(this).data("id");
+            $("#delete_value_boost_id").val(id);
+            var form = document.getElementById("delete_value_boost_form");
+            fetch(form.action, { method: "POST", body: new FormData(form) })
+                .then(response => response.json())
+                .then(json => {
+                    if (json.success) {
+                        $('#value_boosts_table tbody tr[data-id="' + id + '"]').remove();
+                    }
+                });
         });
 
         $("#export_mappings").on("click", function (e) {
