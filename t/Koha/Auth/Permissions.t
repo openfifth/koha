@@ -197,6 +197,7 @@ subtest 'superlibrarian tests' => sub {
         'CAN_user_parameters_manage_cash_registers'                 => 1,
         'CAN_user_parameters_manage_circ_rules_from_any_libraries'  => 1,
         'CAN_user_parameters_manage_circ_rules'                     => 1,
+        'CAN_user_parameters_manage_circ_triggers'                  => 1,
         'CAN_user_parameters_manage_cities'                         => 1,
         'CAN_user_parameters_manage_classifications'                => 1,
         'CAN_user_parameters_manage_column_config'                  => 1,
