@@ -263,8 +263,10 @@ sub set_rules {
             if (@non_trigger_rules) {
                 return $c->render(
                     status  => 403,
-                    openapi =>
-                        { error => 'manage_circ_rules permission is required to manage non-trigger circulation rules' }
+                    openapi => {
+                        error =>
+                            'the manage_circ_rules or circulate_remaining_permissions permission is required to manage non-trigger circulation rules'
+                    }
                 );
             }
         }
