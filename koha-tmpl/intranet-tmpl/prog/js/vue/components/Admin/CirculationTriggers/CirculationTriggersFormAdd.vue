@@ -550,7 +550,7 @@ export default {
             this.setAllowSubmission();
         },
         setAllowSubmission() {
-            // if notice is set to "", this translates to 'No letter', for which submisison is allowed, and mtt is redundant
+            // if notice is set to "", this translates to 'No letter', for which submission is allowed, and mtt is redundant
             const noticeAllowSubmissionAndBypassMtt =
                 this.ruleSetToSubmit?.[
                     `overdue_${this.triggerNumber}_notice`
