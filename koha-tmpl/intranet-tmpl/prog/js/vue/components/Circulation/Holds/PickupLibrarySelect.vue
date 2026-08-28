@@ -20,6 +20,22 @@
                 "
             ></i>
         </template>
+        <!-- Same as the option slot above, but for the closed/selected
+             display - vue-select renders these separately, so the warning
+             icon needs its own copy here to show up once the dropdown is
+             closed too, not just while browsing the open list. -->
+        <template v-slot:selected-option="library"
+            >{{ library.name
+            }}<i
+                v-if="library.needs_override"
+                class="fa fa-exclamation-circle text-warning"
+                :title="
+                    $__(
+                        'This pickup location is not allowed according to circulation rules'
+                    )
+                "
+            ></i
+        ></template>
     </v-select>
 </template>
 

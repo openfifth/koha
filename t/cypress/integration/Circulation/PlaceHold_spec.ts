@@ -21,9 +21,6 @@
  * - Known, pre-existing quirks worked around rather than hidden:
  *   - `PlaceHold.vue` passes id="place-hold-patron" but PatronAutoComplete
  *     never binds it to the actual <input> - use input.patron-search-input.
- *   - patron.branchname doesn't exist in the patron API response, so the
- *     pickup-library select's default option has an empty label until the
- *     dropdown is opened - never asserted on before that.
  *
  * Tests that need AllowHoldPolicyOverride at a specific value are grouped
  * into "with AllowHoldPolicyOverride on/off" blocks below for readability.
@@ -245,6 +242,14 @@ describe("Place a hold (bib-level, UseNewHoldsInterface)", () => {
         cy.get(".holdability-shield .placeholder-glow").should("not.exist");
         cy.get(".express-bib-level-hold button[type=submit]").should("exist");
 
+        // The pickup library dropdown must show the patron's home library
+        // by name from the start, not just hold the right id invisibly -
+        // it's fed from the patron fetch's x-koha-embed=library, not the
+        // nonexistent patron.branchname field.
+        pickupLibraryRow()
+            .find(".vs__selected")
+            .should("have.text", testData.libraries[0].name);
+
         cy.get("#expiration_date").selectFlatpickrDate(expirationDate);
         cy.get("#notes").type("Cypress hold note");
 
@@ -403,14 +408,16 @@ describe("Place a hold (bib-level, UseNewHoldsInterface)", () => {
             visit();
             waitForBootstrap();
 
-            // There's only ever one button - "Place hold" - and it's
-            // already visible for a blocked-but-overridable hold, since
-            // clicking it is how the override confirmation gets triggered
-            // in the first place. HoldabilityShield itself renders no
-            // button at all any more, just the reasons.
+            // There's only ever one button, and it's already visible for
+            // a blocked-but-overridable hold, since clicking it is how
+            // the override confirmation gets triggered in the first
+            // place. Its label reflects that: "Override and place hold"
+            // rather than the plain "Place hold" the available case gets.
+            // HoldabilityShield itself renders no button at all any more,
+            // just the reasons.
             cy.get(".express-bib-level-hold button[type=submit]")
                 .should("exist")
-                .and("contain.text", "Place hold");
+                .and("contain.text", "Override and place hold");
             cy.get(".holdability-shield .alert.alert-danger ul li")
                 .should("have.length", 1)
                 .and("have.text", "The patron's card has been reported lost");

@@ -74,10 +74,16 @@ export default {
                 patron.value = null;
                 return;
             }
-            APIClient.patron.patrons.get(id).then(
-                result => (patron.value = result),
-                error => setError(error)
-            );
+            // The embed is what gives ExpressBibLevelHold.vue a real
+            // library.name to show as the pickup-library default, rather
+            // than the blank label it'd get otherwise (there's no
+            // branchname field on the patron response).
+            APIClient.patron.patrons
+                .get(id, { "x-koha-embed": "library" })
+                .then(
+                    result => (patron.value = result),
+                    error => setError(error)
+                );
         };
 
         // borrowernumber lives in the URL, not just component state, so

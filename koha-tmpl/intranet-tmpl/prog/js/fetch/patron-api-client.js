@@ -7,9 +7,10 @@ export class PatronAPIClient {
 
     get patrons() {
         return {
-            get: id =>
+            get: (id, headers) =>
                 this.httpClient.get({
                     endpoint: "patrons/" + id,
+                    headers,
                 }),
         };
     }

@@ -51,7 +51,11 @@ export default {
             const fetchSysprefs = APIClient.sysprefs.sysprefs
                 .get("AllowHoldPolicyOverride")
                 .then(result => {
-                    sysprefs.value.AllowHoldPolicyOverride = result.value;
+                    // YesNo prefs come back as the string "0"/"1", not a
+                    // boolean - "0" is truthy in JS, so this must be a
+                    // strict comparison, not a plain assignment.
+                    sysprefs.value.AllowHoldPolicyOverride =
+                        result.value === "1";
                 });
 
             Promise.all([

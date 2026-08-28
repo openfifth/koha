@@ -49,7 +49,11 @@
                             class="spinner-border spinner-border-sm"
                             aria-hidden="true"
                         ></span>
-                        {{ overridable ? $__("Override and place hold") : $__("Place hold") }}
+                        {{
+                            overridable
+                                ? $__("Override and place hold")
+                                : $__("Place hold")
+                        }}
                     </button>
                 </fieldset>
             </form>
@@ -77,7 +81,7 @@ export default {
     components: { FormElement, Toast, HoldabilityShield },
     props: {
         biblio: { type: Object, required: true }, // { biblio_id, title }
-        patron: { type: Object, required: true }, // { patron_id, library_id, branchname }
+        patron: { type: Object, required: true }, // { patron_id, library_id, library: { name } }
     },
     setup(props) {
         const { requestHoldOverride } = useHoldOverrideConfirmation();
@@ -127,7 +131,7 @@ export default {
                 },
                 defaultLibraryName: {
                     type: "string",
-                    value: props.patron.branchname,
+                    value: props.patron.library?.name,
                 },
             },
         }));
@@ -224,7 +228,7 @@ export default {
             handleSubmit,
             toastVisible,
             toastMessage,
-            overridable
+            overridable,
         };
     },
 };
