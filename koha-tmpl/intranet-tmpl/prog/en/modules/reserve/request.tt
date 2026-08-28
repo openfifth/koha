@@ -128,7 +128,7 @@
 [% END %]
 
 [% IF use_new_holds_interface %]
-    <div id="holds"></div>
+    <div id="holds" data-borrowernumber="[% borrowernumber | html %]"></div>
 [% ELSE %]
     [% WRAPPER 'sub-header.inc' %]
         [% WRAPPER breadcrumbs %]

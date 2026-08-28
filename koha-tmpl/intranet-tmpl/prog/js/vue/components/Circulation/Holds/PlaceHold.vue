@@ -42,7 +42,18 @@ export default {
 
         const biblio = ref(null);
         const patron = ref(null);
-        const patronId = ref(route.query.borrowernumber || null);
+        // reserve/request.pl already resolves a borrowernumber from either
+        // a literal ?borrowernumber= or a ?findborrower=<cardnumber>
+        // (an exact patron lookup only Perl can do - there's no
+        // cardnumber-search equivalent in the Vue fetch layer) and hands
+        // it down via holds.ts's app.provide("initialBorrowernumber", ...).
+        // route.query.borrowernumber is checked first only as cheap
+        // belt-and-braces - in the real page the two never disagree, since
+        // the injected value already incorporates it.
+        const initialBorrowernumber = inject("initialBorrowernumber", null);
+        const patronId = ref(
+            route.query.borrowernumber || initialBorrowernumber || null
+        );
 
         onBeforeMount(() => {
             loading();

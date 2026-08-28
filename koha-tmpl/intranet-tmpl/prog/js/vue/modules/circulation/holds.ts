@@ -43,6 +43,12 @@ const router = createRouter({
 
 const app = createApp(App);
 
+// Set server-side (reserve/request.pl already resolves a borrowernumber
+// from either a literal ?borrowernumber= or a ?findborrower=<cardnumber>
+// param) and handed down here rather than re-resolved client-side.
+const initialBorrowernumber =
+    document.getElementById("holds")?.dataset.borrowernumber || null;
+
 const rootComponent = app
     .use(i18n)
     .use(pinia)
@@ -54,6 +60,7 @@ app.config.unwrapInjectedRef = true;
 app.provide("mainStore", mainStore);
 app.provide("navigationStore", navigationStore);
 app.provide("holdsStore", useHoldsStore(pinia));
+app.provide("initialBorrowernumber", initialBorrowernumber);
 
 app.mount("#holds");
 

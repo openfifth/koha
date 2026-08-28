@@ -49,7 +49,7 @@
                             class="spinner-border spinner-border-sm"
                             aria-hidden="true"
                         ></span>
-                        {{ $__("Place hold") }}
+                        {{ overridable ? $__("Override and place hold") : $__("Place hold") }}
                     </button>
                 </fieldset>
             </form>
@@ -224,6 +224,7 @@ export default {
             handleSubmit,
             toastVisible,
             toastMessage,
+            overridable
         };
     },
 };

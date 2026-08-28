@@ -670,6 +670,23 @@ describe("Place a hold (bib-level, UseNewHoldsInterface)", () => {
         cy.get(".express-bib-level-hold").should("be.visible");
     });
 
+    it("pre-fills the patron chip when findborrower (a cardnumber) is in the URL", () => {
+        // reserve/request.pl resolves findborrower to a borrowernumber
+        // itself (Koha::Patrons->find({ cardnumber => ... })) and hands
+        // it to the Vue app via a data attribute - no borrowernumber
+        // param here, only findborrower, to prove that path works on its
+        // own rather than piggy-backing on borrowernumber also being set.
+        cy.visit(
+            `${PLACE_HOLD_PATH}?biblionumber=${testData.biblio.biblio_id}` +
+                `&findborrower=${testData.patron.cardnumber}`
+        );
+        cy.get("#patron_selection_place-hold-patron").should(
+            "contain.text",
+            testData.patron.surname
+        );
+        cy.get(".express-bib-level-hold").should("be.visible");
+    });
+
     it("unlocks the form and shows an error when placing the hold fails, then allows a retry", () => {
         visit();
         waitForBootstrap();
