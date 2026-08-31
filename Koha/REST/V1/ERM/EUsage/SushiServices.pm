@@ -48,11 +48,16 @@ sub get {
 
     my $service_url = $query_params_array[0]->{url};
 
-    my $scheme = $service_url ? URI->new($service_url)->scheme : undef;
-    unless ( $scheme && lc($scheme) eq 'https' ) {
+    my $uri    = $service_url ? URI->new($service_url) : undef;
+    my $scheme = $uri         ? $uri->scheme           : undef;
+    my $host   = $uri         ? $uri->host             : undef;
+    unless ( $scheme && lc($scheme) eq 'https' && $host && lc($host) eq 'registry.countermetrics.org' ) {
         return $c->render(
             status  => 400,
-            openapi => { error => "Only https URLs are allowed", error_code => 'invalid_query' }
+            openapi => {
+                error      => "Only https URLs to registry.countermetrics.org are allowed",
+                error_code => 'invalid_query'
+            }
         );
     }
 
@@ -79,7 +84,7 @@ sub get {
                 }
             }
         }
-        warn sprintf "ERROR - Counter registry API %s returned %s - %s\n",
+        warn sprintf "ERROR - Sushi service API %s returned %s - %s\n",
             $service_url,
             $response->code, $message;
         if ( $response->code == 404 ) {
@@ -88,7 +93,7 @@ sub get {
             Koha::Exceptions::Authorization::Unauthorized->throw($message);
         } else {
             die sprintf
-                "ERROR requesting Counter registry API\n%s\ncode %s: %s\n",
+                "ERROR requesting Sushi service API\n%s\ncode %s: %s\n",
                 $service_url,
                 $response->code,
                 $message;

@@ -116,7 +116,7 @@ subtest 'get() tests' => sub {
 
 subtest 'get() rejects non-https url schemes (bug 43076)' => sub {
 
-    plan tests => 15;
+    plan tests => 18;
 
     $schema->storage->txn_begin;
 
@@ -131,10 +131,11 @@ subtest 'get() rejects non-https url schemes (bug 43076)' => sub {
     my $userid = $librarian->userid;
 
     for my $case (
-        { url => 'file:///etc/passwd',  label => 'file scheme rejected (local file read)' },
-        { url => 'http://example.com/', label => 'plain http scheme rejected (SSRF)' },
-        { url => 'ftp://example.com/',  label => 'ftp scheme rejected' },
-        { url => '',                    label => 'empty url rejected' },
+        { url => 'file:///etc/passwd',        label => 'file scheme rejected (local file read)' },
+        { url => 'http://example.com/',       label => 'plain http scheme rejected (SSRF)' },
+        { url => 'ftp://example.com/',        label => 'ftp scheme rejected' },
+        { url => '',                          label => 'empty url rejected' },
+        { url => 'https://evil.example.com/', label => 'https to non-registry host rejected (SSRF)' },
         )
     {
         my $q = encode_json( { "url" => $case->{url} } );
