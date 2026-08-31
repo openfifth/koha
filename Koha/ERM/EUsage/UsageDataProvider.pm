@@ -22,6 +22,7 @@ use Modern::Perl;
 use HTTP::Request;
 use JSON qw( decode_json );
 use LWP::UserAgent;
+use URI;
 
 use Koha::Exceptions;
 
@@ -564,8 +565,15 @@ Also handles any redirects
 sub _handle_sushi_request {
     my ($url) = @_;
 
+    my $scheme = $url ? URI->new($url)->scheme : undef;
+    unless ( $scheme && lc($scheme) eq 'https' ) {
+        die sprintf "ERROR requesting SUSHI service\n%s\nOnly https URLs are allowed\n", $url // '';
+    }
+
     my $request = HTTP::Request->new( 'GET' => $url );
-    my $ua      = LWP::UserAgent->new;
+    my $ua      = LWP::UserAgent->new(
+        protocols_allowed => ['https'],
+    );
     $ua->agent( 'Koha/' . Koha::version() );
     my $response = $ua->simple_request($request);
 

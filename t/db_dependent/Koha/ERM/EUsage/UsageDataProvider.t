@@ -18,7 +18,8 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 3;
+use Test::More tests => 4;
+use Test::Exception;
 
 use Koha::ERM::EUsage::UsageDataProvider;
 use Koha::Database;
@@ -188,9 +189,38 @@ subtest 'test_connection() tests' => sub {
     );
 
     my $usage_data_provider = $builder->build_object(
-        { class => 'Koha::ERM::EUsage::UsageDataProviders', value => { name => 'TestProvider' } } );
+        {
+            class => 'Koha::ERM::EUsage::UsageDataProviders',
+            value => { name => 'TestProvider', service_url => 'https://sushi.example.com' }
+        }
+    );
 
     is( $usage_data_provider->test_connection, 1 );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'test_connection() rejects non-https service_url (bug 43076)' => sub {
+
+    plan tests => 3;
+
+    $schema->storage->txn_begin;
+
+    for my $case (
+        { url => 'file:///etc/passwd',  label => 'file scheme rejected (local file read)' },
+        { url => 'http://example.com/', label => 'plain http scheme rejected (SSRF)' },
+        { url => 'ftp://example.com/',  label => 'ftp scheme rejected' },
+        )
+    {
+        my $usage_data_provider = $builder->build_object(
+            {
+                class => 'Koha::ERM::EUsage::UsageDataProviders',
+                value => { name => 'TestProvider', service_url => $case->{url} }
+            }
+        );
+
+        throws_ok { $usage_data_provider->test_connection } qr/Only https URLs are allowed/, $case->{label};
+    }
 
     $schema->storage->txn_rollback;
 };
