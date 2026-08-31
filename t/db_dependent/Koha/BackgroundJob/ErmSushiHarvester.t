@@ -53,7 +53,11 @@ subtest 'enqueue() tests' => sub {
     $schema->storage->txn_begin;
 
     my $usage_data_provider = $builder->build_object(
-        { class => 'Koha::ERM::EUsage::UsageDataProviders', value => { name => 'TestProvider' } } );
+        {
+            class => 'Koha::ERM::EUsage::UsageDataProviders',
+            value => { name => 'TestProvider', service_url => 'https://sushi.example.com' }
+        }
+    );
 
     my $job_id = Koha::BackgroundJob::ErmSushiHarvester->new->enqueue(
         {
@@ -89,7 +93,11 @@ subtest 'invalid_date_arguments() tests' => sub {
     );
 
     my $usage_data_provider = $builder->build_object(
-        { class => 'Koha::ERM::EUsage::UsageDataProviders', value => { name => 'TestProvider' } } );
+        {
+            class => 'Koha::ERM::EUsage::UsageDataProviders',
+            value => { name => 'TestProvider', service_url => 'https://sushi.example.com' }
+        }
+    );
 
     my $job_args = {
         ud_provider_id   => $usage_data_provider->erm_usage_data_provider_id,
@@ -136,7 +144,11 @@ subtest 'invalid_api_key() tests' => sub {
     );
 
     my $usage_data_provider = $builder->build_object(
-        { class => 'Koha::ERM::EUsage::UsageDataProviders', value => { name => 'TestProvider' } } );
+        {
+            class => 'Koha::ERM::EUsage::UsageDataProviders',
+            value => { name => 'TestProvider', service_url => 'https://sushi.example.com' }
+        }
+    );
 
     my $job_args = {
         ud_provider_id   => $usage_data_provider->erm_usage_data_provider_id,
@@ -183,7 +195,11 @@ subtest 'multiple_exceptions() tests' => sub {
     );
 
     my $usage_data_provider = $builder->build_object(
-        { class => 'Koha::ERM::EUsage::UsageDataProviders', value => { name => 'TestProvider' } } );
+        {
+            class => 'Koha::ERM::EUsage::UsageDataProviders',
+            value => { name => 'TestProvider', service_url => 'https://sushi.example.com' }
+        }
+    );
 
     my $job_args = {
         ud_provider_id   => $usage_data_provider->erm_usage_data_provider_id,
@@ -247,7 +263,11 @@ subtest 'is_redirect() tests' => sub {
     );
 
     my $usage_data_provider = $builder->build_object(
-        { class => 'Koha::ERM::EUsage::UsageDataProviders', value => { name => 'TestProvider' } } );
+        {
+            class => 'Koha::ERM::EUsage::UsageDataProviders',
+            value => { name => 'TestProvider', service_url => 'https://sushi.example.com' }
+        }
+    );
 
     my $job_args = {
         ud_provider_id   => $usage_data_provider->erm_usage_data_provider_id,
