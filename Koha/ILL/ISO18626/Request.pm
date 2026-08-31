@@ -21,7 +21,7 @@ use Modern::Perl;
 
 use Koha::ILL::ISO18626::Messages;
 use Koha::REST::V1;
-use XML::LibXML;
+use Koha::XML;
 use JSON           qw( encode_json decode_json );
 use File::Basename qw( dirname );
 use LWP::UserAgent;
@@ -150,8 +150,8 @@ sub send_message {
     if ( $response->is_success ) {
         my $content = $response->decoded_content;
 
-        if ( $content && !Koha::REST::V1::_unsafe_xml_body($content) ) {
-            my $parser = Koha::REST::V1::safe_xml_parser();
+        if ( $content && !Koha::XML::unsafe_xml_body($content) ) {
+            my $parser = Koha::XML::safe_xml_parser();
             my $doc;
             eval { $doc = $parser->parse_string($content); };
 
