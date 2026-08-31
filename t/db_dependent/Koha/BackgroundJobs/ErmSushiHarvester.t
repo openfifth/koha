@@ -87,7 +87,11 @@ subtest 'enqueue_sushi_harvest_jobs' => sub {
     t::lib::Mocks::mock_userenv( { number => $patron->borrowernumber } );    # Is superlibrarian
 
     my $usage_data_provider = $builder->build_object(
-        { class => 'Koha::ERM::EUsage::UsageDataProviders', value => { name => 'TestProvider' } } );
+        {
+            class => 'Koha::ERM::EUsage::UsageDataProviders',
+            value => { name => 'TestProvider', service_url => 'https://sushi.example.com' }
+        }
+    );
 
     my $job = Koha::BackgroundJob::ErmSushiHarvester->new(
         {
@@ -166,7 +170,11 @@ subtest 'enqueue_counter_file_processing_job' => sub {
     $schema->storage->txn_begin;
 
     my $usage_data_provider = $builder->build_object(
-        { class => 'Koha::ERM::EUsage::UsageDataProviders', value => { name => 'TestProvider' } } );
+        {
+            class => 'Koha::ERM::EUsage::UsageDataProviders',
+            value => { name => 'TestProvider', service_url => 'https://sushi.example.com' }
+        }
+    );
 
     $usage_data_provider->{report_type} = 'TR_J1';
 
@@ -280,7 +288,11 @@ subtest 'enqueue_sushi_harvest_jobs_error_handling' => sub {
     $schema->storage->txn_begin;
 
     my $usage_data_provider_error = $builder->build_object(
-        { class => 'Koha::ERM::EUsage::UsageDataProviders', value => { name => 'TestProvider' } } );
+        {
+            class => 'Koha::ERM::EUsage::UsageDataProviders',
+            value => { name => 'TestProvider', service_url => 'https://sushi.example.com' }
+        }
+    );
 
     my $job = Koha::BackgroundJob::ErmSushiHarvester->new(
         {
