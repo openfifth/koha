@@ -58,6 +58,8 @@ export default {
         disabled: Boolean | false,
         required: Boolean | false,
         onSelected: Function | null,
+        headers: Object | null,
+        params: Object | null,
         query: {
             type: Object,
             default: {},
@@ -76,14 +78,20 @@ export default {
 
         onBeforeMount(() => {
             const relatedResourcesClient = props.relationshipAPIClient;
-            relatedResourcesClient.getAll(queryParameters.value).then(
-                result => {
-                    relatedResources.value = result;
-                    relatedResourcesLoaded.value = true;
-                    emit("resourcesLoaded", props.resource[props.name], result);
-                },
-                error => {}
-            );
+            relatedResourcesClient
+                .getAll(queryParameters.value, props.params, props.headers)
+                .then(
+                    result => {
+                        relatedResources.value = result;
+                        relatedResourcesLoaded.value = true;
+                        emit(
+                            "resourcesLoaded",
+                            props.resource[props.name],
+                            result
+                        );
+                    },
+                    error => {}
+                );
         });
         const relatedResourcesOptions = computed(() => {
             const mapped = relatedResources.value?.map(resource => ({
