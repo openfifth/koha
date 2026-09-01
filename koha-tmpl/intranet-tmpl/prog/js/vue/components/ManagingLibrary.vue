@@ -2,6 +2,7 @@
     <template v-if="routeAction !== 'show'">
         <FormRelationshipSelect
             v-bind="$props"
+            :headers="{ 'x-koha-embed': 'acquisitions_library_groups' }"
             :onSelected="setGroupAccessValue"
             @resourcesLoaded="setGroupAccessValue"
         />
