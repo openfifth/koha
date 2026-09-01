@@ -21,7 +21,7 @@ use Modern::Perl;
 
 use Test::MockModule;
 use Test::NoWarnings;
-use Test::More tests => 21;
+use Test::More tests => 20;
 use Test::Warn;
 
 use Koha::Account;
@@ -49,36 +49,6 @@ subtest 'new initialises empty queues' => sub {
     isa_ok( $executor, 'Koha::Overdues::ActionExecutor' );
     is_deeply( $executor->{action_batch_queue}, [], 'action_batch_queue starts empty' );
     is_deeply( $executor->{notice_queue},       {}, 'notice_queue starts empty' );
-};
-
-subtest '_resolve_rule_context_branchcode honours CircControl + HomeOrHoldingBranch' => sub {
-    plan tests => 3;
-
-    my $executor = Koha::Overdues::ActionExecutor->new;
-    my $row      = {
-        patronhomebranch  => 'PATRON_HB',
-        itemhomebranch    => 'ITEM_HB',
-        itemholdingbranch => 'ITEM_HD',
-    };
-
-    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
-    is(
-        $executor->_resolve_rule_context_branchcode($row),
-        'PATRON_HB', 'CircControl=PatronLibrary → patron home'
-    );
-
-    t::lib::Mocks::mock_preference( 'CircControl',         'ItemHomeLibrary' );
-    t::lib::Mocks::mock_preference( 'HomeOrHoldingBranch', 'homebranch' );
-    is(
-        $executor->_resolve_rule_context_branchcode($row),
-        'ITEM_HB', 'CircControl=ItemHomeLibrary + HomeOrHoldingBranch=homebranch → item home'
-    );
-
-    t::lib::Mocks::mock_preference( 'HomeOrHoldingBranch', 'holdingbranch' );
-    is(
-        $executor->_resolve_rule_context_branchcode($row),
-        'ITEM_HD', 'CircControl=ItemHomeLibrary + HomeOrHoldingBranch=holdingbranch → item holding'
-    );
 };
 
 subtest 'route_item_actions_to_queue splits notice vs action batch' => sub {

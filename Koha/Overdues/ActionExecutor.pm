@@ -18,6 +18,7 @@ package Koha::Overdues::ActionExecutor;
 # along with Koha; if not, see <http://www.gnu.org/licenses>.
 
 use Modern::Perl;
+use Koha::CirculationRules;
 use Koha::Logger;
 use Koha::Items;
 use Koha::Patron::Debarments qw( AddUniqueDebarment );
@@ -62,7 +63,13 @@ Separate action sets into notice and standard action sets, and calls the relevan
 sub route_item_actions_to_queue {
     my ( $self, $effective_rule_sets, $overdue_item ) = @_;
 
-    my $branchcode     = $self->_resolve_rule_context_branchcode($overdue_item);
+    my $branchcode = Koha::CirculationRules->resolve_rule_context_branchcode(
+        {
+            patron_branchcode  => $overdue_item->{patronhomebranch},
+            item_homebranch    => $overdue_item->{itemhomebranch},
+            item_holdingbranch => $overdue_item->{itemholdingbranch},
+        }
+    );
     my $categorycode   = $overdue_item->{categorycode};
     my $itemtype       = $overdue_item->{itemtype};
     my $days_overdue   = $overdue_item->{days_overdue};
@@ -319,7 +326,13 @@ sub _enqueue_letter_for_bucket {
     my $head           = $entries->[0];
     my $borrowernumber = $head->{item}->{borrowernumber};
     my $notice_code    = $head->{action}->{notice_code};
-    my $branchcode     = $self->_resolve_rule_context_branchcode( $head->{item} );
+    my $branchcode     = Koha::CirculationRules->resolve_rule_context_branchcode(
+        {
+            patron_branchcode  => $head->{item}->{patronhomebranch},
+            item_homebranch    => $head->{item}->{itemhomebranch},
+            item_holdingbranch => $head->{item}->{itemholdingbranch},
+        }
+    );
 
     my $patron = Koha::Patrons->find($borrowernumber);
     if ( !$patron ) {
@@ -586,37 +599,6 @@ sub enact_mark_returned {
         undef,
         $patron->privacy,
     );
-}
-
-=head3 _resolve_rule_context_branchcode
-
-  my $branchcode = $self->_resolve_rule_context_branchcode($overdue_item);
-
-Resolves the branchcode used to key the effective rule-set lookup for an
-overdue item, honoring the C<CircControl> and C<HomeOrHoldingBranch> sysprefs
-(cf. the informative blurb in smart-rules.tt). In cron context (no userenv)
-C<PickupLibrary> falls through to the item-side path, matching
-C<C4::Circulation::_GetCircControlBranch>.
-
-TODO: find this a better home. This is general circ-rule context resolution,
-not overdue-specific. Candidate target: a public method on
-C<Koha::CirculationRules> (or wherever C<_GetCircControlBranch> ends up
-promoted to), taking scalars rather than objects so batch callers like the
-overdues processor don't load Item + Patron per row.
-
-=cut
-
-sub _resolve_rule_context_branchcode {
-    my ( $self, $overdue_item ) = @_;
-
-    my $circ_control = C4::Context->preference('CircControl');
-    if ( $circ_control eq 'PatronLibrary' ) {
-        return $overdue_item->{patronhomebranch};
-    }
-
-    return ( C4::Context->preference('HomeOrHoldingBranch') eq 'homebranch' )
-        ? $overdue_item->{itemhomebranch}
-        : $overdue_item->{itemholdingbranch};
 }
 
 1;

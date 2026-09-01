@@ -19,6 +19,7 @@ package Koha::Overdues::TriggerProcessor;
 
 use Modern::Perl;
 use C4::Context;
+use Koha::CirculationRules;
 use Koha::Overdues::RuleResolver;
 use Koha::Overdues::ActionExecutor;
 use Koha::Overdues::Repository;
@@ -218,10 +219,6 @@ sub _dispatch_overdues {
         my $due_date     = dt_from_string( $row->date_due )->truncate( to => 'day' );
         my $days_overdue = $today_date->delta_days($due_date)->in_units('days');
 
-        $seen_branches{ $row->branchcode }        = 1;
-        $seen_categories{ $patron->categorycode } = 1;
-        $seen_itemtypes{ $item->itype }           = 1;
-
         my $item_hashref = {
             issue_id          => $row->issue_id,
             borrowernumber    => $row->borrowernumber,
@@ -238,6 +235,17 @@ sub _dispatch_overdues {
             itemholdingbranch => $item->holdingbranch,
             patronhomebranch  => $patron->branchcode,
         };
+
+        $seen_branches{ Koha::CirculationRules->resolve_rule_context_branchcode(
+                {
+                    patron_branchcode  => $patron->branchcode,
+                    item_homebranch    => $item->homebranch,
+                    item_holdingbranch => $item->holdingbranch,
+                }
+            )
+        } = 1;
+        $seen_categories{ $patron->categorycode } = 1;
+        $seen_itemtypes{ $item->itype }           = 1;
 
         push @overdue_items, $item_hashref;
     }
