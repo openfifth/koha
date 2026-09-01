@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 5;
+use Test::More tests => 6;
 
 use Koha::Notice::Messages;
 
@@ -114,6 +114,67 @@ subtest 'ProcessOverdues simple path — lost + restrict end-to-end' => sub {
     is( $restrictions_second_pass->count, 1, 'one OVERDUES restriction added' );
 
     # is( $restrictions_second_pass->next->type->code, 'OVERDUES', 'second pass does not duplicate the OVERDUES debarment' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'ProcessOverdues resolves rules by the correct branch as defined by CircControl' => sub {
+    plan tests => 1;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'OverdueTriggersCalendar',   0 );
+    t::lib::Mocks::mock_preference( 'CircControl',               'ItemHomeLibrary' );
+    t::lib::Mocks::mock_preference( 'HomeOrHoldingBranch',       'homebranch' );
+    t::lib::Mocks::mock_preference( 'useDefaultReplacementCost', 0 );
+
+    Koha::CirculationRules->search( { rule_name => { -like => 'overdue\_%' } } )->delete;
+
+    my $rule_library    = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $issuing_library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron_library  = $builder->build_object( { class => 'Koha::Libraries' } );
+
+    my $patron =
+        $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $patron_library->branchcode } } );
+    my $item = $builder->build_sample_item( { homebranch => $rule_library->branchcode, replacementprice => 5 } );
+
+    my $today = dt_from_string;
+    $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => {
+                borrowernumber => $patron->borrowernumber,
+                itemnumber     => $item->itemnumber,
+                branchcode     => $issuing_library->branchcode,
+                date_due       => $today->clone->subtract( days => 7 )->strftime('%Y-%m-%d %H:%M:%S'),
+            },
+        }
+    );
+
+    # The trigger is defined only for the item's home library.
+    for my $row (
+        [ 'overdue_1_delay', 7 ],
+        [ 'overdue_1_lost',  1 ],
+        )
+    {
+        Koha::CirculationRules->set_rule(
+            {
+                branchcode   => $rule_library->branchcode,
+                categorycode => $patron->categorycode,
+                itemtype     => $item->effective_itemtype,
+                rule_name    => $row->[0],
+                rule_value   => $row->[1],
+            }
+        );
+    }
+
+    Koha::Overdues::TriggerProcessor->new->ProcessOverdues();
+
+    $item->discard_changes;
+    is(
+        $item->itemlost, 1,
+        'rule defined on the item home library applies to a checkout made at another library'
+    );
 
     $schema->storage->txn_rollback;
 };
