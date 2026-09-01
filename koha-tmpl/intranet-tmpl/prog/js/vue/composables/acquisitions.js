@@ -1041,6 +1041,16 @@ const calculateDistributedAmount = (distribution, orderLine) => {
 const useAllocationTableConfig = ({ entity, router }) => {
     const filterKey = entity + "_id";
     const isFund = entity === "fund";
+    const allocationTypes = [
+        { _id: "INITIAL", _str: $__("Initial") },
+        { _id: "INCREASE", _str: $__("Increase") },
+        { _id: "DECREASE", _str: $__("Decrease") },
+        { _id: "TRANSFER", _str: $__("Transfer") },
+        {
+            _id: "ROLLOVER_TRANSFER",
+            _str: $__("Rollover transfer"),
+        },
+    ];
     return {
         type: "component",
         name: $__("Allocations"),
@@ -1068,10 +1078,10 @@ const useAllocationTableConfig = ({ entity, router }) => {
                             searchable: true,
                             orderable: true,
                             render: function (data, type, row, meta) {
-                                return (
-                                    String(row.type).charAt(0).toUpperCase() +
-                                    String(row.type).slice(1)
+                                const typeDefinition = allocationTypes.find(
+                                    at => at._id === row.type
                                 );
+                                return typeDefinition?._str || "";
                             },
                         },
                         {
