@@ -41,6 +41,7 @@ import KohaTable from "../../KohaTable.vue";
 import { inject, ref, useTemplateRef } from "vue";
 import { useRouter } from "vue-router";
 import { $__ } from "@koha-vue/i18n";
+import { APIClient } from "../../../fetch/api-client.js";
 
 export default {
     setup() {
@@ -111,6 +112,7 @@ export default {
                 {
                     title: $__("Managing library"),
                     data: "managing_library.name",
+                    dataFilter: "managing_library",
                     searchable: true,
                     orderable: true,
                     render: (data, type, row) =>
@@ -187,6 +189,14 @@ export default {
             table_settings: null,
             add_filters: true,
             default_filters: { "me.status": true },
+            filters_options: {
+                managing_library: () =>
+                    APIClient.libraries.libraries.getAll().then(res => {
+                        return res.map(lib => {
+                            return { _id: lib.library_id, _str: lib.name };
+                        });
+                    }),
+            },
             tree: {
                 childrenField: "all_sub_funds",
                 idField: "fund_id",
