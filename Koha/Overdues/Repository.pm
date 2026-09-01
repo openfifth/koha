@@ -68,7 +68,7 @@ sub get_overdue_summaries_by_delays {
 Returns the fully-qualified column expression that holds the branchcode used
 to key the effective rule-set lookup, honoring C<CircControl> and
 C<HomeOrHoldingBranch>. Mirrors the resolution in
-L<Koha::Overdues::ActionExecutor/_resolve_rule_context_branchcode>: in cron
+L<Koha::CirculationRules/resolve_rule_context_branchcode>: in cron
 context (no userenv) C<PickupLibrary> falls through to the item-side path,
 matching C<C4::Circulation::_GetCircControlBranch>.
 

@@ -834,6 +834,34 @@ sub get_known_overdue_delay_values {
     return sort { $a <=> $b } keys %unique_delay_values;
 }
 
+=head3 resolve_rule_context_branchcode
+
+Return the branchcode circulation rules should be resolved against for a given
+patron / item pair, honouring the C<CircControl> and C<HomeOrHoldingBranch>
+system preferences. 'PickupLibrary' is only honored if userenv is set, and otherwise
+we fall back to the item path.
+
+=cut
+
+sub resolve_rule_context_branchcode {
+    my ( $class, $params ) = @_;
+
+    my $circ_control = C4::Context->preference('CircControl') // q{};
+    my $userenv      = C4::Context->userenv;
+
+    if ( $circ_control eq 'PickupLibrary' && $userenv && $userenv->{branch} ) {
+        return $userenv->{branch};
+    }
+
+    if ( $circ_control eq 'PatronLibrary' ) {
+        return $params->{patron_branchcode};
+    }
+
+    return ( ( C4::Context->preference('HomeOrHoldingBranch') // q{} ) eq 'holdingbranch' )
+        ? $params->{item_holdingbranch}
+        : $params->{item_homebranch};
+}
+
 =head3 get_effective_expire_reserves_charge
 
 Return the value for expire_reserves_charge defined in the circulation rules.
