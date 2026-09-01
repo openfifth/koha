@@ -48,9 +48,9 @@ export default {
             resourceAttrs: [
                 {
                     name: "currency",
-                    type: "text",
+                    type: props.routeAction === "edit" ? "display" : "text",
                     label: $__("Currency code"),
-                    required: true,
+                    required: props.routeAction === "edit" ? false : true,
                     maxlength: 50,
                     disabled: () => props.routeAction === "edit",
                 },
