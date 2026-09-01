@@ -3,6 +3,14 @@
         <span class="user">
             {{ resource.patron_str }}
         </span>
+        <template v-if="resource[name]">
+            &nbsp;
+            <i
+                class="fa fa-trash"
+                style="cursor: pointer"
+                @click="deletePatron()"
+            ></i>
+        </template>
         &nbsp;
         <a @click="selectPatron()" class="btn btn-default"
             ><i class="fa fa-plus"></i> {{ $__("Select user") }}</a
@@ -95,12 +103,10 @@ export default {
         });
 
         const passSearchDataToModal = () => {
-            if (props.filteredUrl) {
-                $("#vuePatronSearchData").data(
-                    "patron_search_filter",
-                    props.filteredUrl
-                );
-            }
+            $("#vuePatronSearchData").data(
+                "patron_search_filter",
+                props.filteredUrl || ""
+            );
             $("#vuePatronSearchData").data("action_type", props.modalType);
             $("#vuePatronSearchData").data(
                 "additional_patron_filters",
@@ -186,10 +192,17 @@ export default {
         };
 
         const deletePatron = borrowernumber => {
-            const patronIndex = addedPatrons.value.findIndex(
-                patron => patron.borrowernumber === borrowernumber
-            );
-            addedPatrons.value.splice(patronIndex, 1);
+            if (props.modalType === "add") {
+                const patronIndex = addedPatrons.value.findIndex(
+                    patron => patron.borrowernumber === borrowernumber
+                );
+                addedPatrons.value.splice(patronIndex, 1);
+            }
+            if (props.modalType === "select") {
+                props.resource.patron = null;
+                props.resource.patron_str = "";
+                props.resource[props.name] = null;
+            }
         };
 
         return {

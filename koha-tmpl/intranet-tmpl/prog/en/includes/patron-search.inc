@@ -339,7 +339,7 @@
                 const vueData = $("#vuePatronSearchData")
                 const actionType = vueData.data("action_type")
                 vueCallback = vueData.data("callback")
-                if(!actionButtons.includes(actionType) ) actionButtons.push(actionType)
+                if(!actionButtons.includes(actionType) ) actionButtons = [actionType]
                 const vueFilteredEndpoint = vueData.data("patron_search_filter")
                 if(vueFilteredEndpoint) {
                     patrons_table.DataTable().ajax.url(vueFilteredEndpoint)
