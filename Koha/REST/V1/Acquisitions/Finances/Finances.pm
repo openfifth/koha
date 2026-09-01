@@ -73,7 +73,7 @@ sub list_users {
     my $c = shift->openapi->valid_input or return;
 
     return try {
-        my $query = from_json( $c->req->param('q') );
+        my $query = from_json( $c->req->param('q') || "" );
         my $permission;
         if ( $query->{permission} ) {
             $permission = $query->{permission};
