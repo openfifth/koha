@@ -171,7 +171,7 @@ export default {
                     ...tableColumns.value,
                     {
                         name: "actions",
-                        className: "noExport",
+                        className: "no-export",
                         title: $__("Actions"),
                         searchable: false,
                         sortable: false,
