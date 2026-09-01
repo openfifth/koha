@@ -32,11 +32,8 @@ const formatValueWithCurrencyHandler = (value, currency) => {
     if (!currency) {
         return formattedPrice;
     }
-    if (!value) {
-        return `0 ${currency}`;
-    }
-    if (!formattedPrice) {
-        return `0 ${currency}`;
+    if (!value || !formattedPrice) {
+        return `${formattedPrice} ${currency}`;
     }
     if (formattedPrice < 0) {
         return `-${-formattedPrice} ${currency}`;
