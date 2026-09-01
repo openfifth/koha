@@ -34,6 +34,7 @@ export default {
             useRolloverModal,
             useAllocationTableConfig,
             useFundTableConfig,
+            applyNumberValidation,
         } = acquisitionsStore;
 
         const { setConfirmationDialog, setWarning, setMessage } =
@@ -406,6 +407,7 @@ export default {
                     size: 6,
                     format: v => v + "%",
                     hideIn: ["List"],
+                    ...applyNumberValidation(),
                 },
                 {
                     name: "oe_warning_amount",
@@ -419,6 +421,7 @@ export default {
                     format: (value, resource) =>
                         formatValueWithCurrency(value, resource.currency),
                     hideIn: ["List"],
+                    ...applyNumberValidation(),
                 },
             ],
         });
