@@ -518,6 +518,7 @@ export default {
                         comb => comb.branchcode
                     );
                 if (
+                    childManagingBranches.length &&
                     !childManagingBranches.includes(resource.managing_branch) &&
                     resource.managing_branch
                 )
