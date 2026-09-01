@@ -1087,41 +1087,53 @@ function _dt_add_filters(table_node, table_dt, filters_options = {}) {
                     '<select class="dt-select-filter"><option value=""></option></select'
                 );
 
-                if (typeof filters_options[col.dataFilter] === "function") {
-                    filters_options[col.dataFilter] =
-                        filters_options[col.dataFilter](table_dt);
+                function _format_and_create_filters() {
+                    $(filters_options[col.dataFilter])
+                        .filter(function () {
+                            return this._id !== "" && this._str !== "";
+                        })
+                        .each(function () {
+                            let optionValue = this._id;
+
+                            if (
+                                table_dt.settings()[0].ajax !== null &&
+                                $(table_node)?.attr("id") !== "item_search"
+                            ) {
+                                optionValue = `^${this._id}$`;
+                            }
+
+                            let o = $(
+                                `<option value="${optionValue}">${this._str}</option>`
+                            );
+
+                            // Compare with lc, or selfreg won't match ^SELFREG$ for instance, see bug 32517
+                            // This is only for category, we might want to apply it only in this case.
+                            existing_search = existing_search.toLowerCase();
+                            if (
+                                existing_search === this._id ||
+                                (existing_search &&
+                                    this._id
+                                        .toLowerCase()
+                                        .match(existing_search))
+                            ) {
+                                o.prop("selected", "selected");
+                            }
+                            o.appendTo(select);
+                        });
+                    $(th).html(select);
                 }
-                $(filters_options[col.dataFilter])
-                    .filter(function () {
-                        return this._id !== "" && this._str !== "";
-                    })
-                    .each(function () {
-                        let optionValue = this._id;
 
-                        if (
-                            table_dt.settings()[0].ajax !== null &&
-                            $(table_node)?.attr("id") !== "item_search"
-                        ) {
-                            optionValue = `^${this._id}$`;
-                        }
-
-                        let o = $(
-                            `<option value="${optionValue}">${this._str}</option>`
-                        );
-
-                        // Compare with lc, or selfreg won't match ^SELFREG$ for instance, see bug 32517
-                        // This is only for category, we might want to apply it only in this case.
-                        existing_search = existing_search.toLowerCase();
-                        if (
-                            existing_search === this._id ||
-                            (existing_search &&
-                                this._id.toLowerCase().match(existing_search))
-                        ) {
-                            o.prop("selected", "selected");
-                        }
-                        o.appendTo(select);
-                    });
-                $(th).html(select);
+                if (typeof filters_options[col.dataFilter] === "function") {
+                    $(th).html(_("Loading..."));
+                    Promise.resolve()
+                        .then(() => filters_options[col.dataFilter](table_dt))
+                        .then(result => {
+                            filters_options[col.dataFilter] = result;
+                            _format_and_create_filters();
+                        });
+                } else {
+                    _format_and_create_filters();
+                }
             } else {
                 var title = $(th).text();
                 if (existing_search) {
