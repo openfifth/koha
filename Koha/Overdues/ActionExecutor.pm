@@ -21,7 +21,6 @@ use Modern::Perl;
 use Koha::Logger;
 use Koha::Items;
 use Koha::Patron::Debarments qw( AddUniqueDebarment );
-use C4::Accounts             qw( chargelostitem );
 use C4::Circulation          qw( MarkIssueReturned );
 use C4::Context;
 use C4::Letters;
