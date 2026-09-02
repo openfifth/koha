@@ -102,14 +102,14 @@ export default {
                                 baseResource.resourceAttrs
                             ),
                         title: $__("Duplicate"),
-                        icon: "rotate",
+                        icon: "copy",
                         disabled: !resource.status,
                         hint: $__("This ledger is inactive"),
                     },
                     {
                         onClick: () => openRolloverModal(resource),
                         title: $__("Rollover"),
-                        icon: "right-left",
+                        icon: "rotate",
                         disabled: !resource.status,
                         hint: $__("This ledger is inactive"),
                     },
@@ -125,6 +125,7 @@ export default {
                         return {
                             ...button,
                             disabled: true,
+                            icon: "trash",
                             hint: $__(
                                 "This ledger has funds and cannot be deleted"
                             ),

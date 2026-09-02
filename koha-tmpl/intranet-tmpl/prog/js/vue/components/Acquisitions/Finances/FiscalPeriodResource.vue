@@ -56,6 +56,7 @@ export default {
                         return {
                             ...button,
                             disabled: true,
+                            icon: "trash",
                             hint: $__(
                                 "This fiscal period has ledgers and cannot be deleted"
                             ),
