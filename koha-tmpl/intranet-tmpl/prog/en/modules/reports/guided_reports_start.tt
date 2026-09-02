@@ -1314,7 +1314,7 @@
                                                 </li>
                                                 [% IF item_lists.count %]
                                                     <li>
-                                                        <a href="#" data-bs-toggle="tooltip" data-bs-placement="right" title="Add visible items to an item list" class="dropdown-item send_to_item_list">Add items to list</a>
+                                                        <a href="#" data-bs-toggle="tooltip" data-bs-placement="right" title="Add visible items to an item list" class="dropdown-item send_to_item_list">Add items to item list</a>
                                                     </li>
                                                 [% END %]
                                             [% END %]
