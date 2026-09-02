@@ -228,6 +228,8 @@ export default {
         };
 
         const batchEdit = ids => {
+            if (ids.length === 0) return;
+
             const path = "/cgi-bin/koha/tools/batchMod.pl";
             return postVirtualForm(path, {
                 itemnumber: ids,
@@ -236,6 +238,8 @@ export default {
         };
 
         const batchDelete = ids => {
+            if (ids.length === 0) return;
+
             const path = "/cgi-bin/koha/tools/batchMod.pl";
             return postVirtualForm(path, {
                 itemnumber: ids,
@@ -243,6 +247,12 @@ export default {
                 del: "1",
             });
         };
+
+        function onSelectionChange(e, dt) {
+            const buttons_enabled = dt.rows({ selected: true }).count() > 0;
+            dt.button("batch_edit:name").enable(buttons_enabled);
+            dt.button("batch_delete:name").enable(buttons_enabled);
+        }
 
         const tableOptions = {
             options: {
@@ -252,7 +262,9 @@ export default {
                     ...(config.value?.permissions?.items_batchmod
                         ? [
                               {
-                                  text: "Batch edit",
+                                  name: "batch_edit",
+                                  text: $__("Batch edit"),
+                                  enabled: false,
                                   action: (e, dt, node, config) =>
                                       batchEdit(
                                           dt
@@ -267,7 +279,9 @@ export default {
                     ...(config.value?.permissions?.items_batchdel
                         ? [
                               {
-                                  text: "Batch delete",
+                                  name: "batch_delete",
+                                  text: $__("Batch delete"),
+                                  enabled: false,
                                   action: (e, dt, node, config) =>
                                       batchDelete(
                                           dt
@@ -287,6 +301,10 @@ export default {
             actions: resource => ({
                 "-1": resource?.can_manage ? ["remove"] : [],
             }),
+            additionalEvents: {
+                select: onSelectionChange,
+                deselect: onSelectionChange,
+            },
         };
 
         const onFormSave = (e, itemToSave) => {
