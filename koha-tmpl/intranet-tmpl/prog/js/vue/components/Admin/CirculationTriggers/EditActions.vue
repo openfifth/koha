@@ -140,7 +140,7 @@
                     id="lost"
                     v-model="ruleSetToSubmit[`overdue_${triggerNumber}_lost`]"
                     label="description"
-                    :reduce="val => val.authorised_value_id"
+                    :reduce="val => val.value"
                     :options="lostValues"
                 >
                     <template #search="{ attributes, events }">
