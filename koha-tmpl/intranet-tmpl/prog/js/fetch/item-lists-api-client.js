@@ -56,10 +56,10 @@ export class ItemListsAPIClient {
 
     items(item_list_id) {
         return {
-            add: external_ids =>
+            add: (external_ids, item_ids) =>
                 this.httpClient.post({
                     endpoint: "/" + item_list_id + "/items",
-                    body: { external_ids },
+                    body: { external_ids, item_ids },
                 }),
             remove: item_id =>
                 this.httpClient.delete({

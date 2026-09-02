@@ -71,9 +71,16 @@ export default {
             resourceAttrs: [
                 {
                     name: "external_ids",
-                    required: true,
+                    required: false,
                     type: "textarea",
                     label: $__("Barcodes"),
+                    hideIn: ["List"],
+                },
+                {
+                    name: "item_ids",
+                    required: false,
+                    type: "textarea",
+                    label: $__("Item numbers"),
                     hideIn: ["List"],
                 },
                 {
@@ -310,9 +317,14 @@ export default {
         const onFormSave = (e, itemToSave) => {
             e.preventDefault();
             const item = JSON.parse(JSON.stringify(itemToSave)); // copy
-            const external_ids = item.external_ids.split("\n");
+            const external_ids = item.external_ids
+                .split("\n")
+                .filter(x => x.length > 0);
+            const item_ids = item.item_ids
+                .split("\n")
+                .filter(x => x.length > 0);
 
-            return baseResource.apiClient.add(external_ids).then(
+            return baseResource.apiClient.add(external_ids, item_ids).then(
                 resource => {
                     baseResource.setMessage($__("Items added!"));
                     return resource;
