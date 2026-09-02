@@ -22,7 +22,6 @@ use Koha::CirculationRules;
 use Koha::Logger;
 use Koha::Items;
 use Koha::Patron::Debarments qw( AddUniqueDebarment );
-use C4::Circulation          qw( MarkIssueReturned );
 use C4::Context;
 use C4::Letters;
 use Koha::Notice::Message;
@@ -48,8 +47,9 @@ Instantiate the class.
 sub new {
     my ($class) = @_;
     my $self = {
-        action_batch_queue => [],
-        notice_queue       => {},
+        action_batch_queue      => [],
+        notice_queue            => {},
+        patrons_marked_returned => {},
     };
     return bless $self, $class;
 }
@@ -215,6 +215,21 @@ sub process_action_queue {
 
         if ( $actions->{mark_returned} ) {
             $self->enact_mark_returned($overdue_item);
+        }
+    }
+
+    # Lifting an OVERDUES restriction reconciles against the patron's remaining
+    # overdues, so running it per archived checkout would reach the same answer
+    # by re-evaluating it once per item. Doing it once per patron here avoids
+    # repeating has_restricting_overdues.
+    if ( C4::Context->preference('AutoRemoveOverduesRestrictions') eq 'no' ) {
+        return;
+    }
+
+    foreach my $borrowernumber ( keys %{ $self->{patrons_marked_returned} } ) {
+        my $patron = Koha::Patrons->find($borrowernumber);
+        if ($patron) {
+            $patron->lift_overdue_restrictions;
         }
     }
 }
@@ -578,11 +593,12 @@ sub enact_charge {
 Mark the patron's checkout of this item as returned, honouring the patron's
 privacy setting.
 
-Important: MarkIssueReturned archives the issue to old_issues (reassigning
-related accountlines to old_issue_id), clears items.onloan, records
-last_returned_by, and may remove an OVERDUES debarment per
-AutoRemoveOverduesRestrictions. Patron privacy=2 anonymises the archived
-checkout.
+Important: mark_returned archives the issue to old_issues (reassigning
+related accountlines to old_issue_id), clears items.onloan, and records
+last_returned_by. Patron privacy=2 anonymises the archived checkout.
+
+Any OVERDUES debarment is lifted once per patron at the end of
+L</process_action_queue>, not here.
 
 =cut
 
@@ -593,12 +609,18 @@ sub enact_mark_returned {
         Koha::Logger->get->warn("enact_mark_returned: borrower $overdue_item->{borrowernumber} not found — skipping");
         return;
     }
-    MarkIssueReturned(
-        $overdue_item->{borrowernumber},
-        $overdue_item->{itemnumber},
-        undef,
-        $patron->privacy,
+    my $checkout = Koha::Checkouts->find( $overdue_item->{issue_id} );
+    if ( !$checkout ) {
+        Koha::Logger->get->warn("enact_mark_returned: issue $overdue_item->{issue_id} not found — skipping");
+        return;
+    }
+    $checkout->mark_returned(
+        {
+            borrowernumber => $overdue_item->{borrowernumber},
+            privacy        => $patron->privacy,
+        }
     );
+    $self->{patrons_marked_returned}->{ $overdue_item->{borrowernumber} } = 1;
 }
 
 1;
