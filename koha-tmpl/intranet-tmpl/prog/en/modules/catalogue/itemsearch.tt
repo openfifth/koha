@@ -654,7 +654,9 @@
                 "</a></li>" +
                 "            </ul>" +
                 "        </div>";
-            if (Koha.permissions.CAN_user_tools_items_batchmod || Koha.permissions.CAN_user_tools_items_batchdel) {
+
+            const have_item_lists = $("#item-list-add-form-select > option").length > 0;
+            if (Koha.permissions.CAN_user_tools_items_batchmod || Koha.permissions.CAN_user_tools_items_batchdel || have_item_lists) {
                 table +=
                     "" +
                     '        <div class="btn-group"><button class="btn btn-default btn-sm dropdown-toggle disabled" disabled="disabled" type="button" id="batch_mod_menu"data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="true"> ' +
@@ -679,7 +681,7 @@
                         _("Batch item deletion") +
                         "</a> </li>";
                 }
-                if ($("#item-list-add-form-select > option").length > 0) {
+                if (have_item_lists) {
                     table +=
                         "" +
                         '                <li> <a class="dropdown-item send_to_item_list"" href="#" data-bs-toggle="tooltip" data-bs-placement="right" title="' +
