@@ -500,63 +500,42 @@ export default {
                 this.editMode === "edit" ? parseInt(triggerNumber) : null;
         },
         setFallbackRuleSet() {
-            this.fallbackRuleSet = {
-                [`overdue_${this.triggerNumber}_delay`]: this.findEffectiveRule(
+            // The fallback is what would apply if this context carried no
+            // explicit rule, so the context's own override is excluded from the
+            // resolution. This is the only caller that wants that.
+            const findFallbackRule = ruleSuffix =>
+                this.findEffectiveRule(
                     this.context,
-                    "delay",
-                    this.triggerNumber
-                ).value,
+                    ruleSuffix,
+                    this.triggerNumber,
+                    true,
+                    true
+                ).value;
+
+            this.fallbackRuleSet = {
+                [`overdue_${this.triggerNumber}_delay`]:
+                    findFallbackRule("delay"),
             };
 
             if (this.editMode === "add") {
                 return;
             }
             this.fallbackRuleSet = {
-                [`overdue_${this.triggerNumber}_delay`]: this.findEffectiveRule(
-                    this.context,
-                    "delay",
-                    this.triggerNumber
-                ).value,
-                [`overdue_${this.triggerNumber}_lost`]: this.findEffectiveRule(
-                    this.context,
-                    "lost",
-                    this.triggerNumber
-                ).value,
+                [`overdue_${this.triggerNumber}_delay`]:
+                    findFallbackRule("delay"),
+                [`overdue_${this.triggerNumber}_lost`]:
+                    findFallbackRule("lost"),
                 [`overdue_${this.triggerNumber}_charge`]:
-                    this.findEffectiveRule(
-                        this.context,
-                        "charge",
-                        this.triggerNumber
-                    ).value,
+                    findFallbackRule("charge"),
                 [`overdue_${this.triggerNumber}_mark_returned`]:
-                    this.findEffectiveRule(
-                        this.context,
-                        "mark_returned",
-                        this.triggerNumber
-                    ).value,
+                    findFallbackRule("mark_returned"),
                 [`overdue_${this.triggerNumber}_forgive_fine`]:
-                    this.findEffectiveRule(
-                        this.context,
-                        "forgive_fine",
-                        this.triggerNumber
-                    ).value,
+                    findFallbackRule("forgive_fine"),
                 [`overdue_${this.triggerNumber}_notice`]:
-                    this.findEffectiveRule(
-                        this.context,
-                        "notice",
-                        this.triggerNumber
-                    ).value,
-                [`overdue_${this.triggerNumber}_mtt`]: this.findEffectiveRule(
-                    this.context,
-                    "mtt",
-                    this.triggerNumber
-                ).value,
+                    findFallbackRule("notice"),
+                [`overdue_${this.triggerNumber}_mtt`]: findFallbackRule("mtt"),
                 [`overdue_${this.triggerNumber}_restrict`]:
-                    this.findEffectiveRule(
-                        this.context,
-                        "restrict",
-                        this.triggerNumber
-                    ).value,
+                    findFallbackRule("restrict"),
             };
         },
         setMinDelay() {
