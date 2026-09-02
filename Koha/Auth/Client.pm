@@ -167,7 +167,7 @@ sub get_valid_domain_config {
         if ( defined $asterisk && $asterisk eq '*' ) {
             $pattern .= '.*';
         }
-        $domain_name =~ s/\./\\\./g;
+        $domain_name = quotemeta($domain_name);
         $pattern .= $domain_name . '$';
         if ( $user_email =~ /$pattern/ ) {
             if ( defined $asterisk && $asterisk eq '*' ) {

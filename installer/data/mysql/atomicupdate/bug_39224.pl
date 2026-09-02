@@ -195,7 +195,16 @@ return {
                     "SELECT value FROM systempreferences WHERE LOWER(variable) = LOWER(?)",
                     undef, $pref_name
                 );
-                my ($hostname) = ( $url // '' ) =~ m{^https?://([^/:?#]+)} or next;
+                my ($hostname) = ( $url // '' ) =~ m{^https?://([^/:?#]+)};
+                unless ($hostname) {
+                    say_warning(
+                        $out,
+                        "Could not extract a hostname from $pref_name ('"
+                            . ( $url // '' )
+                            . "'); skipping seed for hostname_id=$id"
+                    );
+                    next;
+                }
                 $dbh->do(
                     "INSERT IGNORE INTO hostnames (hostname_id, hostname) VALUES (?, ?)",
                     undef, $id, $hostname
