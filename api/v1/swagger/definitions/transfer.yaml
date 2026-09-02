@@ -1,0 +1,53 @@
+---
+type: object
+properties:
+  transfer_id:
+    type: integer
+    description: Internal transfer identifier
+  item_id:
+    type: integer
+    description: Internal identifier for the item in transit
+  date_requested:
+    type: string
+    format: date-time
+    description: Date the transfer was requested
+  date_sent:
+    type:
+      - string
+      - "null"
+    format: date-time
+    description: Date the transfer was initiated
+  date_arrived:
+    type:
+      - string
+      - "null"
+    format: date-time
+    description: Date the transfer was completed
+  date_cancelled:
+    type:
+      - string
+      - "null"
+    format: date-time
+    description: Date the transfer was cancelled
+  from_library_id:
+    type: string
+    description: Source library for the transfer
+  to_library_id:
+    type: string
+    description: Destination library for the transfer
+  comments:
+    type:
+      - string
+      - "null"
+    description: Free text comments about the transfer
+  reason:
+    type:
+      - string
+      - "null"
+    description: Reason the transfer was initiated
+  cancellation_reason:
+    type:
+      - string
+      - "null"
+    description: Reason the transfer was cancelled
+additionalProperties: false
