@@ -109,6 +109,7 @@ export default {
                         value: x[0],
                         description: x[1],
                     })),
+                    defaultValue: "private",
                     requiredKey: "value",
                     selectLabel: "description",
                     label: $__("Visibility"),
