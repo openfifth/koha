@@ -29,6 +29,44 @@ export default {
             resourceName: "items",
             nameAttr: "external_id",
             idAttr: "item_id",
+            describeResource: resource => {
+                let result = "";
+                result +=
+                    "<strong>Title</strong>: " +
+                    escape_str(resource.biblio.title);
+                if (resource.biblio.subtitle) {
+                    result += row.biblio.subtitle
+                        .split("|")
+                        .map(escape_str)
+                        .join("");
+                }
+                result += "<br/>";
+                result +=
+                    "<strong>Author</strong>: " +
+                    escape_str(resource.biblio.author) +
+                    "<br/>";
+                result +=
+                    "<strong>Barcode</strong>: " +
+                    escape_str(resource.external_id) +
+                    "<br/>";
+                result +=
+                    "<strong>Item Number</strong>: " +
+                    escape_str(resource.item_id) +
+                    "<br/>";
+                result +=
+                    "<strong>Collection</strong>: " +
+                    escape_str(resource._strings.collection_code.str) +
+                    "<br/>";
+                result +=
+                    "<strong>Holding Library</strong>: " +
+                    escape_str(resource.holding_library.name) +
+                    "<br/>";
+                result +=
+                    "<strong>Home Library</strong>: " +
+                    escape_str(resource.home_library.name) +
+                    "<br/>";
+                return result;
+            },
             components: {
                 show: null,
                 list: "ItemListItemsList",

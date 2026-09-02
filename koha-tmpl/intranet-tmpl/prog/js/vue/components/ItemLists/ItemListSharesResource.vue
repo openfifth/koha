@@ -29,6 +29,12 @@ export default {
             resourceName: "item_list_shares",
             nameAttr: "borrowernumber",
             idAttr: "borrowernumber",
+            describeResource: resource => {
+                if ($patron_to_html) {
+                    return $patron_to_html(resource.patron);
+                }
+                return resource.borrowernumber;
+            },
             components: {
                 show: null,
                 list: "ItemListSharesList",

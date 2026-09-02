@@ -248,9 +248,8 @@ describe("Item List contents CRUD operations", () => {
             "remove this item from the list"
         );
         cy.contains("Yes, remove").click();
-        cy.get("main div[class='alert alert-info']")
-            .contains("Item")
-            .contains("removed");
+        cy.get("main div[class='alert alert-info']").contains("Item");
+        cy.get("main div[class='alert alert-info']").contains("removed");
     });
 });
 
