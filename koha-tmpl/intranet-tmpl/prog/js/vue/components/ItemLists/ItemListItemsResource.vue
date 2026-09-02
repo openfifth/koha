@@ -106,6 +106,23 @@ export default {
                     list: buttons.list.filter(x => x.action != "add"),
                 };
             },
+            additionalToolbarButtons: (resource, componentData) => {
+                if (!resource?.can_update) return {};
+                if (!config.value?.permissions?.list_borrowers) return {};
+
+                return {
+                    list: [
+                        {
+                            to: {
+                                name: "ItemListSharesAdd",
+                                params: { id: item_list_id },
+                            },
+                            icon: "plus",
+                            title: $__("Add shares"),
+                        },
+                    ],
+                };
+            },
             props,
             navigationOnFormSave: "ItemListItemsList",
             resourceAttrs: [
