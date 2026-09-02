@@ -94,6 +94,7 @@
                     :fallbackRuleSet="fallbackRuleSet"
                     :ruleSetInfo="ruleSetInfo"
                     :filteredLetters="filteredLetters"
+                    :handleNoticeChange="handleNoticeChange"
                     :letters="letters"
                     :transportTypes="transportTypes"
                     :setAllowSubmission="setAllowSubmission"
@@ -624,6 +625,29 @@ export default {
         },
         handleSetDelayToNull() {
             this.ruleSetToSubmit[`overdue_${this.triggerNumber}_delay`] = null;
+            this.setAllowSubmission();
+        },
+        handleNoticeChange() {
+            // A transport type is only meaningful alongside a letter. Resolve
+            // what the notice will actually be - the explicit value, or the
+            // fallback where it has been reset - and drop the transports when
+            // that comes to "No letter", so choosing it is equivalent to
+            // clearing the transports first.
+            const noticeName = `overdue_${this.triggerNumber}_notice`;
+            const submittedNotice = this.ruleSetToSubmit[noticeName];
+            const resolvedNotice =
+                submittedNotice === null || submittedNotice === undefined
+                    ? this.fallbackRuleSet?.[noticeName]
+                    : submittedNotice;
+
+            if (
+                resolvedNotice === "" ||
+                resolvedNotice === null ||
+                resolvedNotice === undefined
+            ) {
+                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_mtt`] =
+                    null;
+            }
             this.setAllowSubmission();
         },
     },
