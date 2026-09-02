@@ -11,12 +11,23 @@
                         <p>
                             <label for="item-list-add-form-select" class="required">Item list: </label>
                             <select name="item_list" id="item-list-add-form-select">
+                                [% IF CAN_user_item_lists_create_item_lists %]
+                                    <option value="">Create new list</option>
+                                [% END %]
                                 [% FOREACH list IN item_lists %]
                                     <option value="[% list.id | html %]">[% list.name | html %]</option>
                                 [% END %]
                             </select>
                             <span class="required">Required</span>
                         </p>
+                        [% IF CAN_user_item_lists_create_item_lists %]
+                            <p id="item-list-add-form-new-list">
+                                <input type="hidden" id="item-list-add-form-new-list-owner" value="[% logged_in_user.borrowernumber | html %]" />
+                                <label for="item-list-add-form-new-list-name" class="required">New list name: </label>
+                                <input type="text" required id="item-list-add-form-new-list-name" />
+                                <span class="required">Required</span>
+                            </p>
+                        [% END %]
                     </fieldset>
                 </div>
                 <div class="modal-footer">
