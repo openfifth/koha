@@ -104,11 +104,9 @@
                             </li>
                         [% END %]
 
-                        [% IF ( CAN_user_item_lists) %]
-                            <li>
-                                <a class="icon_general icon_lists" href="/cgi-bin/koha/lists/items"><i class="fa fa-fw fa-list-alt"></i>Item lists</a>
-                            </li>
-                        [% END %]
+                        <li>
+                            <a class="icon_general icon_lists" href="/cgi-bin/koha/lists/items"><i class="fa fa-fw fa-list-alt"></i>Item lists</a>
+                        </li>
 
                         [% IF ( UseCourseReserves ) %]
                             <li>
