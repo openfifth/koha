@@ -20,7 +20,13 @@
                     </fieldset>
                 </div>
                 <div class="modal-footer">
-                    <button id="modal-item-list-add-submit" class="btn btn-primary">Add to list</button>
+                    <div class="btn-group">
+                        <button id="modal-item-list-add-submit" class="btn btn-primary">Add to list</button>
+                        <button class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"></button>
+                        <ul class="dropdown-menu">
+                            <li><button id="modal-item-list-add-submit-view" class="dropdown-item">Add to list and view</button></li>
+                        </ul>
+                    </div>
                     <button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancel</button>
                 </div>
             </form>
