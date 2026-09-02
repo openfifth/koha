@@ -22,7 +22,7 @@
                     :reduce="type => type.code"
                     :options="filteredLetters"
                     :clearable="false"
-                    @update:modelValue="setAllowSubmission"
+                    @update:modelValue="handleNoticeChange"
                 >
                     <template #search="{ attributes, events }">
                         <input
@@ -55,7 +55,7 @@
                     :ruleSetToSubmit="ruleSetToSubmit"
                     :fallbackRuleSet="fallbackRuleSet"
                     :ruleName="`overdue_${triggerNumber}_notice`"
-                    :setAllowSubmission="setAllowSubmission"
+                    :setAllowSubmission="handleNoticeChange"
                 />
             </li>
             <li
@@ -131,6 +131,7 @@ export default {
         letters: { type: Array, required: true },
         transportTypes: { type: Array, required: true },
         setAllowSubmission: { type: Function, required: true },
+        handleNoticeChange: { type: Function, required: true },
     },
 };
 </script>
