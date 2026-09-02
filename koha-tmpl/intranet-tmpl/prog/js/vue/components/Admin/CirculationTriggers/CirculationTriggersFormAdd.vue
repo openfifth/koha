@@ -148,6 +148,7 @@ export default {
             transportTypes,
             patronCategories,
             triggerCounts,
+            ruleSuffixes,
             lastEditedTriggerNumber,
             storeInitialized,
             canManageAnyLibrary,
@@ -161,6 +162,7 @@ export default {
             lostValues,
             transportTypes,
             triggerCounts,
+            ruleSuffixes,
             patronCategories,
             getSelectedRuleSet,
             updateTriggerCount,
@@ -253,137 +255,43 @@ export default {
                 context: this.context,
             };
 
-            // ensure that no property is set to null as this would delete the rule!
-            if (
-                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_delay`] !==
-                    null &&
-                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_delay`] !==
-                    this.fallbackRuleSet[`overdue_${this.triggerNumber}_delay`]
-            ) {
-                ruleSetToSubmit[`overdue_${this.triggerNumber}_delay`] =
-                    cloneDeep(
-                        this.ruleSetToSubmit[
-                            `overdue_${this.triggerNumber}_delay`
-                        ]
-                    );
-            }
+            // Only transmit what the user actually changed. The baseline is the
+            // context's own explicit value: findEffectiveRule with
+            // includeFallbacks false returns undefined when the rule is inherited
+            // rather than set here. So an untouched rule is omitted, and a rule
+            // that was explicitly set and has since been reset is sent as null,
+            // which deletes it.
+            for (const ruleSuffix of this.ruleSuffixes) {
+                const ruleName = `overdue_${this.triggerNumber}_${ruleSuffix}`;
+                const value = this.ruleSetToSubmit[ruleName];
+                const savedRule = this.findEffectiveRule(
+                    this.context,
+                    ruleSuffix,
+                    this.triggerNumber,
+                    false
+                );
 
-            if (
-                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_lost`] !==
-                    null &&
-                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_lost`] !==
-                    this.fallbackRuleSet[`overdue_${this.triggerNumber}_lost`]
-            ) {
-                ruleSetToSubmit[`overdue_${this.triggerNumber}_lost`] =
-                    cloneDeep(
-                        this.ruleSetToSubmit[
-                            `overdue_${this.triggerNumber}_lost`
-                        ]
-                    );
-            }
+                if (value === null || value === undefined) {
+                    if (savedRule !== undefined) {
+                        ruleSetToSubmit[ruleName] = null;
+                    }
+                    continue;
+                }
 
-            if (
-                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_charge`] !==
-                    null &&
-                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_charge`] !==
-                    this.fallbackRuleSet[`overdue_${this.triggerNumber}_charge`]
-            ) {
-                ruleSetToSubmit[`overdue_${this.triggerNumber}_charge`] =
-                    cloneDeep(
-                        this.ruleSetToSubmit[
-                            `overdue_${this.triggerNumber}_charge`
-                        ]
-                    );
-            }
+                // mtt is zero-to-many and is stored as a comma separated string
+                if (ruleSuffix === "mtt") {
+                    if (
+                        Array.isArray(value) &&
+                        !isEqual(value, savedRule?.value)
+                    ) {
+                        ruleSetToSubmit[ruleName] = value.join(",");
+                    }
+                    continue;
+                }
 
-            if (
-                this.ruleSetToSubmit[
-                    `overdue_${this.triggerNumber}_mark_returned`
-                ] !== null &&
-                this.ruleSetToSubmit[
-                    `overdue_${this.triggerNumber}_mark_returned`
-                ] !==
-                    this.fallbackRuleSet[
-                        `overdue_${this.triggerNumber}_mark_returned`
-                    ]
-            ) {
-                ruleSetToSubmit[`overdue_${this.triggerNumber}_mark_returned`] =
-                    cloneDeep(
-                        this.ruleSetToSubmit[
-                            `overdue_${this.triggerNumber}_mark_returned`
-                        ]
-                    );
-            }
-
-            if (
-                this.ruleSetToSubmit[
-                    `overdue_${this.triggerNumber}_forgive_fine`
-                ] !== null &&
-                this.ruleSetToSubmit[
-                    `overdue_${this.triggerNumber}_forgive_fine`
-                ] !==
-                    this.fallbackRuleSet[
-                        `overdue_${this.triggerNumber}_forgive_fine`
-                    ]
-            ) {
-                ruleSetToSubmit[`overdue_${this.triggerNumber}_forgive_fine`] =
-                    cloneDeep(
-                        this.ruleSetToSubmit[
-                            `overdue_${this.triggerNumber}_forgive_fine`
-                        ]
-                    );
-            }
-
-            if (
-                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_notice`] !==
-                    null &&
-                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_notice`] !==
-                    this.fallbackRuleSet[`overdue_${this.triggerNumber}_notice`]
-            ) {
-                ruleSetToSubmit[`overdue_${this.triggerNumber}_notice`] =
-                    cloneDeep(
-                        this.ruleSetToSubmit[
-                            `overdue_${this.triggerNumber}_notice`
-                        ]
-                    );
-            }
-
-            if (
-                this.ruleSetToSubmit[
-                    `overdue_${this.triggerNumber}_restrict`
-                ] !== null &&
-                this.ruleSetToSubmit[
-                    `overdue_${this.triggerNumber}_restrict`
-                ] !==
-                    this.fallbackRuleSet[
-                        `overdue_${this.triggerNumber}_restrict`
-                    ]
-            ) {
-                ruleSetToSubmit[`overdue_${this.triggerNumber}_restrict`] =
-                    cloneDeep(
-                        this.ruleSetToSubmit[
-                            `overdue_${this.triggerNumber}_restrict`
-                        ]
-                    );
-            }
-
-            if (
-                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_mtt`] !==
-                    null &&
-                Array.isArray(
-                    this.ruleSetToSubmit[`overdue_${this.triggerNumber}_mtt`]
-                ) &&
-                !isEqual(
-                    this.ruleSetToSubmit[`overdue_${this.triggerNumber}_mtt`],
-                    this.fallbackRuleSet[`overdue_${this.triggerNumber}_mtt`]
-                )
-            ) {
-                ruleSetToSubmit[`overdue_${this.triggerNumber}_mtt`] =
-                    cloneDeep(
-                        this.ruleSetToSubmit[
-                            `overdue_${this.triggerNumber}_mtt`
-                        ].join(",")
-                    );
+                if (value !== savedRule?.value) {
+                    ruleSetToSubmit[ruleName] = value;
+                }
             }
 
             // in edit mode, check for changes from elsewhere to the rule set being edited
