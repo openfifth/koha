@@ -271,10 +271,8 @@ SKIP: {
     time_diff("checkout");
 
     for my $biblionumber (@biblionumbers) {
-        $driver->get( $base_url . "/circ/returns.pl" );
-        $driver->find_element('//input[@id="barcode"]')->send_keys( 't_value_bib' . $biblionumber );
-        $driver->find_element('//*[@id="circ_returns_checkin"]//button[@type="submit"]')->click;
-        like( $driver->get_title(), qr(Check in test biblio \d+) );
+        $driver->get( $base_url . "/circ/checkin.pl?barcode=t_value_bib" . $biblionumber );
+        like( $driver->get_title(), qr(Check in) );
     }
 
     time_diff("checkin");

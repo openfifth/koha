@@ -847,15 +847,10 @@ export default {
         };
 
         const getCheckinParams = barcode => {
-            const csrfMeta = document.querySelector('meta[name="csrf-token"]');
             return {
-                url: "/cgi-bin/koha/circ/returns.pl",
+                url: "/cgi-bin/koha/circ/checkin.pl",
                 params: {
                     barcode: barcode,
-                    op: "cud-checkin",
-                    csrf_token: csrfMeta
-                        ? csrfMeta.getAttribute("content")
-                        : "",
                 },
             };
         };
@@ -864,41 +859,20 @@ export default {
             if (!barcode) return;
             const { url, params } = getCheckinParams(barcode);
 
-            const form = document.createElement("form");
-            form.method = "POST";
-            form.action = url;
-
-            Object.keys(params).forEach(key => {
-                const input = document.createElement("input");
-                input.type = "hidden";
-                input.name = key;
-                input.value = params[key];
-                form.appendChild(input);
-            });
-
-            document.body.appendChild(form);
-            form.submit();
+            const query = new URLSearchParams(params).toString();
+            window.location.href = `${url}?${query}`;
         };
 
         const renderCheckinForm = barcode => {
             if (!barcode) return `<em>${$__("No barcode")}</em>`;
             const { url, params } = getCheckinParams(barcode);
 
-            // Build the hidden inputs dynamically from the same params object
-            const inputs = Object.entries(params)
-                .map(
-                    ([name, value]) =>
-                        `<input type="hidden" name="${name}" value="${value}" />`
-                )
-                .join("");
+            const query = new URLSearchParams(params).toString();
 
             return `
-                <form method="POST" action="${url}" style="display:inline;">
-                    ${inputs}
-                    <button type="submit" class="btn btn-default btn-sm">
-                        <i class="fa fa-download"></i> ${$__("Check-in")}
-                    </button>
-                </form>
+                <a href="${url}?${query}" class="btn btn-default btn-sm">
+                    <i class="fa fa-download"></i> ${$__("Check-in")}
+                </a>
             `;
         };
 

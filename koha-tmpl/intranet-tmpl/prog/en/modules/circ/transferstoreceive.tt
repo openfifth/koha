@@ -97,9 +97,7 @@
                                         <td>[% IF reser.homebranch %][% Branches.GetName( reser.homebranch ) | html %][% END %]</td>
                                         <td>[% reser.itemcallnumber | html %]</td>
                                         <td class="actions"
-                                            ><a href="/cgi-bin/koha/circ/returns.pl?itemnumber=[% reser.itemnumber | uri %]&amp;canceltransfer=1&amp;dest=ttr" class="btn btn-default btn-xs"
-                                                ><i class="fa fa-times"></i> Cancel transfer</a
-                                            ></td
+                                            ><button type="button" class="btn btn-default btn-xs cancel-transfer" data-transfer-id="[% reser.transfer_id | html %]"><i class="fa fa-times"></i> Cancel transfer</button></td
                                         >
                                     </tr>
                                 [% END %]</tbody
@@ -130,6 +128,29 @@
                     dom: "t",
                     paging: false,
                 });
+            });
+
+            $(".cancel-transfer").on("click", function () {
+                var button = $(this);
+                var transfer_id = button.data("transfer-id");
+                if (!transfer_id) return;
+
+                button.prop("disabled", true);
+
+                $.ajax({
+                    method: "POST",
+                    url: "/api/v1/transfers/" + encodeURIComponent(transfer_id) + "/cancellation",
+                    contentType: "application/json",
+                })
+                    .done(function () {
+                        // Preserve the legacy behaviour: return to the
+                        // transfers-to-receive page after cancelling.
+                        window.location.href = "/cgi-bin/koha/circ/transferstoreceive.pl";
+                    })
+                    .fail(function () {
+                        button.prop("disabled", false);
+                        alert(_("Unable to cancel the transfer."));
+                    });
             });
         });
     </script>

@@ -89,6 +89,7 @@ while ( my $library = $libraries->next ) {
             $getransf{'itemtype'}     = $itemtype->description;    # FIXME Should not it be translated_description?
             %getransf                 = (
                 %getransf,
+                transfer_id    => $num->{branchtransfer_id},
                 title          => $biblio->title,
                 subtitle       => $biblio->subtitle,
                 medium         => $biblio->medium,

@@ -310,7 +310,20 @@ export default {
 
         onMounted(() => {
             document.addEventListener("click", handleDocumentClick);
+            handleUrlParams();
         });
+
+        // Handle deep-link query params carried over from the legacy
+        // returns.pl page so existing links keep working:
+        //   ?barcode=XXXX   -> auto-submit a checkin
+        function handleUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+
+            const barcode = params.get("barcode");
+            if (barcode && barcode.trim()) {
+                onBarcodeScan(barcode.trim());
+            }
+        }
 
         onBeforeUnmount(() => {
             document.removeEventListener("click", handleDocumentClick);

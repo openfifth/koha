@@ -330,6 +330,13 @@ sub cancel_transfer {
     $transfer->cancel( { reason => 'Manual', force => 1 } );
 
     # If there's a recall in transit for this item, revert it
+    #
+    # FIXME: This recall-revert-on-cancel trigger really belongs one level
+    # down, in Koha::Item::Transfer->cancel, so that *every* transfer
+    # cancellation reverts an in-transit recall regardless of the caller
+    # (checkin, transfers-to-receive, etc.). It lives here for now because
+    # Koha::Item::Transfer->cancel is shared by callers that must not trigger
+    # this behaviour; moving it down should be done carefully in a follow-up.
     if ( C4::Context->preference('UseRecalls') ) {
         my $item   = $self->item;
         my $recall = Koha::Recalls->find( { item_id => $item->itemnumber, status => 'in_transit' } );
