@@ -357,8 +357,15 @@ export const useCircRulesStore = defineStore("circRules", () => {
             context,
             ruleSuffix,
             triggerNumber,
-            includeFallbacks = true
+            includeFallbacks = true,
+            excludeExactContext = false
         ) {
+            const isExactContext = ruleSet =>
+                ruleSet?.context.library_id === context.library_id &&
+                ruleSet?.context.patron_category_id ===
+                    context.patron_category_id &&
+                ruleSet?.context.item_type_id === context.item_type_id;
+
             if (
                 !this.currentAndDefaultRawRuleSets ||
                 !Array.isArray(this.currentAndDefaultRawRuleSets) ||
@@ -367,17 +374,16 @@ export const useCircRulesStore = defineStore("circRules", () => {
                 return { value: null, isFallback: true };
             }
             // Check if the current ruleSet's value for the ruleSuffix is undefined
-            const existingRule = this.currentAndDefaultRawRuleSets.find(
-                ruleSet =>
-                    ruleSet[`overdue_${triggerNumber}_${ruleSuffix}`] !==
-                        undefined &&
-                    ruleSet[`overdue_${triggerNumber}_${ruleSuffix}`] !==
-                        null &&
-                    ruleSet?.context.library_id === context.library_id &&
-                    ruleSet?.context.patron_category_id ===
-                        context.patron_category_id &&
-                    ruleSet?.context.item_type_id === context.item_type_id
-            );
+            const existingRule = excludeExactContext
+                ? undefined
+                : this.currentAndDefaultRawRuleSets.find(
+                      ruleSet =>
+                          ruleSet[`overdue_${triggerNumber}_${ruleSuffix}`] !==
+                              undefined &&
+                          ruleSet[`overdue_${triggerNumber}_${ruleSuffix}`] !==
+                              null &&
+                          isExactContext(ruleSet)
+                  );
 
             // if handling 'has_rules', derive from actual rules rather than DB
             if (ruleSuffix === "has_rules") {
@@ -422,6 +428,7 @@ export const useCircRulesStore = defineStore("circRules", () => {
                         undefined &&
                     ruleSet[`overdue_${triggerNumber}_${ruleSuffix}`] !==
                         null &&
+                    !(excludeExactContext && isExactContext(ruleSet)) &&
                     (ruleSet.context.library_id === context.library_id ||
                         ruleSet.context.library_id === "*") &&
                     (ruleSet.context.patron_category_id ===
