@@ -139,13 +139,8 @@
             [% SET identity_providers = AuthClient.get_providers('staff', shibbolethLoginUrl) %]
             [% IF ( ! identity_providers.empty ) %]
                 [% FOREACH provider IN identity_providers %]
-                    [% IF provider.protocol == 'SAML2' %]
-                        [% SET provider_href = provider.url %]
-                    [% ELSE %]
-                        [% SET provider_href = provider.url | url %]
-                    [% END %]
                     <p class="clearfix">
-                        <a href="[% provider_href | $raw %]" class="btn btn-light col" id="provider_[% provider.code | html %]">
+                        <a href="[% provider.url | $raw %]" class="btn btn-light col" id="provider_[% provider.code | html %]">
                             [% IF provider.icon_url %]
                                 <img src="[% provider.icon_url | url %]" style="max-height: 20px; max-width: 20px;" />
                             [% ELSE %]
