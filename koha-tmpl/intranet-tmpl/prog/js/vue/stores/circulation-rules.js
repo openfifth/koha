@@ -191,11 +191,9 @@ export const useCircRulesStore = defineStore("circRules", () => {
             });
             return max;
         },
-        handleLost(id) {
-            const lostValue = this.lostValues.find(
-                val => val.authorised_value_id === id
-            );
-            return lostValue ? lostValue.description : id;
+        handleLost(value) {
+            const lostValue = this.lostValues.find(val => val.value === value);
+            return lostValue ? lostValue.description : value;
         },
         hasConflict(oldRuleSet, newRuleSet, triggerNumber) {
             if (
@@ -789,13 +787,10 @@ export const useCircRulesStore = defineStore("circRules", () => {
             const client = APIClient.authorised_values;
             let lostValues = await client.values.get("lost");
             // coerce id type to string to prevent datatype errors later on
-            lostValues.forEach(
-                val =>
-                    (val.authorised_value_id = String(val.authorised_value_id))
-            );
+            lostValues.forEach(val => (val.value = String(val.value)));
             lostValues.sort(this.compareByProperty("description"));
             lostValues.unshift({
-                authorised_value_id: "*",
+                value: "*",
                 description: $__("Default rule for all categories"),
             });
             this.lostValues = lostValues;
