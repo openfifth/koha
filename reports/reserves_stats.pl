@@ -46,20 +46,13 @@ Plugin that shows reserve stats
 my $input          = CGI->new;
 my $fullreportname = "reports/reserves_stats.tt";
 my $do_it          = $input->param('do_it');
-my $line           = $input->param("Line");
-my $column         = $input->param("Column");
+my $line_input     = $input->param("Line");
+my $column_input   = $input->param("Column");
 my $calc           = $input->param("Cellvalue");
 my $output         = $input->param("output");
 my $basename       = $input->param("basename");
 my $hash_params    = $input->Vars;
-my $filter_hashref;
 
-foreach my $filter ( grep { $_ =~ /^filter/ } keys %$hash_params ) {
-    my $filterstring = $filter;
-    $filterstring =~ s/^filter_//g;
-    $$filter_hashref{$filterstring} = $$hash_params{$filter}
-        if ( defined $$hash_params{$filter} && $$hash_params{$filter} ne "" );
-}
 my ( $template, $borrowernumber, $cookie ) = get_template_and_user(
     {
         template_name => $fullreportname,
@@ -68,6 +61,88 @@ my ( $template, $borrowernumber, $cookie ) = get_template_and_user(
         flagsrequired => { reports => '*' },
     }
 );
+
+# Line and Column values reach calculate() and are interpolated
+# directly into a SELECT clause; any value not on this exact list is
+# rejected to prevent SQL injection. The 15 names below are the
+# checked-in radio buttons the wizard's own template
+# (reserves_stats.tt) submits.
+my %allowed_line_col = map { $_ => 1 } qw(
+    reservestatus
+    reservedate
+    notificationdate
+    reminderdate
+    waitingdate
+    cancellationdate
+    borrowers.categorycode
+    borrowers.sort1
+    borrowers.sort2
+    items.itype
+    items.ccode
+    items.location
+    items.holdingbranch
+    items.homebranch
+    reserves.branchcode
+);
+
+# Legitimate filter parameter names (after stripping the `filter_`
+# prefix) that the wizard's UI submits. Each is validated as an
+# EXACT string match rather than derived by regex-stripping suffixes
+# from the Line/Column allowlist — the two namespaces are related
+# but not identical (e.g. `categorycode` here vs.
+# `borrowers.categorycode` in the Line/Column list, and the
+# reservestatus checkbox family uses `_or_C/F/P/W` suffixes with
+# uppercase letters that a simple `s/_[a-z_]+$//` rewrite would not
+# handle). The downstream WHERE builder interpolates the stripped
+# filter name into SQL, so every entry below is (a) matched by the
+# builder's own suffix logic (`_begin`, `_end`, `_endex`, `_or`, or
+# bare) and (b) a safe bare-column reference in the joined query.
+my %allowed_filter = map { $_ => 1 } qw(
+    reservestatus_or_C
+    reservestatus_or_F
+    reservestatus_or_P
+    reservestatus_or_W
+    reservedate_begin
+    reservedate_end
+    notificationdate_begin
+    notificationdate_end
+    reminderdate_begin
+    reminderdate_end
+    waitingdate_begin
+    waitingdate_end
+    cancellationdate_begin
+    cancellationdate_end
+    categorycode
+    items.itype
+    items.ccode
+    items.location
+    items.holdingbranch
+    items.homebranch
+    items.itemcallnumber_begin
+    items.itemcallnumber_endex
+    reserves.branchcode
+    borrowers.sort1
+    borrowers.sort2
+);
+
+my $line =
+    ( defined $line_input && $allowed_line_col{$line_input} )
+    ? $line_input
+    : 'reserves.branchcode';
+my $column =
+    ( defined $column_input && $allowed_line_col{$column_input} )
+    ? $column_input
+    : 'reservestatus';
+
+my $filter_hashref;
+foreach my $filter ( grep { $_ =~ /^filter_/ } keys %$hash_params ) {
+    my $filterstring = $filter;
+    $filterstring =~ s/^filter_//;
+    next unless $allowed_filter{$filterstring};
+
+    $$filter_hashref{$filterstring} = $$hash_params{$filter}
+        if ( defined $$hash_params{$filter} && $$hash_params{$filter} ne "" );
+}
 our $sep = C4::Context->csv_delimiter( scalar $input->param("sep") );
 $template->param(
     do_it => $do_it,
