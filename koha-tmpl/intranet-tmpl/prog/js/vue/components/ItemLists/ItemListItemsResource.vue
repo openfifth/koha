@@ -113,6 +113,13 @@ export default {
                     hideIn: ["Form"],
                 },
                 {
+                    name: "home_library.name",
+                    required: true,
+                    type: "text",
+                    label: $__("Home Library"),
+                    hideIn: ["Form"],
+                },
+                {
                     name: "me.location",
                     required: true,
                     type: "text",
@@ -217,7 +224,7 @@ export default {
 
         const tableOptions = {
             options: {
-                embed: "biblio,holding_library,item_type,+strings",
+                embed: "biblio,holding_library,home_library,item_type,+strings",
                 order: [[1, "asc"]],
                 additionalButtons: [
                     ...(config.value?.permissions?.items_batchmod

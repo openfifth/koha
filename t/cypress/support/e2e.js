@@ -1861,6 +1861,9 @@ cy.getItem = () => {
             name: "A Library",
         },
         holding_library_id: "ALB",
+        home_library: {
+            name: "A Library",
+        },
         home_library_id: "ALB",
         item_id: 1,
         item_type: {
