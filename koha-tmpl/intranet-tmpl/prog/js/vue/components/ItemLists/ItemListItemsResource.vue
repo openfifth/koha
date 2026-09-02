@@ -106,6 +106,21 @@ export default {
                     hideIn: ["Form"],
                 },
                 {
+                    name: "me.collection_code",
+                    required: true,
+                    type: "text",
+                    label: $__("Collection"),
+                    hideIn: ["Form"],
+                    tableColumnDefinition: {
+                        title: $__("Collection"),
+                        data: "me.collection_code",
+                        render: function (data, type, row, meta) {
+                            return escape_str(row._strings.collection_code.str);
+                        },
+                        searchable: false,
+                    },
+                },
+                {
                     name: "holding_library.name",
                     required: true,
                     type: "text",

@@ -1847,6 +1847,9 @@ cy.getItem = () => {
             location: {
                 str: "Shelving",
             },
+            collection_code: {
+                str: "General",
+            },
         },
         biblio: {
             author: "Doe, Blake",
@@ -1871,6 +1874,7 @@ cy.getItem = () => {
         },
         item_type_id: "BK",
         location: "GEN",
+        collection_code: "GEN",
     };
 };
 
