@@ -135,6 +135,8 @@
                     label="description"
                     :reduce="val => val.value"
                     :options="lostValues"
+                    :clearable="false"
+                    @update:modelValue="setAllowSubmission"
                 >
                     <template #search="{ attributes, events }">
                         <input
@@ -149,7 +151,7 @@
                                     `overdue_${triggerNumber}_lost`
                                 ] === undefined
                                     ? handleLost(
-                                          fallbackRuleSet[
+                                          fallbackRuleSet?.[
                                               `overdue_${triggerNumber}_lost`
                                           ]
                                       )
@@ -158,6 +160,12 @@
                         />
                     </template>
                 </v-select>
+                <ResetToFallback
+                    :ruleSetToSubmit="ruleSetToSubmit"
+                    :fallbackRuleSet="fallbackRuleSet"
+                    :ruleName="`overdue_${triggerNumber}_lost`"
+                    :setAllowSubmission="setAllowSubmission"
+                />
             </li>
             <li>
                 <label for="charge"
@@ -326,7 +334,12 @@
 </template>
 
 <script>
+import ResetToFallback from "./ResetToFallback.vue";
+
 export default {
+    components: {
+        ResetToFallback,
+    },
     props: {
         ruleSetInitialized: { type: Boolean, required: true },
         editMode: { type: [String, Boolean], required: true },

@@ -51,28 +51,12 @@
                         />
                     </template>
                 </v-select>
-                <button
-                    v-if="
-                        ruleSetToSubmit?.[`overdue_${triggerNumber}_notice`] !==
-                            null &&
-                        ruleSetToSubmit?.[`overdue_${triggerNumber}_notice`] !==
-                            undefined &&
-                        fallbackRuleSet?.[`overdue_${triggerNumber}_notice`] !==
-                            null &&
-                        fallbackRuleSet?.[`overdue_${triggerNumber}_notice`] !==
-                            undefined
-                    "
-                    type="button"
-                    class="btn btn-link"
-                    :title="$__('Undo override and reset to fallback')"
-                    @click="
-                        ruleSetToSubmit[`overdue_${triggerNumber}_notice`] =
-                            null;
-                        setAllowSubmission();
-                    "
-                >
-                    <i class="fa fa-undo"></i>
-                </button>
+                <ResetToFallback
+                    :ruleSetToSubmit="ruleSetToSubmit"
+                    :fallbackRuleSet="fallbackRuleSet"
+                    :ruleName="`overdue_${triggerNumber}_notice`"
+                    :setAllowSubmission="setAllowSubmission"
+                />
             </li>
             <li
                 v-if="
@@ -130,7 +114,12 @@
 </template>
 
 <script>
+import ResetToFallback from "./ResetToFallback.vue";
+
 export default {
+    components: {
+        ResetToFallback,
+    },
     props: {
         ruleSetInitialized: { type: Boolean, required: true },
         editMode: { type: [String, Boolean], required: true },
