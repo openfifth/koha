@@ -194,7 +194,7 @@ export default {
                     },
                     tableColumnDefinition: {
                         title: $__("Fiscal period"),
-                        data: "fiscal_period.name",
+                        data: "ledger.fiscal_period.name",
                         searchable: true,
                         orderable: true,
                         render(data, type, row, meta) {
@@ -536,7 +536,7 @@ export default {
             table_settings: fund_table_settings,
             add_filters: true,
             options: {
-                embed: "all_sub_funds,all_sub_funds.fiscal_period,all_sub_funds.ledger,allocations,parent_fund,fiscal_period,ledger",
+                embed: "all_sub_funds,all_sub_funds.fiscal_period,all_sub_funds.ledger,all_sub_funds.ledger.fiscal_period,allocations,parent_fund,fiscal_period,ledger,ledger.fiscal_period",
             },
             filters_options: {
                 ...(authorisedValues.value.av_fund_type.length && {
