@@ -109,6 +109,10 @@ describe("Item List CRUD operations", () => {
         });
         cy.visit("/cgi-bin/koha/lists/items");
 
+        cy.get(
+            "#item_lists_list table tbody tr:first .dropdown-toggle"
+        ).click();
+
         cy.get("#item_lists_list table tbody tr:first")
             .contains("Delete")
             .click();
@@ -131,6 +135,10 @@ describe("Item List CRUD operations", () => {
             statusCode: 204,
             body: null,
         });
+
+        cy.get(
+            "#item_lists_list table tbody tr:first .dropdown-toggle"
+        ).click();
         cy.get("#item_lists_list table tbody tr:first")
             .contains("Delete")
             .click();

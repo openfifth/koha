@@ -6,6 +6,7 @@
 </template>
 <script>
 import { inject } from "vue";
+import { useRouter } from "vue-router";
 import BaseResource from "../BaseResource.vue";
 import { useBaseResource } from "../../composables/base-resource.js";
 import { APIClient } from "../../fetch/api-client.js";
@@ -17,6 +18,8 @@ export default {
         routeAction: String,
     },
     setup(props) {
+        const router = useRouter();
+
         const ItemListsStore = inject("ItemListsStore");
         const { config } = storeToRefs(ItemListsStore);
 
@@ -168,12 +171,27 @@ export default {
                 embed: "item_list_contents+count,item_list_shares+count",
             },
             url: baseResource.getResourceTableUrl(),
+            actionsDropdown: true,
             actions: {
                 "-1": [
                     {
                         edit: {
                             text: $__("Edit"),
                             icon: "fa fa-pencil",
+                            should_display: row => row?.can_update ?? true,
+                        },
+                    },
+                    {
+                        add_items: {
+                            text: $__("Add Items"),
+                            icon: "fa fa-plus",
+                            should_display: row => row?.can_manage ?? true,
+                        },
+                    },
+                    {
+                        add_shares: {
+                            text: $__("Add Shares"),
+                            icon: "fa fa-plus",
                             should_display: row => row?.can_update ?? true,
                         },
                     },
@@ -185,6 +203,16 @@ export default {
                         },
                     },
                 ],
+            },
+            additionalEvents: {
+                add_items: resource => {
+                    window.location.href =
+                        "/cgi-bin/koha/lists/items/" + resource.id;
+                },
+                add_shares: resource => {
+                    window.location.href =
+                        "/cgi-bin/koha/lists/items/" + resource.id + "/shares";
+                },
             },
         };
 
