@@ -19,7 +19,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 8;
+use Test::More tests => 10;
 
 use Test::MockModule;
 use Test::MockObject;
@@ -431,6 +431,100 @@ subtest '_update_patron_from_mapped_data() tests' => sub {
     );
     $patron->discard_changes;
     is( $patron->firstname, 'Mixed', 'Core field updated alongside patron attribute in mixed update' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest '_update_patron_from_mapped_data() with repeatable attributes' => sub {
+
+    plan tests => 7;
+
+    $schema->storage->txn_begin;
+
+    my $client = Koha::Auth::Client->new;
+    my $patron = $builder->build_object( { class => 'Koha::Patrons' } );
+
+    my $repeatable_type = $builder->build_object(
+        {
+            class => 'Koha::Patron::Attribute::Types',
+            value => { repeatable => 1, unique_id => 0 }
+        }
+    );
+
+    # A single value from the IdP is stored as-is
+    $client->_update_patron_from_mapped_data(
+        { patron => $patron, mapped_data => { 'patron_attribute:' . $repeatable_type->code => 'A' } } );
+    my $attrs = Koha::Patron::Attributes->search(
+        { borrowernumber => $patron->borrowernumber, code => $repeatable_type->code } );
+    is( $attrs->count, 1, 'One value stored for a scalar mapping' );
+
+    # A multi-valued mapping (arrayref) creates one row per value
+    $client->_update_patron_from_mapped_data(
+        {
+            patron      => $patron,
+            mapped_data => { 'patron_attribute:' . $repeatable_type->code => [ 'B', 'C' ] }
+        }
+    );
+    $attrs = Koha::Patron::Attributes->search(
+        { borrowernumber => $patron->borrowernumber, code => $repeatable_type->code } );
+    is( $attrs->count, 2, 'Two rows created for a two-element array mapping' );
+    my @values = sort map { $_->attribute } $attrs->as_list;
+    is_deeply( \@values, [ 'B', 'C' ], 'Both values present' );
+
+    # The whole set is replaced on the next sync, including removal of values
+    # the IdP no longer sends — this is what makes it a sync, not just an append.
+    $client->_update_patron_from_mapped_data(
+        { patron => $patron, mapped_data => { 'patron_attribute:' . $repeatable_type->code => ['B'] } } );
+    $attrs = Koha::Patron::Attributes->search(
+        { borrowernumber => $patron->borrowernumber, code => $repeatable_type->code } );
+    is( $attrs->count,           1,   'Previous values are replaced, not appended to' );
+    is( $attrs->next->attribute, 'B', 'Only the value still supplied by the IdP remains' );
+
+    # A non-repeatable attribute given multiple values falls back to the first one
+    # instead of dying or violating the type's own repeatable constraint.
+    my $single_type = $builder->build_object(
+        {
+            class => 'Koha::Patron::Attribute::Types',
+            value => { repeatable => 0, unique_id => 0 }
+        }
+    );
+    $client->_update_patron_from_mapped_data(
+        {
+            patron      => $patron,
+            mapped_data => { 'patron_attribute:' . $single_type->code => [ 'X', 'Y' ] }
+        }
+    );
+    $attrs =
+        Koha::Patron::Attributes->search( { borrowernumber => $patron->borrowernumber, code => $single_type->code } );
+    is( $attrs->count, 1, 'Non-repeatable attribute keeps only one value even when given several' );
+
+    # An invalid attribute code still fails loudly
+    throws_ok {
+        $client->_update_patron_from_mapped_data(
+            { patron => $patron, mapped_data => { 'patron_attribute:DOES_NOT_EXIST' => 'x' } } );
+    }
+    'Koha::Exceptions::Patron::Attribute::InvalidType', 'Invalid attribute code still fails loudly';
+
+    $schema->storage->txn_rollback;
+};
+
+subtest '_update_patron_from_mapped_data() with a multi-valued core field mapping' => sub {
+
+    plan tests => 1;
+
+    $schema->storage->txn_begin;
+
+    my $client = Koha::Auth::Client->new;
+    my $patron = $builder->build_object( { class => 'Koha::Patrons', value => { surname => 'Original' } } );
+
+    # Core borrower fields are single-value DB columns; a mapping that resolves
+    # to an array (e.g. a claim mapped without an index) can't be stored as-is.
+    # Falling back to the first value keeps login working instead of storing a
+    # stringified reference or dying.
+    $client->_update_patron_from_mapped_data(
+        { patron => $patron, mapped_data => { surname => [ 'First', 'Second' ] } } );
+    $patron->discard_changes;
+    is( $patron->surname, 'First', 'Multi-valued core field mapping falls back to the first value' );
 
     $schema->storage->txn_rollback;
 };

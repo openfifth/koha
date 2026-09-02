@@ -24,6 +24,7 @@ use C4::Context;
 use Koha::Exceptions;
 use Koha::Exceptions::Auth;
 use Koha::Auth::Identity::Providers;
+use Koha::Logger;
 use Koha::Patron::Attribute;
 use Koha::Patron::Attribute::Types;
 use Koha::Patron::Attributes;
@@ -253,20 +254,51 @@ sub _update_patron_from_mapped_data {
     my $patron      = $params->{patron};
     my $mapped_data = $params->{mapped_data};
 
+    my $logger = Koha::Logger->get;
+
     my ( %patron_attrs, %borrower_data );
     for my $key ( keys %$mapped_data ) {
+        my $value = $mapped_data->{$key};
+        if ( ref $value eq 'ARRAY' && $key !~ /^patron_attribute:/ ) {
+
+            # Core borrower fields are single-value DB columns; a mapping that
+            # resolves to multiple values here is a configuration error, not
+            # something we can store. Fall back to the first value rather than
+            # storing a stringified reference or dying mid-login.
+            $logger->warn("SAML2/OAuth mapping: multiple values supplied for core field '$key'; using the first one");
+            $value = $value->[0];
+        }
         if ( $key =~ /^patron_attribute:(.+)$/ ) {
-            $patron_attrs{$1} = $mapped_data->{$key};
+            $patron_attrs{$1} = $value;
         } else {
-            $borrower_data{$key} = $mapped_data->{$key};
+            $borrower_data{$key} = $value;
         }
     }
     $patron->set( \%borrower_data )->store;
+
     for my $code ( keys %patron_attrs ) {
-        my $existing = Koha::Patron::Attributes->search( { borrowernumber => $patron->borrowernumber, code => $code } );
-        $existing->delete;
-        Koha::Patron::Attribute->new(
-            { borrowernumber => $patron->borrowernumber, code => $code, attribute => $patron_attrs{$code} } )->store;
+        my $value = $patron_attrs{$code};
+
+        # Dedupe while preserving order, in case the IdP sends the same value twice.
+        my ( %seen, @values );
+        @values = grep { !$seen{$_}++ } ref $value eq 'ARRAY' ? @$value : ($value);
+
+        my $type = Koha::Patron::Attribute::Types->find($code);
+        if ( @values > 1 && !( $type && $type->repeatable ) ) {
+            $logger->warn(
+                "SAML2/OAuth mapping: multiple values supplied for non-repeatable attribute '$code'; using the first one"
+            );
+            @values = ( $values[0] );
+        }
+
+        # The IdP is authoritative for whatever it maps to this code: replace
+        # the whole set every sync (not just add to it), so a value that
+        # changed or disappeared at the IdP is reflected here too.
+        Koha::Patron::Attributes->search( { borrowernumber => $patron->borrowernumber, code => $code } )->delete;
+        for my $v (@values) {
+            Koha::Patron::Attribute->new( { borrowernumber => $patron->borrowernumber, code => $code, attribute => $v } )
+                ->store;
+        }
     }
 }
 
