@@ -18,6 +18,8 @@ export default {
         routeAction: String,
     },
     setup(props, { emit }) {
+        const { setConfirmationDialog, setMessage } = inject("mainStore");
+
         const ItemListsStore = inject("ItemListsStore");
         const { config } = storeToRefs(ItemListsStore);
 
@@ -272,6 +274,33 @@ export default {
             form.submit();
         };
 
+        const batchRemove = (ids, callback) => {
+            if (ids.length === 0) return;
+
+            setConfirmationDialog(
+                {
+                    title: $__(
+                        "Are you sure you want to remove these items from the list?"
+                    ),
+                    message:
+                        ids.length > 1
+                            ? $__("Removing %s items").format(ids.length)
+                            : $__("Removing 1 item"),
+                    accept_label: $__("Yes, remove"),
+                    cancel_label: $__("No, do not remove"),
+                },
+                () => {
+                    baseResource.apiClient.removeMany(ids).then(
+                        success => {
+                            setMessage($__("Items removed"), true);
+                            callback();
+                        },
+                        error => {}
+                    );
+                }
+            );
+        };
+
         const batchEdit = ids => {
             if (ids.length === 0) return;
 
@@ -295,6 +324,7 @@ export default {
 
         function onSelectionChange(e, dt) {
             const buttons_enabled = dt.rows({ selected: true }).count() > 0;
+            dt.button("batch_remove:name").enable(buttons_enabled);
             dt.button("batch_edit:name").enable(buttons_enabled);
             dt.button("batch_delete:name").enable(buttons_enabled);
         }
@@ -304,6 +334,20 @@ export default {
                 embed: "biblio,holding_library,home_library,item_type,+strings",
                 order: [[1, "asc"]],
                 additionalButtons: [
+                    {
+                        name: "batch_remove",
+                        text: $__("Batch remove from list"),
+                        enabled: false,
+                        action: (e, dt, node, config) =>
+                            batchRemove(
+                                dt
+                                    .rows({ selected: true })
+                                    .data()
+                                    .map(row => row.item_id)
+                                    .toArray(),
+                                () => dt.ajax.reload()
+                            ),
+                    },
                     ...(config.value?.permissions?.items_batchmod
                         ? [
                               {

@@ -322,18 +322,20 @@ sub add_items {
     };
 }
 
-=head3 remove_item
+=head3 remove_items
 
-Removes an item from an item list. The item is defined by its itemnumber.
+Removes items from an item list, defined by their itemnumbers.
 
 =cut
 
-sub remove_item {
+sub remove_items {
     my $c = shift->openapi->valid_input or return;
 
     try {
         my $patron = $c->stash('koha.user');
-        my $list   = Koha::Item::Lists->find( $c->param('item_list_id') );
+        my $body   = $c->req->json;
+
+        my $list = Koha::Item::Lists->find( $c->param('item_list_id') );
         return $c->render_resource_not_found("ItemList")
             unless $list;
 
@@ -342,11 +344,9 @@ sub remove_item {
             openapi => { error => "You do not have permission to manage this item list." }
         ) unless $list->can_be_managed_by($patron);
 
-        my $item = Koha::Items->find( $c->param('item_id') );
-        return $c->render_resource_not_found("Item")
-            unless $item;
+        my $itemnumbers = $body->{item_ids} // [];
 
-        $list->remove_item( $item->itemnumber );
+        $list->remove_items($itemnumbers);
 
         return $c->render_resource_deleted();
     } catch {

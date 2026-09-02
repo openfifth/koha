@@ -36,7 +36,7 @@ my $schema  = Koha::Database->new->schema;
 my $builder = t::lib::TestBuilder->new;
 
 subtest 'managing items' => sub {
-    plan tests => 6;
+    plan tests => 8;
 
     $schema->storage->txn_begin;
 
@@ -59,6 +59,13 @@ subtest 'managing items' => sub {
     is( $list->items->count, 1 );
 
     $list->remove_item( $item2->itemnumber );
+    is( $list->items->count, 0 );
+
+    $list->add_item( $item1->itemnumber );
+    $list->add_item( $item2->itemnumber );
+    is( $list->items->count, 2 );
+
+    $list->remove_items( [ $item1->itemnumber, $item2->itemnumber ] );
     is( $list->items->count, 0 );
 
     $schema->storage->txn_rollback;

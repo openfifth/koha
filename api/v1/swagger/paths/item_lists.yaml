@@ -465,23 +465,34 @@
     x-koha-authorization:
       permissions:
         catalogue: "1"
-/item-lists/{item_list_id}/items/{item_id}:
   delete:
-    x-mojo-to: Item::Lists#remove_item
-    operationId: removeItemListItem
+    x-mojo-to: Item::Lists#remove_items
+    operationId: removeItemListItems
     tags:
       - item_lists
-    summary: Add a new item to an item list
+    summary: Remove items from an item list
     parameters:
       - $ref: "../swagger.yaml#/parameters/item_list_id_pp"
-      - $ref: "../swagger.yaml#/parameters/item_id_pp"
+      - name: body
+        in: body
+        description: A JSON object describing the items to remove
+        required: true
+        schema:
+          type: object
+          additionalProperties: false
+          properties:
+            item_ids:
+              description: Unique item identifiers
+              type: array
+              items:
+                type: integer
     consumes:
       - application/json
     produces:
       - application/json
     responses:
       "204":
-        description: Item removed from item list
+        description: Items removed from item list
       "400":
         description: |
           Bad request. Possible `error_code` attribute values:

@@ -460,8 +460,8 @@ subtest 'add_items()' => sub {
     $schema->storage->txn_rollback;
 };
 
-subtest 'remove_item()' => sub {
-    plan tests => 12;
+subtest 'remove_items()' => sub {
+    plan tests => 17;
 
     $schema->storage->txn_begin;
 
@@ -471,34 +471,71 @@ subtest 'remove_item()' => sub {
     my ( $u,  $bn,  $p )  = get_privileged_user();
     my ( $ux, $bnx, $px ) = get_unprivileged_user();
 
-    my $list    = $builder->build_object( { class => 'Koha::Item::Lists', value => { visibility => 'public' } } );
-    my $item    = $builder->build_object( { class => 'Koha::Items' } );
-    my $list_id = $list->id;
-    my $item_id = $item->itemnumber;
+    my $list     = $builder->build_object( { class => 'Koha::Item::Lists', value => { visibility => 'public' } } );
+    my $item1    = $builder->build_object( { class => 'Koha::Items' } );
+    my $item2    = $builder->build_object( { class => 'Koha::Items' } );
+    my $item3    = $builder->build_object( { class => 'Koha::Items' } );
+    my $list_id  = $list->id;
+    my $item1_id = $item1->itemnumber;
+    my $item2_id = $item2->itemnumber;
+    my $item3_id = $item3->itemnumber;
 
     Koha::Item::ListContent->new(
         {
             item_list_id => $list->id,
-            itemnumber   => $item->itemnumber,
+            itemnumber   => $item1->itemnumber,
         }
     )->store();
 
-    $t->delete_ok("/api/v1/item-lists/$list_id/items/$item_id")->status_is(401);
+    Koha::Item::ListContent->new(
+        {
+            item_list_id => $list->id,
+            itemnumber   => $item2->itemnumber,
+        }
+    )->store();
 
-    $t->delete_ok("//$ux:$px@/api/v1/item-lists/$list_id/items/$item_id")->status_is(403);
+    Koha::Item::ListContent->new(
+        {
+            item_list_id => $list->id,
+            itemnumber   => $item3->itemnumber,
+        }
+    )->store();
+
+    $t->delete_ok( "/api/v1/item-lists/$list_id/items" => json => { item_ids => [$item1_id] } )->status_is(401);
+
+    $t->delete_ok( "//$ux:$px@/api/v1/item-lists/$list_id/items" => json => { item_ids => [$item1_id] } )
+        ->status_is(403);
 
     {
         my $m = Test::MockModule->new('Koha::Item::List')->mock( can_be_managed_by => 0 );
-        $t->delete_ok("//$u:$p@/api/v1/item-lists/$list_id/items/$item_id")->status_is(403);
+        $t->delete_ok( "//$u:$p@/api/v1/item-lists/$list_id/items" => json => { item_ids => [$item1_id] } )
+            ->status_is(403);
     }
 
-    is( Koha::Item::ListContents->search( { item_list_id => $list_id, itemnumber => $item->itemnumber } )->count(), 1 );
+    is(
+        Koha::Item::ListContents->search( { item_list_id => $list_id, itemnumber => $item1->itemnumber } )->count(),
+        1
+    );
 
-    $t->delete_ok("//$u:$p@/api/v1/item-lists/$list_id/items/$item_id")->status_is(204);
+    $t->delete_ok( "//$u:$p@/api/v1/item-lists/$list_id/items" => json => { item_ids => [$item1_id] } )->status_is(204);
 
-    is( Koha::Item::ListContents->search( { item_list_id => $list_id, itemnumber => $item->itemnumber } )->count(), 0 );
+    is(
+        Koha::Item::ListContents->search( { item_list_id => $list_id, itemnumber => $item1->itemnumber } )->count(),
+        0
+    );
 
-    $t->delete_ok("//$u:$p@/api/v1/item-lists/$list_id/items/$item_id")->status_is(204);
+    $t->delete_ok( "//$u:$p@/api/v1/item-lists/$list_id/items" => json => { item_ids => [$item1_id] } )->status_is(204);
+
+    is(
+        Koha::Item::ListContents->search( { item_list_id => $list_id, itemnumber => $item1->itemnumber } )->count(),
+        0
+    );
+    is( Koha::Item::ListContents->search( { item_list_id => $list_id } )->count(), 2 );
+
+    $t->delete_ok( "//$u:$p@/api/v1/item-lists/$list_id/items" => json => { item_ids => [ $item2_id, $item3_id ] } )
+        ->status_is(204);
+
+    is( Koha::Item::ListContents->search( { item_list_id => $list_id } )->count(), 0 );
 
     $schema->storage->txn_rollback;
 };

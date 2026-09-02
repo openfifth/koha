@@ -63,7 +63,13 @@ export class ItemListsAPIClient {
                 }),
             remove: item_id =>
                 this.httpClient.delete({
-                    endpoint: "/" + item_list_id + "/items/" + item_id,
+                    endpoint: "/" + item_list_id + "/items",
+                    body: { item_ids: [item_id] },
+                }),
+            removeMany: item_ids =>
+                this.httpClient.delete({
+                    endpoint: "/" + item_list_id + "/items",
+                    body: { item_ids },
                 }),
             getAll: (query, params) =>
                 this.httpClient.getAll({

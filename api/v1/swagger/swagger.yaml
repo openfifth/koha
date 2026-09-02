@@ -533,8 +533,6 @@ paths:
     $ref: "./paths/item_lists.yaml#/~1item-lists~1{item_list_id}"
   "/item-lists/{item_list_id}/items":
     $ref: "./paths/item_lists.yaml#/~1item-lists~1{item_list_id}~1items"
-  "/item-lists/{item_list_id}/items/{item_id}":
-    $ref: "./paths/item_lists.yaml#/~1item-lists~1{item_list_id}~1items~1{item_id}"
   "/item-lists/{item_list_id}/shares":
     $ref: "./paths/item_lists.yaml#/~1item-lists~1{item_list_id}~1shares"
   "/item-lists/{item_list_id}/shares/{patron_id}":

@@ -224,7 +224,7 @@ describe("Item List contents CRUD operations", () => {
         // Accept the confirmation dialog, get 500
         cy.intercept(
             "DELETE",
-            "/api/v1/item-lists/" + item_list.id + "/items/*",
+            "/api/v1/item-lists/" + item_list.id + "/items",
             {
                 statusCode: 500,
             }
@@ -237,7 +237,7 @@ describe("Item List contents CRUD operations", () => {
         // Accept the confirmation dialog, success!
         cy.intercept(
             "DELETE",
-            "/api/v1/item-lists/" + item_list.id + "/items/*",
+            "/api/v1/item-lists/" + item_list.id + "/items",
             {
                 statusCode: 204,
                 body: null,

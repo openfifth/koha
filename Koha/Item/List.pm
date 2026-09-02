@@ -101,9 +101,21 @@ Removes a new Koha::Item from the item list by its itemnumber.
 sub remove_item {
     my ( $self, $itemnumber ) = @_;
 
-    my $contents = $self->item_list_contents->search( { itemnumber => $itemnumber } );
+    return $self->remove_items( [$itemnumber] );
+}
 
-    return 0 unless $contents->count();
+=head3 remove_items
+
+    $list->remove_items([100, 250, 310]);
+
+Removes multiple Koha::Item objects from the item list by their itemnumbers.
+
+=cut
+
+sub remove_items {
+    my ( $self, $itemnumbers ) = @_;
+
+    my $contents = $self->item_list_contents->search( { itemnumber => { '-in' => $itemnumbers } } );
 
     return $contents->delete();
 }
