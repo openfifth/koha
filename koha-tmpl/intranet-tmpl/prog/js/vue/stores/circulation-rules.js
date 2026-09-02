@@ -790,8 +790,8 @@ export const useCircRulesStore = defineStore("circRules", () => {
             lostValues.forEach(val => (val.value = String(val.value)));
             lostValues.sort(this.compareByProperty("description"));
             lostValues.unshift({
-                value: "*",
-                description: $__("Default rule for all categories"),
+                value: "",
+                description: $__("No lost value"),
             });
             this.lostValues = lostValues;
         },
