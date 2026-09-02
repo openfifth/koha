@@ -1875,6 +1875,7 @@ cy.getItem = () => {
         item_type_id: "BK",
         location: "GEN",
         collection_code: "GEN",
+        serial_issue_number: null,
     };
 };
 

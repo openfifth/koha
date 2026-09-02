@@ -106,6 +106,13 @@ export default {
                     hideIn: ["Form"],
                 },
                 {
+                    name: "serial_issue_number",
+                    required: true,
+                    type: "text",
+                    label: $__("Serial Issue Number"),
+                    hideIn: ["Form"],
+                },
+                {
                     name: "me.collection_code",
                     required: true,
                     type: "text",
