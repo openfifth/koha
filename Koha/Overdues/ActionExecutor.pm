@@ -42,14 +42,18 @@ Koha::Overdues::ActionExecutor - Koha Overdue ActionExecutor object set class.
 =head3 new
 
 Instantiate the class.
+
+Takes an optional C<verbose> flag. When set, each action and each enqueued
+letter reports itself at the point it happens.
 =cut
 
 sub new {
-    my ($class) = @_;
+    my ( $class, $params ) = @_;
     my $self = {
         action_batch_queue      => [],
         notice_queue            => {},
         patrons_marked_returned => {},
+        verbose                 => $params->{verbose} // 0,
     };
     return bless $self, $class;
 }
@@ -141,57 +145,43 @@ sub route_item_actions_to_queue {
     }
 }
 
-=head3 print_queues
+=head3 _report_action
 
-Dump the populated action-batch and notice queues as one structured line per
-queued entry. Called between routing and enactment to give C<--verbose> mode
-in C<process_circulation_triggers.pl> a preview of what the script is about
-to do. Side-effect free.
+Report one enacted action under C<verbose>. Called immediately after the
+enactment it describes, so the sequence printed is the sequence that ran.
 
 =cut
 
-sub print_queues {
-    my ($self) = @_;
+sub _report_action {
+    my ( $self, $batch, $type ) = @_;
 
-    printf "ACTION ENACTED: \n";
-
-    foreach my $batch ( @{ $self->{action_batch_queue} } ) {
-        my $item = $batch->{item};
-        for my $type ( sort keys %{ $batch->{actions} } ) {
-            printf "    type=%s value=%s borrower=%s item=%s days_overdue=%s\n",
-                $type,
-                $batch->{actions}->{$type},
-                $item->{borrowernumber},
-                $item->{itemnumber},
-                $batch->{delay};
-        }
+    if ( !$self->{verbose} ) {
+        return;
     }
 
-    printf "NOTICES ENQUEUED: \n";
-
-    for my $borrowernumber ( sort { $a <=> $b } keys %{ $self->{notice_queue} } ) {
-        my $by_code = $self->{notice_queue}{$borrowernumber};
-        for my $notice_code ( sort keys %$by_code ) {
-            my $by_mtt = $by_code->{$notice_code};
-            for my $mtt ( sort keys %$by_mtt ) {
-                for my $delay ( sort { $a <=> $b } keys %{ $by_mtt->{$mtt} } ) {
-                    my $count = scalar @{ $by_mtt->{$mtt}{$delay} };
-                    printf "    letter_code=%s mtt=%s borrower=%s days_overdue=%s items=%s\n",
-                        $notice_code, $mtt, $borrowernumber, $delay, $count;
-                }
-            }
-        }
-    }
+    printf "    type=%s value=%s borrower=%s item=%s days_overdue=%s\n",
+        $type,
+        $batch->{actions}->{$type},
+        $batch->{item}->{borrowernumber},
+        $batch->{item}->{itemnumber},
+        $batch->{delay};
 }
 
 =head3 process_action_queue
 
 Process the standard queue.
 
+Under C<verbose>, each action reports itself as it is enacted, so the output is
+a record of what the run did rather than a prediction of it.
+
 =cut
 
 sub process_action_queue {
     my ($self) = @_;
+
+    if ( $self->{verbose} ) {
+        printf "ACTION ENACTED: \n";
+    }
 
     foreach my $batch ( @{ $self->{action_batch_queue} } ) {
         my $overdue_item = $batch->{item};
@@ -199,22 +189,27 @@ sub process_action_queue {
 
         if ( $actions->{restrict} ) {
             $self->enact_restrict($overdue_item);
+            $self->_report_action( $batch, 'restrict' );
         }
 
         if ( $actions->{forgive_fine} ) {
             $self->enact_forgive_fine($overdue_item);
+            $self->_report_action( $batch, 'forgive_fine' );
         }
 
         if ( $actions->{lost} ) {
             $self->enact_lost( $overdue_item, $actions->{lost} );
+            $self->_report_action( $batch, 'lost' );
         }
 
         if ( $actions->{charge} ) {
             $self->enact_charge($overdue_item);
+            $self->_report_action( $batch, 'charge' );
         }
 
         if ( $actions->{mark_returned} ) {
             $self->enact_mark_returned($overdue_item);
+            $self->_report_action( $batch, 'mark_returned' );
         }
     }
 
@@ -259,6 +254,10 @@ the same pair blocks a duplicate fallback.
 
 sub process_notice_queue {
     my ($self) = @_;
+
+    if ( $self->{verbose} ) {
+        printf "NOTICES ENQUEUED: \n";
+    }
 
     for my $mtt (qw( print sms email )) {
         for my $borrowernumber ( sort keys %{ $self->{notice_queue} } ) {
@@ -410,6 +409,11 @@ sub _enqueue_letter_for_bucket {
             time_queued            => dt_from_string(),
         }
     )->store;
+
+    if ( $self->{verbose} ) {
+        printf "    letter_code=%s mtt=%s borrower=%s days_overdue=%s items=%s\n",
+            $notice_code, $mtt, $borrowernumber, $head->{delay}, scalar @item_rows;
+    }
 }
 
 =head3 format_action_item
