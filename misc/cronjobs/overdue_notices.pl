@@ -384,7 +384,6 @@ warn "         for process_circulation_triggers.pl are available at\n";
 warn "         /cgi-bin/koha/admin/circulation_triggers.\n";
 warn "========================================================\n";
 
-
 if ( defined $csvfilename && $csvfilename =~ /^-/ ) {
     warn qq(using "$csvfilename" as filename, that seems odd);
 }
@@ -528,7 +527,7 @@ my %seen = map { $_ => 1 } @branches;
 my @output_chunks;
 foreach my $branchcode (@branches) {
     my $calendar;
-    if ( C4::Context->preference('OverdueNoticeCalendar') ) {
+    if ( C4::Context->preference('OverdueTriggersCalendar') ) {
         $calendar = Koha::Calendar->new( branchcode => $branchcode );
         if ( $calendar->is_holiday($date_to_run) ) {
             next;
@@ -701,7 +700,7 @@ END_SQL
 
                 # Check the overdue period matches
                 my $days_between;
-                if ( C4::Context->preference('OverdueNoticeCalendar') ) {
+                if ( C4::Context->preference('OverdueTriggersCalendar') ) {
                     $days_between = $calendar->days_between(
                         dt_from_string( $data->{date_due} ),
                         $date_to_run

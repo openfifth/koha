@@ -1328,12 +1328,12 @@ sub has_restricting_overdues {
 
             next DELAY unless $overdue_rules->{ "overdue_$i" . '_restrict' };
 
-            if ( C4::Context->preference('OverdueNoticeCalendar') ) {
+            if ( C4::Context->preference('OverdueTriggersCalendar') ) {
                 $calendar = Koha::Calendar->new( branchcode => $branchcode );
             }
 
             my $days_between =
-                C4::Context->preference('OverdueNoticeCalendar')
+                C4::Context->preference('OverdueTriggersCalendar')
                 ? $calendar->days_between( dt_from_string( $overdue->date_due ), $now )->in_units('days')
                 : $now->delta_days( dt_from_string( $overdue->date_due ) )->in_units('days');
             if ( $days_between >= $overdue_rules->{ "overdue_$i" . '_delay' } ) {
