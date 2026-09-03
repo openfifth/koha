@@ -3,6 +3,7 @@
         :submitAction="resetCircRules"
         formTitle="Confirm circulation rule set reset"
         buttonText="Confirm reset"
+        :disabled="resetWouldLeaveRuleSetWithoutDelay"
     >
         <TriggersTable
             v-if="initialized"
@@ -102,6 +103,18 @@ export default {
             await vm.loadModalData();
         });
     },
+    computed: {
+        // a trigger with no delay is never processed, so a reset that would
+        // leave an inheriting set without one is not allowed
+        resetWouldLeaveRuleSetWithoutDelay() {
+            const delayName = `overdue_${this.triggerNumber}_delay`;
+            return this.projectedDependentEffectiveRuleSets.some(
+                ruleSet =>
+                    ruleSet[delayName]?.value === "" ||
+                    ruleSet[delayName]?.value == null
+            );
+        },
+    },
     methods: {
         async loadModalData() {
             await this.setAllFormattedRuleSets();
@@ -131,6 +144,12 @@ export default {
             if (this.dependentRuleSets.length > 0) {
                 this.alertMessage = this.$__(
                     "Some sets inherit one or more fields from this rule set. After the reset, those fields will fall through to a less specific rule set or be left empty. See the preview below."
+                );
+            }
+
+            if (this.resetWouldLeaveRuleSetWithoutDelay) {
+                this.alertMessage = this.$__(
+                    "This rule set cannot be reset. One or more sets that inherit from it would be left without a delay, which stops that trigger and every higher numbered trigger from being processed. See the preview below."
                 );
             }
 
