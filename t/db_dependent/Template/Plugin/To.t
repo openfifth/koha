@@ -29,20 +29,42 @@ $schema->storage->txn_begin;
 my $builder = t::lib::TestBuilder->new;
 
 subtest 'json' => sub {
-    plan tests => 1;
-    my $patron = $builder->build_object(
-        {
-            class => 'Koha::Patrons',
-            value => {
-                borrowernotes => q|
+    plan tests => 2;
+
+    subtest 'newlines' => sub {
+        plan tests => 1;
+        my $patron = $builder->build_object(
+            {
+                class => 'Koha::Patrons',
+                value => {
+                    borrowernotes => q|
 several
 lines|,
+                }
             }
-        }
-    );
-    my $expected_escaped_notes = q|\\\\nseveral\\\\nlines|;
-    is( Koha::Template::Plugin::To->json( $patron->borrowernotes ), $expected_escaped_notes );
+        );
+        my $expected_escaped_notes = q|\\\\nseveral\\\\nlines|;
+        is( Koha::Template::Plugin::To->json( $patron->borrowernotes ), $expected_escaped_notes );
+    };
+
+    subtest 'XSS characters are escaped (bug 42796)' => sub {
+        plan tests => 6;
+
+        is(
+            Koha::Template::Plugin::To->json(q|</script><script>alert(1)</script>|),
+            q|\u003c/script\u003e\u003cscript\u003ealert(1)\u003c/script\u003e|,
+            'closing/opening script tags are escaped'
+        );
+        is( Koha::Template::Plugin::To->json(q|a & b|), q|a \u0026 b|, '& is escaped' );
+        is( Koha::Template::Plugin::To->json(q|a < b|), q|a \u003c b|, '< is escaped' );
+        is( Koha::Template::Plugin::To->json(q|a > b|), q|a \u003e b|, '> is escaped' );
+        is( Koha::Template::Plugin::To->json(q|a + b|), q|a \u002b b|, '+ is escaped' );
+        is(
+            Koha::Template::Plugin::To->json( "a" . chr(0x2028) . "b" . chr(0x2029) . "c" ),
+            q|a\u2028b\u2029c|,
+            'U+2028/U+2029 are escaped'
+        );
+    };
 };
 
 $schema->storage->txn_rollback;
-

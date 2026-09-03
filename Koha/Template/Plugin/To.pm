@@ -33,6 +33,14 @@ sub json {
     $json =~ s/^"|"$//g;       # Remove quotes around the strings
     $json =~ s/\\r/\\\\r/g;    # Convert newlines to escaped newline characters
     $json =~ s/\\n/\\\\n/g;
+
+    $json =~ s!&!\\u0026!g;
+    $json =~ s!<!\\u003c!g;
+    $json =~ s!>!\\u003e!g;
+    $json =~ s!\+!\\u002b!g;
+    $json =~ s!\x{2028}!\\u2028!g;
+    $json =~ s!\x{2029}!\\u2029!g;
+
     return $json;
 }
 
