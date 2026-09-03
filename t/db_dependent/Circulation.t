@@ -19,7 +19,7 @@ use Modern::Perl;
 use utf8;
 
 use Test::NoWarnings;
-use Test::More tests => 87;
+use Test::More tests => 88;
 use Test::Exception;
 use Test::MockModule;
 use Test::Deep qw( cmp_deeply );
@@ -8530,6 +8530,41 @@ subtest 'Bug 40866: CanBookBeIssued returns correct number of values' => sub {
 
     is( scalar @result, 4, 'CanBookBeIssued returns exactly 4 values' );
     ok( ref( $result[0] ) eq 'HASH', 'First return value is issuingimpossible hashref' );
+};
+
+subtest 'Bug 41728: AddReturn calls progress_request on linked ISO18626 requests' => sub {
+    plan tests => 3;
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron =
+        $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $library->branchcode } } );
+    my $item = $builder->build_sample_item( { library => $library->branchcode } );
+
+    t::lib::Mocks::mock_userenv( { patron => $patron, branchcode => $library->branchcode } );
+    AddIssue( $patron, $item->barcode );
+
+    my $progress_request_called_with;
+    my $mock_request = Test::MockModule->new('Koha::ILL::ISO18626::Request');
+    $mock_request->mock(
+        'progress_request',
+        sub {
+            my ( $self, $actor, $params ) = @_;
+            $progress_request_called_with = { actor => $actor, params => $params };
+        }
+    );
+
+    my $fake_request  = bless {}, 'Koha::ILL::ISO18626::Request';
+    my $mock_checkout = Test::MockModule->new('Koha::Checkout');
+    $mock_checkout->mock( 'iso18626_request', sub { return $fake_request } );
+
+    AddReturn( $item->barcode, $library->branchcode );
+
+    ok( $progress_request_called_with, 'AddReturn calls progress_request on the linked ISO18626 request' );
+    is( $progress_request_called_with->{actor}, 'supplyingAgency', 'progress_request called with correct actor' );
+    is(
+        $progress_request_called_with->{params}->{status}, 'LoanCompleted',
+        'progress_request called with LoanCompleted status'
+    );
 };
 
 $schema->storage->txn_rollback;
