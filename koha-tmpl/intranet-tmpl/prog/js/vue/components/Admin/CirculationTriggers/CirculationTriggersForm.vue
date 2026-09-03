@@ -20,7 +20,7 @@
             <slot></slot>
         </div>
         <div class="modal-footer">
-            <ButtonSubmit :title="buttonText" />
+            <ButtonSubmit :title="buttonText" :disabled="disabled" />
             <router-link
                 :to="{
                     name: 'CirculationTriggersList',
@@ -33,7 +33,7 @@
 <script>
 import ButtonSubmit from "../../ButtonSubmit.vue";
 export default {
-    props: ["submitAction", "formTitle", "buttonText"],
+    props: ["submitAction", "formTitle", "buttonText", "disabled"],
     components: { ButtonSubmit },
 };
 </script>

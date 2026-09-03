@@ -7,6 +7,7 @@
                 : 'Confirm circulation trigger deletion'
         "
         buttonText="Confirm deletion"
+        :disabled="deletionWouldLeaveRuleSetWithoutDelay"
     >
         <fieldset class="rows">
             <TriggersTable
@@ -106,6 +107,18 @@ export default {
             await vm.loadModalData();
         });
     },
+    computed: {
+        // a trigger with no delay is never processed, so a deletion that would
+        // leave an inheriting set without one is not allowed
+        deletionWouldLeaveRuleSetWithoutDelay() {
+            const delayName = `overdue_${this.triggerNumber}_delay`;
+            return this.projectedDependentEffectiveRuleSets.some(
+                ruleSet =>
+                    ruleSet[delayName]?.value === "" ||
+                    ruleSet[delayName]?.value == null
+            );
+        },
+    },
     methods: {
         async loadModalData() {
             await this.setAllFormattedRuleSets();
@@ -126,6 +139,12 @@ export default {
             if (this.dependentRuleSets.length > 0) {
                 this.alertMessage = this.$__(
                     "Some rule sets inherit one or more fields from the default trigger being deleted. After deletion, those fields will fall through to a less specific rule set or be left empty. See the preview below."
+                );
+            }
+
+            if (this.deletionWouldLeaveRuleSetWithoutDelay) {
+                this.alertMessage = this.$__(
+                    "This trigger cannot be deleted. One or more sets that inherit from it would be left without a delay, which stops that trigger and every higher numbered trigger from being processed. See the preview below."
                 );
             }
 
