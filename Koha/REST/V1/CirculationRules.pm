@@ -271,6 +271,21 @@ sub set_rules {
             }
         }
 
+        unless ( haspermission( $logged_in_user->userid, { parameters => 'manage_circ_triggers' } )
+            || haspermission( $logged_in_user->userid, { circulate => 'circulate_remaining_permissions' } ) )
+        {
+            my @trigger_rules = grep { /^overdue_/ } keys %{$body};
+            if (@trigger_rules) {
+                return $c->render(
+                    status  => 403,
+                    openapi => {
+                        error =>
+                            'the manage_circ_triggers or circulate_remaining_permissions permission is required to manage circulation triggers'
+                    }
+                );
+            }
+        }
+
         if ( $patron_category eq '*' ) {
             $patron_category = undef;
         } else {
