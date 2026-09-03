@@ -257,21 +257,20 @@ Items and holds from other libraries will still be included for the given patron
 sub GetOverdueIssues {
     my ($patron_branchcode) = @_;
 
-    my $patron_branchcode_filter = $patron_branchcode ? "AND borrowers.branchcode = '$patron_branchcode'" : q{};
+    my $patron_branchcode_filter = $patron_branchcode ? "WHERE borrowers.branchcode = '$patron_branchcode'" : q{};
 
+    # get one distinct item (issue.itemnumber is a unique key) with m:1 issues -> one distinct issue per row
     my $query =
         "SELECT borrowers.borrowernumber, borrowers.cardnumber, borrowers.title as patron_title, borrowers.firstname, borrowers.surname,
                 borrowers.phone, borrowers.email, borrowers.branchcode, biblio.biblionumber, biblio.title, items.barcode, issues.date_due,
-                TO_DAYS(NOW())-TO_DAYS(date_due) as daysoverdue, borrowers.categorycode as categorycode, items.itemtype as itemtype,
+                TO_DAYS(NOW())-TO_DAYS(date_due) as daysoverdue, borrowers.categorycode as categorycode, items.itype as itemtype,
                 issues.branchcode as site, branches.branchname as site_name
                 FROM borrowers JOIN issues USING (borrowernumber)
                 JOIN items USING (itemnumber)
                 JOIN biblio USING (biblionumber)
                 JOIN branches ON (issues.branchcode = branches.branchcode)
-                WHERE ( overduerules.branchcode = borrowers.branchcode )
                 $patron_branchcode_filter
-                GROUP BY items.itemnumber
-                ORDER BY items.itemtype, borrowers.categorycode, branches.branchcode
+                ORDER BY items.itype, borrowers.categorycode, branches.branchcode
                 ";
     my $sth = $dbh->prepare($query);
     $sth->execute();
@@ -279,7 +278,7 @@ sub GetOverdueIssues {
     my @trigger_numbers;
     my $triggers = Koha::CirculationRules->search(
         { rule_name => { 'like' => 'overdue_%_mtt' }, rule_value => { like => '%itiva%' } } );
-    for my $trigger ( $triggers->all ) {
+    while ( my $trigger = $triggers->next ) {
         my $trigger_number = $trigger->rule_name;
         $trigger_number =~ s/(.*)(\d+)(.*)/$2/;
         push @trigger_numbers, $trigger_number unless grep { $_ == $trigger_number } @trigger_numbers;
