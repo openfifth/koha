@@ -57,7 +57,7 @@ router.beforeEach((to, from, next) => {
         .then(() => {
             if (
                 !circRulesStore.isUserPermitted(
-                    "CAN_user_parameters_manage_circ_rules"
+                    "CAN_user_parameters_manage_circ_triggers"
                 )
             ) {
                 navigationStore.$patch({
