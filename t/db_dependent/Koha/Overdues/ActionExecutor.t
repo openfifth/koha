@@ -225,7 +225,7 @@ subtest 'enact_lost / enact_forgive_fine / enact_mark_returned' => sub {
     $overdue_fine->discard_changes;
     is( $overdue_fine->status, 'LOST', 'mark_lost flipped the OVERDUE accountline status to LOST' );
 
-    # enact_mark_returned archives the checkout via MarkIssueReturned.
+    # enact_mark_returned archives the checkout via Koha::Checkout->mark_returned.
     t::lib::Mocks::mock_userenv( { branchcode => $library->branchcode } );
     $executor->enact_mark_returned($overdue_item);
 
