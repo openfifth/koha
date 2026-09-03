@@ -550,6 +550,15 @@ export default {
             this.setAllowSubmission();
         },
         setAllowSubmission() {
+            // the number input yields "" when cleared from the keyboard and null when
+            // cleared with the button; a trigger with no delay is never processed
+            const delay =
+                this.ruleSetToSubmit?.[`overdue_${this.triggerNumber}_delay`];
+            if (delay === "" || delay == null) {
+                this.allowSubmission = false;
+                return;
+            }
+
             // if notice is set to "", this translates to 'No letter', for which submission is allowed, and mtt is redundant
             const noticeAllowSubmissionAndBypassMtt =
                 this.ruleSetToSubmit?.[
