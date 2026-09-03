@@ -240,7 +240,9 @@ describe("Place a hold (bib-level, UseNewHoldsInterface)", () => {
             testData.biblio.title
         );
         cy.get(".holdability-shield .placeholder-glow").should("not.exist");
-        cy.get(".express-bib-level-hold button[type=submit]").should("exist");
+        cy.get(".express-bib-level-hold button[type=submit]")
+            .should("exist")
+            .and("not.be.disabled");
 
         // The pickup library dropdown must show the patron's home library
         // by name from the start, not just hold the right id invisibly -
@@ -388,12 +390,19 @@ describe("Place a hold (bib-level, UseNewHoldsInterface)", () => {
                     );
                 }
             );
-            // The pickup-library field stays reachable while blocked; only
-            // the submit button (the only route to placing or overriding
-            // the hold) is gated.
-            cy.get(".express-bib-level-hold button[type=submit]").should(
-                "not.exist"
-            );
+            // The pickup-library field stays reachable while blocked. The
+            // submit button (the only route to placing or overriding the
+            // hold) stays visible but disabled, rather than disappearing -
+            // less confusing than the button just not being there - with a
+            // tooltip (on the wrapping span, since a disabled button's own
+            // pointer-events: none suppresses hover on itself) listing why.
+            cy.get(".express-bib-level-hold button[type=submit]")
+                .should("exist")
+                .and("be.disabled");
+            cy.get(".express-bib-level-hold .submit-tooltip")
+                .should("have.attr", "title")
+                .and("include", "The patron's card has been reported lost")
+                .and("include", "No item on this record can fill a hold");
         });
 
         it("overrides a blocked hold via the confirm dialog and places it", () => {
@@ -417,6 +426,7 @@ describe("Place a hold (bib-level, UseNewHoldsInterface)", () => {
             // just the reasons.
             cy.get(".express-bib-level-hold button[type=submit]")
                 .should("exist")
+                .and("not.be.disabled")
                 .and("contain.text", "Override and place hold");
             cy.get(".holdability-shield .alert.alert-danger ul li")
                 .should("have.length", 1)
@@ -440,9 +450,9 @@ describe("Place a hold (bib-level, UseNewHoldsInterface)", () => {
             cy.get("@createHoldCancelled.all").should("have.length", 0);
             // Cancelling leaves the hold unplaced, with the same button
             // still there to try again.
-            cy.get(".express-bib-level-hold button[type=submit]").should(
-                "exist"
-            );
+            cy.get(".express-bib-level-hold button[type=submit]")
+                .should("exist")
+                .and("not.be.disabled");
 
             // Now confirm.
             cy.intercept("POST", "/api/v1/holds").as("createHold");
@@ -508,11 +518,11 @@ describe("Place a hold (bib-level, UseNewHoldsInterface)", () => {
             waitForBootstrap();
 
             // The pickup-library field lives outside the availability
-            // gate, but the rest of the form (and the submit button) is
-            // still the right proxy for "is this hold placeable right now".
-            cy.get(".express-bib-level-hold button[type=submit]").should(
-                "exist"
-            );
+            // gate, but whether the submit button is disabled is still
+            // the right proxy for "is this hold placeable right now".
+            cy.get(".express-bib-level-hold button[type=submit]")
+                .should("exist")
+                .and("not.be.disabled");
 
             cy.intercept(
                 "GET",
@@ -531,11 +541,16 @@ describe("Place a hold (bib-level, UseNewHoldsInterface)", () => {
                     )
                 );
 
-            cy.get(".express-bib-level-hold button[type=submit]").should(
-                "not.exist"
-            );
+            cy.get(".express-bib-level-hold button[type=submit]")
+                .should("exist")
+                .and("be.disabled");
             cy.get(".holdability-shield .alert.alert-danger ul li").should(
                 "have.text",
+                "No item on this record can fill a hold"
+            );
+            cy.get(".express-bib-level-hold .submit-tooltip").should(
+                "have.attr",
+                "title",
                 "No item on this record can fill a hold"
             );
 
@@ -554,9 +569,9 @@ describe("Place a hold (bib-level, UseNewHoldsInterface)", () => {
             cy.get(".holdability-shield .alert.alert-danger").should(
                 "not.exist"
             );
-            cy.get(".express-bib-level-hold button[type=submit]").should(
-                "exist"
-            );
+            cy.get(".express-bib-level-hold button[type=submit]")
+                .should("exist")
+                .and("not.be.disabled");
         });
 
         it("repaints instantly from cache while revalidating in the background", () => {
@@ -585,9 +600,9 @@ describe("Place a hold (bib-level, UseNewHoldsInterface)", () => {
             visit();
             waitForBootstrap();
             cy.wait("@holdability");
-            cy.get(".express-bib-level-hold button[type=submit]").should(
-                "exist"
-            );
+            cy.get(".express-bib-level-hold button[type=submit]")
+                .should("exist")
+                .and("not.be.disabled");
 
             // Never-seen combo: skeleton must appear.
             cy.then(() => selectPickupLibrary(testData.libraries[1].name));
@@ -598,9 +613,9 @@ describe("Place a hold (bib-level, UseNewHoldsInterface)", () => {
             // no skeleton flash, the background revalidation still fires.
             cy.then(() => selectPickupLibrary(testData.libraries[0].name));
             cy.get(".holdability-shield .placeholder-glow").should("not.exist");
-            cy.get(".express-bib-level-hold button[type=submit]").should(
-                "exist"
-            );
+            cy.get(".express-bib-level-hold button[type=submit]")
+                .should("exist")
+                .and("not.be.disabled");
             cy.wait("@holdability");
         });
     });
@@ -623,14 +638,22 @@ describe("Place a hold (bib-level, UseNewHoldsInterface)", () => {
             // A worker other than the one setPrefOnce() just updated may
             // have served this page's own bootstrap fetch of the same
             // pref - retry via reload rather than risk a false failure
-            // from that race.
-            reloadUntil(
-                $body =>
-                    $body.find(".express-bib-level-hold button[type=submit]")
-                        .length === 0
+            // from that race. The button always exists once checked now
+            // (it's disabled, not hidden, when there's no way to submit),
+            // so the condition to retry on is its disabled state, not
+            // whether it's in the DOM at all.
+            reloadUntil($body =>
+                $body
+                    .find(".express-bib-level-hold button[type=submit]")
+                    .prop("disabled")
             );
-            cy.get(".express-bib-level-hold button[type=submit]").should(
-                "not.exist"
+            cy.get(".express-bib-level-hold button[type=submit]")
+                .should("exist")
+                .and("be.disabled");
+            cy.get(".express-bib-level-hold .submit-tooltip").should(
+                "have.attr",
+                "title",
+                "The patron's card has been reported lost"
             );
             cy.get("#confirmation.modal").should("not.exist");
         });
@@ -697,7 +720,9 @@ describe("Place a hold (bib-level, UseNewHoldsInterface)", () => {
     it("unlocks the form and shows an error when placing the hold fails, then allows a retry", () => {
         visit();
         waitForBootstrap();
-        cy.get(".express-bib-level-hold button[type=submit]").should("exist");
+        cy.get(".express-bib-level-hold button[type=submit]")
+            .should("exist")
+            .and("not.be.disabled");
 
         cy.intercept("POST", "/api/v1/holds", {
             statusCode: 500,

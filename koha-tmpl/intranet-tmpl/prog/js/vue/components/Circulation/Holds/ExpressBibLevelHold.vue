@@ -38,23 +38,28 @@
                     </ol>
                 </fieldset>
 
-                <fieldset v-if="canSubmit" class="action">
-                    <button
-                        type="submit"
-                        class="btn btn-primary"
-                        :disabled="holdPlaced"
+                <fieldset v-if="checked" class="action">
+                    <span
+                        class="submit-tooltip"
+                        :title="canSubmit ? null : disabledReason"
                     >
-                        <span
-                            v-if="placing"
-                            class="spinner-border spinner-border-sm"
-                            aria-hidden="true"
-                        ></span>
-                        {{
-                            overridable
-                                ? $__("Override and place hold")
-                                : $__("Place hold")
-                        }}
-                    </button>
+                        <button
+                            type="submit"
+                            class="btn btn-primary"
+                            :disabled="holdPlaced || !canSubmit"
+                        >
+                            <span
+                                v-if="placing"
+                                class="spinner-border spinner-border-sm"
+                                aria-hidden="true"
+                            ></span>
+                            {{
+                                overridable
+                                    ? $__("Override and place hold")
+                                    : $__("Place hold")
+                            }}
+                        </button>
+                    </span>
                 </fieldset>
             </form>
         </div>
@@ -92,12 +97,26 @@ export default {
         const available = ref(false);
         const overridable = ref(false);
         const blockedReasons = ref([]);
+        // True from the first eligibility/blocked result onward - lets the
+        // button stay hidden during the initial skeleton (nothing checked
+        // yet), but never re-hide itself once something has been checked,
+        // even across a background re-check.
+        const checked = ref(false);
 
         // Whether the "Place hold" button at the bottom of the form has
         // anything to do at all - either place the hold directly, or open
-        // the override confirmation first. There's only ever one button;
-        // this is the one thing gating whether it's shown.
+        // the override confirmation first. When false, the button is
+        // still shown (once checked) but disabled, with disabledReason
+        // explaining why via a tooltip - see the template.
         const canSubmit = computed(() => available.value || overridable.value);
+
+        // Native title tooltips don't fire on a disabled button - Bootstrap
+        // sets pointer-events: none on .btn:disabled, which suppresses
+        // hover on the button itself. The title lives on the wrapping
+        // <span> in the template instead, which isn't affected.
+        const disabledReason = computed(() =>
+            blockedReasons.value.map(r => r.label).join("\n")
+        );
 
         const formData = reactive({
             pickup_library_id: props.patron.library_id,
@@ -154,12 +173,14 @@ export default {
         const handleEligibility = () => {
             available.value = true;
             overridable.value = false;
+            checked.value = true;
         };
 
         const handleBlocked = ({ blockers, overridable: canOverride }) => {
             available.value = false;
             overridable.value = canOverride;
             blockedReasons.value = blockers;
+            checked.value = true;
         };
 
         // The single entry point for the "Place hold" button: place the
@@ -217,6 +238,8 @@ export default {
 
         return {
             canSubmit,
+            checked,
+            disabledReason,
             pickupLibraryField,
             restFields,
             formData,
