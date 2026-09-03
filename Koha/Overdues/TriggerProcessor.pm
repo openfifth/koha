@@ -43,9 +43,11 @@ Koha::Overdues::TriggerProcessor - Koha Overdue TriggerProcessor object set clas
 $triggerProcessor = Koha::Overdues::TriggerProcessor->new();
 $triggerProcessor = Koha::Overdues::TriggerProcessor->new( { verbose => 1, debug => 1 } );
 
-Optional C<verbose> and C<debug> flags drive the queue-dump and rule-set-dump
-output emitted by L</_dispatch_overdues> for the C<--verbose> / C<--debug>
-modes of C<process_circulation_triggers.pl>.
+Optional C<verbose> and C<debug> flags serve the C<--verbose> / C<--debug> modes
+of C<process_circulation_triggers.pl>. C<debug> dumps the matched rows and
+resolved rule sets from L</_dispatch_overdues>; C<verbose> is handed to
+L<Koha::Overdues::ActionExecutor>, which reports each action and each enqueued
+letter as it happens so that sequencing is preserved.
 
 =cut
 
@@ -267,7 +269,7 @@ sub _dispatch_overdues {
         \@itemtype_list, $effective_delay_by_raw_delay
     );
 
-    my $action_executor = Koha::Overdues::ActionExecutor->new();
+    my $action_executor = Koha::Overdues::ActionExecutor->new( { verbose => $self->{verbose} } );
 
     # separate notice route actions from standard route actions
     foreach my $overdue_item (@overdue_items) {
@@ -286,10 +288,6 @@ sub _dispatch_overdues {
         print STDERR Data::Dumper->Dump( [ $action_executor->{action_batch_queue} ], ['action_batch_queue'] );
         print STDERR Data::Dumper->Dump( [ $action_executor->{notice_queue} ],       ['notice_queue'] );
 
-    }
-
-    if ( $self->{verbose} ) {
-        $action_executor->print_queues;
     }
 
     $action_executor->process_action_queue;
