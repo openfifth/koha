@@ -33,6 +33,7 @@ export class ItemListsAPIClient {
             get: id =>
                 this.httpClient.get({
                     endpoint: "/" + id,
+                    headers: { "x-koha-embed": "item_list_shares+count" },
                 }),
             getAll: (query, params) =>
                 this.httpClient.getAll({

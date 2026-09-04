@@ -230,6 +230,7 @@ export default {
             delete itemList.can_update;
             delete itemList.can_delete;
             delete itemList.can_manage;
+            delete itemList.item_list_shares_count;
 
             if (itemListId) {
                 // update

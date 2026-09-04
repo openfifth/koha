@@ -169,6 +169,17 @@
     summary: Get item list
     parameters:
       - $ref: "../swagger.yaml#/parameters/item_list_id_pp"
+      - name: x-koha-embed
+        in: header
+        required: false
+        description: Embed list sent as a request header
+        type: array
+        items:
+          type: string
+          enum:
+            - item_list_contents+count
+            - item_list_shares+count
+        collectionFormat: csv
     consumes:
       - application/json
     produces:

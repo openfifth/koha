@@ -4,6 +4,28 @@
             <h1>
                 {{ $__("Contents of") }} <em>{{ slotProps.resource.name }}</em>
             </h1>
+            <p>
+                <template v-if="slotProps.resource.visibility == 'private'">{{
+                    $__("Private")
+                }}</template>
+                <template
+                    v-else-if="slotProps.resource.visibility == 'group'"
+                    >{{ $__("Shared with group") }}</template
+                >
+                <template
+                    v-else-if="slotProps.resource.visibility == 'public'"
+                    >{{ $__("Public") }}</template
+                >
+
+                <template v-if="slotProps.resource.item_list_shares_count == 1"
+                    >, 1 {{ $__("share") }}</template
+                >
+                <template
+                    v-else-if="slotProps.resource.item_list_shares_count > 1"
+                    >, {{ slotProps.resource.item_list_shares_count }}
+                    {{ $__("shares") }}</template
+                >
+            </p>
         </template>
     </BaseResource>
 </template>
