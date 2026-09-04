@@ -45,6 +45,12 @@ Instantiate the class.
 
 Takes an optional C<verbose> flag. When set, each action and each enqueued
 letter reports itself at the point it happens.
+
+Takes an optional C<dry_run> flag. C<process_circulation_triggers.pl> isolates a
+dry run in a transaction it rolls back, but a couple of the effects reached from
+L<Koha::Item/store> - the search index update and the holds queue job - publish
+to a message broker and so escape that rollback. Setting this suppresses them,
+which is what makes a dry run genuinely free of side effects.
 =cut
 
 sub new {
@@ -54,6 +60,7 @@ sub new {
         notice_queue            => {},
         patrons_marked_returned => {},
         verbose                 => $params->{verbose} // 0,
+        dry_run                 => $params->{dry_run} // 0,
     };
     return bless $self, $class;
 }
@@ -143,6 +150,27 @@ sub route_item_actions_to_queue {
             }
         );
     }
+}
+
+=head3 _item_store_params
+
+Parameters for any L<Koha::Item/store> reached from an enactment.
+
+Under C<dry_run> this suppresses the search index update and the holds queue
+job. Both publish to a message broker from inside C<store>, so unlike every
+other effect here they are not undone when the script rolls its transaction
+back. Outside a dry run this is empty and the stores behave normally.
+
+=cut
+
+sub _item_store_params {
+    my ($self) = @_;
+
+    if ( !$self->{dry_run} ) {
+        return {};
+    }
+
+    return { skip_record_index => 1, skip_holds_queue => 1 };
 }
 
 =head3 _report_action
@@ -241,6 +269,13 @@ Processes transports in reliability order — C<print>, then C<sms>, then
 C<email>. When an C<sms> or C<email> entry can't be delivered (patron has no
 C<smsalertnumber> / no C<notice_email_address>), a C<print> entry is
 synthesised instead.
+
+Letters render against B<pre-action> state — this runs before
+L</process_action_queue>. Templates therefore see the checkout still open, the
+overdue fine still outstanding, and the item not yet lost. That is what a letter
+on an action-carrying trigger wants to state: the fine being forgiven, the
+replacement price about to be charged. Nothing that only exists after enactment
+is available.
 
 Every enqueue is guarded by L</_notice_exists>: a bucket is skipped when a
 message_queue row for the same (borrower, letter_code, transport) was already
@@ -496,7 +531,7 @@ sub enact_lost {
         Koha::Logger->get->warn("enact_lost: itemnumber $overdue_item->{itemnumber} not found — skipping");
         return;
     }
-    $item->mark_lost($lost_value);
+    $item->mark_lost( $lost_value, $self->_item_store_params );
 }
 
 =head3 enact_forgive_fine
@@ -622,6 +657,7 @@ sub enact_mark_returned {
         {
             borrowernumber => $overdue_item->{borrowernumber},
             privacy        => $patron->privacy,
+            %{ $self->_item_store_params },
         }
     );
     $self->{patrons_marked_returned}->{ $overdue_item->{borrowernumber} } = 1;
