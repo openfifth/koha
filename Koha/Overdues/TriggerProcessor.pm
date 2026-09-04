@@ -43,11 +43,17 @@ Koha::Overdues::TriggerProcessor - Koha Overdue TriggerProcessor object set clas
 $triggerProcessor = Koha::Overdues::TriggerProcessor->new();
 $triggerProcessor = Koha::Overdues::TriggerProcessor->new( { verbose => 1, debug => 1 } );
 
-Optional C<verbose> and C<debug> flags serve the C<--verbose> / C<--debug> modes
+Optional C<verbose>, C<debug> and C<dry_run> flags serve the corresponding modes
 of C<process_circulation_triggers.pl>. C<debug> dumps the matched rows and
 resolved rule sets from L</_dispatch_overdues>; C<verbose> is handed to
 L<Koha::Overdues::ActionExecutor>, which reports each action and each enqueued
 letter as it happens so that sequencing is preserved.
+
+C<dry_run> is also handed to the executor. The script isolates a dry run in a
+transaction it rolls back, which covers every database effect but not the search
+index update and holds queue job reached from L<Koha::Item/store> — those
+publish to a message broker. The flag suppresses them so a dry run leaves
+nothing behind.
 
 =cut
 
@@ -56,6 +62,7 @@ sub new {
     my $self = {
         verbose => $params->{verbose} // 0,
         debug   => $params->{debug}   // 0,
+        dry_run => $params->{dry_run} // 0,
     };
     return bless $self, $class;
 }
@@ -269,7 +276,8 @@ sub _dispatch_overdues {
         \@itemtype_list, $effective_delay_by_raw_delay
     );
 
-    my $action_executor = Koha::Overdues::ActionExecutor->new( { verbose => $self->{verbose} } );
+    my $action_executor =
+        Koha::Overdues::ActionExecutor->new( { verbose => $self->{verbose}, dry_run => $self->{dry_run} } );
 
     # separate notice route actions from standard route actions
     foreach my $overdue_item (@overdue_items) {

@@ -943,17 +943,22 @@ sub get_transfers {
 =head3 mark_lost
 
   $item->mark_lost($lost_value);
+  $item->mark_lost($lost_value, { skip_record_index => 1, skip_holds_queue => 1 });
 
 Atomic state mutation setting the item's lost status and
 canceling any outstanding transfers (retain behaviour from 27281).
 We also update the relevant accountline to reflect the status change.
 
+C<$params> is relayed to the item store. C<skip_record_index> and
+C<skip_holds_queue> matter to batch callers: both reach a message broker from
+inside L</store>, so they are not covered by an enclosing transaction.
+
 =cut
 
 sub mark_lost {
-    my ( $self, $lost_value ) = @_;
+    my ( $self, $lost_value, $params ) = @_;
 
-    $self->itemlost($lost_value)->store;
+    $self->itemlost($lost_value)->store($params);
 
     my $checkout = $self->checkout;
     if ($checkout) {
