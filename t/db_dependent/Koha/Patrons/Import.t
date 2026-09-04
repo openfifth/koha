@@ -1683,6 +1683,111 @@ subtest 'patron_attributes' => sub {
 
 };
 
+subtest 'test permissions flag' => sub {
+
+    plan tests => 18;
+
+    my $patron      = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $patron_info = $patron->unblessed;
+    $patron->delete;
+
+    my $csv_headers = 'surname,userid,branchcode,categorycode,flags';
+    my $csv_new     = join(
+        ",", $patron_info->{surname}, $patron_info->{userid}, $patron_info->{branchcode},
+        $patron_info->{categorycode}, 2
+    );
+    my $defaults = { cardnumber => "" };    #currently all the defaults come as "" if not filled
+
+    #Make the test files for importing
+    my $filename_1 = make_csv( $temp_dir, $csv_headers, $csv_new );
+    open( my $handle_1, "<", $filename_1 ) or die "cannot open < $filename_1: $!";
+
+    my $params_1 = {
+        file => $handle_1, matchpoint => 'userid', overwrite_cardnumber => 1,
+    };
+
+    C4::Context->unset_userenv();
+    my $result = $patrons_import->import_patrons( $params_1, $defaults );
+    is( scalar @{ $result->{errors} }, 0, 'New borrower imported as expected' );
+    is( $result->{imported},           1, 'New borrower imported as expected' );
+
+    # Set a staff patron and set the userenv
+    my $staff_patron = $builder->build_object( { class => 'Koha::Patrons' } );
+    C4::Context->set_userenv( $staff_patron->id, $staff_patron->userid );
+
+    open( $handle_1, "<", $filename_1 ) or die "cannot open < $filename_1: $!";
+    $result = $patrons_import->import_patrons( $params_1, $defaults );
+    is( scalar @{ $result->{errors} }, 1, 'One error as expected' );
+    is( $result->{imported},           0, 'No borrower imported as expected' );
+    is( $result->{overwritten},        0, 'No borrower overwritten as expected' );
+    is(
+        $result->{errors}->[0]->{invalid_permissions}, 1,
+        "Import aborted because staff doesn't have permissions permission"
+    );
+
+    # Give them permission to set permissions
+    $staff_patron->set_permissions( { permissions => 1 } );
+
+    open( $handle_1, "<", $filename_1 ) or die "cannot open < $filename_1: $!";
+    $result = $patrons_import->import_patrons( $params_1, $defaults );
+    is( scalar @{ $result->{errors} }, 0, 'No error as expected' );
+    is( $result->{overwritten},        1, 'One borrower overwritten as expected' );
+
+    #Make new test file for importing
+    #One patron with normal flags, one with superlibrarian
+    $patron      = $builder->build_object( { class => 'Koha::Patrons' } );
+    $patron_info = $patron->unblessed;
+    $patron->delete;
+    my @csv_new = ();
+    push @csv_new,
+        join(
+        ",", $patron_info->{surname}, $patron_info->{userid}, $patron_info->{branchcode},
+        $patron_info->{categorycode}, 2
+        );
+    $patron      = $builder->build_object( { class => 'Koha::Patrons' } );
+    $patron_info = $patron->unblessed;
+    $patron->delete;
+    push @csv_new,
+        join(
+        ",", $patron_info->{surname}, $patron_info->{userid}, $patron_info->{branchcode},
+        $patron_info->{categorycode}, 1
+        );
+    $defaults   = { cardnumber => "" };                            #currently all the defaults come as "" if not filled
+    $filename_1 = make_csv( $temp_dir, $csv_headers, @csv_new );
+    open( $handle_1, "<", $filename_1 ) or die "cannot open < $filename_1: $!";
+
+    $result = $patrons_import->import_patrons( $params_1, $defaults );
+    is( scalar @{ $result->{errors} }, 1, 'One error as expected' );
+    is( $result->{imported},           1, 'One borrower imported as expected' );
+    is( $result->{overwritten},        0, 'No borrower overwritten as expected' );
+    is(
+        $result->{errors}->[0]->{invalid_superlibrarian}, 1,
+        "Import aborted because staff doesn't have superlibrarian permission"
+    );
+
+    # Give them superlibrarian permission
+    # and set it in userenv
+    C4::Context->unset_userenv();
+    $staff_patron->set_permissions( { superlibrarian => 1 } );
+    C4::Context->set_userenv( $staff_patron->id, $staff_patron->userid, undef, undef, undef, undef, undef, 1 );
+
+    open( $handle_1, "<", $filename_1 ) or die "cannot open < $filename_1: $!";
+    $result = $patrons_import->import_patrons( $params_1, $defaults );
+    is( scalar @{ $result->{errors} }, 0, 'No error as expected' );
+    is( $result->{imported},           1, 'One borrower imported as expected' );
+    is( $result->{overwritten},        1, 'One borrowers overwritten as expected' );
+
+    C4::Context->unset_userenv();
+
+    # Confirm it all works when there is no userenv
+    open( $handle_1, "<", $filename_1 ) or die "cannot open < $filename_1: $!";
+    $result = $patrons_import->import_patrons( $params_1, $defaults );
+    is( scalar @{ $result->{errors} }, 0, 'No error as expected' );
+    is( $result->{imported},           0, 'No borrower imported as expected' );
+    is( $result->{overwritten},        2, 'Two borrowers overwritten as expected' );
+
+};
+
 subtest 'welcome_email' => sub {
 
     plan tests => 3;
