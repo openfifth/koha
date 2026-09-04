@@ -130,6 +130,8 @@ if ( $op eq 'cud-edit' ) {
 
     eval {
 
+        my $existing_search_field_boosts = Koha::SearchFieldValueBoosts->existing_boosts_by_search_field_name;
+
         Koha::SearchFields->search()->delete;
 
         for my $i ( 0 .. scalar(@field_name) - 1 ) {
@@ -164,6 +166,8 @@ if ( $op eq 'cud-edit' ) {
             $search_field->authorised_value_category($av_category);
             $search_field->store;
         }
+
+        Koha::SearchFieldValueBoosts->restore_from_existing_boosts($existing_search_field_boosts);
 
         Koha::SearchMarcMaps->search( { marc_type => $marc_type, } )->delete;
         my @facetable_fields      = Koha::SearchEngine::Elasticsearch->get_facet_fields();
