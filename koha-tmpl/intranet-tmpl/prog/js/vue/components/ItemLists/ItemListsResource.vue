@@ -1,8 +1,9 @@
 <template>
-    <BaseResource
-        :routeAction="routeAction"
-        :instancedResource="this"
-    ></BaseResource>
+    <BaseResource :routeAction="routeAction" :instancedResource="this">
+        <template v-slot:list-header>
+            <h1>{{ $__("Item Lists") }}</h1>
+        </template>
+    </BaseResource>
 </template>
 <script>
 import { inject } from "vue";

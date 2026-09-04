@@ -1,8 +1,11 @@
 <template>
-    <BaseResource
-        :routeAction="routeAction"
-        :instancedResource="this"
-    ></BaseResource>
+    <BaseResource :routeAction="routeAction" :instancedResource="this">
+        <template v-slot:list-header="slotProps">
+            <h1>
+                {{ $__("Contents of") }} <em>{{ slotProps.resource.name }}</em>
+            </h1>
+        </template>
+    </BaseResource>
 </template>
 <script>
 import { inject } from "vue";
