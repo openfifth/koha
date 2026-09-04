@@ -47,10 +47,14 @@ Run the full pipeline inside a transaction that is rolled back at the end,
 producing no permanent changes (no debarments, lost flags, charges, returns,
 or queued notices).
 
+The rollback covers database effects. The search index update and holds queue
+job reached from C<Koha::Item::store> publish to a message broker and would
+survive it, so a dry run suppresses both.
+
 =item B<--verbose>
 
-Print one line per queued action and notice bucket after routing but before
-enactment. Composes with C<--dry-run>.
+Print one line per action as it is enacted and per letter as it is queued, so
+the reported sequence is the sequence that ran. Composes with C<--dry-run>.
 
 =item B<--debug>
 
@@ -99,7 +103,8 @@ if ($dry_run) {
     print "--------------------------------------- \n";
 }
 
-my $triggerProcessor = Koha::Overdues::TriggerProcessor->new( { verbose => $verbose, debug => $debug } );
+my $triggerProcessor =
+    Koha::Overdues::TriggerProcessor->new( { verbose => $verbose, debug => $debug, dry_run => $dry_run } );
 $triggerProcessor->ProcessOverdues();
 
 if ($dry_run) {

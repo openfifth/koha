@@ -1054,6 +1054,10 @@ C<skip_holds_queue> matter to batch callers: both reach a message broker from
 inside L</store>, which no transaction can roll back, so pass them to keep the
 broker out of the transaction and enqueue the work once the batch is done.
 
+C<$params> is relayed to the item store. C<skip_record_index> and
+C<skip_holds_queue> matter to batch callers: both reach a message broker from
+inside L</store>, so they are not covered by an enclosing transaction.
+
 =cut
 
 sub mark_lost {
