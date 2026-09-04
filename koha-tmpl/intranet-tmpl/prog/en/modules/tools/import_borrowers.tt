@@ -125,6 +125,21 @@
                         <ul>
                             [% FOREACH e IN errors %]
                                 [% IF ( e.badheader ) %]<li>Header row could not be parsed</li>[% END %]
+                                [% IF ( e.invalid_permissions ) %]
+                                    <li
+                                        >Import aborted - you are not authorized to change permissions for users and flags (permissions) column present
+                                        <br />
+                                        <code>[% e.lineraw | html %]</code>
+                                    </li>
+                                [% END %]
+                                [% IF ( e.invalid_superlibrarian ) %]
+                                    <li
+                                        >Import aborted - The system preference ProtectSuperlibrarianPrivileges is enabled and you are not authorized to change superlibrarian permissions and flags (permissions) column contains
+                                        superlibrarian (1)
+                                        <br />
+                                        <code>[% e.lineraw | html %]</code>
+                                    </li>
+                                [% END %]
 
                                 [% FOREACH missing_critical IN e.missing_criticals %]
                                     <li class="line_error">

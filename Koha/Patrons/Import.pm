@@ -104,6 +104,22 @@ sub import_patrons {
     my @imported_borrowers;
     my $matchpoint_attr_type = $self->set_attribute_types( { extended => $extended, matchpoint => $matchpoint, } );
 
+    # We assume we can set permissions/superlibrarian
+    # since crons and scripts on the server don't have a userenv
+    my $cannot_set_superlibrarian = 0;
+    my $cannot_set_permissions    = 0;
+
+    # Superlibrarian guard — only for real authenticated sessions
+    my $userenv = C4::Context->userenv;
+    if (   ref $userenv eq 'HASH'
+        && $userenv->{number}
+        && !C4::Context->IsSuperLibrarian() )
+    {
+        $cannot_set_superlibrarian = 1 if C4::Context->preference('ProtectSuperlibrarianPrivileges');
+        my $logged_in_patron = Koha::Patrons->find( $userenv->{number} );
+        $cannot_set_permissions = $logged_in_patron->has_permission( { 'permissions' => 1 } ) ? 0 : 1;
+    }
+
     # Use header line to construct key to column map
     my %csvkeycol;
     my $borrowerline = <$handle>;
@@ -146,6 +162,28 @@ LINE: while ( my $borrowerline = <$handle> ) {
                     $borrower{$key} = '';
                 }
             }
+        }
+
+        if ( defined $borrower{flags} && $cannot_set_permissions ) {
+            push @errors,
+                {
+                invalid_permissions => 1,
+                lineraw             => $borrowerline,
+                };
+            $invalid++;
+            last LINE;
+        } elsif ( defined $borrower{flags}
+            && $borrower{flags} ne ""
+            && $borrower{flags} == 1
+            && $cannot_set_superlibrarian )
+        {
+            push @errors,
+                {
+                invalid_superlibrarian => 1,
+                lineraw                => $borrowerline,
+                };
+            $invalid++;
+            last LINE;
         }
 
         $borrower{cardnumber}  = undef if $borrower{cardnumber} eq "";
