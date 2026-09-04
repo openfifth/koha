@@ -18,6 +18,7 @@ package Koha::SearchFieldValueBoosts;
 use Modern::Perl;
 
 use Koha::Database;
+use Koha::SearchFields;
 use Koha::SearchFieldValueBoost;
 
 use base qw(Koha::Objects);
@@ -31,6 +32,49 @@ Koha::SearchFieldValueBoosts - Koha SearchFieldValueBoost Object set class
 =head2 Class Methods
 
 =cut
+
+=head3 existing_boosts_by_search_field_name
+
+    my $existing_boosts = Koha::SearchFieldValueBoosts->existing_boosts_by_search_field_name;
+
+Returns a hashref of all existing value boosts, keyed by search field name (stable across a
+delete-and-recreate of the search_field table) and then by boosted value, mapping to the
+configured weight.
+
+=cut
+
+sub existing_boosts_by_search_field_name {
+    my ($class) = @_;
+
+    my %existing_boosts;
+    for my $boost ( $class->search( {}, { prefetch => 'search_field' } )->as_list ) {
+        $existing_boosts{ $boost->search_field->name }{ $boost->value } = $boost->weight;
+    }
+    return \%existing_boosts;
+}
+
+=head3 restore_from_existing_boosts
+
+    Koha::SearchFieldValueBoosts->restore_from_existing_boosts($existing_boosts);
+
+Recreates value boosts from the hashref returned by C<existing_boosts_by_search_field_name>,
+resolving each field name to its current Koha::SearchField id. Field names no longer present
+are skipped.
+
+=cut
+
+sub restore_from_existing_boosts {
+    my ( $class, $existing_boosts ) = @_;
+
+    for my $field_name ( keys %$existing_boosts ) {
+        my $search_field = Koha::SearchFields->find( { name => $field_name }, { key => 'name' } );
+        next unless $search_field;
+        while ( my ( $value, $weight ) = each %{ $existing_boosts->{$field_name} } ) {
+            Koha::SearchFieldValueBoost->new(
+                { search_field_id => $search_field->id, value => $value, weight => $weight } )->store;
+        }
+    }
+}
 
 =head3 _type
 

@@ -18,6 +18,7 @@ package Koha::SearchFieldValueBoost;
 use Modern::Perl;
 
 use Koha::Database;
+use Koha::SearchField;
 
 use base qw(Koha::Object);
 
@@ -30,6 +31,18 @@ Koha::SearchFieldValueBoost - Koha SearchFieldValueBoost Object class
 =head2 Class Methods
 
 =cut
+
+=head3 search_field
+
+Returns the associated Koha::SearchField for this value boost.
+
+=cut
+
+sub search_field {
+    my ($self) = @_;
+    my $search_field_rs = $self->_result->search_field;
+    return Koha::SearchField->_new_from_dbic($search_field_rs);
+}
 
 =head3 _type
 
