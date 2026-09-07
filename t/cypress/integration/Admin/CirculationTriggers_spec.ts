@@ -121,12 +121,12 @@ describe("Circulation Triggers - Breadcrumbs", () => {
     });
 
     it("Should have breadcrumb link from add form", () => {
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
         cy.contains("Add new trigger").click();
         cy.get("#breadcrumbs")
             .contains("Circulation triggers")
             .should("have.attr", "href")
-            .and("equal", "/cgi-bin/koha/admin/circulation_triggers");
+            .and("equal", "/cgi-bin/koha/admin/circulation_triggers.pl");
     });
 });
 
@@ -165,7 +165,7 @@ describe("Circulation Triggers - Initial Load", () => {
     });
 
     it("Should successfully load the component and display initial elements", () => {
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
 
         cy.get("h1").should("contain", "Circulation triggers");
         cy.get(".page-section").should(
@@ -179,7 +179,7 @@ describe("Circulation Triggers - Initial Load", () => {
     });
 
     it("Should display trigger tabs when rules exist", () => {
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
 
         cy.get("#circ-triggers-tabs").should("exist");
         cy.get(".nav-link").contains("Trigger 1").should("exist");
@@ -191,7 +191,7 @@ describe("Circulation Triggers - Initial Load", () => {
             statusCode: 500,
         }).as("get-rules-error");
 
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
         cy.wait("@get-rules-error");
 
         // Component should still render without crashing
@@ -204,7 +204,7 @@ describe("Circulation Triggers - Initial Load", () => {
         // atomic — you can't set sms while inheriting print/email. When no
         // rule set provides an mtt value, all three cells render .fallback
         // (bold italics) to signal inheritance.
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
 
         cy.get("#trigger-table-main tbody tr")
             .first()
@@ -263,7 +263,7 @@ describe("Circulation Triggers - No default rules warning", () => {
             }
         }).as("get-rules");
 
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
 
         cy.get(".alert-warning").should(
             "contain",
@@ -283,7 +283,7 @@ describe("Circulation Triggers - No default rules warning", () => {
             headers: { "X-Base-Total-Count": "0", "X-Total-Count": "0" },
         }).as("get-rules");
 
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
 
         cy.get(".alert-warning").should(
             "contain",
@@ -302,7 +302,7 @@ describe("Circulation Triggers - No default rules warning", () => {
             headers: { "X-Base-Total-Count": "1", "X-Total-Count": "1" },
         }).as("get-rules");
 
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
         cy.get("#circ-triggers-tabs").should("exist");
 
         cy.get(".alert-warning").should("not.exist");
@@ -332,7 +332,7 @@ describe("Circulation Triggers - No default rules warning", () => {
             }
         }).as("get-rules");
 
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
 
         cy.get(".alert-warning").contains("Centerville").click();
 
@@ -382,7 +382,7 @@ describe("Circulation Triggers - Filtering", () => {
     });
 
     it("Should filter by library", () => {
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
 
         cy.get("#library_select .vs__search").type("Centerville{enter}", {
             force: true,
@@ -394,7 +394,7 @@ describe("Circulation Triggers - Filtering", () => {
     });
 
     it("Should filter by patron category", () => {
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
 
         cy.get("#patron_category_select .vs__search").type("Patron{enter}", {
             force: true,
@@ -406,7 +406,7 @@ describe("Circulation Triggers - Filtering", () => {
     });
 
     it("Should filter by item type", () => {
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
 
         cy.get("#item_type_select .vs__search").type("Books{enter}", {
             force: true,
@@ -415,7 +415,7 @@ describe("Circulation Triggers - Filtering", () => {
     });
 
     it("Should toggle between explicit and all applicable rules", () => {
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
 
         cy.get("#filter-rules").should("exist");
 
@@ -459,7 +459,7 @@ describe("Circulation Triggers - Tab Navigation", () => {
     });
 
     it("Should switch between trigger tabs", () => {
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
 
         cy.get(".nav-link")
             .contains("Trigger 1")
@@ -510,7 +510,7 @@ describe("Circulation Triggers - Add New Trigger", () => {
     });
 
     it("Should open add trigger modal", () => {
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
         cy.get(".modal-dialog").should("not.exist");
         cy.contains("Add new trigger").click();
 
@@ -522,7 +522,7 @@ describe("Circulation Triggers - Add New Trigger", () => {
     });
 
     it("Should require context selection fields", () => {
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
         cy.contains("Add new trigger").click();
 
         cy.get("#library_id").should("exist");
@@ -535,7 +535,7 @@ describe("Circulation Triggers - Add New Trigger", () => {
         // existed for a library (triggerCounts[library_id] was undefined).
         // The default beforeEach intercept returns only a */*/* rule, so CPL
         // has no library-specific rules — exact regression case.
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
         cy.contains("Add new trigger").click();
 
         cy.get("#library_id .vs__search").type("Centerville{enter}", {
@@ -558,7 +558,7 @@ describe("Circulation Triggers - Add New Trigger", () => {
     });
 
     it("Should show enabled row actions in the trigger table at the selectOrAdd step", () => {
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
         cy.contains("Add new trigger").click();
 
         cy.get("#library_id .vs__search").type("Centerville{enter}", {
@@ -580,7 +580,7 @@ describe("Circulation Triggers - Add New Trigger", () => {
     });
 
     it("Should disable row actions once add mode is entered from the trigger table", () => {
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
         cy.contains("Add new trigger").click();
 
         cy.get("#library_id .vs__search").type("Centerville{enter}", {
@@ -605,7 +605,7 @@ describe("Circulation Triggers - Add New Trigger", () => {
     });
 
     it("Should mark non-active steps with bg-success-subtle in the add flow", () => {
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
         cy.contains("Add new trigger").click();
 
         cy.get("#library_id .vs__search").type("Centerville{enter}", {
@@ -639,13 +639,13 @@ describe("Circulation Triggers - Add New Trigger", () => {
     });
 
     it("Should show row actions in the trigger table on the main list", () => {
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
 
         cy.get("#trigger-table-main td.actions").should("exist");
     });
 
     it("Should allow cancelling add operation", () => {
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
         cy.contains("Add new trigger").click();
 
         cy.get(".modal-dialog").should("be.visible");
@@ -690,7 +690,7 @@ describe("Circulation Triggers - Delete Trigger", () => {
     });
 
     it("Should only show delete button for last trigger tab", () => {
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
 
         cy.get(".nav-link").contains("Trigger 3").click();
         cy.contains("Delete").should("exist");
@@ -700,7 +700,7 @@ describe("Circulation Triggers - Delete Trigger", () => {
     });
 
     it("Should show confirmation dialog for delete", () => {
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
 
         cy.get(".nav-link").contains("Trigger 3").click();
         cy.contains("Delete").click();
@@ -714,7 +714,7 @@ describe("Circulation Triggers - Delete Trigger", () => {
     });
 
     it("Should allow canceling delete operation", () => {
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
 
         cy.get(".nav-link").contains("Trigger 3").click();
         cy.contains("Delete").click();
@@ -765,7 +765,7 @@ describe("Circulation Triggers - Delete Trigger Disabled States", () => {
             },
         }).as("get-rules");
 
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
 
         cy.get(".nav-link").contains("Trigger 2").click();
         cy.contains("Delete").should("not.have.attr", "disabled");
@@ -797,7 +797,7 @@ describe("Circulation Triggers - Delete Trigger Disabled States", () => {
             },
         }).as("get-rules");
 
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
 
         cy.get(".nav-link").contains("Trigger 2").click();
         cy.contains("Delete").should("not.have.attr", "disabled");
@@ -852,7 +852,7 @@ describe("Circulation Triggers - Delete Trigger Disabled States", () => {
             }
         }).as("get-rules");
 
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
 
         cy.get(".nav-link").contains("Trigger 2").click();
 
@@ -898,13 +898,13 @@ describe("Circulation Triggers - Reset Rule Set", () => {
     });
 
     it("Should show Reset button for explicit rule sets in the table", () => {
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
 
         cy.get("table").contains("Reset").should("exist");
     });
 
     it("Should show confirmation dialog for reset", () => {
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
 
         cy.get("table").contains("Reset").click();
 
@@ -917,7 +917,7 @@ describe("Circulation Triggers - Reset Rule Set", () => {
     });
 
     it("Should allow canceling reset operation", () => {
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
 
         cy.get("table").contains("Reset").click();
         cy.get(".modal-dialog").should("be.visible");
@@ -956,7 +956,7 @@ describe("Circulation Triggers - Empty States", () => {
     });
 
     it("Should render without crashing when no rules exist", () => {
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
 
         cy.get("h1").should("contain", "Circulation triggers");
         cy.get(".alert-warning").should(
@@ -1004,7 +1004,7 @@ describe("Circulation Triggers - Complex Scenarios", () => {
     });
 
     it("Should show all three trigger tabs for default library", () => {
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
 
         cy.get(".nav-link").contains("Trigger 1").should("exist");
         cy.get(".nav-link").contains("Trigger 2").should("exist");
@@ -1012,7 +1012,7 @@ describe("Circulation Triggers - Complex Scenarios", () => {
     });
 
     it("Should handle rapid tab switching without errors", () => {
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
 
         cy.get(".nav-link").contains("Trigger 2").click();
         cy.get(".nav-link").contains("Trigger 1").click();
@@ -1052,7 +1052,7 @@ describe("Circulation Triggers - Browser Navigation", () => {
     });
 
     it("Should close modal on browser back button", () => {
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
         cy.contains("Add new trigger").click();
 
         cy.get(".modal-dialog").should("be.visible");
@@ -1063,7 +1063,7 @@ describe("Circulation Triggers - Browser Navigation", () => {
     });
 
     it("Should reopen modal on browser forward button", () => {
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
         cy.contains("Add new trigger").click();
         cy.go("back");
         cy.go("forward");
@@ -1083,7 +1083,7 @@ describe("Circulation Triggers - Permissions", () => {
             statusCode: 403,
         }).as("get-config");
 
-        cy.visit("/cgi-bin/koha/admin/circulation_triggers");
+        cy.visit("/cgi-bin/koha/admin/circulation_triggers.pl");
         cy.wait("@get-config");
 
         cy.url().should("include", "admin-home");

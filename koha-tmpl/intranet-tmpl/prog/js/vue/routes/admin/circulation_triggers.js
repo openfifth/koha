@@ -15,7 +15,7 @@ export default {
     children: [
         {
             title: $__("Circulation triggers"),
-            path: "/cgi-bin/koha/admin/circulation_triggers",
+            path: "/cgi-bin/koha/admin/circulation_triggers.pl",
             children: [
                 {
                     path: "",

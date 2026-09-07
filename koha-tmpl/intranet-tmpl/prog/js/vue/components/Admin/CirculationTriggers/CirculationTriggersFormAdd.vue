@@ -335,7 +335,7 @@ export default {
                     this.alertMessage =
                         "Your changes could not be saved as this circulation trigger was updated elsewhere. Please see the updated trigger below.";
                     this.$router.push({
-                        path: "/cgi-bin/koha/admin/circulation_triggers/edit",
+                        name: "CirculationTriggersFormEdit",
                         query: {
                             library_id: this.context.library_id,
                             patron_category_id: this.context.patron_category_id,
