@@ -9,6 +9,7 @@ export const useHoldsStore = defineStore("holds", () => {
         },
         sysprefs: {
             AllowHoldPolicyOverride: 0,
+            EnableItemGroupHolds: 0,
         },
         // Keyed by `${biblio_id}:${patron_id}:${pickup_library_id}` - the
         // result can genuinely differ per pickup library (cannot_be_transferred,

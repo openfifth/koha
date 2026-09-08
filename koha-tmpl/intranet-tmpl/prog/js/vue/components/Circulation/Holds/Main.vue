@@ -58,9 +58,16 @@ export default {
                         result.value === "1";
                 });
 
+            const fetchItemGroupHoldsPref = APIClient.sysprefs.sysprefs
+                .get("EnableItemGroupHolds")
+                .then(result => {
+                    sysprefs.value.EnableItemGroupHolds = result.value === "1";
+                });
+
             Promise.all([
                 loadAuthorisedValues(authorisedValues.value, holdsStore),
                 fetchSysprefs,
+                fetchItemGroupHoldsPref,
             ]).then(() => {
                 loaded();
                 initialized.value = true;

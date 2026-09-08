@@ -11,21 +11,31 @@
             />
         </div>
 
-        <ExpressBibLevelHold v-if="patron" :biblio="biblio" :patron="patron" />
+        <ExpressBibLevelHold
+            v-if="patron && !isGranular"
+            :biblio="biblio"
+            :patron="patron"
+        />
+        <GranularItemHold
+            v-else-if="patron && isGranular"
+            :biblio="biblio"
+            :patron="patron"
+        />
     </div>
 </template>
 
 <script>
-import { inject, onBeforeMount, ref, watch } from "vue";
+import { computed, inject, onBeforeMount, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { APIClient } from "../../../fetch/api-client.js";
 import PatronAutoComplete from "../../PatronAutoComplete.vue";
 import ExpressBibLevelHold from "./ExpressBibLevelHold.vue";
+import GranularItemHold from "./GranularItemHold.vue";
 import { $__ } from "@koha-vue/i18n";
 
 export default {
     name: "PlaceHold",
-    components: { PatronAutoComplete, ExpressBibLevelHold },
+    components: { PatronAutoComplete, ExpressBibLevelHold, GranularItemHold },
     setup() {
         const route = useRoute();
         const router = useRouter();
@@ -54,6 +64,15 @@ export default {
         const patronId = ref(
             route.query.borrowernumber || initialBorrowernumber || null
         );
+
+        // Set by ExpressBibLevelHold.vue's "More options" button (and
+        // cleared by GranularItemHold.vue's "Back to Express" button) via
+        // a ?view=granular query flag - kept on the URL, not just in
+        // component state, for the same reason borrowernumber is: it
+        // survives a reload/back-navigation, and this component already
+        // owns the biblio/patron fetch, so switching views this way reuses
+        // them rather than triggering a second fetch.
+        const isGranular = computed(() => route.query.view === "granular");
 
         onBeforeMount(() => {
             loading();
@@ -104,7 +123,7 @@ export default {
 
         loadPatron(patronId.value);
 
-        return { biblio, patron, patronId };
+        return { biblio, patron, patronId, isGranular };
     },
 };
 </script>

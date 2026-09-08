@@ -92,7 +92,10 @@ sub add {
 
         my $override_all = $overrides->{any} && C4::Context->preference('AllowHoldPolicyOverride') ? 1 : 0;
 
-        if ( !C4::Context->preference('AllowHoldDateInFuture') && $hold_date ) {
+        if (   !C4::Context->preference('AllowHoldDateInFuture')
+            && $hold_date
+            && dt_from_string( $hold_date, 'iso' )->truncate( to => 'day' ) > dt_from_string->truncate( to => 'day' ) )
+        {
             return $c->render(
                 status  => 400,
                 openapi => {

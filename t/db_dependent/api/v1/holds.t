@@ -315,7 +315,7 @@ subtest 'Reserves with itemtype' => sub {
 
 subtest 'test AllowHoldDateInFuture' => sub {
 
-    plan tests => 6;
+    plan tests => 9;
 
     $dbh->do('DELETE FROM reserves');
 
@@ -334,13 +334,27 @@ subtest 'test AllowHoldDateInFuture' => sub {
 
     $t->post_ok( "//$userid_3:$password@/api/v1/holds" => json => $post_data )->status_is(400)->json_has('/error');
 
-    t::lib::Mocks::mock_preference( 'AllowHoldDateInFuture', 1 );
-
     # Make sure pickup location checks doesn't get in the middle
     my $mock_biblio = Test::MockModule->new('Koha::Biblio');
     $mock_biblio->mock( 'pickup_locations', sub { return Koha::Libraries->search; } );
     my $mock_item = Test::MockModule->new('Koha::Item');
     $mock_item->mock( 'pickup_locations', sub { return Koha::Libraries->search } );
+
+    # A hold_date of today isn't "in the future" - it shouldn't be rejected
+    # even when the preference is off (bug 43126)
+    my $today_hold_date = DateTime->now->truncate( to => 'day' );
+    my $today_post_data = {
+        %$post_data,
+        hold_date => output_pref( { dt => $today_hold_date, dateformat => 'iso', dateonly => 1 } ),
+    };
+
+    $t->post_ok( "//$userid_3:$password@/api/v1/holds" => json => $today_post_data )
+        ->status_is(201)
+        ->json_is( '/hold_date', output_pref( { dt => $today_hold_date, dateformat => 'iso', dateonly => 1 } ) );
+
+    $dbh->do('DELETE FROM reserves');
+
+    t::lib::Mocks::mock_preference( 'AllowHoldDateInFuture', 1 );
 
     $t->post_ok( "//$userid_3:$password@/api/v1/holds" => json => $post_data )
         ->status_is(201)

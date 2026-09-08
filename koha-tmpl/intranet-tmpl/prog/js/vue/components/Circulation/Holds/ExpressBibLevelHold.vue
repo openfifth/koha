@@ -1,7 +1,17 @@
 <template>
     <div class="express-bib-level-hold card">
         <div class="card-body">
-            <h2 class="card-title">{{ biblio.title }}</h2>
+            <div class="d-flex justify-content-between align-items-start">
+                <h2 class="card-title">{{ biblio.title }}</h2>
+                <button
+                    v-if="showMoreOptions"
+                    type="button"
+                    class="btn btn-link"
+                    @click="goToMoreOptions"
+                >
+                    {{ $__("More options") }}
+                </button>
+            </div>
 
             <HoldabilityShield
                 :biblio-id="biblio.biblio_id"
@@ -74,11 +84,11 @@
 
 <script>
 import { computed, reactive, ref } from "vue";
-import { APIClient } from "../../../fetch/api-client.js";
+import { useRoute, useRouter } from "vue-router";
 import FormElement from "../../FormElement.vue";
 import Toast from "../../Elements/Toast.vue";
 import HoldabilityShield from "./HoldabilityShield.vue";
-import { useHoldOverrideConfirmation } from "../../../composables/hold-override-confirmation.js";
+import { useHoldSubmission } from "../../../composables/hold-submission.js";
 import { $__ } from "@koha-vue/i18n";
 
 export default {
@@ -87,9 +97,28 @@ export default {
     props: {
         biblio: { type: Object, required: true }, // { biblio_id, title }
         patron: { type: Object, required: true }, // { patron_id, library_id, library: { name } }
+        // Hidden when this component is rendered as the Record panel of
+        // GranularItemHold.vue - that screen's own Hold type switch is
+        // already the same option, and it's already selected.
+        showMoreOptions: { type: Boolean, default: true },
     },
     setup(props) {
-        const { requestHoldOverride } = useHoldOverrideConfirmation();
+        const route = useRoute();
+        const router = useRouter();
+        const { placing, holdPlaced, errorMessage, submit } =
+            useHoldSubmission();
+
+        // Pure navigation to the granular hold screen - PlaceHold.vue (the
+        // parent route component) reads this same ?view= query flag to
+        // decide whether to render this component or GranularItemHold.vue,
+        // so the biblio/patron it already loaded are reused rather than
+        // re-fetched.
+        const goToMoreOptions = () => {
+            router.push({
+                name: "PlaceHold",
+                query: { ...route.query, view: "granular" },
+            });
+        };
 
         // Set by HoldabilityShield.vue's @eligibility/@blocked events -
         // HoldabilityShield only reports what it found, it doesn't decide
@@ -123,10 +152,6 @@ export default {
             expiration_date: null,
             notes: "",
         });
-
-        const placing = ref(false);
-        const holdPlaced = ref(false);
-        const errorMessage = ref(null);
 
         const toastVisible = ref(false);
         const toastMessage = ref("");
@@ -183,42 +208,32 @@ export default {
             checked.value = true;
         };
 
-        // The single entry point for the "Place hold" button: place the
-        // hold directly when it's already available, otherwise - if
-        // there's an overridable block - show the override confirmation
-        // first and only place the hold if the user accepts it. What
+        // The single entry point for the "Place hold" button: hand off to
+        // useHoldSubmission, which decides whether to place the hold
+        // directly or open the override confirmation first, then show the
+        // toast and redirect once a hold actually comes back. What
         // confirming means here (retry the placement with those codes) is
-        // this component's job; HoldabilityShield only ever tells us what
+        // useHoldSubmission's job; HoldabilityShield only ever tells us what
         // was blocked.
         const handleSubmit = () => {
-            if (available.value) {
-                placeHold();
-            } else if (overridable.value) {
-                requestHoldOverride(blockedReasons.value).then(codes => {
-                    if (codes) placeHold(codes);
-                });
-            }
-        };
-
-        const placeHold = (overrides = []) => {
-            placing.value = true;
-            errorMessage.value = null;
-            holdPlaced.value = true; // optimistic: lock the form immediately
-
-            return APIClient.circulation.holds
-                .create(
-                    {
-                        patron_id: props.patron.patron_id,
-                        biblio_id: props.biblio.biblio_id,
-                        pickup_library_id: formData.pickup_library_id,
-                        expiration_date: formData.expiration_date || undefined,
-                        notes: formData.notes || undefined,
-                    },
-                    overrides
-                )
-                .then(
-                    hold => {
-                        placing.value = false;
+            const result = submit(
+                available.value,
+                overridable.value,
+                blockedReasons.value,
+                {
+                    patron_id: props.patron.patron_id,
+                    biblio_id: props.biblio.biblio_id,
+                    pickup_library_id: formData.pickup_library_id,
+                    expiration_date: formData.expiration_date || undefined,
+                    notes: formData.notes || undefined,
+                }
+            );
+            // submit() resolves with undefined when the override
+            // confirmation was cancelled - nothing to redirect for.
+            if (result) {
+                result
+                    .then(hold => {
+                        if (!hold) return;
                         toastMessage.value = $__("Queue position: #%s").format(
                             hold.priority
                         );
@@ -226,19 +241,20 @@ export default {
                         setTimeout(() => {
                             window.location = `/cgi-bin/koha/members/moremember.pl?borrowernumber=${props.patron.patron_id}#holds`;
                         }, 1500);
-                    },
-                    error => {
-                        // Roll back the optimistic lock - nothing was placed.
-                        placing.value = false;
-                        holdPlaced.value = false;
-                        errorMessage.value = error.message || error;
-                    }
-                );
+                    })
+                    // errorMessage is already surfaced reactively by
+                    // useHoldSubmission - this only exists to keep the
+                    // rejection from useHoldSubmission's rethrow (there for
+                    // callers who do want to chain on it) from surfacing as
+                    // an unhandled promise rejection here.
+                    .catch(() => {});
+            }
         };
 
         return {
             canSubmit,
             checked,
+            goToMoreOptions,
             disabledReason,
             pickupLibraryField,
             restFields,

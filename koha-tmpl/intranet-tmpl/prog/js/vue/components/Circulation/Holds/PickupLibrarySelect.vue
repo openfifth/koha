@@ -53,9 +53,19 @@ export default {
         // The patron's own library, already known by whoever renders this
         // field - lets the option render before the lazy full list ever
         // loads, and stays in the merged option list once it does, so the
-        // current selection is never dropped out from under it.
+        // current selection is never dropped out from under it. Ignored
+        // when preloadedOptions is set (see below).
         defaultLibraryId: { type: [String, Number], default: null },
         defaultLibraryName: { type: String, default: "" },
+        // When a caller already has the full, accurate pickup-location list
+        // for what it's placing a hold against - e.g. the granular item
+        // panel gets one back from GET /items/{id}/holdability's
+        // include_pickup_locations, keyed on that one item rather than the
+        // whole biblio - pass it here instead of biblioId/patronId driving
+        // a second lookup. Each entry is
+        // { library_id, name, needs_override }, same shape
+        // pickupLocations.biblio() already returns.
+        preloadedOptions: { type: Array, default: null },
     },
     emits: ["update:modelValue"],
     setup(props, { emit }) {
@@ -69,6 +79,8 @@ export default {
         const loaded = ref(false);
 
         const options = computed(() => {
+            if (props.preloadedOptions) return props.preloadedOptions;
+
             const seed = {
                 library_id: props.defaultLibraryId,
                 name: props.defaultLibraryName,
@@ -81,9 +93,10 @@ export default {
 
         // Opening the dropdown is the only thing that needs the full,
         // server-searched list - the default option above already covers
-        // the common case with no call at all.
+        // the common case with no call at all. Not needed at all when
+        // preloadedOptions is set - that's already the full list.
         const loadOptions = () => {
-            if (loaded.value || loading.value) return;
+            if (props.preloadedOptions || loaded.value || loading.value) return;
             loading.value = true;
             APIClient.circulation.pickupLocations
                 .biblio(props.biblioId, { patron_id: props.patronId })
