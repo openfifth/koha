@@ -962,16 +962,18 @@
                     <label for="order_vendornote">Vendor note: </label>
                     <textarea id="order_vendornote" cols="30" rows="3" name="order_vendornote">[% IF ( order_vendornote ) %][% order_vendornote | html %][% END %]</textarea>
                 </li>
-                <li>
-                    <label for="servicing_instructions">Servicing instructions: </label>
-                    <div id="servicing_instructions_container">
-                        <!-- Servicing instruction groups will be populated here -->
-                    </div>
-                    <button type="button" id="add_servicing_group" class="btn btn-default btn-xs"> <i class="fa fa-plus"></i> Add servicing group </button>
-                    <input type="hidden" id="servicing_instruction_groups_json" name="servicing_instruction_groups_json" value="[% servicing_instruction_groups_json | html %]" />
-                    <input type="hidden" id="servicing_instruction_avs_json" value="[% servicing_instruction_avs_json | html %]" />
-                    <div class="hint">EDIFACT servicing instructions (GIR LVT/LVC). Each group can contain multiple coded (LVC) and/or free-text (LVT) instructions that work together.</div>
-                </li>
+                [% IF Koha.Preference('EDIFACT') && ediaccount %]
+                    <li>
+                        <label for="servicing_instructions">Servicing instructions: </label>
+                        <div id="servicing_instructions_container">
+                            <!-- Servicing instruction groups will be populated here -->
+                        </div>
+                        <button type="button" id="add_servicing_group" class="btn btn-default btn-xs"> <i class="fa fa-plus"></i> Add servicing group </button>
+                        <input type="hidden" id="servicing_instruction_groups_json" name="servicing_instruction_groups_json" value="[% servicing_instruction_groups_json | html %]" />
+                        <input type="hidden" id="servicing_instruction_avs_json" value="[% servicing_instruction_avs_json | html %]" />
+                        <div class="hint">EDIFACT servicing instructions (GIR LVT/LVC). Each group can contain multiple coded (LVC) and/or free-text (LVT) instructions that work together.</div>
+                    </li>
+                [% END %]
                 <li>
                     <label for="estimated_delivery_date">Estimated delivery date: </label>
                     <input type="text" id="estimated_delivery_date" size="10" name="estimated_delivery_date" class="flatpickr" value="[% estimated_delivery_date | html %]" />
