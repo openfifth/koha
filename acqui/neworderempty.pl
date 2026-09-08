@@ -92,6 +92,7 @@ use Koha::Acquisition::Booksellers;
 use Koha::Acquisition::Currencies;
 use Koha::Biblios;
 use Koha::BiblioFrameworks;
+use Koha::Database;
 use Koha::DateUtils qw( dt_from_string );
 use Koha::MarcSubfieldStructures;
 use Koha::ItemTypes;
@@ -446,6 +447,10 @@ $template->param(
     items                   => $items,
 );
 
+# Only offer EDIFACT servicing instructions when EDIFACT is enabled and the vendor has an EDI account
+my $ediaccount =
+    Koha::Database->new()->schema()->resultset('VendorEdiAccount')->search( { vendor_id => $booksellerid } )->count > 0;
+
 # Get servicing instruction authorized values for EDIFACT_SI category
 my @servicing_instruction_authorised_values = Koha::AuthorisedValues->search(
     { category => 'EDIFACT_SI' },
@@ -496,6 +501,7 @@ $template->param(
     orderdiscount                     => $data->{'discount'},
     order_internalnote                => $data->{'order_internalnote'},
     order_vendornote                  => $data->{'order_vendornote'},
+    ediaccount                        => $ediaccount,
     servicing_instruction_groups      => $servicing_instruction_groups,
     servicing_instruction_groups_json => $servicing_instruction_groups_json,
     servicing_instruction_avs_json    => $servicing_instruction_avs_json,
