@@ -3,6 +3,8 @@ use strict;
 use warnings;
 use FindBin qw( $Bin );
 
+use JSON qw( encode_json );
+
 use Test::NoWarnings;
 use Test::More tests => 16;
 use t::lib::Mocks;
@@ -119,7 +121,7 @@ cmp_ok(
     'Single Gir field OK'
 );
 
-$orderfields->{servicing_instruction} = 'S_I';
+$orderfields->{servicing_instruction} = encode_json( [ [ { type => 'LVT', value => 'S_I' } ] ] );
 @gsegs = Koha::Edifact::Order::gir_segments(
     {
         ol_fields => $orderfields,
@@ -140,7 +142,7 @@ cmp_ok(
 # Test that special characters are properly escaped in GIR segments
 my $special_orderfields = {
     budget_code           => 'BUDGET?+',
-    servicing_instruction => "Note with 'special' chars:",
+    servicing_instruction => encode_json( [ [ { type => 'LVT', value => "Note with 'special' chars:" } ] ] ),
 };
 my @special_items = (
     {
