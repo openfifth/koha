@@ -7,7 +7,7 @@ use strict;
 use warnings;
 
 use Test::NoWarnings;
-use Test::More tests => 11;
+use Test::More tests => 13;
 use C4::Context;
 
 BEGIN {
@@ -15,7 +15,7 @@ BEGIN {
 }
 
 SKIP: {
-    skip "MARC21 heading tests not applicable to UNIMARC", 2 if C4::Context->preference('marcflavour') eq 'UNIMARC';
+    skip "MARC21 heading tests not applicable to UNIMARC", 4 if C4::Context->preference('marcflavour') eq 'UNIMARC';
     my $field   = MARC::Field->new( '650', ' ', '2', a => 'Uncles', x => 'Fiction' );
     my $heading = C4::Heading->new_from_field($field);
     is( $heading->display_form(), 'Uncles--Fiction',              'Display form generation' );
@@ -34,4 +34,20 @@ SKIP: {
     is( $heading->search_form(),  'Yankovic, Al 1959',  'Search form generation' );
     ok( !defined $heading->{thesaurus}, 'Thesaurus is not generated outside of 6XX fields' );
 
+    # Bug 43483: a 6XX field with a blank/undefined 2nd indicator asserts no
+    # thesaurus, so it should be treated the same as a non-subject field
+    # (1XX/7XX), not coerced to the literal 'notdefined' thesaurus.
+    $field   = MARC::Field->new( '600', '1', ' ', a => 'Goddard, Giles', d => '1962-' );
+    $heading = C4::Heading->new_from_field($field);
+    ok(
+        !defined $heading->{thesaurus},
+        'Thesaurus is not generated for a 6XX field with a blank 2nd indicator'
+    );
+
+    $field   = MARC::Field->new( '600', '1', '', a => 'Goddard, Giles', d => '1962-' );
+    $heading = C4::Heading->new_from_field($field);
+    ok(
+        !defined $heading->{thesaurus},
+        'Thesaurus is not generated for a 6XX field with an undefined 2nd indicator'
+    );
 }

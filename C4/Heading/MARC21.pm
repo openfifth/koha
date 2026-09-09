@@ -359,7 +359,13 @@ sub _get_subject_thesaurus {
     # though the 008 in the authority records
     # do have values for them
 
-    my $thesaurus = "notdefined";
+    # A blank/undefined 2nd indicator means no thesaurus is asserted on this
+    # heading. Leave $thesaurus undef in that case (matching the treatment of
+    # 1XX/7XX fields) instead of coercing it to the literal 'notdefined', so
+    # that matching stays symmetric for headings that don't record a
+    # thesaurus (bug 43483). Only an explicitly coded indicator should apply
+    # a thesaurus constraint.
+    my $thesaurus;
     if ( $ind2 eq '0' ) {
         $thesaurus = "lcsh";
     } elsif ( $ind2 eq '1' ) {
