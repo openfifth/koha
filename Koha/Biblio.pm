@@ -350,7 +350,8 @@ sub can_be_edited {
 =head3 check_booking
 
   my $bookable =
-    $biblio->check_booking( { start_date => $datetime, end_date => $datetime, [ booking_id => $booking_id ] } );
+    $biblio->check_booking(
+        { start_date => $datetime, end_date => $datetime, [ booking_id => $booking_id, item_id => $item_id ] } );
 
 Returns a boolean denoting whether the passed booking can be made without clashing.
 
