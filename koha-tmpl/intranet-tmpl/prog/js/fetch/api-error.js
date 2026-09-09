@@ -20,6 +20,16 @@ function extractErrorMessage(error) {
 }
 
 /**
+ * Detect a failure raised by fetch itself rather than by the server.
+ *
+ * @param {unknown} error API error
+ * @returns {boolean} Whether the request never reached the server
+ */
+function isNetworkError(error) {
+    return error instanceof TypeError && !("status" in error);
+}
+
+/**
  * Turn an API error into a user-facing, translated message.
  *
  * The HTTP client attaches the HTTP status and Koha error code to thrown
@@ -42,6 +52,11 @@ export function formatApiError(error) {
     }
     if (status === 403) {
         return __("You are not authorized to perform this action.");
+    }
+    if (isNetworkError(error)) {
+        return __(
+            "Could not reach the server. Check your connection and try again."
+        );
     }
 
     const message = extractErrorMessage(error);

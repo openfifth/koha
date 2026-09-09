@@ -42,33 +42,55 @@ class HttpClient {
             .then(response => {
                 if (!response.ok) {
                     return response.text().then(text => {
-                        let message;
+                        let message = response.statusText;
+                        let code;
                         if (text) {
-                            let json = JSON.parse(text);
-                            message =
-                                json.error ||
-                                json.errors.map(e => e.message).join("\n") ||
-                                json;
-                        } else {
-                            message = response.statusText;
+                            try {
+                                const json = JSON.parse(text);
+                                message =
+                                    json.error ||
+                                    json.errors
+                                        ?.map(e => e.message)
+                                        .join("\n") ||
+                                    json.message ||
+                                    json;
+                                code = json.error_code;
+                            } catch {
+                                // Content-type claimed JSON but the body
+                                // wasn't (truncated response, proxy error
+                                // page, session-expired redirect, ...).
+                                // Fall back to the real HTTP failure rather
+                                // than surfacing the parse error.
+                                message = response.statusText;
+                            }
                         }
-                        throw new Error(message);
+                        const err = new Error(message);
+                        err.status = response.status;
+                        err.code = code;
+                        throw err;
                     });
                 }
-                return return_response ? response : response.json();
+                if (return_response) return response;
+                return response.json().catch(() => {
+                    const err = new Error(
+                        "Invalid response from server: could not parse JSON"
+                    );
+                    err.status = response.status;
+                    throw err;
+                });
             })
             .then(result => {
                 res = result;
             })
             .catch(err => {
                 error = err;
-                setError(err);
+                if (err?.name !== "AbortError") setError(err);
             })
             .then(() => {
                 if (mark_submitting) submitted();
             });
 
-        if (error) throw Error(error);
+        if (error) throw error;
 
         return res;
     }

@@ -29,6 +29,22 @@ describe("formatApiError", () => {
         );
     });
 
+    it("describes transport failures without exposing the raw TypeError", () => {
+        expect(formatApiError(new TypeError("Failed to fetch"))).to.equal(
+            "Could not reach the server. Check your connection and try again."
+        );
+    });
+
+    it("keeps the server message for a TypeError that carries a status", () => {
+        const serverError = Object.assign(new TypeError("Bad payload"), {
+            status: 400,
+        });
+
+        expect(formatApiError(serverError)).to.equal(
+            "An error occurred: Bad payload"
+        );
+    });
+
     it("uses the unexpected-error fallback without a usable message", () => {
         [{}, null, undefined, ""].forEach(error => {
             expect(formatApiError(error)).to.equal(

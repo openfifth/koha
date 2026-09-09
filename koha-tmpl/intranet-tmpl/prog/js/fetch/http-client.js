@@ -89,13 +89,24 @@ class HttpClient {
                         let message;
                         let code;
                         if (text && is_json) {
-                            let json = JSON.parse(text);
-                            message =
-                                json.error ||
-                                json.errors?.map(e => e.message).join("\n") ||
-                                json.message ||
-                                json;
-                            code = json.error_code;
+                            try {
+                                const json = JSON.parse(text);
+                                message =
+                                    json.error ||
+                                    json.errors
+                                        ?.map(e => e.message)
+                                        .join("\n") ||
+                                    json.message ||
+                                    json;
+                                code = json.error_code;
+                            } catch {
+                                // Content-type claimed JSON but the body
+                                // wasn't (truncated response, proxy error
+                                // page, session-expired redirect, ...).
+                                // Fall back to the real HTTP failure rather
+                                // than surfacing the parse error.
+                                message = response.statusText;
+                            }
                         } else {
                             message = response.statusText;
                         }
@@ -105,7 +116,13 @@ class HttpClient {
                         throw err;
                     });
                 }
-                return response.json();
+                return response.json().catch(() => {
+                    const err = new Error(
+                        "Invalid response from server: could not parse JSON"
+                    );
+                    err.status = response.status;
+                    throw err;
+                });
             })
             .then(result => {
                 res = result;
