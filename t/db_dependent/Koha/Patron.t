@@ -19,7 +19,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 52;
+use Test::More tests => 53;
 use Test::NoWarnings;
 use Test::Exception;
 use Test::Warn;
@@ -4057,6 +4057,106 @@ subtest "identify_updated_extended_attributes" => sub {
 
     $updated_attributes = $patron->identify_updated_extended_attributes($changed_attributes);
     is( scalar(@$updated_attributes), 3, "Two have now been updated, one of which is repeatable and has two values" );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest "lift_overdue_restrictions" => sub {
+    plan tests => 6;
+
+    $schema->storage->txn_begin;
+    my $patron = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+        }
+    );
+
+    Koha::CirculationRules->set_rules(
+        {
+            categorycode => $patron->categorycode,
+            itemtype     => undef,
+            branchcode   => undef,
+            rules        => {
+                overdue_1_delay    => 6,
+                overdue_1_restrict => 0,
+                overdue_2_delay    => 10,
+                overdue_2_restrict => 1,
+            }
+        }
+    );
+
+    my $overdue = $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => { borrowernumber => $patron->id, date_due => dt_from_string->subtract( days => 7 ) }
+        }
+    );
+    my $restricting_overdue = $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => { borrowernumber => $patron->id, date_due => dt_from_string->subtract( days => 11 ) }
+        }
+    );
+
+    Koha::Patron::Debarments::AddUniqueDebarment(
+        {
+            borrowernumber => $patron->borrowernumber,
+            type           => 'OVERDUES',
+            comment        => "OVERDUES_PROCESS simulation",
+        }
+    );
+    $patron->discard_changes;
+
+    # Phase one
+    note("Testing with one restricting overdue and one non-restricting overdue found");
+
+    note("Testing 'no'");
+    t::lib::Mocks::mock_preference( 'AutoRemoveOverduesRestrictions', 'no' );
+    $patron->lift_overdue_restrictions;
+    is( $patron->restrictions->search( { type => 'OVERDUES' } )->count, 1, "Restriction retained." );
+
+    note("Testing 'when_no_overdue'");
+    t::lib::Mocks::mock_preference( 'AutoRemoveOverduesRestrictions', 'when_no_overdue' );
+    $patron->lift_overdue_restrictions;
+    is( $patron->restrictions->search( { type => 'OVERDUES' } )->count, 1, "Restriction retained." );
+
+    note("Testing 'when_no_overdue_causing_debarment'");
+    t::lib::Mocks::mock_preference( 'AutoRemoveOverduesRestrictions', 'when_no_overdue_causing_debarment' );
+    $patron->lift_overdue_restrictions;
+    is( $patron->restrictions->search( { type => 'OVERDUES' } )->count, 1, "Restriction retained." );
+
+    # Phase two
+    note("Testing with only one non-restricting overdue found");
+    $restricting_overdue->delete;
+
+    note("Testing 'when_no_overdue'");
+    t::lib::Mocks::mock_preference( 'AutoRemoveOverduesRestrictions', 'when_no_overdue' );
+    $patron->lift_overdue_restrictions;
+    is( $patron->restrictions->search( { type => 'OVERDUES' } )->count, 1, "Restriction retained." );
+
+    note("Testing 'when_no_overdue_causing_debarment'");
+
+    t::lib::Mocks::mock_preference( 'AutoRemoveOverduesRestrictions', 'when_no_overdue_causing_debarment' );
+    $patron->lift_overdue_restrictions;
+    is( $patron->restrictions->search( { type => 'OVERDUES' } )->count, 0, "Restriction removed." );
+
+    # Phase three
+    note("Testing with no overdue found");
+
+    Koha::Patron::Debarments::AddUniqueDebarment(
+        {
+            borrowernumber => $patron->borrowernumber,
+            type           => 'OVERDUES',
+            comment        => "OVERDUES_PROCESS simulation",
+        }
+    );
+    $patron->discard_changes;
+    $overdue->delete;
+
+    note("Testing 'when_no_overdue'");
+    t::lib::Mocks::mock_preference( 'AutoRemoveOverduesRestrictions', 'when_no_overdue' );
+    $patron->lift_overdue_restrictions;
+    is( $patron->restrictions->search( { type => 'OVERDUES' } )->count, 0 );
 
     $schema->storage->txn_rollback;
 };
