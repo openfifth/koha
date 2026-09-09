@@ -21,7 +21,7 @@ use Modern::Perl;
 use utf8;
 
 use Test::NoWarnings;
-use Test::More tests => 42;
+use Test::More tests => 43;
 use Test::Exception;
 use Test::MockModule;
 use Test::Warn;
@@ -4010,6 +4010,115 @@ subtest 'holds_fee() tests' => sub {
     # Test without patron
     $fee = $item->holds_fee(undef);
     is( $fee, 0, 'Item holds_fee returns 0 when no patron provided' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'mark_lost' => sub {
+    plan tests => 9;
+
+    $schema->storage->txn_begin;
+
+    my $patron       = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $other_patron = $builder->build_object( { class => 'Koha::Patrons' } );
+
+    # Item not checked out
+    my $available_item = $builder->build_sample_item;
+
+    $available_item->mark_lost(1);
+
+    $available_item->discard_changes;
+    is( $available_item->itemlost, 1, 'itemlost is set to the value passed on an item that is not checked out' );
+
+    # Item checked out
+    my $checked_out_item = $builder->build_sample_item;
+    my $item_line        = sub {
+        my ($value) = @_;
+        return $builder->build_object(
+            {
+                class => 'Koha::Account::Lines',
+                value => {
+                    borrowernumber   => $patron->borrowernumber,
+                    itemnumber       => $checked_out_item->itemnumber,
+                    debit_type_code  => 'OVERDUE',
+                    credit_type_code => undef,
+                    status           => 'UNRETURNED',
+                    %{ $value // {} },
+                }
+            }
+        );
+    };
+
+    $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => { itemnumber => $checked_out_item->itemnumber, borrowernumber => $patron->borrowernumber }
+        }
+    );
+
+    # mark_lost handles fines and 0 fines
+    my $outstanding = $item_line->( { amount => 5, amountoutstanding => 5 } );
+    my $zero_fine   = $item_line->( { amount => 0, amountoutstanding => 0 } );
+
+    # mark_lost guards against unrelated accountlines being edited. Confirm this.
+    my $other_type  = $item_line->( { debit_type_code => 'LOST' } );
+    my $returned    = $item_line->( { status          => 'RETURNED' } );
+    my $other_owner = $item_line->( { borrowernumber  => $other_patron->borrowernumber } );
+
+    my $other_item_fine = $builder->build_object(
+        {
+            class => 'Koha::Account::Lines',
+            value => {
+                borrowernumber   => $patron->borrowernumber,
+                itemnumber       => $builder->build_sample_item->itemnumber,
+                debit_type_code  => 'OVERDUE',
+                credit_type_code => undef,
+                status           => 'UNRETURNED',
+            }
+        }
+    );
+
+    $checked_out_item->mark_lost(1);
+
+    $outstanding->discard_changes;
+    is( $outstanding->status, 'LOST', 'an outstanding unreturned overdue is flipped to LOST' );
+
+    is( Koha::Account::Lines->find( $zero_fine->id ), undef, 'a zero value overdue with no payments is removed' );
+
+    $other_type->discard_changes;
+    is( $other_type->status, 'UNRETURNED', 'a line of another debit type is left alone' );
+
+    $returned->discard_changes;
+    is( $returned->status, 'RETURNED', 'a line that is not unreturned is left alone' );
+
+    $other_owner->discard_changes;
+    is( $other_owner->status, 'UNRETURNED', "another borrower's line on the same item is left alone" );
+
+    $other_item_fine->discard_changes;
+    is( $other_item_fine->status, 'UNRETURNED', "the borrower's line on another item is left alone" );
+
+    # Transfers are cancelled whether or not the item has already been sent
+    my $waiting_item = $builder->build_sample_item;
+    my $waiting      = $builder->build_object(
+        {
+            class => 'Koha::Item::Transfers',
+            value => { itemnumber => $waiting_item->itemnumber, datesent => undef }
+        }
+    );
+    $waiting_item->mark_lost(1);
+    $waiting->discard_changes;
+    is( $waiting->cancellation_reason, 'ItemLost', 'an outstanding transfer is cancelled' );
+
+    my $sent_item = $builder->build_sample_item;
+    my $sent      = $builder->build_object(
+        {
+            class => 'Koha::Item::Transfers',
+            value => { itemnumber => $sent_item->itemnumber, datesent => dt_from_string->subtract( days => 7 ) }
+        }
+    );
+    $sent_item->mark_lost(1);
+    $sent->discard_changes;
+    is( $sent->cancellation_reason, 'ItemLost', 'a transfer already in transit is cancelled too' );
 
     $schema->storage->txn_rollback;
 };
