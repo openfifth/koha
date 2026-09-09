@@ -1376,16 +1376,23 @@ has_restricting_overdues, which walks the circulation rules per delay.
 sub lift_overdue_restrictions {
     my ($self) = @_;
 
-    my $overdue_restrictions = $self->restrictions->search( { type => 'OVERDUES' } );
-    if ( C4::Context->preference('AutoRemoveOverduesRestrictions') ne 'no' && $self->is_debarred ) {
-        my $remove_restrictions =
-            C4::Context->preference('AutoRemoveOverduesRestrictions') eq 'when_no_overdue_causing_debarment'
-            ? !$self->has_restricting_overdues()
-            : !$self->has_overdues;
-        if ( $remove_restrictions && $overdue_restrictions->count ) {
-            Koha::Patron::Debarments::DelUniqueDebarment(
-                { borrowernumber => $self->borrowernumber, type => 'OVERDUES' } );
-        }
+    my $auto_remove_overdues_restrictions = C4::Context->preference('AutoRemoveOverduesRestrictions');
+    my $overdue_restrictions              = $self->restrictions->search( { type => 'OVERDUES' } );
+
+    if (   $auto_remove_overdues_restrictions eq 'no'
+        || !$self->is_debarred
+        || !$overdue_restrictions->count )
+    {
+        return;
+    }
+
+    my $remove_restrictions =
+        $auto_remove_overdues_restrictions eq 'when_no_overdue_causing_debarment'
+        ? !$self->has_restricting_overdues()
+        : !$self->has_overdues();
+
+    if ($remove_restrictions) {
+        Koha::Patron::Debarments::DelUniqueDebarment( { borrowernumber => $self->borrowernumber, type => 'OVERDUES' } );
     }
 }
 
