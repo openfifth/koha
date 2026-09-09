@@ -73,7 +73,7 @@ subtest "UNIMARC tests" => sub {
 
 subtest "_search tests" => sub {
 
-    plan tests => 15;
+    plan tests => 16;
 
     t::lib::Mocks::mock_preference( 'marcflavour',  'MARC21' );
     t::lib::Mocks::mock_preference( 'SearchEngine', 'Elasticsearch' );
@@ -183,6 +183,23 @@ subtest "_search tests" => sub {
     is_deeply(
         $terms, $expected_terms,
         "Search formed as expected for a non-subject field with double punctuation, period+comma "
+    );
+
+    # Bug 43483: a 6XX field with a blank 2nd indicator asserts no thesaurus,
+    # so no thesaurus constraint should be added to the search - matching the
+    # behaviour of the equivalent 1XX/7XX name field, so the same person can
+    # match/create a single authority regardless of whether they appear as
+    # a name field or a name-used-as-subject field.
+    $field   = MARC::Field->new( '600', '1', ' ', a => 'Goddard, Giles', d => '1962-' );
+    $heading = C4::Heading->new_from_field($field);
+    ($search_query) = $heading->_search('match-heading');
+    $terms          = $search_query->{query}->{bool}->{must};
+    $expected_terms = [
+        { term => { 'match-heading.ci_raw' => 'Goddard, Giles 1962' } },
+    ];
+    is_deeply(
+        $terms, $expected_terms,
+        "Search formed as expected for a 6XX field with a blank 2nd indicator - no thesaurus constraint added"
     );
 
     # Special case where thesaurus defined in subfield 2 should also match record with no thesaurus
