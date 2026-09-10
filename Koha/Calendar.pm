@@ -336,7 +336,6 @@ sub days_forward {
     return $base_dt;
 }
 
-# Walks backward one calendar day at a time, decrementing $num_days only on open days.
 # Does not implement subroutines routing through DayWeek-mode to prevent 7-day jumps
 # which give wrong results for "exact N open days ago".
 sub days_backward {
@@ -352,12 +351,22 @@ sub days_backward {
     }
 
     my $base_dt = $start_dt->clone;
-    while ( $num_days > 0 ) {
+
+    my $i = 0;
+    while ( $num_days > 0 && $i < OPEN_DAYS_SEARCH_MAX_ITERATIONS ) {
         $base_dt->subtract( days => 1 );
         if ( !$self->is_holiday($base_dt) ) {
             $num_days--;
         }
+        ++$i;
     }
+
+    # the loop was interrupted before $num_days reached zero, meaning we hit the max open day cap
+    if ( $num_days > 0 ) {
+        Koha::Exceptions::Calendar::NoOpenDays->throw(
+            sprintf( 'Unable to find an open day for library %s', $self->{branchcode} ) );
+    }
+
     return $base_dt;
 }
 
@@ -610,6 +619,18 @@ Passed a Datetime and number of days, returns another Datetime representing
 the next open day after adding the passed number of days. It is intended for
 use to calculate the due date when useDaysMode syspref is set to either
 'Datedue', 'Calendar' or 'Dayweek'.
+
+=head2 days_backward
+
+$datetime = $calendar->days_backward($start_dt, $to_sub)
+
+Passed a Datetime and number of days, returns another Datetime representing
+the open day reached by stepping back that number of open days. Closed days
+are skipped rather than counted, so the returned date is always an open one.
+
+Returns C<$start_dt> unchanged when C<$to_sub> is zero or negative. Throws
+C<Koha::Exceptions::Calendar::NoOpenDays> when OPEN_DAYS_SEARCH_MAX_ITERATIONS
+days have been stepped through without reaching the requested count.
 
 =head2 set_daysmode
 
