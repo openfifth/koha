@@ -715,22 +715,21 @@ the created credit, or C<undef> when there is nothing outstanding to forgive.
 sub forgive_debit {
     my ( $self, $debit, $params ) = @_;
 
+    if ( !defined( $params->{interface} ) ) {
+        Koha::Exceptions::MissingParameter->throw( error => "The interface parameter is mandatory" );
+    }
+
     my $amount = $debit->amountoutstanding;
     if ( $amount == 0 ) {
         return;
     }
 
-    my $userenv    = C4::Context->userenv;
-    my $user_id    = exists $params->{user_id}    ? $params->{user_id}    : ( $userenv ? $userenv->{number} : undef );
-    my $library_id = exists $params->{library_id} ? $params->{library_id} : ( $userenv ? $userenv->{branch} : undef );
-    my $interface  = $params->{interface} // C4::Context->interface;
-
     my $credit = $self->add_credit(
         {
             amount     => $amount,
-            user_id    => $user_id,
-            library_id => $library_id,
-            interface  => $interface,
+            user_id    => $params->{user_id},
+            library_id => $params->{library_id},
+            interface  => $params->{interface},
             type       => 'FORGIVEN',
             item_id    => $debit->itemnumber,
         }
