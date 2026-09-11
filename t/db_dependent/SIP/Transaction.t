@@ -51,14 +51,19 @@ subtest sip_currency => sub {
     my $transaction = C4::SIP::ILS::Transaction->new();
     is( $transaction->sip_currency, 'USD', "sip_currency defaults to USD when there is no active currency" );
 
-    $builder->build(
+    my $currency = $builder->build(
         {
             source => 'Currency',
-            value  => { isocode => 'GBP', active => 1 },
+            value  => { isocode => 'GBP', active => 1, symbol => 'GBP' },
         }
     );
     $transaction = C4::SIP::ILS::Transaction->new();
     is( $transaction->sip_currency, 'GBP', "sip_currency uses the active currency's isocode when one is configured" );
+
+    # Restore the "no active currency" state so later subtests in this file
+    # (which share this file's single transaction) aren't affected by this
+    # currency's symbol when formatting fee amounts.
+    Koha::Acquisition::Currencies->find( $currency->{currency} )->update( { active => 0 } );
 };
 
 subtest fill_holds_at_checkout => sub {
