@@ -31,10 +31,11 @@ use C4::Output;
 use C4::Reserves qw( ModReserve FixPriority );
 use C4::Auth     qw( checkauth );
 use Koha::BackgroundJob::BatchUpdateBiblioHoldsQueue;
+use Koha::Patrons;
 
 my $query = CGI->new;
 
-checkauth( $query, 0, { reserveforothers => '*' }, 'intranet' );
+my $userid = checkauth( $query, 0, { reserveforothers => '*' }, 'intranet' );
 
 my $op              = $query->param('op') || 'cud-modifyall';
 my @reserve_id      = $query->multi_param('reserve_id');
@@ -102,7 +103,10 @@ if ( $op eq 'cud-cancelall' || $op eq 'cud-modifyall' ) {
     }
 
 } elsif ( $op eq 'cud-convertall' ) {
-    for ( my $i = 0 ; $i < $count ; $i++ ) {
+    my $patron      = Koha::Patrons->find($userid);
+    my $can_convert = $patron && $patron->has_permission( { recalls => 'manage_recalls' } );
+
+    for ( my $i = 0 ; $can_convert && $i < $count ; $i++ ) {
         undef $itemnumber[$i] if !$itemnumber[$i];
         my $cancellation_reason = $query->param("cancellation-reason");
         my $params              = {
