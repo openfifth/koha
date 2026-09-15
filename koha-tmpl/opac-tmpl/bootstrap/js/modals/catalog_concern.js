@@ -36,6 +36,11 @@ $(document).ready(function () {
             let template = $("#concern_template").text();
             concern_body.val(template);
         }
+
+        let concern_biblio = e?.relatedTarget?.dataset?.biblionumber;
+        if (concern_biblio) {
+            $("#concern_biblio").val(concern_biblio);
+        }
     });
 
     $("#addConcernModal").on("click", "#addConfirm", function (e) {
