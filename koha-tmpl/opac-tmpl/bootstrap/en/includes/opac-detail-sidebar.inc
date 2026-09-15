@@ -70,7 +70,9 @@
 
     [% IF Koha.Preference('OpacCatalogConcerns') %]
         <li
-            ><a class="report_a_concern btn btn-link btn-lg" href="#" data-bs-toggle="modal" data-bs-target="#addConcernModal"><i class="fa fa-fw fa-warning" aria-hidden="true"></i> Report a concern</a></li
+            ><a class="report_a_concern btn btn-link btn-lg" href="#" data-bs-toggle="modal" data-bs-target="#addConcernModal" data-biblionumber="[% biblio.biblionumber | html %]"
+                ><i class="fa fa-fw fa-warning" aria-hidden="true"></i> Report a concern</a
+            ></li
         >
     [% END %]
 

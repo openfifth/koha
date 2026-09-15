@@ -482,7 +482,15 @@
 ><!-- / .main -->
 
 [% INCLUDE 'opac-bottom.inc' %]
+
+[% IF Koha.Preference('OpacCatalogConcerns') %]
+    [% INCLUDE 'modals/catalog_concern.inc' %]
+[% END %]
+
 [% BLOCK jsinclude %]
+    [% IF Koha.Preference('OpacCatalogConcerns') %]
+        [% Asset.js("js/modals/catalog_concern.js") | $raw %]
+    [% END %]
     [% IF ( LibraryThingForLibrariesID ) %]
         <script src="https://ltfl.librarything.com/forlibraries/widget.js?id=[% LibraryThingForLibrariesID | html %]&amp;systype=koha">
 </script>

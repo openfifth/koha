@@ -834,7 +834,15 @@
 </form>
 
 [% INCLUDE 'opac-bottom.inc' %]
+
+[% IF Koha.Preference('OpacCatalogConcerns') %]
+    [% INCLUDE 'modals/catalog_concern.inc' %]
+[% END %]
+
 [% BLOCK jsinclude %]
+    [% IF Koha.Preference('OpacCatalogConcerns') %]
+        [% Asset.js("js/modals/catalog_concern.js") | $raw %]
+    [% END %]
     [% Asset.js("lib/Chocolat/js/chocolat.js") | $raw %]
     [% CoverImagePlugins | $raw %]
     [% IF OpenLibraryCovers || OpenLibrarySearch %]

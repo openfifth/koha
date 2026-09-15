@@ -36,6 +36,11 @@ $(document).ready(function () {
             let template = $("#concern_template").text();
             concern_body.val(template);
         }
+
+        let concern_biblio = e?.relatedTarget?.dataset?.biblionumber;
+        if (concern_biblio) {
+            $("#concern_biblio").val(concern_biblio);
+        }
     });
 
     $("#addConcernModal").on("click", "#addConfirm", function (e) {
@@ -63,7 +68,7 @@ $(document).ready(function () {
                 $("#addConcernModal").modal("hide");
                 $("#concern_body").val("");
                 $("#concern_title").val("");
-                $("#catalogue_detail_biblio").prepend(
+                $(".maincontent").prepend(
                     '<div class="alert alert-success">' +
                         __("Your concern was successfully submitted.") +
                         "</div>"
@@ -72,7 +77,7 @@ $(document).ready(function () {
             error: function (data) {
                 $("#concern-submit-spinner").hide();
                 $("#addConcernModal").modal("hide");
-                $("#catalogue_detail_biblio").prepend(
+                $(".maincontent").prepend(
                     '<div class="alert alert-error">' +
                         __(
                             "There was an error when submitting your concern, please contact a librarian."

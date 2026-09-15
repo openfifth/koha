@@ -94,4 +94,12 @@
             >
         [% END %]
     [% END # / IF opacbookbag %]
+
+    [% IF Koha.Preference('OpacCatalogConcerns') %]
+        <span class="actions"
+            ><a class="report_a_concern btn btn-link btn-sm" href="#" data-bs-toggle="modal" data-bs-target="#addConcernModal" data-biblionumber="[% items.biblionumber | html %]"
+                ><i class="fa fa-fw fa-warning" aria-hidden="true"></i> Report a concern</a
+            ></span
+        >
+    [% END %]
 </div>
