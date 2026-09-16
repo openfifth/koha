@@ -95,6 +95,15 @@
                 <th scope="row">Koha version: </th>
                 <td>[% kohaVersion | html %][% IF kohaCodename %]<strong>[% kohaCodename | html %]</strong>[% END %]</td>
             </tr>
+            [% IF buildCommit %]
+                <tr>
+                    <th scope="row">Build commit: </th>
+                    <td>
+                        [% buildCommit | html %]
+                        [% IF buildCommitDate %]<span class="text-muted">([% buildCommitDate | html %])</span>[% END %]
+                    </td>
+                </tr>
+            [% END %]
             <tr>
                 <th scope="row">OS version ('uname -a'): </th>
                 <td>[% osVersion | html %]</td>
