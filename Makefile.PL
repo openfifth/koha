@@ -317,6 +317,7 @@ my $target_map = {
     './docs/history.txt'                               => { target => 'DOC_DIR', trimdir => -1 },
     './docs/contributors.yaml'                         => { target => 'DOC_DIR', trimdir => -1 },
     './docs/teams.yaml'                                => { target => 'DOC_DIR', trimdir => -1 },
+    './docs/build-commit.txt'                          => { target => 'DOC_DIR', trimdir => -1 },
     './offline_circ'                                   => 'INTRANET_CGI_DIR',
     './erm'                                            => 'INTRANET_CGI_DIR',
     './etc'                                            => { target => 'KOHA_CONF_DIR',  trimdir => -1 },

@@ -168,6 +168,19 @@ if ( $tab eq 'about' ) {
     job_notification_method_check($template);
     elasticsearch_check($template);
 
+    # o5th-only: the last commit the running package was built from.
+    # docs/build-commit.txt is stamped by `git archive` via the `export-subst`
+    # gitattribute (see .gitattributes); on a plain git checkout it still
+    # holds the unexpanded placeholder, so nothing is shown there.
+    my ( $build_commit, $build_commit_date );
+    my $build_commit_file = "$docdir" . "/build-commit.txt";
+    if ( -e $build_commit_file ) {
+        my $content = eval { read_file($build_commit_file) };
+        if ( defined $content && $content =~ /^([0-9a-f]{40})\s+(\S+)/ ) {
+            ( $build_commit, $build_commit_date ) = ( $1, $2 );
+        }
+    }
+
     $template->param(
         effective_caching_method  => $effective_caching_method,
         memcached_servers         => $memcached_servers,
@@ -184,6 +197,8 @@ if ( $tab eq 'about' ) {
         mysqlVersion              => $versions{'mysqlVersion'},
         apacheVersion             => $versions{'apacheVersion'},
         memcached_running         => Koha::Caches->get_instance->memcached_cache,
+        buildCommit               => $build_commit,
+        buildCommitDate           => $build_commit_date,
     );
 
 }
