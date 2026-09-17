@@ -397,6 +397,7 @@ my $target_map = {
     './pm_to_blib'                               => 'NONE',
     './blib'                                     => 'NONE',
     '.git-blame-ignore-revs'                     => 'NONE',
+    '.gitattributes'                             => 'NONE',
     './.github'                                  => 'NONE',
     './.forgejo'                                 => 'NONE',
     '.prettierrc.js'                             => 'NONE',
