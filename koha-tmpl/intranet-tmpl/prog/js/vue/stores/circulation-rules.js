@@ -1,18 +1,22 @@
 import { defineStore } from "pinia";
 import { $__ } from "../i18n";
 import { APIClient } from "../fetch/api-client.js";
-import { isEqual } from "lodash";
 import { permissionsActions } from "../composables/permissions";
 import { reactive, toRefs, computed } from "vue";
 import { cloneDeep } from "lodash";
-
-// NOTES ON RULE SETS TYPES
-// exhaustive:  includes 'pure fallback' rules sets for contexts that no rules match.
-//              Format: [{overdue_X_<rule_name>: {value: mixed: isFallback: bool}}]
-// effective:   includes sets only for contexts for which one or more rule exists in the db. These sets will include fallbacks.
-//              Format: [{overdue_X_<rule_name>: <value>}}
-// raw:         includes only the exact sets as they are found in the db
-//              Format: [{overdue_X_<rule_name>: <value>}}]
+import {
+    ruleSuffixes,
+    buildProjectedRuleSet,
+    compareByProperty,
+    containsMatchingContext,
+    findEffectiveRule,
+    formatMttForDisplay,
+    formatRuleSetMttFields,
+    hasConflict,
+    hasExplicitRulesForTrigger,
+    isImpactedByDeletion,
+    maxExplicitTriggerNumber,
+} from "../composables/circulation-rules";
 
 export const useCircRulesStore = defineStore("circRules", () => {
     const store = reactive({
@@ -30,7 +34,6 @@ export const useCircRulesStore = defineStore("circRules", () => {
         userPermissions: null,
         user_library_id: null,
         letters: [],
-        ruleSuffixes: ["delay", "notice", "mtt", "restrict"],
         transportTypes: [
             { code: "email", name: $__("Email") },
             { code: "sms", name: $__("SMS") },
@@ -110,328 +113,7 @@ export const useCircRulesStore = defineStore("circRules", () => {
             }
             await this.getConfigurationOptions();
         },
-        // utilities
-        compareByProperty(property) {
-            return (a, b) => a[property].localeCompare(b[property]);
-        },
-        formatTriggerSpecificRuleSetForDisplay(
-            context,
-            triggerNumber,
-            includeFallbacks = true
-        ) {
-            const triggerSpecificRuleSet = {
-                context,
-            };
-            this.ruleSuffixes.forEach(ruleSuffix => {
-                triggerSpecificRuleSet[
-                    `overdue_${triggerNumber}_${ruleSuffix}`
-                ] = this.findEffectiveRule(
-                    context,
-                    ruleSuffix,
-                    triggerNumber,
-                    includeFallbacks
-                );
-            });
-            triggerSpecificRuleSet[`overdue_${triggerNumber}_has_rules`] =
-                this.findEffectiveRule(
-                    context,
-                    "has_rules",
-                    triggerNumber,
-                    includeFallbacks
-                );
-            return triggerSpecificRuleSet;
-        },
-        handleContext(value, data, type, displayProperty = "name") {
-            const item = data.find(item => item[type] === value);
-            return item[displayProperty];
-        },
-        handleNotice(notice) {
-            const letter = this.letters.find(letter => letter.code === notice);
-            return letter ? letter.name : notice;
-        },
-        handleRestrictions(value) {
-            if (!value) {
-                return;
-            }
-            return value === "1" ? $__("Yes") : $__("No");
-        },
-        handleTransport(value, type) {
-            if (!value) {
-                return "";
-            }
-            return value.includes(type) ? $__("Yes") : $__("No");
-        },
-        hasExplicitRulesForTrigger(ruleSet, triggerNumber) {
-            return this.ruleSuffixes.some(
-                suffix => ruleSet[`overdue_${triggerNumber}_${suffix}`] != null
-            );
-        },
-        maxExplicitTriggerNumber(ruleSet) {
-            const regex = new RegExp(
-                `^overdue_(\\d+)_(${this.ruleSuffixes.join("|")})$`
-            );
-            let max = 0;
-            Object.keys(ruleSet).forEach(key => {
-                const match = key.match(regex);
-                if (match && ruleSet[key] !== null) {
-                    max = Math.max(max, parseInt(match[1]));
-                }
-            });
-            return max;
-        },
-        hasConflict(oldRuleSet, newRuleSet, triggerNumber) {
-            if (
-                !oldRuleSet ||
-                !this.hasExplicitRulesForTrigger(oldRuleSet, triggerNumber)
-            ) {
-                return false;
-            }
-
-            if (!this.isSameContext(oldRuleSet.context, newRuleSet.context)) {
-                return false;
-            }
-
-            return this.ruleSuffixes.some(
-                suffix =>
-                    !isEqual(
-                        oldRuleSet[`overdue_${triggerNumber}_${suffix}`] ??
-                            null,
-                        newRuleSet[`overdue_${triggerNumber}_${suffix}`] ?? null
-                    )
-            );
-        },
-        isOnlyRuleSetForTrigger(triggerNumber) {
-            return (
-                this.allCurrentLibraryRawRuleSets.filter(ruleSet =>
-                    this.hasExplicitRulesForTrigger(ruleSet, triggerNumber)
-                ).length === 1
-            );
-        },
-        isLastTrigger(triggerNumber) {
-            return (
-                parseInt(triggerNumber) ===
-                this.triggerCounts[this.currentLibraryId]
-            );
-        },
-        async scrollToElementById(id) {
-            let count = 0;
-            // ensures that the relevant section is loaded before we attempt to scroll it into view
-            while (!document.getElementById(id) && count < 8) {
-                await new Promise(resolve => setTimeout(resolve, 250));
-                count++;
-            }
-            const element = document.getElementById(id);
-            if (!element) {
-                // handle loading the page if the element is not at all present
-                return;
-            }
-            element.scrollIntoView({ behavior: "smooth" });
-        },
-        isSameContext(a, b) {
-            return (
-                a.library_id === b.library_id &&
-                a.patron_category_id === b.patron_category_id &&
-                a.item_type_id === b.item_type_id
-            );
-        },
-        containsMatchingContext(contextList, context) {
-            return contextList.some(candidate =>
-                this.isSameContext(candidate, context)
-            );
-        },
         // services
-        formatMttForDisplay(rawMtt) {
-            return rawMtt?.split(",");
-        },
-        formatRuleSetMttFields(ruleSets) {
-            let triggerNumber = 1;
-            for (const ruleSet of ruleSets) {
-                while (ruleSet[`overdue_${triggerNumber}_mtt`] !== undefined) {
-                    if (
-                        typeof ruleSet[`overdue_${triggerNumber}_mtt`] ===
-                        "string"
-                    ) {
-                        ruleSet[`overdue_${triggerNumber}_mtt`] =
-                            this.formatMttForDisplay(
-                                ruleSet[`overdue_${triggerNumber}_mtt`]
-                            );
-                    }
-                    triggerNumber++;
-                }
-                triggerNumber = 1;
-            }
-        },
-        getSpecificityScore(ruleSetContext, referenceContext) {
-            let score = 0;
-            if (
-                ruleSetContext.library_id !== "*" &&
-                ruleSetContext.library_id === referenceContext.library_id
-            )
-                score += 4;
-            if (
-                ruleSetContext.patron_category_id !== "*" &&
-                ruleSetContext.patron_category_id ===
-                    referenceContext.patron_category_id
-            )
-                score += 2;
-            if (
-                ruleSetContext.item_type_id !== "*" &&
-                ruleSetContext.item_type_id === referenceContext.item_type_id
-            )
-                score += 1;
-            return score;
-        },
-        findFallbackRuleSetForField(context, triggerNumber, suffix, ruleSets) {
-            const candidates = ruleSets.filter(
-                ruleSet =>
-                    ruleSet[`overdue_${triggerNumber}_${suffix}`] != null &&
-                    (ruleSet.context.library_id === context.library_id ||
-                        ruleSet.context.library_id === "*") &&
-                    (ruleSet.context.patron_category_id ===
-                        context.patron_category_id ||
-                        ruleSet.context.patron_category_id === "*") &&
-                    (ruleSet.context.item_type_id === context.item_type_id ||
-                        ruleSet.context.item_type_id === "*")
-            );
-            if (candidates.length === 0) return null;
-            return candidates.reduce((best, current) =>
-                this.getSpecificityScore(current.context, context) >
-                this.getSpecificityScore(best.context, context)
-                    ? current
-                    : best
-            );
-        },
-        buildProjectedRuleSet(
-            dependentRuleSet,
-            triggerNumber,
-            contextRuleSets
-        ) {
-            const projectedRuleSet = {
-                context: dependentRuleSet.context,
-                [`overdue_${triggerNumber}_has_rules`]: {
-                    value: true,
-                    isFallback: false,
-                },
-            };
-
-            this.ruleSuffixes.forEach(suffix => {
-                const field = `overdue_${triggerNumber}_${suffix}`;
-                if (dependentRuleSet[field] != null) {
-                    projectedRuleSet[field] = {
-                        value: dependentRuleSet[field],
-                        isFallback: false,
-                    };
-                    return;
-                }
-                const fallback = this.findFallbackRuleSetForField(
-                    dependentRuleSet.context,
-                    triggerNumber,
-                    suffix,
-                    contextRuleSets
-                );
-                projectedRuleSet[field] = {
-                    value: fallback?.[field] ?? null,
-                    isFallback: true,
-                };
-            });
-
-            return projectedRuleSet;
-        },
-        findEffectiveRule(
-            context,
-            ruleSuffix,
-            triggerNumber,
-            includeFallbacks = true
-        ) {
-            if (
-                !this.currentAndDefaultRawRuleSets ||
-                !Array.isArray(this.currentAndDefaultRawRuleSets) ||
-                this.currentAndDefaultRawRuleSets.length === 0
-            ) {
-                return { value: null, isFallback: true };
-            }
-            // Check if the current ruleSet's value for the ruleSuffix is undefined
-            const existingRule = this.currentAndDefaultRawRuleSets.find(
-                ruleSet =>
-                    ruleSet[`overdue_${triggerNumber}_${ruleSuffix}`] !==
-                        undefined &&
-                    ruleSet[`overdue_${triggerNumber}_${ruleSuffix}`] !==
-                        null &&
-                    ruleSet?.context.library_id === context.library_id &&
-                    ruleSet?.context.patron_category_id ===
-                        context.patron_category_id &&
-                    ruleSet?.context.item_type_id === context.item_type_id
-            );
-
-            // if handling 'has_rules', derive from actual rules rather than DB
-            if (ruleSuffix === "has_rules") {
-                const hasExplicit = this.currentAndDefaultRawRuleSets.some(
-                    ruleSet =>
-                        ruleSet?.context.library_id === context.library_id &&
-                        ruleSet?.context.patron_category_id ===
-                            context.patron_category_id &&
-                        ruleSet?.context.item_type_id ===
-                            context.item_type_id &&
-                        this.hasExplicitRulesForTrigger(ruleSet, triggerNumber)
-                );
-                return {
-                    value: hasExplicit ? true : null,
-                    isFallback: !hasExplicit,
-                };
-            }
-
-            // If the current ruleSet's value is not null, use it directly
-            if (existingRule !== undefined) {
-                return {
-                    value: existingRule[
-                        `overdue_${triggerNumber}_${ruleSuffix}`
-                    ],
-                    isFallback: !this.hasExplicitRulesForTrigger(
-                        existingRule,
-                        triggerNumber
-                    ),
-                };
-            }
-
-            // If set to return a raw set, return
-            if (!includeFallbacks) {
-                return;
-            }
-
-            // Filter ruleSets to only those with non-null values for the specified ruleSuffix
-            // and that are no excluded from the selected context
-            const relevantRules = this.currentAndDefaultRawRuleSets.filter(
-                ruleSet =>
-                    ruleSet[`overdue_${triggerNumber}_${ruleSuffix}`] !==
-                        undefined &&
-                    ruleSet[`overdue_${triggerNumber}_${ruleSuffix}`] !==
-                        null &&
-                    (ruleSet.context.library_id === context.library_id ||
-                        ruleSet.context.library_id === "*") &&
-                    (ruleSet.context.patron_category_id ===
-                        context.patron_category_id ||
-                        ruleSet.context.patron_category_id === "*") &&
-                    (ruleSet.context.item_type_id === context.item_type_id ||
-                        ruleSet.context.item_type_id === "*")
-            );
-
-            // Sort the ruleSets based on specificity score, descending
-            const sortedRules = relevantRules.sort(
-                (a, b) =>
-                    this.getSpecificityScore(b.context, context) -
-                    this.getSpecificityScore(a.context, context)
-            );
-            // If no ruleSet found, return null
-            if (sortedRules.length === 0) {
-                return { value: null, isFallback: true };
-            }
-            // Get the value from the most specific ruleSet
-            const bestRule = sortedRules[0];
-            return {
-                value: bestRule[`overdue_${triggerNumber}_${ruleSuffix}`],
-                isFallback: true,
-            };
-        },
         setAllExhaustiveEffectiveRuleSets() {
             // clear array
             this.allExhaustiveEffectiveRuleSets = [];
@@ -450,16 +132,18 @@ export const useCircRulesStore = defineStore("circRules", () => {
                         i <= this.triggerCounts[this.currentLibraryId];
                         i++
                     ) {
-                        this.ruleSuffixes.forEach(ruleSuffix => {
+                        ruleSuffixes.forEach(ruleSuffix => {
                             effectiveRuleSet[`overdue_${i}_${ruleSuffix}`] =
-                                this.findEffectiveRule(
+                                findEffectiveRule(
+                                    this.currentAndDefaultRawRuleSets,
                                     effectiveRuleSet.context,
                                     ruleSuffix,
                                     i
                                 );
                         });
                         effectiveRuleSet[`overdue_${i}_has_rules`] =
-                            this.findEffectiveRule(
+                            findEffectiveRule(
+                                this.currentAndDefaultRawRuleSets,
                                 effectiveRuleSet.context,
                                 "has_rules",
                                 i
@@ -482,38 +166,28 @@ export const useCircRulesStore = defineStore("circRules", () => {
                     i <= this.triggerCounts[this.currentLibraryId];
                     i++
                 ) {
-                    if (!this.hasExplicitRulesForTrigger(ruleSet, i)) {
+                    if (!hasExplicitRulesForTrigger(ruleSet, i)) {
                         continue;
                     }
-                    this.ruleSuffixes.forEach(ruleSuffix => {
+                    ruleSuffixes.forEach(ruleSuffix => {
                         effectiveRuleSet[`overdue_${i}_${ruleSuffix}`] =
-                            this.findEffectiveRule(
+                            findEffectiveRule(
+                                this.currentAndDefaultRawRuleSets,
                                 ruleSet.context,
                                 ruleSuffix,
                                 i
                             );
                     });
                     effectiveRuleSet[`overdue_${i}_has_rules`] =
-                        this.findEffectiveRule(ruleSet.context, "has_rules", i);
+                        findEffectiveRule(
+                            this.currentAndDefaultRawRuleSets,
+                            ruleSet.context,
+                            "has_rules",
+                            i
+                        );
                 }
                 this.allEffectiveRuleSets.push(effectiveRuleSet);
             });
-        },
-        setEffectiveTriggerFilteredRuleSet(context) {
-            const effectiveTriggerFilteredRuleSets = [];
-            for (
-                let i = 1;
-                i <= this.triggerCounts[this.currentLibraryId];
-                i++
-            ) {
-                const triggerSpecificRuleSet =
-                    this.formatTriggerSpecificRuleSetForDisplay(context, i);
-                if (!triggerSpecificRuleSet) {
-                    continue;
-                }
-                effectiveTriggerFilteredRuleSets.push(triggerSpecificRuleSet);
-            }
-            return effectiveTriggerFilteredRuleSets;
         },
         updateTriggerCount() {
             // Library-specific triggerCounts can fall into the following use cases:
@@ -528,10 +202,7 @@ export const useCircRulesStore = defineStore("circRules", () => {
                 this.triggerCounts["*"] =
                     this.allDefaultLibraryRawRuleSets.reduce(
                         (max, ruleSet) =>
-                            Math.max(
-                                max,
-                                this.maxExplicitTriggerNumber(ruleSet)
-                            ),
+                            Math.max(max, maxExplicitTriggerNumber(ruleSet)),
                         0
                     );
                 return;
@@ -548,7 +219,7 @@ export const useCircRulesStore = defineStore("circRules", () => {
             let i = this.triggerCounts["*"] + 1;
             while (
                 this.allCurrentLibraryRawRuleSets.some(ruleSet =>
-                    this.hasExplicitRulesForTrigger(ruleSet, i)
+                    hasExplicitRulesForTrigger(ruleSet, i)
                 )
             ) {
                 i++;
@@ -565,9 +236,9 @@ export const useCircRulesStore = defineStore("circRules", () => {
         },
         async setAllFormattedRuleSets() {
             await this.setAllRawRuleSets();
-            this.formatRuleSetMttFields(this.allDefaultLibraryRawRuleSets);
+            formatRuleSetMttFields(this.allDefaultLibraryRawRuleSets);
             if (this.currentLibraryId !== "*") {
-                this.formatRuleSetMttFields(this.allCurrentLibraryRawRuleSets);
+                formatRuleSetMttFields(this.allCurrentLibraryRawRuleSets);
             }
         },
         async getSelectedRuleSet(context, effective = true) {
@@ -584,46 +255,13 @@ export const useCircRulesStore = defineStore("circRules", () => {
             while (i <= this.triggerCounts[this.currentLibraryId]) {
                 if (rawSelectedRuleSet[`overdue_${i}_mtt`]) {
                     formattedSelectedRuleSet[`overdue_${i}_mtt`] =
-                        this.formatMttForDisplay(
+                        formatMttForDisplay(
                             rawSelectedRuleSet[`overdue_${i}_mtt`]
                         );
                 }
                 i++;
             }
             return formattedSelectedRuleSet;
-        },
-        isImpactedByDeletion(
-            candidate,
-            triggerNumber,
-            deletedContexts,
-            contextRuleSets
-        ) {
-            if (
-                this.containsMatchingContext(deletedContexts, candidate.context)
-            ) {
-                return false;
-            }
-            if (!this.hasExplicitRulesForTrigger(candidate, triggerNumber)) {
-                return false;
-            }
-            return this.ruleSuffixes.some(suffix => {
-                if (candidate[`overdue_${triggerNumber}_${suffix}`] != null) {
-                    return false;
-                }
-                const fallback = this.findFallbackRuleSetForField(
-                    candidate.context,
-                    triggerNumber,
-                    suffix,
-                    contextRuleSets
-                );
-                return (
-                    fallback &&
-                    this.containsMatchingContext(
-                        deletedContexts,
-                        fallback.context
-                    )
-                );
-            });
         },
         // For a set of rule sets being deleted for a given trigger, return the
         // rule sets that depend on any of them (deduplicated, excluding the
@@ -647,14 +285,11 @@ export const useCircRulesStore = defineStore("circRules", () => {
 
             const projectedRemainingRawRuleSets = contextRuleSets.filter(
                 ruleSet =>
-                    !this.containsMatchingContext(
-                        deletedContexts,
-                        ruleSet.context
-                    )
+                    !containsMatchingContext(deletedContexts, ruleSet.context)
             );
 
             const dependentRuleSets = searchRuleSets.filter(candidate =>
-                this.isImpactedByDeletion(
+                isImpactedByDeletion(
                     candidate,
                     triggerNumber,
                     deletedContexts,
@@ -664,7 +299,7 @@ export const useCircRulesStore = defineStore("circRules", () => {
 
             const projectedDependentEffectiveRuleSets = dependentRuleSets.map(
                 dependentRuleSet =>
-                    this.buildProjectedRuleSet(
+                    buildProjectedRuleSet(
                         dependentRuleSet,
                         triggerNumber,
                         projectedRemainingRawRuleSets
@@ -678,7 +313,7 @@ export const useCircRulesStore = defineStore("circRules", () => {
         },
         // repositories
         async deleteRuleSet(ruleSet, triggerNumber) {
-            if (!this.hasExplicitRulesForTrigger(ruleSet, triggerNumber)) {
+            if (!hasExplicitRulesForTrigger(ruleSet, triggerNumber)) {
                 return;
             }
 
@@ -687,12 +322,12 @@ export const useCircRulesStore = defineStore("circRules", () => {
                 false
             );
 
-            if (this.hasConflict(ruleSet, ruleSetInDb, triggerNumber)) {
+            if (hasConflict(ruleSet, ruleSetInDb, triggerNumber)) {
                 throw "The rule set for the selected trigger context could not be reset as it was updated elsewhere. Please see the updated trigger above.";
             }
 
             const rulesForDeletion = { context: ruleSet.context };
-            this.ruleSuffixes.forEach(suffix => {
+            ruleSuffixes.forEach(suffix => {
                 rulesForDeletion[`overdue_${triggerNumber}_${suffix}`] = null;
             });
             await this.updateCircRuleSets(rulesForDeletion, triggerNumber);
@@ -710,7 +345,7 @@ export const useCircRulesStore = defineStore("circRules", () => {
         },
         async loadAllLibrariesRuleSets() {
             this.allLibrariesRawRuleSets = await this.fetchRawRuleSets();
-            this.formatRuleSetMttFields(this.allLibrariesRawRuleSets);
+            formatRuleSetMttFields(this.allLibrariesRawRuleSets);
         },
         async getCurrentAndDefaultRawRuleSets() {
             this.allDefaultLibraryRawRuleSets = await this.fetchRawRuleSets({
@@ -739,7 +374,7 @@ export const useCircRulesStore = defineStore("circRules", () => {
         async getItemTypes() {
             const client = APIClient.item;
             let itemTypes = await client.item_types.getAll();
-            itemTypes.sort(this.compareByProperty("description"));
+            itemTypes.sort(compareByProperty("description"));
             itemTypes.unshift({
                 item_type_id: "*",
                 description: $__("Default rule for all item types"),
@@ -750,7 +385,7 @@ export const useCircRulesStore = defineStore("circRules", () => {
             const client = APIClient.library;
             let libraries = [];
             libraries = await client.libraries.getAll();
-            libraries.sort(this.compareByProperty("name"));
+            libraries.sort(compareByProperty("name"));
             libraries.unshift({
                 library_id: "*",
                 name: $__("Default rule for all libraries"),
@@ -760,7 +395,7 @@ export const useCircRulesStore = defineStore("circRules", () => {
         async getPatronCategories() {
             const client = APIClient.patron;
             let patronCategories = await client.categories.getAll();
-            patronCategories.sort(this.compareByProperty("name"));
+            patronCategories.sort(compareByProperty("name"));
             patronCategories.unshift({
                 patron_category_id: "*",
                 name: $__("Default rule for all categories"),

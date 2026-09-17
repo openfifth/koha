@@ -44,18 +44,14 @@ import CirculationTriggersForm from "./CirculationTriggersForm.vue";
 import TriggersTable from "./TriggersTable.vue";
 import { inject } from "vue";
 import { storeToRefs } from "pinia";
+import { formatTriggerSpecificRuleSetForDisplay } from "@koha-vue/composables/circulation-rules";
 
 export default {
     setup() {
         const circRulesStore = inject("circRulesStore");
         const {
-            handleContext,
-            handleNotice,
-            handleTransport,
             getSelectedRuleSet,
-            formatTriggerSpecificRuleSetForDisplay,
             deleteRuleSet,
-            handleRestrictions,
             computeDeletionImpact,
             setAllFormattedRuleSets,
         } = circRulesStore;
@@ -64,19 +60,16 @@ export default {
             itemTypes,
             patronCategories,
             lastEditedTriggerNumber,
+            currentAndDefaultRawRuleSets,
         } = storeToRefs(circRulesStore);
         return {
             libraries,
             itemTypes,
             patronCategories,
             lastEditedTriggerNumber,
-            handleContext,
-            handleNotice,
-            handleTransport,
+            currentAndDefaultRawRuleSets,
             getSelectedRuleSet,
-            formatTriggerSpecificRuleSetForDisplay,
             deleteRuleSet,
-            handleRestrictions,
             computeDeletionImpact,
             setAllFormattedRuleSets,
         };
@@ -127,7 +120,8 @@ export default {
                 },
                 false
             );
-            this.effectiveRuleSet = this.formatTriggerSpecificRuleSetForDisplay(
+            this.effectiveRuleSet = formatTriggerSpecificRuleSetForDisplay(
+                this.currentAndDefaultRawRuleSets,
                 this.currentRuleSet.context,
                 this.triggerNumber
             );

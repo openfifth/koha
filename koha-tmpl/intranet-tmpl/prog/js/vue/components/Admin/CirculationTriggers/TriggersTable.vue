@@ -119,7 +119,8 @@
                                     handleNotice(
                                         ruleSet[
                                             `overdue_${modal ? i + 1 : triggerNumber}_notice`
-                                        ].value
+                                        ].value,
+                                        letters
                                     )
                                 }}
                             </span>
@@ -234,7 +235,10 @@
                                     ruleSet[
                                         `overdue_${modal ? i + 1 : triggerNumber}_has_rules`
                                     ].value &&
-                                    !isOnlyRuleSetForTrigger(triggerNumber)
+                                    !isOnlyRuleSetForTrigger(
+                                        allCurrentLibraryRawRuleSets,
+                                        triggerNumber
+                                    )
                                 "
                                 type="button"
                                 class="btn btn-default btn-xs"
@@ -303,6 +307,13 @@
 <script>
 import { inject } from "vue";
 import { storeToRefs } from "pinia";
+import {
+    handleContext,
+    handleNotice,
+    handleRestrictions,
+    handleTransport,
+    isOnlyRuleSetForTrigger,
+} from "@koha-vue/composables/circulation-rules";
 
 export default {
     props: [
@@ -325,15 +336,14 @@ export default {
     },
     setup() {
         const circRulesStore = inject("circRulesStore");
-        const { triggerCounts, patronCategories, itemTypes, libraries } =
-            storeToRefs(circRulesStore);
         const {
-            handleContext,
-            handleNotice,
-            handleTransport,
-            isOnlyRuleSetForTrigger,
-            handleRestrictions,
-        } = circRulesStore;
+            triggerCounts,
+            patronCategories,
+            itemTypes,
+            libraries,
+            letters,
+            allCurrentLibraryRawRuleSets,
+        } = storeToRefs(circRulesStore);
 
         return {
             handleContext,
@@ -343,6 +353,8 @@ export default {
             patronCategories,
             itemTypes,
             libraries,
+            letters,
+            allCurrentLibraryRawRuleSets,
             isOnlyRuleSetForTrigger,
             handleRestrictions,
         };

@@ -123,20 +123,18 @@ import ConfirmContext from "./ConfirmContext.vue";
 import EditActions from "./EditActions.vue";
 import EditNotice from "./EditNotice.vue";
 import { isEqual, cloneDeep } from "lodash";
+import {
+    findEffectiveRule,
+    hasConflict,
+    scrollToElementById,
+    setEffectiveTriggerFilteredRuleSet,
+} from "@koha-vue/composables/circulation-rules";
 
 export default {
     setup() {
         const circRulesStore = inject("circRulesStore");
-        const {
-            updateTriggerCount,
-            findEffectiveRule,
-            getSelectedRuleSet,
-            setEffectiveTriggerFilteredRuleSet,
-            updateCircRuleSets,
-            hasConflict,
-            compareByProperty,
-            scrollToElementById,
-        } = circRulesStore;
+        const { updateTriggerCount, getSelectedRuleSet, updateCircRuleSets } =
+            circRulesStore;
         const {
             letters,
             libraries,
@@ -144,6 +142,8 @@ export default {
             transportTypes,
             patronCategories,
             triggerCounts,
+            currentLibraryId,
+            currentAndDefaultRawRuleSets,
             lastEditedTriggerNumber,
             storeInitialized,
             canManageAnyLibrary,
@@ -156,19 +156,16 @@ export default {
             libraries,
             transportTypes,
             triggerCounts,
+            currentLibraryId,
+            currentAndDefaultRawRuleSets,
             patronCategories,
             getSelectedRuleSet,
             updateTriggerCount,
-            findEffectiveRule,
-            setEffectiveTriggerFilteredRuleSet,
             updateCircRuleSets,
-            hasConflict,
             lastEditedTriggerNumber,
             storeInitialized,
             canManageAnyLibrary,
             user_library_id,
-            compareByProperty,
-            scrollToElementById,
         };
     },
     data() {
@@ -326,7 +323,7 @@ export default {
                     ruleSetInDb.context = { ...this.context };
                 }
                 if (
-                    this.hasConflict(
+                    hasConflict(
                         ruleSetInDb,
                         this.currentRuleSet,
                         this.triggerNumber
@@ -374,7 +371,11 @@ export default {
             this.setMaxDelay();
             this.setRuleSetInfo();
             this.effectiveTriggerFilteredRuleSets =
-                this.setEffectiveTriggerFilteredRuleSet(this.context);
+                setEffectiveTriggerFilteredRuleSet(
+                    this.currentAndDefaultRawRuleSets,
+                    this.context,
+                    this.triggerCounts[this.currentLibraryId]
+                );
             this.setFallbackRuleSet();
             this.setFilteredLetters();
             this.setAllowSubmission();
@@ -426,7 +427,8 @@ export default {
         },
         setFallbackRuleSet() {
             this.fallbackRuleSet = {
-                [`overdue_${this.triggerNumber}_delay`]: this.findEffectiveRule(
+                [`overdue_${this.triggerNumber}_delay`]: findEffectiveRule(
+                    this.currentAndDefaultRawRuleSets,
                     this.context,
                     "delay",
                     this.triggerNumber
@@ -437,28 +439,30 @@ export default {
                 return;
             }
             this.fallbackRuleSet = {
-                [`overdue_${this.triggerNumber}_delay`]: this.findEffectiveRule(
+                [`overdue_${this.triggerNumber}_delay`]: findEffectiveRule(
+                    this.currentAndDefaultRawRuleSets,
                     this.context,
                     "delay",
                     this.triggerNumber
                 ).value,
-                [`overdue_${this.triggerNumber}_notice`]:
-                    this.findEffectiveRule(
-                        this.context,
-                        "notice",
-                        this.triggerNumber
-                    ).value,
-                [`overdue_${this.triggerNumber}_mtt`]: this.findEffectiveRule(
+                [`overdue_${this.triggerNumber}_notice`]: findEffectiveRule(
+                    this.currentAndDefaultRawRuleSets,
+                    this.context,
+                    "notice",
+                    this.triggerNumber
+                ).value,
+                [`overdue_${this.triggerNumber}_mtt`]: findEffectiveRule(
+                    this.currentAndDefaultRawRuleSets,
                     this.context,
                     "mtt",
                     this.triggerNumber
                 ).value,
-                [`overdue_${this.triggerNumber}_restrict`]:
-                    this.findEffectiveRule(
-                        this.context,
-                        "restrict",
-                        this.triggerNumber
-                    ).value,
+                [`overdue_${this.triggerNumber}_restrict`]: findEffectiveRule(
+                    this.currentAndDefaultRawRuleSets,
+                    this.context,
+                    "restrict",
+                    this.triggerNumber
+                ).value,
             };
         },
         setMinDelay() {
@@ -625,7 +629,7 @@ export default {
         async editMode(newValue) {
             if (newValue === "add" || newValue === "edit") {
                 await this.$nextTick();
-                await this.scrollToElementById("trigger-table-form");
+                await scrollToElementById("trigger-table-form");
             }
         },
     },
