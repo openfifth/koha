@@ -153,14 +153,33 @@ sub reset_debian_changelog {
     sys_command_output(qq{git checkout -- debian/changelog});
 }
 
+sub stamp_build_commit {
+    # docs/build-commit.txt carries an export-subst placeholder that only
+    # `git archive` expands. Mirror that expansion in the working copy so
+    # dpkg-source doesn't see a local change against the orig tarball we
+    # just archived, then reset_build_commit() restores the placeholder.
+    my ($line) = sys_command_output(qq{git log -1 --format="%H %cI" HEAD});
+    open( my $fh, '>', 'docs/build-commit.txt' ) or die "Cannot write docs/build-commit.txt: $!";
+    print $fh "$line\n";
+    close $fh;
+}
+
+sub reset_build_commit {
+    sys_command_output(qq{git checkout -- docs/build-commit.txt});
+}
+
 sub build_package {
     my ($newversion) = @_;
     sys_command_output(
         qq{git archive --format=tar --prefix="koha-$newversion/" HEAD | gzip -9 > "../koha_$newversion.orig.tar.gz"});
 
+    stamp_build_commit();
+
     my $pdebuildopts    = $buildresult ? "--buildresult $buildresult"                                              : "";
     my $pdebuildbasetgz = $basetgz     ? "-- --use-network yes --basetgz /var/cache/pbuilder/" . $basetgz . ".tgz" : "";
     sys_command_output_screen("pdebuild --debbuildopts -sa $pdebuildbasetgz $pdebuildopts");
+
+    reset_build_commit();
 }
 
 everything_is_committed() or die "cannot build: uncommitted changes";
