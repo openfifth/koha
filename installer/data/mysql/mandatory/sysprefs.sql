@@ -397,6 +397,7 @@ INSERT INTO systempreferences ( `variable`, `value` ) VALUES
 ('itemBarcodeFallbackSearch','0'),
 ('itemBarcodeInputFilter',''),
 ('itemcallnumber',''),
+('ItemListsLog','0'),
 ('ItemsDeniedRenewal',''),
 ('JobsNotificationMethod','STOMP'),
 ('KohaAdminEmailAddress','root@localhost'),
