@@ -3,7 +3,7 @@
 [% USE Koha %]
 [% PROCESS 'i18n.inc' %]
 [% SET footerjs = 1 %]
-[% PROCESS 'authorities-search-results.inc' %]
+[% PROCESS 'authorities-search-results.inc' allow_choose_reference=1 %]
 [% INCLUDE 'doc-head-open.inc' %]
 <title
     >[% FILTER collapse %]
@@ -122,10 +122,10 @@
                         <td>
                             [% IF line.summary && line.summary.authorized && line.summary.authorized.size > 1 %]
                                 [% FOREACH authorized IN line.summary.authorized %]
-                                    <a href="javascript:doauth('[% line.authid | uri %]', '[% index | uri %]', '[% loop.count | uri %]')" title="[% authorized.heading | html %]">[% loop.count | html %]</a>
+                                    <a class="auth-choose" data-auth-id="[% line.authid | html %]" data-index="[% index | html %]" data-repet="[% loop.count | html %]" title="[% authorized.heading | html %]">[% loop.count | html %]</a>
                                 [% END %]
                             [% ELSE %]
-                                <a class="btn btn-xs btn-default" href="javascript:doauth('[% line.authid | html %]', '[% index | html %]', '')"><i class="fa fa-plus"></i> Choose</a>
+                                <a class="btn btn-xs btn-default auth-choose" data-auth-id="[% line.authid | html %]" data-index="[% index | html %]"><i class="fa fa-plus"></i> Choose</a>
                             [% END %]
                         </td>
                         <td
@@ -164,6 +164,10 @@
                 jumpfull("blinddetail-biblio-search.pl?authid=" + authid + "&index=" + index + "&repet=" + repet + "&source=" + source);
             }
         }
+
+        $(".auth-choose").on("click", function (e) {
+            doauth($(this).data("authId"), $(this).data("index"), $(this).data("repet") ?? "");
+        });
     </script>
 [% END %]
 
