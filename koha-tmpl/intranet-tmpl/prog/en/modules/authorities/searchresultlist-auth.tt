@@ -3,7 +3,7 @@
 [% USE Koha %]
 [% PROCESS 'i18n.inc' %]
 [% SET footerjs = 1 %]
-[% PROCESS 'authorities-search-results.inc' %]
+[% PROCESS 'authorities-search-results.inc' allow_choose_reference=1 %]
 [% INCLUDE 'doc-head-open.inc' %]
 <title
     >[% FILTER collapse %]

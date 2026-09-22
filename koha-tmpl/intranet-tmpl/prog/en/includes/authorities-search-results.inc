@@ -61,6 +61,9 @@
             </span>
         [% END %]
     [% END %]
+    [% IF allow_choose_reference && authid && index %]
+        <a class="btn btn-xs btn-default" href="javascript:doauth('[% authid | html %]', '[% index | html %]', '')"><i class="fa fa-plus"></i> Choose</a>
+    [% END %]
 [% END %]
 
 [% BLOCK authresult %]
@@ -127,7 +130,7 @@
             [% END %]
             [% IF ( summary.seefrom.size >= 1 ) %]
                 <div class="seefrom">
-                    <span class="seefrom">used for/see from:</span>
+                    <span>used for/see from:</span>
                     [% FOREACH seefro IN summary.seefrom %]
                         <div class="authref">
                             [%# Following on one line for translatability %]
@@ -138,7 +141,7 @@
             [% END %]
             [% IF ( summary.seealso.size >= 1 ) %]
                 <div class="seealso">
-                    <span class="seealso">see also:</span>
+                    <span>see also:</span>
                     [% FOREACH seeals IN summary.seealso %]
                         <div class="authref">
                             [%# Following on one line for translatability %]
