@@ -18,6 +18,7 @@
 [% INCLUDE 'doc-head-close.inc' %]
 [% INCLUDE 'calendar.inc' %]
 [% Asset.js( "lib/sortable/Sortable.min.js" ) | $raw %]
+[% Asset.js( "lib/uri-js/uri.all.min.js" ) | $raw %]
 [% INCLUDE 'select2.inc' %]
 <script nonce="[% Koha.CSPNonce | $raw %]" data-tt-allowed="true">
     var auth_values_creation = [% IF Koha.Preference('CreateAVFromCataloguing') && CAN_user_parameters_manage_auth_values %]1[% ELSE %]0[% END %];
@@ -49,6 +50,7 @@
     var important_fields = [];
     var important_subfields = [];
     var z3950_mandatory_subfields = [];
+    var uri_subfields = [];
     [% FOREACH BIG_LOO IN BIG_LOOP %]
         [% FOREACH innerloo IN BIG_LOO.innerloop %]
             [% IF innerloo.mandatory %]
@@ -86,6 +88,13 @@
                     z3950_mandatory_subfields.push({
                         id: "[% subfield_loo.id | html %]",
                         label: "[% subfield_loo.z3950_mandatory | html %]",
+                        tab: "[% BIG_LOO.number | html %]",
+                    });
+                [% END %]
+                [% IF Koha.Preference('marcflavour') == 'MARC21' && subfield_loo.tag == '856' && subfield_loo.subfield == 'u' %]
+                    uri_subfields.push({
+                        id: "[% subfield_loo.id | html %]",
+                        label: "[% subfield_loo.marc_lib | html %]",
                         tab: "[% BIG_LOO.number | html %]",
                     });
                 [% END %]
@@ -768,12 +777,68 @@
         }
     }
 
+    function ValidateURISubfields() {
+        let StrAlert = "<div id='form-errors' class='alert alert-warning list'>";
+        StrAlert += "<h4>" + _("The following subfields aren't valid URIs:") + "</h4>";
+        let tabflag = new Array();
+        let have_errors = false;
+
+        StrAlert += "<ul>";
+        uri_subfields.forEach(sf => {
+            var id = sf.id;
+            var tag = id.substr(4, 3);
+            var subfield = id.substr(17, 1);
+            var tagnumber = id.substr(19, id.lastIndexOf("_") - 19);
+            if (tabflag[tag + subfield + tagnumber] == null) {
+                tabflag[tag + subfield + tagnumber] = new Array();
+                tabflag[tag + subfield + tagnumber][0] = 0;
+            }
+            tabflag[tag + subfield + tagnumber][3] = id;
+
+            if (tabflag[tag + subfield + tagnumber][0] == 1) return;
+            tabflag[tag + subfield + tagnumber][0] = 1;
+
+            var elt = document.getElementById(id);
+            if (!elt) return;
+            if (!elt.value) return;
+            if (!URI.parse(elt.value)?.error) return;
+
+            tabflag[tag + subfield + tagnumber][0] = 0;
+            elt.setAttribute("class", "input_marceditor noEnterSubmit framework_plugin subfield_not_filled");
+            $("#" + id).focus();
+            tabflag[tag + subfield + tagnumber][1] = sf.label;
+            tabflag[tag + subfield + tagnumber][2] = sf.tab;
+        });
+
+        for (var tagsubfieldid in tabflag) {
+            if (tabflag[tagsubfieldid][0] == 0) {
+                var tag = tagsubfieldid.substr(0, 3);
+                var subfield = tagsubfieldid.substr(3, 1);
+                StrAlert +=
+                    "<li>" +
+                    _("Tag %s subfield %s %s in tab %s").format(tag, subfield, formatFieldName(tabflag[tagsubfieldid][1]), tabflag[tagsubfieldid][2]) +
+                    ' <a class="linkfield btn btn-link" href="#" data-tab="' +
+                    tabflag[tagsubfieldid][2] +
+                    '" data-field="' +
+                    tabflag[tagsubfieldid][3] +
+                    '"><i class="fa fa-arrow-right" aria-hidden="true"></i> ' +
+                    _("Go to field") +
+                    "</a></li>";
+                have_errors = true;
+            }
+        }
+        StrAlert += "</ul>";
+
+        return have_errors && StrAlert;
+    }
+
     /**
      * Run checks for mandatory and important fields
      * Output errors if necessary, or submit the form
      */
     function Check() {
         var StrAlert = AreFieldsNotOk();
+        StrAlert += ValidateURISubfields();
         var StrWarning = AreFieldsNotOk(false);
         if ($(".plugin-blocks-submit").length > 0) {
             // This class can be set by framework plugins to block submittal temporarily (e.g. during ajax call)
