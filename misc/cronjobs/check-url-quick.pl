@@ -23,6 +23,7 @@ use Getopt::Long qw( GetOptions );
 
 use Koha::Script -cron;
 use C4::Context;
+use Koha::Authorities;
 use Koha::Biblios;
 use AnyEvent;
 use AnyEvent::HTTP qw( http_request );
@@ -32,8 +33,10 @@ my ( $verbose, $help, $html ) = ( 0, 0, 0 );
 my ( $host,    $host_intranet ) = ( '', '' );
 my ( $timeout, $maxconn )       = ( 10, 200 );
 my @tags;
-my $uriedit    = "/cgi-bin/koha/cataloguing/addbiblio.pl?biblionumber=";
-my $user_agent = 'Mozilla/5.0 (compatible; U; Koha checkurl)';
+my $biblio_edit = "/cgi-bin/koha/cataloguing/addbiblio.pl?biblionumber=";
+my $item_edit   = "/cgi-bin/koha/cataloguing/additem.pl?op=edititem&itemnumber=";
+my $auth_edit   = "/cgi-bin/koha/authorities/authorities.pl?authid=";
+my $user_agent  = 'Mozilla/5.0 (compatible; U; Koha checkurl)';
 GetOptions(
     'verbose'         => \$verbose,
     'html'            => \$html,
@@ -66,23 +69,21 @@ sub usage {
 }
 
 sub report {
-    my ( $hdr, $biblionumber, $url ) = @_;
+    my ( $hdr, $description, $url, $edit_link ) = @_;
     print $html
         ? "<tr>\n <td><a href=\""
-        . $host_intranet
-        . $uriedit
-        . $biblionumber
-        . "\">$biblionumber</a>"
+        . $edit_link
+        . "\">$description</a>"
         . "</td>\n <td>$url</td>\n <td>"
         . "$hdr->{Status} $hdr->{Reason}</td>\n</tr>\n"
-        : "$biblionumber\t$url\t" . "$hdr->{Status} $hdr->{Reason}\n";
+        : "$description\t$url\t" . "$hdr->{Status} $hdr->{Reason}\n";
 }
 
 # Check all URLs from all current Koha biblio records
 
 sub check_all_url {
-    my $sth = C4::Context->dbh->prepare("SELECT biblionumber FROM biblioitems ORDER BY biblionumber");
-    $sth->execute;
+    my $sth_biblio = C4::Context->dbh->prepare("SELECT biblionumber FROM biblioitems ORDER BY biblionumber");
+    $sth_biblio->execute;
 
     my $count = 0;                   # Number of requested URL
     my $cv    = AnyEvent->condvar;
@@ -91,7 +92,7 @@ sub check_all_url {
         interval => .3,
         cb       => sub {
             return if $count > $maxconn;
-            while ( my ($biblionumber) = $sth->fetchrow ) {
+            while ( my ($biblionumber) = $sth_biblio->fetchrow ) {
                 my $biblio = Koha::Biblios->find($biblionumber);
                 my $record = $biblio->metadata->record;
                 for my $tag (@tags) {
@@ -108,8 +109,10 @@ sub check_all_url {
                             sub {
                                 my ( undef, $hdr ) = @_;
                                 $count--;
-                                report( $hdr, $biblionumber, $url )
-                                    if $hdr->{Status} !~ /^2/ || $verbose;
+                                report(
+                                    $hdr, 'Biblio: ' . $biblionumber, $url,
+                                    $host_intranet . $biblio_edit . $biblionumber
+                                ) if $hdr->{Status} !~ /^2/ || $verbose;
                             },
                         );
                     }
@@ -130,6 +133,99 @@ sub check_all_url {
         cb       => sub { $cv->send if $count == 0; }
     );
     $cv->recv;
+
+    my $sth_items =
+        C4::Context->dbh->prepare("SELECT itemnumber, uri FROM items WHERE uri IS NOT NULL ORDER BY itemnumber");
+    $sth_items->execute;
+
+    $cv   = AnyEvent->condvar;
+    $idle = AnyEvent->timer(
+        interval => .3,
+        cb       => sub {
+            return if $count > $maxconn;
+            while ( my ( $itemnumber, $url ) = $sth_items->fetchrow ) {
+                next unless $url;
+                $url = "$host/$url" unless $url =~ /^http/i;
+                $url = encode_utf8($url);
+                $count++;
+                http_request(
+                    HEAD    => $url,
+                    headers => { 'user-agent' => $user_agent },
+                    timeout => $timeout,
+                    sub {
+                        my ( undef, $hdr ) = @_;
+                        $count--;
+                        report( $hdr, 'Item: ' . $itemnumber, $url, $host_intranet . $item_edit . $itemnumber )
+                            if $hdr->{Status} !~ /^2/ || $verbose;
+                    },
+                );
+                return if $count > $maxconn;
+            }
+            $cv->send;
+        }
+    );
+    $cv->recv;
+    $idle = undef;
+
+    # Few more time for pending requests
+    $cv    = AnyEvent->condvar;
+    $timer = AnyEvent->timer(
+        after    => $timeout,
+        interval => $timeout,
+        cb       => sub { $cv->send if $count == 0; }
+    );
+    $cv->recv;
+
+    my $sth_authorities = C4::Context->dbh->prepare("SELECT authid FROM auth_header ORDER BY authid");
+    $sth_authorities->execute;
+
+    $cv   = AnyEvent->condvar;
+    $idle = AnyEvent->timer(
+        interval => .3,
+        cb       => sub {
+            return if $count > $maxconn;
+            while ( my ($authid) = $sth_authorities->fetchrow ) {
+                my $auth   = Koha::Authorities->find($authid);
+                my $record = $auth->record;
+
+                # TODO: UNIMARC?
+                my $field = $record->field('024');
+                next unless $field;
+                foreach my ($sf) ( ( '0', '1' ) ) {
+                    my $url = $field->subfield($sf);
+                    next unless $url;
+                    $url = "$host/$url" unless $url =~ /^http/i;
+                    $url = encode_utf8($url);
+                    $count++;
+                    http_request(
+                        HEAD    => $url,
+                        headers => { 'user-agent' => $user_agent },
+                        timeout => $timeout,
+                        sub {
+                            my ( undef, $hdr ) = @_;
+                            $count--;
+                            report( $hdr, 'Authority: ' . $authid, $url, $host_intranet . $auth_edit . $authid )
+                                if $hdr->{Status} !~ /^2/ || $verbose;
+                        },
+                    );
+                }
+                return if $count > $maxconn;
+            }
+            $cv->send;
+        }
+    );
+    $cv->recv;
+    $idle = undef;
+
+    # Few more time for pending requests
+    $cv    = AnyEvent->condvar;
+    $timer = AnyEvent->timer(
+        after    => $timeout,
+        interval => $timeout,
+        cb       => sub { $cv->send if $count == 0; }
+    );
+    $cv->recv;
+
     say "</table>\n</div>\n</body>\n</html>" if $html;
 }
 
