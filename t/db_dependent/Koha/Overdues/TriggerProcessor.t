@@ -27,6 +27,7 @@ use Koha::Notice::Messages;
 use Koha::CirculationRules;
 use Koha::Database;
 use Koha::DateUtils qw( dt_from_string );
+use Koha::Library::Calendar;
 use Koha::Overdues::TriggerProcessor;
 use Koha::Patron::Restriction;
 
@@ -205,20 +206,15 @@ subtest 'ProcessOverdues calendar-adjusted path — closure shifts target date' 
     # Mark the past 3 calendar days (today-1, today-2, today-3) as closed.
     # With a delay of 7 open days, the target date becomes today-10 calendar
     # days; with a simple DATEDIFF=7 path, only today-7 would match.
-    my $today = dt_from_string;
+    my $today    = dt_from_string;
+    my $calendar = Koha::Library::Calendar->new( branchcode => $library->branchcode );
     for my $back ( 1 .. 3 ) {
         my $closed = $today->clone->subtract( days => $back );
-        $builder->build(
+        $calendar->add_single_closure(
             {
-                source => 'SpecialHoliday',
-                value  => {
-                    branchcode  => $library->branchcode,
-                    day         => $closed->day,
-                    month       => $closed->month,
-                    year        => $closed->year,
-                    title       => "closure $back days ago",
-                    isexception => 0,
-                },
+                date        => $closed->ymd,
+                title       => "closure $back days ago",
+                description => '',
             }
         );
     }
