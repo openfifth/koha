@@ -228,6 +228,7 @@ function CheckTemplateForm(f) {
 function Check(f) {
     var total_mandatory = CheckMandatorySubfields(f);
     var total_important = CheckImportantSubfields(f);
+    var total_uri_invalid = CheckURISubfields(f);
     var alertString2;
     if (total_mandatory == 0) {
         // Explanation about this line:
@@ -252,8 +253,15 @@ function Check(f) {
             "\n\n " + MSG_IMPORTANT_FIELDS_EMPTY.format(total_important);
         alertString2 += "\n\n " + MSG_CONFIRM_SAVE;
     }
+    if (total_uri_invalid > 0) {
+        if (!alertString2) {
+            alertString2 = "";
+        }
+        alertString2 +=
+            "\n\n " + MSG_INVALID_URI_FIELDS_EMPTY.format(total_uri_invalid);
+    }
     if (alertString2) {
-        if (total_mandatory) {
+        if (total_mandatory || total_uri_invalid) {
             alert(alertString2);
         } else {
             var a = confirm(alertString2);

@@ -34,6 +34,7 @@
 [% INCLUDE 'calendar.inc' %]
 [% INCLUDE 'str/cataloging_additem.inc' %]
 [% Asset.js("js/cataloging_additem.js") | $raw %]
+[% Asset.js( "lib/uri-js/uri.all.min.js" ) | $raw %]
 <style nonce="[% Koha.CSPNonce | $raw %]">
     .flatpickr_wrapper input {
         width: 100%;
