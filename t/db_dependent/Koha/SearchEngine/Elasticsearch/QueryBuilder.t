@@ -1387,7 +1387,7 @@ SKIP: {
 
         $query = $qb->build_query('test');
         ok( exists $query->{query}{function_score}, 'build_query wraps in function_score when boosts are configured' );
-        is( $query->{query}{function_score}{score_mode}, 'max',      'score_mode is max' );
+        is( $query->{query}{function_score}{score_mode}, 'sum',      'score_mode is sum' );
         is( $query->{query}{function_score}{boost_mode}, 'multiply', 'boost_mode is multiply' );
         ok(
             exists $query->{query}{function_score}{query}{bool},

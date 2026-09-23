@@ -260,7 +260,7 @@ sub build_query {
                 function_score => {
                     query      => $res->{query},
                     functions  => $value_boost_functions,
-                    score_mode => 'max',
+                    score_mode => 'sum',
                     boost_mode => 'multiply',
                 }
             };
