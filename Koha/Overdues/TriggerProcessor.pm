@@ -23,7 +23,7 @@ use Koha::CirculationRules;
 use Koha::Overdues::RuleResolver;
 use Koha::Overdues::ActionExecutor;
 use Koha::Overdues::Repository;
-use Koha::Calendar;
+use Koha::Library::Calendar;
 use Koha::Checkouts;
 use Koha::DateUtils qw( dt_from_string );
 
@@ -128,9 +128,9 @@ sub _process_simple_calculation {
 =head3 _process_calendar_adjusted
 
 Calendar-adjusted path. For each unique branch holding overdue items, builds a
-L<Koha::Calendar> and computes the exact calendar date corresponding to each
+L<Koha::Library::Calendar> and computes the exact calendar date corresponding to each
 trigger delay measured in B<open days> using
-L<Koha::Calendar/days_backward>. Then fetches the matching checkouts via one
+L<Koha::Library::Calendar/days_backward>. Then fetches the matching checkouts via one
 SQL with OR-clauses (or one SQL per branch above
 L</CALENDAR_PAIRS_INLINE_LIMIT>) and feeds them through the same rule
 resolution + action enactment as the simple path.
@@ -162,7 +162,7 @@ sub _process_calendar_adjusted {
     my %target_dates_by_branch;
     my %effective_delay_by_raw_delay;    # branchcode => { raw_delay => effective_delay }
     for my $branch (@branches) {
-        my $calendar = Koha::Calendar->new( branchcode => $branch, days_mode => $days_mode );
+        my $calendar = Koha::Library::Calendar->new( branchcode => $branch, days_mode => $days_mode );
         my @dates;
         for my $delay (@known_delay_values) {
             my $target_dt       = $calendar->days_backward( $today->clone, $delay );
