@@ -23,6 +23,8 @@ use C4::Auth   qw( get_template_and_user );
 use C4::Output qw( output_html_with_http_headers );
 use C4::Context;
 
+use Koha::Account::CreditTypes;
+use Koha::Account::DebitTypes;
 use Koha::Cash::Registers;
 use Koha::Database;
 
@@ -40,7 +42,11 @@ my ( $template, $loggedinuser, $cookie, $user_flags ) = get_template_and_user(
 my $logged_in_user = Koha::Patrons->find($loggedinuser) or die "Not logged in";
 
 my $library = Koha::Libraries->find( C4::Context->userenv->{'branch'} );
-$template->param( library => $library );
+$template->param(
+    library          => $library,
+    all_debit_types  => Koha::Account::DebitTypes->search,
+    all_credit_types => Koha::Account::CreditTypes->search,
+);
 
 # Get authorized values for reconciliation notes if configured
 my $note_av_category = C4::Context->preference('CashupReconciliationNoteAuthorisedValue');
