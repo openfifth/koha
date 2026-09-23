@@ -15,6 +15,7 @@
     var MSG_FORM_NOT_SUBMITTED = _("Form not submitted because of the following problem(s)");
     var MSG_MANDATORY_FIELDS_EMPTY = _("%s mandatory fields empty (highlighted)");
     var MSG_IMPORTANT_FIELDS_EMPTY = _("%s important fields empty (highlighted)");
+    var MSG_INVALID_URI_FIELDS_EMPTY = _("%s URI fields are invalid (highlighted)");
     var MSG_ADD_MULTIPLE_ITEMS = _("You are about to add %s items. Continue?");
     var MSG_ENTER_NUM_ITEMS = _("Please enter a number of items to create.");
     var MSG_CONFIRM_DELETE_ITEM = _("Are you sure you want to delete this item?");

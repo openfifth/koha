@@ -740,6 +740,19 @@ function CheckImportantSubfields(p) {
     return total;
 }
 
+function CheckURISubfields(p) {
+    var total = 0;
+    $(p)
+        .find(".subfield_line input[class~='items\\.uri']")
+        .each(function (i) {
+            if (!$(this).val()) return;
+            if (!URI.parse($(this).val())?.error) return;
+            $(this).addClass("missing");
+            total++;
+        });
+    return total;
+}
+
 function initializeSortable(selector) {
     $(selector).each((i, e) => {
         Sortable.create(e, {
