@@ -6,6 +6,15 @@ $(document).ready(function () {
         var inProgress = button.data("in-progress") || false;
         var summary_modal = $(this);
 
+        // code -> translated label, rendered server-side (see cashup_summary.inc)
+        // from the same accounts.inc blocks used everywhere else in Koha. Used
+        // to fill in the type's label when the API's own description is blank
+        // (system types created before Bug 26403 never had one backfilled).
+        var type_descriptions = summary_modal.data("type-descriptions") || {};
+        var type_description = function (code, description) {
+            return description || type_descriptions[code] || code;
+        };
+
         // Update title based on whether this is a preview
         if (inProgress) {
             summary_modal
@@ -71,11 +80,18 @@ $(document).ready(function () {
                                     "{credit_type_description} against {debit_type_description}",
                                     {
                                         credit_type_description: escape_str(
-                                            out.credit_type.description
+                                            type_description(
+                                                out.credit_type_code,
+                                                out.credit_type.description
+                                            )
                                         ),
                                         debit_type_description: escape_str(
-                                            out.related_debit.debit_type
-                                                .description
+                                            type_description(
+                                                out.related_debit
+                                                    .debit_type_code,
+                                                out.related_debit.debit_type
+                                                    .description
+                                            )
                                         ),
                                     }
                                 ) +
@@ -86,7 +102,12 @@ $(document).ready(function () {
                     } else {
                         tbody.append(
                             "<tr><td>" +
-                                escape_str(out.credit_type.description) +
+                                escape_str(
+                                    type_description(
+                                        out.credit_type_code,
+                                        out.credit_type.description
+                                    )
+                                ) +
                                 "</td><td>- " +
                                 Number(out.total).format_price() +
                                 "</td></tr>"
@@ -97,7 +118,12 @@ $(document).ready(function () {
                 for (income of data.summary.income_grouped) {
                     tbody.append(
                         "<tr><td>" +
-                            escape_str(income.debit_type.description) +
+                            escape_str(
+                                type_description(
+                                    income.debit_type_code,
+                                    income.debit_type.description
+                                )
+                            ) +
                             "</td><td>" +
                             Number(income.total).format_price() +
                             "</td></tr>"

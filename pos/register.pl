@@ -23,6 +23,8 @@ use C4::Auth   qw( get_template_and_user );
 use C4::Output qw( output_html_with_http_headers );
 use C4::Context;
 
+use Koha::Account::CreditTypes;
+use Koha::Account::DebitTypes;
 use Koha::Account::Lines;
 use Koha::Cash::Registers;
 use Koha::Database;
@@ -59,8 +61,10 @@ if ( !$registers->count ) {
     $registerid = $registers->next->id if !$registerid;
 
     $template->param(
-        registerid => $registerid,
-        registers  => $registers,
+        registerid       => $registerid,
+        registers        => $registers,
+        all_debit_types  => Koha::Account::DebitTypes->search,
+        all_credit_types => Koha::Account::CreditTypes->search,
     );
 
     my $cash_register      = Koha::Cash::Registers->find( { id => $registerid } );

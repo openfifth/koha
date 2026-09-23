@@ -1,6 +1,27 @@
 [% USE raw %]
+[% USE To %]
+[% PROCESS 'accounts.inc' %]
+[%# Build a code -> translated label lookup by reusing accounts.inc's own
+    debit_type_description / credit_type_description blocks. Known system
+    types (OVERDUE, RESERVE, RENT...) render their hardcoded, translated
+    label, the same one shown everywhere else in Koha; anything else falls
+    through to that type's own (untranslated) stored description, exactly
+    as accounts.inc already does. This is used client-side as a fallback
+    when the API's own description for a type is missing (e.g. a system
+    type predating Bug 26403, whose description was never backfilled). #%]
+[% SET type_descriptions = {} %]
+[% FOREACH dt IN all_debit_types %]
+    [% SET code = dt.code %]
+    [% label = BLOCK %][% PROCESS debit_type_description debit_type = dt %][% END %]
+    [% SET type_descriptions.$code = label.remove('<[^>]+>').trim %]
+[% END %]
+[% FOREACH ct IN all_credit_types %]
+    [% SET code = ct.code %]
+    [% label = BLOCK %][% PROCESS credit_type_description credit_type = ct %][% END %]
+    [% SET type_descriptions.$code = label.remove('<[^>]+>').trim %]
+[% END %]
 <!-- Cashup summary modal -->
-<div class="modal printable" id="cashupSummaryModal" tabindex="-1" role="dialog" aria-labelledby="cashupSummaryLabel">
+<div class="modal printable" id="cashupSummaryModal" tabindex="-1" role="dialog" aria-labelledby="cashupSummaryLabel" data-type-descriptions="[% To.json(type_descriptions) | html %]">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
