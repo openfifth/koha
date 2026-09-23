@@ -245,7 +245,7 @@ if ( $op eq 'cud-edit' ) {
         push @errors, { type => 'error', code => 'invalid_value_boost_params' };
         output_ajax_response( $input, { success => JSON::false, code => 'invalid_value_boost_params' } )
             if $ajax;
-    } elsif ( !looks_like_number($weight) || $weight <= 0 ) {
+    } elsif ( !looks_like_number($weight) || $weight <= 0 || $weight > 999.99 ) {
         push @errors, { type => 'error', code => 'invalid_value_boost_weight', weight => $weight };
         output_ajax_response(
             $input,
