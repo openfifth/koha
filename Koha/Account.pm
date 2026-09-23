@@ -34,6 +34,7 @@ use Koha::Account::Debits;
 use Koha::Account::Lines;
 use Koha::Account::Offsets;
 use Koha::Account::DebitTypes;
+use Koha::CirculationRules;
 use Koha::Exceptions;
 use Koha::Exceptions::Account;
 use Koha::Plugins;
@@ -586,6 +587,153 @@ sub add_debit {
     };
 
     return $line;
+}
+
+=head3 forgive_debit
+
+    $account->forgive_debit(
+        $debit_line,
+        {
+            interface  => $interface,
+            user_id    => $user_id,     # optional
+            library_id => $library_id,  # optional
+        }
+    );
+
+Forgive the outstanding amount on C<$debit_line> by creating a C<FORGIVEN>
+credit equal to its C<amountoutstanding> and applying it to the line. Returns
+the created credit, or C<undef> when there is nothing outstanding to forgive.
+
+=cut
+
+sub forgive_debit {
+    my ( $self, $debit, $params ) = @_;
+
+    if ( !defined( $params->{interface} ) ) {
+        Koha::Exceptions::MissingParameter->throw( error => "The interface parameter is mandatory" );
+    }
+
+    my $amount = $debit->amountoutstanding;
+    if ( $amount == 0 ) {
+        return;
+    }
+
+    my $credit = $self->add_credit(
+        {
+            amount     => $amount,
+            user_id    => $params->{user_id},
+            library_id => $params->{library_id},
+            interface  => $params->{interface},
+            type       => 'FORGIVEN',
+            item_id    => $debit->itemnumber,
+        }
+    );
+    $credit->apply( { debits => [$debit] } );
+
+    return $credit;
+}
+
+=head3 add_lost_replacement_fee
+
+    $account->add_lost_replacement_fee(
+        {
+            item              => $item,
+            manager_id        => $manager_id,
+            issue_id          => $issue_id,        # optional
+            library_id        => $library_id,
+            interface         => $interface,
+            description       => $description,     # optional
+            replacement_price => $replacement_price, # optional; falls back to $item->replacementprice
+        }
+    );
+
+Adds the LOST replacement charge (and any configured lost-item processing fee)
+to this patron's account for the given item. De-duplicates: if a LOST charge
+already exists for this (item, issue) pair, returns without adding anything.
+
+Honours C<useDefaultReplacementCost> when no explicit replacement price is
+given. Does B<not> consult C<WhenLostChargeReplacementFee> — that gate is the
+caller's responsibility. Branch and interface are caller-supplied; the spec's
+fee-context branch resolution (L<Koha::Checkout/branch_for_fee_context>) lives
+upstream.
+
+Note: if the item's replacement price is set to zero, this will override any
+itemtype defaultreplacecost by explicitly setting replacement_price to 0.00.
+
+=cut
+
+sub add_lost_replacement_fee {
+    my ( $self, $params ) = @_;
+
+    my $item              = $params->{item};
+    my $issue_id          = $params->{issue_id};
+    my $library_id        = $params->{library_id};
+    my $manager_id        = $params->{manager_id};
+    my $interface         = $params->{interface};
+    my $description       = $params->{description}       // q{};
+    my $replacement_price = $params->{replacement_price} // $item->replacementprice;
+
+    if ( !$replacement_price && C4::Context->preference('useDefaultReplacementCost') ) {
+        my $default = $item->itemtype ? $item->itemtype->defaultreplacecost : undef;
+        if ($default) {
+            $replacement_price = $default;
+        }
+    }
+
+    my $existing_charges = $self->lines->search(
+        {
+            itemnumber      => $item->itemnumber,
+            debit_type_code => 'LOST',
+            issue_id        => $issue_id,
+        }
+    )->count;
+
+    if ($existing_charges) {
+        return;
+    }
+
+    my $processing_fee = Koha::CirculationRules->get_effective_rule_value(
+        {
+            rule_name    => 'lost_item_processing_fee',
+            categorycode => undef,
+            itemtype     => $item->itemtype ? $item->itemtype->itemtype : undef,
+            branchcode   => $library_id,
+        }
+    ) // 0;
+
+    if ( $processing_fee > 0 ) {
+        $self->add_debit(
+            {
+                amount      => $processing_fee,
+                description => $description,
+                note        => C4::Context->preference('ProcessingFeeNote'),
+                user_id     => $manager_id,
+                interface   => $interface,
+                library_id  => $library_id,
+                type        => 'PROCESSING',
+                item_id     => $item->itemnumber,
+                ( defined $issue_id ? ( issue_id => $issue_id ) : () ),
+            }
+        );
+    }
+
+    if ( $replacement_price > 0 ) {
+        $self->add_debit(
+            {
+                amount      => $replacement_price,
+                description => $description,
+                note        => undef,
+                user_id     => $manager_id,
+                interface   => $interface,
+                library_id  => $library_id,
+                type        => 'LOST',
+                item_id     => $item->itemnumber,
+                ( defined $issue_id ? ( issue_id => $issue_id ) : () ),
+            }
+        );
+    }
+
+    return $self;
 }
 
 =head3 payout_amount
