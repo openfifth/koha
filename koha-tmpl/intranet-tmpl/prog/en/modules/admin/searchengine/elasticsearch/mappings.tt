@@ -60,7 +60,7 @@
             [% CASE 'invalid_value_boost_params' %]
                 [% t("A search field and value are required to add a relevance boost.") | $raw %]
             [% CASE 'invalid_value_boost_weight' %]
-                [% tx("Invalid boost weight '{weight}', must be a positive decimal number.", { weight = m.weight }) | html %]
+                [% tx("Invalid boost weight '{weight}', must be a positive decimal number no greater than 999.99.", { weight = m.weight }) | html %]
             [% CASE 'success_on_update' %]
                 [% t("Mappings updated successfully.") | $raw %]
             [% CASE 'success_on_reset' %]
@@ -721,7 +721,7 @@
                 return "A search field and value are required to add a relevance boost.";
             }
             if (json.code === "invalid_value_boost_weight") {
-                return "Invalid boost weight '" + json.weight + "', must be a positive decimal number.";
+                return "Invalid boost weight '" + json.weight + "', must be a positive decimal number no greater than 999.99.";
             }
             return "An error occurred.";
         }
