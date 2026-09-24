@@ -1323,19 +1323,22 @@ sub get_type {
     return $attr->value;
 }
 
-=head3 get_type_disclaimer_value
+=head3 get_type_disclaimer_values
 
-    my $type = $abstract->get_type_disclaimer_value();
+    my @values = $abstract->get_type_disclaimer_values();
 
-Return the value submitted in the type disclaimer workflow stage
+Return the values submitted in the type disclaimer workflow stage
 
 =cut
 
-sub get_type_disclaimer_value {
+sub get_type_disclaimer_values {
     my ($self) = @_;
-    my $attr = $self->extended_attributes->find( { type => 'type_disclaimer_value' } );
-    return if !$attr;
-    return $attr->value;
+    my $attrs = $self->extended_attributes->search(
+        { type     => { 'LIKE', 'type_disclaimer_value%' } },
+        { order_by => ['type'] }
+    );
+    my @values = $attrs->get_column('value');
+    return @values;
 }
 
 =head3 set_copyright_clearance_confirmed
@@ -1437,19 +1440,20 @@ sub get_type_disclaimer_date {
     return $attr->value;
 }
 
-=head3 get_type_disclaimer_text
+=head3 get_type_disclaimer_texts
 
-    my $text = $abstract->type_disclaimer_text();
+    my @texts = $abstract->type_disclaimer_texts();
 
 Return the text of the disclaimer submitted in the type disclaimer workflow stage
 
 =cut
 
-sub get_type_disclaimer_text {
+sub get_type_disclaimer_texts {
     my ($self) = @_;
-    my $attr = $self->extended_attributes->find( { type => 'type_disclaimer_text' } );
-    return if !$attr;
-    return $attr->value;
+    my $attrs =
+        $self->extended_attributes->search( { type => { 'LIKE', 'type_disclaimer_text%' } }, { order_by => ['type'] } );
+    my @values = $attrs->get_column('value');
+    return @values;
 }
 
 =head3 manager

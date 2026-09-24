@@ -867,20 +867,28 @@
                                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
                                 <div class="modal-body">
-                                    [% type_disclaimer_value = request.get_type_disclaimer_value %]
-                                    [% IF type_disclaimer_value %]
-                                        <h2>Value</h2>
-                                        [% type_disclaimer_value | html %]
+                                    [% type_disclaimer_values = request.get_type_disclaimer_values %]
+                                    [% IF type_disclaimer_values %]
+                                        <h2>Values</h2>
+                                        <ol>
+                                            [% FOREACH type_disclaimer_value IN type_disclaimer_values %]
+                                                <li>[% type_disclaimer_value | html %]</li>
+                                            [% END %]
+                                        </ol>
                                     [% END %]
                                     [% type_disclaimer_date = request.get_type_disclaimer_date %]
                                     [% IF type_disclaimer_date %]
                                         <h2>Date</h2>
                                         [% type_disclaimer_date | $KohaDates with_hours => 1 %]
                                     [% END %]
-                                    [% type_disclaimer_text = request.get_type_disclaimer_text %]
-                                    [% IF type_disclaimer_text %]
-                                        <h2>Text</h2>
-                                        [% type_disclaimer_text | $raw %]
+                                    [% type_disclaimer_texts = request.get_type_disclaimer_texts %]
+                                    [% IF type_disclaimer_texts %]
+                                        <h2>Texts</h2>
+                                        <ol>
+                                            [% FOREACH type_disclaimer_text IN type_disclaimer_texts %]
+                                                <li>[% type_disclaimer_text | $raw %]</li>
+                                            [% END %]
+                                        </ol>
                                     [% END %]
                                 </div>
                                 <div class="modal-footer">
@@ -966,15 +974,18 @@
                         <form method="post" id="typedisclaimer-form">
                             [% INCLUDE 'csrf-token.inc' %]
                             <fieldset class="rows">
-                                [% disclaimer.text | $raw %]
-                                [% SET disc_av_category_code = AuthorisedValues.GetAuthValueDropbox(disclaimer.av_cat) %]
-                                [% IF disc_av_category_code.count %]
+                                [% FOREACH field IN disclaimer.fields %]
+                                    [% field.text | $raw %]
+                                    [% SET disc_av_category_code = AuthorisedValues.GetAuthValueDropbox(field.av_cat) %]
+                                    [% IF disc_av_category_code.count %]
+                                        <br />
+                                        <select name="type_disclaimer_value">
+                                            [% FOR av_option IN disc_av_category_code %]
+                                                <option value="[% av_option.lib_opac | html %]">[% av_option.lib_opac | html %]</option>
+                                            [% END %]
+                                        </select>
+                                    [% END %]
                                     <br />
-                                    <select name="type_disclaimer_value">
-                                        [% FOR av_option IN disc_av_category_code %]
-                                            <option value="[% av_option.lib_opac | html %]">[% av_option.lib_opac | html %]</option>
-                                        [% END %]
-                                    </select>
                                 [% END %]
                             </fieldset>
                             <fieldset class="action">
