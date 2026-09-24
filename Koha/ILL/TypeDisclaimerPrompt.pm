@@ -25,6 +25,20 @@ Koha::ILL::Request - Koha ILL type disclaimer prompt Object class
 
 =head2 Internal methods
 
+=head3 public_read_list
+
+This method returns the list of publicly readable database fields for both API and UI output purposes
+
+=cut
+
+sub public_read_list {
+    return [
+        qw(
+            uuid
+        )
+    ];
+}
+
 =head3 _type
 
 The corresponding Result class.

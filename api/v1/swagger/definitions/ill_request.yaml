@@ -154,6 +154,11 @@ properties:
       - object
       - "null"
     description: The linked patron object (x-koha-embed)
+  uncompleted_type_disclaimer_prompts:
+    type:
+      - array
+      - "null"
+    description: The linked uncompleted type disclaimer prompts (x-koha-embed)
   _strings:
     type:
       - object

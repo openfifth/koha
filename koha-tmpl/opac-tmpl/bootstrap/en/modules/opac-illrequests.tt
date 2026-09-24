@@ -497,7 +497,7 @@
             order: [[0, "desc"]],
             dom: '<"dt-info"i><"top pager"<"table_entries"lp>t<"bottom pager"pi>',
             paging: true,
-            embed: ["+strings", "extended_attributes"],
+            embed: ["+strings", "extended_attributes", "uncompleted_type_disclaimer_prompts"],
             ajax: { url: `/api/v1/public/patrons/${logged_in_user_borrowernumber}/ill/requests` },
             columnDefs: [
                 {
@@ -564,7 +564,12 @@
                     data: "",
                     sortable: false,
                     render: (data, type, row, meta) => {
-                        return `<a href="/cgi-bin/koha/opac-illrequests.pl?op=view&amp;illrequest_id=${row.ill_request_id}" class="btn btn-primary btn-sm">View</a>`;
+                        let result = `<a href="/cgi-bin/koha/opac-illrequests.pl?op=view&amp;illrequest_id=${row.ill_request_id}" class="btn btn-primary btn-sm">View</a>`;
+                        if (!row.extended_attributes.find(x => x.type == "type_disclaimer_date") && row.uncompleted_type_disclaimer_prompts.length) {
+                            const prompt = row.uncompleted_type_disclaimer_prompts[0];
+                            result += `<a href="/cgi-bin/koha/opac-illrequest-type-disclaimer.pl?illrequest_id=${row.ill_request_id}&uuid=${prompt.uuid}" class="btn btn-primary btn-sm">Complete type disclaimer</a>`;
+                        }
+                        return result;
                     },
                 },
             ],
