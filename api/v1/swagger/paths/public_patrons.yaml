@@ -304,6 +304,7 @@
           enum:
             - +strings
             - extended_attributes
+            - uncompleted_type_disclaimer_prompts
         collectionFormat: csv
     produces:
       - application/json

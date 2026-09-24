@@ -283,6 +283,21 @@ sub type_disclaimer_prompts {
     return Koha::ILL::TypeDisclaimerPrompts->_new_from_dbic( scalar $self->_result->ill_type_disclaimer_prompts );
 }
 
+=head3 uncompleted_type_disclaimer_prompts
+
+    my $prompts = $request->uncompleted_type_disclaimer_prompts;
+
+Returns the linked I<Koha::ILL::TypeDisclaimerPrompts> objects that have not been replied to.
+
+=cut
+
+sub uncompleted_type_disclaimer_prompts {
+    my ($self) = @_;
+
+    return Koha::ILL::TypeDisclaimerPrompts->_new_from_dbic( scalar $self->_result->ill_type_disclaimer_prompts )
+        ->search( { date_replied => undef } );
+}
+
 =head3 completed_type_disclaimer_prompts
 
     my $prompts = $request->completed_type_disclaimer_prompts;
