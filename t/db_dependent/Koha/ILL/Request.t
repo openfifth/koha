@@ -118,17 +118,18 @@ subtest 'extended_attributes() tests' => sub {
     $schema->storage->txn_rollback;
 };
 
-subtest 'get_type_disclaimer_value() tests' => sub {
+subtest 'get_type_disclaimer_values() tests' => sub {
 
-    plan tests => 2;
+    plan tests => 6;
 
     $schema->storage->txn_begin;
 
     my $request = $builder->build_object( { class => 'Koha::ILL::Requests' } );
 
+    my @values = $request->get_type_disclaimer_values;
     is(
-        $request->get_type_disclaimer_value, undef,
-        'get_type_disclaimer_value() returns undef if no get_type_disclaimer_value is set'
+        scalar @values, 0,
+        'get_type_disclaimer_values() returns empty list if no type_disclaimer_value is set'
     );
 
     $builder->build_object(
@@ -136,15 +137,39 @@ subtest 'get_type_disclaimer_value() tests' => sub {
             class => 'Koha::ILL::Request::Attributes',
             value => {
                 illrequest_id => $request->illrequest_id,
-                type          => 'type_disclaimer_value',
+                type          => 'type_disclaimer_value_1',
                 value         => 'Yes'
             }
         }
     );
 
+    @values = $request->get_type_disclaimer_values;
+    is( @values, 1, 'get_type_disclaimer_values() returns single value if is set' );
     is(
-        $request->get_type_disclaimer_value, "Yes",
-        'get_type_disclaimer_value() returns the value if is set'
+        $values[0], "Yes",
+        'get_type_disclaimer_values() returns single value if is set'
+    );
+
+    $builder->build_object(
+        {
+            class => 'Koha::ILL::Request::Attributes',
+            value => {
+                illrequest_id => $request->illrequest_id,
+                type          => 'type_disclaimer_value_2',
+                value         => 'No'
+            }
+        }
+    );
+
+    @values = $request->get_type_disclaimer_values;
+    is( @values, 2, 'get_type_disclaimer_values() returns multiple values' );
+    is(
+        $values[0], "Yes",
+        'get_type_disclaimer_values() returns multiple values'
+    );
+    is(
+        $values[1], "No",
+        'get_type_disclaimer_values() returns multiple values'
     );
 
     $schema->storage->txn_rollback;
@@ -182,17 +207,18 @@ subtest 'get_type_disclaimer_date() tests' => sub {
     $schema->storage->txn_rollback;
 };
 
-subtest 'get_type_disclaimer_text() tests' => sub {
+subtest 'get_type_disclaimer_texts() tests' => sub {
 
-    plan tests => 2;
+    plan tests => 6;
 
     $schema->storage->txn_begin;
 
     my $request = $builder->build_object( { class => 'Koha::ILL::Requests' } );
 
+    my @texts = $request->get_type_disclaimer_texts;
     is(
-        $request->get_type_disclaimer_text, undef,
-        'get_type_disclaimer_text() returns undef if no type_disclaimer_text is set'
+        scalar @texts, 0,
+        'get_type_disclaimer_texts() returns empty list if no type_disclaimer_text is set'
     );
 
     $builder->build_object(
@@ -200,15 +226,39 @@ subtest 'get_type_disclaimer_text() tests' => sub {
             class => 'Koha::ILL::Request::Attributes',
             value => {
                 illrequest_id => $request->illrequest_id,
-                type          => 'type_disclaimer_text',
+                type          => 'type_disclaimer_text_1',
                 value         => 'Example text'
             }
         }
     );
 
+    @texts = $request->get_type_disclaimer_texts;
+    is( @texts, 1, 'get_type_disclaimer_texts() returns single text if is set' );
     is(
-        $request->get_type_disclaimer_text, "Example text",
-        'get_type_disclaimer_text() returns the value if is set'
+        $texts[0], "Example text",
+        'get_type_disclaimer_texts() returns single text if is set'
+    );
+
+    $builder->build_object(
+        {
+            class => 'Koha::ILL::Request::Attributes',
+            value => {
+                illrequest_id => $request->illrequest_id,
+                type          => 'type_disclaimer_text_2',
+                value         => 'Another example text'
+            }
+        }
+    );
+
+    @texts = $request->get_type_disclaimer_texts;
+    is( @texts, 2, 'get_type_disclaimer_texts() returns multiple texts' );
+    is(
+        $texts[0], "Example text",
+        'get_type_disclaimer_texts() returns multiple texts'
+    );
+    is(
+        $texts[1], "Another example text",
+        'get_type_disclaimer_texts() returns multiple texts'
     );
 
     $schema->storage->txn_rollback;

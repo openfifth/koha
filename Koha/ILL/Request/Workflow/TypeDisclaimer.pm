@@ -139,7 +139,7 @@ sub after_request_created {
 
     # Validate required parameters before creating record of disclaimer
     return 0
-        unless $params->{type_disclaimer_value} && $disc_info->{text};
+        unless $params->{type_disclaimer_value} && @{ $disc_info->{fields} };
 
     # Store type disclaimer date and value
     my $type_disclaimer_date = {
@@ -150,21 +150,31 @@ sub after_request_created {
     };
     Koha::ILL::Request::Attribute->new($type_disclaimer_date)->store;
 
-    my $type_disclaimer_value = {
-        illrequest_id => $request->illrequest_id,
-        type          => "type_disclaimer_value",
-        value         => $params->{type_disclaimer_value},
-        readonly      => 0
-    };
-    Koha::ILL::Request::Attribute->new($type_disclaimer_value)->store;
+    my @values = split( "\0", $params->{type_disclaimer_value} );
 
-    my $type_disclaimer_text = {
-        illrequest_id => $request->illrequest_id,
-        type          => "type_disclaimer_text",
-        value         => $disc_info->{text},
-        readonly      => 0
-    };
-    Koha::ILL::Request::Attribute->new($type_disclaimer_text)->store;
+    my $i = 0;
+    foreach my $field ( @{ $disc_info->{fields} } ) {
+        my $suffix = '_' . $i;
+        $suffix = '' unless @{ $disc_info->{fields} };
+
+        my $type_disclaimer_value = {
+            illrequest_id => $request->illrequest_id,
+            type          => "type_disclaimer_value" . $suffix,
+            value         => $values[$i],
+            readonly      => 0
+        };
+        Koha::ILL::Request::Attribute->new($type_disclaimer_value)->store;
+
+        my $type_disclaimer_text = {
+            illrequest_id => $request->illrequest_id,
+            type          => "type_disclaimer_text" . $suffix,
+            value         => $field->{text},
+            readonly      => 0
+        };
+        Koha::ILL::Request::Attribute->new($type_disclaimer_text)->store;
+
+        $i++;
+    }
 
     return 1;
 }
@@ -183,7 +193,7 @@ sub clear_type_disclaimer {
     Koha::ILL::Request::Attributes->search(
         {
             illrequest_id => $request->illrequest_id,
-            type          => [ "type_disclaimer_date", "type_disclaimer_value", "type_disclaimer_text" ]
+            type          => { 'LIKE', "type_disclaimer_%" },
         }
     )->delete();
 }
@@ -205,16 +215,27 @@ sub _get_type_disclaimer_info {
         map ( $_ eq $type ? $_ : (), keys %$disc_sys_pref );
 
     my $disc_info = undef;
+    my $matched_type;
     if ( scalar @matching_request_type ) {
-        $disc_info->{text}      = $disc_sys_pref->{$type}->{text};
-        $disc_info->{av_cat}    = $disc_sys_pref->{$type}->{av_category_code};
-        $disc_info->{interface} = $disc_sys_pref->{$type}->{interface};
+        $matched_type = $disc_sys_pref->{$type};
         $disc_info->{interface} = 'none' if $disc_sys_pref->{$type}->{bypass};
     } elsif ( $disc_sys_pref->{all} ) {
-        $disc_info->{text}      = $disc_sys_pref->{all}->{text};
-        $disc_info->{av_cat}    = $disc_sys_pref->{all}->{av_category_code};
-        $disc_info->{interface} = $disc_sys_pref->{all}->{interface};
+        $matched_type = $disc_sys_pref->{all};
     }
+
+    my $fields;
+    if ( exists $matched_type->{fields} ) {
+        $fields = $matched_type->{fields};
+    } else {
+        $fields = [ { text => $matched_type->{text}, av_category_code => $matched_type->{av_category_code} } ];
+    }
+
+    $disc_info->{fields} = [ map { { text => $_->{text}, av_cat => $_->{av_category_code} } } @{$fields} ];
+
+    #$disc_info->{text}      = $matched_type->{text};
+    #$disc_info->{av_cat}    = $matched_type->{av_category_code};
+    $disc_info->{interface} //= $matched_type->{interface};
+
     return $disc_info;
 }
 
