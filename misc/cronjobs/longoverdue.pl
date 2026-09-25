@@ -31,7 +31,7 @@ use warnings;
 use Getopt::Long qw( GetOptions );
 use Pod::Usage   qw( pod2usage );
 
-use C4::Circulation qw( LostItem MarkIssueReturned );
+use C4::Circulation qw( MarkIssueReturned );
 use C4::Context;
 use Koha::Checkout;
 use Koha::Checkouts;
@@ -518,28 +518,25 @@ foreach my $startrange ( sort keys %$lost ) {
                 $row->{borrowernumber}, $lostvalue
             ) if ($verbose);
             if ($confirm) {
-                Koha::Items->find( $row->{itemnumber} )->itemlost($lostvalue)->store;
+                my $item = Koha::Items->find( $row->{itemnumber} );
                 if ( $charge && $charge eq $lostvalue ) {
-                    my $patron = Koha::Patrons->find( $row->{borrowernumber} );
-                    my $item   = Koha::Items->find( $row->{itemnumber} );
-                    my $issue  = Koha::Checkouts->search(
+                    $item->set_lost(
                         {
-                            itemnumber     => $row->{itemnumber},
-                            borrowernumber => $row->{borrowernumber},
+                            context       => 'cronjob',
+                            lost_value    => $lostvalue,
+                            mark_returned => $mark_returned,
                         }
-                    )->next;
-
-                    my $rule_branch = Koha::Checkout->branch_for_fee_context(
-                        fee_type => 'LOST',
-                        patron   => $patron,
-                        item     => $item,
-                        issue    => $issue,
                     );
+                } else {
 
-                    LostItem( $row->{itemnumber}, 'cronjob', $mark_returned, { library_id => $rule_branch } );
-                } elsif ($mark_returned) {
-                    $patron ||= Koha::Patrons->find( $row->{borrowernumber} );
-                    MarkIssueReturned( $row->{borrowernumber}, $row->{itemnumber}, undef, $patron->privacy );
+                    # Without a matching --charge this range levies no fee, and
+                    # historically skipped LostItem entirely: no forgiveness and
+                    # no transfer cancellation either.
+                    $item->itemlost($lostvalue)->store;
+                    if ($mark_returned) {
+                        $patron ||= Koha::Patrons->find( $row->{borrowernumber} );
+                        MarkIssueReturned( $row->{borrowernumber}, $row->{itemnumber}, undef, $patron->privacy );
+                    }
                 }
             }
             $count++;

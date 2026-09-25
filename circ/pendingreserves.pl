@@ -65,7 +65,6 @@ if ( $op eq 'cud-cancel_reserve' and $reserve_id ) {
     my $item = $hold->item;
     if ( $item and C4::Context->preference('CanMarkHoldsToPullAsLost') =~ m|^allow| ) {
         my $patron = $hold->borrower;
-        C4::Circulation::LostItem( $item->itemnumber, "pendingreserves" );
         if ( $op eq 'cud-mark_as_lost_and_notify'
             and C4::Context->preference('CanMarkHoldsToPullAsLost') eq 'allow_and_notify' )
         {
@@ -118,6 +117,10 @@ if ( $op eq 'cud-cancel_reserve' and $reserve_id ) {
             };
             warn "Unable to modify item itemnumber=" . $item->itemnumber . ": $@" if $@;
         }
+
+        # After the assignments: UpdateItemWhenLostFromHoldList is where this
+        # screen's lost value comes from, and set_lost reads items.itemlost.
+        $item->set_lost( { context => 'pendingreserves' } );
 
     } elsif ( not $item ) {
         push @messages, { type => 'alert', code => 'hold_placed_at_biblio_level' };

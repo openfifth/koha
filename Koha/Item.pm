@@ -1092,6 +1092,148 @@ sub mark_lost {
     return $self;
 }
 
+=head3 set_lost
+
+    $item->set_lost(
+        {
+            context           => 'additem',
+            lost_value        => 1,     # optional; defaults to the item's current itemlost
+            charge            => 1,     # optional; overrides WhenLostChargeReplacementFee
+            mark_returned     => 1,     # optional; overrides MarkLostItemsAsReturned
+            skip_record_index => 1,     # optional
+            skip_holds_queue  => 1,     # optional
+        }
+    );
+
+Marks this item lost and applies the system preference driven policy that goes
+with it: forgiving the outstanding overdue where C<WhenLostForgiveFine> says so,
+levying the replacement charge where C<WhenLostChargeReplacementFee> says so, and
+archiving the checkout where C<MarkLostItemsAsReturned> lists C<context>.
+
+C<context> is mandatory and names where the item was marked lost from
+('additem', 'moredetail', 'pendingreserves', 'cronjob', ...). It is matched
+against C<MarkLostItemsAsReturned> and selects the interface recorded on any
+accountlines created.
+
+C<lost_value> is optional: callers that have already written C<items.itemlost>,
+such as the MARC item editor, can omit it and the item's current value is used.
+C<charge> and C<mark_returned> override their preferences when defined, and fall
+through to them when not.
+
+Composed from L</mark_lost>, L<Koha::Account/forgive_debit>,
+L<Koha::Account/add_lost_replacement_fee> and L<Koha::Checkout/mark_returned>.
+
+=cut
+
+sub set_lost {
+    my ( $self, $params ) = @_;
+
+    my $context = $params->{context};
+    if ( !$context ) {
+        Koha::Exceptions::MissingParameter->throw( error => 'The context parameter is mandatory' );
+    }
+
+    my $lost_value = $params->{lost_value} // $self->itemlost;
+    if ( !$lost_value ) {
+        return $self;
+    }
+
+    my $mark_returned = $params->{mark_returned};
+    if ( !defined $mark_returned ) {
+        my $preference = C4::Context->preference('MarkLostItemsAsReturned') // q{};
+        $mark_returned = ( $preference =~ m|$context| );
+    }
+
+    my $charge = $params->{charge} // C4::Context->preference('WhenLostChargeReplacementFee');
+
+    my $interface = $context eq 'cronjob' ? 'cron' : C4::Context->interface;
+    my $userenv   = C4::Context->userenv;
+    my $user_id   = $userenv ? $userenv->{number} : undef;
+
+    my $store_params = {
+        skip_record_index => $params->{skip_record_index},
+        skip_holds_queue  => $params->{skip_holds_queue},
+    };
+
+    # Read before mark_lost: that flips the fine's status to LOST, and
+    # forgiveness only applies to fines still UNRETURNED.
+    my $checkout = $self->checkout;
+
+    if ( !$checkout ) {
+        $self->mark_lost( $lost_value, $store_params );
+        return $self;
+    }
+
+    my $patron  = $checkout->patron;
+    my $account = $patron->account;
+
+    if ( C4::Context->preference('WhenLostForgiveFine') ) {
+        my $overdues = $account->lines->search(
+            {
+                issue_id        => $checkout->issue_id,
+                debit_type_code => 'OVERDUE',
+                status          => 'UNRETURNED',
+            }
+        );
+        while ( my $overdue = $overdues->next ) {
+            $account->forgive_debit(
+                $overdue,
+                {
+                    interface  => C4::Context->interface,
+                    user_id    => $user_id,
+                    library_id => $userenv ? $userenv->{branch} : undef,
+                }
+            );
+        }
+    }
+
+    $self->mark_lost( $lost_value, $store_params );
+
+    if ($charge) {
+        my $description = sprintf(
+            '%s %s %s',
+            $self->biblio ? ( $self->biblio->title // q{} ) : q{},
+            $self->barcode        // q{},
+            $self->itemcallnumber // q{},
+        );
+
+        $account->add_lost_replacement_fee(
+            {
+                item       => $self,
+                issue_id   => $checkout->issue_id,
+                library_id => $checkout->branch_for_fee_context(
+                    fee_type => 'LOST',
+                    patron   => $patron,
+                    item     => $self,
+                    issue    => $checkout,
+                ),
+                user_id           => $user_id,
+                interface         => $interface,
+                description       => $description,
+                replacement_price => ( $checkout->replacementprice // 0 ) + 0,
+            }
+        );
+    }
+
+    if ($mark_returned) {
+        my $checkin_library =
+            ( defined $userenv && exists $userenv->{branch} )
+            ? $userenv->{branch}
+            : $checkout->branchcode;
+
+        $checkout->mark_returned(
+            {
+                borrowernumber  => $patron->borrowernumber,
+                checkin_library => $checkin_library,
+                privacy         => $patron->privacy,
+                %$store_params,
+            }
+        );
+    }
+
+    return $self;
+}
+
 =head3 last_borrowers
 
 Returns all patrons who have returned this item, ordered by most recent first.

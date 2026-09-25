@@ -27,7 +27,7 @@ use C4::Auth qw( get_template_and_user haspermission );
 use C4::Barcodes::ValueBuilder;
 use C4::Barcodes;
 use C4::Biblio      qw( GetFrameworkCode GetMarcFromKohaField GetMarcStructure IsMarcStructureInternal ModBiblio );
-use C4::Circulation qw( barcodedecode LostItem );
+use C4::Circulation qw( barcodedecode );
 use C4::Context;
 use C4::Members;
 use C4::Output qw( output_and_exit_if_error output_and_exit output_html_with_http_headers );
@@ -640,13 +640,16 @@ if ( $op eq "cud-additem" ) {
         $current_item = $item->unblessed;    # Restore edit form for the same item
     } else {
         my $newitemlost = $item->itemlost;
-        if ( $newitemlost && $newitemlost ge '1' && !$olditemlost ) {
-            LostItem( $item->itemnumber, 'additem' );
-        }
         try {
             $item->store;
         } catch {
             push @errors, $_->error;
+        };
+
+        # After the store: set_lost writes items.itemlost itself, so the form's
+        # pending changes must already be persisted.
+        if ( !@errors && $newitemlost && $newitemlost ge '1' && !$olditemlost ) {
+            $item->set_lost( { context => 'additem', lost_value => $newitemlost } );
         }
     }
 

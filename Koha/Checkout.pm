@@ -23,7 +23,7 @@ use Modern::Perl;
 use DateTime;
 use Try::Tiny qw( catch try );
 
-use C4::Circulation qw( AddRenewal CanBookBeRenewed LostItem MarkIssueReturned );
+use C4::Circulation qw( AddRenewal CanBookBeRenewed MarkIssueReturned );
 use Koha::Booking;
 use Koha::Checkouts::Renewals;
 use Koha::Checkouts::ReturnClaims;
@@ -329,7 +329,7 @@ sub claim_returned {
                     :                                          $charge_lost_fee;    # $ClaimReturnedChargeFee eq 'ask'
 
                 if ($charge_lost_fee) {
-                    C4::Circulation::LostItem( $self->itemnumber, 'claim_returned' );
+                    $self->item->set_lost( { context => 'claim_returned' } );
                 } elsif ( C4::Context->preference('MarkLostItemsAsReturned') =~ m/claim_returned/ ) {
                     C4::Circulation::MarkIssueReturned(
                         $self->borrowernumber, $self->itemnumber, undef,
