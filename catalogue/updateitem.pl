@@ -22,7 +22,6 @@ use CGI      qw ( -utf8 );
 use C4::Auth qw( checkauth );
 use C4::Context;
 use C4::Output;
-use C4::Circulation qw( LostItem );
 use C4::Reserves;
 
 my $cgi = CGI->new;
@@ -97,7 +96,9 @@ if ($@) {
         "moredetail.pl?biblionumber=$biblionumber&itemnumber=$itemnumber&nowithdraw=$error_message#item$itemnumber");
     exit;
 }
-LostItem( $itemnumber, 'moredetail' ) if $op eq "cud-set_lost";
+if ( $op eq "cud-set_lost" ) {
+    $item->set_lost( { context => 'moredetail', lost_value => $itemlost } );
+}
 
 print $cgi->redirect(
     "moredetail.pl?" . $messages . "biblionumber=$biblionumber&itemnumber=$itemnumber#item$itemnumber" );

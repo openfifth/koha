@@ -554,12 +554,9 @@ sub batch_update {
                         my $itemlost_pre = $item->itemlost;
                         $item->set($new_values)->store( { skip_record_index => 1 } );
 
-                        C4::Circulation::LostItem(
-                            $item->itemnumber, 'batchmod', undef,
-                            { skip_record_index => 1 }
-                            )
-                            if $item->itemlost
-                            and not $itemlost_pre;
+                        if ( $item->itemlost and not $itemlost_pre ) {
+                            $item->set_lost( { context => 'batchmod', skip_record_index => 1 } );
+                        }
                     }
                     if ($mark_items_returned) {
                         my $issue = $item->checkout;
