@@ -138,7 +138,7 @@ subtest '_find_effective_rule_value walks fallback contexts' => sub {
     );
     is(
         $resolver->_find_effective_rule_value( 'BR', 'PC', 'IT', 7, 'charge' ),
-        "", 'unset action returns an empty scalar'
+        undef, 'unset action returns undef'
     );
 };
 

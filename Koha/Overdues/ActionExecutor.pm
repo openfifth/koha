@@ -150,6 +150,8 @@ sub route_item_actions_to_queue {
             }
         );
     }
+
+    return;
 }
 
 =head3 _item_store_params
@@ -255,6 +257,8 @@ sub process_action_queue {
             $patron->lift_overdue_restrictions;
         }
     }
+
+    return;
 }
 
 =head3 process_notice_queue
@@ -334,6 +338,8 @@ sub process_notice_queue {
             }
         }
     }
+
+    return;
 }
 
 =head3 _notice_exists
@@ -462,6 +468,8 @@ sub _enqueue_letter_for_bucket {
         printf "    letter_code=%s mtt=%s borrower=%s days_overdue=%s items=%s\n",
             $notice_code, $mtt, $borrowernumber, $head->{delay}, scalar @item_rows;
     }
+
+    return;
 }
 
 =head3 format_action_item
@@ -587,6 +595,8 @@ sub enact_forgive_fine {
             "Overdue forgiven: borrower $overdue_item->{borrowernumber}, item $overdue_item->{itemnumber} ($forgiven_count line(s))"
         );
     }
+
+    return;
 }
 
 =head3 enact_charge

@@ -80,9 +80,12 @@ to the simple DATEDIFF-based path.
 sub ProcessOverdues {
     my ($self) = @_;
 
-    return C4::Context->preference('OverdueTriggersCalendar')
-        ? $self->_process_calendar_adjusted
-        : $self->_process_simple_calculation;
+    if ( C4::Context->preference('OverdueTriggersCalendar') ) {
+        $self->_process_calendar_adjusted;
+        return;
+    }
+    $self->_process_simple_calculation;
+    return;
 }
 
 =head3 _process_simple_calculation
@@ -122,7 +125,9 @@ sub _process_simple_calculation {
         return;
     }
 
-    return $self->_dispatch_overdues( $allOverduesForKnownDelays, \%effective_delay_by_raw_delay );
+    $self->_dispatch_overdues( $allOverduesForKnownDelays, \%effective_delay_by_raw_delay );
+
+    return;
 }
 
 =head3 _process_calendar_adjusted
@@ -187,7 +192,9 @@ sub _process_calendar_adjusted {
         return;
     }
 
-    return $self->_dispatch_overdues( $overdues_resultset, \%effective_delay_by_raw_delay );
+    $self->_dispatch_overdues( $overdues_resultset, \%effective_delay_by_raw_delay );
+
+    return;
 }
 
 # Alg 3 fallback: issue one query per branch and return a merged in-memory
@@ -300,6 +307,8 @@ sub _dispatch_overdues {
 
     $action_executor->process_action_queue;
     $action_executor->process_notice_queue;
+
+    return;
 }
 
 # Minimal iterator that chains a list of DBIx::Class resultsets so the

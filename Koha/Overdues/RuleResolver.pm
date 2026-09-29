@@ -78,6 +78,8 @@ sub set_effective_overdue_rule_sets {
             }
         }
     }
+
+    return;
 }
 
 =head3 _find_effective_rule_value
@@ -143,7 +145,7 @@ sub _find_effective_overdue_rule_set {
 =head3 _find_effective_rule_value
 
 Retrieves the effective rule value for a specific context, delay, and action combination from the cache.
-If none is found, returns an empty scalar.
+If none is found, returns undef.
 
 =cut
 
@@ -159,6 +161,7 @@ sub _find_effective_rule_value {
         my $value = $self->{raw_overdue_rule_sets}->{$key}->{actions}->{$action};
         return $value;
     }
+    return;
 }
 
 =head3 _get_fallback_contexts
@@ -233,6 +236,8 @@ sub set_raw_overdue_rule_sets {
             $self->{raw_overdue_rule_sets}->{$cache_key} = $rule_set;
         }
     }
+
+    return;
 }
 
 =head3 get_raw_overdue_rule_sets
