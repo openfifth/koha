@@ -410,6 +410,14 @@ sub _enqueue_letter_for_bucket {
         return;
     }
 
+    my $item_count = scalar @item_rows;
+    my $max_lines  = C4::Context->preference('PrintNoticesMaxLines');
+    my $truncated  = 0;
+    if ( $mtt eq 'print' && $max_lines && $item_count > $max_lines ) {
+        splice @item_rows, $max_lines;
+        $truncated = 1;
+    }
+
     my $letter = C4::Letters::GetPreparedLetter(
         module      => 'circulation',
         letter_code => $notice_code,
@@ -419,7 +427,7 @@ sub _enqueue_letter_for_bucket {
             borrowers => $borrowernumber,
             branches  => $branchcode,
         },
-        substitute => { count    => scalar @item_rows },
+        substitute => { count    => $item_count },
         repeat     => { item     => \@item_rows },
         loops      => { overdues => [ map { $_->{items} } @item_rows ] }
         ,    # for compatibility with templates expecting data that can be parsed like [% FOREACH overdue IN overdues %]
@@ -430,6 +438,11 @@ sub _enqueue_letter_for_bucket {
         Koha::Logger->get->warn(
             "process_notice_queue: no letter for borrower=$borrowernumber code=$notice_code mtt=$mtt — skipping");
         return;
+    }
+
+    if ($truncated) {
+        $letter->{content} .=
+            "List too long for form; please check your account online for a complete list of your overdue items.";
     }
 
     Koha::Notice::Message->new(
