@@ -21,7 +21,7 @@ use Modern::Perl;
 
 use Test::MockModule;
 use Test::NoWarnings;
-use Test::More tests => 20;
+use Test::More tests => 21;
 use Test::Warn;
 
 use Koha::Account;
@@ -242,7 +242,7 @@ subtest 'enact_lost / enact_forgive_fine / enact_mark_returned' => sub {
 };
 
 subtest 'enact_charge creates LOST debit with caller-resolved branch' => sub {
-    plan tests => 4;
+    plan tests => 3;
 
     $schema->storage->txn_begin;
 
@@ -290,19 +290,37 @@ subtest 'enact_charge creates LOST debit with caller-resolved branch' => sub {
         'LOST debit stamped with item home library (LostChargesControl=ItemHomeLibrary)'
     );
 
-    # No replacement fee → warn and skip.
-    my $item_free    = $builder->build_sample_item( { homebranch => $library->branchcode, replacementprice => 0 } );
-    my $overdue_free = {
-        borrowernumber => $patron->borrowernumber,
-        itemnumber     => $item_free->itemnumber,
-        issue_id       => undef,
-        replacementfee => 0,
-    };
+    $schema->storage->txn_rollback;
+};
 
-    # Construct before enact_charge so Koha::Logger->get is mocked when it fires
-    my $logger = t::lib::Mocks::Logger->new();
-    $executor->enact_charge($overdue_free);
-    $logger->warn_like( qr/No replacement fee set/, 'warns and skips when replacementfee is zero' );
+subtest 'enact_charge falls back to the itemtype default replacement cost' => sub {
+    plan tests => 1;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'useDefaultReplacementCost', 1 );
+
+    my $itemtype = $builder->build_object( { class => 'Koha::ItemTypes', value => { defaultreplacecost => 5.00 } } );
+    my $patron   = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $item     = $builder->build_sample_item( { itype => $itemtype->itemtype, replacementprice => 0 } );
+
+    Koha::Overdues::ActionExecutor->new->enact_charge(
+        {
+            borrowernumber => $patron->borrowernumber,
+            itemnumber     => $item->itemnumber,
+            issue_id       => undef,
+            replacementfee => 0,
+        }
+    );
+
+    my $lost = Koha::Account::Lines->search(
+        {
+            borrowernumber  => $patron->borrowernumber,
+            itemnumber      => $item->itemnumber,
+            debit_type_code => 'LOST',
+        }
+    )->next;
+    is( $lost->amount + 0, 5.00, 'LOST debit amount comes from the itemtype defaultreplacecost' );
 
     $schema->storage->txn_rollback;
 };
