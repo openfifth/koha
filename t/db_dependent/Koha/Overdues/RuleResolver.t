@@ -53,6 +53,7 @@ subtest '_get_fallback_contexts' => sub {
             'BR|PC|*|7',
             'BR|*|IT|7',
             'BR|*|*|7',
+            '*|PC|IT|7',
             '*|PC|*|7',
             '*|*|IT|7',
             '*|*|*|7',
