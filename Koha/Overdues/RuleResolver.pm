@@ -176,6 +176,7 @@ sub _get_fallback_contexts {
         join( "|", $branchcode, $categorycode, "*",       $delay ),    # library + category
         join( "|", $branchcode, "*",           $itemtype, $delay ),    # library + itemtype
         join( "|", $branchcode, "*",           "*",       $delay ),    # library only
+        join( "|", "*",         $categorycode, $itemtype, $delay ),    # category + itemtype
         join( "|", "*",         $categorycode, "*",       $delay ),    # category only
         join( "|", "*",         "*",           $itemtype, $delay ),    # itemtype only
         join( "|", "*",         "*",           "*",       $delay ),    # default
