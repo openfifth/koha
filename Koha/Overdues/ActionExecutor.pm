@@ -601,11 +601,6 @@ LostChargesControl / HomeOrHoldingBranch. Records the accountline with interface
 sub enact_charge {
     my ( $self, $overdue_item ) = @_;
 
-    if ( !$overdue_item->{replacementfee} || $overdue_item->{replacementfee} == 0 ) {
-        Koha::Logger->get->warn("No replacement fee set for itemnumber $overdue_item->{itemnumber} — skipping charge");
-        return;
-    }
-
     my $item   = Koha::Items->find( $overdue_item->{itemnumber} );
     my $patron = Koha::Patrons->find( $overdue_item->{borrowernumber} );
     my $issue  = Koha::Checkouts->search(
