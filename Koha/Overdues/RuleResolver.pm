@@ -107,6 +107,12 @@ sub _find_effective_overdue_rule_set {
                 );
                 next;
             }
+
+            # An empty notice code suppresses the notice for this context (we already have accounted for fallbacks).
+            # '' means 'No letter', and must result in notice suppression.
+            if ( !length $notice_code ) {
+                next;
+            }
             my $mtt_value = $self->_find_effective_rule_value( $branchcode, $categorycode, $itemtype, $delay, 'mtt' );
             if ( !defined $mtt_value ) {
                 Koha::Logger->get->warn(
@@ -145,6 +151,7 @@ sub _find_effective_overdue_rule_set {
 =head3 _find_effective_rule_value
 
 Retrieves the effective rule value for a specific context, delay, and action combination from the cache.
+An empty C<mtt> is skipped and the walk continues; an empty action value halts it and is returned.
 If none is found, returns undef.
 
 =cut
@@ -159,6 +166,11 @@ sub _find_effective_rule_value {
             next;
         }
         my $value = $self->{raw_overdue_rule_sets}->{$key}->{actions}->{$action};
+
+        if ( $action eq 'mtt' && !length $value ) {
+            next;
+        }
+
         return $value;
     }
     return;

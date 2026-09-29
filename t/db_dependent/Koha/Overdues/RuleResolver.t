@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 7;
+use Test::More tests => 8;
 
 use Koha::CirculationRules;
 use Koha::Database;
@@ -211,4 +211,19 @@ subtest 'notice action splits comma-separated mtt rule value' => sub {
     );
 
     ok( !exists $by_type_7{notice}->{mtt}, 'no scalar mtt key leaks alongside mtts' );
+};
+
+subtest 'empty mtt resolves to the broader context mtt' => sub {
+    plan tests => 1;
+
+    my $resolver = Koha::Overdues::RuleResolver->new;
+    $resolver->{raw_overdue_rule_sets} = {
+        'BR|PC|IT|7' => { delay => 7, actions => { notice => 'OD1', mtt => '' } },
+        '*|*|*|7'    => { delay => 7, actions => { mtt    => 'email' } },
+    };
+
+    $resolver->set_effective_overdue_rule_sets( ['BR'], ['PC'], ['IT'], { BR => { 7 => 7 } } );
+
+    my %by_type = map { $_->{type} => $_ } @{ $resolver->{effective_overdue_rule_sets}->{'BR|PC|IT|7'}->{actions} };
+    is_deeply( $by_type{notice}->{mtts}, ['email'], 'empty mtt resolves to the default context mtt' );
 };
