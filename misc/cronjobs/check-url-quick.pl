@@ -25,6 +25,8 @@ use Koha::Script -cron;
 use C4::Context;
 use Koha::Authorities;
 use Koha::Biblios;
+use Koha::Biblioitems;
+use Koha::Items;
 use AnyEvent;
 use AnyEvent::HTTP qw( http_request );
 use Encode         qw( encode_utf8 );
@@ -79,43 +81,40 @@ sub report {
         : "$description\t$url\t" . "$hdr->{Status} $hdr->{Reason}\n";
 }
 
-# Check all URLs from all current Koha biblio records
-
-sub check_all_url {
-    my $sth_biblio = C4::Context->dbh->prepare("SELECT biblionumber FROM biblioitems ORDER BY biblionumber");
-    $sth_biblio->execute;
+sub check_resultset {
+    my $params           = shift;
+    my $rs               = $params->{rs};
+    my $urls_proj        = $params->{urls_proj};
+    my $description_proj = $params->{description_proj};
+    my $edit_link_proj   = $params->{edit_link_proj};
 
     my $count = 0;                   # Number of requested URL
     my $cv    = AnyEvent->condvar;
-    say "<html>\n<body>\n<div id=\"checkurl\">\n<table>" if $html;
+
     my $idle = AnyEvent->timer(
         interval => .3,
         cb       => sub {
             return if $count > $maxconn;
-            while ( my ($biblionumber) = $sth_biblio->fetchrow ) {
-                my $biblio = Koha::Biblios->find($biblionumber);
-                my $record = $biblio->metadata->record;
-                for my $tag (@tags) {
-                    foreach my $field ( $record->field($tag) ) {
-                        my $url = $field->subfield('u');
-                        next unless $url;
-                        $url = "$host/$url" unless $url =~ /^http/i;
-                        $url = encode_utf8($url);
-                        $count++;
-                        http_request(
-                            HEAD    => $url,
-                            headers => { 'user-agent' => $user_agent },
-                            timeout => $timeout,
-                            sub {
-                                my ( undef, $hdr ) = @_;
-                                $count--;
-                                report(
-                                    $hdr, 'Biblio: ' . $biblionumber, $url,
-                                    $host_intranet . $biblio_edit . $biblionumber
-                                ) if $hdr->{Status} !~ /^2/ || $verbose;
-                            },
-                        );
-                    }
+            while ( my $item = $rs->next ) {
+                my @urls = $urls_proj->($item);
+                foreach my $url (@urls) {
+                    next unless $url;
+                    $url = "$host/$url" unless $url =~ /^http/i;
+                    $url = encode_utf8($url);
+                    $count++;
+                    http_request(
+                        HEAD    => $url,
+                        headers => { 'user-agent' => $user_agent },
+                        timeout => $timeout,
+                        sub {
+                            my ( undef, $hdr ) = @_;
+                            $count--;
+                            report(
+                                $hdr, $description_proj->($item), $url,
+                                $edit_link_proj->($item)
+                            ) if $hdr->{Status} !~ /^2/ || $verbose;
+                        },
+                    );
                 }
                 return if $count > $maxconn;
             }
@@ -133,98 +132,80 @@ sub check_all_url {
         cb       => sub { $cv->send if $count == 0; }
     );
     $cv->recv;
+}
 
-    my $sth_items =
-        C4::Context->dbh->prepare("SELECT itemnumber, uri FROM items WHERE uri IS NOT NULL ORDER BY itemnumber");
-    $sth_items->execute;
+# Check all URLs from all current Koha biblio records
 
-    $cv   = AnyEvent->condvar;
-    $idle = AnyEvent->timer(
-        interval => .3,
-        cb       => sub {
-            return if $count > $maxconn;
-            while ( my ( $itemnumber, $url ) = $sth_items->fetchrow ) {
-                next unless $url;
-                $url = "$host/$url" unless $url =~ /^http/i;
-                $url = encode_utf8($url);
-                $count++;
-                http_request(
-                    HEAD    => $url,
-                    headers => { 'user-agent' => $user_agent },
-                    timeout => $timeout,
-                    sub {
-                        my ( undef, $hdr ) = @_;
-                        $count--;
-                        report( $hdr, 'Item: ' . $itemnumber, $url, $host_intranet . $item_edit . $itemnumber )
-                            if $hdr->{Status} !~ /^2/ || $verbose;
-                    },
-                );
-                return if $count > $maxconn;
-            }
-            $cv->send;
+sub check_all_url {
+    my $sth_biblio = C4::Context->dbh->prepare("SELECT biblionumber FROM biblioitems ORDER BY biblionumber");
+    $sth_biblio->execute;
+
+    my $count = 0;                   # Number of requested URL
+    my $cv    = AnyEvent->condvar;
+    say "<html>\n<body>\n<div id=\"checkurl\">\n<table>" if $html;
+
+    check_resultset(
+        {
+            rs        => Koha::Biblioitems->search( {}, { order_by => 'biblionumber' } ),
+            urls_proj => sub {
+                my $biblio_item = shift;
+                my @urls;
+                my $biblio = Koha::Biblios->find( $biblio_item->biblionumber );
+                my $record = $biblio->metadata->record;
+                for my $tag (@tags) {
+                    foreach my $field ( $record->field($tag) ) {
+                        my $url = $field->subfield('u');
+                        next unless $url;
+                        push @urls, $url;
+                    }
+                }
+                return @urls;
+
+            },
+            description_proj => sub { 'Biblio: ' . shift->biblionumber },
+            edit_link_proj   => sub { $host_intranet . $biblio_edit . shift->biblionumber },
         }
     );
-    $cv->recv;
-    $idle = undef;
 
-    # Few more time for pending requests
-    $cv    = AnyEvent->condvar;
-    $timer = AnyEvent->timer(
-        after    => $timeout,
-        interval => $timeout,
-        cb       => sub { $cv->send if $count == 0; }
+    check_resultset(
+        {
+            rs        => Koha::Items->search( {}, { order_by => 'itemnumber' } ),
+            urls_proj => sub {
+                my $item = shift;
+                my @urls;
+                push @urls, $item->uri if $item->uri;
+                return @urls;
+
+            },
+            description_proj => sub { 'Item: ' . shift->itemnumber },
+            edit_link_proj   => sub { $host_intranet . $item_edit . shift->itemnumber },
+        }
     );
-    $cv->recv;
 
-    my $sth_authorities = C4::Context->dbh->prepare("SELECT authid FROM auth_header ORDER BY authid");
-    $sth_authorities->execute;
-
-    $cv   = AnyEvent->condvar;
-    $idle = AnyEvent->timer(
-        interval => .3,
-        cb       => sub {
-            return if $count > $maxconn;
-            while ( my ($authid) = $sth_authorities->fetchrow ) {
-                my $auth   = Koha::Authorities->find($authid);
+    check_resultset(
+        {
+            rs        => Koha::Authorities->search( {}, { order_by => 'authid' } ),
+            urls_proj => sub {
+                my $auth = shift;
+                my @urls;
                 my $record = $auth->record;
 
-                # TODO: UNIMARC?
+                # TODO: UNIMARC
                 my $field = $record->field('024');
-                next unless $field;
+                return @urls unless $field;
+
                 foreach my ($sf) ( ( '0', '1' ) ) {
                     my $url = $field->subfield($sf);
                     next unless $url;
-                    $url = "$host/$url" unless $url =~ /^http/i;
-                    $url = encode_utf8($url);
-                    $count++;
-                    http_request(
-                        HEAD    => $url,
-                        headers => { 'user-agent' => $user_agent },
-                        timeout => $timeout,
-                        sub {
-                            my ( undef, $hdr ) = @_;
-                            $count--;
-                            report( $hdr, 'Authority: ' . $authid, $url, $host_intranet . $auth_edit . $authid )
-                                if $hdr->{Status} !~ /^2/ || $verbose;
-                        },
-                    );
+                    push @urls, $url;
                 }
-                return if $count > $maxconn;
-            }
-            $cv->send;
+                return @urls;
+
+            },
+            description_proj => sub { 'Authority: ' . shift->authid },
+            edit_link_proj   => sub { $host_intranet . $auth_edit . shift->authid },
         }
     );
-    $cv->recv;
-    $idle = undef;
-
-    # Few more time for pending requests
-    $cv    = AnyEvent->condvar;
-    $timer = AnyEvent->timer(
-        after    => $timeout,
-        interval => $timeout,
-        cb       => sub { $cv->send if $count == 0; }
-    );
-    $cv->recv;
 
     say "</table>\n</div>\n</body>\n</html>" if $html;
 }
