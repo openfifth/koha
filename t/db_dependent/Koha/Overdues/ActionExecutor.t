@@ -21,7 +21,7 @@ use Modern::Perl;
 
 use Test::MockModule;
 use Test::NoWarnings;
-use Test::More tests => 21;
+use Test::More tests => 22;
 use Test::Warn;
 
 use Koha::Account;
@@ -741,6 +741,80 @@ subtest 'process_notice_queue: email -> print fallback when patron has no email'
         $messages->next->message_transport_type, 'print',
         'mtt is print (synthesised fallback)'
     );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'process_notice_queue: print fallback renders the email template when no print template exists' => sub {
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron  = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => {
+                branchcode => $library->branchcode,
+                email      => q{},
+                emailpro   => q{},
+                B_email    => q{},
+            }
+        }
+    );
+    my $item  = $builder->build_sample_item( { homebranch => $library->branchcode } );
+    my $issue = $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => { borrowernumber => $patron->borrowernumber, itemnumber => $item->itemnumber }
+        }
+    );
+
+    # Only an email template exists for this code.
+    $builder->build(
+        {
+            source => 'Letter',
+            value  => {
+                module                 => 'circulation',
+                code                   => 'OD1',
+                branchcode             => q{},
+                message_transport_type => 'email',
+                name                   => 'OD1 email',
+                title                  => 'OD1',
+                content                => 'email body',
+                is_html                => 0,
+                lang                   => 'default',
+            },
+        }
+    );
+
+    my $executor = Koha::Overdues::ActionExecutor->new;
+    $executor->add_to_notice_queue(
+        $patron->borrowernumber, 'OD1', 'email', 7,
+        [
+            {
+                item => {
+                    borrowernumber    => $patron->borrowernumber,
+                    itemnumber        => $item->itemnumber,
+                    issue_id          => $issue->issue_id,
+                    patronhomebranch  => $library->branchcode,
+                    itemhomebranch    => $library->branchcode,
+                    itemholdingbranch => $library->branchcode,
+                },
+                action => { type => 'notice', notice_code => 'OD1', mtt => 'email' },
+                delay  => 7,
+            },
+        ],
+    );
+
+    $executor->process_notice_queue;
+
+    my $message =
+        Koha::Notice::Messages->search( { borrowernumber => $patron->borrowernumber, letter_code => 'OD1' } )->next;
+    is( $message->message_transport_type, 'print',      'queued as print' );
+    is( $message->content,                'email body', 'content comes from the email template' );
 
     $schema->storage->txn_rollback;
 };

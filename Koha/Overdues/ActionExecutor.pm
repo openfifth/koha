@@ -26,6 +26,7 @@ use C4::Context;
 use C4::Letters;
 use Koha::Notice::Message;
 use Koha::Notice::Messages;
+use Koha::Notice::Templates;
 use Koha::Patrons;
 use Koha::Checkouts;
 use Koha::Checkout;
@@ -333,7 +334,7 @@ sub process_notice_queue {
                     if ( $self->_notice_exists( $borrowernumber, $notice_code, 'print', [ 'pending', 'sent' ] ) ) {
                         next;
                     }
-                    $self->_enqueue_letter_for_bucket( $entries, 'print' );
+                    $self->_enqueue_letter_for_bucket( $entries, 'print', $mtt );
                 }
             }
         }
@@ -369,14 +370,16 @@ sub _notice_exists {
 =head3 _enqueue_letter_for_bucket
 
 Renders the bucket's items into a single prepared letter and stores it as a
-pending L<Koha::Notice::Message> row. C<$mtt> is the transport the message is
-queued under — may differ from the entries' originating mtt when this is being
-called as a print fallback for an undeliverable sms/email bucket.
+pending L<Koha::Notice::Message> row. C<$effective_mtt> is the transport the message is
+queued under. C<$origin_mtt> is passed only when this is a print fallback for an
+undeliverable sms/email bucket, and names the transport that bucket was
+configured for; it supplies the template when the queued transport has none of
+its own.
 
 =cut
 
 sub _enqueue_letter_for_bucket {
-    my ( $self, $entries, $mtt ) = @_;
+    my ( $self, $entries, $effective_mtt, $origin_mtt ) = @_;
 
     my $head           = $entries->[0];
     my $borrowernumber = $head->{item}->{borrowernumber};
@@ -419,9 +422,27 @@ sub _enqueue_letter_for_bucket {
     my $item_count = scalar @item_rows;
     my $max_lines  = C4::Context->preference('PrintNoticesMaxLines');
     my $truncated  = 0;
-    if ( $mtt eq 'print' && $max_lines && $item_count > $max_lines ) {
+    if ( $effective_mtt eq 'print' && $max_lines && $item_count > $max_lines ) {
         splice @item_rows, $max_lines;
         $truncated = 1;
+    }
+
+    # A bucket degraded to print still needs content: where the queued transport has
+    # no template of its own, render from the originating transport's.
+    my $template_mtt = $effective_mtt;
+    if ($origin_mtt) {
+        my $template = Koha::Notice::Templates->find_effective_template(
+            {
+                module                 => 'circulation',
+                code                   => $notice_code,
+                message_transport_type => $effective_mtt,
+                branchcode             => $branchcode,
+                lang                   => $patron->lang,
+            }
+        );
+        if ( !$template ) {
+            $template_mtt = $origin_mtt;
+        }
     }
 
     my $letter = C4::Letters::GetPreparedLetter(
@@ -437,12 +458,13 @@ sub _enqueue_letter_for_bucket {
         repeat     => { item     => \@item_rows },
         loops      => { overdues => [ map { $_->{items} } @item_rows ] }
         ,    # for compatibility with templates expecting data that can be parsed like [% FOREACH overdue IN overdues %]
-        message_transport_type => $mtt,
+        message_transport_type => $template_mtt,
     );
 
     if ( !$letter ) {
         Koha::Logger->get->warn(
-            "process_notice_queue: no letter for borrower=$borrowernumber code=$notice_code mtt=$mtt — skipping");
+            "process_notice_queue: no letter for borrower=$borrowernumber code=$notice_code mtt=$template_mtt — skipping"
+        );
         return;
     }
 
@@ -458,7 +480,7 @@ sub _enqueue_letter_for_bucket {
             content                => $letter->{content},
             content_type           => $letter->{'content-type'} // 'text/plain; charset="UTF-8"',
             letter_code            => $notice_code,
-            message_transport_type => $mtt,
+            message_transport_type => $effective_mtt,
             status                 => 'pending',
             time_queued            => dt_from_string(),
         }
@@ -466,7 +488,7 @@ sub _enqueue_letter_for_bucket {
 
     if ( $self->{verbose} ) {
         printf "    letter_code=%s mtt=%s borrower=%s days_overdue=%s items=%s\n",
-            $notice_code, $mtt, $borrowernumber, $head->{delay}, scalar @item_rows;
+            $notice_code, $effective_mtt, $borrowernumber, $head->{delay}, scalar @item_rows;
     }
 
     return;
