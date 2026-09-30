@@ -194,13 +194,15 @@ sub check_all_url {
                 my $record = $auth->record;
 
                 # TODO: UNIMARC
-                my $field = $record->field('024');
-                return @urls unless $field;
+                if ( C4::Context->preference('marcflavour') eq 'MARC21' ) {
+                    my $field = $record->field('024');
+                    return @urls unless $field;
 
-                foreach my ($sf) ( ( '0', '1' ) ) {
-                    my $url = $field->subfield($sf);
-                    next unless $url;
-                    push @urls, $url;
+                    foreach my ($sf) ( ( '0', '1' ) ) {
+                        my $url = $field->subfield($sf);
+                        next unless $url;
+                        push @urls, $url;
+                    }
                 }
                 return @urls;
 
