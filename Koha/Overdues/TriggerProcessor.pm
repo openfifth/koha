@@ -234,6 +234,7 @@ sub _dispatch_overdues {
     my %seen_branches;
     my %seen_categories;
     my %seen_itemtypes;
+    my %seen_contexts;
     my @overdue_items;
 
     while ( my $row = $overdues_resultset->next ) {
@@ -259,16 +260,23 @@ sub _dispatch_overdues {
             patronhomebranch  => $patron->branchcode,
         };
 
-        $seen_branches{ Koha::CirculationRules->resolve_rule_context_branchcode(
-                {
-                    patron_branchcode  => $patron->branchcode,
-                    item_homebranch    => $item->homebranch,
-                    item_holdingbranch => $item->holdingbranch,
-                }
-            )
-        } = 1;
+        my $rule_branchcode = Koha::CirculationRules->resolve_rule_context_branchcode(
+            {
+                patron_branchcode  => $patron->branchcode,
+                item_homebranch    => $item->homebranch,
+                item_holdingbranch => $item->holdingbranch,
+            }
+        );
+
+        $seen_branches{$rule_branchcode}          = 1;
         $seen_categories{ $patron->categorycode } = 1;
         $seen_itemtypes{ $item->itype }           = 1;
+
+        # The raw fetch matches each context column on its own, so it needs the union
+        # of the values seen. Resolving effective sets does not: only the combinations
+        # an item actually presents are ever looked up, and those are a sparse subset
+        # of the three lists crossed together.
+        $seen_contexts{ join( "|", $rule_branchcode, $patron->categorycode, $item->itype ) } = 1;
 
         push @overdue_items, $item_hashref;
     }
@@ -284,10 +292,10 @@ sub _dispatch_overdues {
         \@itemtype_list
     );
 
-    # generate exhaustive effective set for relevant contexts
+    # resolve the effective set for the contexts this run actually presents
     $rule_resolver->set_effective_overdue_rule_sets(
-        \@branch_list,   \@category_list,
-        \@itemtype_list, $effective_delay_by_raw_delay
+        [ keys %seen_contexts ],
+        $effective_delay_by_raw_delay
     );
 
     my $action_executor = Koha::Overdues::ActionExecutor->new(

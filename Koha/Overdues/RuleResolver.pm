@@ -51,31 +51,35 @@ sub new {
 
 =head3 set_effective_overdue_rule_sets
 
-Sets the array or effective (resolved) rule sets for a given run of the circulation triggers script.
+Sets the effective (resolved) rule sets for a given run of the circulation triggers script.
+
+C<$context_list> is an arrayref of C<"branchcode|categorycode|itemtype"> keys: the distinct
+contexts the run's overdue items present, collected in
+L<Koha::Overdues::TriggerProcessor/_dispatch_overdues>. Crossing the branch, category and
+itemtype lists instead would resolve every combination of the values seen, most of which no
+item ever looks up.
 
 =cut
 
 sub set_effective_overdue_rule_sets {
-    my ( $self, $branch_list, $category_list, $itemtype_list, $effective_delay_by_raw_delay ) = @_;
+    my ( $self, $context_list, $effective_delay_by_raw_delay ) = @_;
 
-    foreach my $branchcode (@$branch_list) {
+    foreach my $context_key (@$context_list) {
+        my ( $branchcode, $categorycode, $itemtype ) = split /\|/, $context_key, 3;
         my $branch_delays = $effective_delay_by_raw_delay->{$branchcode} // {};
-        foreach my $categorycode (@$category_list) {
-            foreach my $itemtype (@$itemtype_list) {
-                foreach my $raw_delay ( keys %$branch_delays ) {
-                    my $effective_delay = $branch_delays->{$raw_delay};
 
-                    # create the rule set
-                    my $key     = join( "|", $branchcode, $categorycode, $itemtype, $effective_delay );
-                    my $context = { branchcode => $branchcode, categorycode => $categorycode, itemtype => $itemtype };
-                    my $effective_rules = $self->_find_effective_overdue_rule_set( $context, $raw_delay );
+        foreach my $raw_delay ( keys %$branch_delays ) {
+            my $effective_delay = $branch_delays->{$raw_delay};
 
-                    if ( !@{ $effective_rules->{actions} } ) {
-                        next;
-                    }
-                    $self->{effective_overdue_rule_sets}{$key} = $effective_rules;
-                }
+            # create the rule set
+            my $key             = join( "|", $branchcode, $categorycode, $itemtype, $effective_delay );
+            my $context         = { branchcode => $branchcode, categorycode => $categorycode, itemtype => $itemtype };
+            my $effective_rules = $self->_find_effective_overdue_rule_set( $context, $raw_delay );
+
+            if ( !@{ $effective_rules->{actions} } ) {
+                next;
             }
+            $self->{effective_overdue_rule_sets}{$key} = $effective_rules;
         }
     }
 

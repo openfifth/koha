@@ -157,7 +157,7 @@ subtest 'set_effective_overdue_rule_sets' => sub {
         },
     };
 
-    $resolver->set_effective_overdue_rule_sets( ['BR'], ['PC'], ['IT'], { BR => { 7 => 7 } } );
+    $resolver->set_effective_overdue_rule_sets( ['BR|PC|IT'], { BR => { 7 => 7 } } );
 
     my $key = 'BR|PC|IT|7';
     my $eff = $resolver->{effective_overdue_rule_sets}->{$key};
@@ -187,7 +187,7 @@ subtest 'notice action splits comma-separated mtt rule value' => sub {
     };
 
     $resolver->set_effective_overdue_rule_sets(
-        ['BR'], ['PC'], ['IT'],
+        ['BR|PC|IT'],
         { BR => { 7 => 7, 14 => 14, 21 => 21 } }
     );
 
@@ -222,7 +222,7 @@ subtest 'empty mtt resolves to the broader context mtt' => sub {
         '*|*|*|7'    => { delay => 7, actions => { mtt    => 'email' } },
     };
 
-    $resolver->set_effective_overdue_rule_sets( ['BR'], ['PC'], ['IT'], { BR => { 7 => 7 } } );
+    $resolver->set_effective_overdue_rule_sets( ['BR|PC|IT'], { BR => { 7 => 7 } } );
 
     my %by_type = map { $_->{type} => $_ } @{ $resolver->{effective_overdue_rule_sets}->{'BR|PC|IT|7'}->{actions} };
     is_deeply( $by_type{notice}->{mtts}, ['email'], 'empty mtt resolves to the default context mtt' );
