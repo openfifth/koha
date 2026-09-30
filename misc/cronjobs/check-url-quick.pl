@@ -74,7 +74,12 @@ sub usage {
 }
 
 sub report {
-    my ( $hdr, $description, $url, $edit_link ) = @_;
+    my $params      = shift;
+    my $hdr         = $params->{hdr};
+    my $description = $params->{description};
+    my $url         = $params->{url};
+    my $edit_link   = $params->{edit_link};
+
     print $html
         ? "<tr>\n <td><a href=\""
         . $edit_link
@@ -113,8 +118,12 @@ sub check_resultset {
                             my ( undef, $hdr ) = @_;
                             $count--;
                             report(
-                                $hdr, $description_proj->($item), $url,
-                                $edit_link_proj->($item)
+                                {
+                                    hdr         => $hdr,
+                                    description => $description_proj->($item),
+                                    url         => $url,
+                                    edit_link   => $edit_link_proj->($item)
+                                }
                             ) if $hdr->{Status} !~ /^2/ || $verbose;
                         },
                     );
@@ -140,11 +149,6 @@ sub check_resultset {
 # Check all URLs from all current Koha biblio records
 
 sub check_all_url {
-    my $sth_biblio = C4::Context->dbh->prepare("SELECT biblionumber FROM biblioitems ORDER BY biblionumber");
-    $sth_biblio->execute;
-
-    my $count = 0;                   # Number of requested URL
-    my $cv    = AnyEvent->condvar;
     say "<html>\n<body>\n<div id=\"checkurl\">\n<table>" if $html;
 
     check_resultset(
@@ -236,8 +240,8 @@ check-url-quick.pl - Check URLs from biblio records
 
 =over
 
-=item check-url-quick [--verbose|--help|--html] [--tags 310 856] [--items] [--authorities] [--host=http://default.tld]
-[--host-intranet]
+=item check-url-quick [--verbose|--help|--html] [--tags 310 856] [--items] [--authorities]
+[--host=http://default.tld] [--host-intranet]
 
 Scan all URLs found by default in 856$u of bib records and display if resources
 are available or not. HTTP requests are sent in parallel for efficiency, and
