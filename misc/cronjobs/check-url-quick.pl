@@ -32,8 +32,9 @@ use AnyEvent::HTTP qw( http_request );
 use Encode         qw( encode_utf8 );
 
 my ( $verbose, $help, $html ) = ( 0, 0, 0 );
-my ( $host,    $host_intranet ) = ( '', '' );
-my ( $timeout, $maxconn )       = ( 10, 200 );
+my ( $check_items, $check_authorities ) = ( 0,  0 );
+my ( $host,        $host_intranet )     = ( '', '' );
+my ( $timeout,     $maxconn )           = ( 10, 200 );
 my @tags;
 my $biblio_edit = "/cgi-bin/koha/cataloguing/addbiblio.pl?biblionumber=";
 my $item_edit   = "/cgi-bin/koha/cataloguing/additem.pl?op=edititem&itemnumber=";
@@ -48,6 +49,8 @@ GetOptions(
     'timeout=i'       => \$timeout,
     'maxconn=i'       => \$maxconn,
     'tags=s{,}'       => \@tags,
+    'items'           => \$check_items,
+    'authorities'     => \$check_authorities,
 );
 
 # Validate tags to check
@@ -180,7 +183,7 @@ sub check_all_url {
             description_proj => sub { 'Item: ' . shift->itemnumber },
             edit_link_proj   => sub { $host_intranet . $item_edit . shift->itemnumber },
         }
-    );
+    ) if $check_items;
 
     check_resultset(
         {
@@ -205,7 +208,7 @@ sub check_all_url {
             description_proj => sub { 'Authority: ' . shift->authid },
             edit_link_proj   => sub { $host_intranet . $auth_edit . shift->authid },
         }
-    );
+    ) if $check_authorities;
 
     say "</table>\n</div>\n</body>\n</html>" if $html;
 }
@@ -231,7 +234,7 @@ check-url-quick.pl - Check URLs from biblio records
 
 =over
 
-=item check-url-quick [--verbose|--help|--html] [--tags 310 856] [--host=http://default.tld]
+=item check-url-quick [--verbose|--help|--html] [--tags 310 856] [--items] [--authorities] [--host=http://default.tld]
 [--host-intranet]
 
 Scan all URLs found by default in 856$u of bib records and display if resources
@@ -255,6 +258,14 @@ For example, if --host=http://www.mylib.com, then when 856$u contains
 Tags containing URLs in $u subfields. If not provided, 856 tag is checked. Multiple tags can be specified, for example:
 
  check-url-quick.pl --tags 310 410 856
+
+=item B<--items>
+
+Also check URLs in items.
+
+=item B<--authorities>
+
+Also check URLs in authorities.
 
 =item B<--verbose|-v>
 
