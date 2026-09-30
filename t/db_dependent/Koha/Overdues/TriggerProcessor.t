@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 6;
+use Test::More tests => 7;
 
 use Koha::Notice::Messages;
 
@@ -345,6 +345,69 @@ subtest 'ProcessOverdues notice path — email rule degrades to print for patron
         $messages->next->message_transport_type, 'print',
         'email rule degraded to print via the no-email patron path'
     );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'ProcessOverdues backdated run — trigger_date replays the day a run was missed' => sub {
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'OverdueTriggersCalendar',   0 );
+    t::lib::Mocks::mock_preference( 'useDefaultReplacementCost', 0 );
+    t::lib::Mocks::mock_preference( 'CircControl',               'PatronLibrary' );
+
+    Koha::CirculationRules->search( { rule_name => { -like => 'overdue\_%' } } )->delete;
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron =
+        $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $library->branchcode } } );
+
+    my $item = $builder->build_sample_item( { homebranch => $library->branchcode, replacementprice => 5 } );
+
+    # Due 10 days ago, with a delay of 7: the run that should have caught this
+    # item was the one due to happen 3 days ago, and it never ran.
+    my $missed_run_date = dt_from_string->subtract( days => 3 );
+    $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => {
+                borrowernumber => $patron->borrowernumber,
+                itemnumber     => $item->itemnumber,
+                branchcode     => $library->branchcode,
+                date_due       => $missed_run_date->clone->subtract( days => 7 )->strftime('%Y-%m-%d %H:%M:%S'),
+            },
+        }
+    );
+
+    for my $row (
+        [ 'overdue_1_delay', 7 ],
+        [ 'overdue_1_lost',  1 ],
+        )
+    {
+        Koha::CirculationRules->set_rule(
+            {
+                branchcode   => $library->branchcode,
+                categorycode => $patron->categorycode,
+                itemtype     => $item->effective_itemtype,
+                rule_name    => $row->[0],
+                rule_value   => $row->[1],
+            }
+        );
+    }
+
+    # Today's run cannot reach it: the item is 10 days overdue, and actions fire
+    # only on the exact day a delay comes due.
+    Koha::Overdues::TriggerProcessor->new->ProcessOverdues;
+
+    $item->discard_changes;
+    is( $item->itemlost, 0, 'a run anchored on today passes over the day that was missed' );
+
+    Koha::Overdues::TriggerProcessor->new( { trigger_date => $missed_run_date } )->ProcessOverdues;
+
+    $item->discard_changes;
+    is( $item->itemlost, 1, 'backdating trigger_date to the missed day fires the delay 7 trigger' );
 
     $schema->storage->txn_rollback;
 };

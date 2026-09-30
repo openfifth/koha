@@ -52,6 +52,11 @@ dry run in a transaction it rolls back, but a couple of the effects reached from
 L<Koha::Item/store> - the search index update and the holds queue job - publish
 to a message broker and so escape that rollback. Setting this suppresses them,
 which is what makes a dry run genuinely free of side effects.
+
+Takes an optional C<trigger_date> L<DateTime>, defaulting to today. It bounds
+the once-per-day guard in L</_notice_exists>, so that a run replaying a missed
+date is deduped against that date rather than against today.
+
 =cut
 
 sub new {
@@ -60,8 +65,9 @@ sub new {
         action_batch_queue      => [],
         notice_queue            => {},
         patrons_marked_returned => {},
-        verbose                 => $params->{verbose} // 0,
-        dry_run                 => $params->{dry_run} // 0,
+        verbose                 => $params->{verbose}      // 0,
+        dry_run                 => $params->{dry_run}      // 0,
+        trigger_date            => $params->{trigger_date} // dt_from_string(),
     };
     return bless $self, $class;
 }
@@ -345,16 +351,16 @@ sub process_notice_queue {
 
 =head3 _notice_exists
 
-Returns true if a notice message_queue row already exists for this day, for this
-(borrowernumber, letter_code) pair. Used to dedup synthesised notice fallbacks
-against any notice — explicit, prior-pass synthesised, or leftover from a prior
-run — already sitting in the pipeline. Status specific.
+Returns true if a notice message_queue row already exists for the trigger date,
+for this (borrowernumber, letter_code) pair. Used to dedup synthesised notice
+fallbacks against any notice — explicit, prior-pass synthesised, or leftover
+from a prior run — already sitting in the pipeline. Status specific.
 
 =cut
 
 sub _notice_exists {
     my ( $self, $borrowernumber, $code, $type, $status ) = @_;
-    my $today = dt_from_string->truncate( to => 'day' )->strftime('%Y-%m-%d %H:%M:%S');
+    my $from = $self->{trigger_date}->clone->truncate( to => 'day' )->strftime('%Y-%m-%d %H:%M:%S');
 
     return Koha::Notice::Messages->search(
         {
@@ -362,7 +368,7 @@ sub _notice_exists {
             letter_code            => $code,
             message_transport_type => $type,
             status                 => $status,
-            time_queued            => { '>=' => $today },
+            time_queued            => { '>=' => $from },
         }
     )->count > 0;
 }

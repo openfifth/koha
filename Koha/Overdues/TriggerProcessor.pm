@@ -55,14 +55,20 @@ index update and holds queue job reached from L<Koha::Item/store> — those
 publish to a message broker. The flag suppresses them so a dry run leaves
 nothing behind.
 
+C<trigger_date> is the L<DateTime> every delay is measured backward from,
+defaulting to today. C<process_circulation_triggers.pl> takes it from C<--date>
+so a missed run can be replayed: actions fire only on the exact day a delay
+comes due, so the day a run is skipped has no other way back.
+
 =cut
 
 sub new {
     my ( $class, $params ) = @_;
     my $self = {
-        verbose => $params->{verbose} // 0,
-        debug   => $params->{debug}   // 0,
-        dry_run => $params->{dry_run} // 0,
+        verbose      => $params->{verbose}      // 0,
+        debug        => $params->{debug}        // 0,
+        dry_run      => $params->{dry_run}      // 0,
+        trigger_date => $params->{trigger_date} // dt_from_string(),
     };
     return bless $self, $class;
 }
@@ -91,8 +97,8 @@ sub ProcessOverdues {
 =head3 _process_simple_calculation
 
 Simple Calculation (No Closed Days). Matches items whose C<date_due> falls
-exactly on one of the trigger-delay dates measured backward from today using
-calendar-day arithmetic.
+exactly on one of the trigger-delay dates measured backward from the trigger
+date using calendar-day arithmetic.
 
 =cut
 
@@ -107,7 +113,7 @@ sub _process_simple_calculation {
     }
 
     my $min_delay = $known_delay_values[0];
-    my @branches  = Koha::Overdues::Repository->get_distinct_overdue_branches($min_delay);
+    my @branches  = Koha::Overdues::Repository->get_distinct_overdue_branches( $min_delay, $self->{trigger_date} );
     if ( !@branches ) {
         return;
     }
@@ -119,7 +125,8 @@ sub _process_simple_calculation {
         }
     }
 
-    my $allOverduesForKnownDelays = Koha::Overdues::Repository->get_overdue_summaries_by_delays( \@known_delay_values );
+    my $allOverduesForKnownDelays =
+        Koha::Overdues::Repository->get_overdue_summaries_by_delays( \@known_delay_values, $self->{trigger_date} );
 
     if ( !$allOverduesForKnownDelays ) {
         return;
@@ -156,13 +163,13 @@ sub _process_calendar_adjusted {
     }
 
     my $min_delay = $known_delay_values[0];
-    my @branches  = Koha::Overdues::Repository->get_distinct_overdue_branches($min_delay);
+    my @branches  = Koha::Overdues::Repository->get_distinct_overdue_branches( $min_delay, $self->{trigger_date} );
     if ( !@branches ) {
         return;
     }
 
-    my $today     = dt_from_string;
-    my $days_mode = C4::Context->preference('useDaysMode');
+    my $trigger_date = $self->{trigger_date};
+    my $days_mode    = C4::Context->preference('useDaysMode');
 
     my %target_dates_by_branch;
     my %effective_delay_by_raw_delay;    # branchcode => { raw_delay => effective_delay }
@@ -170,8 +177,8 @@ sub _process_calendar_adjusted {
         my $calendar = Koha::Library::Calendar->new( branchcode => $branch, days_mode => $days_mode );
         my @dates;
         for my $delay (@known_delay_values) {
-            my $target_dt       = $calendar->days_backward( $today->clone, $delay );
-            my $effective_delay = $today->delta_days($target_dt)->in_units('days');
+            my $target_dt       = $calendar->days_backward( $trigger_date->clone, $delay );
+            my $effective_delay = $trigger_date->delta_days($target_dt)->in_units('days');
             push @dates, $target_dt->strftime('%Y-%m-%d');
             $effective_delay_by_raw_delay{$branch}{$delay} = $effective_delay;
         }
@@ -222,7 +229,7 @@ sub _fetch_per_branch {
 sub _dispatch_overdues {
     my ( $self, $overdues_resultset, $effective_delay_by_raw_delay ) = @_;
 
-    my $today_date = dt_from_string->truncate( to => 'day' );
+    my $trigger_date = $self->{trigger_date}->clone->truncate( to => 'day' );
 
     my %seen_branches;
     my %seen_categories;
@@ -233,7 +240,7 @@ sub _dispatch_overdues {
         my $item         = $row->item;
         my $patron       = $row->patron;
         my $due_date     = dt_from_string( $row->date_due )->truncate( to => 'day' );
-        my $days_overdue = $today_date->delta_days($due_date)->in_units('days');
+        my $days_overdue = $trigger_date->delta_days($due_date)->in_units('days');
 
         my $item_hashref = {
             issue_id          => $row->issue_id,
@@ -283,8 +290,8 @@ sub _dispatch_overdues {
         \@itemtype_list, $effective_delay_by_raw_delay
     );
 
-    my $action_executor =
-        Koha::Overdues::ActionExecutor->new( { verbose => $self->{verbose}, dry_run => $self->{dry_run} } );
+    my $action_executor = Koha::Overdues::ActionExecutor->new(
+        { verbose => $self->{verbose}, dry_run => $self->{dry_run}, trigger_date => $self->{trigger_date} } );
 
     # separate notice route actions from standard route actions
     foreach my $overdue_item (@overdue_items) {

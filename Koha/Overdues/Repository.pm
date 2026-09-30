@@ -35,23 +35,26 @@ Koha::Overdues::Repository - Data access layer for the overdues trigger system.
 
 =head3 get_overdue_summaries_by_delays
 
-my $overdues = Koha::Overdues::Repository->get_overdue_summaries_by_delays( \@known_delay_values )
+my $overdues = Koha::Overdues::Repository->get_overdue_summaries_by_delays( \@known_delay_values, $trigger_date )
 
-Fetches overdue checkouts whose date_due matches one of the known trigger delay dates.
+Fetches overdue checkouts whose date_due matches one of the known trigger delay dates,
+measured backward from C<$trigger_date> (a DateTime, defaulting to today).
 Returns a Koha::Checkouts resultset.
 
 =cut
 
 sub get_overdue_summaries_by_delays {
-    my ( $self, $known_delay_values ) = @_;
+    my ( $self, $known_delay_values, $trigger_date ) = @_;
 
     if ( !@$known_delay_values ) {
         return;
     }
 
-    my $today = dt_from_string;
+    $trigger_date //= dt_from_string;
     my $where =
-        { -or => [ map { $self->_date_range_clause( $today->clone->subtract( days => $_ ) ) } @$known_delay_values ] };
+        { -or =>
+            [ map { $self->_date_range_clause( $trigger_date->clone->subtract( days => $_ ) ) } @$known_delay_values ]
+        };
 
     try {
         return Koha::Checkouts->search( $where, { overdue_summaries_query_attributes() } );
@@ -87,11 +90,11 @@ sub rule_context_branch_column {
 
 =head3 get_distinct_overdue_branches
 
-  my @branches = Koha::Overdues::Repository->get_distinct_overdue_branches($min_delay);
+  my @branches = Koha::Overdues::Repository->get_distinct_overdue_branches( $min_delay, $trigger_date );
 
 Cheap pre-query for the calendar-adjusted trigger path: returns the distinct
 rule-context branchcodes that have at least one checkout overdue by C<$min_delay>
-or more days. The column used depends on
+or more days as at C<$trigger_date> (a DateTime, defaulting to today). The column used depends on
 L</rule_context_branch_column>. Accounts for the relevant branch being determined by
 patron.homebranch OR item.homebranch OR item.holding branch based on 
 rule_context_branch_column.
@@ -99,15 +102,16 @@ rule_context_branch_column.
 =cut
 
 sub get_distinct_overdue_branches {
-    my ( $self, $min_delay ) = @_;
+    my ( $self, $min_delay, $trigger_date ) = @_;
 
     if ( !defined $min_delay ) {
         return;
     }
 
+    $trigger_date //= dt_from_string;
     my $dtf = Koha::Database->new->schema->storage->datetime_parser;
     my $cutoff_exclusive =
-        dt_from_string->subtract( days => $min_delay )->truncate( to => 'day' )->add( days => 1 );
+        $trigger_date->clone->subtract( days => $min_delay )->truncate( to => 'day' )->add( days => 1 );
 
     my $col = $self->rule_context_branch_column;
     my ($relationship_name) = split /\./, $col;

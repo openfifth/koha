@@ -24,7 +24,7 @@ process_circulation_triggers.pl  daily cron script to process overdue materials.
 
 =head1 SYNOPSIS
 
-process_circulation_triggers.pl [ --dry-run ] [ --verbose ] [ --debug ]
+process_circulation_triggers.pl [ --date <yyyy-mm-dd> ] [ --dry-run ] [ --verbose ] [ --debug ]
 
 =head1 DESCRIPTION
 
@@ -40,6 +40,16 @@ delays are measured in calendar days.
 =head1 OPTIONS
 
 =over
+
+=item B<--date>
+
+Process the triggers that fall due on this date rather than today. Format:
+YYYY-MM-DD.
+
+Actions fire only on the exact day a delay comes due, so a run that does not
+happen drops that day's triggers permanently. Passing the missed date replays
+it: every delay is measured backward from that date, and the once-per-day guard
+on synthesised print notices is scoped to it as well.
 
 =item B<--dry-run>
 
@@ -69,21 +79,34 @@ use strict;
 use warnings;
 use Getopt::Long qw( GetOptions );
 use Koha::Database;
+use Koha::DateUtils qw( dt_from_string );
 use Koha::Overdues::TriggerProcessor;
 use C4::Log qw( cronlogaction );
 
 my $command_line_options = join( " ", @ARGV );
 cronlogaction( { info => $command_line_options } );
 
+my $date_input;
 my $dry_run = 0;
 my $verbose = 0;
 my $debug   = 0;
 
 GetOptions(
+    'date=s'  => \$date_input,
     'dry-run' => \$dry_run,
     'verbose' => \$verbose,
     'debug'   => \$debug,
 );
+
+my $trigger_date;
+if ($date_input) {
+    eval { $trigger_date = dt_from_string( $date_input, 'iso' ); };
+    if ( $@ || !$trigger_date ) {
+        die "$date_input is not a valid date, aborting! Use a date in format YYYY-MM-DD.\n";
+    }
+} else {
+    $trigger_date = dt_from_string();
+}
 
 # --debug dumps full hashrefs and would balloon cron mail / log files at
 # realistic data volumes. If STDOUT isn't a terminal (cron), silently
@@ -103,8 +126,8 @@ if ($dry_run) {
     print "--------------------------------------- \n";
 }
 
-my $triggerProcessor =
-    Koha::Overdues::TriggerProcessor->new( { verbose => $verbose, debug => $debug, dry_run => $dry_run } );
+my $triggerProcessor = Koha::Overdues::TriggerProcessor->new(
+    { verbose => $verbose, debug => $debug, dry_run => $dry_run, trigger_date => $trigger_date } );
 $triggerProcessor->ProcessOverdues();
 
 if ($dry_run) {
