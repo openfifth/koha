@@ -320,8 +320,8 @@ sub _dispatch_overdues {
 
     }
 
-    $action_executor->process_action_queue;
     $action_executor->process_notice_queue;
+    $action_executor->process_action_queue;
 
     return;
 }
