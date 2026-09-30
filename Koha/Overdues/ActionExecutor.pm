@@ -24,7 +24,7 @@ use Koha::Items;
 use Koha::Patron::Debarments qw( AddUniqueDebarment );
 use C4::Context;
 use C4::Letters;
-use Koha::Notice::Message;
+use Koha::Libraries;
 use Koha::Notice::Messages;
 use Koha::Notice::Templates;
 use Koha::Patrons;
@@ -369,8 +369,10 @@ sub _notice_exists {
 
 =head3 _enqueue_letter_for_bucket
 
-Renders the bucket's items into a single prepared letter and stores it as a
-pending L<Koha::Notice::Message> row. C<$effective_mtt> is the transport the message is
+Renders the bucket's items into a single prepared letter and hands it to
+L<C4::Letters/EnqueueLetter>, which stores it as a pending
+L<Koha::Notice::Message> row addressed from the rule-context library.
+C<$effective_mtt> is the transport the message is
 queued under. C<$origin_mtt> is passed only when this is a print fallback for an
 undeliverable sms/email bucket, and names the transport that bucket was
 configured for; it supplies the template when the queued transport has none of
@@ -473,18 +475,18 @@ sub _enqueue_letter_for_bucket {
             "List too long for form; please check your account online for a complete list of your overdue items.";
     }
 
-    Koha::Notice::Message->new(
+    my $library = Koha::Libraries->find($branchcode);
+
+    C4::Letters::EnqueueLetter(
         {
+            letter                 => $letter,
             borrowernumber         => $borrowernumber,
-            subject                => $letter->{title},
-            content                => $letter->{content},
-            content_type           => $letter->{'content-type'} // 'text/plain; charset="UTF-8"',
-            letter_code            => $notice_code,
             message_transport_type => $effective_mtt,
-            status                 => 'pending',
-            time_queued            => dt_from_string(),
+            from_address           => $library->from_email_address,
+            to_address             => $patron->notice_email_address,
+            reply_address          => $library->inbound_email_address,
         }
-    )->store;
+    );
 
     if ( $self->{verbose} ) {
         printf "    letter_code=%s mtt=%s borrower=%s days_overdue=%s items=%s\n",
