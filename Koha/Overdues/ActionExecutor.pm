@@ -24,13 +24,20 @@ use Koha::Items;
 use Koha::Patron::Debarments qw( AddUniqueDebarment );
 use C4::Context;
 use C4::Letters;
+use Koha::Account::Lines;
 use Koha::Libraries;
+use Koha::Number::Price;
 use Koha::Notice::Messages;
 use Koha::Notice::Templates;
 use Koha::Patrons;
 use Koha::Checkouts;
 use Koha::Checkout;
 use Koha::DateUtils qw( dt_from_string output_pref );
+
+# Columns rendered into <<items.content>>, one tab-separated line per item.
+# Matches the default of overdue_notices.pl's --itemscontent flag, which the
+# trigger script does not carry.
+use constant ITEM_CONTENT_FIELDS => qw( date_due title barcode author itemnumber );
 
 =head1 NAME
 
@@ -406,7 +413,10 @@ sub _enqueue_letter_for_bucket {
         return;
     }
 
+    my $library = Koha::Libraries->find($branchcode);
+
     my @item_rows;
+    my $titles = q{};
     for my $entry (@$entries) {
         my $item = Koha::Items->find( $entry->{item}->{itemnumber} );
         if ( !$item ) {
@@ -414,12 +424,38 @@ sub _enqueue_letter_for_bucket {
                 "process_notice_queue: itemnumber $entry->{item}->{itemnumber} not found — skipping");
             next;
         }
+
+        my $biblio      = $item->biblio;
+        my $item_fields = { %{ $item->unblessed } };
+        if ($biblio) {
+            $item_fields = { %{ $biblio->unblessed }, %$item_fields };
+        }
+        $item_fields->{date_due} = $entry->{item}->{date_due};
+
+        my $fine = Koha::Account::Lines->search(
+            {
+                borrowernumber    => $borrowernumber,
+                itemnumber        => $item->itemnumber,
+                debit_type_code   => 'OVERDUE',
+                amountoutstanding => { '>' => 0 },
+            }
+        )->total_outstanding;
+        $item_fields->{fine} = Koha::Number::Price->new( $fine // 0 )->format;
+
+        $titles .= C4::Letters::get_item_content(
+            {
+                item                => $item_fields,
+                item_content_fields => [ ITEM_CONTENT_FIELDS() ],
+                dateonly            => 1,
+            }
+        );
+
         push @item_rows,
             {
             biblio      => $item->biblionumber,
             biblioitems => $item->biblionumber,
-            items       => $item->itemnumber,
-            issues      => $entry->{item}->{issue_id},
+            items       => $item_fields,
+            issues      => $item->itemnumber,
             };
     }
 
@@ -462,9 +498,13 @@ sub _enqueue_letter_for_bucket {
             borrowers => $borrowernumber,
             branches  => $branchcode,
         },
-        substitute => { count    => $item_count },
-        repeat     => { item     => \@item_rows },
-        loops      => { overdues => [ map { $_->{items} } @item_rows ] }
+        substitute => {
+            count           => $item_count,
+            bib             => $library->branchname,
+            'items.content' => $titles,
+        },
+        repeat => { item     => \@item_rows },
+        loops  => { overdues => [ map { $_->{items}->{itemnumber} } @item_rows ] }
         ,    # for compatibility with templates expecting data that can be parsed like [% FOREACH overdue IN overdues %]
         message_transport_type => $template_mtt,
     );
@@ -480,8 +520,6 @@ sub _enqueue_letter_for_bucket {
         $letter->{content} .=
             "List too long for form; please check your account online for a complete list of your overdue items.";
     }
-
-    my $library = Koha::Libraries->find($branchcode);
 
     C4::Letters::EnqueueLetter(
         {
