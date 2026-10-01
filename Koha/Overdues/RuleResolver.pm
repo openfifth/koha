@@ -19,6 +19,7 @@ use Modern::Perl;
 # You should have received a copy of the GNU General Public License
 # along with Koha; if not, see <http://www.gnu.org/licenses>.
 
+use Try::Tiny;
 use Koha::Exceptions;
 use Koha::CirculationRules;
 use Koha::Logger;
