@@ -39,6 +39,11 @@ my ( $template, $borrowernumber, $cookie ) = get_template_and_user(
 
 my $biblionumber = $query->param('biblionumber') || $query->param('bib');
 my $imagenumber  = $query->param('imagenumber');
+
+# imagenumber is a DB primary key - it must be a plain non-negative integer.
+# Validating it here means a crafted value never reaches the template,
+# regardless of how it is later interpolated.
+undef $imagenumber if defined $imagenumber && $imagenumber !~ /^\d+$/;
 unless ($biblionumber) {
 
     # Retrieving the biblio from the imagenumber

@@ -124,13 +124,14 @@
     <script>
         $(document).ready(function(){
             $("#largeCoverImg").attr("src","[% interface | html %]/[% theme | html %]/images/loading.gif");
-            showCover([% imagenumber | html %]);
+            showCover("[% imagenumber | html %]");
             $("a.cover_thumbnail").on('click',function(){
                 showCover(this.dataset.imagenumber);
             });
         });
 
         function showCover(img) {
+            if (!img) return;
             $('.thumbnail').attr('class', 'thumbnail');
             $('#largeCoverImg').attr('src', '/cgi-bin/koha/opac-image.pl?imagenumber=' + img);
             $('#' + img + '.thumbnail').attr('class', 'thumbnail selected');
