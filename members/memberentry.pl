@@ -202,11 +202,23 @@ if ( $op eq 'cud-insert' || $op eq 'edit_form' || $op eq 'cud-save' || $op eq 'd
     }
 
     # check permission to modify login info.
+    #
+    # This must be evaluated against the patron's STORED category, never
+    # the submitted categorycode: a user with edit_borrowers but not
+    # staffaccess could otherwise bypass this check by submitting a
+    # non-staff categorycode in the same request as a password/userid
+    # change (bug 43679).
     if (   ref($borrower_data)
-        && ( $category->category_type eq 'S' )
+        && ( $patron->category->category_type eq 'S' )
         && !( C4::Auth::haspermission( $userenv->{'id'}, { 'staffaccess' => 1 } ) ) )
     {
         $NoUpdateLogin = 1;
+
+        # Also refuse to move a staff account out of its staff category via
+        # this request - otherwise an edit_borrowers-only user could still
+        # demote a staff/superlibrarian account by itself, independent of
+        # the login fields handled above.
+        $newdata{'categorycode'} = $borrower_data->{'categorycode'};
     }
 }
 
