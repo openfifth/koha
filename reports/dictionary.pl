@@ -17,12 +17,14 @@
 # You should have received a copy of the GNU General Public License
 # along with Koha; if not, see <https://www.gnu.org/licenses>.
 use Modern::Perl;
-use C4::Auth   qw( get_template_and_user );
+use C4::Auth qw( get_template_and_user );
+use C4::Context;
 use CGI        qw ( -utf8 );
 use C4::Output qw( output_html_with_http_headers );
 use C4::Reports::Guided
     qw( get_from_dictionary get_columns get_column_type get_distinct_values save_dictionary delete_definition get_report_areas );
 use Koha::DateUtils qw( dt_from_string output_pref );
+use Koha::Report;
 
 =head1 NAME
 
@@ -123,7 +125,13 @@ if ( $op eq 'add_form' ) {
     my $query_criteria;
     my @criteria_loop;
 
+    my $valid_columns           = get_columns($area);
+    my %allowed_criteria_column = map { $_->{name} => 1 } map { @$_ } values %$valid_columns;
+    my $dbh                     = C4::Context->dbh;
+
     foreach my $crit (@criteria) {
+        next unless $allowed_criteria_column{$crit};
+
         my $value = $input->param( $crit . "_value" );
         if ($value) {
             my %tmp_hash;
@@ -131,7 +139,7 @@ if ( $op eq 'add_form' ) {
             $tmp_hash{'value'} = $value;
             push @criteria_loop, \%tmp_hash;
 
-            $query_criteria .= " AND $crit='$value'";
+            $query_criteria .= " AND $crit=" . $dbh->quote($value);
         }
 
         if ( my $date_type_value = $input->param( $crit . "_date_type_value" ) ) {
@@ -142,7 +150,7 @@ if ( $op eq 'add_form' ) {
                     $tmp_hash{'value'} = $value;
                     push @criteria_loop, \%tmp_hash;
 
-                    $query_criteria .= " AND $crit >= '$value'";
+                    $query_criteria .= " AND $crit >= " . $dbh->quote($value);
                 }
 
                 if ( $value = $input->param( $crit . "_end_value" ) ) {
@@ -151,7 +159,7 @@ if ( $op eq 'add_form' ) {
                     $tmp_hash{'value'} = $value;
                     push @criteria_loop, \%tmp_hash;
 
-                    $query_criteria .= " AND $crit <= '$value'";
+                    $query_criteria .= " AND $crit <= " . $dbh->quote($value);
                 }
             }
 
@@ -173,8 +181,17 @@ if ( $op eq 'add_form' ) {
     # Saving
     my $area = $input->param('area');
     my $sql  = $input->param('sql');
-    save_dictionary( $definition_name, $definition_description, $sql, $area );
-    $op = "list";
+
+    # $sql is a WHERE fragment, not a SELECT, so is_sql_valid() doesn't apply
+    my $invalid = Koha::Report->new->check_columns($sql)
+        || $sql =~ /\b(?:SELECT|UNION|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|SLEEP|BENCHMARK)\b/i;
+
+    if ($invalid) {
+        $template->param( 'new_dictionary' => 1, sql_invalid_err => 1 );
+    } else {
+        save_dictionary( $definition_name, $definition_description, $sql, $area );
+        $op = "list";
+    }
 
 } elsif ( $op eq 'cud-delete' ) {
     my $id = $input->param('id');

@@ -922,6 +922,13 @@ with the distinct values of the column
 sub get_distinct_values {
     my ($tablecolumn) = @_;
     my ( $table, $column ) = split( /\./, $tablecolumn );
+    my $all_columns = Koha::Database::Columns->columns;
+
+    die sprintf( 'Invalid table name %s', $table // '' )
+        unless $table && exists $all_columns->{$table};
+    die sprintf( 'Invalid column name %s', $column // '' )
+        unless $column && exists $all_columns->{$table}{$column};
+
     my $dbh   = C4::Context->dbh();
     my $query = "SELECT distinct($column) as availablevalues FROM $table";
     my $sth   = $dbh->prepare($query);

@@ -21,7 +21,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 14;
+use Test::More tests => 15;
 use Test::Warn;
 
 use t::lib::TestBuilder;
@@ -644,6 +644,32 @@ subtest 'get_columns' => sub {
         !exists $columns->{password},
         "Password is a forbidden field and should not be returned"
     );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'get_distinct_values' => sub {
+    plan tests => 4;
+    $schema->storage->txn_begin;
+
+    my $success = eval {
+        C4::Reports::Guided::get_distinct_values("borrowers UNION SELECT password FROM borrowers-- -.branchcode");
+    };
+    ok( !$success && $@ =~ m{^Invalid table name}, 'Rejects a table name carrying an injection payload (bug 43478)' );
+
+    $success = eval {
+        C4::Reports::Guided::get_distinct_values("borrowers.branchcode) UNION SELECT password FROM borrowers-- -");
+    };
+    ok(
+        !$success && $@ =~ m{^Invalid column name},
+        'Rejects a column name carrying an injection payload (bug 43478)'
+    );
+
+    $success = eval { C4::Reports::Guided::get_distinct_values('not_a_table.foo') };
+    ok( !$success && $@ =~ m{^Invalid table name}, 'Rejects an unknown table name' );
+
+    my $values = C4::Reports::Guided::get_distinct_values('borrowers.branchcode');
+    is( ref($values), 'ARRAY', 'Returns results for a real table/column' );
 
     $schema->storage->txn_rollback;
 };

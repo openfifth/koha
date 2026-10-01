@@ -160,6 +160,14 @@
                 </div>
             [% END %]
 
+            [% IF ( sql_invalid_err ) %]
+                <div class="alert alert-warning">
+                    <strong>The following error was encountered:</strong><br />
+                    The generated SQL was not valid and could not be saved.<br />
+                    Please make a new selection.
+                </div>
+            [% END %]
+
             <fieldset class="rows"
                 ><legend>Step 1 of 5: Name the new definition</legend
                 ><ol>
