@@ -21,7 +21,7 @@ use Modern::Perl;
 
 use Test::NoWarnings;
 use Test::MockModule;
-use Test::More tests => 9;
+use Test::More tests => 10;
 
 use Koha::Notice::Messages;
 
@@ -540,6 +540,70 @@ subtest 'ProcessOverdues calendar-adjusted path — one branch\'s unusable calen
     $item{healthy}->discard_changes;
     is( $item{broken}->itemlost,  0, 'the branch whose calendar throws enacts nothing' );
     is( $item{healthy}->itemlost, 1, 'and every other branch is still processed' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'ProcessOverdues resolves the rule context by effective itemtype' => sub {
+    plan tests => 1;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'CircControl',               'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'OverdueTriggersCalendar',   0 );
+    t::lib::Mocks::mock_preference( 'useDefaultReplacementCost', 0 );
+    t::lib::Mocks::mock_preference( 'item-level_itypes',         0 );
+
+    Koha::CirculationRules->search( { rule_name => { -like => 'overdue\_%' } } )->delete;
+
+    my $biblio_itemtype = $builder->build_object( { class => 'Koha::ItemTypes' } );
+    my $item_itemtype   = $builder->build_object( { class => 'Koha::ItemTypes' } );
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron =
+        $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $library->branchcode } } );
+
+    my $biblio = $builder->build_sample_biblio( { itemtype => $biblio_itemtype->itemtype } );
+    my $item   = $builder->build_sample_item(
+        {
+            biblionumber     => $biblio->biblionumber,
+            homebranch       => $library->branchcode,
+            replacementprice => 5,
+            itype            => $item_itemtype->itemtype,
+        }
+    );
+
+    my $today = dt_from_string;
+    $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => {
+                borrowernumber => $patron->borrowernumber,
+                itemnumber     => $item->itemnumber,
+                branchcode     => $library->branchcode,
+                date_due       => $today->clone->subtract( days => 7 )->strftime('%Y-%m-%d %H:%M:%S'),
+            },
+        }
+    );
+
+    # The rule is scoped to the biblio's itemtype. Resolving on items.itype
+    # would look up the other one and find nothing.
+    for my $row ( [ 'overdue_1_delay', 7 ], [ 'overdue_1_lost', 1 ] ) {
+        Koha::CirculationRules->set_rule(
+            {
+                branchcode   => $library->branchcode,
+                categorycode => $patron->categorycode,
+                itemtype     => $biblio_itemtype->itemtype,
+                rule_name    => $row->[0],
+                rule_value   => $row->[1],
+            }
+        );
+    }
+
+    Koha::Overdues::TriggerProcessor->new->ProcessOverdues;
+
+    $item->discard_changes;
+    is( $item->itemlost, 1, 'rule scoped to the biblio itemtype fires under item-level_itypes = 0' );
 
     $schema->storage->txn_rollback;
 };
