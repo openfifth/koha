@@ -189,4 +189,12 @@ if ($dry_run) {
     $schema->storage->txn_rollback;
 }
 
-cronlogaction( { action => 'End', info => "COMPLETED" } );
+my $summary = $triggerProcessor->summary;
+my $outcome = $dry_run ? 'COMPLETED (dry run)' : 'COMPLETED';
+
+cronlogaction(
+    {
+        action => 'End',
+        info   => join( " ", $outcome, map { "$_=" . $summary->{$_} } sort keys %$summary ),
+    }
+);
