@@ -496,14 +496,14 @@ sub _notice_exists {
 
 =head3 _enqueue_letter_for_bucket
 
-Renders the bucket's items into a single prepared letter and hands it to
+Renders the bucket's items into a single letter and hands it to
 L<C4::Letters/EnqueueLetter>, which stores it as a pending
 L<Koha::Notice::Message> row addressed from the rule-context library.
-C<$effective_mtt> is the transport the message is
-queued under. C<$origin_mtt> is passed only when this is a print fallback for an
-undeliverable sms/email bucket, and names the transport that bucket was
-configured for; it supplies the template when the queued transport has none of
-its own.
+
+C<$effective_mtt> is the transport the message is queued under. C<$origin_mtt> is
+passed only when this is a print fallback for an undeliverable sms/email bucket,
+and names the transport that bucket was configured for; L</_template_transport>
+uses it where the queued transport has no template of its own.
 
 Returns true when a row was enqueued. A bucket that resolves no items or no
 letter returns false, leaving the delay unclaimed so another bucket degrading to
@@ -525,83 +525,23 @@ sub _enqueue_letter_for_bucket {
             item_holdingbranch => $head->{item}->{itemholdingbranch},
         }
     );
-
     my $library = Koha::Libraries->find($branchcode);
 
-    my @item_rows;
-    my $titles = q{};
-    for my $entry (@$entries) {
-        my $item = Koha::Items->find( $entry->{item}->{itemnumber} );
-        if ( !$item ) {
-            Koha::Logger->get->warn(
-                "process_notice_queue: itemnumber $entry->{item}->{itemnumber} not found — skipping");
-            next;
-        }
-
-        my $biblio      = $item->biblio;
-        my $item_fields = { %{ $item->unblessed } };
-        if ($biblio) {
-            $item_fields = { %{ $biblio->unblessed }, %$item_fields };
-        }
-        $item_fields->{date_due} = $entry->{item}->{date_due};
-
-        my $fine = Koha::Account::Lines->search(
-            {
-                borrowernumber    => $borrowernumber,
-                itemnumber        => $item->itemnumber,
-                debit_type_code   => 'OVERDUE',
-                amountoutstanding => { '>' => 0 },
-            }
-        )->total_outstanding;
-        $item_fields->{fine} = Koha::Number::Price->new( $fine // 0 )->format;
-
-        $titles .= C4::Letters::get_item_content(
-            {
-                item                => $item_fields,
-                item_content_fields => [ ITEM_CONTENT_FIELDS() ],
-                dateonly            => 1,
-            }
-        );
-
-        push @item_rows,
-            {
-            biblio      => $item->biblionumber,
-            biblioitems => $item->biblionumber,
-            items       => $item_fields,
-            issues      => $item->itemnumber,
-            };
-    }
-
-    if ( !@item_rows ) {
+    my $payload = $self->_letter_payload( $patron, $entries );
+    if ( !@{ $payload->{item_rows} } ) {
         return;
     }
 
-    my $item_count = scalar @item_rows;
-    my $max_lines  = C4::Context->preference('PrintNoticesMaxLines');
-    my $truncated  = 0;
-    if ( $effective_mtt eq 'print' && $max_lines && $item_count > $max_lines ) {
-        splice @item_rows, $max_lines;
-        $truncated = 1;
-    }
+    # Taken before truncation: count is what the letter is about, and the footer
+    # below says the printed list was cut.
+    my $item_count = scalar @{ $payload->{item_rows} };
 
-    # A bucket degraded to print still needs content: where the queued transport has
-    # no template of its own, render from the originating transport's.
-    my $template_mtt = $effective_mtt;
-    if ($origin_mtt) {
-        my $template = Koha::Notice::Templates->find_effective_template(
-            {
-                module                 => 'circulation',
-                code                   => $notice_code,
-                message_transport_type => $effective_mtt,
-                branchcode             => $branchcode,
-                lang                   => $patron->lang,
-            }
-        );
-        if ( !$template ) {
-            $template_mtt = $origin_mtt;
-        }
-    }
+    my ( $item_rows, $truncated ) = $self->_truncate_for_print( $payload->{item_rows}, $effective_mtt );
+    my $template_mtt = $self->_template_transport( $patron, $notice_code, $branchcode, $effective_mtt, $origin_mtt );
 
+    # count is the whole bucket, not @$item_rows, which a print bucket may have
+    # had truncated. loops carries the itemnumbers so that templates written as
+    # [% FOREACH overdue IN overdues %] resolve alongside the repeat block.
     my $letter = C4::Letters::GetPreparedLetter(
         module      => 'circulation',
         letter_code => $notice_code,
@@ -614,11 +554,10 @@ sub _enqueue_letter_for_bucket {
         substitute => {
             count           => $item_count,
             bib             => $library->branchname,
-            'items.content' => $titles,
+            'items.content' => $payload->{titles},
         },
-        repeat => { item     => \@item_rows },
-        loops  => { overdues => [ map { $_->{items}->{itemnumber} } @item_rows ] }
-        ,    # for compatibility with templates expecting data that can be parsed like [% FOREACH overdue IN overdues %]
+        repeat                 => { item     => $item_rows },
+        loops                  => { overdues => [ map { $_->{items}->{itemnumber} } @$item_rows ] },
         message_transport_type => $template_mtt,
     );
 
@@ -647,10 +586,162 @@ sub _enqueue_letter_for_bucket {
 
     if ( $self->{verbose} ) {
         printf "    letter_code=%s mtt=%s borrower=%s days_overdue=%s items=%s\n",
-            $notice_code, $effective_mtt, $borrowernumber, $head->{delay}, scalar @item_rows;
+            $notice_code, $effective_mtt, $borrowernumber, $head->{delay}, scalar @$item_rows;
     }
 
     return 1;
+}
+
+=head3 _letter_payload
+
+  my $payload = $self->_letter_payload( $patron, $entries );
+
+The bucket's items in the two forms a letter needs them: C<item_rows> for the
+template's C<repeat> block, and C<titles> for the C<< <<items.content>> >>
+substitution, which C<C4::Letters::get_item_content> renders one tab-separated
+line per item.
+
+Items that no longer resolve are warned about and dropped, so the caller must
+treat an empty C<item_rows> as nothing to send.
+
+=cut
+
+sub _letter_payload {
+    my ( $self, $patron, $entries ) = @_;
+
+    my @item_rows;
+    my $titles = q{};
+
+    for my $entry (@$entries) {
+        my $item_fields = $self->_letter_item_fields( $patron->borrowernumber, $entry );
+        if ( !$item_fields ) {
+            next;
+        }
+
+        $titles .= C4::Letters::get_item_content(
+            {
+                item                => $item_fields,
+                item_content_fields => [ ITEM_CONTENT_FIELDS() ],
+                dateonly            => 1,
+            }
+        );
+
+        push @item_rows,
+            {
+            biblio      => $item_fields->{biblionumber},
+            biblioitems => $item_fields->{biblionumber},
+            items       => $item_fields,
+            issues      => $item_fields->{itemnumber},
+            };
+    }
+
+    return { item_rows => \@item_rows, titles => $titles };
+}
+
+=head3 _letter_item_fields
+
+  my $item_fields = $self->_letter_item_fields( $borrowernumber, $entry );
+
+One queued item as a template sees it: the item's own columns with the biblio's
+merged underneath, so an item column wins where both tables carry the name.
+
+Two fields are not columns. C<date_due> comes from the queue entry rather than
+the item, and C<fine> is the patron's outstanding OVERDUE total for this item,
+formatted through L<Koha::Number::Price> so it reads as C<| $Price> renders it
+elsewhere.
+
+Warns and returns nothing when the item no longer resolves.
+
+=cut
+
+sub _letter_item_fields {
+    my ( $self, $borrowernumber, $entry ) = @_;
+
+    my $item = Koha::Items->find( $entry->{item}->{itemnumber} );
+    if ( !$item ) {
+        Koha::Logger->get->warn("process_notice_queue: itemnumber $entry->{item}->{itemnumber} not found — skipping");
+        return;
+    }
+
+    my $biblio      = $item->biblio;
+    my $item_fields = { %{ $item->unblessed } };
+    if ($biblio) {
+        $item_fields = { %{ $biblio->unblessed }, %$item_fields };
+    }
+
+    $item_fields->{date_due} = $entry->{item}->{date_due};
+
+    my $fine = Koha::Account::Lines->search(
+        {
+            borrowernumber    => $borrowernumber,
+            itemnumber        => $item->itemnumber,
+            debit_type_code   => 'OVERDUE',
+            amountoutstanding => { '>' => 0 },
+        }
+    )->total_outstanding;
+    $item_fields->{fine} = Koha::Number::Price->new( $fine // 0 )->format;
+
+    return $item_fields;
+}
+
+=head3 _truncate_for_print
+
+  my ( $item_rows, $truncated ) = $self->_truncate_for_print( $item_rows, $effective_mtt );
+
+Caps a print bucket's rows at C<PrintNoticesMaxLines>, returning the rows to
+render and whether anything was dropped. Any other transport passes through
+untouched.
+
+=cut
+
+sub _truncate_for_print {
+    my ( $self, $item_rows, $effective_mtt ) = @_;
+
+    if ( $effective_mtt ne 'print' ) {
+        return ( $item_rows, 0 );
+    }
+
+    my $max_lines = C4::Context->preference('PrintNoticesMaxLines');
+    if ( !$max_lines || @$item_rows <= $max_lines ) {
+        return ( $item_rows, 0 );
+    }
+
+    return ( [ @{$item_rows}[ 0 .. $max_lines - 1 ] ], 1 );
+}
+
+=head3 _template_transport
+
+  my $template_mtt = $self->_template_transport( $patron, $notice_code, $branchcode, $effective_mtt, $origin_mtt );
+
+The transport whose template the letter is rendered from, which is the transport
+it is queued under except where a degraded bucket has nowhere else to go: a
+bucket configured for sms or email and queued as print still needs content, so
+where C<print> has no template of its own it renders from the originating
+transport's.
+
+Only consulted for a degraded bucket. A bucket sent as configured always renders
+from its own template.
+
+=cut
+
+sub _template_transport {
+    my ( $self, $patron, $notice_code, $branchcode, $effective_mtt, $origin_mtt ) = @_;
+
+    if ( !$origin_mtt ) {
+        return $effective_mtt;
+    }
+
+    my $template = Koha::Notice::Templates->find_effective_template(
+        {
+            module                 => 'circulation',
+            code                   => $notice_code,
+            message_transport_type => $effective_mtt,
+            branchcode             => $branchcode,
+            lang                   => $patron->lang,
+        }
+    );
+
+    return $template ? $effective_mtt : $origin_mtt;
 }
 
 =head3 format_notice_item
