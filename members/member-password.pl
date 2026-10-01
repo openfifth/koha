@@ -13,6 +13,7 @@ use CGI qw ( -utf8 );
 
 use Koha::Patrons;
 use Koha::Patron::Categories;
+use Koha::Policy::Patrons;
 
 use Try::Tiny qw( catch try );
 
@@ -22,7 +23,7 @@ my $theme = $input->param('theme') || "default";
 
 # only used if allowthemeoverride is set
 
-my ( $template, $loggedinuser, $cookie, $staffflags ) = get_template_and_user(
+my ( $template, $loggedinuser, $cookie ) = get_template_and_user(
     {
         template_name => "members/member-password.tt",
         query         => $input,
@@ -47,14 +48,8 @@ output_and_exit_if_error(
     { module => 'members', logged_in_user => $logged_in_user, current_patron => $patron }
 );
 
-my $category_type = $patron->category->category_type;
-
-if ( ( $patron_id ne $loggedinuser ) && ( $category_type eq 'S' ) ) {
-    push( @errors, 'NOPERMISSION' )
-        unless ( $staffflags->{'superlibrarian'} || $staffflags->{'staffaccess'} );
-
-    # need superlibrarian for koha-conf.xml fakeuser.
-}
+my $can_change = Koha::Policy::Patrons->can_change_password( $logged_in_user, $patron );
+push( @errors, $can_change->messages->[0]->message ) unless $can_change;
 
 push( @errors, 'NOMATCH' ) if ( ( $newpassword && $newpassword2 ) && ( $newpassword ne $newpassword2 ) );
 

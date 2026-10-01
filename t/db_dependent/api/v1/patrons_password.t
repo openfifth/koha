@@ -18,7 +18,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 3;
+use Test::More tests => 4;
 
 use Test::Mojo;
 
@@ -104,6 +104,97 @@ subtest 'set() (authorized user tests)' => sub {
             . "/password" => json => { password => $new_password, password_2 => $new_password } )
         ->status_is(200)
         ->json_is('');
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'set() (staffaccess tests)' => sub {
+
+    plan tests => 18;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'minPasswordLength',     3 );
+    t::lib::Mocks::mock_preference( 'RequireStrongPassword', 0 );
+
+    $builder->build(
+        {
+            source => 'Category',
+            value  => {
+                categorycode  => 'STAFF_TEST',
+                description   => 'Staff test category',
+                category_type => 'S',
+            },
+        }
+    );
+    my $staff_target = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { categorycode => 'STAFF_TEST' },
+        }
+    );
+    my $adult_category =
+        $builder->build_object( { class => 'Koha::Patron::Categories', value => { category_type => 'A' } } );
+    my $ordinary_target = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { categorycode => $adult_category->categorycode, flags => 0 }
+        }
+    );
+
+    # Not in a staff category, but just as sensitive: it has permissions
+    my $superlibrarian_target = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { categorycode => $adult_category->categorycode, flags => 1 }
+        }
+    );
+    my $permissions_target = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { categorycode => $adult_category->categorycode, flags => 2**4 }
+        }
+    );
+
+    # Plain "borrowers" permission only - no staffaccess, no superlibrarian.
+    my $unprivileged_patron = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { flags => 16 }    # 'borrowers'
+        }
+    );
+    my $password = 'thePassword123';
+    $unprivileged_patron->set_password( { password => $password, skip_validation => 1 } );
+    my $userid = $unprivileged_patron->userid;
+
+    my $new_password = 'abcdefg';
+    $t->post_ok( "//$userid:$password@/api/v1/patrons/"
+            . $staff_target->id
+            . "/password" => json => { password => $new_password, password_2 => $new_password } )
+        ->status_is(403)
+        ->json_is( { error => "Changing another staff account's password requires the staffaccess permission" } );
+
+    foreach my $target ( $superlibrarian_target, $permissions_target ) {
+        $t->post_ok( "//$userid:$password@/api/v1/patrons/"
+                . $target->id
+                . "/password" => json => { password => $new_password, password_2 => $new_password } )
+            ->status_is( 403, 'An account with permissions is protected whatever its category' )
+            ->json_is( { error => "Changing another staff account's password requires the staffaccess permission" } );
+    }
+
+    $t->post_ok( "//$userid:$password@/api/v1/patrons/"
+            . $ordinary_target->id
+            . "/password" => json => { password => $new_password, password_2 => $new_password } )
+        ->status_is(200)
+        ->json_is('');
+
+    # 'borrowers' + 'staffaccess'
+    $unprivileged_patron->set( { flags => 16 + 2**17 } )->store;
+    foreach my $target ( $staff_target, $superlibrarian_target, $permissions_target ) {
+        $t->post_ok( "//$userid:$password@/api/v1/patrons/"
+                . $target->id
+                . "/password" => json => { password => $new_password, password_2 => $new_password } )->status_is(200);
+    }
 
     $schema->storage->txn_rollback;
 };

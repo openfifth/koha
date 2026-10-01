@@ -22,6 +22,7 @@ use Mojo::Base 'Mojolicious::Controller';
 use C4::Auth qw(checkpw_internal);
 
 use Koha::Patrons;
+use Koha::Policy::Patrons;
 
 use Scalar::Util qw( blessed );
 use Try::Tiny    qw( catch try );
@@ -49,6 +50,15 @@ sub set {
 
     return $c->render_resource_not_found("Patron")
         unless $patron;
+
+    my $can_change = Koha::Policy::Patrons->can_change_password( $c->stash('koha.user'), $patron );
+    unless ($can_change) {
+        my $error =
+            $can_change->messages->[0]->message eq 'staffaccess_required'
+            ? "Changing another staff account's password requires the staffaccess permission"
+            : "Changing another patron's password requires the edit_borrowers permission";
+        return $c->render( status => 403, openapi => { error => $error } );
+    }
 
     my $password   = $body->{password}   // "";
     my $password_2 = $body->{password_2} // "";
