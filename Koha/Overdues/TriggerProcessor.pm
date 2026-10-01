@@ -71,8 +71,27 @@ sub new {
         debug        => $params->{debug}        // 0,
         dry_run      => $params->{dry_run}      // 0,
         trigger_date => $params->{trigger_date} // dt_from_string(),
+        summary      => { matched => 0 },
     };
     return bless $self, $class;
+}
+
+=head3 summary
+
+  my $summary = $triggerProcessor->summary;
+
+What the run did, for the summary C<process_circulation_triggers.pl> prints:
+C<matched>, the number of overdue checkouts the fetch returned, merged with the
+per-action counts from L<Koha::Overdues::ActionExecutor/summary>.
+
+A run that resolves no delays, no branches or no checkouts never reaches
+L</_dispatch_overdues>, and reports C<matched> 0 with no action counts.
+
+=cut
+
+sub summary {
+    my ($self) = @_;
+    return $self->{summary};
 }
 
 =head3 ProcessOverdues
@@ -354,6 +373,8 @@ sub _dispatch_overdues {
 
     $action_executor->process_notice_queue;
     $action_executor->process_action_queue;
+
+    $self->{summary} = { matched => scalar @overdue_items, %{ $action_executor->summary } };
 
     return;
 }

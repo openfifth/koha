@@ -24,7 +24,7 @@ process_circulation_triggers.pl  daily cron script to process overdue materials.
 
 =head1 SYNOPSIS
 
-process_circulation_triggers.pl [ --date <yyyy-mm-dd> ] [ --dry-run ] [ --verbose ] [ --debug ]
+process_circulation_triggers.pl [ --date <yyyy-mm-dd> ] [ --dry-run ] [ --verbose ] [ --debug ] [ --quiet ]
 
 =head1 DESCRIPTION
 
@@ -71,6 +71,17 @@ the reported sequence is the sequence that ran. Composes with C<--dry-run>.
 In addition to C<--verbose> output, dump the matched overdue rows and the
 effective rule-set entries used to route them. Composes with C<--dry-run>.
 
+=item B<--quiet>
+
+Suppress the end-of-run summary, which is otherwise printed on every run: the
+number of overdue checkouts matched, followed by one line per kind of thing the
+run did, in the order it did them. Lines with nothing to report are omitted, so
+a run that only queued notices prints one.
+
+The summary reports counts, not amounts. What a charge came to belongs with the
+accountlines it created, which carry the library and item the global figure would
+have flattened away.
+
 =back
 
 =cut
@@ -90,13 +101,53 @@ my $date_input;
 my $dry_run = 0;
 my $verbose = 0;
 my $debug   = 0;
+my $quiet   = 0;
 
 GetOptions(
     'date=s'  => \$date_input,
     'dry-run' => \$dry_run,
     'verbose' => \$verbose,
     'debug'   => \$debug,
+    'quiet'   => \$quiet,
 );
+
+# Summary lines, in the order process_action_queue enacts them, so the summary
+# reads as a transcript of the run. Notices precede them all, being drained
+# first, and the restriction lifting pass closes it.
+my @SUMMARY_LINES = (
+    [ 'restricted', 'restrict',            'patrons' ],
+    [ 'forgiven',   'forgive_fine',        'fines' ],
+    [ 'lost',       'lost',                'items' ],
+    [ 'charged',    'charge',              'items' ],
+    [ 'returned',   'mark_returned',       'items' ],
+    [ 'lifted',     'restrictions_lifted', 'restrictions' ],
+);
+
+sub print_summary {
+    my ( $summary, $date ) = @_;
+
+    print "\n### CIRCULATION TRIGGERS SUMMARY ###\n";
+    printf "Trigger date: %s\n",              $date->ymd;
+    printf "Matched: %d overdue checkouts\n", $summary->{matched};
+    print "\n";
+
+    if ( $summary->{notices_queued} || $summary->{notices_suppressed} ) {
+        printf "  %-12s %4d queued, %d suppressed\n", 'notices', $summary->{notices_queued},
+            $summary->{notices_suppressed};
+    }
+
+    foreach my $line (@SUMMARY_LINES) {
+        my ( $label, $key, $noun ) = @$line;
+
+        if ( !$summary->{$key} ) {
+            next;
+        }
+
+        printf "  %-12s %4d %s\n", $label, $summary->{$key}, $noun;
+    }
+
+    return;
+}
 
 my $trigger_date;
 if ($date_input) {
@@ -129,6 +180,10 @@ if ($dry_run) {
 my $triggerProcessor = Koha::Overdues::TriggerProcessor->new(
     { verbose => $verbose, debug => $debug, dry_run => $dry_run, trigger_date => $trigger_date } );
 $triggerProcessor->ProcessOverdues();
+
+if ( !$quiet ) {
+    print_summary( $triggerProcessor->summary, $trigger_date );
+}
 
 if ($dry_run) {
     $schema->storage->txn_rollback;

@@ -1498,7 +1498,7 @@ The preference selects which condition applies:
 
 B<Parameters:> none
 
-B<Returns:> void
+B<Returns:> true when a restriction was removed, false otherwise.
 
 B<Note:> This reconciles the patron's restriction against their current overdue
 state rather than undoing a particular checkout, so it is safe to call
@@ -1522,7 +1522,7 @@ sub lift_overdue_restrictions {
         || !$self->is_debarred
         || !$overdue_restrictions->count )
     {
-        return;
+        return 0;
     }
 
     my $remove_restrictions =
@@ -1532,7 +1532,10 @@ sub lift_overdue_restrictions {
 
     if ($remove_restrictions) {
         Koha::Patron::Debarments::DelUniqueDebarment( { borrowernumber => $self->borrowernumber, type => 'OVERDUES' } );
+        return 1;
     }
+
+    return 0;
 }
 
 =head3 update_lastseen

@@ -82,8 +82,34 @@ sub new {
         verbose                   => $params->{verbose}      // 0,
         dry_run                   => $params->{dry_run}      // 0,
         trigger_date              => $params->{trigger_date} // dt_from_string(),
+        summary                   => {
+            notices_queued      => 0,
+            notices_suppressed  => 0,
+            restrict            => 0,
+            forgive_fine        => 0,
+            lost                => 0,
+            charge              => 0,
+            mark_returned       => 0,
+            restrictions_lifted => 0,
+        },
     };
     return bless $self, $class;
+}
+
+=head3 summary
+
+  my $summary = $action_executor->summary;
+
+Counts of what the run did, for the end-of-run summary
+C<process_circulation_triggers.pl> prints. Each enactor increments its own key at
+the point it knows the outcome, so a skipped item - one that resolved no record,
+or whose charge was blocked by the duplicate guard - is not counted as enacted.
+
+=cut
+
+sub summary {
+    my ($self) = @_;
+    return $self->{summary};
 }
 
 =head3 route_item_actions_to_queue
@@ -274,8 +300,8 @@ sub process_action_queue {
 
     foreach my $borrowernumber ( keys %{ $self->{patrons_marked_returned} } ) {
         my $patron = Koha::Patrons->find($borrowernumber);
-        if ($patron) {
-            $patron->lift_overdue_restrictions;
+        if ( $patron && $patron->lift_overdue_restrictions ) {
+            $self->{summary}->{restrictions_lifted}++;
         }
     }
 
@@ -344,6 +370,7 @@ sub process_notice_queue {
                     my $entries = $by_mtt->{$mtt}{$delay};
 
                     if ( $self->_notice_already_queued( $borrowernumber, $notice_code, $effective_mtt, $delay ) ) {
+                        $self->{summary}->{notices_suppressed}++;
                         next;
                     }
 
@@ -456,6 +483,7 @@ sub _record_notice_enqueued {
     my ( $self, $borrowernumber, $notice_code, $mtt, $delay ) = @_;
 
     $self->{notices_enqueued_this_run}{ join( "|", $borrowernumber, $notice_code, $mtt, $delay ) } = 1;
+    $self->{summary}->{notices_queued}++;
 
     return;
 }
@@ -794,6 +822,7 @@ sub enact_restrict {
             comment        => "OVERDUES_PROCESS " . output_pref( dt_from_string() ),
         }
     );
+    $self->{summary}->{restrict}++;
 }
 
 =head3 enact_lost
@@ -811,6 +840,7 @@ sub enact_lost {
         return;
     }
     $item->mark_lost( $lost_value, $self->_item_store_params );
+    $self->{summary}->{lost}++;
 }
 
 =head3 enact_forgive_fine
@@ -847,6 +877,8 @@ sub enact_forgive_fine {
             $forgiven_count++;
         }
     }
+
+    $self->{summary}->{forgive_fine} += $forgiven_count;
 
     if ( $forgiven_count && C4::Context->preference('FinesLog') ) {
         Koha::Logger->get->info(
@@ -891,7 +923,7 @@ sub enact_charge {
         $item->itemcallnumber // q{},
     );
 
-    Koha::Account->new( { patron_id => $overdue_item->{borrowernumber} } )->add_lost_replacement_fee(
+    my $charged = Koha::Account->new( { patron_id => $overdue_item->{borrowernumber} } )->add_lost_replacement_fee(
         {
             item              => $item,
             issue_id          => $overdue_item->{issue_id},
@@ -901,6 +933,10 @@ sub enact_charge {
             replacement_price => $overdue_item->{replacementfee},
         }
     );
+
+    if ($charged) {
+        $self->{summary}->{charge}++;
+    }
 }
 
 =head3 enact_mark_returned
@@ -929,7 +965,7 @@ sub enact_mark_returned {
         Koha::Logger->get->warn("enact_mark_returned: issue $overdue_item->{issue_id} not found — skipping");
         return;
     }
-    $checkout->mark_returned(
+    my $returned = $checkout->mark_returned(
         {
             borrowernumber  => $overdue_item->{borrowernumber},
             privacy         => $patron->privacy,
@@ -937,6 +973,11 @@ sub enact_mark_returned {
             %{ $self->_item_store_params },
         }
     );
+
+    if ($returned) {
+        $self->{summary}->{mark_returned}++;
+    }
+
     $self->{patrons_marked_returned}->{ $overdue_item->{borrowernumber} } = 1;
 }
 
