@@ -39,7 +39,7 @@ my $schema  = Koha::Database->new->schema;
 my $builder = t::lib::TestBuilder->new;
 
 subtest 'no overdue delay rules → early return' => sub {
-    plan tests => 1;
+    plan tests => 2;
 
     $schema->storage->txn_begin;
 
@@ -50,11 +50,16 @@ subtest 'no overdue delay rules → early return' => sub {
     my $tp = Koha::Overdues::TriggerProcessor->new;
     is( $tp->ProcessOverdues, undef, 'returns early when no overdue delay rules exist' );
 
+    # A run that never reaches _dispatch_overdues reports nothing matched and no
+    # action counts, rather than an empty-looking summary indistinguishable from
+    # a run that matched rows and did nothing with them.
+    is_deeply( $tp->summary, { matched => 0 }, 'summary reports matched 0 with no action counts' );
+
     $schema->storage->txn_rollback;
 };
 
 subtest 'ProcessOverdues simple path — lost + restrict end-to-end' => sub {
-    plan tests => 4;
+    plan tests => 5;
 
     $schema->storage->txn_begin;
 
@@ -101,10 +106,23 @@ subtest 'ProcessOverdues simple path — lost + restrict end-to-end' => sub {
         );
     }
 
-    Koha::Overdues::TriggerProcessor->new->ProcessOverdues;
+    my $trigger_processor = Koha::Overdues::TriggerProcessor->new;
+    $trigger_processor->ProcessOverdues;
 
     $item->discard_changes;
     is( $item->itemlost, 1, 'item marked lost via the trigger pipeline' );
+
+    # matched comes from the processor, the action counts from the executor:
+    # assert both to prove the merge in _dispatch_overdues carries them through.
+    is_deeply(
+        {
+            matched  => $trigger_processor->summary->{matched},
+            lost     => $trigger_processor->summary->{lost},
+            restrict => $trigger_processor->summary->{restrict},
+        },
+        { matched => 1, lost => 1, restrict => 1 },
+        'summary merges the matched count with the executor action counts'
+    );
 
     my $restrictions_first_pass = $patron->restrictions->search( { type => 'OVERDUES' } );
     is( $restrictions_first_pass->count,            1,          'one OVERDUES restriction added' );

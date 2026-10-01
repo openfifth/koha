@@ -4062,7 +4062,7 @@ subtest "identify_updated_extended_attributes" => sub {
 };
 
 subtest "lift_overdue_restrictions" => sub {
-    plan tests => 6;
+    plan tests => 8;
 
     $schema->storage->txn_begin;
     my $patron = $builder->build_object(
@@ -4112,7 +4112,10 @@ subtest "lift_overdue_restrictions" => sub {
 
     note("Testing 'no'");
     t::lib::Mocks::mock_preference( 'AutoRemoveOverduesRestrictions', 'no' );
-    $patron->lift_overdue_restrictions;
+
+    # Callers counting lifted restrictions rely on the return value, so it has to
+    # report what happened rather than whether the patron was examined.
+    is( $patron->lift_overdue_restrictions,                             0, "Returns false when nothing was lifted." );
     is( $patron->restrictions->search( { type => 'OVERDUES' } )->count, 1, "Restriction retained." );
 
     note("Testing 'when_no_overdue'");
@@ -4137,7 +4140,7 @@ subtest "lift_overdue_restrictions" => sub {
     note("Testing 'when_no_overdue_causing_debarment'");
 
     t::lib::Mocks::mock_preference( 'AutoRemoveOverduesRestrictions', 'when_no_overdue_causing_debarment' );
-    $patron->lift_overdue_restrictions;
+    is( $patron->lift_overdue_restrictions, 1, "Returns true when a restriction was lifted." );
     is( $patron->restrictions->search( { type => 'OVERDUES' } )->count, 0, "Restriction removed." );
 
     # Phase three

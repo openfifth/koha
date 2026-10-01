@@ -158,7 +158,7 @@ subtest 'route_item_actions_to_queue: itemlost suppresses a bare reminder, never
 };
 
 subtest 'enact_restrict adds an OVERDUES debarment' => sub {
-    plan tests => 2;
+    plan tests => 3;
 
     $schema->storage->txn_begin;
 
@@ -169,12 +169,13 @@ subtest 'enact_restrict adds an OVERDUES debarment' => sub {
     my $restrictions = $patron->restrictions->search( { type => 'OVERDUES' } );
     is( $restrictions->count,            1,          'one OVERDUES restriction added' );
     is( $restrictions->next->type->code, 'OVERDUES', 'restriction type is OVERDUES' );
+    is( $executor->summary->{restrict},  1,          'summary counts the restriction' );
 
     $schema->storage->txn_rollback;
 };
 
 subtest 'enact_lost / enact_forgive_fine / enact_mark_returned' => sub {
-    plan tests => 6;
+    plan tests => 7;
 
     $schema->storage->txn_begin;
 
@@ -243,11 +244,19 @@ subtest 'enact_lost / enact_forgive_fine / enact_mark_returned' => sub {
         'archived checkout records the checkout branch as checkin_library, as MarkIssueReturned does with no userenv'
     );
 
+    # forgive_fine counts accountlines rather than items — one checkout can carry
+    # several outstanding OVERDUE lines, and only one was forgiven here.
+    is_deeply(
+        { map { $_ => $executor->summary->{$_} } qw( forgive_fine lost mark_returned ) },
+        { forgive_fine => 1, lost => 1, mark_returned => 1 },
+        'summary counts each enacted action once'
+    );
+
     $schema->storage->txn_rollback;
 };
 
 subtest 'enact_charge creates LOST debit with caller-resolved branch' => sub {
-    plan tests => 4;
+    plan tests => 6;
 
     $schema->storage->txn_begin;
 
@@ -294,7 +303,14 @@ subtest 'enact_charge creates LOST debit with caller-resolved branch' => sub {
         $line->branchcode, $library->branchcode,
         'LOST debit stamped with item home library (LostChargesControl=ItemHomeLibrary)'
     );
-    is( $line->issue_id, $issue->issue_id, 'LOST debit carries the checkout issue_id' );
+    is( $line->issue_id,              $issue->issue_id, 'LOST debit carries the checkout issue_id' );
+    is( $executor->summary->{charge}, 1,                'summary counts the charge' );
+
+    # add_lost_replacement_fee returns nothing when its duplicate guard blocks a
+    # second charge for the same (item, issue). The count must follow the fee
+    # actually levied, not the attempt.
+    $executor->enact_charge($overdue_item);
+    is( $executor->summary->{charge}, 1, 'a charge blocked by the duplicate guard is not counted' );
 
     $schema->storage->txn_rollback;
 };
@@ -1413,7 +1429,7 @@ subtest 'process_action_queue: enacts actions in a fixed order' => sub {
 };
 
 subtest 'process_notice_queue: re-run skips a notice already queued today' => sub {
-    plan tests => 2;
+    plan tests => 4;
 
     $schema->storage->txn_begin;
 
@@ -1486,6 +1502,11 @@ subtest 'process_notice_queue: re-run skips a notice already queued today' => su
         Koha::Notice::Messages->search( { borrowernumber => $patron->borrowernumber, letter_code => 'OD1' } )->count,
         1, 'sent notice from today blocks re-enqueue — no duplicate row'
     );
+    is_deeply(
+        { map { $_ => $executor->summary->{$_} } qw( notices_queued notices_suppressed ) },
+        { notices_queued => 0, notices_suppressed => 1 },
+        'a bucket skipped by the guard counts as suppressed, not queued'
+    );
 
     # The same notice queued on an earlier day must NOT block — a later overdue
     # episode still notifies (the same-day bound in _notice_exists).
@@ -1499,6 +1520,11 @@ subtest 'process_notice_queue: re-run skips a notice already queued today' => su
     is(
         Koha::Notice::Messages->search( { borrowernumber => $patron->borrowernumber, letter_code => 'OD1' } )->count,
         2, 'notice queued on an earlier day does not block — fresh episode enqueues'
+    );
+    is_deeply(
+        { map { $_ => $next_run->summary->{$_} } qw( notices_queued notices_suppressed ) },
+        { notices_queued => 1, notices_suppressed => 0 },
+        'a bucket that enqueues counts as queued, not suppressed'
     );
 
     $schema->storage->txn_rollback;
