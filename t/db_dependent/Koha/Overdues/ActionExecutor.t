@@ -21,7 +21,7 @@ use Modern::Perl;
 
 use Test::MockModule;
 use Test::NoWarnings;
-use Test::More tests => 25;
+use Test::More tests => 26;
 use Test::Warn;
 
 use Koha::Account;
@@ -1499,6 +1499,97 @@ subtest 'process_notice_queue: re-run skips a notice already queued today' => su
     is(
         Koha::Notice::Messages->search( { borrowernumber => $patron->borrowernumber, letter_code => 'OD1' } )->count,
         2, 'notice queued on an earlier day does not block — fresh episode enqueues'
+    );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'process_notice_queue: a backdated replay is not blocked by later notices' => sub {
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron  = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { branchcode => $library->branchcode, email => 'patron@example.com' },
+        }
+    );
+    my $item  = $builder->build_sample_item( { homebranch => $library->branchcode } );
+    my $issue = $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => { borrowernumber => $patron->borrowernumber, itemnumber => $item->itemnumber }
+        }
+    );
+
+    $builder->build(
+        {
+            source => 'Letter',
+            value  => {
+                module                 => 'circulation',
+                code                   => 'OD1',
+                branchcode             => q{},
+                message_transport_type => 'email',
+                name                   => 'OD1 email',
+                title                  => 'OD1',
+                content                => 'body',
+                is_html                => 0,
+                lang                   => 'default',
+            },
+        }
+    );
+
+    my $notice_entry = {
+        item => {
+            borrowernumber    => $patron->borrowernumber,
+            itemnumber        => $item->itemnumber,
+            issue_id          => $issue->issue_id,
+            patronhomebranch  => $library->branchcode,
+            itemhomebranch    => $library->branchcode,
+            itemholdingbranch => $library->branchcode,
+        },
+        action => { type => 'notice', notice_code => 'OD1', mtt => 'email' },
+        delay  => 7,
+    };
+
+    # The run for this date was missed. Notices of the same code have gone out on
+    # the days since, which must not stand in for the one that never went.
+    my $missed_date = dt_from_string->subtract( days => 5 );
+
+    Koha::Notice::Message->new(
+        {
+            borrowernumber         => $patron->borrowernumber,
+            letter_code            => 'OD1',
+            message_transport_type => 'email',
+            status                 => 'sent',
+            subject                => 'OD1',
+            content                => 'sent two days ago',
+            time_queued            => dt_from_string->subtract( days => 2 ),
+        }
+    )->store;
+
+    my $replay = Koha::Overdues::ActionExecutor->new( { trigger_date => $missed_date } );
+    $replay->add_to_notice_queue( $patron->borrowernumber, 'OD1', 'email', 7, [$notice_entry] );
+    $replay->process_notice_queue;
+
+    is(
+        Koha::Notice::Messages->search( { borrowernumber => $patron->borrowernumber, letter_code => 'OD1' } )->count,
+        2, 'a later notice of the same code does not suppress the replayed date'
+    );
+
+    # The replay stamped its row with the replayed date rather than today, so a
+    # second replay of the same date finds it and enqueues nothing further.
+    my $second_replay = Koha::Overdues::ActionExecutor->new( { trigger_date => $missed_date } );
+    $second_replay->add_to_notice_queue( $patron->borrowernumber, 'OD1', 'email', 7, [$notice_entry] );
+    $second_replay->process_notice_queue;
+
+    is(
+        Koha::Notice::Messages->search( { borrowernumber => $patron->borrowernumber, letter_code => 'OD1' } )->count,
+        2, 'replaying the same date twice enqueues nothing further'
     );
 
     $schema->storage->txn_rollback;

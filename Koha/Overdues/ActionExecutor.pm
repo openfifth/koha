@@ -93,6 +93,12 @@ sub new {
             restrictions_lifted => 0,
         },
     };
+
+    # A backdated run's notices belong to the date being replayed. EnqueueLetter
+    # stamps time_queued with the moment of insert and takes no parameter for it,
+    # so L</_enqueue_letter_for_bucket> restamps them - see L</_stamp_trigger_date>.
+    $self->{replaying} = $self->{trigger_date}->ymd ne dt_from_string()->ymd;
+
     return bless $self, $class;
 }
 
@@ -440,9 +446,9 @@ sub _effective_transport {
 Whether this bucket's letter has already been accounted for, by either of two
 guards.
 
-A row predating this run — L</_notice_exists> asked once per C<(borrower,
-letter_code, transport)> and cached, so that a letter enqueued by this run never
-answers for the next delay. That is what makes a re-run idempotent, including one
+A row already on the trigger date before this run — L</_notice_exists> asked once
+per C<(borrower, letter_code, transport)> and cached, so that a letter enqueued by
+this run never answers for the next delay. That is what makes a re-run idempotent, including one
 landing after C<SendQueuedMessages> has flipped rows to C<sent>, without a
 patron's delay 7 letter suppressing their delay 14 one.
 
@@ -491,8 +497,13 @@ sub _record_notice_enqueued {
 =head3 _notice_exists
 
 Returns true if a message_queue row for this (borrowernumber, letter_code,
-message_transport_type) was queued on or after the trigger date and is either
-still waiting for C<SendQueuedMessages> or has already gone out.
+message_transport_type) was queued on the trigger date and is either still
+waiting for C<SendQueuedMessages> or has already gone out.
+
+The window is that one day, not everything since it. An open-ended C<< >= >>
+would leave C<--date> unable to do the job it exists for: a missed day is
+replayed precisely because days have passed, and any notice of the same code
+queued in between would suppress the replay entirely.
 
 C<failed> and C<deleted> rows deliberately do not count: a notice that never
 reached the patron should not stop a later run from queueing it again.
@@ -509,7 +520,8 @@ same code sent by staff earlier the same day suppresses the overdue one.
 sub _notice_exists {
     my ( $self, $borrowernumber, $notice_code, $mtt ) = @_;
 
-    my $from = $self->{trigger_date}->clone->truncate( to => 'day' )->strftime('%Y-%m-%d %H:%M:%S');
+    my $day_start = $self->{trigger_date}->clone->truncate( to => 'day' );
+    my $day_end   = $day_start->clone->add( days => 1 );
 
     return Koha::Notice::Messages->search(
         {
@@ -517,9 +529,50 @@ sub _notice_exists {
             letter_code            => $notice_code,
             message_transport_type => $mtt,
             status                 => [ 'pending', 'sent' ],
-            time_queued            => { '>=' => $from },
+            time_queued            => {
+                '>=' => $day_start->strftime('%Y-%m-%d %H:%M:%S'),
+                '<'  => $day_end->strftime('%Y-%m-%d %H:%M:%S'),
+            },
         }
     )->count > 0;
+}
+
+=head3 _stamp_trigger_date
+
+  $self->_stamp_trigger_date($message_id);
+
+Sets C<time_queued> on a just-enqueued message to the trigger date, on a
+backdated run only.
+
+The write-side counterpart to L</_notice_exists>. C<EnqueueLetter> records when
+the row was inserted, which on a replay is the day the operator noticed rather
+than the day the notice is for, while L</_notice_exists> asks what was queued for
+the trigger date. Without this the two never meet: a second replay of the same
+date would find nothing from the first and queue the patron a duplicate.
+
+Sending is unaffected: C<SendQueuedMessages> selects on C<status> alone and never
+reads C<time_queued>. Three things do read it. C<cleanup_database.pl> purges
+C<message_queue> on it, so a replayed notice ages out that many days early;
+L<Koha::Notice::Messages/get_failed_notices> windows on it, so a replay older
+than that window would not be reported if its notice then failed to send; and the
+staff notices tab and the OPAC message feed display it, showing the date the
+notice is for rather than the day it was generated.
+
+=cut
+
+sub _stamp_trigger_date {
+    my ( $self, $message_id ) = @_;
+
+    if ( !$self->{replaying} || !$message_id ) {
+        return;
+    }
+
+    my $message = Koha::Notice::Messages->find($message_id);
+    if ($message) {
+        $message->time_queued( $self->{trigger_date} )->store;
+    }
+
+    return;
 }
 
 =head3 _enqueue_letter_for_bucket
@@ -601,7 +654,7 @@ sub _enqueue_letter_for_bucket {
             "List too long for form; please check your account online for a complete list of your overdue items.";
     }
 
-    C4::Letters::EnqueueLetter(
+    my $message_id = C4::Letters::EnqueueLetter(
         {
             letter                 => $letter,
             borrowernumber         => $borrowernumber,
@@ -611,6 +664,8 @@ sub _enqueue_letter_for_bucket {
             reply_address          => $library->inbound_email_address,
         }
     );
+
+    $self->_stamp_trigger_date($message_id);
 
     if ( $self->{verbose} ) {
         printf "    letter_code=%s mtt=%s borrower=%s days_overdue=%s items=%s\n",
