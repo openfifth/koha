@@ -611,7 +611,7 @@ Circulation:
             - "<br>Example: [1] [30] Sets an item to the <a href='/cgi-bin/koha/admin/authorised_values.pl?searchfield=LOST'>LOST</a> value 1 when it has been overdue for more than 30 days."
             - <br>(Used when the longoverdue.pl script is called without the --lost parameter)
             - "<br><strong>NOTE:</strong> This system preference requires the <code>misc/cronjobs/longoverdue.pl</code> cronjob. Ask your system administrator to schedule it."
-            - <br><strong>NOTE:</strong> These system preferences are supplementary to circulation triggers and will act as fall back if set.
+            - "<br><strong>NOTE:</strong> These system preferences are not used by <code>misc/cronjobs/process_circulation_triggers.pl</code>, which takes the equivalent settings from the <a href='/cgi-bin/koha/admin/circulation_triggers.pl'>circulation triggers</a> instead."
         -
             - "Charge a lost item to the patron's account when the <a href='/cgi-bin/koha/admin/authorised_values.pl?searchfield=LOST'>LOST</a> value of the item changes to:"
             - pref: DefaultLongOverdueChargeValue
@@ -620,7 +620,7 @@ Circulation:
             - <br>Leave this field empty if you don't want to charge the patron for lost items.
             - <br>(Used when the longoverdue.pl script is called without the --charge parameter)
             - "<br><strong>NOTE:</strong> This system preference requires the <code>misc/cronjobs/longoverdue.pl</code> cronjob. Ask your system administrator to schedule it."
-            - <br><strong>NOTE:</strong> This system preference is supplementary to circulation triggers and will act as fall back if set.
+            - "<br><strong>NOTE:</strong> This system preference is not used by <code>misc/cronjobs/process_circulation_triggers.pl</code>, which takes the equivalent setting from the <a href='/cgi-bin/koha/admin/circulation_triggers.pl'>circulation triggers</a> instead."
         -
             - The long overdue process affects patrons in the
             - pref: DefaultLongOverduePatronCategories
@@ -640,14 +640,14 @@ Circulation:
             - <br>(Used when the longoverdue.pl script is called without the --skip-category parameter)
             - <br><strong>WARNING:</strong> This preference overrides the DefaultLongOverduePatronCategories preference, so the DefaultLongOverduePatronCategories filter will not take effect.
             - "<br><strong>NOTE:</strong> This system preference requires the <code>misc/cronjobs/longoverdue.pl</code> cronjob. Ask your system administrator to schedule it."
-            - <br><strong>NOTE:</strong> These system preferences are supplementary to circulation triggers and will act as fall back if set.
+            - "<br><strong>NOTE:</strong> These system preferences are not used by <code>misc/cronjobs/process_circulation_triggers.pl</code>, which takes the equivalent settings from the <a href='/cgi-bin/koha/admin/circulation_triggers.pl'>circulation triggers</a> instead."
         -
             - When using the automatic item loss process, skip items with <a href="/cgi-bin/koha/admin/authorised_values.pl?searchfield=LOST">LOST</a> values matching any of
             - pref: DefaultLongOverdueSkipLostStatuses
             - .
             - <br>Leave this field empty if you don't want to skip any <a href="/cgi-bin/koha/admin/authorised_values.pl?searchfield=LOST">LOST</a> statuses.
             - <br>Set to a list of comma separated values, e.g. <em>5,6,7</em>.
-            - <br><strong>NOTE:</strong> This system preference is supplementary to circulation triggers and will act as fall back if set.
+            - "<br><strong>NOTE:</strong> This system preference is not used by <code>misc/cronjobs/process_circulation_triggers.pl</code>, which takes the equivalent setting from the <a href='/cgi-bin/koha/admin/circulation_triggers.pl'>circulation triggers</a> instead."
         -
             - "When issuing an item that has been marked as lost, "
             - pref: IssueLostItem
@@ -668,6 +668,7 @@ Circulation:
                 onpayment: "when receiving payment for the item"
                 claim_returned: "when marking an item as a return claim"
             - .
+            - "<br><strong>NOTE:</strong> The <code>cronjob</code> option covers <code>misc/cronjobs/longoverdue.pl</code> only. <code>misc/cronjobs/process_circulation_triggers.pl</code> marks items returned per trigger instead, configured at <a href='/cgi-bin/koha/admin/circulation_triggers.pl'>circulation triggers</a>. Every other option here is unaffected."
         -
             - "Update item status to"
             - pref: UpdateItemLostStatusWhenPaid
@@ -1289,6 +1290,7 @@ Circulation:
                   1: Forgive
                   0: "Don't forgive"
             - the fines on an item when it is marked as lost.
+            - "<br><strong>NOTE:</strong> Not used by <code>misc/cronjobs/process_circulation_triggers.pl</code>, which forgives per trigger instead, configured at <a href='/cgi-bin/koha/admin/circulation_triggers.pl'>circulation triggers</a>. Marking an item lost anywhere else still follows this preference."
         -
             - "Don't refund lost fees if a lost item is checked in more than"
             - pref: NoRefundOnLostReturnedItemsAge
@@ -1305,6 +1307,7 @@ Circulation:
                   1: Charge
                   0: "Don't charge"
             - the replacement price when a patron loses an item.
+            - "<br><strong>NOTE:</strong> Not used by <code>misc/cronjobs/process_circulation_triggers.pl</code>, which charges per trigger instead, configured at <a href='/cgi-bin/koha/admin/circulation_triggers.pl'>circulation triggers</a>. Marking an item lost anywhere else still follows this preference."
         -
             - Charge a hold fee
             - pref: HoldFeeMode
