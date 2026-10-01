@@ -69,12 +69,14 @@ date is deduped against that date rather than against today.
 sub new {
     my ( $class, $params ) = @_;
     my $self = {
-        action_batch_queue      => [],
-        notice_queue            => {},
-        patrons_marked_returned => {},
-        verbose                 => $params->{verbose}      // 0,
-        dry_run                 => $params->{dry_run}      // 0,
-        trigger_date            => $params->{trigger_date} // dt_from_string(),
+        action_batch_queue        => [],
+        notice_queue              => {},
+        patrons_marked_returned   => {},
+        notices_queued_before_run => {},
+        notices_enqueued_this_run => {},
+        verbose                   => $params->{verbose}      // 0,
+        dry_run                   => $params->{dry_run}      // 0,
+        trigger_date              => $params->{trigger_date} // dt_from_string(),
     };
     return bless $self, $class;
 }
@@ -295,13 +297,17 @@ on an action-carrying trigger wants to state: the fine being forgiven, the
 replacement price about to be charged. Nothing that only exists after enactment
 is available.
 
-Every enqueue is guarded by L</_notice_exists>: a bucket is skipped when a
-message_queue row for the same (borrower, letter_code, transport) was already
-queued today and is still pending or sent. This makes a re-run idempotent —
-including one that lands after C<SendQueuedMessages> has drained the queue to
-C<sent> — while still letting a later day's overdue episode notify. It also
-covers the synthesised-print case: an explicit or earlier-synthesised print for
-the same pair blocks a duplicate fallback.
+One letter is enqueued per C<(borrower, letter_code, effective transport,
+delay)>. A patron holding items at two delays that resolve the same letter code
+therefore receives one letter per delay, on each configured transport — what
+C<overdue_notices.pl> sent, where each trigger level prepared its own letter and
+C<$print_sent> collapsed duplicates only within a level.
+
+L</_effective_transport> decides what a bucket is actually sent as, and
+L</_notice_already_queued> decides whether it still needs sending. Transports are
+processed in reliability order — C<print>, then C<sms>, then C<email> — so an
+explicitly configured print claims its delay first and renders from its own
+template, leaving degraded buckets to collapse into it.
 
 =cut
 
@@ -317,7 +323,9 @@ sub process_notice_queue {
             my $by_notice_code = $self->{notice_queue}{$borrowernumber};
             for my $notice_code ( sort keys %$by_notice_code ) {
                 my $by_mtt = $by_notice_code->{$notice_code};
-                next if !$by_mtt->{$mtt};
+                if ( !$by_mtt->{$mtt} ) {
+                    next;
+                }
 
                 for my $delay ( sort { $a <=> $b } keys %{ $by_mtt->{$mtt} } ) {
                     my $entries = $by_mtt->{$mtt}{$delay};
@@ -325,29 +333,18 @@ sub process_notice_queue {
                         next;
                     }
 
-                    if ( $mtt eq 'print' ) {
-                        next if $self->_notice_exists( $borrowernumber, $notice_code, 'print', [ 'pending', 'sent' ] );
-                        $self->_enqueue_letter_for_bucket( $entries, 'print' );
+                    my ( $effective_mtt, $origin_mtt ) = $self->_effective_transport( $borrowernumber, $mtt );
+                    if ( !$effective_mtt ) {
                         next;
                     }
 
-                    my $patron = Koha::Patrons->find($borrowernumber);
-                    if ( !$patron ) {
-                        Koha::Logger->get->warn("process_notice_queue: borrower $borrowernumber not found — skipping");
+                    if ( $self->_notice_already_queued( $borrowernumber, $notice_code, $effective_mtt, $delay ) ) {
                         next;
                     }
 
-                    my $viable = $mtt eq 'sms' ? $patron->smsalertnumber : $patron->notice_email_address;
-                    if ($viable) {
-                        next if $self->_notice_exists( $borrowernumber, $notice_code, $mtt, [ 'pending', 'sent' ] );
-                        $self->_enqueue_letter_for_bucket( $entries, $mtt );
-                        next;
+                    if ( $self->_enqueue_letter_for_bucket( $entries, $effective_mtt, $origin_mtt ) ) {
+                        $self->_record_notice_enqueued( $borrowernumber, $notice_code, $effective_mtt, $delay );
                     }
-
-                    if ( $self->_notice_exists( $borrowernumber, $notice_code, 'print', [ 'pending', 'sent' ] ) ) {
-                        next;
-                    }
-                    $self->_enqueue_letter_for_bucket( $entries, 'print', $mtt );
                 }
             }
         }
@@ -356,12 +353,107 @@ sub process_notice_queue {
     return;
 }
 
+=head3 _effective_transport
+
+  my ( $effective_mtt, $origin_mtt ) = $self->_effective_transport( $borrowernumber, $mtt );
+
+The transport a bucket configured for C<$mtt> is actually sent as. An C<sms>
+bucket for a patron with no C<smsalertnumber>, or an C<email> bucket for a patron
+with no C<notice_email_address>, degrades to C<print>; C<$origin_mtt> then names
+the transport it was configured for, so the letter can still render from that
+template where C<print> has none of its own.
+
+Returns the empty list when the borrower cannot be found.
+
+=cut
+
+sub _effective_transport {
+    my ( $self, $borrowernumber, $mtt ) = @_;
+
+    if ( $mtt eq 'print' ) {
+        return ( 'print', undef );
+    }
+
+    my $patron = Koha::Patrons->find($borrowernumber);
+    if ( !$patron ) {
+        Koha::Logger->get->warn("process_notice_queue: borrower $borrowernumber not found — skipping");
+        return;
+    }
+
+    my $viable = $mtt eq 'sms' ? $patron->smsalertnumber : $patron->notice_email_address;
+    if ($viable) {
+        return ( $mtt, undef );
+    }
+
+    return ( 'print', $mtt );
+}
+
+=head3 _notice_already_queued
+
+  next if $self->_notice_already_queued( $borrowernumber, $notice_code, $mtt, $delay );
+
+Whether this bucket's letter has already been accounted for, by either of two
+guards.
+
+A row predating this run — L</_notice_exists> asked once per C<(borrower,
+letter_code, transport)> and cached, so that a letter enqueued by this run never
+answers for the next delay. That is what makes a re-run idempotent, including one
+landing after C<SendQueuedMessages> has flipped rows to C<sent>, without a
+patron's delay 7 letter suppressing their delay 14 one.
+
+A letter this run already enqueued for the same C<(borrower, letter_code,
+transport, delay)>. The transport is the effective one, so an sms bucket and an
+email bucket that both degrade to print at the same delay produce one sheet —
+C<overdue_notices.pl>'s C<$print_sent>, which was likewise scoped within a level.
+
+=cut
+
+sub _notice_already_queued {
+    my ( $self, $borrowernumber, $notice_code, $mtt, $delay ) = @_;
+
+    my $transport_key = join( "|", $borrowernumber, $notice_code, $mtt );
+
+    if ( !exists $self->{notices_queued_before_run}{$transport_key} ) {
+        $self->{notices_queued_before_run}{$transport_key} =
+            $self->_notice_exists( $borrowernumber, $notice_code, $mtt, [ 'pending', 'sent' ] );
+    }
+
+    if ( $self->{notices_queued_before_run}{$transport_key} ) {
+        return 1;
+    }
+
+    return $self->{notices_enqueued_this_run}{"$transport_key|$delay"} ? 1 : 0;
+}
+
+=head3 _record_notice_enqueued
+
+Record that this run has enqueued a letter for C<(borrower, letter_code,
+effective transport, delay)>. Called only once a letter was actually stored, so a
+bucket that resolved no template leaves the delay open for another bucket
+degrading to the same transport.
+
+=cut
+
+sub _record_notice_enqueued {
+    my ( $self, $borrowernumber, $notice_code, $mtt, $delay ) = @_;
+
+    $self->{notices_enqueued_this_run}{ join( "|", $borrowernumber, $notice_code, $mtt, $delay ) } = 1;
+
+    return;
+}
+
 =head3 _notice_exists
 
-Returns true if a notice message_queue row already exists for the trigger date,
-for this (borrowernumber, letter_code) pair. Used to dedup synthesised notice
-fallbacks against any notice — explicit, prior-pass synthesised, or leftover
-from a prior run — already sitting in the pipeline. Status specific.
+Returns true if a message_queue row for this (borrowernumber, letter_code,
+message_transport_type) was queued on or after the trigger date and still holds
+one of the given statuses.
+
+L</process_notice_queue> calls this once per transport key and caches the answer,
+so it reports the state the key was in before this run enqueued anything. It
+carries no notion of delay — message_queue has no column for one — which is why
+the per-delay dedup is held in memory alongside it rather than read back from the
+database. It also matches rows this run did not create, so a notice of the same
+code sent by staff earlier the same day suppresses the overdue one.
 
 =cut
 
@@ -390,6 +482,12 @@ queued under. C<$origin_mtt> is passed only when this is a print fallback for an
 undeliverable sms/email bucket, and names the transport that bucket was
 configured for; it supplies the template when the queued transport has none of
 its own.
+
+Returns true when a row was enqueued. A bucket that resolves no patron, no items
+or no letter returns false, leaving the delay unclaimed so another bucket
+degrading to the same transport can still try — as C<overdue_notices.pl> did,
+where a missing template moved on to the next transport without setting
+C<$print_sent>.
 
 =cut
 
@@ -537,7 +635,7 @@ sub _enqueue_letter_for_bucket {
             $notice_code, $effective_mtt, $borrowernumber, $head->{delay}, scalar @item_rows;
     }
 
-    return;
+    return 1;
 }
 
 =head3 format_notice_item

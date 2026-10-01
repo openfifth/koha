@@ -21,7 +21,7 @@ use Modern::Perl;
 
 use Test::MockModule;
 use Test::NoWarnings;
-use Test::More tests => 22;
+use Test::More tests => 23;
 use Test::Warn;
 
 use Koha::Account;
@@ -549,6 +549,101 @@ subtest 'process_notice_queue: two items at the same trigger render one row' => 
     my $messages =
         Koha::Notice::Messages->search( { borrowernumber => $patron->borrowernumber, letter_code => 'OD2' } );
     is( $messages->count, 1, 'two items at the same trigger render exactly one row' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'process_notice_queue: triggers sharing a letter code send one letter per delay' => sub {
+    plan tests => 4;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron =
+        $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $library->branchcode } } );
+
+    my $item_a  = $builder->build_sample_item( { homebranch => $library->branchcode } );
+    my $item_b  = $builder->build_sample_item( { homebranch => $library->branchcode } );
+    my $issue_a = $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => { borrowernumber => $patron->borrowernumber, itemnumber => $item_a->itemnumber }
+        }
+    );
+    my $issue_b = $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => { borrowernumber => $patron->borrowernumber, itemnumber => $item_b->itemnumber }
+        }
+    );
+
+    $builder->build(
+        {
+            source => 'Letter',
+            value  => {
+                module                 => 'circulation',
+                code                   => 'OD3',
+                branchcode             => q{},
+                message_transport_type => 'email',
+                name                   => 'OD3',
+                title                  => 'Overdue',
+                content                => "You have [% count %] overdue item(s): <item><<items.barcode>> </item>",
+                is_html                => 0,
+                lang                   => 'default',
+            },
+        }
+    );
+
+    my $base_item = {
+        borrowernumber    => $patron->borrowernumber,
+        categorycode      => $patron->categorycode,
+        itemtype          => $item_a->itype,
+        patronhomebranch  => $library->branchcode,
+        itemhomebranch    => $library->branchcode,
+        itemholdingbranch => $library->branchcode,
+    };
+
+    # Two triggers at different delays, both resolving the same letter and the
+    # same transport — the shape a site gets when it adds levels without
+    # authoring a template per level.
+    my $effective_rule_sets = {
+        join( '|', $library->branchcode, $patron->categorycode, $item_a->itype, 7 ) => {
+            actions => [ { type => 'notice', notice_code => 'OD3', mtts => ['email'] } ],
+        },
+        join( '|', $library->branchcode, $patron->categorycode, $item_a->itype, 14 ) => {
+            actions => [ { type => 'notice', notice_code => 'OD3', mtts => ['email'] } ],
+        },
+    };
+
+    my $executor = Koha::Overdues::ActionExecutor->new;
+    $executor->route_item_actions_to_queue(
+        $effective_rule_sets,
+        { %$base_item, itemnumber => $item_a->itemnumber, issue_id => $issue_a->issue_id, days_overdue => 7 }
+    );
+    $executor->route_item_actions_to_queue(
+        $effective_rule_sets,
+        { %$base_item, itemnumber => $item_b->itemnumber, issue_id => $issue_b->issue_id, days_overdue => 14 }
+    );
+
+    is(
+        scalar keys %{ $executor->{notice_queue}{ $patron->borrowernumber }{OD3}{email} }, 2,
+        'the two delays occupy separate notice_queue buckets'
+    );
+
+    $executor->process_notice_queue;
+
+    my $messages = Koha::Notice::Messages->search(
+        { borrowernumber => $patron->borrowernumber, letter_code => 'OD3' },
+        { order_by       => 'message_id' }
+    );
+    is( $messages->count, 2, 'one letter per delay — neither suppresses the other' );
+
+    my $first  = $messages->next;
+    my $second = $messages->next;
+    like( $first->content,  qr/\Q@{ [ $item_a->barcode ] }\E/, 'the delay 7 letter carries the 7-day item' );
+    like( $second->content, qr/\Q@{ [ $item_b->barcode ] }\E/, 'the delay 14 letter carries the 14-day item' );
 
     $schema->storage->txn_rollback;
 };
