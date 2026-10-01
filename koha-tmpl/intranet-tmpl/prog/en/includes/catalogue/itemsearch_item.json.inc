@@ -10,11 +10,11 @@
 "[% FILTER escape_quotes = replace('"', '\"') ~%]
     <input type="checkbox" name="itemnumber" value="[% item.itemnumber | html %]" />
 [%~ END %]",
-"[% FILTER escape_quotes ~%]
-    <a href="/cgi-bin/koha/catalogue/detail.pl?biblionumber=[% biblio.biblionumber | uri %]" title="Go to record detail page">[% INCLUDE 'biblio-title.inc' | trim | collapse %]</a
+[%- title_cell = BLOCK -%]
+    <a href="/cgi-bin/koha/catalogue/detail.pl?biblionumber=[% biblio.biblionumber | uri %]" title="Go to record detail page">[% INCLUDE 'biblio-title.inc' %]</a
     >[% IF ( Koha.Preference( 'marcflavour' ) == 'UNIMARC' && biblio.author ) %]by[% END %] [% biblio.author | html %]
-[%~ END %]",
-"[% (biblioitem.publicationyear || biblio.copyrightdate) | html | $To %]", "[% biblioitem.publishercode | html | $To %]",
+[%- END -%]
+"[% title_cell | collapse | $To %]", "[% (biblioitem.publicationyear || biblio.copyrightdate) | html | $To %]", "[% biblioitem.publishercode | html | $To %]",
 "[% AuthorisedValues.GetDescriptionByKohaField( kohafield => 'items.ccode', authorised_value => item.ccode ) | html | $To %]",
 "[% FILTER escape_quotes ~%]
     <a href="/cgi-bin/koha/catalogue/moredetail.pl?biblionumber=[% biblio.biblionumber | uri %]#item[% item.itemnumber | uri %]" title="Go to item details">[% item.barcode | html | $To %]</a>
