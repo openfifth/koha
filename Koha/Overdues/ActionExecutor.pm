@@ -540,20 +540,6 @@ sub _enqueue_letter_for_bucket {
     return;
 }
 
-=head3 format_action_item
-
-Takes in an item, an action, and a delay, and returns a formatted action_item to be processed.
-
-=cut
-
-sub format_action_item {
-    my ( $self, $overdue_item, $action_hashref ) = @_;
-
-    return { item => {%$overdue_item}, action => {%$action_hashref}, delay => $overdue_item->{days_overdue} };
-
-    # FIXME: return { item =>  $overdue_item, action => $action_hashref, delay => $overdue_item->{days_overdue} };
-}
-
 =head3 format_notice_item
 
 Takes in an item, an action, and a delay, and returns a formatted notice_item to be processed.
