@@ -278,7 +278,7 @@ subtest 'checkauth() tests' => sub {
     };
 
     subtest 'Two-factor authentication' => sub {
-        plan tests => 18;
+        plan tests => 19;
 
         t::lib::Mocks::mock_preference( 'StaffLoginRestrictLibraryByIP', 0 );
 
@@ -288,13 +288,16 @@ subtest 'checkauth() tests' => sub {
         $cgi = Test::MockObject->new();
 
         my $otp_token;
-        our ( $logout, $sessionID, $verified );
+        my $send_credentials = 1;    # The OTP form does not post the login credentials again
+        our ( $logout, $sessionID, $verified, $verify_call_count );
+        $verify_call_count = 0;
         $cgi->mock(
             'param',
             sub {
                 my ( $self, $param ) = @_;
-                if    ( $param eq 'login_userid' )   { return $patron->userid; }
-                elsif ( $param eq 'login_password' ) { return $password; }
+                return unless defined $param;    # No parameter name: no list of parameters
+                if    ( $param eq 'login_userid' )   { return $send_credentials ? $patron->userid : undef; }
+                elsif ( $param eq 'login_password' ) { return $send_credentials ? $password       : undef; }
                 elsif ( $param eq 'otp_token' )      { return $otp_token; }
                 elsif ( $param eq 'logout.x' )       { return $logout; }
                 else                                 { return; }
@@ -304,7 +307,7 @@ subtest 'checkauth() tests' => sub {
         $cgi->mock( 'cookie',         sub { return $sessionID } );
 
         my $two_factor_auth = Test::MockModule->new('Koha::Auth::TwoFactorAuth');
-        $two_factor_auth->mock( 'verify', sub { $verified } );
+        $two_factor_auth->mock( 'verify', sub { $verify_call_count++; return $verified; } );
 
         my ( $userid, $cookie, $flags );
         ( $userid, $cookie, $sessionID, $flags ) = C4::Auth::checkauth( $cgi, 'authrequired', undef, 'intranet' );
@@ -366,6 +369,71 @@ subtest 'checkauth() tests' => sub {
             'Second auth no longer required if OTP token has been verified'
         );
         logout($cgi);
+
+        subtest 'OTP attempts are rate-limited' => sub {
+            plan tests => 12;
+
+            t::lib::Mocks::mock_preference( 'TwoFactorAuthentication', 'enabled' );
+            t::lib::Mocks::mock_preference( 'FailedLoginAttempts',     3 );
+            $patron->auth_method('two-factor')->store;
+            $patron->update( { login_attempts => 0 } );
+
+            $otp_token = "wrong";
+            $verified  = 0;
+
+            # Calls checkauth, as it is when authentication is required, and returns the login page it displays
+            my $output    = '';
+            my $c4_output = Test::MockModule->new('C4::Output');
+            $c4_output->mock( 'output_html_with_http_headers', sub { $output = $_[2] } );
+            my $c4_auth = Test::MockModule->new('C4::Auth');
+            $c4_auth->mock( 'safe_exit', sub { return } );
+            my $login_page = sub {
+                $output = '';
+                C4::Auth::checkauth( $cgi, 0, undef, 'intranet' );
+                return $output;
+            };
+
+            # First-factor login puts the session into waiting-for-2FA...
+            ( $userid, $cookie, $sessionID, $flags ) = C4::Auth::checkauth( $cgi, 'authrequired', undef, 'intranet' );
+
+            # ...then each of these is a pure OTP-verification attempt, without the credentials.
+            $send_credentials = 0;
+            my $page = $login_page->();
+            like( $page, qr/Invalid two-factor code/, 'A wrong code is reported as invalid' );
+            like( $page, qr/name="otp_token"/,        'The code can be entered again' );
+            unlike( $page, qr/This account has been locked/, 'The account is not locked yet' );
+
+            $page = $login_page->();    # 2nd wrong code
+            $page = $login_page->();    # 3rd wrong code: this one locks the account
+
+            $patron->discard_changes;
+            is( $patron->login_attempts, 3, 'Each failed OTP attempt counts toward the account lockout' );
+            ok( $patron->account_locked, 'Account is locked out after FailedLoginAttempts failed OTP attempts' );
+            like( $page, qr/This account has been locked/, 'The attempt that locks the account says so' );
+
+            my $verify_calls_before_lockout = $verify_call_count;
+            $otp_token = "good";
+            $verified  = 1;                 # even the CORRECT token must now be refused
+            $page      = $login_page->();
+            is(
+                $verify_call_count, $verify_calls_before_lockout,
+                'verify() is no longer even called once the account is locked out'
+            );
+            is(
+                C4::Auth::get_session($sessionID)->param('waiting-for-2FA'), 1,
+                'Still waiting for OTP - a locked account cannot complete 2FA even with the correct code'
+            );
+            like( $page, qr/This account has been locked/, 'A locked account is told it is locked' );
+            unlike( $page, qr/Invalid two-factor code/, 'It is not reported as an invalid code' );
+            unlike( $page, qr/name="otp_token"/,        'The code can no longer be entered' );
+            $patron->discard_changes;
+            is( $patron->login_attempts, 3, 'login_attempts does not keep climbing once already locked' );
+
+            t::lib::Mocks::mock_preference( 'FailedLoginAttempts', 0 );    # restore: feature disabled
+            $patron->update( { login_attempts => 0 } );
+            $send_credentials = 1;
+            logout($cgi);
+        };
 
         t::lib::Mocks::mock_preference( 'TwoFactorAuthentication', 'enforced' );
         $patron->auth_method('password')->store;

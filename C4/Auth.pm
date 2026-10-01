@@ -917,23 +917,34 @@ sub checkauth {
             && $auth_state eq 'additional-auth-needed'
             && ( my $otp_token = $query->param('otp_token') ) )
         {
-            my $patron   = Koha::Patrons->find( { userid => $userid } );
-            my $auth     = Koha::Auth::TwoFactorAuth->new( { patron => $patron } );
-            my $verified = $auth->verify($otp_token);
-            $auth->clear;
-            if ($verified) {
+            my $patron = Koha::Patrons->find( { userid => $userid } );
 
-                # The token is correct, the user is fully logged in!
-                $auth_state = 'completed';
-                $session->param( 'waiting-for-2FA',       0 );
-                $session->param( 'waiting-for-2FA-setup', 0 );
+            # Reuse the existing account lockout mechanism (FailedLoginAttempts)
+            # for OTP attempts too, the same way checkpw() does for passwords -
+            # otherwise the first-factor session never expires and an attacker
+            # with valid credentials can brute-force the OTP unthrottled.
+            # Once locked, don't even call verify(): the login page reports the
+            # lockout, not an invalid code.
+            if ( !$patron->account_locked ) {
+                my $auth     = Koha::Auth::TwoFactorAuth->new( { patron => $patron } );
+                my $verified = $auth->verify($otp_token);
+                $auth->clear;
+                if ($verified) {
 
-                # This is an ugly trick to pass the test
-                # $query->param('koha_login_context') && ( $q_userid ne $userid )
-                # few lines later
-                $q_userid = $userid;
-            } else {
-                $invalid_otp_token = 1;
+                    # The token is correct, the user is fully logged in!
+                    $auth_state = 'completed';
+                    $session->param( 'waiting-for-2FA',       0 );
+                    $session->param( 'waiting-for-2FA-setup', 0 );
+                    $patron->update( { login_attempts => 0 } );
+
+                    # This is an ugly trick to pass the test
+                    # $query->param('koha_login_context') && ( $q_userid ne $userid )
+                    # few lines later
+                    $q_userid = $userid;
+                } else {
+                    $invalid_otp_token = 1;
+                    $patron->update( { login_attempts => $patron->login_attempts + 1 } );
+                }
             }
         }
 
@@ -1500,9 +1511,10 @@ sub checkauth {
     if ( $auth_state eq 'additional-auth-needed' ) {
         my $patron = Koha::Patrons->find( { userid => $userid } );
         $template->param(
-            TwoFA_prompt         => 1,
-            invalid_otp_token    => $invalid_otp_token,
-            notice_email_address => $patron->notice_email_address,    # We could also pass logged_in_user if necessary
+            TwoFA_prompt            => 1,
+            invalid_otp_token       => $invalid_otp_token,
+            too_many_login_attempts => $patron->account_locked,         # The account locked while waiting for the code
+            notice_email_address    => $patron->notice_email_address,   # We could also pass logged_in_user if necessary
         );
     }
 

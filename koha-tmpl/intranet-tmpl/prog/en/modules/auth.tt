@@ -250,7 +250,7 @@
                     </ul>
                 [% END %]
             [% END %]
-        [% ELSIF TwoFA_prompt %]
+        [% ELSIF TwoFA_prompt && !too_many_login_attempts %]
             <form action="[% script_name | html %]" method="post" name="loginform" id="loginform" autocomplete="off">
                 [% INCLUDE 'csrf-token.inc' %]
                 <input type="hidden" name="login_op" value="cud-login" />
