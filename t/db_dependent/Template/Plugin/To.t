@@ -19,6 +19,8 @@ use Modern::Perl;
 
 use Test::NoWarnings;
 use Test::More tests => 2;
+use JSON ();
+use Template;
 use t::lib::TestBuilder;
 
 use Koha::Template::Plugin::To;
@@ -29,7 +31,7 @@ $schema->storage->txn_begin;
 my $builder = t::lib::TestBuilder->new;
 
 subtest 'json' => sub {
-    plan tests => 2;
+    plan tests => 4;
 
     subtest 'newlines' => sub {
         plan tests => 1;
@@ -64,6 +66,32 @@ lines|,
             q|a\u2028b\u2029c|,
             'U+2028/U+2029 are escaped'
         );
+    };
+
+    subtest 'escaped output still decodes to the original value' => sub {
+        plan tests => 2;
+
+        my $value = qq|</script><script>alert("x")</script> & 'q' \\ caf\x{e9} \x{2028}|;
+        my $out   = Koha::Template::Plugin::To->json($value);
+        is( JSON->new->decode(qq|["$out"]|)->[0], $value, 'quotes, backslashes and non-ASCII survive the round trip' );
+        unlike( $out, qr{[<>&+\x{2028}\x{2029}]}, 'no HTML-significant characters left in the output' );
+    };
+
+    subtest 'rendered inside a script block (bug 42796)' => sub {
+        plan tests => 2;
+
+        my $payload  = q|</script><script>alert('hacked')</script><script>|;
+        my $template = Template->new( { PLUGIN_BASE => 'Koha::Template::Plugin' } );
+        my $output;
+        $template->process(
+            \q{[% USE raw %][% USE To %]<script>let test = "[% To.json(payload) | $raw %]";</script>},
+            { payload => $payload }, \$output
+        ) or die $template->error;
+
+        my @script_tags = $output =~ m{<script}gi;
+        is( scalar @script_tags, 1, 'only the intended <script> element is present' );
+        my @closing_tags = $output =~ m{</script}gi;
+        is( scalar @closing_tags, 1, 'only the intended closing tag is present' );
     };
 };
 
