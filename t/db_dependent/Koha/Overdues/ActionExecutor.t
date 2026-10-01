@@ -21,7 +21,7 @@ use Modern::Perl;
 
 use Test::MockModule;
 use Test::NoWarnings;
-use Test::More tests => 23;
+use Test::More tests => 25;
 use Test::Warn;
 
 use Koha::Account;
@@ -985,6 +985,154 @@ subtest 'process_notice_queue: sms -> print fallback when patron has no smsalert
         $messages->next->message_transport_type, 'print',
         'mtt is print (synthesised fallback)'
     );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'process_notice_queue: two buckets degrading to print at one delay send one sheet' => sub {
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron  = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => {
+                branchcode     => $library->branchcode,
+                email          => q{},
+                emailpro       => q{},
+                B_email        => q{},
+                smsalertnumber => q{},
+            }
+        }
+    );
+    my $item  = $builder->build_sample_item( { homebranch => $library->branchcode } );
+    my $issue = $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => { borrowernumber => $patron->borrowernumber, itemnumber => $item->itemnumber }
+        }
+    );
+
+    $builder->build(
+        {
+            source => 'Letter',
+            value  => {
+                module                 => 'circulation',
+                code                   => 'OD1',
+                branchcode             => q{},
+                message_transport_type => 'print',
+                name                   => 'OD1 print',
+                title                  => 'OD1',
+                content                => 'print body',
+                is_html                => 0,
+                lang                   => 'default',
+            },
+        }
+    );
+
+    my $entry_item = {
+        borrowernumber    => $patron->borrowernumber,
+        itemnumber        => $item->itemnumber,
+        issue_id          => $issue->issue_id,
+        patronhomebranch  => $library->branchcode,
+        itemhomebranch    => $library->branchcode,
+        itemholdingbranch => $library->branchcode,
+    };
+
+    my $executor = Koha::Overdues::ActionExecutor->new;
+    for my $mtt (qw( sms email )) {
+        $executor->add_to_notice_queue(
+            $patron->borrowernumber, 'OD1', $mtt, 7,
+            [ { item => $entry_item, action => { type => 'notice', notice_code => 'OD1', mtt => $mtt }, delay => 7 } ],
+        );
+    }
+
+    $executor->process_notice_queue;
+
+    my $messages =
+        Koha::Notice::Messages->search( { borrowernumber => $patron->borrowernumber, letter_code => 'OD1' } );
+    is( $messages->count, 1, 'sms and email both degrade to print at delay 7 — one sheet, not two' );
+    is( $messages->next->message_transport_type, 'print', 'the one row is the synthesised print' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'process_notice_queue: a bucket that renders no letter does not suppress the next transport' => sub {
+    plan tests => 3;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron  = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => {
+                branchcode     => $library->branchcode,
+                email          => q{},
+                emailpro       => q{},
+                B_email        => q{},
+                smsalertnumber => q{},
+            }
+        }
+    );
+    my $item  = $builder->build_sample_item( { homebranch => $library->branchcode } );
+    my $issue = $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => { borrowernumber => $patron->borrowernumber, itemnumber => $item->itemnumber }
+        }
+    );
+
+    # Neither print nor sms has a template, so the sms bucket — drained first —
+    # resolves no letter at all. Only the email bucket behind it can render.
+    $builder->build(
+        {
+            source => 'Letter',
+            value  => {
+                module                 => 'circulation',
+                code                   => 'OD1',
+                branchcode             => q{},
+                message_transport_type => 'email',
+                name                   => 'OD1 email',
+                title                  => 'OD1',
+                content                => 'email body',
+                is_html                => 0,
+                lang                   => 'default',
+            },
+        }
+    );
+
+    my $entry_item = {
+        borrowernumber    => $patron->borrowernumber,
+        itemnumber        => $item->itemnumber,
+        issue_id          => $issue->issue_id,
+        patronhomebranch  => $library->branchcode,
+        itemhomebranch    => $library->branchcode,
+        itemholdingbranch => $library->branchcode,
+    };
+
+    my $executor = Koha::Overdues::ActionExecutor->new;
+    for my $mtt (qw( sms email )) {
+        $executor->add_to_notice_queue(
+            $patron->borrowernumber, 'OD1', $mtt, 7,
+            [ { item => $entry_item, action => { type => 'notice', notice_code => 'OD1', mtt => $mtt }, delay => 7 } ],
+        );
+    }
+
+    warning_like { $executor->process_notice_queue }
+    qr/No circulation OD1 letter transported by sms/,
+        'the sms bucket resolves no letter at all';
+
+    my $message =
+        Koha::Notice::Messages->search( { borrowernumber => $patron->borrowernumber, letter_code => 'OD1' } )->next;
+    ok( $message, 'the email bucket still sent — the sms bucket enqueued nothing, so nothing was deduped against' );
+    is( $message->content, 'email body', 'and it rendered from the email template' );
 
     $schema->storage->txn_rollback;
 };
