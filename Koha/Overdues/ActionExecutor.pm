@@ -39,6 +39,11 @@ use Koha::DateUtils qw( dt_from_string output_pref );
 # trigger script does not carry.
 use constant ITEM_CONTENT_FIELDS => qw( date_due title barcode author itemnumber );
 
+# Transports the notice queue is drained in, most reliable first, and the
+# allowlist of what it will send at all: a bucket whose transport is absent here
+# is never drained.
+my %TRANSPORT_ORDER = ( print => 0, sms => 1, email => 2 );
+
 =head1 NAME
 
 Koha::Overdues::ActionExecutor - Koha Overdue ActionExecutor object set class.
@@ -285,8 +290,7 @@ C<< $self->{notice_queue}{$borrowernumber}{$notice_code}{$mtt}{$delay} >>.
 Every item routed to the same bucket in L</route_item_actions_to_queue>
 renders into one letter via the template's repeat block.
 
-Processes transports in reliability order — C<print>, then C<sms>, then
-C<email>. When an C<sms> or C<email> entry can't be delivered (patron has no
+When an C<sms> or C<email> entry can't be delivered (patron has no
 C<smsalertnumber> / no C<notice_email_address>), a C<print> entry is
 synthesised instead.
 
@@ -303,11 +307,15 @@ therefore receives one letter per delay, on each configured transport — what
 C<overdue_notices.pl> sent, where each trigger level prepared its own letter and
 C<$print_sent> collapsed duplicates only within a level.
 
-L</_effective_transport> decides what a bucket is actually sent as, and
-L</_notice_already_queued> decides whether it still needs sending. Transports are
-processed in reliability order — C<print>, then C<sms>, then C<email> — so an
-explicitly configured print claims its delay first and renders from its own
-template, leaving degraded buckets to collapse into it.
+A letter code's transports are drained in C<%TRANSPORT_ORDER> — C<print>, then
+C<sms>, then C<email> — so an explicitly configured print claims its delay before
+any sms or email bucket can degrade into it, and renders from its own template
+rather than by fallback. That ordering only has to hold within one C<(borrower,
+letter_code)>, which is what both dedup keys are scoped to, so transports are
+walked inside the letter code rather than outside the whole queue.
+
+L</_effective_transport> decides what each bucket is actually sent as, and
+L</_notice_already_queued> decides whether it still needs sending.
 
 =cut
 
@@ -318,31 +326,28 @@ sub process_notice_queue {
         printf "NOTICES ENQUEUED: \n";
     }
 
-    for my $mtt (qw( print sms email )) {
-        for my $borrowernumber ( sort keys %{ $self->{notice_queue} } ) {
-            my $by_notice_code = $self->{notice_queue}{$borrowernumber};
-            for my $notice_code ( sort keys %$by_notice_code ) {
-                my $by_mtt = $by_notice_code->{$notice_code};
-                if ( !$by_mtt->{$mtt} ) {
-                    next;
-                }
+    for my $borrowernumber ( sort { $a <=> $b } keys %{ $self->{notice_queue} } ) {
+        my $patron = Koha::Patrons->find($borrowernumber);
+        if ( !$patron ) {
+            Koha::Logger->get->warn("process_notice_queue: borrower $borrowernumber not found — skipping");
+            next;
+        }
+
+        my $by_notice_code = $self->{notice_queue}{$borrowernumber};
+        for my $notice_code ( sort keys %$by_notice_code ) {
+            my $by_mtt = $by_notice_code->{$notice_code};
+
+            for my $mtt ( $self->_sendable_transports($by_mtt) ) {
+                my ( $effective_mtt, $origin_mtt ) = $self->_effective_transport( $patron, $mtt );
 
                 for my $delay ( sort { $a <=> $b } keys %{ $by_mtt->{$mtt} } ) {
                     my $entries = $by_mtt->{$mtt}{$delay};
-                    if ( !$entries || !@$entries ) {
-                        next;
-                    }
-
-                    my ( $effective_mtt, $origin_mtt ) = $self->_effective_transport( $borrowernumber, $mtt );
-                    if ( !$effective_mtt ) {
-                        next;
-                    }
 
                     if ( $self->_notice_already_queued( $borrowernumber, $notice_code, $effective_mtt, $delay ) ) {
                         next;
                     }
 
-                    if ( $self->_enqueue_letter_for_bucket( $entries, $effective_mtt, $origin_mtt ) ) {
+                    if ( $self->_enqueue_letter_for_bucket( $patron, $entries, $effective_mtt, $origin_mtt ) ) {
                         $self->_record_notice_enqueued( $borrowernumber, $notice_code, $effective_mtt, $delay );
                     }
                 }
@@ -353,9 +358,30 @@ sub process_notice_queue {
     return;
 }
 
+=head3 _sendable_transports
+
+  for my $mtt ( $self->_sendable_transports($by_mtt) ) { ... }
+
+The transports queued under one letter code that this pipeline will send,
+in the order they are drained — C<print>, then C<sms>, then C<email>.
+
+C<%TRANSPORT_ORDER> is the allowlist as well as the order, so a transport queued
+but absent from it is dropped here rather than needing a skip of its own.
+C<overdue_notices.pl> named C<itiva> to skip it; anything non-sendable added
+later is inert by default.
+
+=cut
+
+sub _sendable_transports {
+    my ( $self, $by_mtt ) = @_;
+
+    return sort { $TRANSPORT_ORDER{$a} <=> $TRANSPORT_ORDER{$b} }
+        grep { exists $TRANSPORT_ORDER{$_} } keys %$by_mtt;
+}
+
 =head3 _effective_transport
 
-  my ( $effective_mtt, $origin_mtt ) = $self->_effective_transport( $borrowernumber, $mtt );
+  my ( $effective_mtt, $origin_mtt ) = $self->_effective_transport( $patron, $mtt );
 
 The transport a bucket configured for C<$mtt> is actually sent as. An C<sms>
 bucket for a patron with no C<smsalertnumber>, or an C<email> bucket for a patron
@@ -363,21 +389,13 @@ with no C<notice_email_address>, degrades to C<print>; C<$origin_mtt> then names
 the transport it was configured for, so the letter can still render from that
 template where C<print> has none of its own.
 
-Returns the empty list when the borrower cannot be found.
-
 =cut
 
 sub _effective_transport {
-    my ( $self, $borrowernumber, $mtt ) = @_;
+    my ( $self, $patron, $mtt ) = @_;
 
     if ( $mtt eq 'print' ) {
         return ( 'print', undef );
-    }
-
-    my $patron = Koha::Patrons->find($borrowernumber);
-    if ( !$patron ) {
-        Koha::Logger->get->warn("process_notice_queue: borrower $borrowernumber not found — skipping");
-        return;
     }
 
     my $viable = $mtt eq 'sms' ? $patron->smsalertnumber : $patron->notice_email_address;
@@ -483,19 +501,18 @@ undeliverable sms/email bucket, and names the transport that bucket was
 configured for; it supplies the template when the queued transport has none of
 its own.
 
-Returns true when a row was enqueued. A bucket that resolves no patron, no items
-or no letter returns false, leaving the delay unclaimed so another bucket
-degrading to the same transport can still try — as C<overdue_notices.pl> did,
-where a missing template moved on to the next transport without setting
-C<$print_sent>.
+Returns true when a row was enqueued. A bucket that resolves no items or no
+letter returns false, leaving the delay unclaimed so another bucket degrading to
+the same transport can still try — as C<overdue_notices.pl> did, where a missing
+template moved on to the next transport without setting C<$print_sent>.
 
 =cut
 
 sub _enqueue_letter_for_bucket {
-    my ( $self, $entries, $effective_mtt, $origin_mtt ) = @_;
+    my ( $self, $patron, $entries, $effective_mtt, $origin_mtt ) = @_;
 
     my $head           = $entries->[0];
-    my $borrowernumber = $head->{item}->{borrowernumber};
+    my $borrowernumber = $patron->borrowernumber;
     my $notice_code    = $head->{action}->{notice_code};
     my $branchcode     = Koha::CirculationRules->resolve_rule_context_branchcode(
         {
@@ -504,12 +521,6 @@ sub _enqueue_letter_for_bucket {
             item_holdingbranch => $head->{item}->{itemholdingbranch},
         }
     );
-
-    my $patron = Koha::Patrons->find($borrowernumber);
-    if ( !$patron ) {
-        Koha::Logger->get->warn("process_notice_queue: borrower $borrowernumber not found — skipping");
-        return;
-    }
 
     my $library = Koha::Libraries->find($branchcode);
 
