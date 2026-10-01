@@ -174,7 +174,7 @@ subtest 'enact_restrict adds an OVERDUES debarment' => sub {
 };
 
 subtest 'enact_lost / enact_forgive_fine / enact_mark_returned' => sub {
-    plan tests => 5;
+    plan tests => 6;
 
     $schema->storage->txn_begin;
 
@@ -236,6 +236,11 @@ subtest 'enact_lost / enact_forgive_fine / enact_mark_returned' => sub {
     is(
         Koha::Old::Checkouts->search( { issue_id => $issue->issue_id } )->count,
         1, 'checkout archived to old_issues'
+    );
+    is(
+        Koha::Old::Checkouts->find( { issue_id => $issue->issue_id } )->checkin_library,
+        $library->branchcode,
+        'archived checkout records the checkout branch as checkin_library, as MarkIssueReturned does with no userenv'
     );
 
     $schema->storage->txn_rollback;

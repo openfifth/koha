@@ -18,8 +18,10 @@ package Koha::Overdues::TriggerProcessor;
 # along with Koha; if not, see <http://www.gnu.org/licenses>.
 
 use Modern::Perl;
+use Try::Tiny;
 use C4::Context;
 use Koha::CirculationRules;
+use Koha::Logger;
 use Koha::Overdues::RuleResolver;
 use Koha::Overdues::ActionExecutor;
 use Koha::Overdues::Repository;
@@ -175,23 +177,51 @@ sub _process_calendar_adjusted {
     my %effective_delay_by_raw_delay;    # branchcode => { raw_delay => effective_delay }
     for my $branch (@branches) {
         my $calendar = Koha::Library::Calendar->new( branchcode => $branch, days_mode => $days_mode );
+
+        # A branch closed on the run date should not processed
+        if ( $calendar->is_holiday($trigger_date) ) {
+            next;
+        }
+
         my @dates;
         for my $delay (@known_delay_values) {
-            my $target_dt       = $calendar->days_backward( $trigger_date->clone, $delay );
+
+            # days_backward throws past its iteration cap — skip any no open days branch
+            my $target_dt;
+            try {
+                $target_dt = $calendar->days_backward( $trigger_date->clone, $delay );
+            } catch {
+                Koha::Logger->get->warn("Calendar for branch $branch cannot resolve delay $delay — skipping: $_");
+            };
+
+            if ( !$target_dt ) {
+                next;
+            }
+
             my $effective_delay = $trigger_date->delta_days($target_dt)->in_units('days');
             push @dates, $target_dt->strftime('%Y-%m-%d');
             $effective_delay_by_raw_delay{$branch}{$delay} = $effective_delay;
         }
+
+        if ( !@dates ) {
+            next;
+        }
+
         $target_dates_by_branch{$branch} = \@dates;
     }
 
-    my $pair_count = @branches * @known_delay_values;
+    if ( !%target_dates_by_branch ) {
+        return;
+    }
+
+    my @processed_branches = keys %target_dates_by_branch;
+    my $pair_count         = @processed_branches * @known_delay_values;
 
     my $overdues_resultset;
     if ( $pair_count > CALENDAR_PAIRS_INLINE_LIMIT ) {
         $overdues_resultset = $self->_fetch_per_branch( \%target_dates_by_branch );
     } else {
-        my @pairs = map { { branchcode => $_, dates => $target_dates_by_branch{$_} } } @branches;
+        my @pairs = map { { branchcode => $_, dates => $target_dates_by_branch{$_} } } @processed_branches;
         $overdues_resultset = Koha::Overdues::Repository->get_overdue_summaries_by_branch_date_pairs( \@pairs );
     }
 
@@ -243,6 +273,8 @@ sub _dispatch_overdues {
         my $due_date     = dt_from_string( $row->date_due )->truncate( to => 'day' );
         my $days_overdue = $trigger_date->delta_days($due_date)->in_units('days');
 
+        my $itemtype = $item->effective_itemtype;
+
         my $item_hashref = {
             issue_id          => $row->issue_id,
             borrowernumber    => $row->borrowernumber,
@@ -250,7 +282,7 @@ sub _dispatch_overdues {
             branchcode        => $row->branchcode,
             date_due          => $row->date_due,
             categorycode      => $patron->categorycode,
-            itemtype          => $item->itype,
+            itemtype          => $itemtype,
             days_overdue      => $days_overdue,
             biblionumber      => $item->biblionumber,
             replacementfee    => $item->replacementprice,
@@ -270,13 +302,13 @@ sub _dispatch_overdues {
 
         $seen_branches{$rule_branchcode}          = 1;
         $seen_categories{ $patron->categorycode } = 1;
-        $seen_itemtypes{ $item->itype }           = 1;
+        $seen_itemtypes{$itemtype}                = 1;
 
         # The raw fetch matches each context column on its own, so it needs the union
         # of the values seen. Resolving effective sets does not: only the combinations
         # an item actually presents are ever looked up, and those are a sparse subset
         # of the three lists crossed together.
-        $seen_contexts{ join( "|", $rule_branchcode, $patron->categorycode, $item->itype ) } = 1;
+        $seen_contexts{ join( "|", $rule_branchcode, $patron->categorycode, $itemtype ) } = 1;
 
         push @overdue_items, $item_hashref;
     }

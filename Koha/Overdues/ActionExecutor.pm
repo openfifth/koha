@@ -573,6 +573,8 @@ sub _enqueue_letter_for_bucket {
             "List too long for form; please check your account online for a complete list of your overdue items.";
     }
 
+    $self->_warn_unreplaced_placeholders($letter);
+
     C4::Letters::EnqueueLetter(
         {
             letter                 => $letter,
@@ -590,6 +592,33 @@ sub _enqueue_letter_for_bucket {
     }
 
     return 1;
+}
+
+=head3 _warn_unreplaced_placeholders
+
+Warn under C<verbose> about C<< <term> >> sequences the render left behind,
+naming each one. A template referencing a token the letter was not given renders
+it literally and the notice goes out with the markup in it, which is otherwise
+only discovered by a patron reading it.
+
+Ported from C<overdue_notices.pl> (notices:807-811), which scanned the same way
+and reported under its own C<--verbose>.
+
+=cut
+
+sub _warn_unreplaced_placeholders {
+    my ( $self, $letter ) = @_;
+
+    if ( !$self->{verbose} ) {
+        return;
+    }
+
+    my @misses = grep { /./ } map { /^([^>]*)[>]+/; ( $1 || q{} ); } split /\</, $letter->{content};
+    if (@misses) {
+        Koha::Logger->get->warn( "The following terms were not matched and replaced: \n\t" . join "\n\t", @misses );
+    }
+
+    return;
 }
 
 =head3 _letter_payload
@@ -931,8 +960,9 @@ sub enact_mark_returned {
     }
     $checkout->mark_returned(
         {
-            borrowernumber => $overdue_item->{borrowernumber},
-            privacy        => $patron->privacy,
+            borrowernumber  => $overdue_item->{borrowernumber},
+            privacy         => $patron->privacy,
+            checkin_library => $checkout->branchcode,
             %{ $self->_item_store_params },
         }
     );

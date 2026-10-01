@@ -20,7 +20,8 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 7;
+use Test::MockModule;
+use Test::More tests => 9;
 
 use Koha::Notice::Messages;
 
@@ -408,6 +409,137 @@ subtest 'ProcessOverdues backdated run — trigger_date replays the day a run wa
 
     $item->discard_changes;
     is( $item->itemlost, 1, 'backdating trigger_date to the missed day fires the delay 7 trigger' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'ProcessOverdues calendar-adjusted path — a branch closed on the run date is skipped' => sub {
+    plan tests => 1;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'OverdueTriggersCalendar',   1 );
+    t::lib::Mocks::mock_preference( 'useDaysMode',               'Calendar' );
+    t::lib::Mocks::mock_preference( 'CircControl',               'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'useDefaultReplacementCost', 0 );
+
+    Koha::CirculationRules->search( { rule_name => { -like => 'overdue\_%' } } )->delete;
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron =
+        $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $library->branchcode } } );
+    my $item = $builder->build_sample_item( { homebranch => $library->branchcode, replacementprice => 5 } );
+
+    my $today = dt_from_string;
+    $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => {
+                borrowernumber => $patron->borrowernumber,
+                itemnumber     => $item->itemnumber,
+                branchcode     => $library->branchcode,
+                date_due       => $today->clone->subtract( days => 7 )->strftime('%Y-%m-%d %H:%M:%S'),
+            },
+        }
+    );
+
+    # The run date itself is a closure for this branch.
+    Koha::Library::Calendar->new( branchcode => $library->branchcode )->add_single_closure(
+        {
+            date        => $today->ymd,
+            title       => 'closed on the run date',
+            description => '',
+        }
+    );
+
+    for my $row ( [ 'overdue_1_delay', 7 ], [ 'overdue_1_lost', 1 ] ) {
+        Koha::CirculationRules->set_rule(
+            {
+                branchcode   => $library->branchcode,
+                categorycode => $patron->categorycode,
+                itemtype     => $item->effective_itemtype,
+                rule_name    => $row->[0],
+                rule_value   => $row->[1],
+            }
+        );
+    }
+
+    Koha::Overdues::TriggerProcessor->new->ProcessOverdues;
+
+    $item->discard_changes;
+    is( $item->itemlost, 0, 'nothing enacted for a branch whose run date is a holiday' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'ProcessOverdues calendar-adjusted path — one branch\'s unusable calendar does not stop the others' => sub {
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'OverdueTriggersCalendar',   1 );
+    t::lib::Mocks::mock_preference( 'useDaysMode',               'Calendar' );
+    t::lib::Mocks::mock_preference( 'CircControl',               'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'useDefaultReplacementCost', 0 );
+
+    Koha::CirculationRules->search( { rule_name => { -like => 'overdue\_%' } } )->delete;
+
+    my $today = dt_from_string;
+    my %item;
+    my %library;
+
+    for my $which (qw( broken healthy )) {
+        $library{$which} = $builder->build_object( { class => 'Koha::Libraries' } );
+        my $patron = $builder->build_object(
+            { class => 'Koha::Patrons', value => { branchcode => $library{$which}->branchcode } } );
+        $item{$which} =
+            $builder->build_sample_item( { homebranch => $library{$which}->branchcode, replacementprice => 5 } );
+
+        $builder->build_object(
+            {
+                class => 'Koha::Checkouts',
+                value => {
+                    borrowernumber => $patron->borrowernumber,
+                    itemnumber     => $item{$which}->itemnumber,
+                    branchcode     => $library{$which}->branchcode,
+                    date_due       => $today->clone->subtract( days => 7 )->strftime('%Y-%m-%d %H:%M:%S'),
+                },
+            }
+        );
+    }
+
+    # One global rule set, so both branches resolve the same trigger.
+    for my $row ( [ 'overdue_1_delay', 7 ], [ 'overdue_1_lost', 1 ] ) {
+        Koha::CirculationRules->set_rule(
+            {
+                branchcode   => undef,
+                categorycode => undef,
+                itemtype     => undef,
+                rule_name    => $row->[0],
+                rule_value   => $row->[1],
+            }
+        );
+    }
+
+    my $broken_branchcode = $library{broken}->branchcode;
+    my $calendar_mock     = Test::MockModule->new('Koha::Library::Calendar');
+    $calendar_mock->mock(
+        'days_backward',
+        sub {
+            my ( $self, @args ) = @_;
+            if ( $self->{branchcode} eq $broken_branchcode ) {
+                Koha::Exceptions::Calendar::NoOpenDays->throw('no open day found');
+            }
+            return $calendar_mock->original('days_backward')->( $self, @args );
+        }
+    );
+
+    Koha::Overdues::TriggerProcessor->new->ProcessOverdues;
+
+    $item{broken}->discard_changes;
+    $item{healthy}->discard_changes;
+    is( $item{broken}->itemlost,  0, 'the branch whose calendar throws enacts nothing' );
+    is( $item{healthy}->itemlost, 1, 'and every other branch is still processed' );
 
     $schema->storage->txn_rollback;
 };
