@@ -242,7 +242,7 @@ subtest 'enact_lost / enact_forgive_fine / enact_mark_returned' => sub {
 };
 
 subtest 'enact_charge creates LOST debit with caller-resolved branch' => sub {
-    plan tests => 3;
+    plan tests => 4;
 
     $schema->storage->txn_begin;
 
@@ -289,6 +289,7 @@ subtest 'enact_charge creates LOST debit with caller-resolved branch' => sub {
         $line->branchcode, $library->branchcode,
         'LOST debit stamped with item home library (LostChargesControl=ItemHomeLibrary)'
     );
+    is( $line->issue_id, $issue->issue_id, 'LOST debit carries the checkout issue_id' );
 
     $schema->storage->txn_rollback;
 };

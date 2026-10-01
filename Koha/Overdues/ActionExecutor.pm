@@ -690,7 +690,7 @@ sub enact_charge {
     Koha::Account->new( { patron_id => $overdue_item->{borrowernumber} } )->add_lost_replacement_fee(
         {
             item              => $item,
-            issue             => $issue,
+            issue_id          => $overdue_item->{issue_id},
             library_id        => $rule_branch,
             interface         => 'cron',
             description       => $description,
