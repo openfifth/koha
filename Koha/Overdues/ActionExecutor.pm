@@ -433,7 +433,7 @@ sub _notice_already_queued {
 
     if ( !exists $self->{notices_queued_before_run}{$transport_key} ) {
         $self->{notices_queued_before_run}{$transport_key} =
-            $self->_notice_exists( $borrowernumber, $notice_code, $mtt, [ 'pending', 'sent' ] );
+            $self->_notice_exists( $borrowernumber, $notice_code, $mtt );
     }
 
     if ( $self->{notices_queued_before_run}{$transport_key} ) {
@@ -463,28 +463,32 @@ sub _record_notice_enqueued {
 =head3 _notice_exists
 
 Returns true if a message_queue row for this (borrowernumber, letter_code,
-message_transport_type) was queued on or after the trigger date and still holds
-one of the given statuses.
+message_transport_type) was queued on or after the trigger date and is either
+still waiting for C<SendQueuedMessages> or has already gone out.
 
-L</process_notice_queue> calls this once per transport key and caches the answer,
-so it reports the state the key was in before this run enqueued anything. It
-carries no notion of delay — message_queue has no column for one — which is why
-the per-delay dedup is held in memory alongside it rather than read back from the
-database. It also matches rows this run did not create, so a notice of the same
-code sent by staff earlier the same day suppresses the overdue one.
+C<failed> and C<deleted> rows deliberately do not count: a notice that never
+reached the patron should not stop a later run from queueing it again.
+
+L</_notice_already_queued> calls this once per transport key and caches the
+answer, so it reports the state the key was in before this run enqueued anything.
+It carries no notion of delay — message_queue has no column for one — which is
+why the per-delay dedup is held in memory alongside it rather than read back from
+the database. It also matches rows this run did not create, so a notice of the
+same code sent by staff earlier the same day suppresses the overdue one.
 
 =cut
 
 sub _notice_exists {
-    my ( $self, $borrowernumber, $code, $type, $status ) = @_;
+    my ( $self, $borrowernumber, $notice_code, $mtt ) = @_;
+
     my $from = $self->{trigger_date}->clone->truncate( to => 'day' )->strftime('%Y-%m-%d %H:%M:%S');
 
     return Koha::Notice::Messages->search(
         {
             borrowernumber         => $borrowernumber,
-            letter_code            => $code,
-            message_transport_type => $type,
-            status                 => $status,
+            letter_code            => $notice_code,
+            message_transport_type => $mtt,
+            status                 => [ 'pending', 'sent' ],
             time_queued            => { '>=' => $from },
         }
     )->count > 0;
