@@ -4176,6 +4176,7 @@ CREATE TABLE `issues` (
   KEY `itemnumber_idx` (`itemnumber`),
   KEY `branchcode_idx` (`branchcode`),
   KEY `bordate` (`borrowernumber`,`timestamp`),
+  KEY `date_due_idx` (`date_due`,`borrowernumber`),
   KEY `issues_ibfk_borrowers_borrowernumber` (`issuer_id`),
   KEY `issues_booking_id_fk` (`booking_id`),
   CONSTRAINT `issues_booking_id_fk` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`booking_id`) ON DELETE SET NULL ON UPDATE CASCADE,
