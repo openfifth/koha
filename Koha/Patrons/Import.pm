@@ -173,8 +173,8 @@ LINE: while ( my $borrowerline = <$handle> ) {
             $invalid++;
             last LINE;
         } elsif ( defined $borrower{flags}
-            && $borrower{flags} ne ""
-            && $borrower{flags} == 1
+            && $borrower{flags} =~ /^\d+$/
+            && ( $borrower{flags} & 1 )
             && $cannot_set_superlibrarian )
         {
             push @errors,
