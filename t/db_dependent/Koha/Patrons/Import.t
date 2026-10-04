@@ -1685,7 +1685,7 @@ subtest 'patron_attributes' => sub {
 
 subtest 'test permissions flag' => sub {
 
-    plan tests => 18;
+    plan tests => 21;
 
     my $patron      = $builder->build_object( { class => 'Koha::Patrons' } );
     my $patron_info = $patron->unblessed;
@@ -1764,6 +1764,23 @@ subtest 'test permissions flag' => sub {
         $result->{errors}->[0]->{invalid_superlibrarian}, 1,
         "Import aborted because staff doesn't have superlibrarian permission"
     );
+
+    # borrowers.flags is a bitmask: any odd value includes the superlibrarian bit
+    $patron      = $builder->build_object( { class => 'Koha::Patrons' } );
+    $patron_info = $patron->unblessed;
+    $patron->delete;
+    my $filename_3 = make_csv(
+        $temp_dir, $csv_headers,
+        join(
+            ",", $patron_info->{surname}, $patron_info->{userid}, $patron_info->{branchcode},
+            $patron_info->{categorycode}, 3
+        )
+    );
+    open( my $handle_3, "<", $filename_3 ) or die "cannot open < $filename_3: $!";
+    $result = $patrons_import->import_patrons( { %{$params_1}, file => $handle_3 }, $defaults );
+    is( $result->{imported},                              0, 'Patron with flags=3 not imported' );
+    is( $result->{errors}->[0]->{invalid_superlibrarian}, 1, 'flags=3 rejected as it includes superlibrarian' );
+    is( Koha::Patrons->find( { userid => $patron_info->{userid} } ), undef, 'Patron was not created' );
 
     # Give them superlibrarian permission
     # and set it in userenv
