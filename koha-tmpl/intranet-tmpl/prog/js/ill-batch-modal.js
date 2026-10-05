@@ -381,9 +381,11 @@
     // upon success
     function makeLocalSubmission(identifier, metadata, i) {
         const row = tableContent.data[i];
-        const selected_backend_obj = row.auto_backends.find(function (b) {
-            return b.suggested === 1;
-        });
+        const selected_backend_obj = Array.isArray(row.auto_backends)
+            ? row.auto_backends.find(function (b) {
+                  return b.suggested === 1;
+              })
+            : undefined;
         let selected_backend = selected_backend_obj
             ? selected_backend_obj.name
             : batch.data.backend;
