@@ -186,6 +186,7 @@ sub _shared_preferences {
         ReturnBeforeExpiry
         TransfersMaxDaysWarning
         UseBranchTransferLimits
+        UseDisplayModule
         UseTransportCostMatrix
         UseCourseReserves
         finesCalendar
@@ -209,6 +210,7 @@ sub _shared_preferences {
         AutoResumeSuspendedHolds
         canreservefromotherbranches
         decreaseLoanHighHolds
+        DisplayItemsLog
         DisplayMultiPlaceHold
         emailLibrarianWhenHoldIsPlaced
         ExpireReservesMaxPickUpDelay
