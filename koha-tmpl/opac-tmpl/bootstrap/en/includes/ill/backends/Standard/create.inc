@@ -102,6 +102,26 @@
         [% type = whole.value.other.type %]
         [% IF type %]
             [% INCLUDE "ill/backends/Standard/shared/forms/${type}.inc" %]
+
+            [% IF disclaimer %]
+                <fieldset class="rows">
+                    <legend>Type disclaimer</legend>
+                    [% FOREACH field IN disclaimer.fields %]
+                        [% field.text | $raw %]
+                        [% SET disc_av_category_code = AuthorisedValues.GetAuthValueDropbox(field.av_cat) %]
+                        [% IF disc_av_category_code.count %]
+                            <br />
+                            <select name="type_disclaimer_value">
+                                [% FOR av_option IN disc_av_category_code %]
+                                    <option value="[% av_option.lib_opac | html %]">[% av_option.lib_opac | html %]</option>
+                                [% END %]
+                            </select>
+                        [% END %]
+                        <br />
+                    [% END %]
+                </fieldset>
+                <input type="hidden" name="type_disclaimer_submitted" value="1" />
+            [% END %]
         [% END %]
         <legend>Additional information</legend>
         <fieldset class="rows">

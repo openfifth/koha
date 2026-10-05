@@ -145,6 +145,12 @@ if ($backends_available) {
         my $type_disclaimer = Koha::ILL::Request::Workflow::TypeDisclaimer->new( $params, 'staff' );
         my $confirm_auto    = Koha::ILL::Request::Workflow::ConfirmAuto->new( $params, 'staff' );
 
+        # ILLModuleDisclaimerByType operation
+        # This happens inline on the first screen, so does not exit early
+        if ( $type_disclaimer->show_type_disclaimer($request) ) {
+            $template->param( $type_disclaimer->type_disclaimer_template_params($params) );
+        }
+
         # ILLHistoryCheck operation
         if ( $history_check->show_history_check($request) ) {
             $op = 'historycheck';
@@ -154,11 +160,6 @@ if ($backends_available) {
         } elsif ( $availability->show_availability($request) ) {
             $op = 'availability';
             $template->param( $availability->availability_template_params($params) )
-
-            # ILLModuleDisclaimerByType operation
-        } elsif ( $type_disclaimer->show_type_disclaimer($request) ) {
-            $op = 'typedisclaimer';
-            $template->param( $type_disclaimer->type_disclaimer_template_params($params) );
 
             # ConfirmAuto operation
         } elsif ( $confirm_auto->show_confirm_auto($request) ) {

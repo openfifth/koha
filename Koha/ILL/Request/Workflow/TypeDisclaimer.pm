@@ -52,6 +52,8 @@ Given $params, return true if type disclaimer should be shown
 sub show_type_disclaimer {
     my ( $self, $request ) = @_;
 
+    return 0 unless $self->{metadata}->{type};
+
     my $disc_sys_pref = $self->_get_type_disclaimer_sys_pref;
 
     my $disc_info = $self->_get_type_disclaimer_info(
@@ -75,13 +77,7 @@ sub show_type_disclaimer {
         && $disc_sys_pref->{all}
 
         # Type disclaimer has not yet been submitted
-        && !$self->{metadata}->{type_disclaimer_submitted}
-
-        # The form has been submitted and the backend is able to create the request
-        && $request->_backend_capability(
-        'can_create_request',
-        $self->{metadata}
-        );
+        && !$self->{metadata}->{type_disclaimer_submitted};
 }
 
 =head3 type_disclaimer_template_params

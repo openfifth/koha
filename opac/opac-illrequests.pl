@@ -140,6 +140,12 @@ if ( $op eq 'list' ) {
         my $type_disclaimer = Koha::ILL::Request::Workflow::TypeDisclaimer->new( $params, 'opac' );
         my $confirm_auto    = Koha::ILL::Request::Workflow::ConfirmAuto->new( $params, 'opac' );
 
+        # ILLModuleDisclaimerByType operation
+        # This happens inline on the first screen, so does not exit early
+        if ( $type_disclaimer->show_type_disclaimer($request) ) {
+            $template->param( $type_disclaimer->type_disclaimer_template_params($params) );
+        }
+
         # ILLHistoryCheck operation
         if ( $history_check->show_history_check($request) ) {
             $op = 'historycheck';
@@ -153,15 +159,6 @@ if ( $op eq 'list' ) {
         } elsif ( $availability->show_availability($request) ) {
             $op = 'availability';
             $template->param( $availability->availability_template_params($params) );
-            output_html_with_http_headers $query, $cookie,
-                $template->output, undef,
-                { force_no_caching => 1 };
-            exit;
-
-            # ILLModuleDisclaimerByType operation
-        } elsif ( $type_disclaimer->show_type_disclaimer($request) ) {
-            $op = 'typedisclaimer';
-            $template->param( $type_disclaimer->type_disclaimer_template_params($params) );
             output_html_with_http_headers $query, $cookie,
                 $template->output, undef,
                 { force_no_caching => 1 };
