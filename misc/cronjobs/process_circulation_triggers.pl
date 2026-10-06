@@ -93,6 +93,7 @@ use Koha::Database;
 use Koha::DateUtils qw( dt_from_string );
 use Koha::Overdues::TriggerProcessor;
 use C4::Log qw( cronlogaction );
+use Koha::Script -cron;
 
 my $command_line_options = join( " ", @ARGV );
 cronlogaction( { info => $command_line_options } );
