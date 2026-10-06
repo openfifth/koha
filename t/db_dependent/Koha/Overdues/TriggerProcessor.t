@@ -48,7 +48,7 @@ subtest 'no overdue delay rules → early return' => sub {
     Koha::CirculationRules->search( { rule_name => { -like => 'overdue%delay' } } )->delete;
 
     my $tp = Koha::Overdues::TriggerProcessor->new;
-    is( $tp->ProcessOverdues, undef, 'returns early when no overdue delay rules exist' );
+    is( $tp->process_overdues, undef, 'returns early when no overdue delay rules exist' );
 
     # A run that never reaches _dispatch_overdues reports nothing matched and no
     # action counts, rather than an empty-looking summary indistinguishable from
@@ -58,7 +58,7 @@ subtest 'no overdue delay rules → early return' => sub {
     $schema->storage->txn_rollback;
 };
 
-subtest 'ProcessOverdues simple path — lost + restrict end-to-end' => sub {
+subtest 'process_overdues simple path — lost + restrict end-to-end' => sub {
     plan tests => 5;
 
     $schema->storage->txn_begin;
@@ -107,7 +107,7 @@ subtest 'ProcessOverdues simple path — lost + restrict end-to-end' => sub {
     }
 
     my $trigger_processor = Koha::Overdues::TriggerProcessor->new;
-    $trigger_processor->ProcessOverdues;
+    $trigger_processor->process_overdues;
 
     $item->discard_changes;
     is( $item->itemlost, 1, 'item marked lost via the trigger pipeline' );
@@ -129,7 +129,7 @@ subtest 'ProcessOverdues simple path — lost + restrict end-to-end' => sub {
     is( $restrictions_first_pass->next->type->code, 'OVERDUES', 'restriction type is OVERDUES' );
 
     # A second pass should not re-add a debarment (AddUniqueDebarment dedupes).
-    Koha::Overdues::TriggerProcessor->new->ProcessOverdues;
+    Koha::Overdues::TriggerProcessor->new->process_overdues;
     my $restrictions_second_pass = $patron->restrictions->search( { type => 'OVERDUES' } );
     is( $restrictions_second_pass->count, 1, 'one OVERDUES restriction added' );
 
@@ -138,7 +138,7 @@ subtest 'ProcessOverdues simple path — lost + restrict end-to-end' => sub {
     $schema->storage->txn_rollback;
 };
 
-subtest 'ProcessOverdues resolves rules by the correct branch as defined by CircControl' => sub {
+subtest 'process_overdues resolves rules by the correct branch as defined by CircControl' => sub {
     plan tests => 1;
 
     $schema->storage->txn_begin;
@@ -188,7 +188,7 @@ subtest 'ProcessOverdues resolves rules by the correct branch as defined by Circ
         );
     }
 
-    Koha::Overdues::TriggerProcessor->new->ProcessOverdues();
+    Koha::Overdues::TriggerProcessor->new->process_overdues();
 
     $item->discard_changes;
     is(
@@ -199,7 +199,7 @@ subtest 'ProcessOverdues resolves rules by the correct branch as defined by Circ
     $schema->storage->txn_rollback;
 };
 
-subtest 'ProcessOverdues calendar-adjusted path — closure shifts target date' => sub {
+subtest 'process_overdues calendar-adjusted path — closure shifts target date' => sub {
     plan tests => 2;
 
     $schema->storage->txn_begin;
@@ -270,7 +270,7 @@ subtest 'ProcessOverdues calendar-adjusted path — closure shifts target date' 
         );
     }
 
-    Koha::Overdues::TriggerProcessor->new->ProcessOverdues;
+    Koha::Overdues::TriggerProcessor->new->process_overdues;
 
     $item->discard_changes;
     is( $item->itemlost, 1, 'calendar-adjusted path triggers on item due 10 calendar days ago (7 open days)' );
@@ -283,7 +283,7 @@ subtest 'ProcessOverdues calendar-adjusted path — closure shifts target date' 
     $schema->storage->txn_rollback;
 };
 
-subtest 'ProcessOverdues notice path — email rule degrades to print for patron with no email' => sub {
+subtest 'process_overdues notice path — email rule degrades to print for patron with no email' => sub {
     plan tests => 2;
 
     $schema->storage->txn_begin;
@@ -355,7 +355,7 @@ subtest 'ProcessOverdues notice path — email rule degrades to print for patron
         }
     );
 
-    Koha::Overdues::TriggerProcessor->new->ProcessOverdues;
+    Koha::Overdues::TriggerProcessor->new->process_overdues;
 
     my $messages =
         Koha::Notice::Messages->search( { borrowernumber => $patron->borrowernumber, letter_code => 'OD1' } );
@@ -368,7 +368,7 @@ subtest 'ProcessOverdues notice path — email rule degrades to print for patron
     $schema->storage->txn_rollback;
 };
 
-subtest 'ProcessOverdues backdated run — trigger_date replays the day a run was missed' => sub {
+subtest 'process_overdues backdated run — trigger_date replays the day a run was missed' => sub {
     plan tests => 2;
 
     $schema->storage->txn_begin;
@@ -418,12 +418,12 @@ subtest 'ProcessOverdues backdated run — trigger_date replays the day a run wa
 
     # Today's run cannot reach it: the item is 10 days overdue, and actions fire
     # only on the exact day a delay comes due.
-    Koha::Overdues::TriggerProcessor->new->ProcessOverdues;
+    Koha::Overdues::TriggerProcessor->new->process_overdues;
 
     $item->discard_changes;
     is( $item->itemlost, 0, 'a run anchored on today passes over the day that was missed' );
 
-    Koha::Overdues::TriggerProcessor->new( { trigger_date => $missed_run_date } )->ProcessOverdues;
+    Koha::Overdues::TriggerProcessor->new( { trigger_date => $missed_run_date } )->process_overdues;
 
     $item->discard_changes;
     is( $item->itemlost, 1, 'backdating trigger_date to the missed day fires the delay 7 trigger' );
@@ -431,7 +431,7 @@ subtest 'ProcessOverdues backdated run — trigger_date replays the day a run wa
     $schema->storage->txn_rollback;
 };
 
-subtest 'ProcessOverdues calendar-adjusted path — a branch closed on the run date is skipped' => sub {
+subtest 'process_overdues calendar-adjusted path — a branch closed on the run date is skipped' => sub {
     plan tests => 1;
 
     $schema->storage->txn_begin;
@@ -482,7 +482,7 @@ subtest 'ProcessOverdues calendar-adjusted path — a branch closed on the run d
         );
     }
 
-    Koha::Overdues::TriggerProcessor->new->ProcessOverdues;
+    Koha::Overdues::TriggerProcessor->new->process_overdues;
 
     $item->discard_changes;
     is( $item->itemlost, 0, 'nothing enacted for a branch whose run date is a holiday' );
@@ -490,7 +490,7 @@ subtest 'ProcessOverdues calendar-adjusted path — a branch closed on the run d
     $schema->storage->txn_rollback;
 };
 
-subtest 'ProcessOverdues calendar-adjusted path — one branch\'s unusable calendar does not stop the others' => sub {
+subtest 'process_overdues calendar-adjusted path — one branch\'s unusable calendar does not stop the others' => sub {
     plan tests => 2;
 
     $schema->storage->txn_begin;
@@ -552,7 +552,7 @@ subtest 'ProcessOverdues calendar-adjusted path — one branch\'s unusable calen
         }
     );
 
-    Koha::Overdues::TriggerProcessor->new->ProcessOverdues;
+    Koha::Overdues::TriggerProcessor->new->process_overdues;
 
     $item{broken}->discard_changes;
     $item{healthy}->discard_changes;
@@ -562,7 +562,7 @@ subtest 'ProcessOverdues calendar-adjusted path — one branch\'s unusable calen
     $schema->storage->txn_rollback;
 };
 
-subtest 'ProcessOverdues resolves the rule context by effective itemtype' => sub {
+subtest 'process_overdues resolves the rule context by effective itemtype' => sub {
     plan tests => 1;
 
     $schema->storage->txn_begin;
@@ -618,7 +618,7 @@ subtest 'ProcessOverdues resolves the rule context by effective itemtype' => sub
         );
     }
 
-    Koha::Overdues::TriggerProcessor->new->ProcessOverdues;
+    Koha::Overdues::TriggerProcessor->new->process_overdues;
 
     $item->discard_changes;
     is( $item->itemlost, 1, 'rule scoped to the biblio itemtype fires under item-level_itypes = 0' );

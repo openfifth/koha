@@ -94,9 +94,9 @@ sub summary {
     return $self->{summary};
 }
 
-=head3 ProcessOverdues
+=head3 process_overdues
 
-  $triggerProcessor->ProcessOverdues;
+  $triggerProcessor->process_overdues;
 
 Entry point used by C<process_circulation_triggers.pl>. Dispatches to the
 calendar-adjusted path when C<OverdueTriggersCalendar> is enabled, otherwise
@@ -104,7 +104,7 @@ to the simple DATEDIFF-based path.
 
 =cut
 
-sub ProcessOverdues {
+sub process_overdues {
     my ($self) = @_;
 
     if ( C4::Context->preference('OverdueTriggersCalendar') ) {

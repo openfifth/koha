@@ -180,7 +180,7 @@ if ($dry_run) {
 
 my $triggerProcessor = Koha::Overdues::TriggerProcessor->new(
     { verbose => $verbose, debug => $debug, dry_run => $dry_run, trigger_date => $trigger_date } );
-$triggerProcessor->ProcessOverdues();
+$triggerProcessor->process_overdues();
 
 if ( !$quiet ) {
     print_summary( $triggerProcessor->summary, $trigger_date );
