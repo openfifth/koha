@@ -216,7 +216,7 @@ our $RULE_KINDS = {
     },
     overdue_X_lost => {
         scope        => [ 'branchcode', 'categorycode', 'itemtype' ],
-        can_be_blank => 0,
+        can_be_blank => 1,
     },
     renewalperiod => {
         scope => [ 'branchcode', 'categorycode', 'itemtype' ],
