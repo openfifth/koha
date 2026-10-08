@@ -75,7 +75,6 @@
                     :minDelay="minDelay"
                     :maxDelay="maxDelay"
                     :setAllowSubmission="setAllowSubmission"
-                    :handleSetDelayToNull="handleSetDelayToNull"
                     :incrementDelay="incrementDelay"
                     :decrementDelay="decrementDelay"
                     :handleLost="handleLost"
@@ -94,6 +93,7 @@
                     :fallbackRuleSet="fallbackRuleSet"
                     :ruleSetInfo="ruleSetInfo"
                     :filteredLetters="filteredLetters"
+                    :handleNoticeChange="handleNoticeChange"
                     :letters="letters"
                     :transportTypes="transportTypes"
                     :setAllowSubmission="setAllowSubmission"
@@ -126,7 +126,9 @@ import EditActions from "./EditActions.vue";
 import EditNotice from "./EditNotice.vue";
 import { isEqual, cloneDeep } from "lodash";
 import {
-    findEffectiveRule,
+    buildProjectedRuleSet,
+    containsMatchingContext,
+    ruleSuffixes,
     handleLost,
     hasConflict,
     scrollToElementById,
@@ -250,137 +252,36 @@ export default {
                 context: this.context,
             };
 
-            // ensure that no property is set to null as this would delete the rule!
-            if (
-                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_delay`] !==
-                    null &&
-                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_delay`] !==
-                    this.fallbackRuleSet[`overdue_${this.triggerNumber}_delay`]
-            ) {
-                ruleSetToSubmit[`overdue_${this.triggerNumber}_delay`] =
-                    cloneDeep(
-                        this.ruleSetToSubmit[
-                            `overdue_${this.triggerNumber}_delay`
-                        ]
-                    );
-            }
+            const ownRuleSet = this.currentAndDefaultRawRuleSets.find(ruleSet =>
+                containsMatchingContext([this.context], ruleSet.context)
+            );
 
-            if (
-                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_lost`] !==
-                    null &&
-                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_lost`] !==
-                    this.fallbackRuleSet[`overdue_${this.triggerNumber}_lost`]
-            ) {
-                ruleSetToSubmit[`overdue_${this.triggerNumber}_lost`] =
-                    cloneDeep(
-                        this.ruleSetToSubmit[
-                            `overdue_${this.triggerNumber}_lost`
-                        ]
-                    );
-            }
+            for (const suffix of ruleSuffixes) {
+                const field = `overdue_${this.triggerNumber}_${suffix}`;
+                const value = this.ruleSetToSubmit[field];
+                const fallback = this.fallbackRuleSet[field]?.value;
 
-            if (
-                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_charge`] !==
-                    null &&
-                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_charge`] !==
-                    this.fallbackRuleSet[`overdue_${this.triggerNumber}_charge`]
-            ) {
-                ruleSetToSubmit[`overdue_${this.triggerNumber}_charge`] =
-                    cloneDeep(
-                        this.ruleSetToSubmit[
-                            `overdue_${this.triggerNumber}_charge`
-                        ]
-                    );
-            }
+                const isMtt = suffix === "mtt";
+                if (isMtt && value !== null && !Array.isArray(value)) {
+                    continue;
+                }
 
-            if (
-                this.ruleSetToSubmit[
-                    `overdue_${this.triggerNumber}_mark_returned`
-                ] !== null &&
-                this.ruleSetToSubmit[
-                    `overdue_${this.triggerNumber}_mark_returned`
-                ] !==
-                    this.fallbackRuleSet[
-                        `overdue_${this.triggerNumber}_mark_returned`
-                    ]
-            ) {
-                ruleSetToSubmit[`overdue_${this.triggerNumber}_mark_returned`] =
-                    cloneDeep(
-                        this.ruleSetToSubmit[
-                            `overdue_${this.triggerNumber}_mark_returned`
-                        ]
-                    );
-            }
+                const isSet = value !== null && value !== undefined;
+                const overrides =
+                    isSet &&
+                    (isMtt ? !isEqual(value, fallback) : value !== fallback);
 
-            if (
-                this.ruleSetToSubmit[
-                    `overdue_${this.triggerNumber}_forgive_fine`
-                ] !== null &&
-                this.ruleSetToSubmit[
-                    `overdue_${this.triggerNumber}_forgive_fine`
-                ] !==
-                    this.fallbackRuleSet[
-                        `overdue_${this.triggerNumber}_forgive_fine`
-                    ]
-            ) {
-                ruleSetToSubmit[`overdue_${this.triggerNumber}_forgive_fine`] =
-                    cloneDeep(
-                        this.ruleSetToSubmit[
-                            `overdue_${this.triggerNumber}_forgive_fine`
-                        ]
-                    );
-            }
+                if (overrides) {
+                    ruleSetToSubmit[field] = isMtt
+                        ? value.join(",")
+                        : cloneDeep(value);
+                    continue;
+                }
 
-            if (
-                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_notice`] !==
-                    null &&
-                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_notice`] !==
-                    this.fallbackRuleSet[`overdue_${this.triggerNumber}_notice`]
-            ) {
-                ruleSetToSubmit[`overdue_${this.triggerNumber}_notice`] =
-                    cloneDeep(
-                        this.ruleSetToSubmit[
-                            `overdue_${this.triggerNumber}_notice`
-                        ]
-                    );
-            }
-
-            if (
-                this.ruleSetToSubmit[
-                    `overdue_${this.triggerNumber}_restrict`
-                ] !== null &&
-                this.ruleSetToSubmit[
-                    `overdue_${this.triggerNumber}_restrict`
-                ] !==
-                    this.fallbackRuleSet[
-                        `overdue_${this.triggerNumber}_restrict`
-                    ]
-            ) {
-                ruleSetToSubmit[`overdue_${this.triggerNumber}_restrict`] =
-                    cloneDeep(
-                        this.ruleSetToSubmit[
-                            `overdue_${this.triggerNumber}_restrict`
-                        ]
-                    );
-            }
-
-            if (
-                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_mtt`] !==
-                    null &&
-                Array.isArray(
-                    this.ruleSetToSubmit[`overdue_${this.triggerNumber}_mtt`]
-                ) &&
-                !isEqual(
-                    this.ruleSetToSubmit[`overdue_${this.triggerNumber}_mtt`],
-                    this.fallbackRuleSet[`overdue_${this.triggerNumber}_mtt`]
-                )
-            ) {
-                ruleSetToSubmit[`overdue_${this.triggerNumber}_mtt`] =
-                    cloneDeep(
-                        this.ruleSetToSubmit[
-                            `overdue_${this.triggerNumber}_mtt`
-                        ].join(",")
-                    );
+                // Null deletes the stored rule; omitting the field leaves it in place.
+                if (ownRuleSet?.[field] != null) {
+                    ruleSetToSubmit[field] = null;
+                }
             }
 
             // in edit mode, check for changes from elsewhere to the rule set being edited
@@ -502,70 +403,17 @@ export default {
                 this.editMode === "edit" ? parseInt(triggerNumber) : null;
         },
         setFallbackRuleSet() {
-            this.fallbackRuleSet = {
-                [`overdue_${this.triggerNumber}_delay`]: findEffectiveRule(
-                    this.currentAndDefaultRawRuleSets,
-                    this.context,
-                    "delay",
-                    this.triggerNumber
-                ).value,
-            };
-
-            if (this.editMode === "add") {
-                return;
-            }
-            this.fallbackRuleSet = {
-                [`overdue_${this.triggerNumber}_delay`]: findEffectiveRule(
-                    this.currentAndDefaultRawRuleSets,
-                    this.context,
-                    "delay",
-                    this.triggerNumber
-                ).value,
-                [`overdue_${this.triggerNumber}_lost`]: findEffectiveRule(
-                    this.currentAndDefaultRawRuleSets,
-                    this.context,
-                    "lost",
-                    this.triggerNumber
-                ).value,
-                [`overdue_${this.triggerNumber}_charge`]: findEffectiveRule(
-                    this.currentAndDefaultRawRuleSets,
-                    this.context,
-                    "charge",
-                    this.triggerNumber
-                ).value,
-                [`overdue_${this.triggerNumber}_mark_returned`]:
-                    findEffectiveRule(
-                        this.currentAndDefaultRawRuleSets,
-                        this.context,
-                        "mark_returned",
-                        this.triggerNumber
-                    ).value,
-                [`overdue_${this.triggerNumber}_forgive_fine`]:
-                    findEffectiveRule(
-                        this.currentAndDefaultRawRuleSets,
-                        this.context,
-                        "forgive_fine",
-                        this.triggerNumber
-                    ).value,
-                [`overdue_${this.triggerNumber}_notice`]: findEffectiveRule(
-                    this.currentAndDefaultRawRuleSets,
-                    this.context,
-                    "notice",
-                    this.triggerNumber
-                ).value,
-                [`overdue_${this.triggerNumber}_mtt`]: findEffectiveRule(
-                    this.currentAndDefaultRawRuleSets,
-                    this.context,
-                    "mtt",
-                    this.triggerNumber
-                ).value,
-                [`overdue_${this.triggerNumber}_restrict`]: findEffectiveRule(
-                    this.currentAndDefaultRawRuleSets,
-                    this.context,
-                    "restrict",
-                    this.triggerNumber
-                ).value,
-            };
+            this.fallbackRuleSet = buildProjectedRuleSet(
+                { context: this.context },
+                this.triggerNumber,
+                this.currentAndDefaultRawRuleSets.filter(
+                    ruleSet =>
+                        !containsMatchingContext(
+                            [this.context],
+                            ruleSet.context
+                        )
+                )
+            );
         },
         setMinDelay() {
             if (
@@ -743,8 +591,25 @@ export default {
             }
             this.allowSubmission = false;
         },
-        handleSetDelayToNull() {
-            this.ruleSetToSubmit[`overdue_${this.triggerNumber}_delay`] = null;
+        handleNoticeChange() {
+            // A transport type is only meaningful alongside a letter. Resolve
+            // what the notice will actually be and drop the transports when
+            // that is "No letter".
+            const submittedNotice =
+                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_notice`];
+            const resolvedNotice =
+                submittedNotice ??
+                this.fallbackRuleSet?.[`overdue_${this.triggerNumber}_notice`]
+                    ?.value;
+
+            if (
+                resolvedNotice === "" ||
+                resolvedNotice === null ||
+                resolvedNotice === undefined
+            ) {
+                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_mtt`] =
+                    null;
+            }
             this.setAllowSubmission();
         },
     },

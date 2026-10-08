@@ -36,28 +36,19 @@
                             :placeholder="
                                 fallbackRuleSet?.[
                                     `overdue_${triggerNumber}_delay`
-                                ]
+                                ]?.value
                             "
                             :min="minDelay"
                             :max="maxDelay"
                             class="numeric-input"
                         />
-                        <button
-                            v-if="
-                                ruleSetToSubmit[
-                                    `overdue_${triggerNumber}_delay`
-                                ] !== null &&
-                                ruleSetToSubmit[
-                                    `overdue_${triggerNumber}_delay`
-                                ] !== undefined
-                            "
-                            type="button"
-                            class="btn btn-link clear-btn"
-                            :title="$__('Undo override and reset to fallback')"
-                            @click="handleSetDelayToNull"
-                        >
-                            <i class="fa-solid fa-xmark"></i>
-                        </button>
+                        <ResetToFallback
+                            class="clear-btn"
+                            :ruleSetToSubmit="ruleSetToSubmit"
+                            :fallbackRuleSet="fallbackRuleSet"
+                            :ruleName="`overdue_${triggerNumber}_delay`"
+                            :setAllowSubmission="setAllowSubmission"
+                        />
                         <div class="chevron-buttons">
                             <button
                                 type="button"
@@ -87,7 +78,7 @@
                         v-model="
                             ruleSetToSubmit[`overdue_${triggerNumber}_restrict`]
                         "
-                        :value="1"
+                        :value="'1'"
                     />
                     {{ $__("Yes") }}
                     <input
@@ -97,7 +88,7 @@
                         v-model="
                             ruleSetToSubmit[`overdue_${triggerNumber}_restrict`]
                         "
-                        :value="0"
+                        :value="'0'"
                     />
                     {{ $__("No") }}
                     <input
@@ -114,13 +105,13 @@
                         v-if="
                             fallbackRuleSet?.[
                                 `overdue_${triggerNumber}_restrict`
-                            ] !== null
+                            ]?.value !== null
                         "
                     >
                         ({{
                             fallbackRuleSet?.[
                                 `overdue_${triggerNumber}_restrict`
-                            ] === "1"
+                            ]?.value === "1"
                                 ? $__("Yes")
                                 : $__("No")
                         }})
@@ -135,6 +126,7 @@
                     label="description"
                     :reduce="val => val.value"
                     :options="lostValues"
+                    @update:modelValue="setAllowSubmission"
                 >
                     <template #search="{ attributes, events }">
                         <input
@@ -151,7 +143,7 @@
                                     ? handleLost(
                                           fallbackRuleSet[
                                               `overdue_${triggerNumber}_lost`
-                                          ],
+                                          ]?.value,
                                           lostValues
                                       )
                                     : ''
@@ -159,6 +151,12 @@
                         />
                     </template>
                 </v-select>
+                <ResetToFallback
+                    :ruleSetToSubmit="ruleSetToSubmit"
+                    :fallbackRuleSet="fallbackRuleSet"
+                    :ruleName="`overdue_${triggerNumber}_lost`"
+                    :setAllowSubmission="setAllowSubmission"
+                />
             </li>
             <li>
                 <label for="charge"
@@ -166,24 +164,27 @@
                 >
                 <div>
                     <input
+                        @click="setAllowSubmission"
                         type="radio"
                         id="charge-yes"
                         v-model="
                             ruleSetToSubmit[`overdue_${triggerNumber}_charge`]
                         "
-                        :value="1"
+                        :value="'1'"
                     />
                     {{ $__("Yes") }}
                     <input
+                        @click="setAllowSubmission"
                         type="radio"
                         id="charge-no"
                         v-model="
                             ruleSetToSubmit[`overdue_${triggerNumber}_charge`]
                         "
-                        :value="0"
+                        :value="'0'"
                     />
                     {{ $__("No") }}
                     <input
+                        @click="setAllowSubmission"
                         type="radio"
                         id="charge-fallback"
                         v-model="
@@ -194,15 +195,13 @@
                     {{ $__("Fallback to default") }}
                     <span
                         v-if="
-                            fallbackRuleSet[
-                                `overdue_${triggerNumber}_charge`
-                            ] !== null
+                            fallbackRuleSet[`overdue_${triggerNumber}_charge`]
+                                ?.value !== null
                         "
                     >
                         ({{
-                            fallbackRuleSet[
-                                `overdue_${triggerNumber}_charge`
-                            ] === 1
+                            fallbackRuleSet[`overdue_${triggerNumber}_charge`]
+                                ?.value === "1"
                                 ? $__("Yes")
                                 : $__("No")
                         }})
@@ -215,6 +214,7 @@
                 >
                 <div>
                     <input
+                        @click="setAllowSubmission"
                         type="radio"
                         id="mark_returned-yes"
                         v-model="
@@ -222,10 +222,11 @@
                                 `overdue_${triggerNumber}_mark_returned`
                             ]
                         "
-                        :value="1"
+                        :value="'1'"
                     />
                     {{ $__("Yes") }}
                     <input
+                        @click="setAllowSubmission"
                         type="radio"
                         id="mark_returned-no"
                         v-model="
@@ -233,10 +234,11 @@
                                 `overdue_${triggerNumber}_mark_returned`
                             ]
                         "
-                        :value="0"
+                        :value="'0'"
                     />
                     {{ $__("No") }}
                     <input
+                        @click="setAllowSubmission"
                         type="radio"
                         id="mark_returned-fallback"
                         v-model="
@@ -251,13 +253,13 @@
                         v-if="
                             fallbackRuleSet[
                                 `overdue_${triggerNumber}_mark_returned`
-                            ] !== null
+                            ]?.value !== null
                         "
                     >
                         ({{
                             fallbackRuleSet[
                                 `overdue_${triggerNumber}_mark_returned`
-                            ] === 1
+                            ]?.value === "1"
                                 ? $__("Yes")
                                 : $__("No")
                         }})
@@ -270,6 +272,7 @@
                 >
                 <div>
                     <input
+                        @click="setAllowSubmission"
                         type="radio"
                         id="forgive_fine-yes"
                         v-model="
@@ -277,10 +280,11 @@
                                 `overdue_${triggerNumber}_forgive_fine`
                             ]
                         "
-                        :value="1"
+                        :value="'1'"
                     />
                     {{ $__("Yes") }}
                     <input
+                        @click="setAllowSubmission"
                         type="radio"
                         id="forgive_fine-no"
                         v-model="
@@ -288,10 +292,11 @@
                                 `overdue_${triggerNumber}_forgive_fine`
                             ]
                         "
-                        :value="0"
+                        :value="'0'"
                     />
                     {{ $__("No") }}
                     <input
+                        @click="setAllowSubmission"
                         type="radio"
                         id="forgive_fine-fallback"
                         v-model="
@@ -306,13 +311,13 @@
                         v-if="
                             fallbackRuleSet[
                                 `overdue_${triggerNumber}_forgive_fine`
-                            ] !== null
+                            ]?.value !== null
                         "
                     >
                         ({{
                             fallbackRuleSet[
                                 `overdue_${triggerNumber}_forgive_fine`
-                            ] === 1
+                            ]?.value === "1"
                                 ? $__("Yes")
                                 : $__("No")
                         }})
@@ -327,7 +332,10 @@
 </template>
 
 <script>
+import ResetToFallback from "./ResetToFallback.vue";
+
 export default {
+    components: { ResetToFallback },
     props: {
         ruleSetInitialized: { type: Boolean, required: true },
         editMode: { type: [String, Boolean], required: true },
@@ -337,7 +345,6 @@ export default {
         minDelay: { type: Number, required: true },
         maxDelay: { type: Number, required: true },
         setAllowSubmission: { type: Function, required: true },
-        handleSetDelayToNull: { type: Function, required: true },
         incrementDelay: { type: Function, required: true },
         decrementDelay: { type: Function, required: true },
         handleLost: { type: Function, required: true },
