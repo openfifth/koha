@@ -67,15 +67,18 @@ import TriggersTable from "./TriggersTable.vue";
 import CirculationTriggersForm from "./CirculationTriggersForm.vue";
 import { inject } from "vue";
 import { storeToRefs } from "pinia";
+import {
+    ruleSuffixes,
+    findEffectiveRule,
+    handleContext,
+    hasExplicitRulesForTrigger,
+} from "@koha-vue/composables/circulation-rules";
 
 export default {
     setup() {
         const circRulesStore = inject("circRulesStore");
         const {
-            handleContext,
-            findEffectiveRule,
             deleteRuleSet,
-            hasExplicitRulesForTrigger,
             computeDeletionImpact,
             setAllFormattedRuleSets,
         } = circRulesStore;
@@ -84,18 +87,16 @@ export default {
             itemTypes,
             patronCategories,
             allCurrentLibraryRawRuleSets,
-            ruleSuffixes,
+            currentAndDefaultRawRuleSets,
         } = storeToRefs(circRulesStore);
         return {
             libraries,
             itemTypes,
             patronCategories,
             handleContext,
-            findEffectiveRule,
             allCurrentLibraryRawRuleSets,
-            ruleSuffixes,
+            currentAndDefaultRawRuleSets,
             deleteRuleSet,
-            hasExplicitRulesForTrigger,
             computeDeletionImpact,
             setAllFormattedRuleSets,
         };
@@ -135,7 +136,7 @@ export default {
             this.setFormattedEffectiveRuleSets();
 
             const deletedRuleSets = this.allCurrentLibraryRawRuleSets.filter(
-                rs => this.hasExplicitRulesForTrigger(rs, this.triggerNumber)
+                rs => hasExplicitRulesForTrigger(rs, this.triggerNumber)
             );
             const { dependentRuleSets, projectedDependentEffectiveRuleSets } =
                 await this.computeDeletionImpact(
@@ -187,25 +188,22 @@ export default {
                     context: { ...ruleSet.context },
                 };
 
-                if (
-                    !this.hasExplicitRulesForTrigger(
-                        ruleSet,
-                        this.triggerNumber
-                    )
-                ) {
+                if (!hasExplicitRulesForTrigger(ruleSet, this.triggerNumber)) {
                     return;
                 }
-                this.ruleSuffixes.forEach(ruleSuffix => {
+                ruleSuffixes.forEach(ruleSuffix => {
                     effectiveRuleSet[
                         `overdue_${this.triggerNumber}_${ruleSuffix}`
-                    ] = this.findEffectiveRule(
+                    ] = findEffectiveRule(
+                        this.currentAndDefaultRawRuleSets,
                         ruleSet.context,
                         ruleSuffix,
                         this.triggerNumber
                     );
                 });
                 effectiveRuleSet[`overdue_${this.triggerNumber}_has_rules`] =
-                    this.findEffectiveRule(
+                    findEffectiveRule(
+                        this.currentAndDefaultRawRuleSets,
                         ruleSet.context,
                         "has_rules",
                         this.triggerNumber

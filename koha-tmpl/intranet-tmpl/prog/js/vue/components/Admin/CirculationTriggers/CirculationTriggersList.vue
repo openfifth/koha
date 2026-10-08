@@ -306,7 +306,12 @@
                             :triggerNumber="number"
                         >
                             <router-link
-                                v-if="isLastTrigger(number)"
+                                v-if="
+                                    isLastTrigger(
+                                        number,
+                                        triggerCounts[currentLibraryId]
+                                    )
+                                "
                                 :to="{
                                     name: 'CirculationTriggersFormConfirmTriggerDelete',
                                     query: { triggerNumber: number },
@@ -328,7 +333,10 @@
                             <div
                                 :class="{
                                     'page-section bg-info': true,
-                                    'inline-block': isLastTrigger(number),
+                                    'inline-block': isLastTrigger(
+                                        number,
+                                        triggerCounts[currentLibraryId]
+                                    ),
                                 }"
                             >
                                 {{
@@ -359,6 +367,10 @@ import ToolbarButton from "../../ToolbarButton.vue";
 import TriggersTable from "./TriggersTable.vue";
 import { inject } from "vue";
 import { storeToRefs } from "pinia";
+import {
+    isLastTrigger,
+    scrollToElementById,
+} from "@koha-vue/composables/circulation-rules";
 
 export default {
     setup() {
@@ -368,11 +380,9 @@ export default {
             setAllFormattedRuleSets,
             setAllEffectiveRuleSets,
             setAllExhaustiveEffectiveRuleSets,
-            isLastTrigger,
             getLibrariesWithRules,
             getLibrariesBlockingTriggerDeletion,
             loadAllLibrariesRuleSets,
-            scrollToElementById,
         } = circRulesStore;
         const {
             currentLibraryId,
@@ -417,7 +427,6 @@ export default {
             from_branch,
             canManageAnyLibrary,
             user_library_id,
-            scrollToElementById,
         };
     },
     data() {
@@ -592,7 +601,7 @@ export default {
                         this.tabSelected = `Notice ${this.lastEditedTriggerNumber}`;
                         this.lastEditedTriggerNumber = null;
                     }
-                    await this.scrollToElementById("circ-triggers-content");
+                    await scrollToElementById("circ-triggers-content");
                 }
                 this.filtersInitialized = true;
             },

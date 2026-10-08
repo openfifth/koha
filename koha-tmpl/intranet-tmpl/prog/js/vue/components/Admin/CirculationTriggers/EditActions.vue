@@ -151,7 +151,8 @@
                                     ? handleLost(
                                           fallbackRuleSet[
                                               `overdue_${triggerNumber}_lost`
-                                          ]
+                                          ],
+                                          lostValues
                                       )
                                     : ''
                             "
