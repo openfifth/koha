@@ -48,6 +48,14 @@ OPAC:
                   0: Disable
             - "Koha OPAC as public. Private OPAC requires authentication before accessing the OPAC. "
             - 'Note: This does not affect the public API, see the <a href="/cgi-bin/koha/admin/preferences.pl?op=search&searchfield=RESTPublicAnonymousRequests">RESTPublicAnonymousRequests</a> to control the API.'
+
+        -
+            - pref: OPACShowLabelsForSearchInputs
+              choices:
+                  1: "Show"
+                  0: "Don't show"
+            - "labels beside each of the search input fields."
+
         -
             - pref: OPACShowLibraries
               choices:

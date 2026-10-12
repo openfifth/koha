@@ -597,6 +597,7 @@ INSERT INTO systempreferences ( `variable`, `value` ) VALUES
 ('OPACShibOnly','0'),
 ('OPACShowCheckoutName','0'),
 ('OPACShowHoldQueueDetails','none'),
+('OPACShowLabelsForSearchInputs', '0'),
 ('OPACShowLibraries', '1'),
 ('OPACShowMusicalInscripts','0'),
 ('OPACShowOpenURL', '0'),
