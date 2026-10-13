@@ -35,6 +35,7 @@ use English   qw{ -no_match_vars };
 use Try::Tiny qw( catch try );
 use Business::ISBN;
 use DateTime;
+use JSON qw( to_json );
 use C4::Context;
 use Koha::Database;
 use Koha::DateUtils qw( dt_from_string );
