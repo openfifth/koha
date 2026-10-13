@@ -572,15 +572,6 @@
                         [% END # / IF serialcollection %]
 
                         [% WRAPPER tab_panel tabname="holdings" %]
-                            [% IF bound_with_peers && bound_with_peers.size %]
-                                <div id="bound_with_peers" class="results_summary">
-                                    <span class="label">Also bound in this volume:</span>
-                                    [% FOREACH peer IN bound_with_peers %]
-                                        <a href="/cgi-bin/koha/opac-detail.pl?biblionumber=[% peer.biblionumber | uri %]">[% peer.title | html %]</a>
-                                        [%- UNLESS loop.last %];[% END %]
-                                    [% END %]
-                                </div>
-                            [% END %]
                             [% IF too_many_items %]
                                 <p>This record has many physical items ([% items_count | html %]). <a href="/cgi-bin/koha/opac-detail.pl?biblionumber=[% biblio.biblionumber | uri %]&amp;viewallitems=1">View all the physical items.</a></p>
                             [% ELSIF ( itemloop.size ) %]
@@ -1297,6 +1288,7 @@
                 <th id="item_copy" data-colname="item_copy" class="copynumber">Copy number</th>
                 <th id="item_status" data-colname="item_status" class="status">Status</th>
                 <th id="item_notes" data-colname="item_notes" class="notes">Notes</th>
+                <th id="item_bound_with" data-colname="item_bound_with" class="bound_with">Bound with</th>
                 <th id="item_datedue" data-colname="item_datedue" class="date_due">Date due</th>
                 <th id="item_barcode" data-colname="item_barcode" class="barcode">Barcode</th>
                 <th id="item_holds" data-colname="item_holds">Item holds</th>
@@ -1428,14 +1420,6 @@
                                     [% END %]
                                 [% END %]
                             [% END %]
-                            [% IF ( ITEM_RESULT.bound_with && ITEM_RESULT.bound_with_biblios.size ) %]
-                                <span class="bound_with_note d-block">
-                                    This title is bound with
-                                    [% FOREACH bound_biblio IN ITEM_RESULT.bound_with_biblios %]
-                                        <a href="/cgi-bin/koha/opac-detail.pl?biblionumber=[% bound_biblio.biblionumber | uri %]">[% bound_biblio.title | html %]</a>[% UNLESS loop.last %];[% END %]
-                                    [% END %]
-                                </span>
-                            [% END %]
                         </td>
                     [% ELSE %]
                         [% hidden_columns_force.$table_id.push('item_callnumber') %]
@@ -1531,6 +1515,17 @@
                         <td class="notes" property="description">[% ITEM_RESULT.itemnotes | $raw %]</td>
                     [% ELSE %]
                         [% hidden_columns_force.$table_id.push('item_notes') %]
+                        <td></td>
+                    [% END %]
+
+                    [% IF ( itemdata_bound_with ) %]
+                        <td class="bound_with">
+                            [% FOREACH bound_biblio IN ITEM_RESULT.bound_with_biblios %]
+                                <a href="/cgi-bin/koha/opac-detail.pl?biblionumber=[% bound_biblio.biblionumber | uri %]">[% bound_biblio.title | html %]</a>[% UNLESS loop.last %]<br />[% END %]
+                            [% END %]
+                        </td>
+                    [% ELSE %]
+                        [% hidden_columns_force.$table_id.push('item_bound_with') %]
                         <td></td>
                     [% END %]
 

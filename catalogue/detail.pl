@@ -197,8 +197,6 @@ my $items_params       = {
 my $all_items        = $biblio->items($items_params);
 my $items_to_display = $all_items->search( { $include_lost_items ? () : ( itemlost => 0 ) } );
 
-$template->param( bound_with_peers => $biblio->bound_with_peers );
-
 my $dat = &GetBiblioData($biblionumber);
 
 #is biblio a collection and are bundles enabled

@@ -18,7 +18,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 46;
+use Test::More tests => 45;
 use Test::Exception;
 use Test::Warn;
 
@@ -2660,7 +2660,7 @@ subtest 'CataloguingLog MARC-in-JSON diff tests' => sub {
 
 subtest 'linked_items() and items({ linked_items => 1 }) tests' => sub {
 
-    plan tests => 10;
+    plan tests => 11;
 
     $schema->storage->txn_begin;
 
@@ -2700,12 +2700,18 @@ subtest 'linked_items() and items({ linked_items => 1 }) tests' => sub {
     );
     t::lib::Mocks::mock_preference( 'EnableBoundWithItems', 1 );
 
-    my $record = $biblio->metadata_record( { embed_items => 1 } );
     my ( $itemtag, $itemsubfield ) = C4::Biblio::GetMarcFromKohaField('items.itemnumber');
+    my $record      = $biblio->metadata_record( { embed_items => 1 } );
     my @item_fields = $record->field($itemtag);
     is(
+        scalar( grep { $_->subfield($itemsubfield) == $shared_item->itemnumber } @item_fields ), 0,
+        'metadata_record({ embed_items => 1 }) does not embed the linked item field by default'
+    );
+    $record      = $biblio->metadata_record( { embed_items => 1, linked_items => 1 } );
+    @item_fields = $record->field($itemtag);
+    is(
         scalar( grep { $_->subfield($itemsubfield) == $shared_item->itemnumber } @item_fields ), 1,
-        'metadata_record({ embed_items => 1 }) embeds the linked item field'
+        'metadata_record({ embed_items => 1, linked_items => 1 }) embeds the linked item field'
     );
 
     # A record whose only item comes through a link offers the same pickup
@@ -2723,62 +2729,6 @@ subtest 'linked_items() and items({ linked_items => 1 }) tests' => sub {
         [ sort $third_biblio->pickup_locations( { patron => $patron } )->get_column('branchcode') ],
         [ sort $other_biblio->pickup_locations( { patron => $patron } )->get_column('branchcode') ],
         'pickup_locations() on a record with only a linked item matches the item record home record'
-    );
-
-    $schema->storage->txn_rollback;
-};
-
-subtest 'bound_with_peers() tests' => sub {
-
-    plan tests => 4;
-
-    $schema->storage->txn_begin;
-
-    t::lib::Mocks::mock_preference( 'EnableBoundWithItems', 1 );
-    t::lib::Mocks::mock_preference( 'RealTimeHoldsQueue',   0 );
-
-    my $native_biblio = $builder->build_sample_biblio( { title => 'Native' } );
-    my $peer_biblio_1 = $builder->build_sample_biblio( { title => 'Peer 1' } );
-    my $peer_biblio_2 = $builder->build_sample_biblio( { title => 'Peer 2' } );
-    my $lone_biblio   = $builder->build_sample_biblio( { title => 'Lone' } );
-    my $item          = $builder->build_sample_item( { biblionumber => $native_biblio->biblionumber } );
-
-    # Peer 2 sorts first through its explicit display_order
-    Koha::Item::BiblioLink->new(
-        {
-            itemnumber    => $item->itemnumber,
-            biblionumber  => $peer_biblio_1->biblionumber,
-            link_type     => 'binding',
-            display_order => 2,
-        }
-    )->store( { skip_record_index => 1 } );
-    Koha::Item::BiblioLink->new(
-        {
-            itemnumber    => $item->itemnumber,
-            biblionumber  => $peer_biblio_2->biblionumber,
-            link_type     => 'binding',
-            display_order => 1,
-        }
-    )->store( { skip_record_index => 1 } );
-
-    is_deeply(
-        [ map { $_->biblionumber } @{ $native_biblio->bound_with_peers } ],
-        [ $peer_biblio_2->biblionumber, $peer_biblio_1->biblionumber ],
-        'Peers of the native record are the linked records, ordered by display_order'
-    );
-
-    is_deeply(
-        [ map { $_->biblionumber } @{ $peer_biblio_1->bound_with_peers } ],
-        [ $peer_biblio_2->biblionumber, $native_biblio->biblionumber ],
-        'Peers of a linked record include the other linked record and the native record (no display_order) last'
-    );
-
-    is_deeply( $lone_biblio->bound_with_peers, [], 'A record with no links has no peers' );
-
-    t::lib::Mocks::mock_preference( 'EnableBoundWithItems', 0 );
-    is_deeply(
-        $native_biblio->bound_with_peers, [],
-        'bound_with_peers returns an empty arrayref when EnableBoundWithItems is disabled'
     );
 
     $schema->storage->txn_rollback;
