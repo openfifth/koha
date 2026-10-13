@@ -2241,9 +2241,9 @@ subtest 'duplicate_invoice_blocking' => sub {
             {
                 source => 'VendorEdiAccount',
                 value  => {
-                    description       => 'test vendor',
-                    plugin            => '',
-                    san               => '5013546027173',
+                    description => 'test vendor',
+                    plugin      => '',
+                    san         => '5013546027173',
                 }
             }
         );
@@ -2345,9 +2345,9 @@ subtest 'duplicate_invoice_blocking' => sub {
             {
                 source => 'VendorEdiAccount',
                 value  => {
-                    description       => 'test vendor',
-                    plugin            => '',
-                    san               => '5013546027173',
+                    description => 'test vendor',
+                    plugin      => '',
+                    san         => '5013546027173',
                 }
             }
         );
@@ -2460,9 +2460,9 @@ subtest 'duplicate_invoice_blocking' => sub {
             {
                 source => 'VendorEdiAccount',
                 value  => {
-                    description       => 'test vendor 1',
-                    plugin            => '',
-                    san               => '5013546027173',
+                    description => 'test vendor 1',
+                    plugin      => '',
+                    san         => '5013546027173',
                 }
             }
         );
@@ -2471,9 +2471,9 @@ subtest 'duplicate_invoice_blocking' => sub {
             {
                 source => 'VendorEdiAccount',
                 value  => {
-                    description       => 'test vendor 2',
-                    plugin            => '',
-                    san               => '5013546027999',
+                    description => 'test vendor 2',
+                    plugin      => '',
+                    san         => '5013546027999',
                 }
             }
         );
@@ -2629,9 +2629,9 @@ subtest 'duplicate_invoice_blocking' => sub {
             {
                 source => 'VendorEdiAccount',
                 value  => {
-                    description       => 'test vendor',
-                    plugin            => '',
-                    san               => '5013546027173',
+                    description => 'test vendor',
+                    plugin      => '',
+                    san         => '5013546027173',
                 }
             }
         );
@@ -2767,9 +2767,9 @@ subtest 'duplicate_invoice_blocking' => sub {
             {
                 source => 'VendorEdiAccount',
                 value  => {
-                    description       => 'test vendor',
-                    plugin            => '',
-                    san               => '5013546027173',
+                    description => 'test vendor',
+                    plugin      => '',
+                    san         => '5013546027173',
                 }
             }
         );
@@ -2905,9 +2905,9 @@ subtest 'duplicate_invoice_blocking' => sub {
             {
                 source => 'VendorEdiAccount',
                 value  => {
-                    description       => 'test vendor',
-                    plugin            => '',
-                    san               => '5013546027173',
+                    description => 'test vendor',
+                    plugin      => '',
+                    san         => '5013546027173',
                 }
             }
         );
@@ -3041,9 +3041,9 @@ subtest 'duplicate_invoice_blocking' => sub {
             {
                 source => 'VendorEdiAccount',
                 value  => {
-                    description       => 'test vendor',
-                    plugin            => '',
-                    san               => '5013546027173',
+                    description => 'test vendor',
+                    plugin      => '',
+                    san         => '5013546027173',
                 }
             }
         );
