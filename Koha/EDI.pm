@@ -573,7 +573,7 @@ sub _get_invoiced_price {
 
 sub receipt_items {
     my ( $schema, $inv_line, $ordernumber, $quantity, $invoice_message, $invoicenumber ) = @_;
-    my $logger   = Koha::Logger->get( { interface => 'edi' } );
+    my $logger = Koha::Logger->get( { interface => 'edi' } );
 
     # itemnumber is not a foreign key ??? makes this a bit cumbersome
     my @item_links = $schema->resultset('AqordersItem')->search(
