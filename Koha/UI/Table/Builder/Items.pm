@@ -18,6 +18,8 @@ package Koha::UI::Table::Builder::Items;
 use Modern::Perl;
 use List::MoreUtils qw( uniq );
 use C4::Biblio      qw( GetMarcStructure GetMarcFromKohaField IsMarcStructureInternal );
+use C4::Context;
+use Koha::Item::BiblioLinks;
 use Koha::Items;
 
 =head1 NAME
@@ -64,6 +66,11 @@ sub new {
 
 Build the headers and rows for the table.
 
+Each row holds the item's attributes (see Koha::Item::columns_to_str) plus:
+index, biblio, safe_to_delete, holds, item_holds, is_checked_out, nomod and
+bound_with (an arrayref of the Koha::Biblio objects the item is bound to,
+ordered by display_order; empty unless EnableBoundWithItems is enabled).
+
 Use it with:
     [% PROCESS items_table_batchmod headers => headers, items => items %]
 
@@ -74,9 +81,23 @@ sub build_table {
 
     my $patron = $params->{patron};
 
+    my $bound_with_enabled = C4::Context->preference('EnableBoundWithItems');
+
     my %itemnumbers_to_idx = map { $self->{itemnumbers}->[$_] => $_ } 0 .. $#{ $self->{itemnumbers} };
 
     my $items = Koha::Items->search( { itemnumber => $self->{itemnumbers} } );
+
+    # Binding links of all the items, fetched once rather than per row
+    my %bound_with;
+    if ($bound_with_enabled) {
+        my $links = Koha::Item::BiblioLinks->search(
+            { 'me.itemnumber' => $self->{itemnumbers}, 'me.link_type' => 'binding' },
+            { prefetch        => 'biblionumber',       order_by       => 'me.display_order' }
+        );
+        while ( my $link = $links->next ) {
+            push @{ $bound_with{ $link->itemnumber } }, $link->biblio;
+        }
+    }
 
     my @items;
     while ( my $item = $items->next ) {
@@ -90,6 +111,7 @@ sub build_table {
             item_holds     => $item->holds->count,
             is_checked_out => $item->checkout ? 1                                                  : 0,
             nomod          => $patron         ? !$patron->can_edit_items_from( $item->homebranch ) : 0,
+            bound_with     => $bound_with{ $item->itemnumber } // [],
         };
         push @items, $item_info;
     }

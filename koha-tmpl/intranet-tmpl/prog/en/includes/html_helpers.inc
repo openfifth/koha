@@ -351,6 +351,9 @@
                     [% END %]
                     <th class="anti-the">Title</th>
                     <th class="holds_count" title="Item holds / Total holds">Holds</th>
+                    [% IF Koha.Preference('EnableBoundWithItems') %]
+                        <th class="bound_with">Bound-with</th>
+                    [% END %]
                     [% FOREACH item_header IN headers %]
                         [% IF item_header.column_name %]
                             <th data-colname="[% item_header.column_name | html %]"> [% item_header.header_value | html %] </th>
@@ -439,6 +442,13 @@
                                 [% END %]
                             </a>
                         </td>
+                        [% IF Koha.Preference('EnableBoundWithItems') %]
+                            <td class="bound_with">
+                                [% FOREACH bound_biblio IN item.bound_with %]
+                                    [% INCLUDE 'biblio-title.inc' biblio=bound_biblio link=1 %][% UNLESS loop.last %]<br />[% END %]
+                                [% END %]
+                            </td>
+                        [% END %]
                         [% FOREACH header IN headers %]
                             [% SET attribute = header.attribute %]
                             [% IF header.attribute AND date_fields.grep('^' _ attribute _ '$').size %]

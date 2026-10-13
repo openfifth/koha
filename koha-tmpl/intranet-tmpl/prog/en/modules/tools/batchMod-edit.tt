@@ -297,11 +297,12 @@
     [% INCLUDE 'select2.inc' %]
     [% INCLUDE 'calendar.inc' %]
     <script nonce="[% Koha.CSPNonce | $raw %]" data-tt-allowed="true">
-        // Prepare array of all column headers, incrementing each index by
-        // two to accommodate control and title columns
+        // Prepare array of all column headers, incrementing each index to
+        // accommodate the checkbox, title, holds and (if enabled) bound-with columns
+        [% SET fixed_cols = Koha.Preference('EnableBoundWithItems') ? 4 : 3 %]
         var allColumns = new Array([% FOREACH item_header_loo IN item_header_loop %]'[% loop.count | html %]'[% UNLESS ( loop.last ) %],[% END %][% END %]);
         for( x=0; x<allColumns.length; x++ ){
-            allColumns[x] = Number(allColumns[x]) + 3;
+            allColumns[x] = Number(allColumns[x]) + [% fixed_cols | html %];
         }
 
         $(document).ready(function(){

@@ -4,13 +4,15 @@ var date = new Date();
 date.setTime(date.getTime() + 365 * 24 * 60 * 60 * 1000);
 
 function guess_nb_cols() {
+    // The Bound-with column is only rendered when EnableBoundWithItems is on
+    const hasBoundWith = $("#itemst thead th.bound_with").length ? 1 : 0;
     // This is a bit ugly, we are trying to know if there are checkboxes in the first column of the table
     if ($("#itemst tr:first th:first .dt-column-title").html() == "") {
         // First header is empty, it's a checkbox
-        return 3;
+        return 3 + hasBoundWith;
     } else {
         // First header is not empty, there are no checkboxes
-        return 2;
+        return 2 + hasBoundWith;
     }
 }
 
