@@ -1,0 +1,25 @@
+---
+type: object
+properties:
+  record_matcher_id:
+    type: integer
+    description: Internal record matching rule identifier
+  code:
+    type: string
+    description: Code of the record matching rule
+  description:
+    type: string
+    description: Description of the record matching rule
+  record_type:
+    type: string
+    description: Type of record the rule applies to (biblio or authority)
+  threshold:
+    type: integer
+    description: Score a candidate must reach to count as a match
+required:
+  - record_matcher_id
+  - code
+  - description
+  - record_type
+  - threshold
+additionalProperties: false

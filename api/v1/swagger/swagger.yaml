@@ -126,6 +126,10 @@ definitions:
     $ref: ./definitions/import_batch_profiles.yaml
   import_record_match:
     $ref: ./definitions/import_record_match.yaml
+  record_matcher:
+    $ref: ./definitions/record_matcher.yaml
+  record_matchers:
+    $ref: ./definitions/record_matchers.yaml
   record_source:
     $ref: ./definitions/record_source.yaml
   invoice:
@@ -610,6 +614,10 @@ paths:
     $ref: ./paths/quotes.yaml#/~1quotes
   "/quotes/{quote_id}":
     $ref: "./paths/quotes.yaml#/~1quotes~1{quote_id}"
+  /record_matchers:
+    $ref: ./paths/record_matchers.yaml#/~1record_matchers
+  "/record_matchers/{record_matcher_id}":
+    $ref: "./paths/record_matchers.yaml#/~1record_matchers~1{record_matcher_id}"
   /record_sources:
     $ref: ./paths/record_sources.yaml#/~1record_sources
   "/record_sources/{record_source_id}":
@@ -870,6 +878,12 @@ parameters:
     description: Internal import record identifier
     in: path
     name: import_record_id
+    required: true
+    type: integer
+  record_matcher_id_pp:
+    description: Internal record matching rule identifier
+    in: path
+    name: record_matcher_id
     required: true
     type: integer
   record_source_id_pp:
@@ -1373,6 +1387,9 @@ tags:
   - description: "Manage ILL users\n"
     name: ill_users
     x-displayName: ILL users
+  - description: "Manage record matching rules\n"
+    name: record_matchers
+    x-displayName: Record matching rules
   - description: "Manage record sources\n"
     name: record_sources
     x-displayName: Record source
