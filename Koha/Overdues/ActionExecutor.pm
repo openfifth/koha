@@ -148,8 +148,8 @@ sub route_item_actions_to_queue {
     my %actions = map { $_->{type} => $_ } @$actions_hashes;
 
     # Build the non-notice action batch first: whether the trigger carries any
-    # non-notice action decides how a notice on an already-lost item is treated
-    # (see the notice block below).
+    # non-notice action decides how a notice on a loan under an open return
+    # claim is treated (see the notice block below).
     my %action_batch;
     for my $type (qw( restrict lost charge mark_returned forgive_fine )) {
         if ( !$actions{$type} ) {
@@ -166,16 +166,16 @@ sub route_item_actions_to_queue {
     # handle notice
     if ( $actions{notice} && defined $actions{notice}->{notice_code} && $actions{notice}->{notice_code} ne '' ) {
 
-        # Parity with the itemlost = 0 filter legacy overdue_notices.pl applied:
-        # once an item is lost, suppress a *bare* overdue reminder — a notice
-        # whose trigger does nothing else. A notice that shares its trigger with
-        # a non-notice action is an event notification ("item declared lost, you
-        # have been charged …") and always sends, on this or a later trigger.
-        # Lost items still flow through the pipeline so action triggers (e.g.
-        # mark_returned) can act on them.
-        my $bare_reminder_on_lost = $overdue_item->{itemlost} && !%action_batch;
+        # While a return claim on the loan is open, a notice is only sent if its
+        # trigger also carries a non-notice action. overdue_notices.pl sent no
+        # notice at all for a lost item (items.itemlost = 0), which silenced
+        # return claims since they set the item lost. The new trigger system
+        # allows for actions to be taken on items marked as lost -> narrow
+        # the gate to specifically target open return claims instead of just
+        # any lost items.
+        my $bare_reminder_on_claimed = $overdue_item->{open_return_claim} && !%action_batch;
 
-        if ( !$bare_reminder_on_lost ) {
+        if ( !$bare_reminder_on_claimed ) {
             my $mtts = $actions{notice}->{mtts} // [];
 
             for my $mtt (@$mtts) {

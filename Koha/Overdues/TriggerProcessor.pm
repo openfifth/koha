@@ -27,6 +27,7 @@ use Koha::Overdues::ActionExecutor;
 use Koha::Overdues::Repository;
 use Koha::Library::Calendar;
 use Koha::Checkouts;
+use Koha::Checkouts::ReturnClaims;
 use Koha::DateUtils qw( dt_from_string );
 
 # Above this many (branch, delay) pairs, the calendar-adjusted path issues one
@@ -330,6 +331,15 @@ sub _dispatch_overdues {
         $seen_contexts{ join( "|", $rule_branchcode, $patron->categorycode, $itemtype ) } = 1;
 
         push @overdue_items, $item_hashref;
+    }
+
+    # One lookup for the whole run rather than one per checkout.
+    my %issue_ids_with_open_claim =
+        map { $_ => 1 }
+        Koha::Checkouts::ReturnClaims->search( { issue_id => { -in => [ map { $_->{issue_id} } @overdue_items ] } } )
+        ->unresolved->get_column('issue_id');
+    for my $overdue_item (@overdue_items) {
+        $overdue_item->{open_return_claim} = $issue_ids_with_open_claim{ $overdue_item->{issue_id} } ? 1 : 0;
     }
 
     my @branch_list   = keys %seen_branches;

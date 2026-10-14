@@ -99,8 +99,9 @@ subtest 'route_item_actions_to_queue splits notice vs action batch' => sub {
     is( scalar @{ $executor->{action_batch_queue} }, 1, 'unmatched context does not enqueue' );
 };
 
-subtest 'route_item_actions_to_queue: itemlost suppresses a bare reminder, never an escalation notice' => sub {
-    plan tests => 4;
+subtest 'route_item_actions_to_queue: an open return claim suppresses a bare reminder, never an escalation notice' =>
+    sub {
+    plan tests => 5;
 
     t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
 
@@ -118,44 +119,53 @@ subtest 'route_item_actions_to_queue: itemlost suppresses a bare reminder, never
         },
     };
 
-    my $lost_item = {
-        borrowernumber   => 42,
-        itemnumber       => 7,
-        categorycode     => 'PC',
-        itemtype         => 'IT',
-        patronhomebranch => 'LIB',
-        days_overdue     => 7,
-        itemlost         => 1,
+    my $claimed_item = {
+        borrowernumber    => 42,
+        itemnumber        => 7,
+        categorycode      => 'PC',
+        itemtype          => 'IT',
+        patronhomebranch  => 'LIB',
+        days_overdue      => 7,
+        open_return_claim => 1,
     };
 
-    # Bare reminder on a lost item → suppressed.
+    # Bare reminder on a loan under an open return claim → suppressed.
     my $reminder_run = Koha::Overdues::ActionExecutor->new;
-    $reminder_run->route_item_actions_to_queue( $reminder_only, $lost_item );
+    $reminder_run->route_item_actions_to_queue( $reminder_only, $claimed_item );
     ok(
         !exists $reminder_run->{notice_queue}{42},
-        'lost item, notice-only trigger → no notice queued'
+        'open return claim, notice-only trigger → no notice queued'
     );
 
-    # Same lost item, but the trigger also charges → event notification, notice sent.
+    # Same claimed loan, but the trigger also charges → event notification, notice sent.
     my $escalation_run = Koha::Overdues::ActionExecutor->new;
-    $escalation_run->route_item_actions_to_queue( $escalation, $lost_item );
+    $escalation_run->route_item_actions_to_queue( $escalation, $claimed_item );
     ok(
         exists $escalation_run->{notice_queue}{42}{OD1}{email}{7},
-        'lost item, charge+notice trigger → notice queued (event notification)'
+        'open return claim, charge+notice trigger → notice queued (event notification)'
     );
     is(
         scalar @{ $escalation_run->{action_batch_queue} }, 1,
-        'the charge action is still batched for the lost item'
+        'the charge action is still batched for the claimed loan'
     );
 
-    # Control: a non-lost item on the notice-only trigger still notifies.
-    my $not_lost_run = Koha::Overdues::ActionExecutor->new;
-    $not_lost_run->route_item_actions_to_queue( $reminder_only, { %$lost_item, itemlost => 0 } );
+    # Control: an unclaimed loan on the notice-only trigger still notifies.
+    my $unclaimed_run = Koha::Overdues::ActionExecutor->new;
+    $unclaimed_run->route_item_actions_to_queue( $reminder_only, { %$claimed_item, open_return_claim => 0 } );
     ok(
-        exists $not_lost_run->{notice_queue}{42}{OD1}{email}{7},
-        'non-lost item, notice-only trigger → notice queued'
+        exists $unclaimed_run->{notice_queue}{42}{OD1}{email}{7},
+        'unclaimed loan, notice-only trigger → notice queued'
     );
-};
+
+    # A lost item with no claim follows its triggers: a configured flow that sets
+    # lost and later informs the patron is honoured.
+    my $lost_run = Koha::Overdues::ActionExecutor->new;
+    $lost_run->route_item_actions_to_queue( $reminder_only, { %$claimed_item, open_return_claim => 0, itemlost => 1 } );
+    ok(
+        exists $lost_run->{notice_queue}{42}{OD1}{email}{7},
+        'lost item without a return claim, notice-only trigger → notice queued'
+    );
+    };
 
 subtest 'enact_restrict adds an OVERDUES debarment' => sub {
     plan tests => 3;
