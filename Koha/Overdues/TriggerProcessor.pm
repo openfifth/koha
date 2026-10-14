@@ -348,6 +348,8 @@ sub _dispatch_overdues {
 
     }
 
+    $action_executor->process_notice_queue;
+
     $self->{summary} = { matched => scalar @overdue_items, %{ $action_executor->summary } };
 
     return;

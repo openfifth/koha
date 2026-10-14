@@ -21,7 +21,9 @@ use Modern::Perl;
 
 use Test::NoWarnings;
 use Test::MockModule;
-use Test::More tests => 3;
+use Test::More tests => 4;
+
+use Koha::Notice::Messages;
 
 use Koha::Checkouts::ReturnClaim;
 use Koha::CirculationRules;
@@ -51,6 +53,91 @@ subtest 'no overdue delay rules → early return' => sub {
     # action counts, rather than an empty-looking summary indistinguishable from
     # a run that matched rows and did nothing with them.
     is_deeply( $tp->summary, { matched => 0 }, 'summary reports matched 0 with no action counts' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'process_overdues notice path — email rule degrades to print for patron with no email' => sub {
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'OverdueTriggersCalendar', 0 );
+    t::lib::Mocks::mock_preference( 'CircControl',             'PatronLibrary' );
+
+    Koha::CirculationRules->search( { rule_name => { -like => 'overdue\_%' } } )->delete;
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron  = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => {
+                branchcode => $library->branchcode,
+                email      => q{},
+                emailpro   => q{},
+                B_email    => q{},
+            }
+        }
+    );
+
+    my $item = $builder->build_sample_item( { homebranch => $library->branchcode } );
+
+    my $today = dt_from_string;
+    $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => {
+                borrowernumber => $patron->borrowernumber,
+                itemnumber     => $item->itemnumber,
+                branchcode     => $library->branchcode,
+                date_due       => $today->clone->subtract( days => 7 )->strftime('%Y-%m-%d %H:%M:%S'),
+            },
+        }
+    );
+
+    for my $row (
+        [ 'overdue_1_delay',  7 ],
+        [ 'overdue_1_notice', 'OD1' ],
+        [ 'overdue_1_mtt',    'email' ],
+        )
+    {
+        Koha::CirculationRules->set_rule(
+            {
+                branchcode   => $library->branchcode,
+                categorycode => $patron->categorycode,
+                itemtype     => $item->effective_itemtype,
+                rule_name    => $row->[0],
+                rule_value   => $row->[1],
+            }
+        );
+    }
+
+    $builder->build(
+        {
+            source => 'Letter',
+            value  => {
+                module                 => 'circulation',
+                code                   => 'OD1',
+                branchcode             => q{},
+                message_transport_type => 'print',
+                name                   => 'OD1 print',
+                title                  => 'OD1',
+                content                => 'print body',
+                is_html                => 0,
+                lang                   => 'default',
+            },
+        }
+    );
+
+    Koha::Overdues::TriggerProcessor->new->process_overdues;
+
+    my $messages =
+        Koha::Notice::Messages->search( { borrowernumber => $patron->borrowernumber, letter_code => 'OD1' } );
+    is( $messages->count, 1, 'one Koha::Notice::Message row for the overdue patron' );
+    is(
+        $messages->next->message_transport_type, 'print',
+        'email rule degraded to print via the no-email patron path'
+    );
 
     $schema->storage->txn_rollback;
 };
