@@ -50,6 +50,7 @@ sub new {
     my ( $class, $params ) = @_;
     my $self = {
         action_batch_queue => [],
+        notice_queue       => {},
         verbose            => $params->{verbose}      // 0,
         dry_run            => $params->{dry_run}      // 0,
         trigger_date       => $params->{trigger_date} // dt_from_string(),
@@ -89,9 +90,10 @@ sub route_item_actions_to_queue {
             item_holdingbranch => $overdue_item->{itemholdingbranch},
         }
     );
-    my $categorycode = $overdue_item->{categorycode};
-    my $itemtype     = $overdue_item->{itemtype};
-    my $days_overdue = $overdue_item->{days_overdue};
+    my $categorycode   = $overdue_item->{categorycode};
+    my $itemtype       = $overdue_item->{itemtype};
+    my $days_overdue   = $overdue_item->{days_overdue};
+    my $borrowernumber = $overdue_item->{borrowernumber};
 
     my $actions_hashes = $effective_rule_sets->{"$branchcode|$categorycode|$itemtype|$days_overdue"}->{actions};
 
@@ -101,6 +103,9 @@ sub route_item_actions_to_queue {
 
     my %actions = map { $_->{type} => $_ } @$actions_hashes;
 
+    # Build the non-notice action batch first: whether the trigger carries any
+    # non-notice action decides how a notice on a loan under an open return
+    # claim is treated (see the notice block below).
     my %action_batch;
     for my $type (qw( restrict lost charge mark_returned forgive_fine )) {
         if ( !$actions{$type} ) {
@@ -112,6 +117,36 @@ sub route_item_actions_to_queue {
         }
 
         $action_batch{$type} = $actions{$type}{value};
+    }
+
+    # handle notice
+    if ( $actions{notice} && defined $actions{notice}->{notice_code} && $actions{notice}->{notice_code} ne '' ) {
+
+        # While a return claim on the loan is open, a notice is only sent if its
+        # trigger also carries a non-notice action. overdue_notices.pl sent no
+        # notice at all for a lost item (items.itemlost = 0), which silenced
+        # return claims since they set the item lost. The new trigger system
+        # allows for actions to be taken on items marked as lost -> narrow
+        # the gate to specifically target open return claims instead of just
+        # any lost items.
+        my $bare_reminder_on_claimed = $overdue_item->{open_return_claim} && !%action_batch;
+
+        if ( !$bare_reminder_on_claimed ) {
+            my $mtts = $actions{notice}->{mtts} // [];
+
+            for my $mtt (@$mtts) {
+                my $per_mtt_action = { %{ $actions{notice} }, mtt => $mtt };
+                delete $per_mtt_action->{mtts};
+
+                $self->add_to_notice_queue(
+                    $borrowernumber,
+                    $actions{notice}->{notice_code},
+                    $mtt,
+                    $days_overdue,
+                    [ $self->format_notice_item( $overdue_item, $per_mtt_action, $days_overdue ) ],
+                );
+            }
+        }
     }
 
     # handle action batch
@@ -126,6 +161,30 @@ sub route_item_actions_to_queue {
     }
 
     return;
+}
+
+=head3 format_notice_item
+
+Takes in an item, an action, and a delay, and returns a formatted notice_item to be processed.
+
+=cut
+
+sub format_notice_item {
+    my ( $self, $item, $action_hashref, $delay ) = @_;
+    return { item => $item, action => $action_hashref, delay => $delay };
+}
+
+=head3 add_to_notice_queue
+
+Pushes the given notice items onto the bucket addressed by
+C<($borrowernumber, $notice_code, $mtt, $delay)>. Buckets autovivify on first
+push.
+
+=cut
+
+sub add_to_notice_queue {
+    my ( $self, $borrowernumber, $notice_code, $mtt, $delay, $notice_items ) = @_;
+    push @{ $self->{notice_queue}{$borrowernumber}{$notice_code}{$mtt}{$delay} }, @$notice_items;
 }
 
 =head3 add_to_action_batch_queue

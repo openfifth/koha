@@ -27,6 +27,7 @@ use Koha::Overdues::ActionExecutor;
 use Koha::Overdues::Repository;
 use Koha::Library::Calendar;
 use Koha::Checkouts;
+use Koha::Checkouts::ReturnClaims;
 use Koha::DateUtils qw( dt_from_string );
 
 =head1 NAME
@@ -299,6 +300,15 @@ sub _dispatch_overdues {
         push @overdue_items, $item_hashref;
     }
 
+    # One lookup for the whole run rather than one per checkout.
+    my %issue_ids_with_open_claim =
+        map { $_ => 1 }
+        Koha::Checkouts::ReturnClaims->search( { issue_id => { -in => [ map { $_->{issue_id} } @overdue_items ] } } )
+        ->unresolved->get_column('issue_id');
+    for my $overdue_item (@overdue_items) {
+        $overdue_item->{open_return_claim} = $issue_ids_with_open_claim{ $overdue_item->{issue_id} } ? 1 : 0;
+    }
+
     my @branch_list   = keys %seen_branches;
     my @category_list = keys %seen_categories;
     my @itemtype_list = keys %seen_itemtypes;
@@ -334,6 +344,7 @@ sub _dispatch_overdues {
             ['effective_overdue_rule_sets']
         );
         print STDERR Data::Dumper->Dump( [ $action_executor->{action_batch_queue} ], ['action_batch_queue'] );
+        print STDERR Data::Dumper->Dump( [ $action_executor->{notice_queue} ],       ['notice_queue'] );
 
     }
 

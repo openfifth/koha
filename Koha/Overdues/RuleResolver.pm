@@ -34,7 +34,7 @@ Koha::Overdues::RuleResolver - Koha Overdues RuleResolver object set class
 
 =cut
 
-my @action_names = ( 'charge', 'lost', 'restrict', 'mark_returned', 'forgive_fine' );
+my @action_names = ( 'notice', 'charge', 'lost', 'restrict', 'mark_returned', 'forgive_fine' );
 
 =head3 new
 
@@ -103,6 +103,41 @@ sub _find_effective_overdue_rule_set {
     my $effective_rule = { delay => $delay, actions => [] };
 
     foreach my $action (@action_names) {
+        if ( $action eq 'notice' ) {
+            my $notice_code =
+                $self->_find_effective_rule_value( $branchcode, $categorycode, $itemtype, $delay, 'notice' );
+            if ( !defined $notice_code ) {
+                Koha::Logger->get->warn(
+                    "No notice rule found for context $branchcode|$categorycode|$itemtype at delay $delay — skipping notice action"
+                );
+                next;
+            }
+
+            # An empty notice code suppresses the notice for this context (we already have accounted for fallbacks).
+            # '' means 'No letter', and must result in notice suppression.
+            if ( !length $notice_code ) {
+                next;
+            }
+            my $mtt_value = $self->_find_effective_rule_value( $branchcode, $categorycode, $itemtype, $delay, 'mtt' );
+            if ( !defined $mtt_value ) {
+                Koha::Logger->get->warn(
+                    "No mtt rule found for notice $notice_code at delay $delay — skipping notice action");
+                next;
+            }
+
+            my @mtts = grep { length } split /\s*,\s*/, $mtt_value;
+            if ( !@mtts ) {
+                next;
+            }
+
+            push @{ $effective_rule->{actions} }, {
+                type        => 'notice',
+                notice_code => $notice_code,
+                mtts        => \@mtts,
+            };
+            next;
+        }
+
         my $value = $self->_find_effective_rule_value( $branchcode, $categorycode, $itemtype, $delay, $action );
 
         if ( !defined $value ) {
@@ -121,6 +156,7 @@ sub _find_effective_overdue_rule_set {
 =head3 _find_effective_rule_value
 
 Retrieves the effective rule value for a specific context, delay, and action combination from the cache.
+An empty C<mtt> is skipped and the walk continues; an empty action value halts it and is returned.
 If none is found, returns undef.
 
 =cut
@@ -135,6 +171,10 @@ sub _find_effective_rule_value {
             next;
         }
         my $value = $self->{raw_overdue_rule_sets}->{$key}->{actions}->{$action};
+
+        if ( $action eq 'mtt' && !length $value ) {
+            next;
+        }
 
         return $value;
     }
