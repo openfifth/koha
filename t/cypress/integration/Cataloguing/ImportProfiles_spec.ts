@@ -1,3 +1,5 @@
+// Note: the Cypress support file fails a test on any console.warn from the
+// page, so Vue warnings (bad prop types, unexpected nulls...) fail these tests.
 describe("Import profiles list", () => {
     beforeEach(() => {
         cy.login();
@@ -58,6 +60,9 @@ describe("Import profiles list", () => {
             expect(request.body).to.not.have.property("profile_id");
             expect(request.body.overlay_action).to.eq(null);
             expect(request.body.comments).to.eq(null);
+            expect(request.body.nomatch_action).to.eq(null);
+            expect(request.body.item_action).to.eq(null);
+            expect(request.body.parse_items).to.eq(null);
         });
     });
 
@@ -651,5 +656,249 @@ describe("Import profiles duplicate", () => {
         cy.get("#name").should("have.value", "");
         cy.get("#record_type").contains("Bibliographic");
         cy.get("#parse_items").should("be.checked");
+    });
+});
+
+describe("Import profiles delete, menu and save feedback", () => {
+    const profile = (overrides = {}) => ({
+        profile_id: 1,
+        name: "Profile 1",
+        matcher_id: null,
+        template_id: null,
+        record_type: "biblio",
+        format: "ISO2709",
+        encoding: "UTF-8",
+        overlay_action: "replace",
+        nomatch_action: "create_new",
+        item_action: "always_add",
+        parse_items: true,
+        comments: null,
+        ...overrides,
+    });
+    const listOf = (rows: Array<object>) => ({
+        statusCode: 200,
+        body: rows,
+        headers: {
+            "X-Base-Total-Count": String(rows.length),
+            "X-Total-Count": String(rows.length),
+        },
+    });
+    const stubLookups = () => {
+        cy.intercept("GET", "/api/v1/record_matchers*", {
+            body: [
+                {
+                    record_matcher_id: 1,
+                    code: "ISBN",
+                    description: "ISBN match",
+                    record_type: "biblio",
+                    threshold: 100,
+                },
+            ],
+        });
+        cy.intercept("GET", "/api/v1/marc_modification_templates*", {
+            body: [{ marc_modification_template_id: 7, name: "Strip 9xx" }],
+        });
+    };
+
+    beforeEach(() => {
+        cy.login();
+        cy.title().should("eq", "Koha staff interface");
+        stubLookups();
+    });
+
+    describe("delete", () => {
+        beforeEach(() => {
+            cy.intercept(
+                "GET",
+                "/api/v1/import_batch_profiles*",
+                listOf([profile({ name: "To delete" })])
+            );
+            cy.visit("/cgi-bin/koha/cataloguing/import_profiles");
+            cy.get("#import_batch_profiles_list").contains("Delete").click();
+            cy.get("#confirmation").contains(
+                "Staged batches that used it are not affected"
+            );
+            cy.get("#confirmation").contains("To delete");
+        });
+
+        it("deletes after confirmation", () => {
+            cy.intercept("DELETE", "/api/v1/import_batch_profiles/1", {
+                statusCode: 204,
+                body: null,
+            }).as("delete");
+            cy.get("#confirmation").contains("Yes, delete").click();
+            cy.wait("@delete");
+            cy.get("main div[class='alert alert-info']").contains(
+                "Import profile To delete deleted"
+            );
+        });
+
+        it("sends nothing when cancelled", () => {
+            cy.intercept(
+                "DELETE",
+                "/api/v1/import_batch_profiles/*",
+                cy.spy().as("delete")
+            );
+            cy.get("#confirmation").contains("No, do not delete").click();
+            cy.get("#confirmation").should("not.exist");
+            cy.get("@delete").should("not.have.been.called");
+            cy.get("#import_batch_profiles_list").contains("To delete");
+        });
+    });
+
+    it("links to the page from the Cataloguing home", () => {
+        cy.intercept("GET", "/api/v1/import_batch_profiles*", listOf([]));
+        cy.visit("/cgi-bin/koha/cataloguing/cataloging-home.pl");
+        cy.contains("a", "Import profiles")
+            .should(
+                "have.attr",
+                "href",
+                "/cgi-bin/koha/cataloguing/import_profiles"
+            )
+            .click();
+        cy.location("pathname").should(
+            "eq",
+            "/cgi-bin/koha/cataloguing/import_profiles"
+        );
+        cy.get("#import_batch_profiles_list").should("exist");
+    });
+
+    it("shows a message and returns to the list after create", () => {
+        cy.intercept("GET", "/api/v1/import_batch_profiles*", listOf([]));
+        cy.intercept("POST", "/api/v1/import_batch_profiles", {
+            statusCode: 201,
+            body: profile({ profile_id: 9, name: "Brand new" }),
+        }).as("create");
+        cy.visit("/cgi-bin/koha/cataloguing/import_profiles/add");
+        cy.get("#name").type("Brand new");
+        cy.get("#import_batch_profiles_add form").submit();
+        cy.wait("@create");
+        cy.get("main div[class='alert alert-info']").contains(
+            "Import profile created!"
+        );
+        cy.location("pathname").should(
+            "eq",
+            "/cgi-bin/koha/cataloguing/import_profiles"
+        );
+    });
+
+    it("shows a message and returns to the list after edit", () => {
+        const row = profile({ profile_id: 3, name: "Edit me" });
+        cy.intercept("GET", "/api/v1/import_batch_profiles/3", row);
+        cy.intercept("GET", "/api/v1/import_batch_profiles?*", listOf([row]));
+        cy.intercept("PUT", "/api/v1/import_batch_profiles/3", {
+            statusCode: 200,
+            body: row,
+        }).as("update");
+        cy.visit("/cgi-bin/koha/cataloguing/import_profiles/edit/3");
+        cy.get("#name").should("have.value", "Edit me");
+        cy.get("#import_batch_profiles_add form").submit();
+        cy.wait("@update");
+        cy.get("main div[class='alert alert-info']").contains(
+            "Import profile updated!"
+        );
+        cy.location("pathname").should(
+            "eq",
+            "/cgi-bin/koha/cataloguing/import_profiles"
+        );
+    });
+
+    it("stays on the form when the save fails", () => {
+        const row = profile({ profile_id: 3, name: "Edit me" });
+        cy.intercept("GET", "/api/v1/import_batch_profiles/3", row);
+        cy.intercept("PUT", "/api/v1/import_batch_profiles/3", {
+            statusCode: 500,
+            body: { error: "boom" },
+        }).as("update");
+        cy.visit("/cgi-bin/koha/cataloguing/import_profiles/edit/3");
+        cy.get("#name").should("have.value", "Edit me");
+        cy.get("#import_batch_profiles_add form").submit();
+        cy.wait("@update");
+        cy.location("pathname").should(
+            "eq",
+            "/cgi-bin/koha/cataloguing/import_profiles/edit/3"
+        );
+        cy.get("#import_batch_profiles_add").should("be.visible");
+        cy.get("#name").should("have.value", "Edit me");
+        cy.contains("Import profile updated!").should("not.exist");
+    });
+
+    it("sends null when the matching rule and template are cleared", () => {
+        const row = profile({ profile_id: 3, matcher_id: 1, template_id: 7 });
+        cy.intercept("GET", "/api/v1/import_batch_profiles/3", row);
+        cy.intercept("GET", "/api/v1/import_batch_profiles?*", listOf([row]));
+        cy.intercept("PUT", "/api/v1/import_batch_profiles/3", {
+            statusCode: 200,
+            body: row,
+        }).as("update");
+        cy.visit("/cgi-bin/koha/cataloguing/import_profiles/edit/3");
+        cy.get("#matcher_id").contains("ISBN (ISBN match)");
+        cy.get("#template_id").contains("Strip 9xx");
+        cy.get("#matcher_id .vs__clear").click();
+        cy.get("#template_id .vs__clear").click();
+        cy.get("#import_batch_profiles_add form").submit();
+        cy.wait("@update").then(({ request }) => {
+            expect(request.body).to.have.property("matcher_id", null);
+            expect(request.body).to.have.property("template_id", null);
+        });
+    });
+
+    it("never shows Unknown while the lookups are held back", () => {
+        // Hold both lookup replies until the test releases them.
+        let release: () => void = () => {};
+        const gate = new Promise<void>(resolve => (release = resolve));
+        cy.intercept("GET", "/api/v1/record_matchers*", req =>
+            gate.then(() =>
+                req.reply({
+                    body: [
+                        {
+                            record_matcher_id: 1,
+                            code: "ISBN",
+                            description: "ISBN match",
+                            record_type: "biblio",
+                            threshold: 100,
+                        },
+                    ],
+                })
+            )
+        ).as("matchers");
+        cy.intercept("GET", "/api/v1/marc_modification_templates*", req =>
+            gate.then(() =>
+                req.reply({
+                    body: [
+                        {
+                            marc_modification_template_id: 7,
+                            name: "Strip 9xx",
+                        },
+                    ],
+                })
+            )
+        ).as("templates");
+        cy.intercept(
+            "GET",
+            "/api/v1/import_batch_profiles*",
+            listOf([profile({ matcher_id: 1, template_id: 7 })])
+        );
+        cy.visit("/cgi-bin/koha/cataloguing/import_profiles");
+
+        // Positive anchor: the page is mounted and still pending. Row
+        // rendering is not expected yet, but if it happens it must not
+        // claim Unknown for ids that exist.
+        cy.wait(500);
+        cy.get("main").contains("Loading", { timeout: 3000 });
+        cy.get("main")
+            .invoke("text")
+            .should("not.match", /Unknown|Unavailable/);
+        cy.get("main")
+            .invoke("text")
+            .should("not.match", /Unknown|Unavailable/);
+
+        cy.then(() => release());
+        cy.wait(["@matchers", "@templates"]);
+        cy.get("#import_batch_profiles_list").contains("ISBN");
+        cy.get("#import_batch_profiles_list").contains("Strip 9xx");
+        cy.get("main")
+            .invoke("text")
+            .should("not.match", /Unknown|Unavailable/);
     });
 });
