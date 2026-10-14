@@ -8,6 +8,8 @@ import AVAPIClient from "@fetch/authorised-values-api-client";
 import CashAPIClient from "@fetch/cash-api-client";
 import ItemAPIClient from "@fetch/item-api-client";
 import ImportBatchProfilesAPIClient from "@fetch/import-batch-profiles-api-client";
+import RecordMatchersAPIClient from "@fetch/record-matchers-api-client";
+import MARCModificationTemplatesAPIClient from "@fetch/marc-modification-templates-api-client";
 import RecordSourcesAPIClient from "@fetch/record-sources-api-client";
 import SysprefAPIClient from "@fetch/system-preferences-api-client";
 import SIP2APIClient from "@fetch/sip2-api-client";
@@ -25,6 +27,10 @@ export const APIClient = {
     sip2: new SIP2APIClient(HttpClient),
     preservation: new PreservationAPIClient(HttpClient),
     import_batch_profiles: new ImportBatchProfilesAPIClient(HttpClient),
+    record_matchers: new RecordMatchersAPIClient(HttpClient),
+    marc_modification_templates: new MARCModificationTemplatesAPIClient(
+        HttpClient
+    ),
     record_sources: new RecordSourcesAPIClient(HttpClient),
 };
 
