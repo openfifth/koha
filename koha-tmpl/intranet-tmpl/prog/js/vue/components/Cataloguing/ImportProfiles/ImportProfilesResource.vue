@@ -5,7 +5,7 @@
     ></BaseResource>
 </template>
 <script>
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import BaseResource from "../../BaseResource.vue";
 import { useBaseResource } from "../../../composables/base-resource.js";
 import { APIClient } from "../../../fetch/api-client.js";
@@ -28,6 +28,17 @@ const escapedColumn = (name, title) => ({
     orderable: true,
     render: (data, type) => (type === "display" ? escape_str(data) : data),
 });
+
+// Source row of a Duplicate, kept at module level so it survives the route
+// change to the add form. It is only honoured while the route's ?copy=
+// matches its profile_id, so it cannot leak into a plain "New" visit.
+let duplicateSource = null;
+
+// The name column is varchar(100) of characters: truncate by code
+// point (not UTF-16 code units) so the copy can be saved even when an
+// astral character straddles the cut.
+const copyName = name =>
+    Array.from($__("Copy of %s").format(name)).slice(0, 100).join("");
 
 const selectAttr = (name, label, options, extra = {}) => ({
     name,
@@ -291,6 +302,20 @@ export default {
             actions: {
                 "-1": [
                     "edit",
+                    {
+                        duplicate: {
+                            text: $__("Duplicate"),
+                            icon: "fa fa-copy",
+                            callback: (row, dt, event) => {
+                                event.preventDefault();
+                                duplicateSource = row;
+                                baseResource.router.push({
+                                    name: "ImportProfilesFormAdd",
+                                    query: { copy: row.profile_id },
+                                });
+                            },
+                        },
+                    },
                     { delete: { text: $__("Delete"), icon: "fa fa-trash" } },
                 ],
             },
@@ -320,8 +345,29 @@ export default {
             );
         };
 
+        // The add form starts from the copy only when reached via Duplicate;
+        // a plain New (no ?copy=) or a reload (no stored source) gets defaults.
+        const newResource = computed(() => {
+            const fresh = baseResource.newResource.value;
+            const copy = baseResource.route.query.copy;
+            if (
+                !copy ||
+                !duplicateSource ||
+                String(duplicateSource.profile_id) !== String(copy)
+            ) {
+                return fresh;
+            }
+            return {
+                ...fresh,
+                ...duplicateSource,
+                profile_id: null,
+                name: copyName(duplicateSource.name),
+            };
+        });
+
         return {
             ...baseResource,
+            newResource,
             tableOptions,
             onFormSave,
         };

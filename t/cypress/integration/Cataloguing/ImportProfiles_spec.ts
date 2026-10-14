@@ -494,3 +494,162 @@ describe("Import profiles matcher and template names", () => {
         cy.window().its("__xss").should("not.exist");
     });
 });
+
+describe("Import profiles duplicate", () => {
+    const source = {
+        profile_id: 5,
+        name: "x".repeat(100),
+        matcher_id: null,
+        template_id: null,
+        record_type: "auth",
+        format: "MARCXML",
+        encoding: "MARC-8",
+        overlay_action: "ignore",
+        nomatch_action: "ignore",
+        item_action: "ignore",
+        parse_items: false,
+        comments: "hello",
+    };
+
+    beforeEach(() => {
+        cy.login();
+        cy.title().should("eq", "Koha staff interface");
+        cy.intercept("GET", "/api/v1/record_matchers*", { body: [] });
+        cy.intercept("GET", "/api/v1/marc_modification_templates*", {
+            body: [],
+        });
+        cy.intercept("GET", "/api/v1/import_batch_profiles*", {
+            statusCode: 200,
+            body: [source],
+            headers: { "X-Base-Total-Count": "1", "X-Total-Count": "1" },
+        });
+    });
+
+    it("opens the add form pre-filled, with a truncated name", () => {
+        cy.visit("/cgi-bin/koha/cataloguing/import_profiles");
+        cy.get("#import_batch_profiles_list").contains("Duplicate").click();
+        cy.location("search").should("eq", "?copy=5");
+        cy.get("#name").invoke("val").should("have.length", 100);
+        cy.get("#name")
+            .invoke("val")
+            .should("match", /^Copy of /);
+        cy.get("#record_type").contains("Authority");
+        cy.get("#format").contains("MARCXML");
+        cy.get("#encoding").contains("MARC 8");
+        cy.get("#overlay_action").contains("Ignore");
+        cy.get("#comments").should("have.value", "hello");
+        cy.get("#parse_items").should("not.be.checked");
+
+        cy.intercept("POST", "/api/v1/import_batch_profiles", req => {
+            req.reply({ statusCode: 201, body: {} });
+        }).as("create");
+        cy.get("#import_batch_profiles_add form").submit();
+        cy.wait("@create").then(({ request }) => {
+            expect(request.body).to.not.have.property("profile_id");
+            expect(request.body.name).to.match(/^Copy of x+$/);
+            expect(request.body.name).to.have.length(100);
+            expect(request.body.record_type).to.equal("auth");
+            expect(request.body.format).to.equal("MARCXML");
+            expect(request.body.encoding).to.equal("MARC-8");
+            expect(request.body.item_action).to.equal("ignore");
+            expect(request.body.parse_items).to.equal(false);
+            expect(request.body.comments).to.equal("hello");
+        });
+    });
+
+    it("keeps the copied name code point safe when an astral character straddles the cut", () => {
+        // "Copy of " is 8 UTF-16 code units; 91 x's put the emoji's
+        // surrogate pair across the 100 code unit boundary, where a
+        // naive String.prototype.slice leaves a lone surrogate.
+        const astralSource = {
+            ...source,
+            profile_id: 6,
+            name: "x".repeat(91) + "😀" + "y".repeat(4),
+        };
+        cy.intercept("GET", "/api/v1/import_batch_profiles*", {
+            statusCode: 200,
+            body: [astralSource],
+            headers: { "X-Base-Total-Count": "1", "X-Total-Count": "1" },
+        });
+
+        cy.visit("/cgi-bin/koha/cataloguing/import_profiles");
+        cy.get("#import_batch_profiles_list").contains("Duplicate").click();
+        cy.location("search").should("eq", "?copy=6");
+        cy.get("#name")
+            .invoke("val")
+            .then(val => {
+                expect(Array.from(val).length).to.be.at.most(100);
+                const loneSurrogate =
+                    /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
+                expect(loneSurrogate.test(val)).to.be.false;
+
+                cy.intercept("POST", "/api/v1/import_batch_profiles", req => {
+                    req.reply({ statusCode: 201, body: {} });
+                }).as("createAstral");
+                cy.get("#import_batch_profiles_add form").submit();
+                cy.wait("@createAstral").then(({ request }) => {
+                    expect(request.body.name).to.equal(val);
+                });
+            });
+    });
+
+    it("shows the matching rule and template names, not their ids, on the copy", () => {
+        cy.intercept("GET", "/api/v1/record_matchers*", {
+            delay: 500,
+            body: [
+                {
+                    record_matcher_id: 1,
+                    code: "ISBN",
+                    description: "ISBN match",
+                    record_type: "biblio",
+                    threshold: 100,
+                },
+            ],
+        });
+        cy.intercept("GET", "/api/v1/marc_modification_templates*", {
+            delay: 500,
+            body: [{ marc_modification_template_id: 7, name: "Strip 9xx" }],
+        });
+        cy.intercept("GET", "/api/v1/import_batch_profiles*", {
+            statusCode: 200,
+            body: [{ ...source, matcher_id: 1, template_id: 7 }],
+            headers: { "X-Base-Total-Count": "1", "X-Total-Count": "1" },
+        });
+        cy.visit("/cgi-bin/koha/cataloguing/import_profiles");
+        cy.get("#import_batch_profiles_list").contains("Duplicate").click();
+        cy.get("#name")
+            .invoke("val")
+            .should("match", /^Copy of /);
+        cy.get("#matcher_id")
+            .closest(".v-select")
+            .find(".vs__selected")
+            .should("have.text", "ISBN (ISBN match)");
+        cy.get("#template_id")
+            .closest(".v-select")
+            .find(".vs__selected")
+            .should("have.text", "Strip 9xx");
+    });
+
+    it("gives defaults for a plain New after a Duplicate", () => {
+        cy.visit("/cgi-bin/koha/cataloguing/import_profiles");
+        cy.get("#import_batch_profiles_list").contains("Duplicate").click();
+        cy.get("#name")
+            .invoke("val")
+            .should("match", /^Copy of /);
+        cy.get("#import_batch_profiles_add").contains("Cancel").click();
+        cy.get("#import_batch_profiles_list").should("exist");
+        cy.contains("a, button", "New import profile").click();
+        cy.get("#name").should("have.value", "");
+        cy.get("#record_type").contains("Bibliographic");
+        cy.get("#comments").should("have.value", "");
+        cy.get("#parse_items").should("be.checked");
+    });
+
+    it("falls back to defaults on a reload of ?copy=", () => {
+        cy.visit("/cgi-bin/koha/cataloguing/import_profiles/add?copy=5");
+        cy.get("#import_batch_profiles_add").should("be.visible");
+        cy.get("#name").should("have.value", "");
+        cy.get("#record_type").contains("Bibliographic");
+        cy.get("#parse_items").should("be.checked");
+    });
+});
