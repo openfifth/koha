@@ -40,6 +40,21 @@ let duplicateSource = null;
 const copyName = name =>
     Array.from($__("Copy of %s").format(name)).slice(0, 100).join("");
 
+// Like escapedColumn, but shows the option's label instead of the stored
+// code. Sorting, searching and export keep using the stored value, and a
+// value we have no label for (for example a plugin format) is shown as stored.
+const labelledColumn = (name, title, options) => ({
+    title,
+    data: name,
+    searchable: true,
+    orderable: true,
+    render: (data, type) => {
+        if (type !== "display") return data;
+        const option = options.find(o => o.value === data);
+        return escape_str(option ? option.label : data);
+    },
+});
+
 const selectAttr = (name, label, options, extra = {}) => ({
     name,
     type: "select",
@@ -177,25 +192,28 @@ export default {
                 selectAttr("record_type", $__("Record type"), recordTypes, {
                     group: "file",
                     defaultValue: "biblio",
-                    tableColumnDefinition: escapedColumn(
+                    tableColumnDefinition: labelledColumn(
                         "record_type",
-                        $__("Record type")
+                        $__("Record type"),
+                        recordTypes
                     ),
                 }),
                 selectAttr("encoding", $__("Character encoding"), encodings, {
                     group: "file",
                     defaultValue: "UTF-8",
-                    tableColumnDefinition: escapedColumn(
+                    tableColumnDefinition: labelledColumn(
                         "encoding",
-                        $__("Character encoding")
+                        $__("Character encoding"),
+                        encodings
                     ),
                 }),
                 selectAttr("format", $__("Format"), formats, {
                     group: "file",
                     defaultValue: "ISO2709",
-                    tableColumnDefinition: escapedColumn(
+                    tableColumnDefinition: labelledColumn(
                         "format",
-                        $__("Format")
+                        $__("Format"),
+                        formats
                     ),
                 }),
                 {
@@ -244,10 +262,14 @@ export default {
                     overlayActions,
                     {
                         group: "matching",
+                        toolTip: $__(
+                            "What to do when an incoming record matches a record already in the catalogue, according to the matching rule. Items may still be processed even if the record is ignored."
+                        ),
                         defaultValue: "replace",
-                        tableColumnDefinition: escapedColumn(
+                        tableColumnDefinition: labelledColumn(
                             "overlay_action",
-                            $__("Action if matching record found")
+                            $__("Action if matching record found"),
+                            overlayActions
                         ),
                     }
                 ),
@@ -257,10 +279,14 @@ export default {
                     nomatchActions,
                     {
                         group: "matching",
+                        toolTip: $__(
+                            "What to do with an incoming record that matches nothing already in the catalogue."
+                        ),
                         defaultValue: "create_new",
-                        tableColumnDefinition: escapedColumn(
+                        tableColumnDefinition: labelledColumn(
                             "nomatch_action",
-                            $__("Action if no match is found")
+                            $__("Action if no match is found"),
+                            nomatchActions
                         ),
                     }
                 ),
@@ -277,10 +303,14 @@ export default {
                     itemActions,
                     {
                         group: "items",
+                        toolTip: $__(
+                            "What to do with item records embedded in incoming records. Matched and new refer to whether the record matched one already in the catalogue. Replace existing items only affects items that already exist."
+                        ),
                         defaultValue: "always_add",
-                        tableColumnDefinition: escapedColumn(
+                        tableColumnDefinition: labelledColumn(
                             "item_action",
-                            $__("How to process items")
+                            $__("How to process items"),
+                            itemActions
                         ),
                     }
                 ),

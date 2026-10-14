@@ -902,3 +902,130 @@ describe("Import profiles delete, menu and save feedback", () => {
             .should("not.match", /Unknown|Unavailable/);
     });
 });
+
+describe("Import profiles option labels", () => {
+    const row = (overrides = {}) => ({
+        profile_id: 1,
+        name: "Labels",
+        matcher_id: null,
+        template_id: null,
+        record_type: "auth",
+        format: "MARCXML",
+        encoding: "MARC-8",
+        overlay_action: "ignore",
+        nomatch_action: "ignore",
+        item_action: "add_only_for_matches",
+        parse_items: true,
+        comments: null,
+        ...overrides,
+    });
+
+    beforeEach(() => {
+        cy.login();
+        cy.title().should("eq", "Koha staff interface");
+        cy.intercept("GET", "/api/v1/record_matchers*", { body: [] });
+        cy.intercept("GET", "/api/v1/marc_modification_templates*", {
+            body: [],
+        });
+    });
+
+    // Scope to the select that was opened: another dropdown's menu may still
+    // be in the page.
+    const optionsOf = (id: string, expected: Array<string>) => {
+        cy.get("#" + id).click();
+        cy.get("#" + id)
+            .closest(".v-select")
+            .find(".vs__dropdown-option")
+            .then($options => {
+                expect([...$options].map(o => o.textContent.trim())).to.deep.eq(
+                    expected
+                );
+            });
+        cy.get("#" + id).type("{esc}");
+    };
+
+    it("offers short labels for the action options", () => {
+        cy.intercept("GET", "/api/v1/import_batch_profiles*", {
+            statusCode: 200,
+            body: [],
+            headers: { "X-Base-Total-Count": "0", "X-Total-Count": "0" },
+        });
+        cy.visit("/cgi-bin/koha/cataloguing/import_profiles/add");
+        optionsOf("overlay_action", [
+            "Replace existing record",
+            "Add as new record",
+            "Ignore incoming record",
+        ]);
+        optionsOf("nomatch_action", [
+            "Add as new record",
+            "Ignore incoming record",
+        ]);
+        optionsOf("item_action", [
+            "Always add items",
+            "Add for matched records",
+            "Add for new records",
+            "Replace existing items",
+            "Ignore items",
+        ]);
+    });
+
+    it("explains the action fields with a tooltip", () => {
+        cy.intercept("GET", "/api/v1/import_batch_profiles*", {
+            statusCode: 200,
+            body: [],
+            headers: { "X-Base-Total-Count": "0", "X-Total-Count": "0" },
+        });
+        cy.visit("/cgi-bin/koha/cataloguing/import_profiles/add");
+        const tip = (id: string, text: string) =>
+            cy
+                .get("#" + id)
+                .closest("li")
+                .find("a.tooltip_helper")
+                .should($a => {
+                    const title =
+                        $a.attr("title") || $a.attr("data-bs-original-title");
+                    expect(title).to.contain(text);
+                });
+        tip("overlay_action", "matches a record already in the catalogue");
+        tip("nomatch_action", "matches nothing already in the catalogue");
+        tip("item_action", "embedded in incoming records");
+    });
+
+    it("shows labels, not stored codes, in the list", () => {
+        cy.intercept("GET", "/api/v1/import_batch_profiles*", {
+            statusCode: 200,
+            body: [
+                row(),
+                row({
+                    profile_id: 2,
+                    name: "Plugin",
+                    format: "Koha::Plugin::Com::Example::Format",
+                }),
+            ],
+            headers: { "X-Base-Total-Count": "2", "X-Total-Count": "2" },
+        });
+        cy.visit("/cgi-bin/koha/cataloguing/import_profiles");
+        cy.contains("#import_batch_profiles_list tbody tr", "Labels").within(
+            () => {
+                cy.contains("Authority");
+                cy.contains("MARCXML");
+                cy.contains("MARC 8");
+                cy.contains("Ignore incoming record");
+                cy.contains("Add for matched records");
+            }
+        );
+        // The stored codes must not show.
+        cy.get("#import_batch_profiles_list tbody").should(
+            "not.contain",
+            "add_only_for_matches"
+        );
+        cy.get("#import_batch_profiles_list tbody").should(
+            "not.contain",
+            "auth "
+        );
+        // A format we have no label for (a plugin) is shown as stored.
+        cy.contains("#import_batch_profiles_list tbody tr", "Plugin").contains(
+            "Koha::Plugin::Com::Example::Format"
+        );
+    });
+});

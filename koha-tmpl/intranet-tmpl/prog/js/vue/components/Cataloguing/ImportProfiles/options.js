@@ -19,38 +19,24 @@ export const formats = [
     { value: "MARCXML", label: $__("MARCXML") },
 ];
 
+// The values are what is stored (and match the "Stage MARC records for
+// import" page); the labels are deliberately shorter than that page's, to fit
+// the select, and the fields carry a tooltip that explains the choices.
 export const overlayActions = [
-    {
-        value: "replace",
-        label: $__("Replace existing record with incoming record"),
-    },
-    { value: "create_new", label: $__("Add incoming record") },
-    {
-        value: "ignore",
-        label: $__("Ignore incoming record (its items may still be processed)"),
-    },
+    { value: "replace", label: $__("Replace existing record") },
+    { value: "create_new", label: $__("Add as new record") },
+    { value: "ignore", label: $__("Ignore incoming record") },
 ];
 
 export const nomatchActions = [
-    { value: "create_new", label: $__("Add incoming record") },
+    { value: "create_new", label: $__("Add as new record") },
     { value: "ignore", label: $__("Ignore incoming record") },
 ];
 
 export const itemActions = [
     { value: "always_add", label: $__("Always add items") },
-    {
-        value: "add_only_for_matches",
-        label: $__("Add items only if matching bib was found"),
-    },
-    {
-        value: "add_only_for_new",
-        label: $__("Add items only if no matching bib was found"),
-    },
-    {
-        value: "replace",
-        label: $__(
-            "Replace items if matching bib was found (only for existing items)"
-        ),
-    },
+    { value: "add_only_for_matches", label: $__("Add for matched records") },
+    { value: "add_only_for_new", label: $__("Add for new records") },
+    { value: "replace", label: $__("Replace existing items") },
     { value: "ignore", label: $__("Ignore items") },
 ];
