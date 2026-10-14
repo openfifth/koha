@@ -18,7 +18,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 6;
+use Test::More tests => 7;
 use Test::Mojo;
 use t::lib::TestBuilder;
 use t::lib::Mocks;
@@ -229,4 +229,32 @@ subtest 'delete profile' => sub {
 
     $schema->storage->txn_rollback;
 
+};
+
+subtest 'get() tests' => sub {
+    plan tests => 7;
+    $schema->storage->txn_begin;
+
+    my $profile = $builder->build_object( { class => 'Koha::ImportBatchProfiles', value => { name => 'get_ibp' } } );
+
+    my $nopermission = $builder->build_object( { class => 'Koha::Patrons', value => { flags => 4 } } );
+    my $pwd          = 'thePassword123';
+    $nopermission->set_password( { password => $pwd, skip_validation => 1 } );
+    my $nuid = $nopermission->userid;
+    my $id   = $profile->id;
+
+    $t->get_ok("//$nuid:$pwd@/api/v1/import_batch_profiles/$id")->status_is(403);
+
+    my $patron = $builder->build_object( { class => 'Koha::Patrons', value => { flags => 4096 } } );
+    $dbh->prepare(
+        "INSERT INTO user_permissions (borrowernumber, module_bit, code) SELECT ?, bit, ? FROM userflags WHERE flag = ?"
+    )->execute( $patron->borrowernumber, 'stage_marc_import', 'tools' );
+    $patron->set_password( { password => $pwd, skip_validation => 1 } );
+    my $uid = $patron->userid;
+
+    $t->get_ok("//$uid:$pwd@/api/v1/import_batch_profiles/$id")->status_is(200)->json_is( '/name' => 'get_ibp' );
+
+    $t->get_ok( "//$uid:$pwd@/api/v1/import_batch_profiles/" . ( $id + 100000 ) )->status_is(404);
+
+    $schema->storage->txn_rollback;
 };

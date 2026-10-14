@@ -165,6 +165,47 @@
       permissions:
         tools: stage_marc_import
 "/import_batch_profiles/{import_batch_profile_id}":
+  get:
+    x-mojo-to: ImportBatchProfiles#get
+    operationId: getImportBatchProfiles
+    tags:
+      - batch_import_profiles
+    summary: Get batch import profile
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/import_batch_profile_id_pp"
+    produces:
+      - application/json
+    responses:
+      "200":
+        description: A batch import profile
+        schema:
+          $ref: "../swagger.yaml#/definitions/import_batch_profile"
+      "401":
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "404":
+        description: Import batch profile not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "500":
+        description: |
+          Internal server error. Possible `error_code` attribute values:
+
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "503":
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        tools: stage_marc_import
   put:
     x-mojo-to: ImportBatchProfiles#edit
     operationId: editImportBatchProfiles

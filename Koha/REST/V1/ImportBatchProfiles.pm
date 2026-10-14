@@ -54,6 +54,26 @@ sub list {
     };
 }
 
+=head3 get
+
+Method that handles retrieving a single Koha::ImportBatchProfile object
+
+=cut
+
+sub get {
+    my $c = shift->openapi->valid_input or return;
+
+    return try {
+        my $profile = $c->objects->find( Koha::ImportBatchProfiles->new, $c->param('import_batch_profile_id') );
+        return $c->render_resource_not_found("Import batch profile")
+            unless $profile;
+
+        return $c->render( status => 200, openapi => $profile );
+    } catch {
+        $c->unhandled_exception($_);
+    };
+}
+
 =head3 add
 
 Method that handles adding a new Koha::ImportBatchProfile object
