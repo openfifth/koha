@@ -5,7 +5,6 @@
 [% USE Koha %]
 [% INCLUDE 'doc-head-open.inc' %]
 <title>Koha &rsaquo; Agrovoc Search</title>
-[% INCLUDE 'greybox.inc' %]
 [% INCLUDE 'doc-head-close.inc' %]
 [% PROCESS 'i18n.inc' %]
 
