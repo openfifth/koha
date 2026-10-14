@@ -78,4 +78,25 @@ __PACKAGE__->has_many(
 
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration
+
+=head2 koha_object_class
+
+  Koha Object class
+
+=cut
+
+sub koha_object_class {
+    'Koha::MarcModificationTemplate';
+}
+
+=head2 koha_objects_class
+
+  Koha Objects class
+
+=cut
+
+sub koha_objects_class {
+    'Koha::MarcModificationTemplates';
+}
+
 1;
