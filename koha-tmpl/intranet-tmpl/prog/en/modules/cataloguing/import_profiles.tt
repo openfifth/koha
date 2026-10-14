@@ -26,7 +26,9 @@
 [% END #/ WRAPPER main-container.inc %]
 
 [% MACRO jsinclude BLOCK %]
+    [% INCLUDE 'calendar.inc' %]
     [% INCLUDE 'datatables.inc' %]
+    [% INCLUDE 'js-date-format.inc' %]
     [% Asset.js("js/vue/dist/cataloguing/import_profiles.js") | $raw %]
 [% END %]
 

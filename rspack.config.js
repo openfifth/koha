@@ -109,6 +109,8 @@ module.exports = [
             erm: "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/erm.ts",
             preservation:
                 "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/preservation.ts",
+            "cataloguing/import_profiles":
+                "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/cataloguing/import_profiles.ts",
             "admin/record_sources":
                 "./koha-tmpl/intranet-tmpl/prog/js/vue/modules/admin/record_sources.ts",
             acquisitions:
