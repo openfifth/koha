@@ -1,0 +1,13 @@
+---
+type: object
+properties:
+  marc_modification_template_id:
+    type: integer
+    description: Internal MARC modification template identifier
+  name:
+    type: string
+    description: Name of the MARC modification template
+required:
+  - marc_modification_template_id
+  - name
+additionalProperties: false

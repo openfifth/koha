@@ -146,6 +146,10 @@ definitions:
     $ref: ./definitions/library.yaml
   list:
     $ref: ./definitions/list.yaml
+  marc_modification_template:
+    $ref: ./definitions/marc_modification_template.yaml
+  marc_modification_templates:
+    $ref: ./definitions/marc_modification_templates.yaml
   merge_biblios:
     $ref: ./definitions/merge_biblios.yaml
   order:
@@ -501,6 +505,10 @@ paths:
     $ref: "./paths/libraries.yaml#/~1libraries~1{library_id}~1desks"
   "/libraries/{library_id}/closed_dates":
     $ref: "./paths/libraries.yaml#/~1libraries~1{library_id}~1closed_dates"
+  /marc_modification_templates:
+    $ref: ./paths/marc_modification_templates.yaml#/~1marc_modification_templates
+  "/marc_modification_templates/{marc_modification_template_id}":
+    $ref: "./paths/marc_modification_templates.yaml#/~1marc_modification_templates~1{marc_modification_template_id}"
   "/oauth/login/{provider_code}/{interface}":
     $ref: ./paths/oauth.yaml#/~1oauth~1login~1{provider_code}~1{interface}
   /oauth/token:
@@ -919,6 +927,12 @@ parameters:
     description: License internal identifier
     in: path
     name: license_id
+    required: true
+    type: integer
+  marc_modification_template_id_pp:
+    description: Internal MARC modification template identifier
+    in: path
+    name: marc_modification_template_id
     required: true
     type: integer
   match:
@@ -1411,6 +1425,9 @@ tags:
   - description: "Manage macros\n"
     name: macros
     x-displayName: Macros
+  - description: "Manage MARC modification templates\n"
+    name: marc_modification_templates
+    x-displayName: MARC modification templates
   - description: "Manage acquisition orders\n"
     name: orders
     x-displayName: Orders
