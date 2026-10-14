@@ -66,6 +66,11 @@ KOHA_CRON_PATH = /usr/share/koha/bin/cronjobs
 # updates item status from available to longoverdue for items long overdue
 # 19 1 * * *  __KOHA_USER__  $KOHA_CRON_PATH/longoverdue.pl --lost 90=1 --confirm
 
+# CIRCULATION TRIGGERS
+# Replaces both overdue_notices.pl (in the sequence above) and longoverdue.pl.
+# Disable both before enabling process_circulation_triggers.pl.
+# 20 1 * * *  __KOHA_USER__  $KOHA_CRON_PATH/process_circulation_triggers.pl
+
 # SEND EMAILS
 15   * * * *  __KOHA_USER__  $KOHA_CRON_PATH/process_message_queue.pl
 

@@ -19,15 +19,21 @@
 
 use Modern::Perl;
 
+use Test::MockModule;
 use Test::NoWarnings;
-use Test::More tests => 21;
+use Test::More tests => 26;
 use Test::Warn;
 
+use Koha::Account;
+use Koha::Account::Lines;
 use Koha::Database;
 use Koha::DateUtils qw( dt_from_string );
+use Koha::Items;
 use Koha::Notice::Message;
 use Koha::Notice::Messages;
+use Koha::Old::Checkouts;
 use Koha::Overdues::ActionExecutor;
+use Koha::Patron::Restriction;
 
 use t::lib::Mocks;
 use t::lib::Mocks::Logger;
@@ -160,6 +166,196 @@ subtest 'route_item_actions_to_queue: an open return claim suppresses a bare rem
         'lost item without a return claim, notice-only trigger → notice queued'
     );
     };
+
+subtest 'enact_restrict adds an OVERDUES debarment' => sub {
+    plan tests => 3;
+
+    $schema->storage->txn_begin;
+
+    my $patron   = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $executor = Koha::Overdues::ActionExecutor->new;
+    $executor->enact_restrict( { borrowernumber => $patron->borrowernumber } );
+
+    my $restrictions = $patron->restrictions->search( { type => 'OVERDUES' } );
+    is( $restrictions->count,            1,          'one OVERDUES restriction added' );
+    is( $restrictions->next->type->code, 'OVERDUES', 'restriction type is OVERDUES' );
+    is( $executor->summary->{restrict},  1,          'summary counts the restriction' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'enact_lost / enact_forgive_fine / enact_mark_returned' => sub {
+    plan tests => 7;
+
+    $schema->storage->txn_begin;
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron  = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $item    = $builder->build_sample_item( { homebranch => $library->branchcode } );
+    my $issue   = $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => {
+                borrowernumber => $patron->borrowernumber,
+                itemnumber     => $item->itemnumber,
+                branchcode     => $library->branchcode,
+            },
+        }
+    );
+
+    my $account      = Koha::Account->new( { patron_id => $patron->borrowernumber } );
+    my $overdue_fine = $account->add_debit(
+        {
+            amount     => 4.50,
+            interface  => 'commandline',
+            type       => 'OVERDUE',
+            item_id    => $item->itemnumber,
+            issue_id   => $issue->issue_id,
+            library_id => $library->branchcode,
+        }
+    );
+    $overdue_fine->status('UNRETURNED')->store;
+
+    my $overdue_item = {
+        borrowernumber => $patron->borrowernumber,
+        itemnumber     => $item->itemnumber,
+        issue_id       => $issue->issue_id,
+    };
+
+    my $executor = Koha::Overdues::ActionExecutor->new;
+
+    # enact_forgive_fine forgives the UNRETURNED OVERDUE accountline for this issue.
+    $executor->enact_forgive_fine($overdue_item);
+    $overdue_fine->discard_changes;
+    is( $overdue_fine->amountoutstanding + 0, 0, 'enact_forgive_fine zeros the outstanding overdue' );
+
+    # enact_lost flips status to LOST and sets itemlost.
+    $executor->enact_lost( $overdue_item, 2 );
+    $item->discard_changes;
+    is( $item->itemlost, 2, 'enact_lost sets itemlost' );
+    $overdue_fine->discard_changes;
+    is( $overdue_fine->status, 'LOST', 'mark_lost flipped the OVERDUE accountline status to LOST' );
+
+    # enact_mark_returned archives the checkout via Koha::Checkout->mark_returned.
+    t::lib::Mocks::mock_userenv( { branchcode => $library->branchcode } );
+    $executor->enact_mark_returned($overdue_item);
+
+    is(
+        Koha::Checkouts->search( { issue_id => $issue->issue_id } )->count,
+        0, 'checkout removed from issues'
+    );
+    is(
+        Koha::Old::Checkouts->search( { issue_id => $issue->issue_id } )->count,
+        1, 'checkout archived to old_issues'
+    );
+    is(
+        Koha::Old::Checkouts->find( { issue_id => $issue->issue_id } )->checkin_library,
+        $library->branchcode,
+        'archived checkout records the checkout branch as checkin_library, as MarkIssueReturned does with no userenv'
+    );
+
+    # forgive_fine counts accountlines rather than items — one checkout can carry
+    # several outstanding OVERDUE lines, and only one was forgiven here.
+    is_deeply(
+        { map { $_ => $executor->summary->{$_} } qw( forgive_fine lost mark_returned ) },
+        { forgive_fine => 1, lost => 1, mark_returned => 1 },
+        'summary counts each enacted action once'
+    );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'enact_charge creates LOST debit with caller-resolved branch' => sub {
+    plan tests => 6;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'LostChargesControl',        'ItemHomeLibrary' );
+    t::lib::Mocks::mock_preference( 'HomeOrHoldingBranch',       'homebranch' );
+    t::lib::Mocks::mock_preference( 'useDefaultReplacementCost', 0 );
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron  = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $item    = $builder->build_sample_item( { homebranch => $library->branchcode, replacementprice => 8.00 } );
+    my $issue   = $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => {
+                borrowernumber => $patron->borrowernumber,
+                itemnumber     => $item->itemnumber,
+                branchcode     => $library->branchcode,
+            },
+        }
+    );
+
+    my $overdue_item = {
+        borrowernumber => $patron->borrowernumber,
+        itemnumber     => $item->itemnumber,
+        issue_id       => $issue->issue_id,
+        replacementfee => 8.00,
+    };
+
+    my $executor = Koha::Overdues::ActionExecutor->new;
+    $executor->enact_charge($overdue_item);
+
+    my $lost = Koha::Account::Lines->search(
+        {
+            borrowernumber  => $patron->borrowernumber,
+            itemnumber      => $item->itemnumber,
+            debit_type_code => 'LOST',
+        }
+    );
+    is( $lost->count, 1, 'one LOST debit created' );
+
+    my $line = $lost->next;
+    is( $line->amount + 0, 8.00, 'LOST debit amount comes from replacementfee' );
+    is(
+        $line->branchcode, $library->branchcode,
+        'LOST debit stamped with item home library (LostChargesControl=ItemHomeLibrary)'
+    );
+    is( $line->issue_id,              $issue->issue_id, 'LOST debit carries the checkout issue_id' );
+    is( $executor->summary->{charge}, 1,                'summary counts the charge' );
+
+    # add_lost_replacement_fee returns nothing when its duplicate guard blocks a
+    # second charge for the same (item, issue). The count must follow the fee
+    # actually levied, not the attempt.
+    $executor->enact_charge($overdue_item);
+    is( $executor->summary->{charge}, 1, 'a charge blocked by the duplicate guard is not counted' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'enact_charge falls back to the itemtype default replacement cost' => sub {
+    plan tests => 1;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'useDefaultReplacementCost', 1 );
+
+    my $itemtype = $builder->build_object( { class => 'Koha::ItemTypes', value => { defaultreplacecost => 5.00 } } );
+    my $patron   = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $item     = $builder->build_sample_item( { itype => $itemtype->itemtype, replacementprice => 0 } );
+
+    Koha::Overdues::ActionExecutor->new->enact_charge(
+        {
+            borrowernumber => $patron->borrowernumber,
+            itemnumber     => $item->itemnumber,
+            issue_id       => undef,
+            replacementfee => 0,
+        }
+    );
+
+    my $lost = Koha::Account::Lines->search(
+        {
+            borrowernumber  => $patron->borrowernumber,
+            itemnumber      => $item->itemnumber,
+            debit_type_code => 'LOST',
+        }
+    )->next;
+    is( $lost->amount + 0, 5.00, 'LOST debit amount comes from the itemtype defaultreplacecost' );
+
+    $schema->storage->txn_rollback;
+};
 
 subtest 'route_item_actions_to_queue: aggregates multiple items under (borrower|code|mtt|delay) key' => sub {
     plan tests => 4;
@@ -1209,6 +1405,37 @@ subtest 'process_notice_queue: processes print -> sms -> email order' => sub {
     );
 
     $schema->storage->txn_rollback;
+};
+
+subtest 'process_action_queue: enacts actions in a fixed order' => sub {
+    plan tests => 1;
+
+    my $mock = Test::MockModule->new('Koha::Overdues::ActionExecutor');
+
+    my @order;
+    for my $action (qw( enact_restrict enact_forgive_fine enact_lost enact_charge enact_mark_returned )) {
+        $mock->mock( $action, sub { push @order, $action } );
+    }
+
+    my $executor = Koha::Overdues::ActionExecutor->new;
+
+    # Insert the action keys in an order that differs from the enactment order
+    # to prove the ordering comes from process_action_queue, not the hash.
+    $executor->add_to_action_batch_queue(
+        {
+            item    => { borrowernumber => 1, itemnumber => 1 },
+            delay   => 7,
+            actions => { mark_returned => 1, charge => 1, lost => 2, forgive_fine => 1, restrict => 1 },
+        }
+    );
+
+    $executor->process_action_queue;
+
+    is_deeply(
+        \@order,
+        [qw( enact_restrict enact_forgive_fine enact_lost enact_charge enact_mark_returned )],
+        'actions enacted in restrict -> forgive_fine -> lost -> charge -> mark_returned order'
+    );
 };
 
 subtest 'process_notice_queue: re-run skips a notice already queued today' => sub {

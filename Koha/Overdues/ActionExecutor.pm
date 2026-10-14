@@ -21,6 +21,7 @@ use Modern::Perl;
 use Koha::CirculationRules;
 use Koha::Logger;
 use Koha::Items;
+use Koha::Patron::Debarments qw( AddUniqueDebarment );
 use C4::Context;
 use C4::Letters;
 use Koha::Account::Lines;
@@ -29,7 +30,9 @@ use Koha::Number::Price;
 use Koha::Notice::Messages;
 use Koha::Notice::Templates;
 use Koha::Patrons;
-use Koha::DateUtils qw( dt_from_string );
+use Koha::Checkouts;
+use Koha::Checkout;
+use Koha::DateUtils qw( dt_from_string output_pref );
 
 # Columns rendered into <<items.content>>, one tab-separated line per item.
 # Matches the default of overdue_notices.pl's --itemscontent flag, which the
@@ -73,14 +76,21 @@ sub new {
     my $self = {
         action_batch_queue        => [],
         notice_queue              => {},
+        patrons_marked_returned   => {},
         notices_queued_before_run => {},
         notices_enqueued_this_run => {},
         verbose                   => $params->{verbose}      // 0,
         dry_run                   => $params->{dry_run}      // 0,
         trigger_date              => $params->{trigger_date} // dt_from_string(),
         summary                   => {
-            notices_queued     => 0,
-            notices_suppressed => 0,
+            notices_queued      => 0,
+            notices_suppressed  => 0,
+            restrict            => 0,
+            forgive_fine        => 0,
+            lost                => 0,
+            charge              => 0,
+            mark_returned       => 0,
+            restrictions_lifted => 0,
         },
     };
 
@@ -97,7 +107,9 @@ sub new {
   my $summary = $action_executor->summary;
 
 Counts of what the run did, for the end-of-run summary
-C<process_circulation_triggers.pl> prints.
+C<process_circulation_triggers.pl> prints. Each enactor increments its own key at
+the point it knows the outcome, so a skipped item - one that resolved no record,
+or whose charge was blocked by the duplicate guard - is not counted as enacted.
 
 =cut
 
@@ -195,6 +207,113 @@ sub route_item_actions_to_queue {
     return;
 }
 
+=head3 _item_store_params
+
+Parameters for any L<Koha::Item/store> reached from an enactment.
+
+Under C<dry_run> this suppresses the search index update and the holds queue
+job. Both publish to a message broker from inside C<store>, so unlike every
+other effect here they are not undone when the script rolls its transaction
+back. Outside a dry run this is empty and the stores behave normally.
+
+=cut
+
+sub _item_store_params {
+    my ($self) = @_;
+
+    if ( !$self->{dry_run} ) {
+        return {};
+    }
+
+    return { skip_record_index => 1, skip_holds_queue => 1 };
+}
+
+=head3 _report_action
+
+Report one enacted action under C<verbose>. Called immediately after the
+enactment it describes, so the sequence printed is the sequence that ran.
+
+=cut
+
+sub _report_action {
+    my ( $self, $batch, $type ) = @_;
+
+    if ( !$self->{verbose} ) {
+        return;
+    }
+
+    printf "    type=%s value=%s borrower=%s item=%s days_overdue=%s\n",
+        $type,
+        $batch->{actions}->{$type},
+        $batch->{item}->{borrowernumber},
+        $batch->{item}->{itemnumber},
+        $batch->{delay};
+}
+
+=head3 process_action_queue
+
+Process the standard queue.
+
+Under C<verbose>, each action reports itself as it is enacted, so the output is
+a record of what the run did rather than a prediction of it.
+
+=cut
+
+sub process_action_queue {
+    my ($self) = @_;
+
+    if ( $self->{verbose} ) {
+        printf "ACTION ENACTED: \n";
+    }
+
+    foreach my $batch ( @{ $self->{action_batch_queue} } ) {
+        my $overdue_item = $batch->{item};
+        my $actions      = $batch->{actions};
+
+        if ( $actions->{restrict} ) {
+            $self->enact_restrict($overdue_item);
+            $self->_report_action( $batch, 'restrict' );
+        }
+
+        if ( $actions->{forgive_fine} ) {
+            $self->enact_forgive_fine($overdue_item);
+            $self->_report_action( $batch, 'forgive_fine' );
+        }
+
+        if ( $actions->{lost} ) {
+            $self->enact_lost( $overdue_item, $actions->{lost} );
+            $self->_report_action( $batch, 'lost' );
+        }
+
+        if ( $actions->{charge} ) {
+            $self->enact_charge($overdue_item);
+            $self->_report_action( $batch, 'charge' );
+        }
+
+        if ( $actions->{mark_returned} ) {
+            $self->enact_mark_returned($overdue_item);
+            $self->_report_action( $batch, 'mark_returned' );
+        }
+    }
+
+    # Lifting an OVERDUES restriction reconciles against the patron's remaining
+    # overdues, so running it per archived checkout would reach the same answer
+    # by re-evaluating it once per item. Doing it once per patron here avoids
+    # repeating has_restricting_overdues.
+    if ( C4::Context->preference('AutoRemoveOverduesRestrictions') eq 'no' ) {
+        return;
+    }
+
+    foreach my $borrowernumber ( keys %{ $self->{patrons_marked_returned} } ) {
+        my $patron = Koha::Patrons->find($borrowernumber);
+        if ( $patron && $patron->lift_overdue_restrictions ) {
+            $self->{summary}->{restrictions_lifted}++;
+        }
+    }
+
+    return;
+}
+
 =head3 process_notice_queue
 
 Drain the notice queue, generating a prepared letter and inserting a pending
@@ -206,6 +325,13 @@ renders into one letter via the template's repeat block.
 When an C<sms> or C<email> entry can't be delivered (patron has no
 C<smsalertnumber> / no C<notice_email_address>), a C<print> entry is
 synthesised instead.
+
+Letters render against B<pre-action> state — this runs before
+L</process_action_queue>. Templates therefore see the checkout still open, the
+overdue fine still outstanding, and the item not yet lost. That is what a letter
+on an action-carrying trigger wants to state: the fine being forgiven, the
+replacement price about to be charged. Nothing that only exists after enactment
+is available.
 
 One letter is enqueued per C<(borrower, letter_code, effective transport,
 delay)>. A patron holding items at two delays that resolve the same letter code
@@ -735,6 +861,180 @@ Adds an action item to the standard queue.
 sub add_to_action_batch_queue {
     my ( $self, $action_item_batch ) = @_;
     push @{ $self->{action_batch_queue} }, $action_item_batch;
+}
+
+=head3 enact_restrict
+
+Add an OVERDUES debarment for the patron associated with the overdue item.
+
+=cut
+
+sub enact_restrict {
+    my ( $self, $overdue_item ) = @_;
+    AddUniqueDebarment(
+        {
+            borrowernumber => $overdue_item->{borrowernumber},
+            type           => 'OVERDUES',
+            comment        => "OVERDUES_PROCESS " . output_pref( dt_from_string() ),
+        }
+    );
+    $self->{summary}->{restrict}++;
+}
+
+=head3 enact_lost
+
+Set the item's lost status (and cancel outstanding transfers) via
+L<Koha::Item/mark_lost>.
+
+=cut
+
+sub enact_lost {
+    my ( $self, $overdue_item, $lost_value ) = @_;
+    my $item = Koha::Items->find( $overdue_item->{itemnumber} );
+    if ( !$item ) {
+        Koha::Logger->get->warn("enact_lost: itemnumber $overdue_item->{itemnumber} not found — skipping");
+        return;
+    }
+    $item->mark_lost( $lost_value, $self->_item_store_params );
+    $self->{summary}->{lost}++;
+}
+
+=head3 enact_forgive_fine
+
+Forgive any outstanding UNRETURNED OVERDUE accountline(s) for this checkout via
+L<Koha::Account/forgive_debit>. Gated by the trigger row's C<forgive_fine> rule
+value in L</process_action_queue>; legacy C<WhenLostForgiveFine> is deprecated
+and not consulted.
+
+The audit-trail side effects (UNRETURNED → LOST status flip and zero-amount
+accountline cleanup) are not part of this action — they fire from
+L<Koha::Item/mark_lost>.
+
+=cut
+
+sub enact_forgive_fine {
+    my ( $self, $overdue_item ) = @_;
+
+    my $accountlines = Koha::Account::Lines->search(
+        {
+            borrowernumber  => $overdue_item->{borrowernumber},
+            itemnumber      => $overdue_item->{itemnumber},
+            issue_id        => $overdue_item->{issue_id},
+            debit_type_code => 'OVERDUE',
+            status          => 'UNRETURNED',
+        }
+    );
+
+    my $account        = Koha::Account->new( { patron_id => $overdue_item->{borrowernumber} } );
+    my $forgiven_count = 0;
+    while ( my $accountline = $accountlines->next ) {
+        my $credit = $account->forgive_debit( $accountline, { interface => 'cron' } );
+        if ($credit) {
+            $forgiven_count++;
+        }
+    }
+
+    $self->{summary}->{forgive_fine} += $forgiven_count;
+
+    if ( $forgiven_count && C4::Context->preference('FinesLog') ) {
+        Koha::Logger->get->info(
+            "Overdue forgiven: borrower $overdue_item->{borrowernumber}, item $overdue_item->{itemnumber} ($forgiven_count line(s))"
+        );
+    }
+
+    return;
+}
+
+=head3 enact_charge
+
+Charge the patron the item's replacement fee.
+
+Resolves the fee-context branch via LKoha::Checkout/branch_for_fee_context so the LOST accountline's library_id honours
+LostChargesControl / HomeOrHoldingBranch. Records the accountline with interface 'cron'.
+
+=cut
+
+sub enact_charge {
+    my ( $self, $overdue_item ) = @_;
+
+    my $item   = Koha::Items->find( $overdue_item->{itemnumber} );
+    my $patron = Koha::Patrons->find( $overdue_item->{borrowernumber} );
+    my $issue  = Koha::Checkouts->search(
+        {
+            issue_id => $overdue_item->{issue_id},
+        }
+    )->next;
+
+    my $rule_branch = Koha::Checkout->branch_for_fee_context(
+        fee_type => 'LOST',
+        patron   => $patron,
+        item     => $item,
+        issue    => $issue,
+    );
+
+    my $description = sprintf(
+        "%s %s %s",
+        $item->biblio ? ( $item->biblio->title // q{} ) : q{},
+        $item->barcode        // q{},
+        $item->itemcallnumber // q{},
+    );
+
+    my $charged = Koha::Account->new( { patron_id => $overdue_item->{borrowernumber} } )->add_lost_replacement_fee(
+        {
+            item              => $item,
+            issue_id          => $overdue_item->{issue_id},
+            library_id        => $rule_branch,
+            interface         => 'cron',
+            description       => $description,
+            replacement_price => $overdue_item->{replacementfee},
+        }
+    );
+
+    if ($charged) {
+        $self->{summary}->{charge}++;
+    }
+}
+
+=head3 enact_mark_returned
+
+Mark the patron's checkout of this item as returned, honouring the patron's
+privacy setting.
+
+Important: mark_returned archives the issue to old_issues (reassigning
+related accountlines to old_issue_id), clears items.onloan, and records
+last_returned_by. Patron privacy=2 anonymises the archived checkout.
+
+Any OVERDUES debarment is lifted once per patron at the end of
+L</process_action_queue>, not here.
+
+=cut
+
+sub enact_mark_returned {
+    my ( $self, $overdue_item ) = @_;
+    my $patron = Koha::Patrons->find( $overdue_item->{borrowernumber} );
+    if ( !$patron ) {
+        Koha::Logger->get->warn("enact_mark_returned: borrower $overdue_item->{borrowernumber} not found — skipping");
+        return;
+    }
+    my $checkout = Koha::Checkouts->find( $overdue_item->{issue_id} );
+    if ( !$checkout ) {
+        Koha::Logger->get->warn("enact_mark_returned: issue $overdue_item->{issue_id} not found — skipping");
+        return;
+    }
+    my $returned = $checkout->mark_returned(
+        {
+            borrowernumber  => $overdue_item->{borrowernumber},
+            privacy         => $patron->privacy,
+            checkin_library => $checkout->branchcode,
+            %{ $self->_item_store_params },
+        }
+    );
+
+    if ($returned) {
+        $self->{summary}->{mark_returned}++;
+    }
+
+    $self->{patrons_marked_returned}->{ $overdue_item->{borrowernumber} } = 1;
 }
 
 1;
