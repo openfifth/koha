@@ -21,7 +21,7 @@ use Modern::Perl;
 
 use Benchmark;
 use Test::NoWarnings;
-use Test::More tests => 9;
+use Test::More tests => 11;
 use Test::Deep qw( cmp_methods );
 use Test::Exception;
 
@@ -1144,6 +1144,138 @@ subtest 'get_lostreturn_policy() tests' => sub {
         Koha::CirculationRules->get_lostreturn_policy($params),
         { lostreturn => 'restore', processingreturn => 'restore' },
         'return_branch undefined, fallback to ItemHomeBranch rule (restore)'
+    );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'get_known_overdue_delay_values' => sub {
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    Koha::CirculationRules->search( { rule_name => { -like => 'overdue%delay' } } )->delete;
+
+    my @empty = Koha::CirculationRules->get_known_overdue_delay_values;
+    is_deeply( \@empty, [], 'returns empty list when no overdue delay rules exist' );
+
+    my $branch_a = $builder->build( { source => 'Branch' } )->{branchcode};
+    my $branch_b = $builder->build( { source => 'Branch' } )->{branchcode};
+
+    for my $row (
+        [ $branch_a, 'overdue_1_delay', 7 ],
+        [ $branch_a, 'overdue_2_delay', 14 ],
+        [ $branch_b, 'overdue_1_delay', 7 ],    # duplicate value, distinct context
+        [ $branch_b, 'overdue_2_delay', 30 ],
+        )
+    {
+        $builder->build(
+            {
+                source => 'CirculationRule',
+                value  => {
+                    branchcode   => $row->[0],
+                    categorycode => undef,
+                    itemtype     => undef,
+                    rule_name    => $row->[1],
+                    rule_value   => $row->[2],
+                },
+            }
+        );
+    }
+
+    # A non-integer value must be ignored.
+    $builder->build(
+        {
+            source => 'CirculationRule',
+            value  => {
+                branchcode   => $branch_a,
+                categorycode => undef,
+                itemtype     => undef,
+                rule_name    => 'overdue_3_delay',
+                rule_value   => 'noisy',
+            },
+        }
+    );
+
+    # An empty value must be ignored.
+    $builder->build(
+        {
+            source => 'CirculationRule',
+            value  => {
+                branchcode   => $branch_a,
+                categorycode => undef,
+                itemtype     => undef,
+                rule_name    => 'overdue_4_delay',
+                rule_value   => '',
+            },
+        }
+    );
+
+    # Zero is valid and should be included.
+    $builder->build(
+        {
+            source => 'CirculationRule',
+            value  => {
+                branchcode   => $branch_a,
+                categorycode => undef,
+                itemtype     => undef,
+                rule_name    => 'overdue_4_delay',
+                rule_value   => 0,
+            },
+        }
+    );
+
+    my @delays = Koha::CirculationRules->get_known_overdue_delay_values;
+    is_deeply( \@delays, [ 0, 7, 14, 30 ], 'returns distinct integer delays in ascending order' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'resolve_rule_context_branchcode' => sub {
+    plan tests => 5;
+
+    $schema->storage->txn_begin;
+
+    my $context = {
+        patron_branchcode  => 'PATRON_HB',
+        item_homebranch    => 'ITEM_HB',
+        item_holdingbranch => 'ITEM_HD',
+    };
+
+    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+    is(
+        Koha::CirculationRules->resolve_rule_context_branchcode($context),
+        'PATRON_HB', 'CircControl=PatronLibrary → patron library'
+    );
+
+    t::lib::Mocks::mock_preference( 'CircControl',         'ItemHomeLibrary' );
+    t::lib::Mocks::mock_preference( 'HomeOrHoldingBranch', 'homebranch' );
+    is(
+        Koha::CirculationRules->resolve_rule_context_branchcode($context),
+        'ITEM_HB', 'CircControl=ItemHomeLibrary + HomeOrHoldingBranch=homebranch → item home library'
+    );
+
+    t::lib::Mocks::mock_preference( 'HomeOrHoldingBranch', 'holdingbranch' );
+    is(
+        Koha::CirculationRules->resolve_rule_context_branchcode($context),
+        'ITEM_HD', 'CircControl=ItemHomeLibrary + HomeOrHoldingBranch=holdingbranch → item holding library'
+    );
+
+    # Cron runs without a userenv, so PickupLibrary has no pickup branch to
+    # honour and falls through to the item-side path, matching
+    # C4::Circulation::_GetCircControlBranch.
+    t::lib::Mocks::mock_preference( 'CircControl',         'PickupLibrary' );
+    t::lib::Mocks::mock_preference( 'HomeOrHoldingBranch', 'homebranch' );
+    is(
+        Koha::CirculationRules->resolve_rule_context_branchcode($context),
+        'ITEM_HB', 'PickupLibrary without a userenv falls through to the item-side path'
+    );
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    t::lib::Mocks::mock_userenv( { branchcode => $library->branchcode } );
+    is(
+        Koha::CirculationRules->resolve_rule_context_branchcode($context),
+        $library->branchcode, 'PickupLibrary with a userenv resolves to the logged-in library'
     );
 
     $schema->storage->txn_rollback;

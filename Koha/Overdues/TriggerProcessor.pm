@@ -1,0 +1,345 @@
+package Koha::Overdues::TriggerProcessor;
+
+# Copyright Open Fifth 2025
+#
+# This file is part of Koha.
+#
+# Koha is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# Koha is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Koha; if not, see <http://www.gnu.org/licenses>.
+
+use Modern::Perl;
+use Try::Tiny;
+use C4::Context;
+use Koha::CirculationRules;
+use Koha::Logger;
+use Koha::Overdues::RuleResolver;
+use Koha::Overdues::ActionExecutor;
+use Koha::Overdues::Repository;
+use Koha::Library::Calendar;
+use Koha::Checkouts;
+use Koha::DateUtils qw( dt_from_string );
+
+=head1 NAME
+
+Koha::Overdues::TriggerProcessor - Koha Overdue TriggerProcessor object set class
+
+=head2 API
+
+=head3 new
+
+$triggerProcessor = Koha::Overdues::TriggerProcessor->new();
+$triggerProcessor = Koha::Overdues::TriggerProcessor->new( { verbose => 1, debug => 1 } );
+
+Optional C<verbose>, C<debug> and C<dry_run> flags serve the corresponding modes
+of C<process_circulation_triggers.pl>. C<debug> dumps the matched rows and
+resolved rule sets from L</_dispatch_overdues>; C<verbose> is handed to
+L<Koha::Overdues::ActionExecutor>, which reports each action and each enqueued
+letter as it happens so that sequencing is preserved.
+
+C<dry_run> is also handed to the executor. The script isolates a dry run in a
+transaction it rolls back, which covers every database effect but not the search
+index update and holds queue job reached from L<Koha::Item/store> — those
+publish to a message broker. The flag suppresses them so a dry run leaves
+nothing behind.
+
+C<trigger_date> is the L<DateTime> every delay is measured backward from,
+defaulting to today. C<process_circulation_triggers.pl> takes it from C<--date>
+so a missed run can be replayed: actions fire only on the exact day a delay
+comes due, so the day a run is skipped has no other way back.
+
+=cut
+
+sub new {
+    my ( $class, $params ) = @_;
+    my $self = {
+        verbose      => $params->{verbose}      // 0,
+        debug        => $params->{debug}        // 0,
+        dry_run      => $params->{dry_run}      // 0,
+        trigger_date => $params->{trigger_date} // dt_from_string(),
+        summary      => { matched => 0 },
+    };
+    return bless $self, $class;
+}
+
+=head3 summary
+
+  my $summary = $triggerProcessor->summary;
+
+What the run did, for the summary C<process_circulation_triggers.pl> prints:
+C<matched>, the number of overdue checkouts the fetch returned, merged with the
+per-action counts from L<Koha::Overdues::ActionExecutor/summary>.
+
+A run that resolves no delays, no branches or no checkouts never reaches
+L</_dispatch_overdues>, and reports C<matched> 0 with no action counts.
+
+=cut
+
+sub summary {
+    my ($self) = @_;
+    return $self->{summary};
+}
+
+=head3 process_overdues
+
+  $triggerProcessor->process_overdues;
+
+Entry point used by C<process_circulation_triggers.pl>. Dispatches to the
+calendar-adjusted path when C<OverdueTriggersCalendar> is enabled, otherwise
+to the simple DATEDIFF-based path.
+
+=cut
+
+sub process_overdues {
+    my ($self) = @_;
+
+    if ( C4::Context->preference('OverdueTriggersCalendar') ) {
+        $self->_process_calendar_adjusted;
+        return;
+    }
+    $self->_process_simple_calculation;
+    return;
+}
+
+=head3 _process_simple_calculation
+
+Simple Calculation (No Closed Days). Matches items whose C<date_due> falls
+exactly on one of the trigger-delay dates measured backward from the trigger
+date using calendar-day arithmetic.
+
+=cut
+
+sub _process_simple_calculation {
+    my ($self) = @_;
+    my @known_delay_values = Koha::CirculationRules->get_known_overdue_delay_values();
+
+    if ( !@known_delay_values ) {
+
+        # this should not happen as it would imply the process_circulation_triggers.pl script is running despite no circulation rules being set
+        return;
+    }
+
+    my $min_delay = $known_delay_values[0];
+    my @branches  = Koha::Overdues::Repository->get_distinct_overdue_branches( $min_delay, $self->{trigger_date} );
+    if ( !@branches ) {
+        return;
+    }
+
+    my %effective_delay_by_raw_delay;    # branchcode => { raw_delay => effective_delay }
+    for my $branch (@branches) {
+        for my $delay (@known_delay_values) {
+            $effective_delay_by_raw_delay{$branch}{$delay} = $delay;
+        }
+    }
+
+    my $allOverduesForKnownDelays =
+        Koha::Overdues::Repository->get_overdue_summaries_by_delays( \@known_delay_values, $self->{trigger_date} );
+
+    if ( !$allOverduesForKnownDelays ) {
+        return;
+    }
+
+    $self->_dispatch_overdues( $allOverduesForKnownDelays, \%effective_delay_by_raw_delay );
+
+    return;
+}
+
+=head3 _process_calendar_adjusted
+
+Calendar-adjusted path. For each unique branch holding overdue items, builds a
+L<Koha::Library::Calendar> and computes the exact calendar date corresponding to each
+trigger delay measured in B<open days> using
+L<Koha::Library::Calendar/days_backward>. Then fetches the matching checkouts via one
+SQL with OR-clauses and feeds them through the same rule
+resolution + action enactment as the simple path.
+
+Deliberately does B<not> use C<prev_open_days> — that routes through
+C<get_push_amt> which jumps 7 days at a time in DayWeek mode (Bug 42608
+class). C<days_backward> walks one calendar day at a time, decrementing only
+on open days.
+
+=cut
+
+sub _process_calendar_adjusted {
+    my ($self) = @_;
+
+    my @known_delay_values = Koha::CirculationRules->get_known_overdue_delay_values();    # sorted in ascending order
+    if ( !@known_delay_values ) {
+        return;
+    }
+
+    my $min_delay = $known_delay_values[0];
+    my @branches  = Koha::Overdues::Repository->get_distinct_overdue_branches( $min_delay, $self->{trigger_date} );
+    if ( !@branches ) {
+        return;
+    }
+
+    my $trigger_date = $self->{trigger_date};
+    my $days_mode    = C4::Context->preference('useDaysMode');
+
+    my %target_dates_by_branch;
+    my %effective_delay_by_raw_delay;    # branchcode => { raw_delay => effective_delay }
+    for my $branch (@branches) {
+        my $calendar = Koha::Library::Calendar->new( branchcode => $branch, days_mode => $days_mode );
+
+        # A branch closed on the run date should not processed
+        if ( $calendar->is_holiday($trigger_date) ) {
+            next;
+        }
+
+        my @dates;
+        for my $delay (@known_delay_values) {
+
+            # days_backward throws past its iteration cap — skip any no open days branch
+            my $target_dt;
+            try {
+                $target_dt = $calendar->days_backward( $trigger_date->clone, $delay );
+            } catch {
+                Koha::Logger->get->warn("Calendar for branch $branch cannot resolve delay $delay — skipping: $_");
+            };
+
+            if ( !$target_dt ) {
+                next;
+            }
+
+            my $effective_delay = $trigger_date->delta_days($target_dt)->in_units('days');
+            push @dates, $target_dt->strftime('%Y-%m-%d');
+            $effective_delay_by_raw_delay{$branch}{$delay} = $effective_delay;
+        }
+
+        if ( !@dates ) {
+            next;
+        }
+
+        $target_dates_by_branch{$branch} = \@dates;
+    }
+
+    if ( !%target_dates_by_branch ) {
+        return;
+    }
+
+    my @pairs = map { { branchcode => $_, dates => $target_dates_by_branch{$_} } } keys %target_dates_by_branch;
+    my $overdues_resultset = Koha::Overdues::Repository->get_overdue_summaries_by_branch_date_pairs( \@pairs );
+
+    if ( !$overdues_resultset ) {
+        return;
+    }
+
+    $self->_dispatch_overdues( $overdues_resultset, \%effective_delay_by_raw_delay );
+
+    return;
+}
+
+# Shared post-fetch flow: walk the resultset, collect dimensions, resolve
+# rules, route through ActionExecutor. Identical for both simple and
+# calendar-adjusted paths.
+sub _dispatch_overdues {
+    my ( $self, $overdues_resultset, $effective_delay_by_raw_delay ) = @_;
+
+    my $trigger_date = $self->{trigger_date}->clone->truncate( to => 'day' );
+
+    my %seen_branches;
+    my %seen_categories;
+    my %seen_itemtypes;
+    my %seen_contexts;
+    my @overdue_items;
+
+    while ( my $row = $overdues_resultset->next ) {
+        my $item         = $row->item;
+        my $patron       = $row->patron;
+        my $due_date     = dt_from_string( $row->date_due )->truncate( to => 'day' );
+        my $days_overdue = $trigger_date->delta_days($due_date)->in_units('days');
+
+        my $itemtype = $item->effective_itemtype;
+
+        my $item_hashref = {
+            issue_id          => $row->issue_id,
+            borrowernumber    => $row->borrowernumber,
+            itemnumber        => $row->itemnumber,
+            branchcode        => $row->branchcode,
+            date_due          => $row->date_due,
+            categorycode      => $patron->categorycode,
+            itemtype          => $itemtype,
+            days_overdue      => $days_overdue,
+            biblionumber      => $item->biblionumber,
+            replacementfee    => $item->replacementprice,
+            itemlost          => $item->itemlost,
+            itemhomebranch    => $item->homebranch,
+            itemholdingbranch => $item->holdingbranch,
+            patronhomebranch  => $patron->branchcode,
+        };
+
+        my $rule_branchcode = Koha::CirculationRules->resolve_rule_context_branchcode(
+            {
+                patron_branchcode  => $patron->branchcode,
+                item_homebranch    => $item->homebranch,
+                item_holdingbranch => $item->holdingbranch,
+            }
+        );
+
+        $seen_branches{$rule_branchcode}          = 1;
+        $seen_categories{ $patron->categorycode } = 1;
+        $seen_itemtypes{$itemtype}                = 1;
+
+        # The raw fetch matches each context column on its own, so it needs the union
+        # of the values seen. Resolving effective sets does not: only the combinations
+        # an item actually presents are ever looked up, and those are a sparse subset
+        # of the three lists crossed together.
+        $seen_contexts{ join( "|", $rule_branchcode, $patron->categorycode, $itemtype ) } = 1;
+
+        push @overdue_items, $item_hashref;
+    }
+
+    my @branch_list   = keys %seen_branches;
+    my @category_list = keys %seen_categories;
+    my @itemtype_list = keys %seen_itemtypes;
+
+    #  fetch from the database
+    my $rule_resolver = Koha::Overdues::RuleResolver->new;
+    $rule_resolver->set_raw_overdue_rule_sets(
+        \@branch_list, \@category_list,
+        \@itemtype_list
+    );
+
+    # resolve the effective set for the contexts this run actually presents
+    $rule_resolver->set_effective_overdue_rule_sets(
+        [ keys %seen_contexts ],
+        $effective_delay_by_raw_delay
+    );
+
+    my $action_executor = Koha::Overdues::ActionExecutor->new(
+        { verbose => $self->{verbose}, dry_run => $self->{dry_run}, trigger_date => $self->{trigger_date} } );
+
+    # separate notice route actions from standard route actions
+    foreach my $overdue_item (@overdue_items) {
+        $action_executor->route_item_actions_to_queue( $rule_resolver->{effective_overdue_rule_sets}, $overdue_item );
+    }
+
+    if ( $self->{debug} ) {
+        require Data::Dumper;
+        local $Data::Dumper::Sortkeys = 1;
+        local $Data::Dumper::Indent   = 1;
+        print STDERR Data::Dumper->Dump( [ \@overdue_items ], ['overdue_items'] );
+        print STDERR Data::Dumper->Dump(
+            [ $rule_resolver->{effective_overdue_rule_sets} ],
+            ['effective_overdue_rule_sets']
+        );
+        print STDERR Data::Dumper->Dump( [ $action_executor->{action_batch_queue} ], ['action_batch_queue'] );
+
+    }
+
+    $self->{summary} = { matched => scalar @overdue_items, %{ $action_executor->summary } };
+
+    return;
+}
+
+1;

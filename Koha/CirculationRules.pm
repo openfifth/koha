@@ -804,6 +804,66 @@ sub get_effective_daysmode {
 
 }
 
+=head3 get_known_overdue_delay_values
+
+Return an array of existing overdue delays, sorted in ascending order.
+Checks through every rule set existing in the database, regardless of context, and include any delay that is DISTINCT.
+For use in process_circulation_triggers.pl
+
+=cut
+
+sub get_known_overdue_delay_values {
+    my ( $self, $params ) = @_;
+
+    my $overdue_delay_rules = $self->search( { 'me.rule_name' => { -like => 'overdue%delay' } }, {} );
+
+    if ( $overdue_delay_rules->count == 0 ) {
+        return ();
+    }
+
+    my %unique_delay_values;
+    while ( my $rule = $overdue_delay_rules->next ) {
+        my $value = $rule->rule_value;
+
+        if ( !defined $value || $value !~ /^\d+$/ || defined $unique_delay_values{$value} ) {
+            next;
+        }
+
+        $unique_delay_values{$value} = 1;
+    }
+
+    my @delays = sort { $a <=> $b } keys %unique_delay_values;
+    return @delays;
+}
+
+=head3 resolve_rule_context_branchcode
+
+Return the branchcode circulation rules should be resolved against for a given
+patron / item pair, honouring the C<CircControl> and C<HomeOrHoldingBranch>
+system preferences. 'PickupLibrary' is only honored if userenv is set, and otherwise
+we fall back to the item path.
+
+=cut
+
+sub resolve_rule_context_branchcode {
+    my ( $class, $params ) = @_;
+
+    my $circ_control = C4::Context->preference('CircControl') // q{};
+    my $userenv      = C4::Context->userenv;
+
+    if ( $circ_control eq 'PickupLibrary' && $userenv && $userenv->{branch} ) {
+        return $userenv->{branch};
+    }
+
+    if ( $circ_control eq 'PatronLibrary' ) {
+        return $params->{patron_branchcode};
+    }
+
+    return ( ( C4::Context->preference('HomeOrHoldingBranch') // q{} ) eq 'holdingbranch' )
+        ? $params->{item_holdingbranch}
+        : $params->{item_homebranch};
+}
+
 =head3 get_effective_expire_reserves_charge
 
 Return the value for expire_reserves_charge defined in the circulation rules.
