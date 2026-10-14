@@ -1,0 +1,33 @@
+[% USE raw %]
+[% USE Asset %]
+[% SET footerjs = 1 %]
+[% PROCESS 'i18n.inc' %]
+[% INCLUDE 'doc-head-open.inc' %]
+<title
+    >[% FILTER collapse %]
+        [% t("Import profiles") | html %]
+        &rsaquo; [% t("Cataloging") | html %] &rsaquo; [% t("Koha") | html %]
+    [% END %]</title
+>
+[% INCLUDE 'doc-head-close.inc' %]
+</head>
+
+<body id="import_profiles" class="cat import_profiles">
+[% WRAPPER 'header.inc' %]
+    [% INCLUDE 'cat-search.inc' %]
+[% END %]
+
+[% WRAPPER 'sub-header.inc' %]
+    <div id="vue-breadcrumbs-container"></div>
+[% END #/ WRAPPER sub-header.inc %]
+
+[% WRAPPER 'main-container.inc' aside='cat-menu' %]
+    <div id="import-profiles"></div>
+[% END #/ WRAPPER main-container.inc %]
+
+[% MACRO jsinclude BLOCK %]
+    [% INCLUDE 'datatables.inc' %]
+    [% Asset.js("js/vue/dist/cataloguing/import_profiles.js") | $raw %]
+[% END %]
+
+[% INCLUDE 'intranet-bottom.inc' %]

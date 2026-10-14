@@ -13,6 +13,11 @@
                     <a href="/cgi-bin/koha/tools/manage-marc-import.pl">Manage staged records</a>
                 </li>
             [% END %]
+            [% IF ( CAN_user_tools_stage_marc_import ) %]
+                <li>
+                    <a href="/cgi-bin/koha/cataloguing/import_profiles">Import profiles</a>
+                </li>
+            [% END %]
         </ul>
     [% END %]
 
