@@ -1640,6 +1640,7 @@
             OPACURLOpenInNewWindow: [% Koha.Preference('OPACURLOpenInNewWindow') ? 1 : 0 | html %],
             OPACShelfBrowser: [% Koha.Preference('OPACShelfBrowser') ? 1 : 0 | html %],
             OPACTableColExpandedByDefault: [% Koha.Preference('OPACTableColExpandedByDefault') ? 1 : 0 | html %],
+            OpacAnonCatalogConcerns: [% Koha.Preference("OpacAnonCatalogConcerns") ? 1 : 0 | html %]
         });
         const busc = "[% busc | html %]";
         const loggedinusername = "[% loggedinusername | html %]";

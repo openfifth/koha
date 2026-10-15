@@ -523,6 +523,7 @@
             CoceProviders: "[% Koha.Preference('CoceProviders') | html %]",
             OverDriveLibraryID: "[% Koha.Preference("OverDriveLibraryID") | html %]",
             OpenLibrarySearch: [% Koha.Preference("OpenLibrarySearch") ? 1 : 0 | html %],
+            OpacAnonCatalogConcerns: [% Koha.Preference("OpacAnonCatalogConcerns") ? 1 : 0 | html %]
         });
         const OverDriveEnabled = [% OverDriveEnabled ? 1 : 0 | html %];
         const DidYouMean = [% DidYouMean ? 1 : 0 | html %];

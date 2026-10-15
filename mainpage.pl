@@ -116,7 +116,8 @@ if ( C4::Context->preference('OpacCatalogConcerns') || C4::Context->preference('
     my $pending_biblio_tickets = Koha::Tickets->search(
         {
             resolved_date => undef,
-            biblio_id     => { '!=' => undef }
+            biblio_id     => { '!=' => undef },
+            verify_uuid   => undef,
         }
     );
     $template->param( pending_biblio_tickets => $pending_biblio_tickets->count );

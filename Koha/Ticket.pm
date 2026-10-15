@@ -47,6 +47,21 @@ sub reporter {
     return Koha::Patron->_new_from_dbic($rs);
 }
 
+=head3 reporter_contact_email
+
+Return the email address to contact the patron who submitted this ticket
+
+=cut
+
+sub reporter_contact_email {
+    my ($self) = @_;
+    my $reporter = $self->reporter;
+    if ($reporter) {
+        return $reporter->notice_email_address;
+    }
+    return $self->reporter_email;
+}
+
 =head3 assignee
 
 Return the patron who submitted this ticket
@@ -129,56 +144,99 @@ sub store {
         $self->discard_changes;
         $assignee = $self->assignee;
 
-        # Send patron acknowledgement
-        my $acknowledgement_letter = C4::Letters::GetPreparedLetter(
-            module      => 'catalogue',
-            letter_code => 'TICKET_ACKNOWLEDGE',
-            branchcode  => $self->reporter->branchcode,
-            tables      => { tickets => $self->id }
-        );
-
-        if ($acknowledgement_letter) {
-            my $acknowledgement_message_id = C4::Letters::EnqueueLetter(
-                {
-                    letter                 => $acknowledgement_letter,
-                    message_transport_type => 'email',
-                    borrowernumber         => $self->reporter_id,
-                }
-            );
-            C4::Letters::SendQueuedMessages( { message_id => $acknowledgement_message_id } )
-                if $acknowledgement_message_id;
-        }
-
-        # Notify cataloger by email
-        if ( $self->biblio_id && C4::Context->preference('CatalogerEmails') ) {
-
-            # notify the library if a notice exists
-            my $notify_letter = C4::Letters::GetPreparedLetter(
-                module      => 'catalogue',
-                letter_code => 'TICKET_NOTIFY',
-                branchcode  => $self->reporter->branchcode,
-                tables      => { tickets => $self->id }
-            );
-
-            if ($notify_letter) {
-                my $message_id = C4::Letters::EnqueueLetter(
-                    {
-                        letter                 => $notify_letter,
-                        message_transport_type => 'email',
-                        to_address             => C4::Context->preference('CatalogerEmails'),
-                        reply_address          => $self->reporter->notice_email_address,
-                    }
-                );
-                C4::Letters::SendQueuedMessages( { message_id => $message_id } ) if $message_id;
-            }
+        if ( $self->_is_verified ) {
+            $self->_send_initial_emails;
         }
     } else {
         my %updated_columns = $self->_result->get_dirty_columns;
         $self->SUPER::store;
         $self->discard_changes;
 
+        if ( $self->_is_verified && exists $updated_columns{verify_uuid} ) {
+            $self->_send_initial_emails;
+        }
+
         $assignee = ( exists $updated_columns{assignee_id} ) ? $self->assignee : undef;
     }
+
+    $self->_send_update_emails($assignee);
+
+    return $self;
+}
+
+=head2 Internal methods
+
+=cut
+
+sub _is_verified {
+    my ($self) = @_;
+    return $self->verify_uuid ? 0 : 1;
+}
+
+sub _send_initial_emails {
+    my ($self) = @_;
+
+    my $branchcode = $self->reporter ? $self->reporter->branchcode : undef;
+
+    # Send patron acknowledgement
+    my $acknowledgement_letter = C4::Letters::GetPreparedLetter(
+        module      => 'catalogue',
+        letter_code => 'TICKET_ACKNOWLEDGE',
+        branchcode  => $branchcode,
+        tables      => { tickets => $self->id }
+    );
+
+    if ($acknowledgement_letter) {
+        my $acknowledgement_message_id;
+
+        if ( $self->reporter ) {
+            $acknowledgement_message_id = C4::Letters::EnqueueLetter(
+                {
+                    letter                 => $acknowledgement_letter,
+                    message_transport_type => 'email',
+                    borrowernumber         => $self->reporter_id,
+                }
+            );
+        } else {
+            $acknowledgement_message_id = C4::Letters::EnqueueLetter(
+                {
+                    letter                 => $acknowledgement_letter,
+                    message_transport_type => 'email',
+                    to_address             => $self->reporter_contact_email,
+                }
+            );
+        }
+        C4::Letters::SendQueuedMessages( { message_id => $acknowledgement_message_id } )
+            if $acknowledgement_message_id;
+    }
+
+    # Notify cataloger by email
+    if ( $self->biblio_id && C4::Context->preference('CatalogerEmails') ) {
+
+        # notify the library if a notice exists
+        my $notify_letter = C4::Letters::GetPreparedLetter(
+            module      => 'catalogue',
+            letter_code => 'TICKET_NOTIFY',
+            branchcode  => $branchcode,
+            tables      => { tickets => $self->id }
+        );
+
+        if ($notify_letter) {
+            my $message_id = C4::Letters::EnqueueLetter(
+                {
+                    letter                 => $notify_letter,
+                    message_transport_type => 'email',
+                    to_address             => C4::Context->preference('CatalogerEmails'),
+                    reply_address          => $self->reporter_contact_email,
+                }
+            );
+            C4::Letters::SendQueuedMessages( { message_id => $message_id } ) if $message_id;
+        }
+    }
+}
+
+sub _send_update_emails {
+    my ( $self, $assignee ) = @_;
 
     # Notify assignee
     if ( $assignee && ( $assignee->borrowernumber != C4::Context->userenv->{number} ) ) {
@@ -200,13 +258,7 @@ sub store {
             C4::Letters::SendQueuedMessages( { message_id => $message_id } ) if $message_id;
         }
     }
-
-    return $self;
 }
-
-=head2 Internal methods
-
-=cut
 
 =head3 public_read_list
 
