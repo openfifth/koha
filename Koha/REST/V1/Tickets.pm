@@ -93,6 +93,16 @@ sub add {
                 );
             }
 
+            my $email_regex = C4::Context->preference('OpacAnonCatalogConcernsEmail');
+            if ($email_regex) {
+                unless ( $body->{reporter_email} =~ /$email_regex/ ) {
+                    return $c->render(
+                        status => 403,
+                        json   => { error => "Anonymous tickets are not permitted from this email address" }
+                    );
+                }
+            }
+
             $body->{verify_uuid} = uuid();
         }
 

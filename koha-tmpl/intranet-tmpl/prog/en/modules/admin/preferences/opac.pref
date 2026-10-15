@@ -378,6 +378,9 @@ OPAC:
                   1: Allow
             - "unauthenticated users to report concerns about bibliographic records."
         -
+            - pref: OpacAnonCatalogConcernsEmail
+            - "Regular expression that must match the provided email address for anonymous concerns."
+        -
             - pref: OPACReportProblem
               choices:
                   1: Allow

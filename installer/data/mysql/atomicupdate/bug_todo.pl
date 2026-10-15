@@ -9,6 +9,8 @@ return {
         my ( $dbh, $out ) = @$args{qw(dbh out)};
 
         $dbh->do(q{INSERT IGNORE INTO systempreferences (variable,value) VALUES ('OpacAnonCatalogConcerns', '0')});
+        $dbh->do(q{INSERT IGNORE INTO systempreferences (variable,value) VALUES ('OpacAnonCatalogConcernsEmail', '')});
+
         say_success( $out, "Added OpacAnonCatalogConcerns system preference" );
 
         $dbh->do(

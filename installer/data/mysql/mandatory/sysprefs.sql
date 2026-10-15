@@ -515,6 +515,7 @@ INSERT INTO systempreferences ( `variable`, `value` ) VALUES
 ('OPACAllowUserToChooseBranch','1'),
 ('OPACAmazonCoverImages','0'),
 ('OpacAnonCatalogConcerns', '0'),
+('OpacAnonCatalogConcernsEmail', ''),
 ('OPACAuthorIdentifiersAndInformation', ''),
 ('OpacAuthorities','1'),
 ('OPACBaseURL',''),
