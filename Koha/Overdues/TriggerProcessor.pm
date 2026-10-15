@@ -30,11 +30,6 @@ use Koha::Checkouts;
 use Koha::Checkouts::ReturnClaims;
 use Koha::DateUtils qw( dt_from_string );
 
-# Above this many (branch, delay) pairs, the calendar-adjusted path issues one
-# SQL per branch instead of a single OR-clause query — keeps the OR list and
-# the bind-parameter count within sensible bounds for large fleets.
-use constant CALENDAR_PAIRS_INLINE_LIMIT => 150;
-
 =head1 NAME
 
 Koha::Overdues::TriggerProcessor - Koha Overdue TriggerProcessor object set class
@@ -165,8 +160,7 @@ Calendar-adjusted path. For each unique branch holding overdue items, builds a
 L<Koha::Library::Calendar> and computes the exact calendar date corresponding to each
 trigger delay measured in B<open days> using
 L<Koha::Library::Calendar/days_backward>. Then fetches the matching checkouts via one
-SQL with OR-clauses (or one SQL per branch above
-L</CALENDAR_PAIRS_INLINE_LIMIT>) and feeds them through the same rule
+SQL with OR-clauses and feeds them through the same rule
 resolution + action enactment as the simple path.
 
 Deliberately does B<not> use C<prev_open_days> — that routes through
@@ -234,16 +228,8 @@ sub _process_calendar_adjusted {
         return;
     }
 
-    my @processed_branches = keys %target_dates_by_branch;
-    my $pair_count         = @processed_branches * @known_delay_values;
-
-    my $overdues_resultset;
-    if ( $pair_count > CALENDAR_PAIRS_INLINE_LIMIT ) {
-        $overdues_resultset = $self->_fetch_per_branch( \%target_dates_by_branch );
-    } else {
-        my @pairs = map { { branchcode => $_, dates => $target_dates_by_branch{$_} } } @processed_branches;
-        $overdues_resultset = Koha::Overdues::Repository->get_overdue_summaries_by_branch_date_pairs( \@pairs );
-    }
+    my @pairs = map { { branchcode => $_, dates => $target_dates_by_branch{$_} } } keys %target_dates_by_branch;
+    my $overdues_resultset = Koha::Overdues::Repository->get_overdue_summaries_by_branch_date_pairs( \@pairs );
 
     if ( !$overdues_resultset ) {
         return;
@@ -252,25 +238,6 @@ sub _process_calendar_adjusted {
     $self->_dispatch_overdues( $overdues_resultset, \%effective_delay_by_raw_delay );
 
     return;
-}
-
-# Alg 3 fallback: issue one query per branch and return a merged in-memory
-# resultset-like iterator. The downstream code only needs ->next, so we wrap
-# the per-branch resultsets in a minimal chained iterator.
-sub _fetch_per_branch {
-    my ( $self, $target_dates_by_branch ) = @_;
-
-    my @resultsets;
-    for my $branch ( keys %$target_dates_by_branch ) {
-        my $rs = Koha::Overdues::Repository->get_overdue_summaries_by_branch_dates(
-            $branch,
-            $target_dates_by_branch->{$branch}
-        );
-        push @resultsets, $rs if $rs;
-    }
-    return unless @resultsets;
-
-    return Koha::Overdues::_ChainedResultset->new( \@resultsets );
 }
 
 # Shared post-fetch flow: walk the resultset, collect dimensions, resolve
@@ -386,25 +353,6 @@ sub _dispatch_overdues {
 
     $self->{summary} = { matched => scalar @overdue_items, %{ $action_executor->summary } };
 
-    return;
-}
-
-# Minimal iterator that chains a list of DBIx::Class resultsets so the
-# dispatch code can keep using ->next. Used only by the per-branch fallback.
-package Koha::Overdues::_ChainedResultset;
-
-sub new {
-    my ( $class, $resultsets ) = @_;
-    return bless { resultsets => $resultsets, current => 0 }, $class;
-}
-
-sub next {
-    my ($self) = @_;
-    while ( $self->{current} < @{ $self->{resultsets} } ) {
-        my $row = $self->{resultsets}->[ $self->{current} ]->next;
-        return $row if $row;
-        $self->{current}++;
-    }
     return;
 }
 

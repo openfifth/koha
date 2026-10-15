@@ -139,7 +139,7 @@ sub get_distinct_overdue_branches {
       [ { branchcode => 'CPL', dates => [ '2026-05-27', '2026-05-20' ] },
         { branchcode => 'MPL', dates => [ '2026-05-28' ] }, ... ] );
 
-Algorithm 2: single SQL with one OR-clause per branch, each clause matching
+Single SQL with one OR-clause per branch, each clause matching
 that branch's pre-computed exact target dates. The branch comparison uses
 L</rule_context_branch_column>. Returns a L<Koha::Checkouts> resultset.
 
@@ -173,40 +173,14 @@ sub get_overdue_summaries_by_branch_date_pairs {
     };
 }
 
-=head3 get_overdue_summaries_by_branch_dates
-
-  my $rs = Koha::Overdues::Repository->get_overdue_summaries_by_branch_dates(
-      'CPL', [ '2026-05-27', '2026-05-20' ] );
-
-Algorithm 3: per-branch fallback for cases where the single OR-clause would
-grow too large (large fleets with many branches). Same shape as
-L</get_overdue_summaries_by_branch_date_pairs> but scoped to one branch.
-
-=cut
-
-sub get_overdue_summaries_by_branch_dates {
-    my ( $self, $branchcode, $dates ) = @_;
-    return unless defined $branchcode && $dates && @$dates;
-
-    my $where = $self->_branch_dates_clause( $branchcode, $dates );
-
-    try {
-        return Koha::Checkouts->search( $where, { overdue_summaries_query_attributes() } );
-    } catch {
-        Koha::Logger->get->error("Failed to fetch overdues by branch+dates for $branchcode: $_");
-        return;
-    };
-}
-
 =head3 _branch_dates_clause
 
   my $clause = $self->_branch_dates_clause( $branchcode, \@dates );
 
 Builds the SQL::Abstract clause matching rows whose rule-context branch equals
 C<$branchcode> and whose C<date_due> falls on any of the given calendar dates,
-used by L</get_overdue_summaries_by_branch_date_pairs> and
-L</get_overdue_summaries_by_branch_dates>. The branch column comes from
-L</rule_context_branch_column>.
+used by L</get_overdue_summaries_by_branch_date_pairs>. The branch column comes
+from L</rule_context_branch_column>.
 
 =cut
 

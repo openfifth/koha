@@ -229,8 +229,8 @@ subtest 'get_distinct_overdue_branches' => sub {
     $schema->storage->txn_rollback;
 };
 
-subtest 'get_overdue_summaries_by_branch_date_pairs + get_overdue_summaries_by_branch_dates' => sub {
-    plan tests => 6;
+subtest 'get_overdue_summaries_by_branch_date_pairs' => sub {
+    plan tests => 4;
 
     $schema->storage->txn_begin;
 
@@ -287,7 +287,7 @@ subtest 'get_overdue_summaries_by_branch_date_pairs + get_overdue_summaries_by_b
         }
     );
 
-    # Alg 2: pairs hit each branch's exact date.
+    # Pairs hit each branch's exact date.
     my $rs = Koha::Overdues::Repository->get_overdue_summaries_by_branch_date_pairs(
         [
             { branchcode => $library_a->branchcode, dates => [$date_a] },
@@ -308,13 +308,6 @@ subtest 'get_overdue_summaries_by_branch_date_pairs + get_overdue_summaries_by_b
     %seen = ();
     while ( my $row = $rs->next ) { $seen{ $row->itemnumber } = 1 }
     ok( !$seen{ $item_b->itemnumber }, 'pair (A, date_b) does not return item B (branch mismatch)' );
-
-    # Alg 3: single-branch variant.
-    $rs   = Koha::Overdues::Repository->get_overdue_summaries_by_branch_dates( $library_a->branchcode, [$date_a] );
-    %seen = ();
-    while ( my $row = $rs->next ) { $seen{ $row->itemnumber } = 1 }
-    ok( $seen{ $item_a->itemnumber },  'per-branch variant returns item A' );
-    ok( !$seen{ $item_b->itemnumber }, 'per-branch variant scoped to A excludes B' );
 
     # Empty pair list short-circuits.
     is(
