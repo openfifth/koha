@@ -65,15 +65,16 @@ subtest 'list() tests' => sub {
     # No tickets, so empty array should be returned
     $t->get_ok("//$userid:$password@/api/v1/tickets")->status_is(200)->json_is( [] );
 
-    my $ticket = $builder->build_object( { class => 'Koha::Tickets' } );
+    my $ticket = $builder->build_object( { class => 'Koha::Tickets', value => { verify_uuid => undef } } );
 
     # One ticket created, should get returned
     $t->get_ok("//$userid:$password@/api/v1/tickets")->status_is(200)->json_is( [ $ticket->to_api ] );
 
-    my $another_ticket     = $builder->build_object( { class => 'Koha::Tickets' } );
-    my $and_another_ticket = $builder->build_object( { class => 'Koha::Tickets' } );
+    my $another_ticket     = $builder->build_object( { class => 'Koha::Tickets', value => { verify_uuid => undef } } );
+    my $and_another_ticket = $builder->build_object( { class => 'Koha::Tickets', value => { verify_uuid => undef } } );
+    my $unverified_ticket  = $builder->build_object( { class => 'Koha::Tickets', value => { verify_uuid => 'uuid' } } );
 
-    # Two tickets created, they should both be returned
+    # Four tickets created, all three verified tickets should be returned
     $t->get_ok("//$userid:$password@/api/v1/tickets")->status_is(200)->json_is(
         [
             $ticket->to_api, $another_ticket->to_api,
