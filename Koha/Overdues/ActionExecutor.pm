@@ -408,8 +408,9 @@ later is inert by default.
 sub _sendable_transports {
     my ( $self, $by_mtt ) = @_;
 
-    return sort { $TRANSPORT_ORDER{$a} <=> $TRANSPORT_ORDER{$b} }
+    my @transports = sort { $TRANSPORT_ORDER{$a} <=> $TRANSPORT_ORDER{$b} }
         grep { exists $TRANSPORT_ORDER{$_} } keys %$by_mtt;
+    return @transports;
 }
 
 =head3 _effective_transport

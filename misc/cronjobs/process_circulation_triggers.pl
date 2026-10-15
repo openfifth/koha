@@ -160,16 +160,6 @@ if ($date_input) {
     $trigger_date = dt_from_string();
 }
 
-# --debug dumps full hashrefs and would balloon cron mail / log files at
-# realistic data volumes. If STDOUT isn't a terminal (cron), silently
-# downgrade --debug so the run still completes — overdues processing has
-# real financial impact (lost-item charges, account restrictions) and must
-# not be skipped because of a misconfigured crontab flag.
-if ( $debug && !-t STDOUT ) {
-    warn "--debug suppressed: not running on an interactive terminal\n";
-    $debug = 0;
-}
-
 my $schema = Koha::Database->new->schema;
 if ($dry_run) {
     $schema->storage->txn_begin;

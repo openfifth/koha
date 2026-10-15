@@ -831,7 +831,9 @@ sub get_known_overdue_delay_values {
 
         $unique_delay_values{$value} = 1;
     }
-    return sort { $a <=> $b } keys %unique_delay_values;
+
+    my @delays = sort { $a <=> $b } keys %unique_delay_values;
+    return @delays;
 }
 
 =head3 resolve_rule_context_branchcode
