@@ -23,6 +23,8 @@ use Test::More tests => 6;
 use Koha::Database;
 use Koha::BackgroundJobs;
 use Koha::BackgroundJob::ErmSushiHarvester;
+use Koha::ERM::EUsage::MonthlyUsage;
+use Koha::ERM::EUsage::MonthlyUsages;
 use Koha::ERM::EUsage::YearlyUsages;
 
 use JSON           qw( decode_json );
@@ -80,7 +82,7 @@ $ua->mock(
 
 subtest 'enqueue_sushi_harvest_jobs' => sub {
 
-    plan tests => 14;
+    plan tests => 24;
 
     $schema->storage->txn_begin;
 
@@ -116,6 +118,7 @@ subtest 'enqueue_sushi_harvest_jobs' => sub {
     is( $report->{report_type},                           'TR_J1' );
     is( $report->{ud_provider_name},                      $usage_data_provider->name );
     is( $report->{us_report_info}->{skipped_mus},         0 );
+    is( $report->{us_report_info}->{updated_mus},         0 );
     is( $report->{us_report_info}->{added_mus},           22 );
     is( $report->{us_report_info}->{added_usage_objects}, 2 );
 
@@ -150,12 +153,77 @@ subtest 'enqueue_sushi_harvest_jobs' => sub {
     is( $another_report->{report_type},                           'TR_J1' );
     is( $another_report->{ud_provider_name},                      $usage_data_provider->name );
     is( $another_report->{us_report_info}->{skipped_mus},         22 );
+    is( $another_report->{us_report_info}->{updated_mus},         0 );
     is( $another_report->{us_report_info}->{added_mus},           0 );
     is( $another_report->{us_report_info}->{added_usage_objects}, 0 );
 
     is(
         Koha::ERM::EUsage::YearlyUsages->search($yus_search)->count, 6,
         'Yearly usages are not duplicated by a second harvest'
+    );
+
+    # Simulate stale and duplicated data left by earlier harvests
+    my $mus_search = { usage_data_provider_id => $usage_data_provider->erm_usage_data_provider_id };
+    my $stale_usage =
+        Koha::ERM::EUsage::MonthlyUsages->search( $mus_search, { order_by => 'monthly_usage_summary_id' } )->next;
+    my $original_count = $stale_usage->usage_count;
+    $stale_usage->usage_count( $original_count + 999 )->store;
+
+    my $duplicated_usage =
+        Koha::ERM::EUsage::MonthlyUsages->search( $mus_search, { order_by => 'monthly_usage_summary_id' } )->last;
+    Koha::ERM::EUsage::MonthlyUsage->new( { %{ $duplicated_usage->unblessed }, monthly_usage_summary_id => undef } )
+        ->store;
+
+    # A month the file reports as zero, stored by an earlier harvest
+    my $zero_month_usage = Koha::ERM::EUsage::MonthlyUsage->new(
+        { %{ $stale_usage->unblessed }, monthly_usage_summary_id => undef, year => 2021, month => 9, usage_count => 7 }
+    )->store;
+    is(
+        Koha::ERM::EUsage::MonthlyUsages->search($mus_search)->count, 24,
+        'A duplicate and a stale zero month exist before the third harvest'
+    );
+
+    my $third_job = Koha::BackgroundJob::ErmSushiHarvester->new(
+        {
+            status => 'new',
+            size   => 1,
+            type   => 'erm_sushi_harvester'
+        }
+    )->store;
+
+    $third_job = Koha::BackgroundJobs->find( $third_job->id );
+
+    $third_job->process(
+        {
+            job_id           => $third_job->id,
+            ud_provider_id   => $usage_data_provider->erm_usage_data_provider_id,
+            report_type      => 'TR_J1',
+            begin_date       => '2023-08-01',
+            end_date         => '2023-09-30',
+            ud_provider_name => $usage_data_provider->name,
+        }
+    );
+
+    my $third_report = decode_json( $third_job->get_from_storage->data )->{report};
+
+    is(
+        $third_report->{us_report_info}->{updated_mus}, 2,
+        'The stale monthly usage was updated and the zero month removed'
+    );
+    is( $third_report->{us_report_info}->{skipped_mus}, 21,              'Unchanged monthly usages were skipped' );
+    is( $third_report->{us_report_info}->{added_mus},   0,               'No monthly usage was added' );
+    is( $stale_usage->get_from_storage->usage_count,    $original_count, 'The stale usage_count was corrected' );
+    is(
+        Koha::ERM::EUsage::MonthlyUsages->search($mus_search)->count, 22,
+        'The duplicate monthly usage was removed'
+    );
+    is(
+        Koha::ERM::EUsage::MonthlyUsages->find( $zero_month_usage->monthly_usage_summary_id ), undef,
+        'The month reported as zero was removed'
+    );
+    is(
+        Koha::ERM::EUsage::YearlyUsages->search($yus_search)->count, 6,
+        'Yearly usages are unchanged after the third harvest'
     );
 
     #TODO: Test more report types
@@ -166,7 +234,7 @@ subtest 'enqueue_sushi_harvest_jobs' => sub {
 
 subtest 'enqueue_counter_file_processing_job' => sub {
 
-    plan tests => 14;
+    plan tests => 23;
 
     $schema->storage->txn_begin;
 
@@ -199,6 +267,7 @@ subtest 'enqueue_counter_file_processing_job' => sub {
     is( $report->{report_type},                           'TR_J1' );
     is( $report->{ud_provider_name},                      $usage_data_provider->name );
     is( $report->{us_report_info}->{skipped_mus},         0 );
+    is( $report->{us_report_info}->{updated_mus},         0 );
     is( $report->{us_report_info}->{added_mus},           22 );
     is( $report->{us_report_info}->{added_usage_objects}, 2 );
 
@@ -230,12 +299,62 @@ subtest 'enqueue_counter_file_processing_job' => sub {
     is( $another_report->{report_type},                           'TR_J1' );
     is( $another_report->{ud_provider_name},                      $usage_data_provider->name );
     is( $another_report->{us_report_info}->{skipped_mus},         22 );
+    is( $another_report->{us_report_info}->{updated_mus},         0 );
     is( $another_report->{us_report_info}->{added_mus},           0 );
     is( $another_report->{us_report_info}->{added_usage_objects}, 0 );
 
     is(
         Koha::ERM::EUsage::YearlyUsages->search($yus_search)->count, 6,
         'Yearly usages are not duplicated by a second file upload'
+    );
+
+    # Simulate stale and duplicated data left by earlier uploads
+    my $mus_search = { usage_data_provider_id => $usage_data_provider->erm_usage_data_provider_id };
+    my $stale_usage =
+        Koha::ERM::EUsage::MonthlyUsages->search( $mus_search, { order_by => 'monthly_usage_summary_id' } )->next;
+    my $original_count = $stale_usage->usage_count;
+    $stale_usage->usage_count( $original_count + 999 )->store;
+
+    my $duplicated_usage =
+        Koha::ERM::EUsage::MonthlyUsages->search( $mus_search, { order_by => 'monthly_usage_summary_id' } )->last;
+    Koha::ERM::EUsage::MonthlyUsage->new( { %{ $duplicated_usage->unblessed }, monthly_usage_summary_id => undef } )
+        ->store;
+    is(
+        Koha::ERM::EUsage::MonthlyUsages->search($mus_search)->count, 23,
+        'A duplicate monthly usage exists before the third upload'
+    );
+
+    my $third_job = Koha::BackgroundJob::ErmSushiHarvester->new(
+        {
+            status => 'new',
+            size   => 1,
+            type   => 'erm_sushi_harvester'
+        }
+    )->store;
+
+    $third_job = Koha::BackgroundJobs->find( $third_job->id );
+
+    $third_job->process(
+        {
+            job_id         => $third_job->id,
+            ud_provider_id => $usage_data_provider->erm_usage_data_provider_id,
+            file_content   => $sushi_counter_report_TR_J1->get_COUNTER_from_SUSHI,
+        }
+    );
+
+    my $third_report = decode_json( $third_job->get_from_storage->data )->{report};
+
+    is( $third_report->{us_report_info}->{updated_mus}, 1,               'The stale monthly usage was updated' );
+    is( $third_report->{us_report_info}->{skipped_mus}, 21,              'Unchanged monthly usages were skipped' );
+    is( $third_report->{us_report_info}->{added_mus},   0,               'No monthly usage was added' );
+    is( $stale_usage->get_from_storage->usage_count,    $original_count, 'The stale usage_count was corrected' );
+    is(
+        Koha::ERM::EUsage::MonthlyUsages->search($mus_search)->count, 22,
+        'The duplicate monthly usage was removed'
+    );
+    is(
+        Koha::ERM::EUsage::YearlyUsages->search($yus_search)->count, 6,
+        'Yearly usages are unchanged after the third upload'
     );
 
     #TODO: Test a big file larger than max_allowed_packets
