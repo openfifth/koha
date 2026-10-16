@@ -21,15 +21,42 @@ use Modern::Perl;
 
 use base qw(Koha::Object);
 
+use Koha::Exception;
+
 =head1 NAME
 
 Koha::ERM::EUsage::YearlyUsage - Koha ErmYearlyUsage Object class
+
+=head1 SYNOPSIS
+
+This object is backed by the erm_usage_yus database view, which sums the
+monthly usage in erm_usage_mus per year. It is read-only.
 
 =head1 API
 
 =head2 Class Methods
 
+=head3 store
+
+Yearly usage cannot be stored. Add monthly usage instead.
+
 =cut
+
+sub store {
+    Koha::Exception->throw(
+        'Koha::ERM::EUsage::YearlyUsage is read-only: erm_usage_yus is a view computed from erm_usage_mus');
+}
+
+=head3 delete
+
+Yearly usage cannot be deleted. Delete the monthly usage instead.
+
+=cut
+
+sub delete {
+    Koha::Exception->throw(
+        'Koha::ERM::EUsage::YearlyUsage is read-only: erm_usage_yus is a view computed from erm_usage_mus');
+}
 
 =head2 Internal methods
 
