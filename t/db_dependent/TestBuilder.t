@@ -443,6 +443,9 @@ subtest 'build_object() tests' => sub {
 
             eval "require $module";
 
+            # Views are read-only, TestBuilder cannot insert into them
+            next if $schema->source( $module->_type )->isa('DBIx::Class::ResultSource::View');
+
             # Check if this is a polymorphic class
             my $is_polymorphic = $module->can('_polymorphic_field') && $module->can('_polymorphic_map');
 
