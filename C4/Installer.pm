@@ -389,9 +389,11 @@ sub load_sql_in_order {
         "$global_mandatory_dir/userpermissions.sql",
         "$global_mandatory_dir/audio_alerts.sql",
         "$global_mandatory_dir/record_sources.sql",
+        "$global_mandatory_dir/erm_views.sql",
         ;
     my $localization_file =
         C4::Context->config('intranetdir') . "/installer/data/$self->{dbms}/localization/$langchoice/custom.sql";
+
     if ( -f $localization_file ) {
         push @fnames, $localization_file;
     }
