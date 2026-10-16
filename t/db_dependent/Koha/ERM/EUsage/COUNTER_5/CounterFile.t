@@ -43,7 +43,7 @@ my $sushi_counter_report_TR_J1 =
 
 subtest 'store' => sub {
 
-    plan tests => 4;
+    plan tests => 5;
 
     $schema->storage->txn_begin;
 
@@ -94,6 +94,17 @@ subtest 'store' => sub {
         }
         )->as_list;
     is( $yearly_usage->totalcount, $expected_total, 'Yearly totalcount is the sum of the monthly usage counts' );
+
+    # Storing the same COUNTER file again must not duplicate the monthly usages
+    Koha::ERM::EUsage::CounterFile->new(
+        {
+            usage_data_provider_id => $usage_data_provider->erm_usage_data_provider_id,
+            file_content           => $sushi_counter_report_TR_J1->get_COUNTER_from_SUSHI,
+            date_uploaded          => $now_time,
+            filename               => $usage_data_provider->name . "_" . $usage_data_provider->{report_type},
+        }
+    )->store;
+    is( $mus_rs->count, 22, 'Storing the same COUNTER file again does not duplicate monthly usages' );
 
     $schema->storage->txn_rollback;
 
