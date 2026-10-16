@@ -88,7 +88,9 @@ This script fetches usage data from ERM data providers defined in the interface.
 
 =head2 Configuration
 
-This script harvests from the given date to the specified end date, or until today
+This script harvests from the given date to the specified end date, or until today.
+One background job is enqueued for each report type of the provider and for each
+calendar month in the date range.
 
 =head1 USAGE EXAMPLES
 
@@ -167,11 +169,24 @@ while ( my $udprovider = $udproviders->next ) {
                 end_date   => $harvest_end_date->ymd
             }
         );
-        my $report_type_jobs = join ", ", map { $_->{report_type} . ': Job ID #' . $_->{job_id} } @{$job_ids};
+        my %jobs_by_report_type;
+        push @{ $jobs_by_report_type{ $_->{report_type} } }, $_ for @{$job_ids};
+
+        my $report_type_jobs = join "\n - ", map {
+            my $jobs = $jobs_by_report_type{$_};
+            sprintf(
+                "%s: %d job(s) (%s to %s), Job IDs %s",
+                $_,
+                scalar @{$jobs},
+                substr( $jobs->[0]->{begin_date}, 0, 7 ),
+                substr( $jobs->[-1]->{end_date},  0, 7 ),
+                join( ", ", map { '#' . $_->{job_id} } @{$jobs} )
+            );
+        } sort keys %jobs_by_report_type;
 
         debug_msg(
             sprintf(
-                " - Harvest job enqueued (yyyy-mm-dd):\n - Begin date: %s \n - End date: %s \n - %s",
+                " - Harvest jobs enqueued (yyyy-mm-dd):\n - Begin date: %s \n - End date: %s \n - %s",
                 $harvest_begin_date->ymd,
                 $harvest_end_date->ymd,
                 $report_type_jobs
