@@ -39,5 +39,9 @@ ADD UNIQUE KEY `ticket_uuid_uniq` (`verify_uuid`)
             );
 
         }
+
+        $dbh->do(
+            q{INSERT IGNORE INTO letter(module, code, branchcode, name, is_html, title, content, message_transport_type, lang) VALUES ('catalogue', 'TICKET_VERIFY', '', 'Concern requires verification', 0, 'Catalog concern requires verification', "[%- PROCESS 'html_helpers.inc' -%]\nDear user,<br>\n<br>\nA concern reported against [%- INCLUDE 'biblio-title.inc' biblio=ticket.biblio link = 0 -%] requires verification.<br>\nIf you reported this concern, please verify it at the following address:<br>\n[% ticket_verification_link %]<br>\n<br>\nThank you", 'email', 'default');}
+        );
     },
 };

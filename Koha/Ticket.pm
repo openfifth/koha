@@ -24,6 +24,8 @@ use C4::Letters;
 use Koha::Ticket::Update;
 use Koha::Ticket::Updates;
 
+use Carp;
+
 =head1 NAME
 
 Koha::Ticket - Koha Ticket Object class
@@ -146,6 +148,8 @@ sub store {
 
         if ( $self->_is_verified ) {
             $self->_send_initial_emails;
+        } else {
+            $self->_send_verify_email;
         }
     } else {
         my %updated_columns = $self->_result->get_dirty_columns;
@@ -171,6 +175,39 @@ sub store {
 sub _is_verified {
     my ($self) = @_;
     return $self->verify_uuid ? 0 : 1;
+}
+
+sub _send_verify_email {
+    my ($self) = @_;
+
+    return unless $self->reporter_email;
+
+    my $letter = C4::Letters::GetPreparedLetter(
+        module      => 'catalogue',
+        letter_code => 'TICKET_VERIFY',
+        tables      => { tickets => $self->id },
+        objects     => {
+                  ticket_verification_link => C4::Context->preference('OPACBaseURL')
+                . '/cgi-bin/koha/opac-ticket-verify.pl?uuid='
+                . $self->verify_uuid
+        }
+    );
+
+    return unless $letter;
+
+    my $message_id = C4::Letters::EnqueueLetter(
+        {
+            letter                 => $letter,
+            message_transport_type => 'email',
+            to_address             => $self->reporter_email,
+        }
+    );
+
+    my $sent;
+    $sent = C4::Letters::SendQueuedMessages( { message_id => $message_id } )
+        if $message_id;
+
+    croak "Failed to send verification email" unless $sent == 1;
 }
 
 sub _send_initial_emails {
