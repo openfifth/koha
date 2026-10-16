@@ -84,8 +84,31 @@ sub yearly_usages {
 
 =head3 monthly_usages
 
-Getter/setter for monthly_usages for this usage object
-Skips adding monthly_usage if it already exists
+    my $monthly_usages = $usage_object->monthly_usages( \@monthly_usages, $job_callbacks );
+
+Getter/setter for monthly_usages for this usage object.
+
+A monthly usage is identified by every column except usage_count: the usage
+object, the data provider, year, month, metric_type, report_type and, when the
+report type has them, access_type and yop.
+
+For each monthly usage passed in:
+
+=over
+
+=item * no row exists for that identity: a new row is added (C<added_mus>)
+
+=item * a row exists with the same usage_count: nothing is done (C<skipped_mus>)
+
+=item * a row exists with a different usage_count: it is updated (C<updated_mus>)
+
+=back
+
+If more than one row exists for the same identity (duplicates from earlier
+harvests), the oldest row is kept and the others are deleted.
+
+The report_info_callback in C<$job_callbacks>, when given, is called with the
+counter name shown above.
 
 =cut
 
@@ -94,18 +117,52 @@ sub monthly_usages {
 
     if ($monthly_usages) {
         for my $monthly_usage (@$monthly_usages) {
-            if ( $self->monthly_usages()->search($monthly_usage)->last ) {
-                $job_callbacks->{report_info_callback}->('skipped_mus')
-                    if $job_callbacks;
+            my %identity    = %{$monthly_usage};
+            my $usage_count = delete $identity{usage_count};
+
+            my @existing = $self->monthly_usages()->search(
+                \%identity,
+                { order_by => 'monthly_usage_summary_id' }
+            )->as_list;
+
+            if ( !@existing ) {
+                Koha::ERM::EUsage::MonthlyUsage->new($monthly_usage)->store;
+                $self->_report_info( $job_callbacks, 'added_mus' );
                 next;
             }
-            $job_callbacks->{report_info_callback}->('added_mus')
-                if $job_callbacks;
-            Koha::ERM::EUsage::MonthlyUsage->new($monthly_usage)->store;
+
+            my $kept = shift @existing;
+
+            # Remove duplicates left behind by earlier harvests
+            $_->delete for @existing;
+
+            if ( ( $kept->usage_count // -1 ) == $usage_count ) {
+                $self->_report_info( $job_callbacks, 'skipped_mus' );
+                next;
+            }
+
+            $kept->usage_count($usage_count)->store;
+            $self->_report_info( $job_callbacks, 'updated_mus' );
         }
     }
     my $monthly_usages_rs = $self->_result->erm_usage_muses;
     return Koha::ERM::EUsage::MonthlyUsages->_new_from_dbic($monthly_usages_rs);
+}
+
+=head2 Internal methods
+
+=head3 _report_info
+
+Calls the report_info_callback in the job callbacks, when there is one
+
+=cut
+
+sub _report_info {
+    my ( $self, $job_callbacks, $info ) = @_;
+
+    $job_callbacks->{report_info_callback}->($info)
+        if $job_callbacks && $job_callbacks->{report_info_callback};
+    return;
 }
 
 1;

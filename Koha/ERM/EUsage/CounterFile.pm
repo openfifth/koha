@@ -211,7 +211,7 @@ sub _add_usage_objects {
 
 =head3 _add_monthly_usage_entries
 
-Adds erm_usage_mus database entries
+Adds or updates erm_usage_mus database entries, see Koha::ERM::EUsage::UsageObject::monthly_usages
 
 =cut
 
