@@ -3432,38 +3432,39 @@ CREATE TABLE `erm_usage_titles` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `erm_usage_yus`
+-- View structure for view `erm_usage_yus`
+--
+-- Yearly usage is derived from the monthly usage in `erm_usage_mus`.
+-- Views are created after the tables they read from.
 --
 
-DROP TABLE IF EXISTS `erm_usage_yus`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8mb4 */;
-CREATE TABLE `erm_usage_yus` (
-  `yearly_usage_summary_id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'primary key',
-  `title_id` int(11) DEFAULT NULL COMMENT 'item title id number',
-  `platform_id` int(11) DEFAULT NULL COMMENT 'platform id number',
-  `database_id` int(11) DEFAULT NULL COMMENT 'database id number',
-  `item_id` int(11) DEFAULT NULL COMMENT 'item id number',
-  `usage_data_provider_id` int(11) DEFAULT NULL COMMENT 'item title id number',
-  `year` int(4) DEFAULT NULL COMMENT 'year of usage statistics',
-  `totalcount` int(11) DEFAULT NULL COMMENT 'usage count for the title',
-  `metric_type` varchar(50) DEFAULT NULL COMMENT 'metric type for the usage statistic',
-  `access_type` varchar(50) DEFAULT NULL COMMENT 'access type for the usage statistic',
-  `yop` varchar(255) DEFAULT NULL COMMENT 'year of publication for the usage statistic',
-  `report_type` varchar(50) DEFAULT NULL COMMENT 'report type for the usage statistic',
-  PRIMARY KEY (`yearly_usage_summary_id`),
-  KEY `erm_usage_yus_ibfk_1` (`title_id`),
-  KEY `erm_usage_yus_ibfk_2` (`usage_data_provider_id`),
-  KEY `erm_usage_yus_ibfk_3` (`platform_id`),
-  KEY `erm_usage_yus_ibfk_4` (`database_id`),
-  KEY `erm_usage_yus_ibfk_5` (`item_id`),
-  CONSTRAINT `erm_usage_yus_ibfk_1` FOREIGN KEY (`title_id`) REFERENCES `erm_usage_titles` (`title_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `erm_usage_yus_ibfk_2` FOREIGN KEY (`usage_data_provider_id`) REFERENCES `erm_usage_data_providers` (`erm_usage_data_provider_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `erm_usage_yus_ibfk_3` FOREIGN KEY (`platform_id`) REFERENCES `erm_usage_platforms` (`platform_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `erm_usage_yus_ibfk_4` FOREIGN KEY (`database_id`) REFERENCES `erm_usage_databases` (`database_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `erm_usage_yus_ibfk_5` FOREIGN KEY (`item_id`) REFERENCES `erm_usage_items` (`item_id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
+DROP VIEW IF EXISTS `erm_usage_yus`;
+CREATE VIEW `erm_usage_yus` AS
+SELECT
+    MIN(`monthly_usage_summary_id`)    AS `yearly_usage_summary_id`,
+    `title_id`,
+    `platform_id`,
+    `database_id`,
+    `item_id`,
+    `usage_data_provider_id`,
+    `year`,
+    CAST(SUM(`usage_count`) AS SIGNED) AS `totalcount`,
+    `metric_type`,
+    `access_type`,
+    `yop`,
+    `report_type`
+FROM `erm_usage_mus`
+GROUP BY
+    `title_id`,
+    `platform_id`,
+    `database_id`,
+    `item_id`,
+    `usage_data_provider_id`,
+    `year`,
+    `metric_type`,
+    `access_type`,
+    `yop`,
+    `report_type`;
 
 --
 -- Table structure for table `erm_user_roles`
