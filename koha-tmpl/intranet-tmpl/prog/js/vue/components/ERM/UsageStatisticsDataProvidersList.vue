@@ -40,7 +40,7 @@ import { inject, ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { APIClient } from "../../fetch/api-client.js";
 import KohaTable from "../KohaTable.vue";
-import { $__ } from "@koha-vue/i18n/";
+import { $__, $__n } from "@koha-vue/i18n/";
 
 export default {
     setup() {
@@ -269,19 +269,41 @@ export default {
                             .process_SUSHI_response(id, inputFields)
                             .then(
                                 success => {
+                                    const jobsByReportType =
+                                        success.jobs.reduce((acc, job) => {
+                                            (acc[job.report_type] ||= []).push(
+                                                job
+                                            );
+                                            return acc;
+                                        }, {});
                                     let message = "";
-                                    success.jobs.forEach((job, i) => {
-                                        message +=
-                                            "<li>" +
-                                            $__(
-                                                "Job for report type <strong>%s</strong> has been queued"
-                                            ).format(job.report_type) +
-                                            '. <a href="/cgi-bin/koha/admin/background_jobs.pl?op=view&id=' +
-                                            job.job_id +
-                                            '" target="_blank">' +
-                                            $__("Check job progress") +
-                                            ".</a></li>";
-                                    });
+                                    Object.entries(jobsByReportType).forEach(
+                                        ([reportType, jobs]) => {
+                                            const firstMonth =
+                                                jobs[0].begin_date.substring(
+                                                    0,
+                                                    7
+                                                );
+                                            const lastMonth = jobs[
+                                                jobs.length - 1
+                                            ].end_date.substring(0, 7);
+                                            message +=
+                                                "<li>" +
+                                                $__n(
+                                                    "%s job queued for report type <strong>%s</strong> (%s to %s)",
+                                                    "%s jobs queued for report type <strong>%s</strong> (%s to %s)",
+                                                    jobs.length
+                                                ).format(
+                                                    jobs.length,
+                                                    reportType,
+                                                    firstMonth,
+                                                    lastMonth
+                                                ) +
+                                                '. <a href="/cgi-bin/koha/admin/background_jobs.pl" target="_blank">' +
+                                                $__("Check job progress") +
+                                                ".</a></li>";
+                                        }
+                                    );
                                     setMessage(message, true);
                                 },
                                 error => {}
