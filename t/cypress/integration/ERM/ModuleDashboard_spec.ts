@@ -93,6 +93,7 @@ describe("ERM Module Dashboard", () => {
                             added_mus: 0,
                             added_usage_objects: 0,
                             skipped_mus: 0,
+                            updated_mus: 0,
                         },
                     },
                     report_type: "PR",
