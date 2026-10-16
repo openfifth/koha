@@ -34,6 +34,7 @@ use Koha::ILL::Request::Workflow::Availability;
 use Koha::ILL::Request::Workflow::HistoryCheck;
 use Koha::ILL::Request::Workflow::TypeDisclaimer;
 use Koha::ILL::Request::Workflow::ConfirmAuto;
+use Koha::ILL::TypeDisclaimerPrompts;
 use Koha::Libraries;
 use Koha::Plugins;
 
@@ -524,16 +525,29 @@ if ($backends_available) {
         }
 
         # If a type_disclaimer_prompt already exists, use it to send another email without creating
-        # another one.
+        # another one. Always reset the expiration date.
 
-        $request->type_disclaimer_prompts->find_or_create(
+        my $expiration = dt_from_string->add( days => 7 );
+        my $prompt     = $request->type_disclaimer_prompts->find(
             {
-                uuid        => uuid4(),
-                patron_id   => $request->borrowernumber,
-                valid_until => dt_from_string->add( days => 7 ),
+                patron_id => $request->borrowernumber,
             },
             { key => 'ill_type_disclaimer_uniq' }
         );
+
+        unless ($prompt) {
+            $prompt = Koha::ILL::TypeDisclaimerPrompt->new(
+                {
+                    illrequest_id => $request->id,
+
+                    uuid        => uuid4(),
+                    patron_id   => $request->borrowernumber,
+                    valid_until => $expiration,
+                }
+            );
+        }
+        $prompt->valid_until($expiration);
+        $prompt->store;
 
         my $ret    = $request->send_patron_notice('ILL_DISCLAIMER');
         my $append = '';
