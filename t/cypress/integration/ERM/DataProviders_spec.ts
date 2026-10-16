@@ -737,12 +737,20 @@ describe("Data providers action buttons", () => {
                         {
                             report_type: "TR_J1",
                             job_id: 1,
+                            begin_date: "2025-01-01",
+                            end_date: "2025-01-31",
+                        },
+                        {
+                            report_type: "PR",
+                            job_id: 2,
+                            begin_date: "2025-01-01",
+                            end_date: "2025-01-31",
                         },
                     ],
                 },
                 headers: {
-                    "X-Base-Total-Count": "1",
-                    "X-Total-Count": "1",
+                    "X-Base-Total-Count": "2",
+                    "X-Total-Count": "2",
                 },
             }
         );
@@ -756,8 +764,13 @@ describe("Data providers action buttons", () => {
         cy.get("#accept_modal").click();
         cy.get("main div[class='alert alert-info']").should(
             "have.text",
-            "Job for report type TR_J1 has been queued. Check job progress."
+            "1 job queued for report type TR_J1: 2025-01" +
+                "1 job queued for report type PR: 2025-01"
         );
+        cy.get("main div[class='alert alert-info'] a")
+            .first()
+            .should("have.attr", "href")
+            .and("include", "background_jobs.pl?op=view&id=1");
     });
 
     it("Should test a provider's SUSHI connection", () => {
