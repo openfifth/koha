@@ -118,6 +118,11 @@ sub build {
     my @unknowns = grep( !/^(source|value)$/, keys %{$params} );
     carp "Unknown parameter(s): ", join( ', ', @unknowns ) if scalar @unknowns;
 
+    if ( $self->schema->source($source)->isa('DBIx::Class::ResultSource::View') ) {
+        carp "Cannot build a record for '$source': it is a view";
+        return;
+    }
+
     my $col_values = $self->_buildColumnValues(
         {
             source => $source,

@@ -38,7 +38,7 @@ our $schema = Koha::Database->new->schema;
 our $builder;
 
 subtest 'Start with some trivial tests' => sub {
-    plan tests => 7;
+    plan tests => 9;
 
     $schema->storage->txn_begin;
 
@@ -69,6 +69,13 @@ subtest 'Start with some trivial tests' => sub {
     warning_like { $builder->build($param) }
     qr/Violation of unique constraint/,
         'Catch warn on adding existing record';
+
+    # views are read-only
+    my $view_row;
+    warning_like { $view_row = $builder->build( { source => 'ErmUsageYus' } ) }
+    qr/it is a view/,
+        'Catch warn on building a record for a view';
+    is( $view_row, undef, 'build returns undef for a view' );
 
     $schema->storage->txn_rollback;
 };
@@ -442,6 +449,9 @@ subtest 'build_object() tests' => sub {
             next if $module eq 'Koha::Objects';
 
             eval "require $module";
+
+            # Views are read-only, TestBuilder cannot insert into them
+            next if $schema->source( $module->_type )->isa('DBIx::Class::ResultSource::View');
 
             # Check if this is a polymorphic class
             my $is_polymorphic = $module->can('_polymorphic_field') && $module->can('_polymorphic_map');
