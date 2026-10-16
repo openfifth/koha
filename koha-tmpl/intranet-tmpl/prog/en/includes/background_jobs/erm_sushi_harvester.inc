@@ -36,6 +36,10 @@
                         <td>[% report.us_report_info.skipped_mus | html %]</td>
                     </tr>
                     <tr>
+                        <td>Monthly usages updated</td>
+                        <td>[% report.us_report_info.updated_mus | html %]</td>
+                    </tr>
+                    <tr>
                         <td>Monthly usages added</td>
                         <td>[% report.us_report_info.added_mus | html %]</td>
                     </tr>

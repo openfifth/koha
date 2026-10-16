@@ -62,6 +62,7 @@ sub process {
 
     $self->{us_report_info} = {
         skipped_mus         => 0,
+        updated_mus         => 0,
         added_mus           => 0,
         added_usage_objects => 0,
     };

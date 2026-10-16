@@ -183,21 +183,15 @@ sub _add_usage_objects {
                 warn "No monthly usage fields retrieved";
             }
 
-            # Add monthly usage statistics for this usage object
-            foreach my $year_month (@date_fields) {
-                my $usage = %{$row}{$year_month};
-
-                # Skip this monthly usage entry if it's 0
-                next if $usage eq "0";
-
-                my $month = substr( $year_month, 0, 3 );
-                my $year  = substr( $year_month, 4, 4 );
-
-                $self->_add_monthly_usage_entries(
-                    $usage_object,
-                    $row->{Metric_Type}, $row, $year, $month, $usage
-                );
-            }
+            # Add monthly usage statistics for this usage object, all months in one call
+            my @months = map {
+                +{
+                    year  => substr( $_, 4, 4 ),
+                    month => substr( $_, 0, 3 ),
+                    usage => $row->{$_},
+                }
+            } @date_fields;
+            $self->_add_monthly_usage_entries( $usage_object, $row, \@months );
 
             $previous_object = $usage_object;
 
@@ -211,12 +205,17 @@ sub _add_usage_objects {
 
 =head3 _add_monthly_usage_entries
 
-Adds erm_usage_mus database entries
+    $self->_add_monthly_usage_entries( $usage_object, $row, \@months );
+
+Adds, updates or removes the erm_usage_mus rows of one report row in one call,
+see Koha::ERM::EUsage::UsageObject::monthly_usages. Each month is a hashref
+with year, month (Mmm) and usage. A month with usage 0 is not stored; a stored
+row for it is removed.
 
 =cut
 
 sub _add_monthly_usage_entries {
-    my ( $self, $usage_object, $metric_type, $row, $year, $month, $usage ) = @_;
+    my ( $self, $usage_object, $row, $months ) = @_;
 
     my $usage_data_provider = $self->get_usage_data_provider;
     my $usage_object_info   = $self->_get_usage_object_id_hash($usage_object);
@@ -225,23 +224,25 @@ sub _add_monthly_usage_entries {
         $self->get_COUNTER_report_release->{header_value}
     );
 
+    my %common = (
+        %{$usage_object_info},
+        usage_data_provider_id => $usage_data_provider->erm_usage_data_provider_id,
+        metric_type            => $row->{Metric_Type},
+        grep ( /Access_Type/, @{$specific_fields} ) ? ( access_type => $row->{Access_Type} ) : (),
+        grep ( /YOP/,         @{$specific_fields} ) ? ( yop         => $row->{YOP} )         : (),
+        report_type => $self->type,
+    );
+
     $usage_object->monthly_usages(
         [
-            {
-                %{$usage_object_info},
-                usage_data_provider_id => $usage_data_provider->erm_usage_data_provider_id,
-                year                   => $year,
-                month                  => $self->_get_month_number($month),
-                usage_count            => $usage,
-                metric_type            => $row->{Metric_Type},
-                grep ( /Access_Type/, @{$specific_fields} )
-                ? ( access_type => $row->{Access_Type} )
-                : (),
-                grep ( /YOP/, @{$specific_fields} )
-                ? ( yop => $row->{YOP} )
-                : (),
-                report_type => $self->type
-            }
+            map {
+                +{
+                    %common,
+                    year        => $_->{year},
+                    month       => $self->_get_month_number( $_->{month} ),
+                    usage_count => $_->{usage},
+                }
+            } @{$months}
         ],
         $self->{job_callbacks}
     );
