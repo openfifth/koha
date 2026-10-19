@@ -343,12 +343,12 @@
             </template>
         </div>
     </div>
-    <div v-if="showModal" class="modal" role="dialog">
+    <div v-if="showModal" class="modal modal-full" role="dialog">
         <div
             class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable"
             role="document"
         >
-            <router-view></router-view>
+            <router-view v-if="storeInitialized"></router-view>
         </div>
     </div>
 </template>
@@ -572,10 +572,7 @@ export default {
                 }
 
                 // Handle initial page loads, and successful save / edit / reset actions - reload data
-                if (
-                    newVal.fullPath.includes("refresh") ||
-                    newVal.path.endsWith("circulation_triggers")
-                ) {
+                if (!oldVal || newVal.fullPath.includes("refresh")) {
                     if (!this.metaInitialized) {
                         await new Promise(resolve => {
                             const stop = this.$watch("metaInitialized", val => {
@@ -644,7 +641,7 @@ export default {
 .modal {
     position: fixed;
     z-index: 9998;
-    display: table;
+    display: block;
     transition: opacity 0.3s ease;
     left: 0px;
     top: 0px;
@@ -652,11 +649,5 @@ export default {
     height: 100%;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.33);
     background-color: rgba(0, 0, 0, 0.33);
-}
-.modal-dialog,
-.modal-dialog-centered,
-.modal-lg {
-    max-width: 90%;
-    width: fit-content;
 }
 </style>

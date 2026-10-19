@@ -168,7 +168,7 @@ export const useCircRulesStore = defineStore("circRules", () => {
             return value === "1" ? $__("Yes") : $__("No");
         },
         handleTransport(value, type) {
-            if (!value) {
+            if (value === null || value === undefined) {
                 return "";
             }
             return value.includes(type) ? $__("Yes") : $__("No");
@@ -257,6 +257,9 @@ export const useCircRulesStore = defineStore("circRules", () => {
         },
         // services
         formatMttForDisplay(rawMtt) {
+            if (rawMtt === "") {
+                return [];
+            }
             return rawMtt?.split(",");
         },
         formatRuleSetMttFields(ruleSets) {
@@ -605,7 +608,7 @@ export const useCircRulesStore = defineStore("circRules", () => {
             let formattedSelectedRuleSet = cloneDeep(rawSelectedRuleSet);
             let i = 1;
             while (i <= this.triggerCounts[this.currentLibraryId]) {
-                if (rawSelectedRuleSet[`overdue_${i}_mtt`]) {
+                if (rawSelectedRuleSet[`overdue_${i}_mtt`] != null) {
                     formattedSelectedRuleSet[`overdue_${i}_mtt`] =
                         this.formatMttForDisplay(
                             rawSelectedRuleSet[`overdue_${i}_mtt`]
