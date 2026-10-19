@@ -31,6 +31,12 @@ return {
 
         $dbh->do(
             q{
+        INSERT IGNORE INTO letter(module, code, branchcode, name, is_html, title, content, message_transport_type, lang) VALUES ('ill', 'ILL_DISCLAIMER', '', 'ILL request requires accepting disclaimer', 0, "Interlibrary loan request requires accepting disclaimer", "Dear [% borrower.firstname %] [% borrower.surname %],\n\nThe Interlibrary loans request number [% illrequest.illrequest_id %] you placed for:\n\n- [% ill_bib_title %] - [% ill_bib_author %]\n\nrequires accepting a disclaimer.\n\nYou may access the disclaimer at the following URL:\n  [% type_disclaimer_prompt_url %]\n\nKind regards\n\n[% branch.branchname %]\n[% branch.branchaddress1 %]\n[% branch.branchaddress2 %]\n[% branch.branchaddress3 %]\n[% branch.branchcity %]\n[% branch.branchstate %]\n[% branch.branchzip %]\n[% branch.branchphone %]\n[% branch.branchillemail %]\n[% branch.branchemail %]", 'email', 'default');
+    }
+        );
+
+        $dbh->do(
+            q{
                 INSERT IGNORE INTO `message_attributes`
                     (message_name, `takes_days`)
                 VALUES ('Ill_disclaimer', 0)
