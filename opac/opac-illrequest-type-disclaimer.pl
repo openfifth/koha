@@ -17,7 +17,8 @@
 
 use Modern::Perl;
 
-use CGI      qw ( -utf8 );
+use CGI qw ( -utf8 );
+use DateTime;
 use C4::Auth qw( get_template_and_user );
 use C4::Koha;
 use C4::Output      qw( output_html_with_http_headers );
@@ -72,17 +73,21 @@ if ( $params->{backend} && !grep { $_ eq $params->{backend} } @$backends ) {
 my $backends_available = ( scalar @{$backends} > 0 );
 $template->param( backends_available => $backends_available );
 
-my $dtf    = Koha::Database->new->schema->storage->datetime_parser;
 my $prompt = $request->type_disclaimer_prompts->search(
     {
-        uuid        => $uuid,
-        patron_id   => $request->borrowernumber,
-        valid_until => { '>=' => $dtf->format_datetime( dt_from_string() ) }
+        uuid      => $uuid,
+        patron_id => $request->borrowernumber,
     }
 )->next;
 
 if ( !$prompt ) {
     print $query->redirect("/cgi-bin/koha/errors/404.pl");
+    exit;
+}
+
+unless ( DateTime->compare( dt_from_string(), dt_from_string( $prompt->valid_until ) ) == -1 ) {
+    $template->param( op => 'typedisclaimer_expired' );
+    output_html_with_http_headers $query, $cookie, $template->output, undef, { force_no_caching => 1 };
     exit;
 }
 
