@@ -151,7 +151,6 @@ export default {
             currentLibraryId,
             currentAndDefaultRawRuleSets,
             lastEditedTriggerNumber,
-            storeInitialized,
             canManageAnyLibrary,
             user_library_id,
         } = storeToRefs(circRulesStore);
@@ -170,7 +169,6 @@ export default {
             updateTriggerCount,
             updateCircRuleSets,
             lastEditedTriggerNumber,
-            storeInitialized,
             canManageAnyLibrary,
             user_library_id,
             handleLost,
@@ -208,15 +206,6 @@ export default {
         };
     },
     beforeMount() {
-        // handle hard refresh mid-stepper workflow by ensuring store is initialized
-        if (!this.storeInitialized) {
-            this.$watch("storeInitialized", newVal => {
-                if (newVal) {
-                    this.initializeComponent();
-                }
-            });
-            return;
-        }
         this.initializeComponent();
     },
     beforeRouteEnter(to, from, next) {
@@ -592,23 +581,13 @@ export default {
             this.allowSubmission = false;
         },
         handleNoticeChange() {
-            // A transport type is only meaningful alongside a letter. Resolve
-            // what the notice will actually be and drop the transports when
-            // that is "No letter".
-            const submittedNotice =
-                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_notice`];
-            const resolvedNotice =
-                submittedNotice ??
-                this.fallbackRuleSet?.[`overdue_${this.triggerNumber}_notice`]
-                    ?.value;
-
+            // "No letter" set on this context overrides the transports to
+            // none as well.
             if (
-                resolvedNotice === "" ||
-                resolvedNotice === null ||
-                resolvedNotice === undefined
+                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_notice`] ===
+                ""
             ) {
-                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_mtt`] =
-                    null;
+                this.ruleSetToSubmit[`overdue_${this.triggerNumber}_mtt`] = [];
             }
             this.setAllowSubmission();
         },

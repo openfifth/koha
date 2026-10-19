@@ -490,4 +490,9 @@ table.centered {
     margin: auto;
     width: fit-content;
 }
+
+th,
+td {
+    padding: 0.2em 0.4em;
+}
 </style>

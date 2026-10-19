@@ -256,7 +256,7 @@ export const useCircRulesStore = defineStore("circRules", () => {
             let formattedSelectedRuleSet = cloneDeep(rawSelectedRuleSet);
             let i = 1;
             while (i <= this.triggerCounts[this.currentLibraryId]) {
-                if (rawSelectedRuleSet[`overdue_${i}_mtt`]) {
+                if (rawSelectedRuleSet[`overdue_${i}_mtt`] != null) {
                     formattedSelectedRuleSet[`overdue_${i}_mtt`] =
                         formatMttForDisplay(
                             rawSelectedRuleSet[`overdue_${i}_mtt`]

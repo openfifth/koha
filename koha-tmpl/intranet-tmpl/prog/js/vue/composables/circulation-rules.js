@@ -184,6 +184,9 @@ export function isLastTrigger(triggerNumber, triggerCount) {
  * @return {String[]|undefined} The individual transport types.
  */
 export function formatMttForDisplay(rawMtt) {
+    if (rawMtt === "") {
+        return [];
+    }
     return rawMtt?.split(",");
 }
 
@@ -553,7 +556,7 @@ export function handleRestrictions(value) {
  * @return {String} The translated answer, or "" where none are set.
  */
 export function handleTransport(value, type) {
-    if (!value) {
+    if (value === null || value === undefined) {
         return "";
     }
     return value.includes(type) ? $__("Yes") : $__("No");

@@ -89,9 +89,7 @@
                                 ] === null ||
                                 ruleSetToSubmit[
                                     `overdue_${triggerNumber}_mtt`
-                                ] === undefined ||
-                                ruleSetToSubmit[`overdue_${triggerNumber}_mtt`]
-                                    .length === 0
+                                ] === undefined
                                     ? fallbackRuleSet?.[
                                           `overdue_${triggerNumber}_mtt`
                                       ]?.value
