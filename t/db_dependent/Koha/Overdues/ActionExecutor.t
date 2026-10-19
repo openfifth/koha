@@ -21,7 +21,7 @@ use Modern::Perl;
 
 use Test::MockModule;
 use Test::NoWarnings;
-use Test::More tests => 26;
+use Test::More tests => 27;
 use Test::Warn;
 
 use Koha::Account;
@@ -1420,16 +1420,18 @@ subtest 'process_action_queue: enacts actions in a fixed order' => sub {
     my $executor = Koha::Overdues::ActionExecutor->new;
 
     # Insert the action keys in an order that differs from the enactment order
-    # to prove the ordering comes from process_action_queue, not the hash.
+    # to prove the ordering comes from process_action_queue and
+    # process_return_queue, not the hash.
     $executor->add_to_action_batch_queue(
         {
-            item    => { borrowernumber => 1, itemnumber => 1 },
+            item    => { borrowernumber => 1, itemnumber => 1, issue_id => 1 },
             delay   => 7,
             actions => { mark_returned => 1, charge => 1, lost => 2, forgive_fine => 1, restrict => 1 },
         }
     );
 
     $executor->process_action_queue;
+    $executor->process_return_queue;
 
     is_deeply(
         \@order,
@@ -1627,6 +1629,88 @@ subtest 'process_notice_queue: a backdated replay is not blocked by later notice
         Koha::Notice::Messages->search( { borrowernumber => $patron->borrowernumber, letter_code => 'OD1' } )->count,
         2, 'replaying the same date twice enqueues nothing further'
     );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'process_action_queue: a failing loan is rolled back, left open, and the others still run' => sub {
+    plan tests => 8;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'useDefaultReplacementCost', 0 );
+
+    my $logger  = t::lib::Mocks::Logger->new();
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron =
+        $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $library->branchcode } } );
+
+    my %item;
+    my %checkout;
+    for my $which (qw( succeeding failing )) {
+        $item{$which} = $builder->build_sample_item( { homebranch => $library->branchcode, replacementprice => 5 } );
+        $checkout{$which} = $builder->build_object(
+            {
+                class => 'Koha::Checkouts',
+                value => {
+                    borrowernumber => $patron->borrowernumber,
+                    itemnumber     => $item{$which}->itemnumber,
+                    branchcode     => $library->branchcode,
+                },
+            }
+        );
+    }
+
+    my $mock = Test::MockModule->new('Koha::Overdues::ActionExecutor');
+    $mock->mock(
+        'enact_charge',
+        sub {
+            my ( $self, $overdue_item ) = @_;
+            if ( $overdue_item->{issue_id} == $checkout{failing}->issue_id ) {
+                die "charge failed\n";
+            }
+            return $mock->original('enact_charge')->(@_);
+        }
+    );
+
+    my $executor = Koha::Overdues::ActionExecutor->new;
+    for my $which (qw( failing succeeding )) {
+        $executor->add_to_action_batch_queue(
+            {
+                item => {
+                    borrowernumber => $patron->borrowernumber,
+                    itemnumber     => $item{$which}->itemnumber,
+                    issue_id       => $checkout{$which}->issue_id,
+                },
+                delay   => 7,
+                actions => { lost => 1, charge => 1, mark_returned => 1 },
+            }
+        );
+    }
+
+    $executor->process_action_queue;
+
+    $item{succeeding}->discard_changes;
+    $item{failing}->discard_changes;
+    is( $item{succeeding}->itemlost, 1, 'the loan queued after the failure is still actioned' );
+    is( $item{failing}->itemlost,    0, 'the failing loan\'s lost is rolled back with its charge' );
+
+    is_deeply(
+        { lost => $executor->summary->{lost}, charge => $executor->summary->{charge} },
+        { lost => 1,                          charge => 1 },
+        'the summary counts only the committed loan'
+    );
+    is( $executor->summary->{failed}, 1, 'the failure is counted' );
+    is_deeply(
+        $executor->{failed_issue_ids}, { $checkout{failing}->issue_id => 1 },
+        'the failing loan is recorded'
+    );
+    $logger->warn_like( qr/issue @{ [ $checkout{failing}->issue_id ] } failed/, 'the failure is warned about' );
+
+    $executor->process_return_queue;
+
+    is( Koha::Checkouts->find( $checkout{succeeding}->issue_id ), undef, 'the committed loan is returned' );
+    ok( Koha::Checkouts->find( $checkout{failing}->issue_id ), 'the failing loan stays open for a rerun' );
 
     $schema->storage->txn_rollback;
 };

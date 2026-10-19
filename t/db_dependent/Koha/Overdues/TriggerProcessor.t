@@ -21,7 +21,7 @@ use Modern::Perl;
 
 use Test::NoWarnings;
 use Test::MockModule;
-use Test::More tests => 11;
+use Test::More tests => 13;
 
 use Koha::Notice::Messages;
 
@@ -30,6 +30,8 @@ use Koha::CirculationRules;
 use Koha::Database;
 use Koha::DateUtils qw( dt_from_string );
 use Koha::Library::Calendar;
+use Koha::Number::Price;
+use Koha::Old::Checkouts;
 use Koha::Overdues::TriggerProcessor;
 use Koha::Patron::Restriction;
 
@@ -695,6 +697,180 @@ subtest 'process_overdues flags loans under an open return claim' => sub {
     is( $open_return_claim_by_issue_id{ $checkout{open}->issue_id },     1, 'unresolved claim flags the loan' );
     is( $open_return_claim_by_issue_id{ $checkout{resolved}->issue_id }, 0, 'resolved claim does not' );
     is( $open_return_claim_by_issue_id{ $checkout{none}->issue_id },     0, 'unclaimed loan is not flagged' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'process_overdues notice and mark_returned on one trigger — the letter renders from the open checkout' => sub {
+    plan tests => 4;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'OverdueTriggersCalendar', 0 );
+    t::lib::Mocks::mock_preference( 'CircControl',             'PatronLibrary' );
+
+    Koha::CirculationRules->search( { rule_name => { -like => 'overdue\_%' } } )->delete;
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron =
+        $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $library->branchcode } } );
+
+    my $item = $builder->build_sample_item( { homebranch => $library->branchcode } );
+
+    my $today    = dt_from_string;
+    my $checkout = $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => {
+                borrowernumber => $patron->borrowernumber,
+                itemnumber     => $item->itemnumber,
+                branchcode     => $library->branchcode,
+                date_due       => $today->clone->subtract( days => 7 )->strftime('%Y-%m-%d %H:%M:%S'),
+            },
+        }
+    );
+
+    for my $row (
+        [ 'overdue_1_delay',         7 ],
+        [ 'overdue_1_notice',        'OD1' ],
+        [ 'overdue_1_mtt',           'print' ],
+        [ 'overdue_1_mark_returned', 1 ],
+        )
+    {
+        Koha::CirculationRules->set_rule(
+            {
+                branchcode   => $library->branchcode,
+                categorycode => $patron->categorycode,
+                itemtype     => $item->effective_itemtype,
+                rule_name    => $row->[0],
+                rule_value   => $row->[1],
+            }
+        );
+    }
+
+    # issues.* resolves against the issues row by itemnumber, so it only renders
+    # while the checkout is still open.
+    $builder->build(
+        {
+            source => 'Letter',
+            value  => {
+                module                 => 'circulation',
+                code                   => 'OD1',
+                branchcode             => q{},
+                message_transport_type => 'print',
+                name                   => 'OD1 print',
+                title                  => 'OD1',
+                content                => '<item>[<<items.barcode>>|<<issues.issue_id>>]</item>',
+                is_html                => 0,
+                lang                   => 'default',
+            },
+        }
+    );
+
+    Koha::Overdues::TriggerProcessor->new->process_overdues;
+
+    my $messages =
+        Koha::Notice::Messages->search( { borrowernumber => $patron->borrowernumber, letter_code => 'OD1' } );
+    is( $messages->count, 1, 'one Koha::Notice::Message row for the overdue patron' );
+    like(
+        $messages->next->content,
+        qr/\Q[@{ [ $item->barcode ] }|@{ [ $checkout->issue_id ] }]\E/,
+        'the letter carries the checkout data'
+    );
+
+    is( Koha::Checkouts->find( $checkout->issue_id ), undef, 'the checkout is no longer open' );
+    ok( Koha::Old::Checkouts->find( $checkout->issue_id ), 'the checkout was archived by mark_returned' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'process_overdues notice and charge on one trigger — the letter carries the fees just charged' => sub {
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'OverdueTriggersCalendar',   0 );
+    t::lib::Mocks::mock_preference( 'useDefaultReplacementCost', 0 );
+    t::lib::Mocks::mock_preference( 'CircControl',               'PatronLibrary' );
+
+    Koha::CirculationRules->search( { rule_name => { -like => 'overdue\_%' } } )->delete;
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron =
+        $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $library->branchcode } } );
+
+    my $item = $builder->build_sample_item( { homebranch => $library->branchcode, replacementprice => 5 } );
+
+    my $today = dt_from_string;
+    $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => {
+                borrowernumber => $patron->borrowernumber,
+                itemnumber     => $item->itemnumber,
+                branchcode     => $library->branchcode,
+                date_due       => $today->clone->subtract( days => 7 )->strftime('%Y-%m-%d %H:%M:%S'),
+            },
+        }
+    );
+
+    Koha::CirculationRules->set_rule(
+        {
+            branchcode => undef,
+            itemtype   => undef,
+            rule_name  => 'lost_item_processing_fee',
+            rule_value => 2,
+        }
+    );
+
+    for my $row (
+        [ 'overdue_1_delay',  7 ],
+        [ 'overdue_1_notice', 'OD1' ],
+        [ 'overdue_1_mtt',    'print' ],
+        [ 'overdue_1_charge', 1 ],
+        )
+    {
+        Koha::CirculationRules->set_rule(
+            {
+                branchcode   => $library->branchcode,
+                categorycode => $patron->categorycode,
+                itemtype     => $item->effective_itemtype,
+                rule_name    => $row->[0],
+                rule_value   => $row->[1],
+            }
+        );
+    }
+
+    $builder->build(
+        {
+            source => 'Letter',
+            value  => {
+                module                 => 'circulation',
+                code                   => 'OD1',
+                branchcode             => q{},
+                message_transport_type => 'print',
+                name                   => 'OD1 print',
+                title                  => 'OD1',
+                content                => '<item>[<<items.replacement_fee>>|<<items.processing_fee>>]</item>',
+                is_html                => 0,
+                lang                   => 'default',
+            },
+        }
+    );
+
+    Koha::Overdues::TriggerProcessor->new->process_overdues;
+
+    my $messages =
+        Koha::Notice::Messages->search( { borrowernumber => $patron->borrowernumber, letter_code => 'OD1' } );
+    is( $messages->count, 1, 'one Koha::Notice::Message row for the overdue patron' );
+
+    my $replacement_fee = Koha::Number::Price->new(5)->format;
+    my $processing_fee  = Koha::Number::Price->new(2)->format;
+    like(
+        $messages->next->content,
+        qr/\Q[$replacement_fee|$processing_fee]\E/,
+        'the letter carries the replacement and processing fees'
+    );
 
     $schema->storage->txn_rollback;
 };

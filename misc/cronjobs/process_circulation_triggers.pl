@@ -89,6 +89,7 @@ have flattened away.
 use strict;
 use warnings;
 use Getopt::Long qw( GetOptions );
+use Try::Tiny    qw( catch try );
 use Koha::Database;
 use Koha::DateUtils qw( dt_from_string );
 use Koha::Overdues::TriggerProcessor;
@@ -112,9 +113,10 @@ GetOptions(
     'quiet'   => \$quiet,
 );
 
-# Summary lines, in the order process_action_queue enacts them, so the summary
-# reads as a transcript of the run. Notices precede them all, being drained
-# first, and the restriction lifting pass closes it.
+# Summary lines, in the order the run enacts them, so the summary reads as a
+# transcript of the run. Notices are listed first, though drained between
+# charge and return, the restriction lifting pass closes it, and failures
+# are tallied last.
 my @SUMMARY_LINES = (
     [ 'restricted', 'restrict',            'patrons' ],
     [ 'forgiven',   'forgive_fine',        'fines' ],
@@ -122,6 +124,7 @@ my @SUMMARY_LINES = (
     [ 'charged',    'charge',              'items' ],
     [ 'returned',   'mark_returned',       'items' ],
     [ 'lifted',     'restrictions_lifted', 'restrictions' ],
+    [ 'failed',     'failed',              'failures, see the log' ],
 );
 
 sub print_summary {
@@ -170,7 +173,21 @@ if ($dry_run) {
 
 my $triggerProcessor = Koha::Overdues::TriggerProcessor->new(
     { verbose => $verbose, debug => $debug, dry_run => $dry_run, trigger_date => $trigger_date } );
-$triggerProcessor->process_overdues();
+
+my $run_error;
+try {
+    $triggerProcessor->process_overdues();
+} catch {
+    $run_error = $_;
+};
+
+if ($run_error) {
+    if ($dry_run) {
+        $schema->storage->txn_rollback;
+    }
+    cronlogaction( { action => 'End', info => "FAILED $run_error" } );
+    die "Circulation triggers run failed: $run_error";
+}
 
 if ( !$quiet ) {
     print_summary( $triggerProcessor->summary, $trigger_date );
@@ -181,7 +198,11 @@ if ($dry_run) {
 }
 
 my $summary = $triggerProcessor->summary;
+my $failed  = $summary->{failed} // 0;
 my $outcome = $dry_run ? 'COMPLETED (dry run)' : 'COMPLETED';
+if ($failed) {
+    $outcome .= ' WITH FAILURES';
+}
 
 cronlogaction(
     {
@@ -189,3 +210,7 @@ cronlogaction(
         info   => join( " ", $outcome, map { "$_=" . $summary->{$_} } sort keys %$summary ),
     }
 );
+
+if ($failed) {
+    exit 1;
+}
