@@ -50,16 +50,19 @@ return {
                 qq(INSERT IGNORE INTO message_transports (message_attribute_id, message_transport_type, is_digest, letter_module, letter_code) VALUES ($ready_id, 'phone', 0, 'ill', 'ILL_DISCLAIMER');)
             );
 
-            # Enable this preference via email for every patron by default
-            $dbh->do(
-                qq(INSERT IGNORE INTO borrower_message_preferences (borrowernumber, message_attribute_id) SELECT borrowernumber, $ready_id FROM borrowers;)
-            );
-
-            $dbh->do(
-                qq(INSERT IGNORE INTO borrower_message_transport_preferences (borrower_message_preference_id, message_transport_type) SELECT borrower_message_preference_id, 'email' FROM borrower_message_preferences WHERE message_attribute_id=$ready_id;)
-            );
-
             say_success( $out, "Message transports for 'Ill_disclaimer' added" );
         }
+
+        # Enable this preference via email for every patron by default
+        $dbh->do(
+            qq(INSERT IGNORE INTO borrower_message_preferences (borrowernumber, message_attribute_id) SELECT borrowers.borrowernumber, message_attributes.message_attribute_id FROM borrowers INNER JOIN message_attributes WHERE message_attributes.message_name='Ill_disclaimer';)
+        );
+
+        $dbh->do(
+            qq(INSERT IGNORE INTO borrower_message_transport_preferences (borrower_message_preference_id, message_transport_type) SELECT borrower_message_preferences.borrower_message_preference_id, 'email' FROM borrower_message_preferences INNER JOIN message_attributes ON borrower_message_preferences.message_attribute_id=message_attributes.message_attribute_id WHERE message_attributes.message_name='Ill_disclaimer';)
+        );
+
+        say_success( $out, "Enabled 'Ill_disclaimer' message over email for every borrower" );
+
     },
 };
