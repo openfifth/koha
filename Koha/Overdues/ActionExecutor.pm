@@ -18,6 +18,7 @@ package Koha::Overdues::ActionExecutor;
 # along with Koha; if not, see <http://www.gnu.org/licenses>.
 
 use Modern::Perl;
+use Try::Tiny qw( catch try );
 use Koha::CirculationRules;
 use Koha::Logger;
 use Koha::Items;
@@ -32,6 +33,7 @@ use Koha::Notice::Templates;
 use Koha::Patrons;
 use Koha::Checkouts;
 use Koha::Checkout;
+use Koha::Database;
 use Koha::DateUtils qw( dt_from_string output_pref );
 
 # Columns rendered into <<items.content>>, one tab-separated line per item.
@@ -77,6 +79,7 @@ sub new {
         action_batch_queue        => [],
         notice_queue              => {},
         patrons_marked_returned   => {},
+        failed_issue_ids          => {},
         notices_queued_before_run => {},
         notices_enqueued_this_run => {},
         verbose                   => $params->{verbose}      // 0,
@@ -91,6 +94,7 @@ sub new {
             charge              => 0,
             mark_returned       => 0,
             restrictions_lifted => 0,
+            failed              => 0,
         },
     };
 
@@ -252,7 +256,13 @@ sub _report_action {
 
 =head3 process_action_queue
 
-Process the standard queue.
+Enact every queued action that leaves the checkout open: restrict,
+forgive_fine, lost and charge. Runs before L</process_notice_queue>, so
+letters see the outcome of these actions.
+
+Each loan's actions run in one transaction. A loan whose actions fail is
+rolled back, warned about, counted under C<failed> and recorded in
+C<failed_issue_ids>; the remaining loans still run.
 
 Under C<verbose>, each action reports itself as it is enacted, so the output is
 a record of what the run did rather than a prediction of it.
@@ -266,32 +276,101 @@ sub process_action_queue {
         printf "ACTION ENACTED: \n";
     }
 
+    my $schema = Koha::Database->new->schema;
+
     foreach my $batch ( @{ $self->{action_batch_queue} } ) {
         my $overdue_item = $batch->{item};
         my $actions      = $batch->{actions};
 
-        if ( $actions->{restrict} ) {
-            $self->enact_restrict($overdue_item);
-            $self->_report_action( $batch, 'restrict' );
+        my %summary_before = %{ $self->{summary} };
+        my @enacted;
+        try {
+            $schema->txn_do(
+                sub {
+                    @enacted = ();
+
+                    if ( $actions->{restrict} ) {
+                        $self->enact_restrict($overdue_item);
+                        push @enacted, 'restrict';
+                    }
+
+                    if ( $actions->{forgive_fine} ) {
+                        $self->enact_forgive_fine($overdue_item);
+                        push @enacted, 'forgive_fine';
+                    }
+
+                    if ( $actions->{lost} ) {
+                        $self->enact_lost( $overdue_item, $actions->{lost} );
+                        push @enacted, 'lost';
+                    }
+
+                    if ( $actions->{charge} ) {
+                        $self->enact_charge($overdue_item);
+                        push @enacted, 'charge';
+                    }
+                }
+            );
+        } catch {
+            Koha::Logger->get->warn(
+                "process_action_queue: issue $overdue_item->{issue_id} failed, its actions were rolled back: $_");
+            $self->{summary} = \%summary_before;
+            $self->{summary}->{failed}++;
+            $self->{failed_issue_ids}->{ $overdue_item->{issue_id} } = 1;
+            @enacted = ();
+        };
+
+        for my $type (@enacted) {
+            $self->_report_action( $batch, $type );
+        }
+    }
+
+    return;
+}
+
+=head3 process_return_queue
+
+Enact mark_returned for every queued item, then lift OVERDUES restrictions
+once per affected patron. Runs after L</process_notice_queue>, because
+mark_returned archives the checkout that letters render from.
+
+Loans in C<failed_issue_ids> are not returned, so they stay open for a rerun.
+Each return runs in its own transaction and each patron's restriction lifting
+on its own; a failure in either is warned about and counted under C<failed>,
+and the rest still run.
+
+=cut
+
+sub process_return_queue {
+    my ($self) = @_;
+
+    my $schema = Koha::Database->new->schema;
+
+    foreach my $batch ( @{ $self->{action_batch_queue} } ) {
+        my $overdue_item = $batch->{item};
+        my $actions      = $batch->{actions};
+
+        if ( $self->{failed_issue_ids}->{ $overdue_item->{issue_id} } ) {
+            next;
         }
 
-        if ( $actions->{forgive_fine} ) {
-            $self->enact_forgive_fine($overdue_item);
-            $self->_report_action( $batch, 'forgive_fine' );
+        if ( !$actions->{mark_returned} ) {
+            next;
         }
 
-        if ( $actions->{lost} ) {
-            $self->enact_lost( $overdue_item, $actions->{lost} );
-            $self->_report_action( $batch, 'lost' );
-        }
+        my %summary_before = %{ $self->{summary} };
+        my $returned       = 0;
+        try {
+            $schema->txn_do( sub { $self->enact_mark_returned($overdue_item); } );
+            $returned = 1;
+        } catch {
+            Koha::Logger->get->warn(
+                "process_return_queue: issue $overdue_item->{issue_id} failed, its return was rolled back: $_");
+            $self->{summary} = \%summary_before;
+            $self->{summary}->{failed}++;
+            $self->{failed_issue_ids}->{ $overdue_item->{issue_id} } = 1;
+        };
 
-        if ( $actions->{charge} ) {
-            $self->enact_charge($overdue_item);
-            $self->_report_action( $batch, 'charge' );
-        }
-
-        if ( $actions->{mark_returned} ) {
-            $self->enact_mark_returned($overdue_item);
+        if ($returned) {
             $self->_report_action( $batch, 'mark_returned' );
         }
     }
@@ -305,10 +384,16 @@ sub process_action_queue {
     }
 
     foreach my $borrowernumber ( keys %{ $self->{patrons_marked_returned} } ) {
-        my $patron = Koha::Patrons->find($borrowernumber);
-        if ( $patron && $patron->lift_overdue_restrictions ) {
-            $self->{summary}->{restrictions_lifted}++;
-        }
+        try {
+            my $patron = Koha::Patrons->find($borrowernumber);
+            if ( $patron && $patron->lift_overdue_restrictions ) {
+                $self->{summary}->{restrictions_lifted}++;
+            }
+        } catch {
+            Koha::Logger->get->warn(
+                "process_return_queue: lifting restrictions for borrower $borrowernumber failed: $_");
+            $self->{summary}->{failed}++;
+        };
     }
 
     return;
@@ -326,12 +411,10 @@ When an C<sms> or C<email> entry can't be delivered (patron has no
 C<smsalertnumber> / no C<notice_email_address>), a C<print> entry is
 synthesised instead.
 
-Letters render against B<pre-action> state — this runs before
-L</process_action_queue>. Templates therefore see the checkout still open, the
-overdue fine still outstanding, and the item not yet lost. That is what a letter
-on an action-carrying trigger wants to state: the fine being forgiven, the
-replacement price about to be charged. Nothing that only exists after enactment
-is available.
+Letters render after L</process_action_queue> and before
+L</process_return_queue>. Templates therefore see the replacement charge
+posted, the item lost and any overdue fine already forgiven, with the
+checkout still open.
 
 One letter is enqueued per C<(borrower, letter_code, effective transport,
 delay)>. A patron holding items at two delays that resolve the same letter code
@@ -349,6 +432,9 @@ walked inside the letter code rather than outside the whole queue.
 L</_effective_transport> decides what each bucket is actually sent as, and
 L</_notice_already_queued> decides whether it still needs sending.
 
+Each borrower's letters are enqueued on their own: a failure is warned about
+and counted under C<failed>, and the remaining borrowers still receive theirs.
+
 =cut
 
 sub process_notice_queue {
@@ -359,30 +445,51 @@ sub process_notice_queue {
     }
 
     for my $borrowernumber ( sort { $a <=> $b } keys %{ $self->{notice_queue} } ) {
-        my $patron = Koha::Patrons->find($borrowernumber);
-        if ( !$patron ) {
-            Koha::Logger->get->warn("process_notice_queue: borrower $borrowernumber not found — skipping");
-            next;
-        }
+        try {
+            $self->_process_notices_for_borrower($borrowernumber);
+        } catch {
+            Koha::Logger->get->warn("process_notice_queue: notices for borrower $borrowernumber failed: $_");
+            $self->{summary}->{failed}++;
+        };
+    }
 
-        my $by_notice_code = $self->{notice_queue}{$borrowernumber};
-        for my $notice_code ( sort keys %$by_notice_code ) {
-            my $by_mtt = $by_notice_code->{$notice_code};
+    return;
+}
 
-            for my $mtt ( $self->_sendable_transports($by_mtt) ) {
-                my ( $effective_mtt, $origin_mtt ) = $self->_effective_transport( $patron, $mtt );
+=head3 _process_notices_for_borrower
 
-                for my $delay ( sort { $a <=> $b } keys %{ $by_mtt->{$mtt} } ) {
-                    my $entries = $by_mtt->{$mtt}{$delay};
+  $self->_process_notices_for_borrower($borrowernumber);
 
-                    if ( $self->_notice_already_queued( $borrowernumber, $notice_code, $effective_mtt, $delay ) ) {
-                        $self->{summary}->{notices_suppressed}++;
-                        next;
-                    }
+Enqueue one borrower's letters, as described in L</process_notice_queue>.
 
-                    if ( $self->_enqueue_letter_for_bucket( $patron, $entries, $effective_mtt, $origin_mtt ) ) {
-                        $self->_record_notice_enqueued( $borrowernumber, $notice_code, $effective_mtt, $delay );
-                    }
+=cut
+
+sub _process_notices_for_borrower {
+    my ( $self, $borrowernumber ) = @_;
+
+    my $patron = Koha::Patrons->find($borrowernumber);
+    if ( !$patron ) {
+        Koha::Logger->get->warn("process_notice_queue: borrower $borrowernumber not found — skipping");
+        return;
+    }
+
+    my $by_notice_code = $self->{notice_queue}{$borrowernumber};
+    for my $notice_code ( sort keys %$by_notice_code ) {
+        my $by_mtt = $by_notice_code->{$notice_code};
+
+        for my $mtt ( $self->_sendable_transports($by_mtt) ) {
+            my ( $effective_mtt, $origin_mtt ) = $self->_effective_transport( $patron, $mtt );
+
+            for my $delay ( sort { $a <=> $b } keys %{ $by_mtt->{$mtt} } ) {
+                my $entries = $by_mtt->{$mtt}{$delay};
+
+                if ( $self->_notice_already_queued( $borrowernumber, $notice_code, $effective_mtt, $delay ) ) {
+                    $self->{summary}->{notices_suppressed}++;
+                    next;
+                }
+
+                if ( $self->_enqueue_letter_for_bucket( $patron, $entries, $effective_mtt, $origin_mtt ) ) {
+                    $self->_record_notice_enqueued( $borrowernumber, $notice_code, $effective_mtt, $delay );
                 }
             }
         }
@@ -729,10 +836,11 @@ sub _letter_payload {
 One queued item as a template sees it: the item's own columns with the biblio's
 merged underneath, so an item column wins where both tables carry the name.
 
-Two fields are not columns. C<date_due> comes from the queue entry rather than
-the item, and C<fine> is the patron's outstanding OVERDUE total for this item,
-formatted through L<Koha::Number::Price> so it reads as C<| $Price> renders it
-elsewhere.
+Four fields are not columns. C<date_due> comes from the queue entry rather than
+the item, and C<fine> is the patron's outstanding OVERDUE total for this item.
+C<replacement_fee> and C<processing_fee> are the outstanding LOST and
+PROCESSING totals for this checkout. All three amounts are formatted through
+L<Koha::Number::Price> so they read as C<| $Price> renders them elsewhere.
 
 Warns and returns nothing when the item no longer resolves.
 
@@ -755,15 +863,29 @@ sub _letter_item_fields {
 
     $item_fields->{date_due} = $entry->{item}->{date_due};
 
-    my $fine = Koha::Account::Lines->search(
+    my %outstanding  = ( OVERDUE => 0, LOST => 0, PROCESSING => 0 );
+    my $accountlines = Koha::Account::Lines->search(
         {
             borrowernumber    => $borrowernumber,
             itemnumber        => $item->itemnumber,
-            debit_type_code   => 'OVERDUE',
             amountoutstanding => { '>' => 0 },
-        }
-    )->total_outstanding;
-    $item_fields->{fine} = Koha::Number::Price->new( $fine // 0 )->format;
+            -or               => [
+                { debit_type_code => 'OVERDUE' },
+                {
+                    debit_type_code => [qw( LOST PROCESSING )],
+                    issue_id        => $entry->{item}->{issue_id},
+                },
+            ],
+        },
+        { columns => [qw( debit_type_code amountoutstanding )] }
+    );
+    while ( my $accountline = $accountlines->next ) {
+        $outstanding{ $accountline->debit_type_code } += $accountline->amountoutstanding;
+    }
+
+    $item_fields->{fine}            = Koha::Number::Price->new( $outstanding{OVERDUE} )->format;
+    $item_fields->{replacement_fee} = Koha::Number::Price->new( $outstanding{LOST} )->format;
+    $item_fields->{processing_fee}  = Koha::Number::Price->new( $outstanding{PROCESSING} )->format;
 
     return $item_fields;
 }

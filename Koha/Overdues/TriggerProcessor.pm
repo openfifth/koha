@@ -78,7 +78,8 @@ sub new {
 
 What the run did, for the summary C<process_circulation_triggers.pl> prints:
 C<matched>, the number of overdue checkouts the fetch returned, merged with the
-per-action counts from L<Koha::Overdues::ActionExecutor/summary>.
+per-action counts from L<Koha::Overdues::ActionExecutor/summary>. Its C<failed>
+count also includes checkouts that could not be routed.
 
 A run that resolves no delays, no branches or no checkouts never reaches
 L</_dispatch_overdues>, and reports C<matched> 0 with no action counts.
@@ -330,8 +331,17 @@ sub _dispatch_overdues {
         { verbose => $self->{verbose}, dry_run => $self->{dry_run}, trigger_date => $self->{trigger_date} } );
 
     # separate notice route actions from standard route actions
+    my $routing_failures = 0;
     foreach my $overdue_item (@overdue_items) {
-        $action_executor->route_item_actions_to_queue( $rule_resolver->{effective_overdue_rule_sets}, $overdue_item );
+        try {
+            $action_executor->route_item_actions_to_queue(
+                $rule_resolver->{effective_overdue_rule_sets},
+                $overdue_item
+            );
+        } catch {
+            Koha::Logger->get->warn("process_overdues: routing issue $overdue_item->{issue_id} failed — skipping: $_");
+            $routing_failures++;
+        };
     }
 
     if ( $self->{debug} ) {
@@ -348,10 +358,12 @@ sub _dispatch_overdues {
 
     }
 
-    $action_executor->process_notice_queue;
     $action_executor->process_action_queue;
+    $action_executor->process_notice_queue;
+    $action_executor->process_return_queue;
 
     $self->{summary} = { matched => scalar @overdue_items, %{ $action_executor->summary } };
+    $self->{summary}->{failed} += $routing_failures;
 
     return;
 }
