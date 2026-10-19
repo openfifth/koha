@@ -354,6 +354,7 @@ INSERT INTO systempreferences ( `variable`, `value` ) VALUES
 ('IllLog', '0'),
 ('ILLModule','0'),
 ('ILLModuleDisclaimerByType',''),
+('ILLModuleDisclaimerPromptExpiry','7'),
 ('ILLModuleUnmediated','0'),
 ('ILLOpacbackends',''),
 ('ILLOpacUnauthenticatedRequest','0'),

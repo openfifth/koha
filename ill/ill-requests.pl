@@ -527,7 +527,10 @@ if ($backends_available) {
         # If a type_disclaimer_prompt already exists, use it to send another email without creating
         # another one. Always reset the expiration date.
 
-        my $expiration = dt_from_string->add( days => 7 );
+        my $expiration_days = C4::Context->preference('ILLModuleDisclaimerPromptExpiry');
+        $expiration_days = 7 unless $expiration_days;
+
+        my $expiration = dt_from_string->add( days => $expiration_days );
         my $prompt     = $request->type_disclaimer_prompts->find(
             {
                 patron_id => $request->borrowernumber,

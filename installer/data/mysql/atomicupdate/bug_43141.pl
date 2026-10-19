@@ -8,6 +8,14 @@ return {
         my ($args) = @_;
         my ( $dbh, $out ) = @$args{qw(dbh out)};
 
+        $dbh->do(
+            q{
+INSERT IGNORE INTO systempreferences(variable, value, type) VALUES ('ILLModuleDisclaimerPromptExpiry', '7', 'integer')
+}
+        );
+
+        say_success( $out, 'Added ILLModuleDisclaimerPromptExpiry system preference' );
+
         unless ( TableExists('ill_type_disclaimer_prompts') ) {
             $dbh->do(
                 q{
