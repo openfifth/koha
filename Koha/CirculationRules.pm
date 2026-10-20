@@ -843,12 +843,15 @@ patron / item pair, honouring the C<CircControl> and C<HomeOrHoldingBranch>
 system preferences. 'PickupLibrary' is only honored if userenv is set, and otherwise
 we fall back to the item path.
 
+C<control_preference> names the preference to honour in place of C<CircControl>,
+such as C<LostChargesControl>, whose values mirror it.
+
 =cut
 
 sub resolve_rule_context_branchcode {
     my ( $class, $params ) = @_;
 
-    my $circ_control = C4::Context->preference('CircControl') // q{};
+    my $circ_control = C4::Context->preference( $params->{control_preference} // 'CircControl' ) // q{};
     my $userenv      = C4::Context->userenv;
 
     if ( $circ_control eq 'PickupLibrary' && $userenv && $userenv->{branch} ) {

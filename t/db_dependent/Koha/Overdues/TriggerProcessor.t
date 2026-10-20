@@ -21,7 +21,7 @@ use Modern::Perl;
 
 use Test::NoWarnings;
 use Test::MockModule;
-use Test::More tests => 13;
+use Test::More tests => 14;
 
 use Koha::Notice::Messages;
 
@@ -69,6 +69,7 @@ subtest 'process_overdues simple path — lost + restrict end-to-end' => sub {
     t::lib::Mocks::mock_preference( 'OverdueTriggersCalendar',   0 );
     t::lib::Mocks::mock_preference( 'useDefaultReplacementCost', 0 );
     t::lib::Mocks::mock_preference( 'CircControl',               'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'LostChargesControl',        'PatronLibrary' );
 
     Koha::CirculationRules->search( { rule_name => { -like => 'overdue\_%' } } )->delete;
 
@@ -148,6 +149,7 @@ subtest 'process_overdues resolves rules by the correct branch as defined by Cir
 
     t::lib::Mocks::mock_preference( 'OverdueTriggersCalendar',   0 );
     t::lib::Mocks::mock_preference( 'CircControl',               'ItemHomeLibrary' );
+    t::lib::Mocks::mock_preference( 'LostChargesControl',        'ItemHomeLibrary' );
     t::lib::Mocks::mock_preference( 'HomeOrHoldingBranch',       'homebranch' );
     t::lib::Mocks::mock_preference( 'useDefaultReplacementCost', 0 );
 
@@ -210,6 +212,7 @@ subtest 'process_overdues calendar-adjusted path — closure shifts target date'
     t::lib::Mocks::mock_preference( 'OverdueTriggersCalendar',   1 );
     t::lib::Mocks::mock_preference( 'useDaysMode',               'Calendar' );
     t::lib::Mocks::mock_preference( 'CircControl',               'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'LostChargesControl',        'PatronLibrary' );
     t::lib::Mocks::mock_preference( 'useDefaultReplacementCost', 0 );
 
     Koha::CirculationRules->search( { rule_name => { -like => 'overdue\_%' } } )->delete;
@@ -379,6 +382,7 @@ subtest 'process_overdues backdated run — trigger_date replays the day a run w
     t::lib::Mocks::mock_preference( 'OverdueTriggersCalendar',   0 );
     t::lib::Mocks::mock_preference( 'useDefaultReplacementCost', 0 );
     t::lib::Mocks::mock_preference( 'CircControl',               'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'LostChargesControl',        'PatronLibrary' );
 
     Koha::CirculationRules->search( { rule_name => { -like => 'overdue\_%' } } )->delete;
 
@@ -442,6 +446,7 @@ subtest 'process_overdues calendar-adjusted path — a branch closed on the run 
     t::lib::Mocks::mock_preference( 'OverdueTriggersCalendar',   1 );
     t::lib::Mocks::mock_preference( 'useDaysMode',               'Calendar' );
     t::lib::Mocks::mock_preference( 'CircControl',               'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'LostChargesControl',        'PatronLibrary' );
     t::lib::Mocks::mock_preference( 'useDefaultReplacementCost', 0 );
 
     Koha::CirculationRules->search( { rule_name => { -like => 'overdue\_%' } } )->delete;
@@ -501,6 +506,7 @@ subtest 'process_overdues calendar-adjusted path — one branch\'s unusable cale
     t::lib::Mocks::mock_preference( 'OverdueTriggersCalendar',   1 );
     t::lib::Mocks::mock_preference( 'useDaysMode',               'Calendar' );
     t::lib::Mocks::mock_preference( 'CircControl',               'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'LostChargesControl',        'PatronLibrary' );
     t::lib::Mocks::mock_preference( 'useDefaultReplacementCost', 0 );
 
     Koha::CirculationRules->search( { rule_name => { -like => 'overdue\_%' } } )->delete;
@@ -571,6 +577,7 @@ subtest 'process_overdues resolves the rule context by effective itemtype' => su
     $schema->storage->txn_begin;
 
     t::lib::Mocks::mock_preference( 'CircControl',               'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'LostChargesControl',        'PatronLibrary' );
     t::lib::Mocks::mock_preference( 'OverdueTriggersCalendar',   0 );
     t::lib::Mocks::mock_preference( 'useDefaultReplacementCost', 0 );
     t::lib::Mocks::mock_preference( 'item-level_itypes',         0 );
@@ -708,6 +715,7 @@ subtest 'process_overdues notice and mark_returned on one trigger — the letter
 
     t::lib::Mocks::mock_preference( 'OverdueTriggersCalendar', 0 );
     t::lib::Mocks::mock_preference( 'CircControl',             'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'LostChargesControl',      'PatronLibrary' );
 
     Koha::CirculationRules->search( { rule_name => { -like => 'overdue\_%' } } )->delete;
 
@@ -792,6 +800,7 @@ subtest 'process_overdues notice and charge on one trigger — the letter carrie
     t::lib::Mocks::mock_preference( 'OverdueTriggersCalendar',   0 );
     t::lib::Mocks::mock_preference( 'useDefaultReplacementCost', 0 );
     t::lib::Mocks::mock_preference( 'CircControl',               'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'LostChargesControl',        'PatronLibrary' );
 
     Koha::CirculationRules->search( { rule_name => { -like => 'overdue\_%' } } )->delete;
 
@@ -871,6 +880,87 @@ subtest 'process_overdues notice and charge on one trigger — the letter carrie
         qr/\Q[$replacement_fee|$processing_fee]\E/,
         'the letter carries the replacement and processing fees'
     );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'process_overdues resolves lost against LostChargesControl and notices against CircControl' => sub {
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'OverdueTriggersCalendar', 0 );
+    t::lib::Mocks::mock_preference( 'CircControl',             'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'LostChargesControl',      'ItemHomeLibrary' );
+    t::lib::Mocks::mock_preference( 'HomeOrHoldingBranch',     'homebranch' );
+
+    Koha::CirculationRules->search( { rule_name => { -like => 'overdue\_%' } } )->delete;
+
+    my $patron_library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $item_library   = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron =
+        $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $patron_library->branchcode } } );
+
+    my $item = $builder->build_sample_item( { homebranch => $item_library->branchcode } );
+
+    my $today = dt_from_string;
+    $builder->build_object(
+        {
+            class => 'Koha::Checkouts',
+            value => {
+                borrowernumber => $patron->borrowernumber,
+                itemnumber     => $item->itemnumber,
+                branchcode     => $patron_library->branchcode,
+                date_due       => $today->clone->subtract( days => 7 )->strftime('%Y-%m-%d %H:%M:%S'),
+            },
+        }
+    );
+
+    # The patron's library sends the notice, the item's library marks it lost.
+    for my $row (
+        [ $patron_library->branchcode, 'overdue_1_delay',  7 ],
+        [ $patron_library->branchcode, 'overdue_1_notice', 'OD1' ],
+        [ $patron_library->branchcode, 'overdue_1_mtt',    'print' ],
+        [ $item_library->branchcode,   'overdue_1_delay',  7 ],
+        [ $item_library->branchcode,   'overdue_1_lost',   1 ],
+        )
+    {
+        Koha::CirculationRules->set_rule(
+            {
+                branchcode   => $row->[0],
+                categorycode => undef,
+                itemtype     => undef,
+                rule_name    => $row->[1],
+                rule_value   => $row->[2],
+            }
+        );
+    }
+
+    $builder->build(
+        {
+            source => 'Letter',
+            value  => {
+                module                 => 'circulation',
+                code                   => 'OD1',
+                branchcode             => q{},
+                message_transport_type => 'print',
+                name                   => 'OD1 print',
+                title                  => 'OD1',
+                content                => 'print body',
+                is_html                => 0,
+                lang                   => 'default',
+            },
+        }
+    );
+
+    Koha::Overdues::TriggerProcessor->new->process_overdues;
+
+    is(
+        Koha::Notice::Messages->search( { borrowernumber => $patron->borrowernumber, letter_code => 'OD1' } )->count,
+        1, 'the notice from the CircControl branch\'s trigger is queued'
+    );
+    $item->discard_changes;
+    is( $item->itemlost, 1, 'the item is marked lost by the LostChargesControl branch\'s trigger' );
 
     $schema->storage->txn_rollback;
 };

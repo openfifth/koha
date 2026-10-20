@@ -131,19 +131,22 @@ Separate action sets into notice and standard action sets, and calls the relevan
 sub route_item_actions_to_queue {
     my ( $self, $effective_rule_sets, $overdue_item ) = @_;
 
-    my $branchcode = Koha::CirculationRules->resolve_rule_context_branchcode(
-        {
-            patron_branchcode  => $overdue_item->{patronhomebranch},
-            item_homebranch    => $overdue_item->{itemhomebranch},
-            item_holdingbranch => $overdue_item->{itemholdingbranch},
-        }
-    );
+    my $branch_params = {
+        patron_branchcode  => $overdue_item->{patronhomebranch},
+        item_homebranch    => $overdue_item->{itemhomebranch},
+        item_holdingbranch => $overdue_item->{itemholdingbranch},
+    };
+    my $branchcode = Koha::CirculationRules->resolve_rule_context_branchcode($branch_params);
+    my $lost_branchcode =
+        Koha::CirculationRules->resolve_rule_context_branchcode(
+        { %$branch_params, control_preference => 'LostChargesControl' } );
     my $categorycode   = $overdue_item->{categorycode};
     my $itemtype       = $overdue_item->{itemtype};
     my $days_overdue   = $overdue_item->{days_overdue};
     my $borrowernumber = $overdue_item->{borrowernumber};
 
-    my $actions_hashes = $effective_rule_sets->{"$branchcode|$categorycode|$itemtype|$days_overdue"}->{actions};
+    my $actions_hashes =
+        $effective_rule_sets->{"$branchcode|$lost_branchcode|$categorycode|$itemtype|$days_overdue"}->{actions};
 
     if ( !$actions_hashes || !@$actions_hashes ) {
         return;

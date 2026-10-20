@@ -54,10 +54,11 @@ subtest 'new initialises empty queues' => sub {
 subtest 'route_item_actions_to_queue splits notice vs action batch' => sub {
     plan tests => 5;
 
-    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'CircControl',        'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'LostChargesControl', 'PatronLibrary' );
 
     my $effective_rule_sets = {
-        'LIB|PC|IT|7' => {
+        'LIB|LIB|PC|IT|7' => {
             actions => [
                 { type => 'notice',   notice_code => 'OD1', mtts => ['email'] },
                 { type => 'lost',     value       => 1 },
@@ -103,15 +104,16 @@ subtest 'route_item_actions_to_queue: an open return claim suppresses a bare rem
     sub {
     plan tests => 5;
 
-    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'CircControl',        'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'LostChargesControl', 'PatronLibrary' );
 
     my $reminder_only = {
-        'LIB|PC|IT|7' => {
+        'LIB|LIB|PC|IT|7' => {
             actions => [ { type => 'notice', notice_code => 'OD1', mtts => ['email'] } ],
         },
     };
     my $escalation = {
-        'LIB|PC|IT|7' => {
+        'LIB|LIB|PC|IT|7' => {
             actions => [
                 { type => 'notice', notice_code => 'OD1', mtts => ['email'] },
                 { type => 'charge', value => 1 },
@@ -360,13 +362,14 @@ subtest 'enact_charge falls back to the itemtype default replacement cost' => su
 subtest 'route_item_actions_to_queue: aggregates multiple items under (borrower|code|mtt|delay) key' => sub {
     plan tests => 4;
 
-    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'CircControl',        'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'LostChargesControl', 'PatronLibrary' );
 
     my $effective_rule_sets = {
-        'LIB|PC|IT|7' => {
+        'LIB|LIB|PC|IT|7' => {
             actions => [ { type => 'notice', notice_code => 'OD1', mtts => ['email'] } ],
         },
-        'LIB|PC|IT|14' => {
+        'LIB|LIB|PC|IT|14' => {
             actions => [ { type => 'notice', notice_code => 'OD1', mtts => ['email'] } ],
         },
     };
@@ -555,7 +558,7 @@ subtest 'process_notice_queue: two items at the same trigger render one row' => 
     };
 
     my $effective_rule_sets = {
-        join( '|', $library->branchcode, $patron->categorycode, $item_a->itype, 3 ) => {
+        join( '|', $library->branchcode, $library->branchcode, $patron->categorycode, $item_a->itype, 3 ) => {
             actions => [ { type => 'notice', notice_code => 'OD2', mtts => ['email'] } ],
         },
     };
@@ -640,10 +643,10 @@ subtest 'process_notice_queue: triggers sharing a letter code send one letter pe
     # same transport — the shape a site gets when it adds levels without
     # authoring a template per level.
     my $effective_rule_sets = {
-        join( '|', $library->branchcode, $patron->categorycode, $item_a->itype, 7 ) => {
+        join( '|', $library->branchcode, $library->branchcode, $patron->categorycode, $item_a->itype, 7 ) => {
             actions => [ { type => 'notice', notice_code => 'OD3', mtts => ['email'] } ],
         },
-        join( '|', $library->branchcode, $patron->categorycode, $item_a->itype, 14 ) => {
+        join( '|', $library->branchcode, $library->branchcode, $patron->categorycode, $item_a->itype, 14 ) => {
             actions => [ { type => 'notice', notice_code => 'OD3', mtts => ['email'] } ],
         },
     };
@@ -761,10 +764,11 @@ subtest 'process_notice_queue: missing letter template warns and skips' => sub {
 subtest 'route_item_actions_to_queue: multi-MTT fans out per-MTT queue entries' => sub {
     plan tests => 4;
 
-    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'CircControl',        'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'LostChargesControl', 'PatronLibrary' );
 
     my $effective_rule_sets = {
-        'LIB|PC|IT|7' => {
+        'LIB|LIB|PC|IT|7' => {
             actions => [
                 { type => 'notice', notice_code => 'OD1', mtts => [ 'email', 'print' ] },
             ],

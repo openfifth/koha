@@ -1232,7 +1232,7 @@ subtest 'get_known_overdue_delay_values' => sub {
 };
 
 subtest 'resolve_rule_context_branchcode' => sub {
-    plan tests => 5;
+    plan tests => 6;
 
     $schema->storage->txn_begin;
 
@@ -1276,6 +1276,16 @@ subtest 'resolve_rule_context_branchcode' => sub {
     is(
         Koha::CirculationRules->resolve_rule_context_branchcode($context),
         $library->branchcode, 'PickupLibrary with a userenv resolves to the logged-in library'
+    );
+
+    t::lib::Mocks::mock_preference( 'CircControl',        'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'LostChargesControl', 'ItemHomeLibrary' );
+    is(
+        Koha::CirculationRules->resolve_rule_context_branchcode(
+            { %$context, control_preference => 'LostChargesControl' }
+        ),
+        'ITEM_HB',
+        'control_preference honours the named preference instead of CircControl'
     );
 
     $schema->storage->txn_rollback;

@@ -280,15 +280,18 @@ sub _dispatch_overdues {
             patronhomebranch  => $patron->branchcode,
         };
 
-        my $rule_branchcode = Koha::CirculationRules->resolve_rule_context_branchcode(
-            {
-                patron_branchcode  => $patron->branchcode,
-                item_homebranch    => $item->homebranch,
-                item_holdingbranch => $item->holdingbranch,
-            }
-        );
+        my $branch_params = {
+            patron_branchcode  => $patron->branchcode,
+            item_homebranch    => $item->homebranch,
+            item_holdingbranch => $item->holdingbranch,
+        };
+        my $rule_branchcode = Koha::CirculationRules->resolve_rule_context_branchcode($branch_params);
+        my $lost_rule_branchcode =
+            Koha::CirculationRules->resolve_rule_context_branchcode(
+            { %$branch_params, control_preference => 'LostChargesControl' } );
 
         $seen_branches{$rule_branchcode}          = 1;
+        $seen_branches{$lost_rule_branchcode}     = 1;
         $seen_categories{ $patron->categorycode } = 1;
         $seen_itemtypes{$itemtype}                = 1;
 
@@ -296,7 +299,7 @@ sub _dispatch_overdues {
         # of the values seen. Resolving effective sets does not: only the combinations
         # an item actually presents are ever looked up, and those are a sparse subset
         # of the three lists crossed together.
-        $seen_contexts{ join( "|", $rule_branchcode, $patron->categorycode, $itemtype ) } = 1;
+        $seen_contexts{ join( "|", $rule_branchcode, $lost_rule_branchcode, $patron->categorycode, $itemtype ) } = 1;
 
         push @overdue_items, $item_hashref;
     }
