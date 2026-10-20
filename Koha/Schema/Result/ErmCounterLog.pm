@@ -55,6 +55,14 @@ foreign key to erm_counter_files
 
 foreign key to erm_usage_data_providers
 
+=head2 background_job_id
+
+  data_type: 'integer'
+  is_foreign_key: 1
+  is_nullable: 1
+
+foreign key to background_jobs
+
 =head2 importdate
 
   data_type: 'timestamp'
@@ -79,6 +87,28 @@ name of the counter file
 
 details from the counter log
 
+=head2 report_type
+
+  data_type: 'varchar'
+  is_nullable: 1
+  size: 10
+
+report type
+
+=head2 report_year
+
+  data_type: 'integer'
+  is_nullable: 1
+
+year of the harvested report period
+
+=head2 report_month
+
+  data_type: 'integer'
+  is_nullable: 1
+
+month of the harvested report period
+
 =cut
 
 __PACKAGE__->add_columns(
@@ -89,6 +119,8 @@ __PACKAGE__->add_columns(
   "counter_files_id",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
   "usage_data_provider_id",
+  { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
+  "background_job_id",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
   "importdate",
   {
@@ -101,6 +133,12 @@ __PACKAGE__->add_columns(
   { data_type => "varchar", is_nullable => 1, size => 80 },
   "logdetails",
   { data_type => "longtext", is_nullable => 1 },
+  "report_type",
+  { data_type => "varchar", is_nullable => 1, size => 10 },
+  "report_year",
+  { data_type => "integer", is_nullable => 1 },
+  "report_month",
+  { data_type => "integer", is_nullable => 1 },
 );
 
 =head1 PRIMARY KEY
@@ -116,6 +154,26 @@ __PACKAGE__->add_columns(
 __PACKAGE__->set_primary_key("erm_counter_log_id");
 
 =head1 RELATIONS
+
+=head2 background_job
+
+Type: belongs_to
+
+Related object: L<Koha::Schema::Result::BackgroundJob>
+
+=cut
+
+__PACKAGE__->belongs_to(
+  "background_job",
+  "Koha::Schema::Result::BackgroundJob",
+  { id => "background_job_id" },
+  {
+    is_deferrable => 1,
+    join_type     => "LEFT",
+    on_delete     => "SET NULL",
+    on_update     => "CASCADE",
+  },
+);
 
 =head2 borrowernumber
 
@@ -178,8 +236,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2025-05-05 10:42:40
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:557G0h9pNamyqGj+YkEwXA
+# Created by DBIx::Class::Schema::Loader v0.07053 @ 2026-10-20 13:59:36
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:7rJahz8xJmhhcM+wYmrwhA
 
 __PACKAGE__->belongs_to(
     "patron",
