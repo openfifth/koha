@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 8;
+use Test::More tests => 10;
 
 use Koha::CirculationRules;
 use Koha::Database;
@@ -44,19 +44,19 @@ subtest '_get_fallback_contexts' => sub {
     plan tests => 1;
 
     my $resolver = Koha::Overdues::RuleResolver->new;
-    my $keys     = $resolver->_get_fallback_contexts( 'BR', 'PC', 'IT', 7 );
+    my $keys     = $resolver->_get_fallback_contexts( 'BR', 'PC', 'IT', 1 );
 
     is_deeply(
         $keys,
         [
-            'BR|PC|IT|7',
-            'BR|PC|*|7',
-            'BR|*|IT|7',
-            'BR|*|*|7',
-            '*|PC|IT|7',
-            '*|PC|*|7',
-            '*|*|IT|7',
-            '*|*|*|7',
+            'BR|PC|IT|1',
+            'BR|PC|*|1',
+            'BR|*|IT|1',
+            'BR|*|*|1',
+            '*|PC|IT|1',
+            '*|PC|*|1',
+            '*|*|IT|1',
+            '*|*|*|1',
         ],
         'fallback context list ordered from most-specific to default'
     );
@@ -90,7 +90,7 @@ subtest 'set_raw_overdue_rule_sets' => sub {
         }
     );
 
-    # A trigger with no delay rule must be skipped (logged as a warning).
+    # A trigger with no delay rule of its own is kept, to inherit one later.
     Koha::CirculationRules->set_rule(
         {
             branchcode   => $branchcode,
@@ -104,16 +104,17 @@ subtest 'set_raw_overdue_rule_sets' => sub {
     my $resolver = Koha::Overdues::RuleResolver->new;
     $resolver->set_raw_overdue_rule_sets( [$branchcode], [$categorycode], [$itemtype] );
 
-    my $cache_key = join( "|", $branchcode, $categorycode, $itemtype, 7 );
+    my $cache_key = join( "|", $branchcode, $categorycode, $itemtype, 1 );
     my $rule_set  = $resolver->{raw_overdue_rule_sets}->{$cache_key};
-    ok( $rule_set, "raw set cached under $cache_key (branchcode|cat|itype|delay)" );
+    ok( $rule_set, "raw set cached under $cache_key (branchcode|cat|itype|trigger_number)" );
     is( $rule_set->{delay},           7, 'cached delay matches the delay rule_value' );
     is( $rule_set->{actions}->{lost}, 1, 'cached actions include the lost rule_value' );
 
-    my $orphan_key = join( "|", $branchcode, $categorycode, $itemtype, '' );
-    ok(
-        !$resolver->{raw_overdue_rule_sets}->{$orphan_key},
-        'trigger with action rules but no delay rule is not cached'
+    my $no_delay_key = join( "|", $branchcode, $categorycode, $itemtype, 9 );
+    is_deeply(
+        $resolver->{raw_overdue_rule_sets}->{$no_delay_key},
+        { actions => { charge => 1 } },
+        'trigger with action rules but no delay rule is cached without a delay'
     );
 
     $schema->storage->txn_rollback;
@@ -124,20 +125,20 @@ subtest '_find_effective_rule_value walks fallback contexts' => sub {
 
     my $resolver = Koha::Overdues::RuleResolver->new;
     $resolver->{raw_overdue_rule_sets} = {
-        'BR|*|*|7' => { delay => 7, actions => { lost   => 2 } },
-        '*|PC|*|7' => { delay => 7, actions => { notice => 'OD1' } },
+        'BR|*|*|1' => { delay => 7, actions => { lost   => 2 } },
+        '*|PC|*|1' => { delay => 7, actions => { notice => 'OD1' } },
     };
 
     is(
-        $resolver->_find_effective_rule_value( 'BR', 'PC', 'IT', 7, 'lost' ),
+        $resolver->_find_effective_rule_value( 'BR', 'PC', 'IT', 1, 'lost' ),
         2, 'lost resolves via library-only fallback'
     );
     is(
-        $resolver->_find_effective_rule_value( 'BR', 'PC', 'IT', 7, 'notice' ),
+        $resolver->_find_effective_rule_value( 'BR', 'PC', 'IT', 1, 'notice' ),
         'OD1', 'notice resolves via category-only fallback'
     );
     is(
-        $resolver->_find_effective_rule_value( 'BR', 'PC', 'IT', 7, 'charge' ),
+        $resolver->_find_effective_rule_value( 'BR', 'PC', 'IT', 1, 'charge' ),
         undef, 'unset action returns undef'
     );
 };
@@ -147,7 +148,7 @@ subtest 'set_effective_overdue_rule_sets' => sub {
 
     my $resolver = Koha::Overdues::RuleResolver->new;
     $resolver->{raw_overdue_rule_sets} = {
-        'BR|PC|IT|7' => {
+        'BR|PC|IT|1' => {
             delay   => 7,
             actions => {
                 notice => 'OD1',
@@ -181,9 +182,9 @@ subtest 'notice action splits comma-separated mtt rule value' => sub {
 
     my $resolver = Koha::Overdues::RuleResolver->new;
     $resolver->{raw_overdue_rule_sets} = {
-        'BR|PC|IT|7'  => { delay => 7,  actions => { notice => 'OD1', mtt => 'email, print' } },
-        'BR|PC|IT|14' => { delay => 14, actions => { notice => 'OD2', mtt => '' } },
-        'BR|PC|IT|21' => { delay => 21, actions => { notice => 'OD3', mtt => 'sms' } },
+        'BR|PC|IT|1' => { delay => 7,  actions => { notice => 'OD1', mtt => 'email, print' } },
+        'BR|PC|IT|2' => { delay => 14, actions => { notice => 'OD2', mtt => '' } },
+        'BR|PC|IT|3' => { delay => 21, actions => { notice => 'OD3', mtt => 'sms' } },
     };
 
     $resolver->set_effective_overdue_rule_sets(
@@ -218,12 +219,45 @@ subtest 'empty mtt resolves to the broader context mtt' => sub {
 
     my $resolver = Koha::Overdues::RuleResolver->new;
     $resolver->{raw_overdue_rule_sets} = {
-        'BR|PC|IT|7' => { delay => 7, actions => { notice => 'OD1', mtt => '' } },
-        '*|*|*|7'    => { delay => 7, actions => { mtt    => 'email' } },
+        'BR|PC|IT|1' => { delay => 7, actions => { notice => 'OD1', mtt => '' } },
+        '*|*|*|1'    => { delay => 7, actions => { mtt    => 'email' } },
     };
 
     $resolver->set_effective_overdue_rule_sets( ['BR|PC|IT'], { BR => { 7 => 7 } } );
 
     my %by_type = map { $_->{type} => $_ } @{ $resolver->{effective_overdue_rule_sets}->{'BR|PC|IT|7'}->{actions} };
     is_deeply( $by_type{notice}->{mtts}, ['email'], 'empty mtt resolves to the default context mtt' );
+};
+
+subtest 'an override that sets no delay inherits the delay of the same trigger' => sub {
+    plan tests => 2;
+
+    my $resolver = Koha::Overdues::RuleResolver->new;
+    $resolver->{raw_overdue_rule_sets} = {
+        '*|*|*|1'  => { delay   => 7, actions => { notice => 'OD1', mtt => 'print' } },
+        'BR|*|*|1' => { actions => { notice => 'OD2' } },
+    };
+
+    $resolver->set_effective_overdue_rule_sets( [ 'BR|PC|IT', 'XX|PC|IT' ], { BR => { 7 => 7 }, XX => { 7 => 7 } } );
+
+    my %overridden = map { $_->{type} => $_ } @{ $resolver->{effective_overdue_rule_sets}->{'BR|PC|IT|7'}->{actions} };
+    is( $overridden{notice}->{notice_code}, 'OD2', 'the library override applies at the inherited delay' );
+
+    my %inherited = map { $_->{type} => $_ } @{ $resolver->{effective_overdue_rule_sets}->{'XX|PC|IT|7'}->{actions} };
+    is( $inherited{notice}->{notice_code}, 'OD1', 'another library still gets the default' );
+};
+
+subtest 'an override that moves a trigger\'s delay does not also fire at the default delay' => sub {
+    plan tests => 2;
+
+    my $resolver = Koha::Overdues::RuleResolver->new;
+    $resolver->{raw_overdue_rule_sets} = {
+        '*|*|*|1'  => { delay => 7,  actions => { lost => 1 } },
+        'BR|*|*|1' => { delay => 10, actions => {} },
+    };
+
+    $resolver->set_effective_overdue_rule_sets( ['BR|PC|IT'], { BR => { 7 => 7, 10 => 10 } } );
+
+    ok( !exists $resolver->{effective_overdue_rule_sets}->{'BR|PC|IT|7'}, 'nothing fires at the default delay' );
+    ok( exists $resolver->{effective_overdue_rule_sets}->{'BR|PC|IT|10'}, 'the trigger fires at the overridden delay' );
 };

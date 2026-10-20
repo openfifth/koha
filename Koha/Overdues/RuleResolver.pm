@@ -60,22 +60,52 @@ L<Koha::Overdues::TriggerProcessor/_dispatch_overdues>. Crossing the branch, cat
 itemtype lists instead would resolve every combination of the values seen, most of which no
 item ever looks up.
 
+Triggers are resolved by trigger number: a context's trigger inherits each rule it does not
+set, its delay included, from the same trigger number in a less specific context. Each
+resolved set is then keyed by the effective delay it fires at, which is what
+L<Koha::Overdues::ActionExecutor/route_item_actions_to_queue> looks up. Where two trigger
+numbers of one context resolve to the same delay, the lower trigger number is kept.
+
 =cut
 
 sub set_effective_overdue_rule_sets {
     my ( $self, $context_list, $effective_delay_by_raw_delay ) = @_;
 
+    my %trigger_numbers = map { ( split /\|/ )[3] => 1 } keys %{ $self->{raw_overdue_rule_sets} };
+
     foreach my $context_key (@$context_list) {
         my ( $branchcode, $categorycode, $itemtype ) = split /\|/, $context_key, 3;
         my $branch_delays = $effective_delay_by_raw_delay->{$branchcode} // {};
+        my $context       = { branchcode => $branchcode, categorycode => $categorycode, itemtype => $itemtype };
 
-        foreach my $raw_delay ( keys %$branch_delays ) {
+        foreach my $trigger_number ( sort { $a <=> $b } keys %trigger_numbers ) {
+            my $raw_delay =
+                $self->_find_effective_rule_value( $branchcode, $categorycode, $itemtype, $trigger_number, 'delay' );
+            if ( !defined $raw_delay ) {
+                if ( grep { $self->{raw_overdue_rule_sets}->{$_} }
+                    @{ $self->_get_fallback_contexts( $branchcode, $categorycode, $itemtype, $trigger_number ) } )
+                {
+                    Koha::Logger->get->warn(
+                        "Trigger $trigger_number for context $context_key has no delay value, own or inherited — skipping"
+                    );
+                }
+                next;
+            }
+
             my $effective_delay = $branch_delays->{$raw_delay};
+            if ( !defined $effective_delay ) {
+                next;
+            }
 
-            # create the rule set
-            my $key             = join( "|", $branchcode, $categorycode, $itemtype, $effective_delay );
-            my $context         = { branchcode => $branchcode, categorycode => $categorycode, itemtype => $itemtype };
-            my $effective_rules = $self->_find_effective_overdue_rule_set( $context, $raw_delay );
+            my $key = join( "|", $branchcode, $categorycode, $itemtype, $effective_delay );
+            if ( $self->{effective_overdue_rule_sets}{$key} ) {
+                Koha::Logger->get->warn(
+                    "Trigger $trigger_number for context $context_key fires at the same delay as an earlier trigger — skipping"
+                );
+                next;
+            }
+
+            my $effective_rules = $self->_find_effective_overdue_rule_set( $context, $trigger_number, $raw_delay );
 
             if ( !@{ $effective_rules->{actions} } ) {
                 next;
@@ -87,14 +117,14 @@ sub set_effective_overdue_rule_sets {
     return;
 }
 
-=head3 _find_effective_rule_value
+=head3 _find_effective_overdue_rule_set
 
-Retrieves the effective rule sets value for a specific context, and delay combination from the cache.
+Retrieves the effective rule set for a specific context and trigger number from the cache.
 
 =cut
 
 sub _find_effective_overdue_rule_set {
-    my ( $self, $context, $delay ) = @_;
+    my ( $self, $context, $trigger_number, $delay ) = @_;
 
     my $branchcode   = $context->{branchcode};
     my $categorycode = $context->{categorycode};
@@ -105,7 +135,7 @@ sub _find_effective_overdue_rule_set {
     foreach my $action (@action_names) {
         if ( $action eq 'notice' ) {
             my $notice_code =
-                $self->_find_effective_rule_value( $branchcode, $categorycode, $itemtype, $delay, 'notice' );
+                $self->_find_effective_rule_value( $branchcode, $categorycode, $itemtype, $trigger_number, 'notice' );
             if ( !defined $notice_code ) {
                 Koha::Logger->get->warn(
                     "No notice rule found for context $branchcode|$categorycode|$itemtype at delay $delay — skipping notice action"
@@ -118,7 +148,8 @@ sub _find_effective_overdue_rule_set {
             if ( !length $notice_code ) {
                 next;
             }
-            my $mtt_value = $self->_find_effective_rule_value( $branchcode, $categorycode, $itemtype, $delay, 'mtt' );
+            my $mtt_value =
+                $self->_find_effective_rule_value( $branchcode, $categorycode, $itemtype, $trigger_number, 'mtt' );
             if ( !defined $mtt_value ) {
                 Koha::Logger->get->warn(
                     "No mtt rule found for notice $notice_code at delay $delay — skipping notice action");
@@ -138,7 +169,8 @@ sub _find_effective_overdue_rule_set {
             next;
         }
 
-        my $value = $self->_find_effective_rule_value( $branchcode, $categorycode, $itemtype, $delay, $action );
+        my $value =
+            $self->_find_effective_rule_value( $branchcode, $categorycode, $itemtype, $trigger_number, $action );
 
         if ( !defined $value ) {
             next;
@@ -155,22 +187,24 @@ sub _find_effective_overdue_rule_set {
 
 =head3 _find_effective_rule_value
 
-Retrieves the effective rule value for a specific context, delay, and action combination from the cache.
+Retrieves the effective rule value for a specific context, trigger number, and action combination
+from the cache. C<delay> resolves like any action.
 An empty C<mtt> is skipped and the walk continues; an empty action value halts it and is returned.
 If none is found, returns undef.
 
 =cut
 
 sub _find_effective_rule_value {
-    my ( $self, $branchcode, $categorycode, $itemtype, $delay, $action ) = @_;
-    foreach my $key ( @{ $self->_get_fallback_contexts( $branchcode, $categorycode, $itemtype, $delay ) } ) {
-        if ( !$self->{raw_overdue_rule_sets}->{$key} ) {
+    my ( $self, $branchcode, $categorycode, $itemtype, $trigger_number, $action ) = @_;
+    foreach my $key ( @{ $self->_get_fallback_contexts( $branchcode, $categorycode, $itemtype, $trigger_number ) } ) {
+        my $rule_set = $self->{raw_overdue_rule_sets}->{$key};
+        if ( !$rule_set ) {
             next;
         }
-        if ( !defined $self->{raw_overdue_rule_sets}->{$key}->{actions}->{$action} ) {
+        my $value = $action eq 'delay' ? $rule_set->{delay} : $rule_set->{actions}->{$action};
+        if ( !defined $value ) {
             next;
         }
-        my $value = $self->{raw_overdue_rule_sets}->{$key}->{actions}->{$action};
 
         if ( $action eq 'mtt' && !length $value ) {
             next;
@@ -183,23 +217,23 @@ sub _find_effective_rule_value {
 
 =head3 _get_fallback_contexts
 
-Generates the fallback context keys for a specific context / delay combination. Allows to resolve effective rule sets.
+Generates the fallback context keys for a specific context / trigger number combination. Allows to resolve effective rule sets.
 
 =cut
 
 sub _get_fallback_contexts {
-    my ( $self, $branchcode, $categorycode, $itemtype, $delay ) = @_;
+    my ( $self, $branchcode, $categorycode, $itemtype, $trigger_number ) = @_;
 
     # Fallback order for contexts
     my @keys = (
-        join( "|", $branchcode, $categorycode, $itemtype, $delay ),    # exact match
-        join( "|", $branchcode, $categorycode, "*",       $delay ),    # library + category
-        join( "|", $branchcode, "*",           $itemtype, $delay ),    # library + itemtype
-        join( "|", $branchcode, "*",           "*",       $delay ),    # library only
-        join( "|", "*",         $categorycode, $itemtype, $delay ),    # category + itemtype
-        join( "|", "*",         $categorycode, "*",       $delay ),    # category only
-        join( "|", "*",         "*",           $itemtype, $delay ),    # itemtype only
-        join( "|", "*",         "*",           "*",       $delay ),    # default
+        join( "|", $branchcode, $categorycode, $itemtype, $trigger_number ),    # exact match
+        join( "|", $branchcode, $categorycode, "*",       $trigger_number ),    # library + category
+        join( "|", $branchcode, "*",           $itemtype, $trigger_number ),    # library + itemtype
+        join( "|", $branchcode, "*",           "*",       $trigger_number ),    # library only
+        join( "|", "*",         $categorycode, $itemtype, $trigger_number ),    # category + itemtype
+        join( "|", "*",         $categorycode, "*",       $trigger_number ),    # category only
+        join( "|", "*",         "*",           $itemtype, $trigger_number ),    # itemtype only
+        join( "|", "*",         "*",           "*",       $trigger_number ),    # default
     );
     return \@keys;
 }
@@ -208,9 +242,9 @@ sub _get_fallback_contexts {
 
 # TODO: refactor, rewrite descr
 Set the array of raw overdue rule sets that are relevant for the current cicrulation triggers script run.
-Format: {branchcode|categorycode|itemtype|delay => { charge, has_rules, mark_returned, mtt, notice, restrict, lost}}, where all properties are optional.
-This reflects the reality of what is stored in the database 
-It also ties the actions to the delay explicitly assigned to this set
+Format: {branchcode|categorycode|itemtype|trigger_number => { delay, actions => { charge, has_rules, mark_returned, mtt, notice, restrict, lost } }}, where all properties are optional.
+This reflects the reality of what is stored in the database
+A trigger that sets no delay of its own is kept: it inherits one in L</set_effective_overdue_rule_sets>
 
 =cut
 
@@ -242,15 +276,8 @@ sub set_raw_overdue_rule_sets {
     # format and cache all rules
     foreach my $context_key ( keys %{$temporary_rule_sets} ) {
         foreach my $trigger_number ( keys %{ $temporary_rule_sets->{$context_key} } ) {
-            my $rule_set = $temporary_rule_sets->{$context_key}->{$trigger_number};
-            my $delay    = $rule_set->{delay};
-            if ( !defined $delay ) {
-                Koha::Logger->get->warn(
-                    "Trigger $trigger_number for context $context_key has no delay value — skipping");
-                next;
-            }
-            my $cache_key = join( "|", $context_key, $delay );
-            $self->{raw_overdue_rule_sets}->{$cache_key} = $rule_set;
+            my $cache_key = join( "|", $context_key, $trigger_number );
+            $self->{raw_overdue_rule_sets}->{$cache_key} = $temporary_rule_sets->{$context_key}->{$trigger_number};
         }
     }
 
