@@ -34,7 +34,10 @@ Koha::Overdues::RuleResolver - Koha Overdues RuleResolver object set class
 
 =cut
 
-my @action_names = ( 'notice', 'charge', 'lost', 'restrict', 'mark_returned', 'forgive_fine' );
+# Rules for the actions that concern a lost item resolve against the branch named by
+# LostChargesControl; every other rule resolves against the branch named by CircControl.
+my @circ_control_actions = ( 'notice', 'restrict', 'forgive_fine' );
+my @lost_control_actions = ( 'lost',   'charge',   'mark_returned' );
 
 =head3 new
 
@@ -54,17 +57,22 @@ sub new {
 
 Sets the effective (resolved) rule sets for a given run of the circulation triggers script.
 
-C<$context_list> is an arrayref of C<"branchcode|categorycode|itemtype"> keys: the distinct
-contexts the run's overdue items present, collected in
-L<Koha::Overdues::TriggerProcessor/_dispatch_overdues>. Crossing the branch, category and
-itemtype lists instead would resolve every combination of the values seen, most of which no
-item ever looks up.
+C<$context_list> is an arrayref of C<"branchcode|lost_branchcode|categorycode|itemtype"> keys:
+the distinct contexts the run's overdue items present, collected in
+L<Koha::Overdues::TriggerProcessor/_dispatch_overdues>. C<branchcode> is the branch
+C<CircControl> names and C<lost_branchcode> the one C<LostChargesControl> names; they are the
+same branch unless the two preferences resolve differently for an item. Crossing the branch,
+category and itemtype lists instead would resolve every combination of the values seen, most
+of which no item ever looks up.
 
 Triggers are resolved by trigger number: a context's trigger inherits each rule it does not
-set, its delay included, from the same trigger number in a less specific context. Each
-resolved set is then keyed by the effective delay it fires at, which is what
+set, its delay included, from the same trigger number in a less specific context. The lost,
+charge and mark_returned rules are resolved against C<lost_branchcode>, every other rule
+against C<branchcode>, each with the delay of its own branch's trigger; both go through
+C<branchcode>'s calendar, the one that selected the item. Each resolved set is then keyed by
+the effective delay it fires at, which is what
 L<Koha::Overdues::ActionExecutor/route_item_actions_to_queue> looks up. Where two trigger
-numbers of one context resolve to the same delay, the lower trigger number is kept.
+numbers resolve to the same delay against one branch, the lower trigger number is kept.
 
 =cut
 
@@ -74,43 +82,76 @@ sub set_effective_overdue_rule_sets {
     my %trigger_numbers = map { ( split /\|/ )[3] => 1 } keys %{ $self->{raw_overdue_rule_sets} };
 
     foreach my $context_key (@$context_list) {
-        my ( $branchcode, $categorycode, $itemtype ) = split /\|/, $context_key, 3;
+        my ( $branchcode, $lost_branchcode, $categorycode, $itemtype ) = split /\|/, $context_key, 4;
         my $branch_delays = $effective_delay_by_raw_delay->{$branchcode} // {};
-        my $context       = { branchcode => $branchcode, categorycode => $categorycode, itemtype => $itemtype };
 
-        foreach my $trigger_number ( sort { $a <=> $b } keys %trigger_numbers ) {
-            my $raw_delay =
-                $self->_find_effective_rule_value( $branchcode, $categorycode, $itemtype, $trigger_number, 'delay' );
-            if ( !defined $raw_delay ) {
-                if ( grep { $self->{raw_overdue_rule_sets}->{$_} }
-                    @{ $self->_get_fallback_contexts( $branchcode, $categorycode, $itemtype, $trigger_number ) } )
-                {
-                    Koha::Logger->get->warn(
-                        "Trigger $trigger_number for context $context_key has no delay value, own or inherited — skipping"
-                    );
-                }
-                next;
-            }
+        # When both branches are the same, both groups walk the same fallback chain
+        # and would log the same warning twice.
+        my %warned;
 
-            my $effective_delay = $branch_delays->{$raw_delay};
-            if ( !defined $effective_delay ) {
-                next;
-            }
+        for my $action_group (
+            { branchcode => $branchcode,      actions => \@circ_control_actions },
+            { branchcode => $lost_branchcode, actions => \@lost_control_actions },
+            )
+        {
+            my $group_branchcode = $action_group->{branchcode};
+            my $context = { branchcode => $group_branchcode, categorycode => $categorycode, itemtype => $itemtype };
+            my %claimed_keys;
 
-            my $key = join( "|", $branchcode, $categorycode, $itemtype, $effective_delay );
-            if ( $self->{effective_overdue_rule_sets}{$key} ) {
-                Koha::Logger->get->warn(
-                    "Trigger $trigger_number for context $context_key fires at the same delay as an earlier trigger — skipping"
+            foreach my $trigger_number ( sort { $a <=> $b } keys %trigger_numbers ) {
+                my $raw_delay = $self->_find_effective_rule_value(
+                    $group_branchcode, $categorycode, $itemtype, $trigger_number,
+                    'delay'
                 );
-                next;
-            }
+                if ( !defined $raw_delay ) {
+                    if (
+                        grep { $self->{raw_overdue_rule_sets}->{$_} } @{
+                            $self->_get_fallback_contexts(
+                                $group_branchcode, $categorycode, $itemtype, $trigger_number
+                            )
+                        }
+                        )
+                    {
+                        my $message =
+                            "Trigger $trigger_number for context $group_branchcode|$categorycode|$itemtype has no delay value, own or inherited — skipping";
+                        if ( !$warned{$message}++ ) {
+                            Koha::Logger->get->warn($message);
+                        }
+                    }
+                    next;
+                }
 
-            my $effective_rules = $self->_find_effective_overdue_rule_set( $context, $trigger_number, $raw_delay );
+                my $effective_delay = $branch_delays->{$raw_delay};
+                if ( !defined $effective_delay ) {
+                    next;
+                }
 
-            if ( !@{ $effective_rules->{actions} } ) {
-                next;
+                my $key = join( "|", $branchcode, $lost_branchcode, $categorycode, $itemtype, $effective_delay );
+                if ( $claimed_keys{$key} ) {
+                    my $message =
+                        "Trigger $trigger_number for context $group_branchcode|$categorycode|$itemtype fires at the same delay as an earlier trigger — skipping";
+                    if ( !$warned{$message}++ ) {
+                        Koha::Logger->get->warn($message);
+                    }
+                    next;
+                }
+
+                my $effective_rules = $self->_find_effective_overdue_rule_set(
+                    $context, $trigger_number, $raw_delay,
+                    $action_group->{actions}
+                );
+
+                if ( !@{ $effective_rules->{actions} } ) {
+                    next;
+                }
+                $claimed_keys{$key} = 1;
+
+                if ( $self->{effective_overdue_rule_sets}{$key} ) {
+                    push @{ $self->{effective_overdue_rule_sets}{$key}{actions} }, @{ $effective_rules->{actions} };
+                    next;
+                }
+                $self->{effective_overdue_rule_sets}{$key} = $effective_rules;
             }
-            $self->{effective_overdue_rule_sets}{$key} = $effective_rules;
         }
     }
 
@@ -119,12 +160,13 @@ sub set_effective_overdue_rule_sets {
 
 =head3 _find_effective_overdue_rule_set
 
-Retrieves the effective rule set for a specific context and trigger number from the cache.
+Retrieves the effective rule set for a specific context and trigger number from the cache,
+covering the given actions.
 
 =cut
 
 sub _find_effective_overdue_rule_set {
-    my ( $self, $context, $trigger_number, $delay ) = @_;
+    my ( $self, $context, $trigger_number, $delay, $action_names ) = @_;
 
     my $branchcode   = $context->{branchcode};
     my $categorycode = $context->{categorycode};
@@ -132,7 +174,7 @@ sub _find_effective_overdue_rule_set {
 
     my $effective_rule = { delay => $delay, actions => [] };
 
-    foreach my $action (@action_names) {
+    foreach my $action (@$action_names) {
         if ( $action eq 'notice' ) {
             my $notice_code =
                 $self->_find_effective_rule_value( $branchcode, $categorycode, $itemtype, $trigger_number, 'notice' );
