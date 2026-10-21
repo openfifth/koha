@@ -27,6 +27,24 @@ Koha::Tickets - Koha Ticket Objects class
 
 =head1 API
 
+=cut
+
+=head2 Class methods
+
+=head3 filter_verified
+
+  my $filtered_tickets = Koha::Tickets->filter_verified();
+
+Filters to tickets that have been verified, either by being submitted
+from an account, or having the associated anonymous email verified.
+
+=cut
+
+sub filter_verified {
+    my ($self) = @_;
+    return $self->search( { verify_uuid => undef } );
+}
+
 =head2 Internal methods
 
 =cut
