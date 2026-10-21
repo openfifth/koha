@@ -134,13 +134,17 @@
                             data: "reported_date:reporter.firstname",
                             render: function (data, type, row, meta) {
                                 let reported = '<div class="d-flex justify-content-between align-items-start">';
-                                reported +=
-                                    '<span class="reporter">' +
-                                    $patron_to_html(row.reporter, {
-                                        display_cardnumber: false,
-                                        url: true,
-                                    }) +
-                                    "</span>";
+                                if (row.reporter) {
+                                    reported +=
+                                        '<span class="reporter">' +
+                                        $patron_to_html(row.reporter, {
+                                            display_cardnumber: false,
+                                            url: true,
+                                        }) +
+                                        "</span>";
+                                } else if (row.reporter_email) {
+                                    reported += '<span class="reporter">' + row.reporter_email.escapeHtml() + "</span>";
+                                }
                                 reported += '<span class="date text-muted">' + $datetime(row.reported_date) + "</span>";
                                 reported += "</div>";
                                 return reported;
