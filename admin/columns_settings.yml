@@ -1105,7 +1105,19 @@ modules:
             -
               columnname: filename
             -
+              columnname: report_type
+            -
+              columnname: period
+            -
+              columnname: status
+            -
+              columnname: details
+            -
               columnname: importdate
+            -
+              columnname: importer
+            -
+              columnname: background_job
             -
               columnname: actions
               cannot_be_toggled: 1
