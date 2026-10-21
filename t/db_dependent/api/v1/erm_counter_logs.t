@@ -37,7 +37,7 @@ t::lib::Mocks::mock_preference( 'RESTBasicAuth', 1 );
 
 subtest 'list() tests' => sub {
 
-    plan tests => 17;
+    plan tests => 23;
 
     $schema->storage->txn_begin;
 
@@ -67,7 +67,8 @@ subtest 'list() tests' => sub {
     # No counter logs, so empty array should be returned
     $t->get_ok("//$userid:$password@/api/v1/erm/counter_logs")->status_is(200)->json_is( [] );
 
-    my $counter_log = $builder->build_object( { class => 'Koha::ERM::EUsage::CounterLogs' } );
+    my $counter_log =
+        $builder->build_object( { class => 'Koha::ERM::EUsage::CounterLogs', value => { status => 'success' } } );
 
     # One counter_log created, should get returned
     $t->get_ok("//$userid:$password@/api/v1/erm/counter_logs")->status_is(200)->json_is( [ $counter_log->to_api ] );
@@ -75,6 +76,7 @@ subtest 'list() tests' => sub {
     my $another_counter_log = $builder->build_object(
         {
             class => 'Koha::ERM::EUsage::CounterLogs',
+            value => { status => 'success' },
         }
     );
 
@@ -95,6 +97,35 @@ subtest 'list() tests' => sub {
             }
         ]
         );
+
+    # Filter on status to find the harvests that need a retry
+    my $job = $builder->build_object(
+        {
+            class => 'Koha::BackgroundJobs',
+            value => { type => 'erm_sushi_harvester', context => '{}', data => '{}' },
+        }
+    );
+    my $retry_counter_log = $builder->build_object(
+        {
+            class => 'Koha::ERM::EUsage::CounterLogs',
+            value => {
+                status            => 'retry',
+                background_job_id => $job->id,
+                logdetails        => '{"http_status":200,"exceptions":[{"code":3031,"message":"Usage Not Ready"}]}',
+            },
+        }
+    );
+    $t->get_ok( "//$userid:$password@/api/v1/erm/counter_logs?q=" . '{"status":"retry"}' )
+        ->status_is(200)
+        ->json_is( [ $retry_counter_log->to_api ] );
+
+    # Embed the background job that created the log
+    $t->get_ok( "//$userid:$password@/api/v1/erm/counter_logs?q="
+            . '{"erm_counter_log_id":'
+            . $retry_counter_log->erm_counter_log_id
+            . '}' => { 'x-koha-embed' => 'background_job' } )
+        ->status_is(200)
+        ->json_is( '/0/background_job/job_id' => $retry_counter_log->background_job_id );
 
     # Warn on unsupported query parameter
     $t->get_ok("//$userid:$password@/api/v1/erm/counter_logs?blah=blah")

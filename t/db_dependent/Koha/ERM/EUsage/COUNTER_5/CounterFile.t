@@ -18,14 +18,16 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 5;
+use Test::More tests => 7;
 
 use Koha::Database;
 use Koha::ERM::EUsage::CounterFile;
+use Koha::ERM::EUsage::CounterLogs;
 
 use JSON           qw( decode_json );
 use File::Basename qw( dirname );
 use File::Slurp;
+use List::Util qw( sum0 );
 
 use t::lib::Mocks;
 use t::lib::TestBuilder;
@@ -43,12 +45,12 @@ my $sushi_counter_report_TR_J1 =
 
 subtest 'store' => sub {
 
-    plan tests => 5;
+    plan tests => 20;
 
     $schema->storage->txn_begin;
 
     my $patron = Koha::Patrons->search()->last;
-    t::lib::Mocks::mock_userenv( { number => $patron->borrowernumber } );    # Is superlibrarian
+    t::lib::Mocks::mock_userenv( { patron => $patron } );
 
     my $usage_data_provider = $builder->build_object(
         { class => 'Koha::ERM::EUsage::UsageDataProviders', value => { name => 'TestProvider' } } );
@@ -95,8 +97,51 @@ subtest 'store' => sub {
         )->as_list;
     is( $yearly_usage->totalcount, $expected_total, 'Yearly totalcount is the sum of the monthly usage counts' );
 
+    # A counter log is added on CounterFile->store
+    my $counter_logs = $counter_file->counter_logs;
+    is( $counter_logs->count, 1, 'One counter log was added' );
+    my $counter_log = $counter_logs->next;
+    is( $counter_log->status,            'success',               'A stored file without log args is a success' );
+    is( $counter_log->report_type,       'TR_J1',                 'The report type comes from the file header' );
+    is( $counter_log->report_year,       undef,                   'A file over several months has no report year' );
+    is( $counter_log->report_month,      undef,                   'A file over several months has no report month' );
+    is( $counter_log->background_job_id, undef,                   'No job id without log args' );
+    is( $counter_log->borrowernumber,    $patron->borrowernumber, 'The log holds the user' );
+    is( $counter_log->filename,          $counter_file->filename, 'The log holds the file name' );
+    is_deeply( $counter_log->decoded_logdetails, { exceptions => [] }, 'logdetails hold no exception' );
+
     # Storing the same COUNTER file again must not duplicate the monthly usages
-    Koha::ERM::EUsage::CounterFile->new(
+    my $job         = $builder->build_object( { class => 'Koha::BackgroundJobs' } );
+    my $second_file = Koha::ERM::EUsage::CounterFile->new(
+        {
+            usage_data_provider_id => $usage_data_provider->erm_usage_data_provider_id,
+            file_content           => $sushi_counter_report_TR_J1->get_COUNTER_from_SUSHI,
+            date_uploaded          => $now_time,
+            filename               => $usage_data_provider->name . "_" . $usage_data_provider->{report_type},
+        }
+    )->store(
+        undef,
+        {
+            background_job_id => $job->id,
+            report_type       => 'TR_J1',
+            report_year       => 2021,
+            report_month      => 10,
+            status            => 'retry',
+            logdetails        => '{"http_status":200,"exceptions":[{"code":3040}]}',
+        }
+    );
+    is( $mus_rs->count, 22, 'Storing the same COUNTER file again does not duplicate monthly usages' );
+
+    my $second_log = $second_file->counter_logs->next;
+    is( $second_log->status,            'retry',                          'The status comes from the log args' );
+    is( $second_log->report_year,       2021,                             'The report year comes from the log args' );
+    is( $second_log->report_month,      10,                               'The report month comes from the log args' );
+    is( $second_log->background_job_id, $job->id,                         'The job id comes from the log args' );
+    is( $second_log->decoded_logdetails->{exceptions}->[0]->{code}, 3040, 'logdetails come from the log args' );
+
+    # Without a userenv the log has no user
+    C4::Context->unset_userenv;
+    my $third_file = Koha::ERM::EUsage::CounterFile->new(
         {
             usage_data_provider_id => $usage_data_provider->erm_usage_data_provider_id,
             file_content           => $sushi_counter_report_TR_J1->get_COUNTER_from_SUSHI,
@@ -104,7 +149,7 @@ subtest 'store' => sub {
             filename               => $usage_data_provider->name . "_" . $usage_data_provider->{report_type},
         }
     )->store;
-    is( $mus_rs->count, 22, 'Storing the same COUNTER file again does not duplicate monthly usages' );
+    is( $third_file->counter_logs->next->borrowernumber, undef, 'A store without userenv does not die' );
 
     $schema->storage->txn_rollback;
 
@@ -150,6 +195,378 @@ subtest 'store month column separator' => sub {
             { usage_data_provider_id => $usage_data_provider->erm_usage_data_provider_id } );
         is( $mus_rs->count, 22, "22 monthly usages were added with $test->{label} columns" );
     }
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'header helpers' => sub {
+
+    plan tests => 10;
+
+    $schema->storage->txn_begin;
+
+    my $header = sub {
+        my ( $reporting_period, $exceptions ) = @_;
+        return join(
+            "\r\n",
+            'Report_Name,"Journal Requests (Excluding OA_Gold)"',
+            'Report_ID,TR_J1',
+            'Release,5',
+            'Institution_Name,"Test Institution"',
+            'Institution_ID,',
+            'Metric_Types,"Total_Item_Requests; Unique_Item_Requests"',
+            'Report_Filters,',
+            'Report_Attributes,',
+            'Exceptions,"' .       ( $exceptions       // '' ) . '"',
+            'Reporting_Period,"' . ( $reporting_period // '' ) . '"',
+            'Created,2023-06-19T02:13:31Z',
+            'Created_By,"Test Systems Inc."',
+            '',
+            'Title,Publisher,Metric_Type,Reporting_Period_Total,"Jun 2023"',
+            '"A Title",Publisher,Total_Item_Requests,1,1',
+            ''
+        );
+    };
+
+    my $file = Koha::ERM::EUsage::CounterFile->new(
+        { file_content => $header->( 'Begin_Date=2023-06-01; End_Date=2023-06-30', '' ) } );
+
+    is( $file->_header_value('Report_ID'), 'TR_J1', '_header_value reads a header row' );
+    is( $file->_header_value('Not_A_Key'), undef,   '_header_value returns undef for a missing row' );
+    is_deeply(
+        $file->_report_period_from_file, { report_year => 2023, report_month => 6 },
+        'A reporting period inside one month gives that year and month'
+    );
+    is_deeply( [ $file->_header_exceptions ], [], 'An empty Exceptions row gives no exception' );
+
+    $file->file_content( $header->( 'Begin_Date=2022-01-01; End_Date=2023-06-01', '' ) );
+    is_deeply(
+        $file->_report_period_from_file, { report_year => undef, report_month => undef },
+        'A reporting period over several months gives no period'
+    );
+
+    $file->file_content( $header->( undef, '' ) );
+    is_deeply(
+        $file->_report_period_from_file, { report_year => undef, report_month => undef },
+        'An empty reporting period gives no period'
+    );
+
+    $file->file_content(
+        $header->(
+            'Begin_Date=2023-06-01; End_Date=2023-06-30',
+            '3031: Usage Not Ready for Requested Dates (Requested data between 2023-06-01 and 2023-06-30); 3040: Partial Data Returned'
+        )
+    );
+    is_deeply(
+        [ $file->_header_exceptions ],
+        [
+            {
+                code    => 3031,
+                message => 'Usage Not Ready for Requested Dates (Requested data between 2023-06-01 and 2023-06-30)'
+            },
+            { code => 3040, message => 'Partial Data Returned' },
+        ],
+        'Coded exceptions are split and parsed'
+    );
+
+    $file->file_content( $header->( 'Begin_Date=2023-06-01; End_Date=2023-06-30', 'Some vendor note' ) );
+    is_deeply(
+        [ $file->_header_exceptions ], [ { code => undef, message => 'Some vendor note' } ],
+        'An exception without a code keeps its text'
+    );
+
+    # The header exceptions set the status of an uploaded file
+    my $usage_data_provider = $builder->build_object( { class => 'Koha::ERM::EUsage::UsageDataProviders' } );
+    my $stored              = Koha::ERM::EUsage::CounterFile->new(
+        {
+            usage_data_provider_id => $usage_data_provider->erm_usage_data_provider_id,
+            file_content           =>
+                $header->( 'Begin_Date=2023-06-01; End_Date=2023-06-30', '3031: Usage Not Ready for Requested Dates' ),
+            date_uploaded => POSIX::strftime( "%Y%m%d%H%M%S", localtime ),
+            filename      => 'upload',
+        }
+    )->store;
+    my $log = $stored->counter_logs->next;
+    is_deeply(
+        [ $log->status, $log->report_year, $log->report_month, $log->decoded_logdetails->{exceptions}->[0]->{code} ],
+        [ 'success',    2023,              6,                  3031 ],
+        'An uploaded file with a 3031 header exception is logged as a success: the data was imported'
+    );
+
+    my $no_usage = Koha::ERM::EUsage::CounterFile->new(
+        {
+            usage_data_provider_id => $usage_data_provider->erm_usage_data_provider_id,
+            file_content           => $header->(
+                'Begin_Date=2023-06-01; End_Date=2023-06-30', '3030: No Usage Available for Requested Dates'
+            ) =~ s/Total_Item_Requests,1,1/Total_Item_Requests,0,0/r,
+            date_uploaded => POSIX::strftime( "%Y%m%d%H%M%S", localtime ),
+            filename      => 'upload_no_usage',
+        }
+    )->store;
+    is(
+        $no_usage->counter_logs->next->status, 'no_usage',
+        'An uploaded file with a 3030 header exception is logged as no_usage'
+    );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'upload periods and import_period' => sub {
+
+    plan tests => 32;
+
+    $schema->storage->txn_begin;
+
+    my $patron = Koha::Patrons->search()->last;
+    t::lib::Mocks::mock_userenv( { patron => $patron } );
+
+    my $usage_data_provider = $builder->build_object( { class => 'Koha::ERM::EUsage::UsageDataProviders' } );
+
+    # A COUNTER file of release 5 with one row. Each month is [ column heading, usage ]
+    my $counter_file_content = sub {
+        my ($args) = @_;
+
+        my @months = @{ $args->{months} // [] };
+        my @header = (
+            'Report_Name,"Journal Requests (Excluding OA_Gold)"',
+            'Report_ID,TR_J1',
+            'Release,5',
+            'Institution_Name,"Test Institution"',
+            'Institution_ID,',
+            'Metric_Types,"Total_Item_Requests"',
+            'Report_Filters,',
+            'Report_Attributes,',
+            'Exceptions,"' .       ( $args->{exceptions} // '' ) . '"',
+            'Reporting_Period,"' . ( $args->{period}     // '' ) . '"',
+            'Created,2026-10-30T02:13:31Z',
+            'Created_By,"Test Systems Inc."',
+            '',
+        );
+        my $columns = join( ',', 'Title,Publisher,Metric_Type,Reporting_Period_Total', map { qq{"$_->[0]"} } @months );
+        my $row     = join(
+            ',', '"A Title"', 'Publisher', 'Total_Item_Requests', sum0( map { $_->[1] } @months ),
+            map { $_->[1] } @months
+        );
+
+        return join( "\r\n", @header, $columns, $row, '' );
+    };
+
+    my $new_file = sub {
+        my ($args) = @_;
+
+        return Koha::ERM::EUsage::CounterFile->new(
+            {
+                usage_data_provider_id => $usage_data_provider->erm_usage_data_provider_id,
+                file_content           => $counter_file_content->($args),
+                date_uploaded          => POSIX::strftime( "%Y%m%d%H%M%S", localtime ),
+                filename               => 'upload',
+            }
+        );
+    };
+
+    my $period = sub { +{ report_year => $_[0], report_month => $_[1] } };
+
+    # The months of a file
+    is_deeply(
+        [
+            $new_file->( { period => 'Begin_Date=2026-10-01; End_Date=2026-10-31', months => [ [ 'Oct-2026', 1 ] ] } )
+                ->_report_periods_from_file
+        ],
+        [ $period->( 2026, 10 ) ],
+        'A reporting period inside one month gives that month'
+    );
+
+    my @periods = $new_file->(
+        {
+            period => 'Begin_Date=2026-01-01; End_Date=2026-06-30',
+            months => [ map { [ "$_-2026", 1 ] } qw( Jan Feb Mar Apr May Jun ) ]
+        }
+    )->_report_periods_from_file;
+    is( scalar @periods, 6, 'A reporting period over six months gives six months' );
+    is_deeply(
+        [ $periods[0], $periods[5] ], [ $period->( 2026, 1 ), $period->( 2026, 6 ) ],
+        'The months run from the first to the last'
+    );
+
+    is_deeply(
+        [
+            $new_file->(
+                {
+                    period => 'Begin_Date=2025-12-01; End_Date=2026-01-31',
+                    months => [ [ 'Dec-2025', 1 ], [ 'Jan-2026', 1 ] ]
+                }
+            )->_report_periods_from_file
+        ],
+        [ $period->( 2025, 12 ), $period->( 2026, 1 ) ],
+        'A reporting period over a new year gives both months'
+    );
+
+    is_deeply(
+        [ $new_file->( { months => [ [ 'Oct-2026', 1 ], [ 'Nov 2026', 1 ] ] } )->_report_periods_from_file ],
+        [ $period->( 2026, 10 ), $period->( 2026, 11 ) ],
+        'Without a reporting period the months come from the month columns, with a hyphen or a space'
+    );
+
+    is_deeply(
+        [
+            $new_file->( { period => 'Begin_Date=2026-10-01; End_Date=2026-01-31', months => [ [ 'Oct-2026', 1 ] ] } )
+                ->_report_periods_from_file
+        ],
+        [ $period->( 2026, 10 ) ],
+        'A reporting period that runs backwards gives the month columns'
+    );
+
+    is_deeply(
+        [
+            $new_file->( { period => 'Begin_Date=1900-01-01; End_Date=2999-12-31', months => [ [ 'Oct-2026', 1 ] ] } )
+                ->_report_periods_from_file
+        ],
+        [ $period->( 2026, 10 ) ],
+        'A reporting period over too many months gives the month columns'
+    );
+
+    is_deeply(
+        [ $new_file->( {} )->_report_periods_from_file ],
+        [ $period->( undef, undef ) ],
+        'A file with no readable month gives one period with no month'
+    );
+
+    # One month of a stored file
+    my $mus_search = { usage_data_provider_id => $usage_data_provider->erm_usage_data_provider_id };
+    my $jobs       = sub { $builder->build_object( { class => 'Koha::BackgroundJobs' } ) };
+    my $file       = $new_file->(
+        {
+            period => 'Begin_Date=2026-01-01; End_Date=2026-03-31',
+            months => [ [ 'Jan-2026', 4 ], [ 'Feb-2026', 0 ], [ 'Mar-2026', 6 ] ]
+        }
+    )->store_file;
+
+    is( $file->type,                                                  'TR_J1', 'store_file sets the report type' );
+    is( Koha::ERM::EUsage::MonthlyUsages->search($mus_search)->count, 0,       'store_file imports no usage' );
+    is( $file->counter_logs->count,                                   0,       'store_file writes no counter log' );
+
+    my $january_job = $jobs->();
+    $file->import_period( undef, { report_year => 2026, report_month => 1, background_job_id => $january_job->id } );
+    is( Koha::ERM::EUsage::MonthlyUsages->search($mus_search)->count, 1, 'The month asked for is imported' );
+    my $january_log = $file->counter_logs->search( { background_job_id => $january_job->id } )->next;
+    is_deeply(
+        [ $january_log->report_year, $january_log->report_month, $january_log->status, $january_log->report_type ],
+        [ 2026,                      1,                          'success',            'TR_J1' ],
+        'A month with usage is logged as a success'
+    );
+
+    my $yearly_usages = Koha::ERM::EUsage::YearlyUsages->search($mus_search);
+    is( $yearly_usages->count,            1, 'The yearly usage is rebuilt for the year of the month' );
+    is( $yearly_usages->next->totalcount, 4, 'The yearly usage is the sum of the monthly usage' );
+
+    my $february_job = $jobs->();
+    $file->import_period( undef, { report_year => 2026, report_month => 2, background_job_id => $february_job->id } );
+    is( Koha::ERM::EUsage::MonthlyUsages->search($mus_search)->count, 1, 'A month without usage adds no usage' );
+    is(
+        $file->counter_logs->search( { background_job_id => $february_job->id } )->next->status, 'no_usage',
+        'A month with no usage is logged as no_usage'
+    );
+
+    my $april_job = $jobs->();
+    $file->import_period( undef, { report_year => 2026, report_month => 4, background_job_id => $april_job->id } );
+    is(
+        Koha::ERM::EUsage::MonthlyUsages->search($mus_search)->count, 1,
+        'A month that is not in the file adds no usage'
+    );
+    is(
+        $file->counter_logs->search( { background_job_id => $april_job->id } )->next->status, 'no_data',
+        'A month that is not in the file is logged as no_data'
+    );
+
+    my $march_job = $jobs->();
+    $file->import_period( undef, { report_year => 2026, report_month => 3, background_job_id => $march_job->id } );
+    is(
+        Koha::ERM::EUsage::MonthlyUsages->search($mus_search)->count, 2,
+        'The next month is added to the usage of the first'
+    );
+    is( $file->counter_logs->count, 4, 'The file has one counter log for each job' );
+
+    # A month without a period imports the whole file
+    my $whole_file = $new_file->( { months => [ [ 'Jul-2026', 2 ], [ 'Aug 2026', 3 ] ] } )->store_file;
+    $whole_file->import_period( undef, { report_year => undef, report_month => undef } );
+    is(
+        Koha::ERM::EUsage::MonthlyUsages->search($mus_search)->count, 4,
+        'Without a month every month of the file is imported'
+    );
+    my $whole_log = $whole_file->counter_logs->next;
+    is_deeply(
+        [ $whole_log->report_year, $whole_log->report_month, $whole_log->status ], [ undef, undef, 'success' ],
+        'The log has no period'
+    );
+
+    # Space separated columns of older files
+    my $old_file =
+        $new_file->( { period => 'Begin_Date=2026-10-01; End_Date=2026-10-31', months => [ [ 'Oct 2026', 5 ] ] } )
+        ->store_file;
+    $old_file->import_period( undef, { report_year => 2026, report_month => 10 } );
+    is(
+        Koha::ERM::EUsage::MonthlyUsages->search( { %{$mus_search}, year => 2026, month => 10 } )->count, 1,
+        'A Mmm yyyy column is imported'
+    );
+
+    # The exceptions of the file
+    my @messages;
+    my $callbacks = {
+        report_info_callback => sub { },
+        step_callback        => sub { },
+        set_size_callback    => sub { },
+        add_message_callback => sub { push @messages, @_ },
+    };
+
+    my $retry_file = $new_file->(
+        {
+            period     => 'Begin_Date=2026-11-01; End_Date=2026-11-30',
+            months     => [ [ 'Nov-2026', 7 ] ],
+            exceptions => '3031: Usage Not Ready for Requested Dates (only data up to 2026-10)'
+        }
+    )->store_file;
+    $retry_file->import_period( $callbacks, { report_year => 2026, report_month => 11 } );
+    my $retry_log = $retry_file->counter_logs->next;
+    is( $retry_log->status, 'success', 'A 3031 exception does not set a retry status on an upload' );
+    is( $retry_log->decoded_logdetails->{exceptions}->[0]->{code}, 3031, 'The exception is kept in logdetails' );
+    is_deeply(
+        [ map { $_->{type} . q{ } . $_->{code} } grep { ( $_->{code} // q{} ) eq q{file_exception} } @messages ],
+        ['warning file_exception'],
+        'The exception is added to the job messages as a warning'
+    );
+
+    @messages = ();
+    my $error_file = $new_file->(
+        {
+            period     => 'Begin_Date=2026-12-01; End_Date=2026-12-31',
+            months     => [ [ 'Dec-2026', 9 ] ],
+            exceptions => '2020: API Key Invalid'
+        }
+    )->store_file;
+    $error_file->import_period( $callbacks, { report_year => 2026, report_month => 12 } );
+    is(
+        Koha::ERM::EUsage::MonthlyUsages->search( { %{$mus_search}, year => 2026, month => 12 } )->count, 0,
+        'A file with an error exception is not imported'
+    );
+    is( $error_file->counter_logs->next->status, 'error', 'A file with an error exception is logged as an error' );
+    is_deeply(
+        [ map { $_->{type} . q{ } . $_->{code} } grep { ( $_->{code} // q{} ) eq q{file_exception} } @messages ],
+        ['error file_exception'],
+        'The error exception is added to the job messages as an error'
+    );
+
+    # A file stored in one call follows the same rules
+    my $stored = $new_file->(
+        {
+            period     => 'Begin_Date=2027-01-01; End_Date=2027-01-31', months => [ [ 'Jan-2027', 1 ] ],
+            exceptions => '2020: API Key Invalid'
+        }
+    )->store;
+    is( $stored->counter_logs->next->status, 'error', 'store does not import a file with an error exception' );
+    is(
+        Koha::ERM::EUsage::MonthlyUsages->search( { %{$mus_search}, year => 2027 } )->count, 0,
+        'No usage was stored by store for the error file'
+    );
 
     $schema->storage->txn_rollback;
 };
