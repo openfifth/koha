@@ -249,6 +249,24 @@ tables:
             - "Thank you"
 
         - module: catalogue
+          code: TICKET_VERIFY
+          branchcode: ""
+          name: "Concern requires verification"
+          is_html: 1
+          title: "Catalog concern requires verification"
+          message_transport_type: email
+          lang: default
+          content:
+            - "[%- PROCESS 'html_helpers.inc' -%]"
+            - "Dear user,<br>"
+            - "<br>"
+            - "A concern reported against [%- INCLUDE 'biblio-title.inc' biblio=ticket.biblio link = 0 -%] requires verification.<br>"
+            - "If you reported this concern, please verify it at the following address:<br>"
+            - "[% ticket_verification_link %]<br>"
+            - "<br>"
+            - "Thank you"
+
+        - module: catalogue
           code: TICKET_NOTIFY
           branchcode: ""
           name: "Concern notification"
