@@ -1440,7 +1440,13 @@ cy.get_counter_file = () => {
                 erm_counter_log_id: 2,
                 filename: "PTFS Journals_TR_J1",
                 importdate: "2023-06-19T09:40:46+00:00",
-                logdetails: null,
+                logdetails:
+                    '{"http_status":200,"exceptions":[{"code":3031,"message":"Usage Not Ready for Requested Dates"}]}',
+                background_job_id: 12,
+                report_type: "TR_J1",
+                report_year: 2023,
+                report_month: 6,
+                status: "retry",
                 patron: {
                     cardnumber: "42",
                     category_id: "S",

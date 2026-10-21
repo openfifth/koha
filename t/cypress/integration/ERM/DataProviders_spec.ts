@@ -654,6 +654,14 @@ describe("Data provider tab options", () => {
                 "X-Total-Count": "0",
             },
         });
+        cy.intercept("GET", "/api/v1/erm/counter_logs*", {
+            statusCode: 200,
+            body: [],
+            headers: {
+                "X-Base-Total-Count": "0",
+                "X-Total-Count": "0",
+            },
+        });
         cy.get("#usage_data_providerstabs").contains("Import logs").click();
         cy.get("main div[class='alert alert-info']").should(
             "have.text",
@@ -684,10 +692,30 @@ describe("Data provider tab options", () => {
         cy.get("#usage_data_providerstabs").contains("Import logs").click();
         cy.get("#counter_logs_list").contains("Showing 1 to 1 of 1 entries");
 
+        const firstRowCells = () =>
+            cy.get("#counter_logs_list table tbody tr:first td");
+
+        // Check the harvest columns
+        firstRowCells().eq(1).contains("TR_J1");
+        firstRowCells().eq(2).contains("2023-06");
+        firstRowCells().eq(3).contains("Retry needed");
+        firstRowCells()
+            .eq(4)
+            .contains("3031: Usage Not Ready for Requested Dates");
+
         // Check 'Imported by' name
-        cy.get("#counter_logs_list table tbody tr:first td")
-            .eq(2)
-            .contains("koha");
+        firstRowCells().eq(6).contains("koha");
+
+        // Check the job link
+        firstRowCells()
+            .eq(7)
+            .find("a")
+            .should("have.attr", "href")
+            .and("include", "background_jobs.pl?op=view&id=12");
+
+        // Download and delete need a counter file
+        firstRowCells().eq(8).find("a.download").should("exist");
+        firstRowCells().eq(8).find("a.delete").should("exist");
     });
 });
 
