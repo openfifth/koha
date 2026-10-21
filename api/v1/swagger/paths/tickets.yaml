@@ -84,7 +84,10 @@
         schema:
           $ref: "../swagger.yaml#/definitions/ticket"
       "400":
-        description: Bad request
+        description: |
+          Bad request. Possible `error_code` attribute values:
+
+          * `anonymous_ticket_needs_email`
         schema:
           $ref: "../swagger.yaml#/definitions/error"
       "401":
@@ -92,7 +95,11 @@
         schema:
           $ref: "../swagger.yaml#/definitions/error"
       "403":
-        description: Access forbidden
+        description: |
+          Access forbidden. Possible `error_code` attribute values:
+
+          * `email_not_allowed`
+          * `no_anonymous_tickets`
         schema:
           $ref: "../swagger.yaml#/definitions/error"
       "500":

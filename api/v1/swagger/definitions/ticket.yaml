@@ -44,8 +44,16 @@ properties:
     description: The object representing the patron who reported the ticket
     readOnly: true
   reporter_id:
-    type: integer
+    type:
+      - integer
+      - "null"
     description: Internal identifier for the patron who reported the ticket
+    readOnly: true
+  reporter_email:
+    type:
+      - string
+      - "null"
+    description: Email address of the reporter
   assignee:
     type:
       - object
@@ -71,6 +79,11 @@ properties:
       - "null"
     format: date-time
     description: Date the ticket was resolved_date
+  verify_uuid:
+    type:
+      - string
+      - "null"
+    description: UUID used to verify anonymous ticket emails
   updates_count:
     type:
       - integer
