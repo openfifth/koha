@@ -1,0 +1,56 @@
+[% USE raw %]
+[% USE Koha %]
+[% USE AdditionalContents %]
+[% PROCESS 'i18n.inc' %]
+[% PROCESS 'html_helpers.inc' %]
+[% SET OpacNav = AdditionalContents.get( location => "OpacNav", lang => lang, library => logged_in_user.branchcode || default_branch, blocktitle => 0 ) %]
+[% SET OpacNavBottom = AdditionalContents.get( location => "OpacNavBottom", lang => lang, library => logged_in_user.branchcode || default_branch, blocktitle => 0 ) %]
+[% INCLUDE 'doc-head-open.inc' %]
+<title>Verify ticket</title>
+[% INCLUDE 'doc-head-close.inc' %]
+[% BLOCK cssinclude %]
+[% END %]
+</head>
+<body id="opac-verify-ticket" class="scrollto">
+[% INCLUDE 'masthead.inc' %]
+
+<main class="main">
+    [% WRAPPER breadcrumbs %]
+        [% WRAPPER breadcrumb_item bc_active= 1 %]
+            Verify ticket
+        [% END %]
+    [% END #/ WRAPPER breadcrumbs %]
+
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-lg-2">
+                <div id="navigation"> [% INCLUDE 'navigation.inc' %] </div>
+            </div>
+            <div class="col-10 order-first order-md-first order-lg-2">
+                <div class="maincontent">
+                    [% IF verified %]
+                        <h1>Ticket verified</h1>
+                        <p>Thanks for verifying your ticket, which will now be processed by library staff.</p>
+                    [% ELSE %]
+                        <h1>Verify ticket</h1>
+                        <p>Please use the button below to verify the ticket sent from your email address.</p>
+                        <form id="verify-ticket-form" class="d-print-none" action="/cgi-bin/koha/opac-ticket-verify.pl" method="post">
+                            [% INCLUDE 'csrf-token.inc' %]
+                            <input type="hidden" name="uuid" value="[% uuid | html %]" />
+                            <input type="hidden" name="op" value="cud-verify" />
+                            <button type="submit" class="verify-ticket-button btn btn-primary">Verify</button>
+                        </form>
+                    [% END %]
+                </div>
+            </div>
+            <!-- / .col-10 -->
+        </div>
+        <!-- / .row -->
+    </div>
+    <!-- / .container-fluid -->
+</main>
+<!-- / .main -->
+
+[% INCLUDE 'opac-bottom.inc' %]
+[% BLOCK jsinclude %]
+[% END %]
