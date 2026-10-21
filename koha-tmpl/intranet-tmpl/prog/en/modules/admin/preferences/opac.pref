@@ -371,6 +371,16 @@ OPAC:
             - "OPAC users to report concerns about bibliographic records."
             - '<p><strong>NOTE:</strong> Enabling `<a href="/cgi-bin/koha/admin/preferences.pl?op=search&searchfield=CatalogConcerns">CatalogConcerns</a>` will allow concern submissions from the staff interface.</p>'
         -
+            - pref: OpacAnonCatalogConcerns
+              default: 0
+              choices:
+                  0: "Don't allow"
+                  1: Allow
+            - "unauthenticated users to report concerns about bibliographic records."
+        -
+            - pref: OpacAnonCatalogConcernsEmail
+            - "Regular expression that must match the provided email address for anonymous concerns."
+        -
             - pref: OPACReportProblem
               choices:
                   1: Allow
