@@ -109,6 +109,15 @@ year of the harvested report period
 
 month of the harvested report period
 
+=head2 status
+
+  data_type: 'varchar'
+  default_value: 'success'
+  is_nullable: 0
+  size: 16
+
+outcome of the harvest or import: success, no_data, retry, error
+
 =cut
 
 __PACKAGE__->add_columns(
@@ -139,6 +148,13 @@ __PACKAGE__->add_columns(
   { data_type => "integer", is_nullable => 1 },
   "report_month",
   { data_type => "integer", is_nullable => 1 },
+  "status",
+  {
+    data_type => "varchar",
+    default_value => "success",
+    is_nullable => 0,
+    size => 16,
+  },
 );
 
 =head1 PRIMARY KEY
@@ -236,8 +252,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07053 @ 2026-10-20 13:59:36
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:7rJahz8xJmhhcM+wYmrwhA
+# Created by DBIx::Class::Schema::Loader v0.07053 @ 2026-10-22 14:35:20
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:noW0cn2PCXrwV0sJ9RbJOw
 
 __PACKAGE__->belongs_to(
     "patron",
