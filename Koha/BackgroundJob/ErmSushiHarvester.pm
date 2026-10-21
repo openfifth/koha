@@ -54,7 +54,8 @@ sub job_type {
 
 Process the harvesting. The job either harvests one report type for one period
 from the SUSHI service (C<report_type>, C<begin_date>, C<end_date>) or processes
-an uploaded COUNTER file (C<file_content>).
+an uploaded COUNTER file (C<file_content>). Both paths write one counter log row
+with this job's id. The job report holds the log's status as C<harvest_status>.
 
 =cut
 
@@ -89,6 +90,7 @@ sub process {
     );
 
     my $counter_file;
+    my $harvest_status;
     if ( $args->{file_content} ) {
         my $counter_files_rs = $ud_provider->counter_files(
             [
@@ -98,17 +100,23 @@ sub process {
                     date_uploaded          => POSIX::strftime( "%Y%m%d%H%M%S", localtime ),
                     filename               => $ud_provider->name,
                 }
-            ]
+            ],
+            { background_job_id => $self->id }
         );
         $counter_file = $counter_files_rs->last;
+        my $counter_log = $counter_file->counter_logs->last;
+        $harvest_status = $counter_log->status if $counter_log;
     } else {
         $ud_provider->harvest_sushi(
             {
-                begin_date  => $args->{begin_date},
-                end_date    => $args->{end_date},
-                report_type => $args->{report_type}
+                begin_date        => $args->{begin_date},
+                end_date          => $args->{end_date},
+                report_type       => $args->{report_type},
+                background_job_id => $self->id,
             }
         );
+        my $outcome = $ud_provider->harvest_outcome;
+        $harvest_status = $outcome->{status} if $outcome;
     }
 
     my $job_report_report_type = $ud_provider->{report_type} || $counter_file->type;
@@ -118,6 +126,7 @@ sub process {
         report_type      => $job_report_report_type,
         begin_date       => $args->{begin_date},
         end_date         => $args->{end_date},
+        harvest_status   => $harvest_status,
         us_report_info   => $self->{us_report_info},
         ud_provider_id   => $ud_provider->erm_usage_data_provider_id,
         ud_provider_name => $ud_provider->name,
