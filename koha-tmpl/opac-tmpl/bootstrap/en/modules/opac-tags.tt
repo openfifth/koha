@@ -263,6 +263,7 @@
         const virtualshelves = [% ( virtualshelves ) ? 1 : 0 | html %];
         Koha.addPrefs({
             OPACTableColExpandedByDefault: [% Koha.Preference('OPACTableColExpandedByDefault') ? 1 : 0 | html %],
+            OpacAnonCatalogConcerns: [% Koha.Preference("OpacAnonCatalogConcerns") ? 1 : 0 | html %]
         });
     </script>
     [% Asset.js("js/results-list.js") | $raw %]

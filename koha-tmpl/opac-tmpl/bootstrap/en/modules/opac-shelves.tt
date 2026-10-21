@@ -864,6 +864,7 @@
             CoceProviders: "[% Koha.Preference('CoceProviders') | html %]",
             OverDriveLibraryID: "[% Koha.Preference("OverDriveLibraryID") | html %]",
             OpenLibrarySearch: [% Koha.Preference("OpenLibrarySearch") ? 1 : 0 | html %],
+            OpacAnonCatalogConcerns: [% Koha.Preference("OpacAnonCatalogConcerns") ? 1 : 0 | html %]
         });
 
         const TagsInputEnabled = [% TagsInputEnabled ? 1 : 0 | html %];

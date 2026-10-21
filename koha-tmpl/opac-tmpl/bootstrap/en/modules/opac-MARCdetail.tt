@@ -198,6 +198,9 @@
         [% Asset.js("js/modals/catalog_concern.js") | $raw %]
     [% END %]
     <script nonce="[% Koha.CSPNonce | $raw %]" data-tt-allowed="true">
+        Koha.addPrefs({
+        OpacAnonCatalogConcerns: [% Koha.Preference("OpacAnonCatalogConcerns") ? 1 : 0 | html %]
+        });
         $(document).ready(function(){
             var loaded = 0;
             var toggle = 0;

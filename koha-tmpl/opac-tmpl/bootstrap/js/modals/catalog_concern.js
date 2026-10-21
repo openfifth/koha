@@ -19,7 +19,7 @@ $(document).ready(function () {
 
     $("#addConcernModal").on("show.bs.modal", function (e) {
         // Redirect to login modal if not logged in
-        if (logged_in_user_id === "") {
+        if (logged_in_user_id === "" && !Koha.prefs.OpacAnonCatalogConcerns) {
             $("#modalAuth").append(
                 '<input type="hidden" name="return" value="' +
                     window.location.pathname +
@@ -44,17 +44,17 @@ $(document).ready(function () {
     });
 
     $("#addConcernModal").on("click", "#addConfirm", function (e) {
+        let reporter_email = $("#reporter_email").val();
         let concern_title = $("#concern_title").val();
         let concern_body = $("#concern_body").val();
         let biblio_id = $("#concern_biblio").val();
-        let reporter_id = $("#concern_reporter").val();
 
         params = {
             source: "catalog",
+            reporter_email: reporter_email,
             title: concern_title,
             body: concern_body,
             biblio_id: biblio_id,
-            reporter_id: reporter_id,
         };
 
         $("#concern-submit-spinner").show();
