@@ -65,15 +65,16 @@ subtest 'list() tests' => sub {
     # No tickets, so empty array should be returned
     $t->get_ok("//$userid:$password@/api/v1/tickets")->status_is(200)->json_is( [] );
 
-    my $ticket = $builder->build_object( { class => 'Koha::Tickets' } );
+    my $ticket = $builder->build_object( { class => 'Koha::Tickets', value => { verify_uuid => undef } } );
 
     # One ticket created, should get returned
     $t->get_ok("//$userid:$password@/api/v1/tickets")->status_is(200)->json_is( [ $ticket->to_api ] );
 
-    my $another_ticket     = $builder->build_object( { class => 'Koha::Tickets' } );
-    my $and_another_ticket = $builder->build_object( { class => 'Koha::Tickets' } );
+    my $another_ticket     = $builder->build_object( { class => 'Koha::Tickets', value => { verify_uuid => undef } } );
+    my $and_another_ticket = $builder->build_object( { class => 'Koha::Tickets', value => { verify_uuid => undef } } );
+    my $unverified_ticket  = $builder->build_object( { class => 'Koha::Tickets', value => { verify_uuid => 'uuid' } } );
 
-    # Two tickets created, they should both be returned
+    # Four tickets created, all three verified tickets should be returned
     $t->get_ok("//$userid:$password@/api/v1/tickets")->status_is(200)->json_is(
         [
             $ticket->to_api, $another_ticket->to_api,
@@ -141,7 +142,7 @@ subtest 'get() tests' => sub {
 
 subtest 'add() tests' => sub {
 
-    plan tests => 22;
+    plan tests => 23;
 
     $schema->storage->txn_begin;
 
@@ -264,6 +265,59 @@ subtest 'add() tests' => sub {
             ->json_is( '/reporter_id' => $patron->id )
             ->tx->res->json->{ticket_id};
 
+    };
+
+    subtest 'anonymous add' => sub {
+        plan tests => 14;
+
+        # Ignore email errors by stubbing send_or_die
+        my $email_stuffer_module = Test::MockModule->new('Email::Stuffer');
+        $email_stuffer_module->mock( 'send_or_die', sub { } );
+
+        my $ticket = {
+            source         => 'catalog',
+            biblio_id      => $biblio->id,
+            body           => "Test anonymous ticket",
+            title          => 'Test',
+            reporter_email => 'test@example.com',
+        };
+
+        t::lib::Mocks::mock_preference( 'OpacAnonCatalogConcerns',      0 );
+        t::lib::Mocks::mock_preference( 'OpacAnonCatalogConcernsEmail', '' );
+
+        # Anonymous tickets disabled
+        $t->post_ok( '/api/v1/public/tickets' => json => $ticket )->status_is(403);
+
+        t::lib::Mocks::mock_preference( 'OpacAnonCatalogConcerns', 1 );
+
+        # Anonymous tickets allowed
+        my $ticket_id =
+            $t->post_ok( '/api/v1/public/tickets' => json => $ticket )
+            ->status_is(201)
+            ->json_is( '/reporter_id' => undef )
+            ->tx->res->json->{ticket_id};
+
+        my $fetched_ticket = Koha::Tickets->find($ticket_id);
+        is( $fetched_ticket->reporter_email, 'test@example.com' );
+        isnt( $fetched_ticket->verify_uuid, undef );
+
+        t::lib::Mocks::mock_preference( 'OpacAnonCatalogConcernsEmail', 'example.net' );
+
+        # Anonymous tickets allowed but not for this email address
+        $t->post_ok( '/api/v1/public/tickets' => json => $ticket )->status_is(403);
+
+        t::lib::Mocks::mock_preference( 'OpacAnonCatalogConcernsEmail', 'example.com' );
+
+        # Anonymous tickets allowed and limited to include this email address
+        $ticket_id =
+            $t->post_ok( '/api/v1/public/tickets' => json => $ticket )
+            ->status_is(201)
+            ->json_is( '/reporter_id' => undef )
+            ->tx->res->json->{ticket_id};
+
+        $fetched_ticket = Koha::Tickets->find($ticket_id);
+        is( $fetched_ticket->reporter_email, 'test@example.com' );
+        isnt( $fetched_ticket->verify_uuid, undef );
     };
 
     $schema->storage->txn_rollback;
