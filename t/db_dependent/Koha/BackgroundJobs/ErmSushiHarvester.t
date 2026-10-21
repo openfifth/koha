@@ -23,6 +23,7 @@ use Test::More tests => 6;
 use Koha::Database;
 use Koha::BackgroundJobs;
 use Koha::BackgroundJob::ErmSushiHarvester;
+use Koha::ERM::EUsage::CounterLogs;
 use Koha::ERM::EUsage::MonthlyUsage;
 use Koha::ERM::EUsage::MonthlyUsages;
 use Koha::ERM::EUsage::YearlyUsages;
@@ -82,7 +83,7 @@ $ua->mock(
 
 subtest 'enqueue_sushi_harvest_jobs' => sub {
 
-    plan tests => 26;
+    plan tests => 33;
 
     $schema->storage->txn_begin;
 
@@ -114,10 +115,20 @@ subtest 'enqueue_sushi_harvest_jobs' => sub {
 
     my $report = decode_json( $job->get_from_storage->data )->{report};
 
-    is( $report->{ud_provider_id},                        $usage_data_provider->erm_usage_data_provider_id );
-    is( $report->{report_type},                           'TR_J1' );
-    is( $report->{begin_date},                            '2023-08-01', 'Report holds the harvest begin date' );
-    is( $report->{end_date},                              '2023-09-30', 'Report holds the harvest end date' );
+    is( $report->{ud_provider_id}, $usage_data_provider->erm_usage_data_provider_id );
+    is( $report->{report_type},    'TR_J1' );
+    is( $report->{begin_date},     '2023-08-01', 'Report holds the harvest begin date' );
+    is( $report->{end_date},       '2023-09-30', 'Report holds the harvest end date' );
+    is( $report->{harvest_status}, 'success',    'Report holds the harvest status' );
+
+    my $counter_log = Koha::ERM::EUsage::CounterLogs->search( { background_job_id => $job->id } );
+    is( $counter_log->count, 1, 'One counter log was written for the job' );
+    $counter_log = $counter_log->next;
+    is( $counter_log->status,       'success', 'The counter log is a success' );
+    is( $counter_log->report_type,  'TR_J1',   'The counter log holds the report type' );
+    is( $counter_log->report_year,  undef,     'A two month harvest has no report year' );
+    is( $counter_log->report_month, undef,     'A two month harvest has no report month' );
+    ok( $counter_log->counter_files_id, 'The counter log points at the stored file' );
     is( $report->{ud_provider_name},                      $usage_data_provider->name );
     is( $report->{us_report_info}->{skipped_mus},         0 );
     is( $report->{us_report_info}->{updated_mus},         0 );
@@ -236,7 +247,7 @@ subtest 'enqueue_sushi_harvest_jobs' => sub {
 
 subtest 'enqueue_counter_file_processing_job' => sub {
 
-    plan tests => 25;
+    plan tests => 31;
 
     $schema->storage->txn_begin;
 
@@ -265,10 +276,19 @@ subtest 'enqueue_counter_file_processing_job' => sub {
 
     my $report = decode_json( $job->get_from_storage->data )->{report};
 
-    is( $report->{ud_provider_id},                        $usage_data_provider->erm_usage_data_provider_id );
-    is( $report->{report_type},                           'TR_J1' );
-    is( $report->{begin_date},                            undef, 'A file upload has no harvest begin date' );
-    is( $report->{end_date},                              undef, 'A file upload has no harvest end date' );
+    is( $report->{ud_provider_id}, $usage_data_provider->erm_usage_data_provider_id );
+    is( $report->{report_type},    'TR_J1' );
+    is( $report->{begin_date},     undef,     'A file upload has no harvest begin date' );
+    is( $report->{end_date},       undef,     'A file upload has no harvest end date' );
+    is( $report->{harvest_status}, 'success', 'Report holds the status of the upload log' );
+
+    my $counter_log = Koha::ERM::EUsage::CounterLogs->search( { background_job_id => $job->id } );
+    is( $counter_log->count, 1, 'One counter log was written for the upload job' );
+    $counter_log = $counter_log->next;
+    is( $counter_log->status,                             'success', 'The upload log is a success' );
+    is( $counter_log->report_type,                        'TR_J1',   'The report type comes from the file' );
+    is( $counter_log->report_year,                        undef,     'A file over several months has no report year' );
+    is( $counter_log->report_month,                       undef,     'A file over several months has no report month' );
     is( $report->{ud_provider_name},                      $usage_data_provider->name );
     is( $report->{us_report_info}->{skipped_mus},         0 );
     is( $report->{us_report_info}->{updated_mus},         0 );
@@ -407,7 +427,7 @@ $ua->mock(
 );
 
 subtest 'enqueue_sushi_harvest_jobs_error_handling' => sub {
-    plan tests => 2;
+    plan tests => 6;
 
     $schema->storage->txn_begin;
 
@@ -434,6 +454,12 @@ subtest 'enqueue_sushi_harvest_jobs_error_handling' => sub {
 
     is( ref $job->messages,          'ARRAY', 'messages is an array' );
     is( $job->messages->[0]->{code}, 2010,    'first message has code 2010' );
+
+    my $counter_log = Koha::ERM::EUsage::CounterLogs->search( { background_job_id => $job->id } )->next;
+    is( $counter_log->status,           'error',                           'A 2010 exception is logged as an error' );
+    is( $counter_log->counter_files_id, undef,                             'No counter file was stored' );
+    is( $counter_log->decoded_logdetails->{exceptions}->[0]->{code}, 2010, 'logdetails hold the exception' );
+    is( decode_json( $job->get_from_storage->data )->{report}->{harvest_status}, 'error', 'Report holds the status' );
 
     $schema->storage->txn_rollback;
 

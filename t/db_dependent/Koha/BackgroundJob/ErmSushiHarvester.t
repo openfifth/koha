@@ -105,8 +105,7 @@ subtest 'invalid_date_arguments() tests' => sub {
 
     is(
         $job->{messages}[0]->{message},
-        decode_json( $sushi_response_errors->{invalid_date_arguments} )->{severity} . ' - '
-            . decode_json( $sushi_response_errors->{invalid_date_arguments} )->{message},
+        decode_json( $sushi_response_errors->{invalid_date_arguments} )->{message},
         'SUSHI error invalid_date_arguments is stored on job messages correctly'
     );
     is(
@@ -152,8 +151,7 @@ subtest 'invalid_api_key() tests' => sub {
 
     is(
         $job->{messages}[0]->{message},
-        decode_json( $sushi_response_errors->{invalid_api_key} )->{Severity} . ' - '
-            . decode_json( $sushi_response_errors->{invalid_api_key} )->{Message},
+        decode_json( $sushi_response_errors->{invalid_api_key} )->{Message},
         'SUSHI error invalid_date_arguments is stored on job messages correctly'
     );
     is(
@@ -203,7 +201,10 @@ subtest 'multiple_exceptions() tests' => sub {
             . decode_json( $sushi_response_exceptions->{multiple_exceptions} )->{Exceptions}[0]->{Data},
         'SUSHI exceptions multiple_exceptions are stored on job messages correctly'
     );
-    is( $job->{messages}[0]->{type}, 'error', 'SUSHI error multiple_exceptions are stored on job messages correctly' );
+    is(
+        $job->{messages}[0]->{type}, 'warning',
+        'SUSHI warning 3050 multiple_exceptions is stored on job messages correctly'
+    );
     is(
         $job->{messages}[0]->{code},
         decode_json( $sushi_response_exceptions->{multiple_exceptions} )->{Exceptions}[0]->{Code},
@@ -263,8 +264,7 @@ subtest 'is_redirect() tests' => sub {
 
     is(
         $job->{messages}[0]->{message},
-        decode_json( $sushi_response_errors->{invalid_api_key} )->{Severity} . ' - '
-            . decode_json( $sushi_response_errors->{invalid_api_key} )->{Message},
+        decode_json( $sushi_response_errors->{invalid_api_key} )->{Message},
         'SUSHI error invalid_date_arguments is stored on job messages correctly'
     );
     is(
