@@ -19,12 +19,14 @@ use Modern::Perl;
 
 use Mojo::Base 'Mojolicious::Controller';
 
+use C4::Context;
 use Koha::Ticket;
 use Koha::Tickets;
 use Koha::Ticket::Update;
 use Koha::Ticket::Updates;
 
 use Try::Tiny qw( catch try );
+use UUID      qw(uuid);
 
 =head1 API
 
@@ -38,7 +40,8 @@ sub list {
     my $c = shift->openapi->valid_input or return;
 
     return try {
-        my $tickets = $c->objects->search( Koha::Tickets->new );
+        my $rs      = Koha::Tickets->filter_verified();
+        my $tickets = $c->objects->search($rs);
         return $c->render( status => 200, openapi => $tickets );
     } catch {
         $c->unhandled_exception($_);
@@ -75,8 +78,33 @@ sub add {
     return try {
         my $body = $c->req->json;
 
-        # Set reporter from session
-        $body->{reporter_id} = $patron->id;
+        if ($patron) {
+
+            # Set reporter from session
+            $body->{reporter_id} = $patron->id;
+        } else {
+            unless ( C4::Context->preference('OpacAnonCatalogConcerns') ) {
+                return $c->render( status => 403, json => { error => "Anonymous tickets are not permitted" } );
+            }
+            unless ( $body->{reporter_email} ) {
+                return $c->render(
+                    status  => 400,
+                    openapi => { error => "An email address must be included with anonymous tickets" }
+                );
+            }
+
+            my $email_regex = C4::Context->preference('OpacAnonCatalogConcernsEmail');
+            if ($email_regex) {
+                unless ( $body->{reporter_email} =~ /$email_regex/ ) {
+                    return $c->render(
+                        status => 403,
+                        json   => { error => "Anonymous tickets are not permitted from this email address" }
+                    );
+                }
+            }
+
+            $body->{verify_uuid} = uuid();
+        }
 
         # FIXME: We should allow impersonation at a later date to
         # allow an API user to submit on behalf of a user
