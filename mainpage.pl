@@ -113,10 +113,10 @@ my $pending_article_requests       = Koha::ArticleRequests->search_limited(
 my $pending_problem_reports = Koha::ProblemReports->search( { status => 'New' } );
 
 if ( C4::Context->preference('OpacCatalogConcerns') || C4::Context->preference('CatalogConcerns') ) {
-    my $pending_biblio_tickets = Koha::Tickets->search(
+    my $pending_biblio_tickets = Koha::Tickets->filter_verified()->search(
         {
             resolved_date => undef,
-            biblio_id     => { '!=' => undef }
+            biblio_id     => { '!=' => undef },
         }
     );
     $template->param( pending_biblio_tickets => $pending_biblio_tickets->count );
