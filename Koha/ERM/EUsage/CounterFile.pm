@@ -19,6 +19,7 @@ package Koha::ERM::EUsage::CounterFile;
 
 use Modern::Perl;
 
+use JSON         qw( encode_json );
 use Text::CSV_XS qw( csv );
 use Try::Tiny;
 
@@ -39,6 +40,8 @@ use Koha::Exceptions::ERM::EUsage::CounterFile;
 use C4::Context;
 
 use base qw(Koha::Object);
+
+use constant MAX_REPORT_MONTHS => 120;
 
 use Koha::ERM::EUsage::CounterLogs;
 
@@ -65,13 +68,46 @@ sub counter_logs {
     return Koha::ERM::EUsage::CounterLogs->_new_from_dbic($counter_logs_rs);
 }
 
+=head3 store_file
+
+    my $counter_file = Koha::ERM::EUsage::CounterFile->new($counter_file)->store_file;
+
+Stores the csv COUNTER file and sets its report type from the file header.
+Nothing is imported and no counter log is written, see L</import_period> and L</store>.
+
+=cut
+
+sub store_file {
+    my ($self) = @_;
+
+    # DOCS:
+    # COUNTER 5 CSV examples:
+    # https://cop5.countermetrics.org/en/5.0.3/appendices/h-sample-counter-master-reports-and-standard-views.html
+    # COUNTER 5.1 CSV examples:
+    # https://cop5.projectcounter.org/en/5.1/appendices/g-sample-counter-reports-and-standard-views.html
+
+    $self->_set_report_type_from_file;
+
+    return $self->SUPER::store;
+}
+
 =head3 store
 
-    Koha::ERM::EUsage::CounterFile->new($counter_file)->store( $self->{job_callbacks} );
+    Koha::ERM::EUsage::CounterFile->new($counter_file)->store( $self->{job_callbacks}, $log_args );
 
 Stores the csv COUNTER file.
 Adds usage titles from the file.
 Adds the respective counter_log entry.
+
+C<$log_args> is an optional hashref with the counter log fields.
+
+A SUSHI harvest passes all of C<background_job_id>, C<report_type>, C<report_year>,
+C<report_month>, C<status> and C<logdetails>. The file is imported and the log row
+is written as given.
+
+Without C<status> the file is an upload: the period is read from the file header
+and the status follows the rules of L</import_period>. A file with an error
+exception is not imported.
 
 =over
 
@@ -84,25 +120,65 @@ Receive background_job_callbacks to be able to update job progress
 =cut
 
 sub store {
-    my ( $self, $background_job_callbacks ) = @_;
+    my ( $self, $background_job_callbacks, $log_args ) = @_;
 
-    # DOCS:
-    # COUNTER 5 CSV examples:
-    # https://cop5.countermetrics.org/en/5.0.3/appendices/h-sample-counter-master-reports-and-standard-views.html
-    # COUNTER 5.1 CSV examples:
-    # https://cop5.projectcounter.org/en/5.1/appendices/g-sample-counter-reports-and-standard-views.html
-
-    $self->_set_report_type_from_file;
-
-    my $result = $self->SUPER::store;
+    my $result = $self->store_file;
 
     # Set class wide background_job callbacks
     $self->{job_callbacks} = $background_job_callbacks;
 
-    $self->_add_usage_objects;
-    $self->_add_counter_log_entry;
+    if ( $log_args && defined $log_args->{status} ) {
+        $self->_add_usage_objects;
+        $self->_add_counter_log_entry($log_args);
+    } else {
+        $self->_import_and_log( { %{ $log_args // {} }, %{ $self->_report_period_from_file } } );
+    }
 
     return $result;
+}
+
+=head3 import_period
+
+    $counter_file->import_period(
+        $background_job_callbacks,
+        {
+            report_year       => 2026,
+            report_month      => 10,
+            background_job_id => $job->id,
+        }
+    );
+
+Imports one month of a stored COUNTER file and writes one counter log row for that
+month. This is the entry point of an upload job, see
+C<Koha::ERM::EUsage::UsageDataProvider::enqueue_counter_file_processing_job>.
+When C<report_year> and C<report_month> are undef the whole file is imported and
+the row has no period.
+
+The status of the row is:
+
+=over
+
+=item C<error>: the C<Exceptions> header row holds an error exception. Nothing is imported.
+
+=item C<success>: the month column holds usage.
+
+=item C<no_usage>: the month column holds no usage.
+
+=item C<no_data>: the file has no column for the month.
+
+=back
+
+The other exceptions of the file do not change the status. They are stored in
+C<logdetails> and added to the job messages as warnings.
+
+=cut
+
+sub import_period {
+    my ( $self, $background_job_callbacks, $args ) = @_;
+
+    $self->{job_callbacks} = $background_job_callbacks;
+
+    return $self->_import_and_log( { %{ $args // {} }, only_period => 1 } );
 }
 
 =head3 get_usage_data_provider
@@ -132,15 +208,21 @@ Only the Regular usage is stored. A row whose Access_Method is not Regular (the 
 mining, TDM) is skipped: it adds no usage object and no usage, and one C<access_method_skipped> warning
 with the number of skipped rows is added to the job. A row without an Access_Method is Regular.
 
+C<$period>, a hashref with C<report_year> and C<report_month>, limits the import to
+that month. The usage of each month column is added up in C<< $self->{month_usage} >>.
+
 =cut
 
 sub _add_usage_objects {
-    my ($self) = @_;
+    my ( $self, $period ) = @_;
 
     my $rows                = $self->_get_rows_from_COUNTER_file;
     my $usage_data_provider = $self->get_usage_data_provider;
     my $previous_object     = undef;
     my $usage_object        = undef;
+
+    # The usage of each month, to give the status of the counter log
+    $self->{month_usage} = {};
 
     # The years of the months that were written, to rebuild their yearly usage
     my %years;
@@ -202,7 +284,25 @@ sub _add_usage_objects {
                 warn "No monthly usage fields retrieved";
             }
 
+            # An upload job imports one month of the file
+            if ($period) {
+                @date_fields = grep {
+                    my $month = $self->_get_month_number( substr( $_, 0, 3 ) );
+                    defined $month
+                        && substr( $_, 4, 4 ) == $period->{report_year}
+                        && $month == $period->{report_month}
+                } @date_fields;
+            }
+
             $years{ substr( $_, 4, 4 ) } = 1 for @date_fields;
+
+            foreach my $date_field (@date_fields) {
+                my $month = $self->_get_month_number( substr( $date_field, 0, 3 ) );
+                next unless defined $month;
+                my $usage = $row->{$date_field};
+                $self->{month_usage}->{ substr( $date_field, 4, 4 ) . '-' . $month } +=
+                    ( defined $usage && $usage =~ /^[0-9]+(?:\.[0-9]+)?$/ ) ? $usage : 0;
+            }
 
             # Add monthly usage statistics for this usage object, all months in one call
             my @months = map {
@@ -316,18 +416,186 @@ Extracts Report_ID from file and sets report_type for this counter_file
 sub _set_report_type_from_file {
     my ($self) = @_;
 
+    $self->type( $self->_header_value('Report_ID') );
+}
+
+=head3 _header_value
+
+    my $value = $self->_header_value('Reporting_Period');
+
+Returns the value of a COUNTER file header row (the first 14 rows of the file) for
+the given key, or undef when the row is absent.
+
+=cut
+
+sub _header_value {
+    my ( $self, $key ) = @_;
+
     open my $fh, "<", \$self->file_content or die;
     my $csv = Text::CSV_XS->new( { binary => 1, always_quote => 1, eol => $/, decode_utf8 => 1, formula => 'empty' } );
 
     $csv->column_names(qw( header_key header_value ));
-    my @header_rows = $csv->getline_hr_all( $fh, 0, 12 );
-    my @header      = $header_rows[0];
+    my $header_rows = $csv->getline_hr_all( $fh, 0, 14 );
 
-    my @report_id_row =
-        map( $_->{header_key} eq 'Report_ID' ? $_ : (), @{ $header[0] } );
-    my $report = $report_id_row[0];
+    my ($row) = grep { ( $_->{header_key} // q{} ) eq $key } @{$header_rows};
 
-    $self->type( $report->{header_value} );
+    # Always return a scalar: the result is used inside hash constructors
+    my $value = $row ? $row->{header_value} : undef;
+    return $value;
+}
+
+=head3 _report_period_from_file
+
+    my $period = $self->_report_period_from_file;
+
+Reads the C<Reporting_Period> header row (C<Begin_Date=YYYY-MM-DD; End_Date=YYYY-MM-DD>)
+and returns a hashref with the C<report_year> and C<report_month> of the reported month
+when both dates are in the same calendar month. Both values are undef when the file
+covers more than one month or has no reporting period.
+
+=cut
+
+sub _report_period_from_file {
+    my ($self) = @_;
+
+    my %period           = ( report_year => undef, report_month => undef );
+    my $reporting_period = $self->_header_value('Reporting_Period');
+    if ( defined $reporting_period ) {
+        my ( $begin_year, $begin_month ) = $reporting_period =~ /Begin_Date=(\d{4})-(\d{2})/;
+        my ( $end_year,   $end_month )   = $reporting_period =~ /End_Date=(\d{4})-(\d{2})/;
+        if ( $begin_year && $end_year && $begin_year == $end_year && $begin_month == $end_month ) {
+            $period{report_year}  = int $begin_year;
+            $period{report_month} = int $begin_month;
+        }
+    }
+
+    return \%period;
+}
+
+=head3 _column_headings
+
+    my @headings = $self->_column_headings;
+
+Returns the column headings of the report body, the row that follows the header.
+
+=cut
+
+sub _column_headings {
+    my ($self) = @_;
+
+    open my $fh, "<", \$self->file_content or die;
+    my $csv = Text::CSV_XS->new( { binary => 1, always_quote => 1, eol => $/, decode_utf8 => 1, formula => 'empty' } );
+
+    my $release     = $self->get_COUNTER_report_release;
+    my $header_rows = ( $release && $release->{header_value} eq '5.1' ) ? 14 : 13;
+
+    my $headings = $csv->getline_all( $fh, $header_rows, 1 );
+
+    return @{ $headings->[0] // [] };
+}
+
+=head3 _month_columns
+
+    my @months = $self->_month_columns;
+
+Returns one hashref with C<report_year> and C<report_month> for each month column of the
+report body, in the order of the file. The column heading is C<Mmm-yyyy>, or C<Mmm yyyy>
+in files generated by older releases.
+
+=cut
+
+sub _month_columns {
+    my ($self) = @_;
+
+    my ( %seen, @months );
+    foreach my $heading ( $self->_column_headings ) {
+        next unless defined $heading && $heading =~ /\b[A-Z][a-z][a-z][ -][0-9]{4}\b/;
+
+        my $month = $self->_get_month_number( substr( $heading, 0, 3 ) );
+        next unless defined $month;
+
+        my $year = int substr( $heading, 4, 4 );
+        push @months, { report_year => $year, report_month => $month } unless $seen{"$year-$month"}++;
+    }
+
+    return @months;
+}
+
+=head3 _report_periods_from_file
+
+    my @periods = $self->_report_periods_from_file;
+
+Returns one hashref with C<report_year> and C<report_month> for each month the file
+reports. The months are the ones from C<Begin_Date> to C<End_Date> of the
+C<Reporting_Period> header row. When that row is missing, cannot be read, runs backwards
+or covers more than L</MAX_REPORT_MONTHS> months, the months are the month columns of the
+report body. When there are none, the list holds one hashref with both values undef.
+
+=cut
+
+sub _report_periods_from_file {
+    my ($self) = @_;
+
+    my $reporting_period = $self->_header_value('Reporting_Period');
+    if ( defined $reporting_period
+        && $reporting_period =~ /Begin_Date=(\d{4})-(\d{2})(?:-\d{2})?;\s*End_Date=(\d{4})-(\d{2})/ )
+    {
+        my ( $year, $month, $end_year, $end_month ) = ( $1, int $2, $3, int $4 );
+        my $count = ( $end_year * 12 + $end_month ) - ( $year * 12 + $month ) + 1;
+
+        if (   $month >= 1
+            && $month <= 12
+            && $end_month >= 1
+            && $end_month <= 12
+            && $count >= 1
+            && $count <= MAX_REPORT_MONTHS )
+        {
+            my @periods;
+            for ( 1 .. $count ) {
+                push @periods, { report_year => $year, report_month => $month };
+                if ( ++$month > 12 ) {
+                    $month = 1;
+                    $year++;
+                }
+            }
+            return @periods;
+        }
+    }
+
+    my @columns = $self->_month_columns;
+    return @columns if @columns;
+
+    return ( { report_year => undef, report_month => undef } );
+}
+
+=head3 _header_exceptions
+
+    my @exceptions = $self->_header_exceptions;
+
+Reads the C<Exceptions> header row of the file and returns a list of hashrefs with
+C<code> and C<message>. The row holds C<"CODE: Message"> entries separated by
+semicolons. Returns an empty list when the row is absent or empty.
+
+=cut
+
+sub _header_exceptions {
+    my ($self) = @_;
+
+    my $exceptions = $self->_header_value('Exceptions');
+    return unless defined $exceptions && length $exceptions;
+
+    my @parsed;
+    for my $entry ( split /;\s*(?=\d{4}:)/, $exceptions ) {
+        $entry =~ s/^\s+|\s+$//g;
+        next unless length $entry;
+        if ( $entry =~ /^(\d{4}):\s*(.*)$/s ) {
+            push @parsed, { code => 0 + $1, message => $2 };
+        } else {
+            push @parsed, { code => undef, message => $entry };
+        }
+    }
+
+    return @parsed;
 }
 
 =head3 get_COUNTER_report_release
@@ -563,29 +831,160 @@ sub _get_month_number {
     return $months{$month};
 }
 
+=head3 _import_and_log
+
+    $self->_import_and_log(
+        {
+            report_year       => 2026,
+            report_month      => 10,
+            background_job_id => $job->id,
+            only_period       => 1,
+        }
+    );
+
+Imports the file and writes its counter log row, see L</import_period>. Without
+C<only_period> every month of the file is imported, whatever the period of the row.
+The exceptions of the file are stored in C<logdetails> and added to the job messages:
+an error exception as an error, the others as warnings.
+
+=cut
+
+sub _import_and_log {
+    my ( $self, $args ) = @_;
+
+    my $period =
+          ( defined $args->{report_year} && defined $args->{report_month} )
+        ? { report_year => $args->{report_year}, report_month => $args->{report_month} }
+        : undef;
+    my $only_period = $period && $args->{only_period};
+
+    my @exceptions = $self->_header_exceptions;
+    my @errors     = grep { Koha::ERM::EUsage::CounterLog->sushi_code_status( $_->{code} ) eq 'error' } @exceptions;
+
+    my $status;
+    if (@errors) {
+
+        # The file is suspect: it is logged, not imported
+        $status = 'error';
+        $self->_add_file_exception_messages( 'error', @errors );
+    } else {
+        $self->_add_file_exception_messages( 'warning', @exceptions );
+
+        if ( !$only_period
+            || grep { $_->{report_year} == $period->{report_year} && $_->{report_month} == $period->{report_month} }
+            $self->_month_columns )
+        {
+            $self->_add_usage_objects( $only_period ? $period : undef );
+        }
+        $status = $self->_upload_status( $only_period ? $period : undef );
+    }
+
+    return $self->_add_counter_log_entry(
+        {
+            background_job_id => $args->{background_job_id},
+            report_year       => $args->{report_year},
+            report_month      => $args->{report_month},
+            status            => $status,
+            logdetails        => encode_json( { exceptions => \@exceptions } ),
+        }
+    );
+}
+
+=head3 _upload_status
+
+    my $status = $self->_upload_status($period);
+
+Returns the counter log status of an imported file, from the usage that
+L</_add_usage_objects> added up. C<$period> is a hashref with C<report_year> and
+C<report_month>, or undef for the whole file. The statuses are described in
+L</import_period>.
+
+=cut
+
+sub _upload_status {
+    my ( $self, $period ) = @_;
+
+    my @columns = $self->_month_columns;
+    @columns =
+        grep { $_->{report_year} == $period->{report_year} && $_->{report_month} == $period->{report_month} } @columns
+        if $period;
+
+    return 'no_data' unless @columns;
+
+    my $usage = 0;
+    $usage += $self->{month_usage}->{ $_->{report_year} . '-' . $_->{report_month} } // 0 for @columns;
+
+    return $usage > 0 ? 'success' : 'no_usage';
+}
+
+=head3 _add_file_exception_messages
+
+    $self->_add_file_exception_messages( 'warning', @exceptions );
+
+Adds one job message for each exception of the file, with the code C<file_exception>.
+Each exception is a hashref with C<code> and C<message>, see L</_header_exceptions>.
+
+=cut
+
+sub _add_file_exception_messages {
+    my ( $self, $type, @exceptions ) = @_;
+
+    return unless $self->{job_callbacks};
+
+    foreach my $exception (@exceptions) {
+        $self->{job_callbacks}->{add_message_callback}->(
+            {
+                type    => $type,
+                code    => 'file_exception',
+                message => join( ': ', grep { defined $_ && length $_ } $exception->{code}, $exception->{message} ),
+            }
+        );
+    }
+}
+
 =head3 _add_counter_log_entry
 
-Adds a erm_counter_logs database entry
+    $self->_add_counter_log_entry(
+        {
+            background_job_id => $job->id,
+            report_type       => 'TR_J1',
+            report_year       => 2026,
+            report_month      => 10,
+            status            => 'success',
+            logdetails        => '{}',
+        }
+    );
+
+Adds one erm_counter_logs database entry. The report type is the one of the file when
+it is not passed. The period is the one passed when both C<report_year> and
+C<report_month> exist in C<$log_args>, undef values included: a harvest passes undef
+on purpose when it has no single month. Otherwise it is read from the file header.
 
 =cut
 
 sub _add_counter_log_entry {
-    my ($self) = @_;
+    my ( $self, $log_args ) = @_;
 
-    my $user = C4::Context->userenv()->{'number'};
+    $log_args //= {};
+    my $userenv = C4::Context->userenv;
+
+    my $period =
+          ( exists $log_args->{report_year} && exists $log_args->{report_month} )
+        ? { map { $_ => $log_args->{$_} } qw(report_year report_month) }
+        : $self->_report_period_from_file;
+
     Koha::ERM::EUsage::CounterLog->new(
         {
-            #TODO: borrowernumber only required for manual uploads or "harvest now" button clicks
-            borrowernumber   => $user,
-            counter_files_id => $self->erm_counter_files_id,
-            importdate       => $self->date_uploaded,
-            filename         => $self->filename,
-
-            #TODO: add eventual exceptions coming from the COUNTER report to logdetails?
-            logdetails => undef,
-
-            # TEST: retrieving counter logs directly rather than embedding them in counter files requires the provider id
-            usage_data_provider_id => $self->usage_data_provider_id
+            borrowernumber         => $userenv ? $userenv->{number} : undef,
+            counter_files_id       => $self->erm_counter_files_id,
+            usage_data_provider_id => $self->usage_data_provider_id,
+            background_job_id      => $log_args->{background_job_id},
+            importdate             => $self->date_uploaded,
+            filename               => $self->filename,
+            report_type            => $log_args->{report_type} // $self->type,
+            %{$period},
+            status     => $log_args->{status} // 'success',
+            logdetails => $log_args->{logdetails},
         }
     )->store;
 }

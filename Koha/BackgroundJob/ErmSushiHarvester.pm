@@ -20,7 +20,10 @@ use Modern::Perl;
 use Try::Tiny;
 
 use Koha::DateUtils qw( dt_from_string );
+use Koha::ERM::EUsage::CounterFiles;
+use Koha::ERM::EUsage::CounterLogs;
 use Koha::ERM::EUsage::UsageDataProviders;
+use Koha::Exceptions;
 
 use base 'Koha::BackgroundJob';
 
@@ -52,9 +55,23 @@ sub job_type {
         }
     );
 
-Process the harvesting. The job either harvests one report type for one period
-from the SUSHI service (C<report_type>, C<begin_date>, C<end_date>) or processes
-an uploaded COUNTER file (C<file_content>).
+Process the harvesting. The job does one of three things:
+
+=over
+
+=item harvests one report type for one period from the SUSHI service
+(C<report_type>, C<begin_date>, C<end_date>)
+
+=item imports one month of a stored COUNTER file (C<counter_file_id>,
+C<begin_date>, C<end_date>). Without dates it imports the whole file.
+
+=item processes an uploaded COUNTER file (C<file_content>). Uploads enqueue
+C<counter_file_id> jobs now; this is kept for jobs queued by an older release.
+
+=back
+
+Each path writes one counter log row with this job's id. The job report holds the
+log's status as C<harvest_status>.
 
 =cut
 
@@ -79,17 +96,35 @@ sub process {
 
     my $ud_provider = Koha::ERM::EUsage::UsageDataProviders->find( $args->{ud_provider_id} );
 
-    $ud_provider->set_background_job_callbacks(
-        {
-            report_info_callback => sub { $self->report_info(@_); },
-            step_callback        => sub { $self->step; },
-            set_size_callback    => sub { $self->set_job_size(@_); },
-            add_message_callback => sub { $self->add_message(@_); },
-        }
-    );
+    my $job_callbacks = {
+        report_info_callback => sub { $self->report_info(@_); },
+        step_callback        => sub { $self->step; },
+        set_size_callback    => sub { $self->set_job_size(@_); },
+        add_message_callback => sub { $self->add_message(@_); },
+    };
+    $ud_provider->set_background_job_callbacks($job_callbacks);
 
     my $counter_file;
-    if ( $args->{file_content} ) {
+    my $harvest_status;
+    if ( $args->{counter_file_id} ) {
+        $counter_file = Koha::ERM::EUsage::CounterFiles->find( $args->{counter_file_id} );
+        Koha::Exceptions::ObjectNotFound->throw( 'COUNTER file ' . $args->{counter_file_id} . ' does not exist' )
+            unless $counter_file;
+
+        my ( $report_year, $report_month ) = ( $args->{begin_date} // q{} ) =~ /^(\d{4})-(\d{2})/;
+        $counter_file->import_period(
+            $job_callbacks,
+            {
+                report_year       => $report_year,
+                report_month      => defined $report_month ? int $report_month : undef,
+                background_job_id => $self->id,
+            }
+        );
+
+        # The file holds one counter log for each month: read the one of this job
+        my $counter_log = Koha::ERM::EUsage::CounterLogs->search( { background_job_id => $self->id } )->last;
+        $harvest_status = $counter_log->status if $counter_log;
+    } elsif ( $args->{file_content} ) {
         my $counter_files_rs = $ud_provider->counter_files(
             [
                 {
@@ -98,17 +133,23 @@ sub process {
                     date_uploaded          => POSIX::strftime( "%Y%m%d%H%M%S", localtime ),
                     filename               => $ud_provider->name,
                 }
-            ]
+            ],
+            { background_job_id => $self->id }
         );
         $counter_file = $counter_files_rs->last;
+        my $counter_log = $counter_file->counter_logs->last;
+        $harvest_status = $counter_log->status if $counter_log;
     } else {
         $ud_provider->harvest_sushi(
             {
-                begin_date  => $args->{begin_date},
-                end_date    => $args->{end_date},
-                report_type => $args->{report_type}
+                begin_date        => $args->{begin_date},
+                end_date          => $args->{end_date},
+                report_type       => $args->{report_type},
+                background_job_id => $self->id,
             }
         );
+        my $outcome = $ud_provider->harvest_outcome;
+        $harvest_status = $outcome->{status} if $outcome;
     }
 
     my $job_report_report_type = $ud_provider->{report_type} || $counter_file->type;
@@ -118,6 +159,7 @@ sub process {
         report_type      => $job_report_report_type,
         begin_date       => $args->{begin_date},
         end_date         => $args->{end_date},
+        harvest_status   => $harvest_status,
         us_report_info   => $self->{us_report_info},
         ud_provider_id   => $ud_provider->erm_usage_data_provider_id,
         ud_provider_name => $ud_provider->name,
