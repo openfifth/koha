@@ -21,6 +21,27 @@
                             <td>[% tx("{begin} to {end}", { begin = report.begin_date, end = report.end_date }) | html %]</td>
                         </tr>
                     [% END %]
+                    [% IF report.harvest_status %]
+                        <tr>
+                            <td>Harvest status</td>
+                            <td>
+                                [% SWITCH report.harvest_status %]
+                                [% CASE 'success' %]
+                                    <span class="badge bg-success">Success</span>
+                                [% CASE 'no_usage' %]
+                                    <span class="badge bg-success-subtle">No usage</span>
+                                [% CASE 'no_data' %]
+                                    <span class="badge bg-secondary">No data</span>
+                                [% CASE 'retry' %]
+                                    <span class="badge bg-warning text-dark">Retry needed</span>
+                                [% CASE 'error' %]
+                                    <span class="badge bg-danger">Error</span>
+                                [% CASE %]
+                                    [% report.harvest_status | html %]
+                                [% END %]
+                            </td>
+                        </tr>
+                    [% END %]
                     <tr>
                         <td>Report rows processed</td>
                         <td>[% job.progress | html %]</td>
@@ -103,6 +124,8 @@
             [% CASE 'no_items' %]
                 <span>SUSHI response returned no items.</span><br />
                 <span>Please try a different harvest period.</span>
+            [% CASE 'invalid_response' %]
+                <span>The SUSHI service did not return a valid JSON response: [% m.message | html %]</span>
             [% CASE %]
                 <span>SUSHI returned: [% m.message | html %] [% m.code | html %]</span>
             [% END %]

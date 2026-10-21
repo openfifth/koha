@@ -22,9 +22,12 @@ use Modern::Perl;
 use HTTP::Request;
 use JSON qw( decode_json );
 use LWP::UserAgent;
+use Scalar::Util qw( blessed );
 
+use C4::Context;
 use Koha::DateUtils qw( dt_from_string );
 use Koha::Exceptions;
+use Koha::Logger;
 
 use Try::Tiny qw( catch try );
 
@@ -33,6 +36,8 @@ use base qw(Koha::Object);
 use Koha;
 use Koha::ERM::EUsage::CounterFile;
 use Koha::ERM::EUsage::CounterFiles;
+use Koha::ERM::EUsage::CounterLog;
+use Koha::ERM::EUsage::CounterLogs;
 use Koha::ERM::EUsage::UsageTitles;
 use Koha::ERM::EUsage::UsageItems;
 use Koha::ERM::EUsage::UsagePlatforms;
@@ -51,16 +56,24 @@ Koha::ERM::EUsage::UsageDataProvider - Koha ErmUsageDataProvider Object class
 
 =head3 counter_files
 
-Getter/setter for counter_files for this usage data provider
+    my $counter_files = $ud_provider->counter_files;
+    $ud_provider->counter_files( \@counter_files, $log_args );
+
+Getter/setter for counter_files for this usage data provider.
+
+When C<$counter_files> is passed, each file is stored. The optional C<$log_args>
+hashref is passed to C<Koha::ERM::EUsage::CounterFile::store> and fills the
+counter log row of each file (C<background_job_id>, C<report_type>, C<report_year>,
+C<report_month>, C<status>, C<logdetails>).
 
 =cut
 
 sub counter_files {
-    my ( $self, $counter_files ) = @_;
+    my ( $self, $counter_files, $log_args ) = @_;
 
     if ($counter_files) {
         for my $counter_file (@$counter_files) {
-            Koha::ERM::EUsage::CounterFile->new($counter_file)->store( $self->{job_callbacks} );
+            Koha::ERM::EUsage::CounterFile->new($counter_file)->store( $self->{job_callbacks}, $log_args );
         }
     }
     my $counter_files_rs = $self->_result->erm_counter_files;
@@ -219,14 +232,23 @@ sub enqueue_sushi_harvest_jobs {
 
     $ud_provider->harvest_sushi(
         {
-            begin_date  => $args->{begin_date},
-            end_date    => $args->{end_date},
-            report_type => $args->{report_type}
+            begin_date        => $args->{begin_date},
+            end_date          => $args->{end_date},
+            report_type       => $args->{report_type},
+            background_job_id => $job->id,
         }
     );
 
 Runs this usage data provider's SUSHI harvester
 Builds the URL query and requests the COUNTER 5 SUSHI service
+
+Every harvest attempt writes one C<Koha::ERM::EUsage::CounterLog> row. When the
+response holds report items, the COUNTER file is stored and the log row is created by
+C<Koha::ERM::EUsage::CounterFile::store>. Otherwise the log row is created here with
+no counter file and no file name. A report that carries an error exception is not
+imported, even when it holds items: the row is logged as C<error>. The row's C<status> is one of C<success>, C<no_usage>, C<no_data>, C<retry> or
+C<error> (see C<_classify_harvest>) and C<logdetails> holds the HTTP status and the
+SUSHI exceptions as JSON.
 
 COUNTER SUSHI api spec:
 https://app.swaggerhub.com/apis/COUNTER/counter-sushi_5_0_api/5.0.2
@@ -255,64 +277,100 @@ Report type to run this harvest on
 
 =back
 
+=over
+
+=item background_job_id
+
+Optional. Id of the background job that runs this harvest, stored on the counter log
+
+=back
+
 =cut
 
 sub harvest_sushi {
     my ( $self, $args ) = @_;
 
     # Set class wide vars
-    $self->{report_type} = $args->{report_type};
-    $self->{begin_date}  = $args->{begin_date};
-    $self->{end_date}    = $args->{end_date};
+    $self->{report_type}       = $args->{report_type};
+    $self->{begin_date}        = $args->{begin_date};
+    $self->{end_date}          = $args->{end_date};
+    $self->{background_job_id} = $args->{background_job_id};
+    $self->{harvest_outcome}   = { exceptions => [] };
+
     my $url      = $self->_build_url_query;
     my $response = _handle_sushi_request($url);
+    my $outcome  = $self->{harvest_outcome};
+    $outcome->{http_status} = $response->code;
 
-    my $result = decode_json( $response->decoded_content );
+    my $content = $response->decoded_content // q{};
+    my $result  = try { decode_json($content) } catch { undef };
+    if ( !defined $result && length $content ) {
+        $outcome->{message} = 'Invalid SUSHI response: ' . substr( $content, 0, 500 );
+        $self->{job_callbacks}->{add_message_callback}->(
+            {
+                type    => 'error',
+                code    => 'invalid_response',
+                message => $outcome->{message},
+            }
+        ) if $self->{job_callbacks};
+    }
+
+    $self->_collect_sushi_exceptions($result);
+
+    my $report_items = ref($result) eq 'HASH' ? $result->{Report_Items} : undef;
+    my $has_items    = ref($report_items) eq 'ARRAY' && scalar @{$report_items} > 0;
+    $outcome->{counter_release} = $result->{Report_Header}->{Release}
+        if ref($result) eq 'HASH' && ref( $result->{Report_Header} ) eq 'HASH';
 
     if ( $response->code >= 400 ) {
+        $self->_add_harvest_log( $self->_classify_harvest( { has_items => 0 } ) );
 
-        return if $self->_sushi_errors($result);
+        # A COUNTER exception explains the failure: the job finishes with its messages
+        return if grep { defined $_->{code} } @{ $outcome->{exceptions} };
 
-        my $message;
-        if ( ref($result) eq 'ARRAY' ) {
-            for my $r (@$result) {
-                $message .= $r->{message};
-            }
-        } else {
-
-            #TODO: May want to check $result->{Report_Header}->{Exceptions} here
-            $message = $result->{message} || $result->{Message} || q{};
-            if ( $result->{errors} ) {
-                for my $e ( @{ $result->{errors} } ) {
-                    $message .= $e->{message};
-                }
-            }
-        }
-
-        warn sprintf "ERROR - SUSHI service %s returned %s - %s\n", $url,
-            $response->code, $message;
+        my $message = $self->_harvest_outcome_message;
+        Koha::Logger->get->warn(
+            sprintf "SUSHI service for usage data provider %s returned HTTP %s - %s",
+            $self->erm_usage_data_provider_id, $response->code, $message
+        );
         if ( $response->code == 404 ) {
             Koha::Exceptions::ObjectNotFound->throw($message);
         } elsif ( $response->code == 401 ) {
             Koha::Exceptions::Authorization::Unauthorized->throw($message);
         } else {
-
-            die sprintf "ERROR requesting SUSHI service\n%s\ncode %s: %s\n",
-                $url, $response->code,
-                $message;
+            die sprintf "ERROR requesting SUSHI service\ncode %s: %s\n", $response->code, $message;
         }
-    } elsif ( $response->code == 204 ) {    # No content
+    }
+
+    unless ($has_items) {
+        my $status = $self->_classify_harvest( { has_items => 0 } );
+        $self->{job_callbacks}->{add_message_callback}->(
+            {
+                type => 'warning',
+                code => 'no_items',
+            }
+        ) if $self->{job_callbacks} && !@{ $outcome->{exceptions} } && !defined $outcome->{message};
+        $self->_add_harvest_log($status);
         return;
     }
 
-    return if $self->_sushi_errors($result);
+    # An error exception next to items: the report is suspect, it is logged, not imported
+    my $status = $self->_classify_harvest( { has_items => 1 } );
+    if ( $status eq 'error' ) {
+        $self->_add_harvest_log($status);
+        return;
+    }
 
     # Parse the SUSHI response
     try {
         my $sushi_counter = Koha::ERM::EUsage::SushiCounter->new( { response => $result } );
         my $counter_file  = $sushi_counter->get_COUNTER_from_SUSHI;
 
-        return if $self->_counter_file_size_too_large($counter_file);
+        if ( $self->_counter_file_size_too_large($counter_file) ) {
+            $outcome->{message} = 'COUNTER file larger than max_allowed_packet';
+            $self->_add_harvest_log('error');
+            return;
+        }
 
         $self->counter_files(
             [
@@ -324,18 +382,46 @@ sub harvest_sushi {
                     #TODO: add ".csv" to end of filename here
                     filename => $self->_counter_filename,
                 }
-            ]
+            ],
+            $self->_harvest_log_args($status)
         );
     } catch {
-        if ( $_->isa('Koha::Exceptions::ERM::EUsage::CounterFile::UnsupportedRelease') ) {
+        my $error = $_;
+        if ( blessed($error) && $error->isa('Koha::Exceptions::ERM::EUsage::CounterFile::UnsupportedRelease') ) {
+            $outcome->{message} = 'COUNTER release ' . $error->{message}->{counter_release} . ' not supported';
             $self->{job_callbacks}->{add_message_callback}->(
                 {
                     type    => 'error',
-                    message => 'COUNTER release ' . $_->{message}->{counter_release} . ' not supported',
+                    message => $outcome->{message},
                 }
             ) if $self->{job_callbacks};
+            $self->_add_harvest_log('error');
+            return;
         }
+
+        # CounterFile::store writes the log row after the import, so a failure in the
+        # import normally has no row yet. A row that exists is kept.
+        $outcome->{message} = "$error";
+        $self->_add_harvest_log('error') unless $self->_harvest_logged;
+        die $error;
     };
+}
+
+=head3 harvest_outcome
+
+    my $outcome = $ud_provider->harvest_outcome;
+
+Returns the outcome of the last C<harvest_sushi> call as a hashref with
+C<status>, C<http_status>, C<exceptions> (arrayref of C<code>, C<severity>,
+C<message>, C<data>), optional C<message> and optional C<counter_release>.
+Returns undef when no harvest ran on this object.
+
+=cut
+
+sub harvest_outcome {
+    my ($self) = @_;
+
+    return $self->{harvest_outcome};
 }
 
 =head3 set_background_job_callbacks
@@ -566,74 +652,234 @@ sub _check_trailing_character {
     return $url;
 }
 
-=head3 sushi_code_is_error
+=head3 _collect_sushi_exceptions
 
-    my $is_error = $self->sushi_code_is_error($code);
+    my @exceptions = $self->_collect_sushi_exceptions($decoded_response);
 
-Determines if a given SUSHI response code is considered an error. Codes greater than 1000 are generally errors unless they are in the list of known warning codes, in which case they are treated as non-errors. Docs at:
+Collects the exceptions of a decoded SUSHI response into
+C<< $self->{harvest_outcome}->{exceptions} >> and adds one background job message
+per exception, with the exception message and data; the severity is kept in the
+exception only. Docs at:
 https://cop5.projectcounter.org/en/5.0.2/appendices/f-handling-errors-and-exceptions.html
 
-=cut
-
-sub _sushi_code_is_error {
-    my ($code) = @_;
-
-    return 0 unless $code;
-
-    my @warning_codes = ( 1011, 3032, 3040, 3050, 3060, 3061, 3062, 3070 );
-    return 1 if $code > 1000 && !grep { $_ == $code } @warning_codes;
-}
-
-=head3 _sushi_errors
-
-Checks and handles possible errors in the SUSHI response
-Additionally, adds background job report message(s) if that is the case
+Exceptions are read, in order, from a top level exception object (C<Code>,
+C<Message>, C<Severity>, C<Data>, any case), a top level C<Exceptions> array, the
+C<Report_Header.Exceptions> array, and from non-COUNTER vendor bodies (C<errors>
+array or C<message>, stored with an undefined code). An array response is read as a
+list of exception objects.
 
 =cut
 
-sub _sushi_errors {
+sub _collect_sushi_exceptions {
     my ( $self, $decoded_response ) = @_;
 
-    my $severity = $decoded_response->{Severity} // $decoded_response->{severity};
-    my $message  = $decoded_response->{Message}  // $decoded_response->{message};
-    my $code     = $decoded_response->{Code}     // $decoded_response->{code};
+    my $outcome = $self->{harvest_outcome};
+    return unless defined $decoded_response;
 
-    if ( $severity || _sushi_code_is_error($code) ) {
-        $self->{job_callbacks}->{add_message_callback}->(
-            {
-                type    => 'error',
-                code    => $code,
-                message => ( $severity ? "$severity - " : '' ) . $message,
-            }
-        ) if $self->{job_callbacks};
-        return 1;
+    my @raw;
+    if ( ref($decoded_response) eq 'ARRAY' ) {
+        push @raw, grep { ref($_) eq 'HASH' } @{$decoded_response};
+    } elsif ( ref($decoded_response) eq 'HASH' ) {
+        my $response = $decoded_response;
+        push @raw, $response
+            if exists $response->{Code} || exists $response->{code} || exists $response->{Severity};
+        push @raw, @{ $response->{Exceptions} } if ref( $response->{Exceptions} ) eq 'ARRAY';
+        push @raw, @{ $response->{Report_Header}->{Exceptions} }
+            if ref( $response->{Report_Header} ) eq 'HASH'
+            && ref( $response->{Report_Header}->{Exceptions} ) eq 'ARRAY';
+        push @raw, @{ $response->{errors} } if ref( $response->{errors} ) eq 'ARRAY';
+        push @raw, { message => $response->{message} }
+            if !@raw && defined $response->{message} && !ref( $response->{message} );
     }
 
-    my $exceptions = $decoded_response->{Report_Header}->{Exceptions} // $decoded_response->{Exceptions};
-    if ($exceptions) {
-        foreach my $exception ( @{$exceptions} ) {
-            $self->{job_callbacks}->{add_message_callback}->(
-                {
-                    type    => 'error',
-                    code    => $exception->{Code},
-                    message => $exception->{Message} . ' - ' . $exception->{Data},
-                }
-            ) if $self->{job_callbacks};
+    for my $raw (@raw) {
+        next unless ref($raw) eq 'HASH';
+        my $exception = {
+            code     => $raw->{Code}     // $raw->{code},
+            severity => $raw->{Severity} // $raw->{severity},
+            message  => $raw->{Message}  // $raw->{message},
+            data     => $raw->{Data}     // $raw->{data},
+        };
+        next unless defined $exception->{code} || defined $exception->{message};
+
+        push @{ $outcome->{exceptions} }, $exception;
+
+        my $code_status = Koha::ERM::EUsage::CounterLog->sushi_code_status( $exception->{code} );
+        $self->{job_callbacks}->{add_message_callback}->(
+            {
+                type    => $code_status eq 'error' ? 'error' : 'warning',
+                code    => $exception->{code},
+                message => join(
+                    ' - ',
+                    grep { defined $_ && length $_ } $exception->{message}, $exception->{data}
+                ),
+            }
+        ) if $self->{job_callbacks};
+    }
+
+    return @{ $outcome->{exceptions} };
+}
+
+=head3 _classify_harvest
+
+    my $status = $self->_classify_harvest( { has_items => 1 } );
+
+Returns the counter log status of the current harvest from the HTTP status and the
+collected exceptions:
+
+=over
+
+=item C<error>: a SUSHI error code (authorization, unsupported report, bad request),
+an HTTP 4xx response without a retry condition, or a response that is not JSON.
+A retry gives the same result.
+
+=item C<retry>: a SUSHI retry code (1000, 1010, 1011, 1020, 3031, 3040) or an HTTP
+202, 429 or 5xx response. The same report type and period must be harvested again.
+
+=item C<success>: report items were stored and no condition above applies.
+
+=item C<no_usage>: no report items and the provider answered 3030 No Usage Available.
+The month is complete, the usage is zero.
+
+=item C<no_data>: no report items and no condition above applies (3032, HTTP 204,
+an empty report).
+
+=back
+
+=cut
+
+sub _classify_harvest {
+    my ( $self, $args ) = @_;
+
+    my $outcome = $self->{harvest_outcome};
+    my $http    = $outcome->{http_status} // 0;
+    my @statuses =
+        map { Koha::ERM::EUsage::CounterLog->sushi_code_status( $_->{code} ) } @{ $outcome->{exceptions} };
+
+    return 'error'    if grep { $_ eq 'error' } @statuses;
+    return 'retry'    if grep { $_ eq 'retry' } @statuses;
+    return 'retry'    if $http == 202 || $http == 429 || $http >= 500;
+    return 'error'    if $http >= 400;
+    return 'error'    if defined $outcome->{message};
+    return 'success'  if $args->{has_items};
+    return 'no_usage' if grep { $_ eq 'no_usage' } @statuses;
+    return 'no_data';
+}
+
+=head3 _harvest_outcome_message
+
+Joins the messages of the collected exceptions and the free text message of the
+current harvest into one string for warnings and thrown exceptions.
+
+=cut
+
+sub _harvest_outcome_message {
+    my ($self) = @_;
+
+    my $outcome = $self->{harvest_outcome};
+    my @parts   = map {
+        join( ': ', grep { defined $_ && length $_ } $_->{code}, $_->{message} )
+    } @{ $outcome->{exceptions} };
+    push @parts, $outcome->{message} if defined $outcome->{message};
+
+    return join( '; ', @parts );
+}
+
+=head3 _harvest_report_period
+
+    my $period = $self->_harvest_report_period;
+
+Returns a hashref with the C<report_year> and C<report_month> of the harvested month
+when the begin and end dates of the current harvest are in the same calendar month.
+Both values are undef when the harvest covers more than one month or has no dates.
+
+=cut
+
+sub _harvest_report_period {
+    my ($self) = @_;
+
+    my %period = ( report_year => undef, report_month => undef );
+    if ( $self->{begin_date} && $self->{end_date} ) {
+        my ( $begin_year, $begin_month ) = $self->{begin_date} =~ /^(\d{4})-(\d{2})/;
+        my ( $end_year,   $end_month )   = $self->{end_date}   =~ /^(\d{4})-(\d{2})/;
+        if ( $begin_year && $end_year && $begin_year == $end_year && $begin_month == $end_month ) {
+            $period{report_year}  = int $begin_year;
+            $period{report_month} = int $begin_month;
         }
-        return 1;
     }
 
-    if ( $decoded_response->{Report_Items} && scalar @{ $decoded_response->{Report_Items} } == 0 ) {
-        $self->{job_callbacks}->{add_message_callback}->(
-            {
-                type => 'error',
-                code => 'no_items',
-            }
-        ) if $self->{job_callbacks};
-        return 1;
+    return \%period;
+}
+
+=head3 _harvest_log_args
+
+    my $log_args = $self->_harvest_log_args($status);
+
+Sets the status of the current harvest outcome and returns the counter log fields
+that describe it: C<background_job_id>, C<report_type>, C<report_year>,
+C<report_month>, C<status> and C<logdetails> (JSON). The request URL is never stored, it holds credentials.
+
+=cut
+
+sub _harvest_log_args {
+    my ( $self, $status ) = @_;
+
+    my $outcome = $self->{harvest_outcome};
+    $outcome->{status} = $status;
+
+    my %logdetails;
+    for my $key ( grep { $_ ne 'status' && defined $outcome->{$_} } keys %{$outcome} ) {
+        $logdetails{$key} = $outcome->{$key};
     }
 
-    return 0;
+    return {
+        background_job_id => $self->{background_job_id},
+        report_type       => $self->{report_type},
+        %{ $self->_harvest_report_period },
+        status     => $status,
+        logdetails => JSON->new->canonical->encode( \%logdetails ),
+    };
+}
+
+=head3 _add_harvest_log
+
+    $self->_add_harvest_log($status);
+
+Creates the counter log row of a harvest that stored no counter file.
+
+=cut
+
+sub _add_harvest_log {
+    my ( $self, $status ) = @_;
+
+    my $userenv = C4::Context->userenv;
+
+    return Koha::ERM::EUsage::CounterLog->new(
+        {
+            borrowernumber         => $userenv ? $userenv->{number} : undef,
+            usage_data_provider_id => $self->erm_usage_data_provider_id,
+            counter_files_id       => undef,
+            importdate             => dt_from_string,
+            filename               => undef,
+            %{ $self->_harvest_log_args($status) },
+        }
+    )->store;
+}
+
+=head3 _harvest_logged
+
+    my $logged = $self->_harvest_logged;
+
+Returns true when a counter log row exists for the background job of this
+harvest. Without a background job id nothing can be matched and it returns false.
+
+=cut
+
+sub _harvest_logged {
+    my ($self) = @_;
+
+    return 0 unless $self->{background_job_id};
+    return Koha::ERM::EUsage::CounterLogs->search( { background_job_id => $self->{background_job_id} } )->count ? 1 : 0;
 }
 
 =head3 _counter_file_size_too_large
@@ -660,7 +906,7 @@ sub _counter_file_size_too_large {
     return 0;
 }
 
-=head3 _handle_sushi_response
+=head3 _handle_sushi_request
 
 Creates and sends the request based on a provided url
 Also handles any redirects

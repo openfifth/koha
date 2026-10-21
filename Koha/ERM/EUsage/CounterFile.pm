@@ -19,6 +19,7 @@ package Koha::ERM::EUsage::CounterFile;
 
 use Modern::Perl;
 
+use JSON         qw( encode_json );
 use Text::CSV_XS qw( csv );
 use Try::Tiny;
 
@@ -66,11 +67,15 @@ sub counter_logs {
 
 =head3 store
 
-    Koha::ERM::EUsage::CounterFile->new($counter_file)->store( $self->{job_callbacks} );
+    Koha::ERM::EUsage::CounterFile->new($counter_file)->store( $self->{job_callbacks}, $log_args );
 
 Stores the csv COUNTER file.
 Adds usage titles from the file.
 Adds the respective counter_log entry.
+
+C<$log_args> is an optional hashref with the counter log fields of a SUSHI harvest
+(C<background_job_id>, C<report_type>, C<report_year>, C<report_month>, C<status>,
+C<logdetails>). Fields that are not passed are read from the file header.
 
 =over
 
@@ -83,7 +88,7 @@ Receive background_job_callbacks to be able to update job progress
 =cut
 
 sub store {
-    my ( $self, $background_job_callbacks ) = @_;
+    my ( $self, $background_job_callbacks, $log_args ) = @_;
 
     # DOCS:
     # COUNTER 5 CSV examples:
@@ -99,7 +104,7 @@ sub store {
     $self->{job_callbacks} = $background_job_callbacks;
 
     $self->_add_usage_objects;
-    $self->_add_counter_log_entry;
+    $self->_add_counter_log_entry($log_args);
 
     return $result;
 }
@@ -278,18 +283,90 @@ Extracts Report_ID from file and sets report_type for this counter_file
 sub _set_report_type_from_file {
     my ($self) = @_;
 
+    $self->type( $self->_header_value('Report_ID') );
+}
+
+=head3 _header_value
+
+    my $value = $self->_header_value('Reporting_Period');
+
+Returns the value of a COUNTER file header row (the first 14 rows of the file) for
+the given key, or undef when the row is absent.
+
+=cut
+
+sub _header_value {
+    my ( $self, $key ) = @_;
+
     open my $fh, "<", \$self->file_content or die;
     my $csv = Text::CSV_XS->new( { binary => 1, always_quote => 1, eol => $/, decode_utf8 => 1, formula => 'empty' } );
 
     $csv->column_names(qw( header_key header_value ));
-    my @header_rows = $csv->getline_hr_all( $fh, 0, 12 );
-    my @header      = $header_rows[0];
+    my $header_rows = $csv->getline_hr_all( $fh, 0, 14 );
 
-    my @report_id_row =
-        map( $_->{header_key} eq 'Report_ID' ? $_ : (), @{ $header[0] } );
-    my $report = $report_id_row[0];
+    my ($row) = grep { ( $_->{header_key} // q{} ) eq $key } @{$header_rows};
 
-    $self->type( $report->{header_value} );
+    # Always return a scalar: the result is used inside hash constructors
+    my $value = $row ? $row->{header_value} : undef;
+    return $value;
+}
+
+=head3 _report_period_from_file
+
+    my $period = $self->_report_period_from_file;
+
+Reads the C<Reporting_Period> header row (C<Begin_Date=YYYY-MM-DD; End_Date=YYYY-MM-DD>)
+and returns a hashref with the C<report_year> and C<report_month> of the reported month
+when both dates are in the same calendar month. Both values are undef when the file
+covers more than one month or has no reporting period.
+
+=cut
+
+sub _report_period_from_file {
+    my ($self) = @_;
+
+    my %period           = ( report_year => undef, report_month => undef );
+    my $reporting_period = $self->_header_value('Reporting_Period');
+    if ( defined $reporting_period ) {
+        my ( $begin_year, $begin_month ) = $reporting_period =~ /Begin_Date=(\d{4})-(\d{2})/;
+        my ( $end_year,   $end_month )   = $reporting_period =~ /End_Date=(\d{4})-(\d{2})/;
+        if ( $begin_year && $end_year && $begin_year == $end_year && $begin_month == $end_month ) {
+            $period{report_year}  = int $begin_year;
+            $period{report_month} = int $begin_month;
+        }
+    }
+
+    return \%period;
+}
+
+=head3 _header_exceptions
+
+    my @exceptions = $self->_header_exceptions;
+
+Reads the C<Exceptions> header row of the file and returns a list of hashrefs with
+C<code> and C<message>. The row holds C<"CODE: Message"> entries separated by
+semicolons. Returns an empty list when the row is absent or empty.
+
+=cut
+
+sub _header_exceptions {
+    my ($self) = @_;
+
+    my $exceptions = $self->_header_value('Exceptions');
+    return unless defined $exceptions && length $exceptions;
+
+    my @parsed;
+    for my $entry ( split /;\s*(?=\d{4}:)/, $exceptions ) {
+        $entry =~ s/^\s+|\s+$//g;
+        next unless length $entry;
+        if ( $entry =~ /^(\d{4}):\s*(.*)$/s ) {
+            push @parsed, { code => 0 + $1, message => $2 };
+        } else {
+            push @parsed, { code => undef, message => $entry };
+        }
+    }
+
+    return @parsed;
 }
 
 =head3 get_COUNTER_report_release
@@ -532,22 +609,44 @@ Adds a erm_counter_logs database entry
 =cut
 
 sub _add_counter_log_entry {
-    my ($self) = @_;
+    my ( $self, $log_args ) = @_;
 
-    my $user = C4::Context->userenv()->{'number'};
+    $log_args //= {};
+    my $userenv = C4::Context->userenv;
+
+    my $status     = $log_args->{status};
+    my $logdetails = $log_args->{logdetails};
+    unless ( defined $status && defined $logdetails ) {
+
+        # Uploaded file: the only status information is the Exceptions header row
+        my @exceptions = $self->_header_exceptions;
+        my @statuses   = map { Koha::ERM::EUsage::CounterLog->sushi_code_status( $_->{code} ) } @exceptions;
+        $status //=
+              ( grep { $_ eq 'error' } @statuses )    ? 'error'
+            : ( grep { $_ eq 'retry' } @statuses )    ? 'retry'
+            : ( grep { $_ eq 'no_usage' } @statuses ) ? 'no_usage'
+            :                                           'success';
+        $logdetails //= encode_json( { exceptions => \@exceptions } );
+    }
+
+    # The harvest passes both period fields together; an uploaded file has only its header
+    my $period =
+        exists $log_args->{report_year}
+        ? { map { $_ => $log_args->{$_} } qw(report_year report_month) }
+        : $self->_report_period_from_file;
+
     Koha::ERM::EUsage::CounterLog->new(
         {
-            #TODO: borrowernumber only required for manual uploads or "harvest now" button clicks
-            borrowernumber   => $user,
-            counter_files_id => $self->erm_counter_files_id,
-            importdate       => $self->date_uploaded,
-            filename         => $self->filename,
-
-            #TODO: add eventual exceptions coming from the COUNTER report to logdetails?
-            logdetails => undef,
-
-            # TEST: retrieving counter logs directly rather than embedding them in counter files requires the provider id
-            usage_data_provider_id => $self->usage_data_provider_id
+            borrowernumber         => $userenv ? $userenv->{number} : undef,
+            counter_files_id       => $self->erm_counter_files_id,
+            usage_data_provider_id => $self->usage_data_provider_id,
+            background_job_id      => $log_args->{background_job_id},
+            importdate             => $self->date_uploaded,
+            filename               => $self->filename,
+            report_type            => $log_args->{report_type} // $self->type,
+            %{$period},
+            status     => $status,
+            logdetails => $logdetails,
         }
     )->store;
 }
