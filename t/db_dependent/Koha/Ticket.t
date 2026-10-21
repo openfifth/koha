@@ -20,7 +20,9 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 9;
+use Test::MockModule;
+use Test::More tests => 10;
+use Test::Warn;
 use t::lib::TestBuilder;
 use t::lib::Mocks;
 
@@ -113,6 +115,37 @@ subtest 'biblio() tests' => sub {
     $schema->storage->txn_rollback;
 };
 
+subtest 'reporter_contact_email() tests' => sub {
+    plan tests => 3;
+
+    $schema->storage->txn_begin;
+
+    my $patron = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $ticket = $builder->build_object(
+        { class => 'Koha::Tickets', value => { reporter_email => undef, reporter_id => $patron->id } } );
+
+    is(
+        $ticket->reporter_contact_email, $patron->notice_email_address,
+        'reporter_contact_email uses reporter patron relationship'
+    );
+
+    $ticket->reporter_email('test@example.com');
+
+    is(
+        $ticket->reporter_contact_email, $patron->notice_email_address,
+        'reporter_contact_email prefers reporter patron relationship'
+    );
+
+    $ticket->reporter_id(undef);
+
+    is(
+        $ticket->reporter_contact_email, 'test@example.com',
+        'reporter_contact_email falls back to reporter_email column'
+    );
+
+    $schema->storage->txn_rollback;
+};
+
 subtest 'updates() tests' => sub {
 
     plan tests => 4;
@@ -165,7 +198,7 @@ subtest 'add_update() tests' => sub {
 };
 
 subtest 'store() tests' => sub {
-    plan tests => 3;
+    plan tests => 4;
 
     subtest 'acknowledgement notice trigger' => sub {
         plan tests => 4;
@@ -322,6 +355,65 @@ subtest 'store() tests' => sub {
 
         $schema->storage->txn_rollback;
     };
+
+    subtest "anonymous ticket email triggers" => sub {
+        plan tests => 6;
+
+        t::lib::Mocks::mock_preference( 'SendAllEmailsTo', '' );
+        t::lib::Mocks::mock_preference( 'CatalogerEmails', '' );
+
+        my $email_stuffer_module = Test::MockModule->new('Email::Stuffer');
+        $email_stuffer_module->mock( 'send_or_die', sub { warn 'Fake send_or_die'; } );
+
+        $schema->storage->txn_begin;
+
+        Koha::Notice::Messages->search()->delete();
+
+        my $assignee = $builder->build_object( { class => "Koha::Patrons" } );
+        my $biblio   = $builder->build_sample_biblio();
+
+        my $librarian = $builder->build_object( { class => "Koha::Patrons" } );
+
+        my $new_ticket = Koha::Ticket->new(
+            {
+                reporter_email => 'test@example.com',
+                title          => "Testing ticket",
+                body           => "Testing ticket message",
+                biblio_id      => $biblio->id,
+                verify_uuid    => '051fa2cc-6bf3-4ab4-9e76-c460b68a2b79',
+            }
+        );
+
+        warning_like { $new_ticket->store() } qr|Fake send_or_die|, 'reached mocked send_or_die';
+
+        is(
+            ref($new_ticket), 'Koha::Ticket',
+            'Koha::Ticket->store() returned the Koha::Ticket object'
+        );
+        my $notices = Koha::Notice::Messages->search( { to_address => 'test@example.com' } );
+        is(
+            $notices->count, 1,
+            'One verification notice queued for the reporter on anonymous ticket creation'
+        );
+        my $THE_notice = $notices->next;
+        isnt(
+            $THE_notice->status, 'pending',
+            'Verification notice is sent immediately'
+        );
+
+        # Simulate successful verification
+        $new_ticket->verify_uuid(undef);
+        warning_like { $new_ticket->store() } qr|Fake send_or_die|, 'reached mocked send_or_die';
+
+        $notices = Koha::Notice::Messages->search( { to_address => 'test@example.com' } );
+        is(
+            $notices->count, 2,
+            'One additional confirmation notice queued for the reporter on anonymous ticket verification'
+        );
+
+        $schema->storage->txn_rollback;
+
+    }
 
 };
 
