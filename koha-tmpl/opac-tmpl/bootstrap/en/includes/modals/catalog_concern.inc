@@ -12,6 +12,12 @@
             </div>
             <div class="modal-body">
                 <fieldset id="concern_fieldset">
+                    [% IF !borrowernumber && Koha.Preference('OpacAnonCatalogConcerns') %]
+                        <div class="form-group">
+                            <label for="concern_title">Email: </label>
+                            <input type="email" name="reporter_email" id="reporter_email" required="required" />
+                        </div>
+                    [% END %]
                     <div class="form-group">
                         <label for="concern_title">Title: </label>
                         <input type="text" name="concern_title" id="concern_title" required="required" />
@@ -38,7 +44,6 @@
             </div>
             <div class="modal-footer">
                 <input type="hidden" name="biblio_id" id="concern_biblio" value="[% biblio.biblionumber | html %]" />
-                <input type="hidden" name="reporter_id" id="concern_reporter" value="[% borrowernumber | html %]" />
                 <button type="submit" id="addConfirm" class="btn btn-primary">Submit <i id="concern-submit-spinner" class="fa fa-spinner fa-pulse fa-fw" style="display:none"></i></button>
                 <button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancel</button>
             </div>
