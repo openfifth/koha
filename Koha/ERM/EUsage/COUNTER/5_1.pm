@@ -75,7 +75,11 @@ sub _COUNTER_report_header {
         [ Report_Attributes => $header->{Report_Attributes} || "" ],
         [
             Exceptions => join(
-                "; ", map( $_->{Code} . ": " . $_->{Message} . " (" . $_->{Data} . ")", @{ $header->{Exceptions} } )
+                "; ",
+                map( ( $_->{Code} // "" ) . ": "
+                        . ( $_->{Message} // "" )
+                        . ( defined $_->{Data} ? " (" . $_->{Data} . ")" : "" ),
+                    @{ $header->{Exceptions} // [] } )
                 )
                 || ""
         ],
