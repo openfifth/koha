@@ -43,11 +43,17 @@ source of ticket
 =head2 reporter_id
 
   data_type: 'integer'
-  default_value: 0
   is_foreign_key: 1
-  is_nullable: 0
+  is_nullable: 1
 
 id of the patron who reported the ticket
+
+=head2 reporter_email
+
+  data_type: 'longtext'
+  is_nullable: 1
+
+the reporter's email address for anonymous tickets
 
 =head2 reported_date
 
@@ -112,6 +118,14 @@ date and time this ticket was resolved
 
 id of biblio linked
 
+=head2 verify_uuid
+
+  data_type: 'varchar'
+  is_nullable: 1
+  size: 128
+
+a unique string for verifying an anonymous ticket
+
 =cut
 
 __PACKAGE__->add_columns(
@@ -125,12 +139,9 @@ __PACKAGE__->add_columns(
     is_nullable => 0,
   },
   "reporter_id",
-  {
-    data_type      => "integer",
-    default_value  => 0,
-    is_foreign_key => 1,
-    is_nullable    => 0,
-  },
+  { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
+  "reporter_email",
+  { data_type => "longtext", is_nullable => 1 },
   "reported_date",
   {
     data_type => "timestamp",
@@ -156,6 +167,8 @@ __PACKAGE__->add_columns(
   },
   "biblio_id",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
+  "verify_uuid",
+  { data_type => "varchar", is_nullable => 1, size => 128 },
 );
 
 =head1 PRIMARY KEY
@@ -169,6 +182,20 @@ __PACKAGE__->add_columns(
 =cut
 
 __PACKAGE__->set_primary_key("id");
+
+=head1 UNIQUE CONSTRAINTS
+
+=head2 C<ticket_uuid_uniq>
+
+=over 4
+
+=item * L</verify_uuid>
+
+=back
+
+=cut
+
+__PACKAGE__->add_unique_constraint("ticket_uuid_uniq", ["verify_uuid"]);
 
 =head1 RELATIONS
 
@@ -224,7 +251,12 @@ __PACKAGE__->belongs_to(
   "reporter",
   "Koha::Schema::Result::Borrower",
   { borrowernumber => "reporter_id" },
-  { is_deferrable => 1, on_delete => "CASCADE", on_update => "CASCADE" },
+  {
+    is_deferrable => 1,
+    join_type     => "LEFT",
+    on_delete     => "CASCADE",
+    on_update     => "CASCADE",
+  },
 );
 
 =head2 resolver
@@ -263,8 +295,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2024-05-02 11:36:36
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:8bWiSb7hXPFYRzRzrVG3kw
+# Created by DBIx::Class::Schema::Loader v0.07053 @ 2026-10-15 13:33:05
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:BJkIX8C/vppGV40wen9ILQ
 
 
 __PACKAGE__->has_many(
