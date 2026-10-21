@@ -30,8 +30,8 @@ properties:
     - string
     - "null"
   usage_data_provider_id:
-    description: logdetails of the counter_log
-    type: 
+    description: usage_data_provider_id of the counter_log
+    type:
     - integer
     - "null"
   background_job_id:
@@ -53,6 +53,20 @@ properties:
     description: month covered by the harvested report
     type:
     - integer
+    - "null"
+  status:
+    description: outcome of the harvest or import
+    type: string
+    enum:
+      - success
+      - no_usage
+      - no_data
+      - retry
+      - error
+  background_job:
+    description: background job that created the counter log
+    type:
+    - object
     - "null"
   patron:
     description: patron object for the importer
