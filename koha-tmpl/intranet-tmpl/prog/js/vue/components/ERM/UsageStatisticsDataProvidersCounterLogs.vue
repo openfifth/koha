@@ -1,7 +1,7 @@
 <template>
     <div v-if="!initialized">{{ $__("Loading") }}</div>
     <div v-else id="counter_logs_list">
-        <div v-if="counter_files_count > 0" class="page-section">
+        <div v-if="counter_logs_count > 0" class="page-section">
             <KohaTable
                 ref="table"
                 v-bind="tableOptions"
@@ -28,9 +28,53 @@ export default {
         const { setConfirmationDialog, setMessage } = inject("mainStore");
 
         const table = useTemplateRef("table");
-        const counter_files_count = ref(0);
+        const format_datetime = $datetime;
+        const counter_logs_count = ref(0);
         const initialized = ref(false);
         const building_table = ref(false);
+
+        const statusLabels = {
+            success: $__("Success"),
+            no_usage: $__("No usage"),
+            no_data: $__("No data"),
+            retry: $__("Retry needed"),
+            error: $__("Error"),
+        };
+        const statusClasses = {
+            success: "bg-success",
+            no_usage: "bg-success-subtle",
+            no_data: "bg-orange",
+            retry: "bg-warning text-dark",
+            error: "bg-danger",
+        };
+        const statusFilterOptions = Object.entries(statusLabels).map(
+            ([id, label]) => ({ _id: id, _str: label })
+        );
+
+        const formatPeriod = (year, month) =>
+            year && month ? `${year}-${String(month).padStart(2, "0")}` : "";
+        const parseLogDetails = logdetails => {
+            if (!logdetails) return {};
+            try {
+                const parsed = JSON.parse(logdetails);
+                return parsed && typeof parsed === "object" ? parsed : {};
+            } catch (e) {
+                return {};
+            }
+        };
+        const exceptionText = exception =>
+            [exception.code, exception.message]
+                .filter(
+                    value =>
+                        value !== null && value !== undefined && value !== ""
+                )
+                .join(": ");
+        const logDetailLines = logdetails => {
+            const details = parseLogDetails(logdetails);
+            const lines = (details.exceptions || []).map(exceptionText);
+            if (details.message) lines.push(details.message);
+            return lines.filter(line => line !== "");
+        };
 
         const table_url = () => {
             let url = `/api/v1/erm/counter_logs?usage_data_provider_id=${route.params.erm_usage_data_provider_id}`;
@@ -78,13 +122,52 @@ export default {
                     orderable: true,
                 },
                 {
+                    title: $__("Report type"),
+                    data: "report_type",
+                    render: (data, type, row, meta) =>
+                        escape_str(row.report_type || ""),
+                    searchable: true,
+                    orderable: true,
+                },
+                {
+                    title: $__("Period"),
+                    data: "report_year:report_month",
+                    render: (data, type, row, meta) =>
+                        formatPeriod(row.report_year, row.report_month),
+                    searchable: true,
+                    orderable: true,
+                },
+                {
+                    title: $__("Status"),
+                    data: "status",
+                    dataFilter: "status",
+                    render: (data, type, row, meta) => {
+                        const label = statusLabels[row.status] || row.status;
+                        const badgeClass =
+                            statusClasses[row.status] || "bg-secondary";
+                        const tooltip = logDetailLines(row.logdetails).join(
+                            "\n"
+                        );
+                        return `<span class="badge ${badgeClass}" title="${escape_str(tooltip)}">${escape_str(label)}</span>`;
+                    },
+                    searchable: true,
+                    orderable: true,
+                },
+                {
+                    title: $__("Details"),
+                    data: "logdetails",
+                    render: (data, type, row, meta) =>
+                        logDetailLines(row.logdetails)
+                            .map(line => escape_str(line))
+                            .join("<br />"),
+                    searchable: false,
+                    orderable: false,
+                },
+                {
                     data: "importdate",
                     title: $__("Import date"),
-                    render: function (data, type, row, meta) {
-                        const date = row.importdate.substr(0, 10);
-                        const time = row.importdate.substr(11, 8);
-                        return `${date} ${time}`;
-                    },
+                    render: (data, type, row, meta) =>
+                        format_datetime(row.importdate),
                     searchable: true,
                     orderable: true,
                 },
@@ -104,19 +187,29 @@ export default {
                     searchable: true,
                     orderable: true,
                 },
+                {
+                    title: $__("Job"),
+                    data: "background_job_id",
+                    render: (data, type, row, meta) =>
+                        row.background_job_id
+                            ? `<a href="/cgi-bin/koha/admin/background_jobs.pl?op=view&id=${encodeURIComponent(row.background_job_id)}">#${escape_str(row.background_job_id)}</a>`
+                            : "",
+                    searchable: true,
+                    orderable: true,
+                },
             ];
         };
 
-        const getCounterFiles = async () => {
+        const getCounterLogs = async () => {
             const client = APIClient.erm;
-            await client.counter_files
+            await client.counter_logs
                 .count({
                     usage_data_provider_id:
                         route.params.erm_usage_data_provider_id,
                 })
                 .then(
                     count => {
-                        counter_files_count.value = count;
+                        counter_logs_count.value = count;
                         initialized.value = true;
                     },
                     error => {}
@@ -131,7 +224,9 @@ export default {
             url: () => table_url(),
             table_settings: counter_log_table_settings,
             add_filters: true,
-            filters_options: {},
+            filters_options: {
+                status: statusFilterOptions,
+            },
             actions: {
                 0: ["show"],
                 "-1": [
@@ -139,9 +234,16 @@ export default {
                         download: {
                             text: $__("Download"),
                             icon: "fa fa-download",
+                            should_display: row => !!row.counter_files_id,
                         },
                     },
-                    "delete",
+                    {
+                        delete: {
+                            text: $__("Delete"),
+                            icon: "fa fa-trash",
+                            should_display: row => !!row.counter_files_id,
+                        },
+                    },
                 ],
             },
         });
@@ -149,14 +251,14 @@ export default {
         onMounted(() => {
             if (!building_table.value) {
                 building_table.value = true;
-                getCounterFiles();
+                getCounterLogs();
             }
         });
         return {
             table,
             setConfirmationDialog,
             setMessage,
-            counter_files_count,
+            counter_logs_count,
             initialized,
             building_table,
             tableOptions,
@@ -165,6 +267,6 @@ export default {
         };
     },
     components: { KohaTable },
-    name: "UsageStatisticsTitlesList",
+    name: "UsageStatisticsDataProvidersCounterLogs",
 };
 </script>

@@ -34,3 +34,9 @@ textarea {
     pointer-events: none;
     font-weight: 700;
 }
+
+/* Harvest status badges (ERM import logs and data providers summary) */
+.badge.bg-orange {
+    background-color: #fd7e14;
+    color: #000;
+}
