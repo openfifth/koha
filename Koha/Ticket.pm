@@ -216,7 +216,7 @@ This method returns the list of publicly readable database fields for both API a
 
 sub public_read_list {
     return [
-        'ticket_id',   'title',         'body',
+        'id',          'title',         'body',
         'reporter_id', 'reported_date', 'resolved_date',
         'biblio_id',   'source'
     ];
