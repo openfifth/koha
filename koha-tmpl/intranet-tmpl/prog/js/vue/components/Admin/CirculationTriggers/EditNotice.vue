@@ -5,18 +5,18 @@
         id="trigger-edit-form-notice-section"
     >
         <legend v-if="ruleSetInfo.triggerCount < triggerNumber">
-            {{ $__("Notice, restriction and fine for trigger") }}
+            {{ $__("Notice and restriction for trigger") }}
             {{ " " + triggerNumber }}
         </legend>
         <legend v-else>
-            {{ $__("Edit notice, restriction and fine for trigger") }}
+            {{ $__("Edit notice and restriction for trigger") }}
             {{ " " + triggerNumber }}
         </legend>
         <div class="page-section bg-info">
             <p>
                 {{
                     $__x(
-                        "For each overdue item, Koha sends the notice, restricts the patron and forgives the fine using the triggers set up for {library}.",
+                        "For each overdue item, Koha sends the notice and restricts the patron using the triggers set up for {library}.",
                         { library: noticeLibrary }
                     )
                 }}
@@ -175,64 +175,6 @@
                         ({{
                             fallbackRuleSet?.[
                                 `overdue_${triggerNumber}_restrict`
-                            ]?.value === "1"
-                                ? $__("Yes")
-                                : $__("No")
-                        }})
-                    </span>
-                </div>
-            </li>
-            <li class="radio-row">
-                <label for="forgive_fine"
-                    >{{ $__("Forgive overdue fine") }}:</label
-                >
-                <div>
-                    <input
-                        @click="setAllowSubmission"
-                        type="radio"
-                        id="forgive_fine-yes"
-                        v-model="
-                            ruleSetToSubmit[
-                                `overdue_${triggerNumber}_forgive_fine`
-                            ]
-                        "
-                        :value="'1'"
-                    />
-                    {{ $__("Yes") }}
-                    <input
-                        @click="setAllowSubmission"
-                        type="radio"
-                        id="forgive_fine-no"
-                        v-model="
-                            ruleSetToSubmit[
-                                `overdue_${triggerNumber}_forgive_fine`
-                            ]
-                        "
-                        :value="'0'"
-                    />
-                    {{ $__("No") }}
-                    <input
-                        @click="setAllowSubmission"
-                        type="radio"
-                        id="forgive_fine-fallback"
-                        v-model="
-                            ruleSetToSubmit[
-                                `overdue_${triggerNumber}_forgive_fine`
-                            ]
-                        "
-                        :value="null"
-                    />
-                    {{ $__("Fallback to default") }}
-                    <span
-                        v-if="
-                            fallbackRuleSet[
-                                `overdue_${triggerNumber}_forgive_fine`
-                            ]?.value !== null
-                        "
-                    >
-                        ({{
-                            fallbackRuleSet[
-                                `overdue_${triggerNumber}_forgive_fine`
                             ]?.value === "1"
                                 ? $__("Yes")
                                 : $__("No")

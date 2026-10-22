@@ -453,7 +453,7 @@ Circulation:
                   item-homebranch: "item home library"
                   patron-homebranch: "patron home library"
             - .
-            - "<br><strong>NOTE:</strong> <code>misc/cronjobs/process_circulation_triggers.pl</code> also uses this library to look up the <a href='/cgi-bin/koha/admin/circulation_triggers'>circulation triggers</a> that send notices, restrict patrons and forgive overdue fines, and counts their delays on its calendar. It takes no command-line option, so 'command-line option' means the checkout library. Triggers that mark items lost, charge for them and mark them returned follow <code>LostChargesControl</code>."
+            - "<br><strong>NOTE:</strong> <code>misc/cronjobs/process_circulation_triggers.pl</code> also uses this library to look up the <a href='/cgi-bin/koha/admin/circulation_triggers'>circulation triggers</a> that send notices and restrict patrons, and counts their delays on its calendar. It takes no command-line option, so 'command-line option' means the checkout library. Triggers that mark items lost, forgive their overdue fines, charge for them and mark them returned follow <code>LostChargesControl</code>."
         -
             - Include up to
             - pref: PrintNoticesMaxLines
@@ -1343,7 +1343,7 @@ Circulation:
                   PatronLibrary: the library the patron is from
                   ItemHomeLibrary: the library the item is from
             - .
-            - "<br><strong>NOTE:</strong> <code>misc/cronjobs/process_circulation_triggers.pl</code> also uses this library to look up the <a href='/cgi-bin/koha/admin/circulation_triggers'>circulation triggers</a> that mark items lost, charge for them and mark them returned. Its other triggers follow <code>OverdueNoticeFrom</code>. As the script runs without a logged-in library, 'the library you are logged in at' falls back to the library the item is from."
+            - "<br><strong>NOTE:</strong> <code>misc/cronjobs/process_circulation_triggers.pl</code> also uses this library to look up the <a href='/cgi-bin/koha/admin/circulation_triggers'>circulation triggers</a> that mark items lost, forgive their overdue fines, charge for them and mark them returned. Its other triggers follow <code>OverdueNoticeFrom</code>. As the script runs without a logged-in library, 'the library you are logged in at' falls back to the library the item is from."
     Self check-in module:
         -
             - pref: SelfCheckInModule

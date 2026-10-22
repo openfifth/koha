@@ -36,8 +36,8 @@ Koha::Overdues::RuleResolver - Koha Overdues RuleResolver object set class
 
 # Rules for the actions that concern a lost item resolve against the branch named by
 # LostChargesControl; every other rule resolves against the branch named by OverdueNoticeFrom.
-my @overdue_notice_actions = ( 'notice', 'restrict', 'forgive_fine' );
-my @lost_control_actions   = ( 'lost',   'charge',   'mark_returned' );
+my @overdue_notice_actions = ( 'notice', 'restrict' );
+my @lost_control_actions   = ( 'lost',   'charge', 'mark_returned', 'forgive_fine' );
 
 =head3 new
 
@@ -67,7 +67,7 @@ of which no item ever looks up.
 
 Triggers are resolved by trigger number: a context's trigger inherits each rule it does not
 set, its delay included, from the same trigger number in a less specific context. The lost,
-charge and mark_returned rules are resolved against C<lost_branchcode>, every other rule
+charge, mark_returned and forgive_fine rules are resolved against C<lost_branchcode>, every other rule
 against C<branchcode>, each with the delay of its own branch's trigger, counted on that
 branch's calendar. Each resolved set is then keyed by
 the effective delay it fires at, which is what

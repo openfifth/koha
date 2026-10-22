@@ -15,7 +15,7 @@
             <p>
                 {{
                     $__x(
-                        "For each overdue item, Koha marks it lost, charges for it and checks it in using the triggers set up for {library}.",
+                        "For each overdue item, Koha marks it lost, forgives its overdue fine, charges for it and checks it in using the triggers set up for {library}.",
                         { library: lostLibrary }
                     )
                 }}
@@ -79,6 +79,64 @@
                     :ruleName="`overdue_${triggerNumber}_lost`"
                     :setAllowSubmission="setAllowSubmission"
                 />
+            </li>
+            <li>
+                <label for="forgive_fine"
+                    >{{ $__("Forgive overdue fine") }}:</label
+                >
+                <div>
+                    <input
+                        @click="setAllowSubmission"
+                        type="radio"
+                        id="forgive_fine-yes"
+                        v-model="
+                            ruleSetToSubmit[
+                                `overdue_${triggerNumber}_forgive_fine`
+                            ]
+                        "
+                        :value="'1'"
+                    />
+                    {{ $__("Yes") }}
+                    <input
+                        @click="setAllowSubmission"
+                        type="radio"
+                        id="forgive_fine-no"
+                        v-model="
+                            ruleSetToSubmit[
+                                `overdue_${triggerNumber}_forgive_fine`
+                            ]
+                        "
+                        :value="'0'"
+                    />
+                    {{ $__("No") }}
+                    <input
+                        @click="setAllowSubmission"
+                        type="radio"
+                        id="forgive_fine-fallback"
+                        v-model="
+                            ruleSetToSubmit[
+                                `overdue_${triggerNumber}_forgive_fine`
+                            ]
+                        "
+                        :value="null"
+                    />
+                    {{ $__("Fallback to default") }}
+                    <span
+                        v-if="
+                            fallbackRuleSet[
+                                `overdue_${triggerNumber}_forgive_fine`
+                            ]?.value !== null
+                        "
+                    >
+                        ({{
+                            fallbackRuleSet[
+                                `overdue_${triggerNumber}_forgive_fine`
+                            ]?.value === "1"
+                                ? $__("Yes")
+                                : $__("No")
+                        }})
+                    </span>
+                </div>
             </li>
             <li>
                 <label for="charge"

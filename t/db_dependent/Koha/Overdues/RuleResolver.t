@@ -272,13 +272,13 @@ subtest 'an override that moves a trigger\'s delay does not also fire at the def
     );
 };
 
-subtest 'lost, charge and mark_returned resolve against the LostChargesControl branch' => sub {
-    plan tests => 3;
+subtest 'lost, charge, mark_returned and forgive_fine resolve against the LostChargesControl branch' => sub {
+    plan tests => 4;
 
     my $resolver = Koha::Overdues::RuleResolver->new;
     $resolver->{raw_overdue_rule_sets} = {
-        'CPL|*|*|1' => { delay => 7, actions => { notice => 'OD1', mtt => 'print', lost => 2 } },
-        'FPL|*|*|1' => { delay => 7, actions => { notice => 'OD2', mtt => 'print', lost => 1 } },
+        'CPL|*|*|1' => { delay => 7, actions => { notice => 'OD1', mtt => 'print', lost => 2, forgive_fine => 0 } },
+        'FPL|*|*|1' => { delay => 7, actions => { notice => 'OD2', mtt => 'print', lost => 1, forgive_fine => 1 } },
     };
 
     $resolver->set_effective_overdue_rule_sets( ['CPL|FPL|PC|IT'], { CPL => { 7 => 7 }, FPL => { 7 => 7 } } );
@@ -287,6 +287,7 @@ subtest 'lost, charge and mark_returned resolve against the LostChargesControl b
         map { $_->{type} => $_ } @{ $resolver->{effective_overdue_rule_sets}->{'CPL|FPL|PC|IT|7'}->{actions} };
     is( $by_type{notice}->{notice_code}, 'OD1', 'the notice comes from the CircControl branch' );
     is( $by_type{lost}->{value},         1,     'lost comes from the LostChargesControl branch' );
+    is( $by_type{forgive_fine}->{value}, 1,     'forgive_fine comes from the LostChargesControl branch' );
     is(
         scalar grep( { $_->{type} eq 'lost' }
             @{ $resolver->{effective_overdue_rule_sets}->{'CPL|FPL|PC|IT|7'}->{actions} } ),
