@@ -75,10 +75,27 @@ L<Koha::CirculationRules/resolve_rule_context_branchcode>: in cron
 context (no userenv) C<PickupLibrary> falls through to the item-side path,
 matching C<C4::Circulation::_GetCircControlBranch>.
 
+C<$control_preference> names the preference to honour in place of C<CircControl>,
+such as C<LostChargesControl>. For C<OverdueNoticeFrom> the column mirrors
+L<Koha::CirculationRules/resolve_overdue_notice_branchcode> instead.
+
 =cut
 
 sub rule_context_branch_column {
-    my $circ_control = C4::Context->preference('CircControl') // '';
+    my ( $self, $control_preference ) = @_;
+
+    if ( ( $control_preference // q{} ) eq 'OverdueNoticeFrom' ) {
+        my $overdue_notice_from = C4::Context->preference('OverdueNoticeFrom') // q{};
+        if ( $overdue_notice_from eq 'item-homebranch' ) {
+            return 'item.homebranch';
+        }
+        if ( $overdue_notice_from eq 'patron-homebranch' ) {
+            return 'patron.branchcode';
+        }
+        return 'me.branchcode';
+    }
+
+    my $circ_control = C4::Context->preference( $control_preference // 'CircControl' ) // '';
 
     if ( $circ_control eq 'PatronLibrary' ) {
         return 'patron.branchcode';
@@ -96,13 +113,13 @@ Cheap pre-query for the calendar-adjusted trigger path: returns the distinct
 rule-context branchcodes that have at least one checkout overdue by C<$min_delay>
 or more days as at C<$trigger_date> (a DateTime, defaulting to today). The column used depends on
 L</rule_context_branch_column>. Accounts for the relevant branch being determined by
-patron.homebranch OR item.homebranch OR item.holding branch based on 
-rule_context_branch_column.
+patron.homebranch OR item.homebranch OR item.holding branch based on
+rule_context_branch_column. C<$control_preference> is passed on to it.
 
 =cut
 
 sub get_distinct_overdue_branches {
-    my ( $self, $min_delay, $trigger_date ) = @_;
+    my ( $self, $min_delay, $trigger_date, $control_preference ) = @_;
 
     if ( !defined $min_delay ) {
         return;
@@ -113,14 +130,14 @@ sub get_distinct_overdue_branches {
     my $cutoff_exclusive =
         $trigger_date->clone->subtract( days => $min_delay )->truncate( to => 'day' )->add( days => 1 );
 
-    my $col = $self->rule_context_branch_column;
+    my $col = $self->rule_context_branch_column($control_preference);
     my ($relationship_name) = split /\./, $col;
 
     try {
         my $rs = Koha::Checkouts->search(
             { date_due => { '<' => $dtf->format_datetime($cutoff_exclusive) } },
             {
-                join     => $relationship_name,
+                ( $relationship_name eq 'me' ? () : ( join => $relationship_name ) ),
                 select   => [$col],
                 as       => ['rule_branch'],
                 group_by => [$col],
@@ -141,7 +158,8 @@ sub get_distinct_overdue_branches {
 
 Single SQL with one OR-clause per branch, each clause matching
 that branch's pre-computed exact target dates. The branch comparison uses
-L</rule_context_branch_column>. Returns a L<Koha::Checkouts> resultset.
+L</rule_context_branch_column>, for the pair's C<control_preference> where it
+has one. Returns a L<Koha::Checkouts> resultset.
 
 =cut
 
@@ -156,7 +174,8 @@ sub get_overdue_summaries_by_branch_date_pairs {
         if ( !$pair->{dates} || !@{ $pair->{dates} } ) {
             next;
         }
-        push @or_clauses, $self->_branch_dates_clause( $pair->{branchcode}, $pair->{dates} );
+        push @or_clauses,
+            $self->_branch_dates_clause( $pair->{branchcode}, $pair->{dates}, $pair->{control_preference} );
     }
 
     if ( !@or_clauses ) {
@@ -175,19 +194,19 @@ sub get_overdue_summaries_by_branch_date_pairs {
 
 =head3 _branch_dates_clause
 
-  my $clause = $self->_branch_dates_clause( $branchcode, \@dates );
+  my $clause = $self->_branch_dates_clause( $branchcode, \@dates, $control_preference );
 
 Builds the SQL::Abstract clause matching rows whose rule-context branch equals
 C<$branchcode> and whose C<date_due> falls on any of the given calendar dates,
 used by L</get_overdue_summaries_by_branch_date_pairs>. The branch column comes
-from L</rule_context_branch_column>.
+from L</rule_context_branch_column>, given C<$control_preference>.
 
 =cut
 
 sub _branch_dates_clause {
-    my ( $self, $branchcode, $dates ) = @_;
+    my ( $self, $branchcode, $dates, $control_preference ) = @_;
 
-    my $col = $self->rule_context_branch_column;
+    my $col = $self->rule_context_branch_column($control_preference);
 
     return {
         $col => $branchcode,

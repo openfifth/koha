@@ -21,7 +21,7 @@ use Modern::Perl;
 
 use Test::NoWarnings;
 use Test::MockModule;
-use Test::More tests => 14;
+use Test::More tests => 15;
 
 use Koha::Notice::Messages;
 
@@ -961,6 +961,98 @@ subtest 'process_overdues resolves lost against LostChargesControl and notices a
     );
     $item->discard_changes;
     is( $item->itemlost, 1, 'the item is marked lost by the LostChargesControl branch\'s trigger' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'process_overdues calendar-adjusted path — each branch counts its triggers on its own calendar' => sub {
+    plan tests => 4;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'OverdueTriggersCalendar', 1 );
+    t::lib::Mocks::mock_preference( 'useDaysMode',             'Calendar' );
+    t::lib::Mocks::mock_preference( 'CircControl',             'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'LostChargesControl',      'ItemHomeLibrary' );
+    t::lib::Mocks::mock_preference( 'HomeOrHoldingBranch',     'homebranch' );
+
+    Koha::CirculationRules->search( { rule_name => { -like => 'overdue\_%' } } )->delete;
+
+    my $patron_library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $item_library   = $builder->build_object( { class => 'Koha::Libraries' } );
+
+    # The item's library was closed for the past 3 days, the patrons' library was not.
+    my $today    = dt_from_string;
+    my $calendar = Koha::Library::Calendar->new( branchcode => $item_library->branchcode );
+    for my $back ( 1 .. 3 ) {
+        $calendar->add_single_closure(
+            {
+                date        => $today->clone->subtract( days => $back )->ymd,
+                title       => "closure $back days ago",
+                description => '',
+            }
+        );
+    }
+
+    # Both libraries trigger at 7 open days: the patrons' library restricts,
+    # the item's library marks the item lost.
+    for my $row (
+        [ $patron_library->branchcode, 'overdue_1_delay',    7 ],
+        [ $patron_library->branchcode, 'overdue_1_restrict', 1 ],
+        [ $item_library->branchcode,   'overdue_1_delay',    7 ],
+        [ $item_library->branchcode,   'overdue_1_lost',     1 ],
+        )
+    {
+        Koha::CirculationRules->set_rule(
+            {
+                branchcode   => $row->[0],
+                categorycode => undef,
+                itemtype     => undef,
+                rule_name    => $row->[1],
+                rule_value   => $row->[2],
+            }
+        );
+    }
+
+    my %patron;
+    my %item;
+    for my $days_ago ( 7, 10 ) {
+        $patron{$days_ago} = $builder->build_object(
+            { class => 'Koha::Patrons', value => { branchcode => $patron_library->branchcode } } );
+        $item{$days_ago} = $builder->build_sample_item(
+            {
+                homebranch    => $item_library->branchcode,
+                holdingbranch => $item_library->branchcode,
+            }
+        );
+        $builder->build_object(
+            {
+                class => 'Koha::Checkouts',
+                value => {
+                    borrowernumber => $patron{$days_ago}->borrowernumber,
+                    itemnumber     => $item{$days_ago}->itemnumber,
+                    branchcode     => $patron_library->branchcode,
+                    date_due       => $today->clone->subtract( days => $days_ago )->strftime('%Y-%m-%d %H:%M:%S'),
+                },
+            }
+        );
+    }
+
+    Koha::Overdues::TriggerProcessor->new->process_overdues;
+
+    is(
+        $patron{7}->restrictions->search( { type => 'OVERDUES' } )->count, 1,
+        'due 7 days ago is 7 open days for the patrons\' library: restricted'
+    );
+    is(
+        $patron{10}->restrictions->search( { type => 'OVERDUES' } )->count, 0,
+        'due 10 days ago is 10 open days for the patrons\' library: not restricted'
+    );
+
+    $item{7}->discard_changes;
+    $item{10}->discard_changes;
+    is( $item{7}->itemlost,  0, 'due 7 days ago is 4 open days for the item\'s library: not lost' );
+    is( $item{10}->itemlost, 1, 'due 10 days ago is 7 open days for the item\'s library: lost' );
 
     $schema->storage->txn_rollback;
 };

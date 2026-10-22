@@ -68,8 +68,8 @@ of which no item ever looks up.
 Triggers are resolved by trigger number: a context's trigger inherits each rule it does not
 set, its delay included, from the same trigger number in a less specific context. The lost,
 charge and mark_returned rules are resolved against C<lost_branchcode>, every other rule
-against C<branchcode>, each with the delay of its own branch's trigger; both go through
-C<branchcode>'s calendar, the one that selected the item. Each resolved set is then keyed by
+against C<branchcode>, each with the delay of its own branch's trigger, counted on that
+branch's calendar. Each resolved set is then keyed by
 the effective delay it fires at, which is what
 L<Koha::Overdues::ActionExecutor/route_item_actions_to_queue> looks up. Where two trigger
 numbers resolve to the same delay against one branch, the lower trigger number is kept.
@@ -83,7 +83,6 @@ sub set_effective_overdue_rule_sets {
 
     foreach my $context_key (@$context_list) {
         my ( $branchcode, $lost_branchcode, $categorycode, $itemtype ) = split /\|/, $context_key, 4;
-        my $branch_delays = $effective_delay_by_raw_delay->{$branchcode} // {};
 
         # When both branches are the same, both groups walk the same fallback chain
         # and would log the same warning twice.
@@ -121,7 +120,7 @@ sub set_effective_overdue_rule_sets {
                     next;
                 }
 
-                my $effective_delay = $branch_delays->{$raw_delay};
+                my $effective_delay = $effective_delay_by_raw_delay->{$group_branchcode}->{$raw_delay};
                 if ( !defined $effective_delay ) {
                     next;
                 }
