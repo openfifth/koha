@@ -130,14 +130,15 @@ sub _process_simple_calculation {
         return;
     }
 
-    my $min_delay = $known_delay_values[0];
-    my @branches  = Koha::Overdues::Repository->get_distinct_overdue_branches( $min_delay, $self->{trigger_date} );
-    if ( !@branches ) {
+    my $min_delay                      = $known_delay_values[0];
+    my $branches_by_control_preference = $self->_distinct_overdue_branches_by_control_preference($min_delay);
+    my %branches                       = map { $_ => 1 } map { @$_ } values %$branches_by_control_preference;
+    if ( !%branches ) {
         return;
     }
 
     my %effective_delay_by_raw_delay;    # branchcode => { raw_delay => effective_delay }
-    for my $branch (@branches) {
+    for my $branch ( keys %branches ) {
         for my $delay (@known_delay_values) {
             $effective_delay_by_raw_delay{$branch}{$delay} = $delay;
         }
@@ -179,9 +180,10 @@ sub _process_calendar_adjusted {
         return;
     }
 
-    my $min_delay = $known_delay_values[0];
-    my @branches  = Koha::Overdues::Repository->get_distinct_overdue_branches( $min_delay, $self->{trigger_date} );
-    if ( !@branches ) {
+    my $min_delay                      = $known_delay_values[0];
+    my $branches_by_control_preference = $self->_distinct_overdue_branches_by_control_preference($min_delay);
+    my %branches                       = map { $_ => 1 } map { @$_ } values %$branches_by_control_preference;
+    if ( !%branches ) {
         return;
     }
 
@@ -190,7 +192,7 @@ sub _process_calendar_adjusted {
 
     my %target_dates_by_branch;
     my %effective_delay_by_raw_delay;    # branchcode => { raw_delay => effective_delay }
-    for my $branch (@branches) {
+    for my $branch ( keys %branches ) {
         my $calendar = Koha::Library::Calendar->new( branchcode => $branch, days_mode => $days_mode );
 
         # A branch closed on the run date should not processed
@@ -229,7 +231,23 @@ sub _process_calendar_adjusted {
         return;
     }
 
-    my @pairs = map { { branchcode => $_, dates => $target_dates_by_branch{$_} } } keys %target_dates_by_branch;
+    # A checkout reaches a trigger today when its due date is one of the target
+    # dates of either of its rule-context branches, each counted on that
+    # branch's own calendar.
+    my @pairs;
+    for my $control_preference ( keys %$branches_by_control_preference ) {
+        for my $branch ( @{ $branches_by_control_preference->{$control_preference} } ) {
+            if ( !$target_dates_by_branch{$branch} ) {
+                next;
+            }
+            push @pairs,
+                {
+                branchcode         => $branch,
+                dates              => $target_dates_by_branch{$branch},
+                control_preference => $control_preference,
+                };
+        }
+    }
     my $overdues_resultset = Koha::Overdues::Repository->get_overdue_summaries_by_branch_date_pairs( \@pairs );
 
     if ( !$overdues_resultset ) {
@@ -239,6 +257,39 @@ sub _process_calendar_adjusted {
     $self->_dispatch_overdues( $overdues_resultset, \%effective_delay_by_raw_delay );
 
     return;
+}
+
+=head3 _distinct_overdue_branches_by_control_preference
+
+  my $branches_by_control_preference = $self->_distinct_overdue_branches_by_control_preference($min_delay);
+
+Rules resolve against the branch C<OverdueNoticeFrom> names and the branch
+C<LostChargesControl> names (see L<Koha::Overdues::RuleResolver>), each on its
+own calendar, so both sets of branches are needed. Returns
+C<< { control_preference => [ branchcode, ... ] } >>. A preference that reads the
+same column as one already queried is left out, so a site whose two
+preferences agree runs one query, as before.
+
+=cut
+
+sub _distinct_overdue_branches_by_control_preference {
+    my ( $self, $min_delay ) = @_;
+
+    my %branches_by_control_preference;
+    my %seen_columns;
+    for my $control_preference (qw( OverdueNoticeFrom LostChargesControl )) {
+        if ( $seen_columns{ Koha::Overdues::Repository->rule_context_branch_column($control_preference) }++ ) {
+            next;
+        }
+        $branches_by_control_preference{$control_preference} = [
+            Koha::Overdues::Repository->get_distinct_overdue_branches(
+                $min_delay, $self->{trigger_date},
+                $control_preference
+            )
+        ];
+    }
+
+    return \%branches_by_control_preference;
 }
 
 # Shared post-fetch flow: walk the resultset, collect dimensions, resolve
@@ -284,8 +335,9 @@ sub _dispatch_overdues {
             patron_branchcode  => $patron->branchcode,
             item_homebranch    => $item->homebranch,
             item_holdingbranch => $item->holdingbranch,
+            issue_branchcode   => $row->branchcode,
         };
-        my $rule_branchcode = Koha::CirculationRules->resolve_rule_context_branchcode($branch_params);
+        my $rule_branchcode = Koha::CirculationRules->resolve_overdue_notice_branchcode($branch_params);
         my $lost_rule_branchcode =
             Koha::CirculationRules->resolve_rule_context_branchcode(
             { %$branch_params, control_preference => 'LostChargesControl' } );

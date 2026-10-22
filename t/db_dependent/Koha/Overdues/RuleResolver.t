@@ -281,7 +281,7 @@ subtest 'lost, charge and mark_returned resolve against the LostChargesControl b
         'FPL|*|*|1' => { delay => 7, actions => { notice => 'OD2', mtt => 'print', lost => 1 } },
     };
 
-    $resolver->set_effective_overdue_rule_sets( ['CPL|FPL|PC|IT'], { CPL => { 7 => 7 } } );
+    $resolver->set_effective_overdue_rule_sets( ['CPL|FPL|PC|IT'], { CPL => { 7 => 7 }, FPL => { 7 => 7 } } );
 
     my %by_type =
         map { $_->{type} => $_ } @{ $resolver->{effective_overdue_rule_sets}->{'CPL|FPL|PC|IT|7'}->{actions} };
