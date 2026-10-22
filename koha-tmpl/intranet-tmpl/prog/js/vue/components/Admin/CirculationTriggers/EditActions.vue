@@ -2,131 +2,44 @@
     <fieldset
         class="rows"
         v-if="(ruleSetInitialized && editMode === 'edit') || editMode === 'add'"
-        id="trigger-edit-form-general-section"
+        id="trigger-edit-form-lost-section"
     >
-        <legend v-if="editMode === 'add'">
-            {{ $__x("Add new trigger {triggerNumber}", { triggerNumber }) }}
-        </legend>
-        <legend v-else>
-            {{ $__x("Edit trigger {triggerNumber}", { triggerNumber }) }}
+        <legend>
+            {{
+                $__x("Lost items for trigger {triggerNumber}", {
+                    triggerNumber,
+                })
+            }}
         </legend>
         <div class="page-section bg-info">
             <p>
                 {{
+                    $__x(
+                        "For each overdue item, Koha marks it lost, charges for it and checks it in using the triggers set up for {library}.",
+                        { library: lostLibrary }
+                    )
+                }}
+                {{
                     $__(
-                        "NOTE: Delay for a given trigger can be pushed forward or backwards only within the bounds of what its two neighbouring triggers allows."
+                        "If closed days are skipped, Koha counts only the days that library is open."
                     )
                 }}
             </p>
+            <p>
+                {{ $__("To use a different library, change:") }}
+                <a
+                    href="/cgi-bin/koha/admin/preferences.pl?op=search&searchfield=LostChargesControl"
+                    >LostChargesControl</a
+                ><template v-if="followsItemLibrary"
+                    >,
+                    <a
+                        href="/cgi-bin/koha/admin/preferences.pl?op=search&searchfield=HomeOrHoldingBranch"
+                        >HomeOrHoldingBranch</a
+                    ></template
+                >
+            </p>
         </div>
         <ol>
-            <li>
-                <label for="overdue_delay">{{ $__("Delay") }}: </label>
-                <div class="numeric-input-wrapper">
-                    <div class="input-with-clear">
-                        <input
-                            @input="setAllowSubmission"
-                            id="overdue_delay"
-                            v-model="
-                                ruleSetToSubmit[
-                                    `overdue_${triggerNumber}_delay`
-                                ]
-                            "
-                            type="number"
-                            :placeholder="
-                                fallbackRuleSet?.[
-                                    `overdue_${triggerNumber}_delay`
-                                ]
-                            "
-                            :min="minDelay"
-                            :max="maxDelay"
-                            class="numeric-input"
-                        />
-                        <button
-                            v-if="
-                                ruleSetToSubmit[
-                                    `overdue_${triggerNumber}_delay`
-                                ] !== null &&
-                                ruleSetToSubmit[
-                                    `overdue_${triggerNumber}_delay`
-                                ] !== undefined
-                            "
-                            type="button"
-                            class="btn btn-link clear-btn"
-                            :title="$__('Undo override and reset to fallback')"
-                            @click="handleSetDelayToNull"
-                        >
-                            <i class="fa-solid fa-xmark"></i>
-                        </button>
-                        <div class="chevron-buttons">
-                            <button
-                                type="button"
-                                class="increment-btn"
-                                @click="incrementDelay"
-                            >
-                                ▴
-                            </button>
-                            <button
-                                type="button"
-                                class="decrement-btn"
-                                @click="decrementDelay"
-                            >
-                                ▾
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </li>
-            <li>
-                <label for="restricts">{{ $__("Restricts checkouts") }}:</label>
-                <div>
-                    <input
-                        @click="setAllowSubmission"
-                        type="radio"
-                        id="restricts-yes"
-                        v-model="
-                            ruleSetToSubmit[`overdue_${triggerNumber}_restrict`]
-                        "
-                        :value="1"
-                    />
-                    {{ $__("Yes") }}
-                    <input
-                        @click="setAllowSubmission"
-                        type="radio"
-                        id="restricts-no"
-                        v-model="
-                            ruleSetToSubmit[`overdue_${triggerNumber}_restrict`]
-                        "
-                        :value="0"
-                    />
-                    {{ $__("No") }}
-                    <input
-                        @click="setAllowSubmission"
-                        type="radio"
-                        id="restricts-fallback"
-                        v-model="
-                            ruleSetToSubmit[`overdue_${triggerNumber}_restrict`]
-                        "
-                        :value="null"
-                    />
-                    {{ $__("Fallback to default") }}
-                    <span
-                        v-if="
-                            fallbackRuleSet?.[
-                                `overdue_${triggerNumber}_restrict`
-                            ] !== null
-                        "
-                    >
-                        ({{
-                            fallbackRuleSet?.[
-                                `overdue_${triggerNumber}_restrict`
-                            ] === "1"
-                                ? $__("Yes")
-                                : $__("No")
-                        }})
-                    </span>
-                </div>
-            </li>
             <li>
                 <label for="lost">{{ $__("Set Lost Value") }}:</label>
                 <v-select
@@ -135,7 +48,6 @@
                     label="description"
                     :reduce="val => val.value"
                     :options="lostValues"
-                    :clearable="false"
                     @update:modelValue="setAllowSubmission"
                 >
                     <template #search="{ attributes, events }">
@@ -151,9 +63,10 @@
                                     `overdue_${triggerNumber}_lost`
                                 ] === undefined
                                     ? handleLost(
-                                          fallbackRuleSet?.[
+                                          fallbackRuleSet[
                                               `overdue_${triggerNumber}_lost`
-                                          ]
+                                          ]?.value,
+                                          lostValues
                                       )
                                     : ''
                             "
@@ -173,24 +86,27 @@
                 >
                 <div>
                     <input
+                        @click="setAllowSubmission"
                         type="radio"
                         id="charge-yes"
                         v-model="
                             ruleSetToSubmit[`overdue_${triggerNumber}_charge`]
                         "
-                        :value="1"
+                        :value="'1'"
                     />
                     {{ $__("Yes") }}
                     <input
+                        @click="setAllowSubmission"
                         type="radio"
                         id="charge-no"
                         v-model="
                             ruleSetToSubmit[`overdue_${triggerNumber}_charge`]
                         "
-                        :value="0"
+                        :value="'0'"
                     />
                     {{ $__("No") }}
                     <input
+                        @click="setAllowSubmission"
                         type="radio"
                         id="charge-fallback"
                         v-model="
@@ -201,15 +117,13 @@
                     {{ $__("Fallback to default") }}
                     <span
                         v-if="
-                            fallbackRuleSet[
-                                `overdue_${triggerNumber}_charge`
-                            ] !== null
+                            fallbackRuleSet[`overdue_${triggerNumber}_charge`]
+                                ?.value !== null
                         "
                     >
                         ({{
-                            fallbackRuleSet[
-                                `overdue_${triggerNumber}_charge`
-                            ] === 1
+                            fallbackRuleSet[`overdue_${triggerNumber}_charge`]
+                                ?.value === "1"
                                 ? $__("Yes")
                                 : $__("No")
                         }})
@@ -222,6 +136,7 @@
                 >
                 <div>
                     <input
+                        @click="setAllowSubmission"
                         type="radio"
                         id="mark_returned-yes"
                         v-model="
@@ -229,10 +144,11 @@
                                 `overdue_${triggerNumber}_mark_returned`
                             ]
                         "
-                        :value="1"
+                        :value="'1'"
                     />
                     {{ $__("Yes") }}
                     <input
+                        @click="setAllowSubmission"
                         type="radio"
                         id="mark_returned-no"
                         v-model="
@@ -240,10 +156,11 @@
                                 `overdue_${triggerNumber}_mark_returned`
                             ]
                         "
-                        :value="0"
+                        :value="'0'"
                     />
                     {{ $__("No") }}
                     <input
+                        @click="setAllowSubmission"
                         type="radio"
                         id="mark_returned-fallback"
                         v-model="
@@ -258,68 +175,13 @@
                         v-if="
                             fallbackRuleSet[
                                 `overdue_${triggerNumber}_mark_returned`
-                            ] !== null
+                            ]?.value !== null
                         "
                     >
                         ({{
                             fallbackRuleSet[
                                 `overdue_${triggerNumber}_mark_returned`
-                            ] === 1
-                                ? $__("Yes")
-                                : $__("No")
-                        }})
-                    </span>
-                </div>
-            </li>
-            <li>
-                <label for="forgive_fine"
-                    >{{ $__("Forgive overdue fine") }}:</label
-                >
-                <div>
-                    <input
-                        type="radio"
-                        id="forgive_fine-yes"
-                        v-model="
-                            ruleSetToSubmit[
-                                `overdue_${triggerNumber}_forgive_fine`
-                            ]
-                        "
-                        :value="1"
-                    />
-                    {{ $__("Yes") }}
-                    <input
-                        type="radio"
-                        id="forgive_fine-no"
-                        v-model="
-                            ruleSetToSubmit[
-                                `overdue_${triggerNumber}_forgive_fine`
-                            ]
-                        "
-                        :value="0"
-                    />
-                    {{ $__("No") }}
-                    <input
-                        type="radio"
-                        id="forgive_fine-fallback"
-                        v-model="
-                            ruleSetToSubmit[
-                                `overdue_${triggerNumber}_forgive_fine`
-                            ]
-                        "
-                        :value="null"
-                    />
-                    {{ $__("Fallback to default") }}
-                    <span
-                        v-if="
-                            fallbackRuleSet[
-                                `overdue_${triggerNumber}_forgive_fine`
-                            ] !== null
-                        "
-                    >
-                        ({{
-                            fallbackRuleSet[
-                                `overdue_${triggerNumber}_forgive_fine`
-                            ] === 1
+                            ]?.value === "1"
                                 ? $__("Yes")
                                 : $__("No")
                         }})
@@ -329,16 +191,24 @@
         </ol>
     </fieldset>
     <div v-else-if="editMode === 'add' || editMode === 'edit'">
-        <p>{{ $__("Loading current action settings...") }}</p>
+        <p>{{ $__("Loading current lost item settings...") }}</p>
     </div>
 </template>
 
 <script>
 import ResetToFallback from "./ResetToFallback.vue";
+import { describeLostChargesControl } from "@koha-vue/composables/circulation-rules";
 
 export default {
-    components: {
-        ResetToFallback,
+    components: { ResetToFallback },
+    setup() {
+        return {
+            followsItemLibrary: lost_charges_control !== "PatronLibrary",
+            lostLibrary: describeLostChargesControl(
+                lost_charges_control,
+                home_or_holding_branch
+            ),
+        };
     },
     props: {
         ruleSetInitialized: { type: Boolean, required: true },
@@ -346,12 +216,7 @@ export default {
         triggerNumber: { type: Number, required: true },
         ruleSetToSubmit: { type: Object, default: null },
         fallbackRuleSet: { type: Object, default: null },
-        minDelay: { type: Number, required: true },
-        maxDelay: { type: Number, required: true },
         setAllowSubmission: { type: Function, required: true },
-        handleSetDelayToNull: { type: Function, required: true },
-        incrementDelay: { type: Function, required: true },
-        decrementDelay: { type: Function, required: true },
         handleLost: { type: Function, required: true },
         lostValues: { type: Array, required: true },
     },
@@ -362,86 +227,5 @@ export default {
 li {
     display: flex;
     align-items: center;
-}
-
-.numeric-input-wrapper {
-    position: relative;
-    display: inline-block;
-    width: 30%;
-}
-
-.input-with-clear {
-    position: relative;
-    display: flex;
-    align-items: center;
-    width: 100%;
-}
-
-.numeric-input {
-    padding-right: 40px;
-    padding-left: 0.25em;
-    padding-top: 2px;
-    padding-bottom: 2px;
-    width: 100%;
-    border-radius: 4px;
-    border: 1px solid #ccc;
-    font-size: 16px;
-    box-sizing: border-box;
-    transition: border-color 0.2s ease;
-}
-
-/* overlays the input, clear of the chevrons; appearance comes from btn-link,
-   matching the equivalent button in EditNotice.vue */
-.clear-btn {
-    position: absolute;
-    right: 22px;
-    z-index: 2;
-    padding: 0;
-    color: #333;
-}
-
-.chevron-buttons {
-    display: flex;
-    flex-direction: column;
-    position: absolute;
-    right: 0px;
-    top: 0;
-    bottom: 0;
-    width: 16px;
-    padding: 0px 5px 0px 2px;
-    justify-content: center;
-    z-index: 2;
-}
-
-.increment-btn,
-.decrement-btn {
-    background-color: transparent;
-    border: 0px solid #ccc;
-    font-size: 10px;
-    padding: 0px;
-    cursor: pointer;
-    color: rgba(60, 60, 60, 0.5);
-    border-radius: 2px;
-}
-
-.increment-btn:hover,
-.decrement-btn:hover {
-    background-color: #ddd;
-}
-
-input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
-
-input[type="number"] {
-    -moz-appearance: textfield;
-}
-
-.numeric-input:focus,
-.numeric-input:hover {
-    border-color: #007bff;
-    outline: none;
 }
 </style>

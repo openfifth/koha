@@ -11,6 +11,8 @@
 </template>
 
 <script>
+import { cloneDeep, isEqual } from "lodash";
+
 export default {
     props: {
         ruleSetToSubmit: { type: Object, default: null },
@@ -20,17 +22,25 @@ export default {
     },
     computed: {
         isOverridden() {
+            const value = this.ruleSetToSubmit?.[this.ruleName];
+            const fallback = this.fallbackRuleSet?.[this.ruleName]?.value;
+
             return (
-                this.ruleSetToSubmit?.[this.ruleName] !== null &&
-                this.ruleSetToSubmit?.[this.ruleName] !== undefined &&
-                this.fallbackRuleSet?.[this.ruleName] !== null &&
-                this.fallbackRuleSet?.[this.ruleName] !== undefined
+                value !== null &&
+                value !== undefined &&
+                fallback !== null &&
+                fallback !== undefined &&
+                !isEqual(value, fallback)
             );
         },
     },
     methods: {
+        // Cloned because mtt's fallback is the very array held in the raw rule
+        // sets, which the transport select would otherwise edit in place.
         resetToFallback() {
-            this.ruleSetToSubmit[this.ruleName] = null;
+            this.ruleSetToSubmit[this.ruleName] = cloneDeep(
+                this.fallbackRuleSet?.[this.ruleName]?.value
+            );
             this.setAllowSubmission();
         },
     },

@@ -66,7 +66,7 @@
                 class="page-section"
                 v-if="editMode === 'add' || editMode === 'edit'"
             >
-                <EditActions
+                <EditDelay
                     :ruleSetInitialized="ruleSetInitialized"
                     :editMode="editMode"
                     :triggerNumber="triggerNumber"
@@ -75,11 +75,8 @@
                     :minDelay="minDelay"
                     :maxDelay="maxDelay"
                     :setAllowSubmission="setAllowSubmission"
-                    :handleSetDelayToNull="handleSetDelayToNull"
                     :incrementDelay="incrementDelay"
                     :decrementDelay="decrementDelay"
-                    :handleLost="handleLost"
-                    :lostValues="lostValues"
                 />
             </div>
             <div
@@ -98,6 +95,21 @@
                     :letters="letters"
                     :transportTypes="transportTypes"
                     :setAllowSubmission="setAllowSubmission"
+                />
+            </div>
+            <div
+                class="page-section"
+                v-if="editMode === 'add' || editMode === 'edit'"
+            >
+                <EditActions
+                    :ruleSetInitialized="ruleSetInitialized"
+                    :editMode="editMode"
+                    :triggerNumber="triggerNumber"
+                    :ruleSetToSubmit="ruleSetToSubmit"
+                    :fallbackRuleSet="fallbackRuleSet"
+                    :setAllowSubmission="setAllowSubmission"
+                    :handleLost="handleLost"
+                    :lostValues="lostValues"
                 />
             </div>
         </div>
@@ -124,23 +136,24 @@ import ButtonSubmit from "../../ButtonSubmit.vue";
 import CirculationRulesSummary from "./CirculationRulesSummary.vue";
 import ConfirmContext from "./ConfirmContext.vue";
 import EditActions from "./EditActions.vue";
+import EditDelay from "./EditDelay.vue";
 import EditNotice from "./EditNotice.vue";
 import { isEqual, cloneDeep } from "lodash";
+import {
+    buildProjectedRuleSet,
+    containsMatchingContext,
+    ruleSuffixes,
+    handleLost,
+    hasConflict,
+    scrollToElementById,
+    setEffectiveTriggerFilteredRuleSet,
+} from "@koha-vue/composables/circulation-rules";
 
 export default {
     setup() {
         const circRulesStore = inject("circRulesStore");
-        const {
-            updateTriggerCount,
-            findEffectiveRule,
-            getSelectedRuleSet,
-            setEffectiveTriggerFilteredRuleSet,
-            updateCircRuleSets,
-            hasConflict,
-            compareByProperty,
-            scrollToElementById,
-            handleLost,
-        } = circRulesStore;
+        const { updateTriggerCount, getSelectedRuleSet, updateCircRuleSets } =
+            circRulesStore;
         const {
             letters,
             lostValues,
@@ -149,7 +162,8 @@ export default {
             transportTypes,
             patronCategories,
             triggerCounts,
-            ruleSuffixes,
+            currentLibraryId,
+            currentAndDefaultRawRuleSets,
             lastEditedTriggerNumber,
             canManageAnyLibrary,
             user_library_id,
@@ -162,19 +176,15 @@ export default {
             lostValues,
             transportTypes,
             triggerCounts,
-            ruleSuffixes,
+            currentLibraryId,
+            currentAndDefaultRawRuleSets,
             patronCategories,
             getSelectedRuleSet,
             updateTriggerCount,
-            findEffectiveRule,
-            setEffectiveTriggerFilteredRuleSet,
             updateCircRuleSets,
-            hasConflict,
             lastEditedTriggerNumber,
             canManageAnyLibrary,
             user_library_id,
-            compareByProperty,
-            scrollToElementById,
             handleLost,
         };
     },
@@ -245,42 +255,35 @@ export default {
                 context: this.context,
             };
 
-            // Only transmit what the user actually changed. The baseline is the
-            // context's own explicit value: findEffectiveRule with
-            // includeFallbacks false returns undefined when the rule is inherited
-            // rather than set here. So an untouched rule is omitted, and a rule
-            // that was explicitly set and has since been reset is sent as null,
-            // which deletes it.
-            for (const ruleSuffix of this.ruleSuffixes) {
-                const ruleName = `overdue_${this.triggerNumber}_${ruleSuffix}`;
-                const value = this.ruleSetToSubmit[ruleName];
-                const savedRule = this.findEffectiveRule(
-                    this.context,
-                    ruleSuffix,
-                    this.triggerNumber,
-                    false
-                );
+            const ownRuleSet = this.currentAndDefaultRawRuleSets.find(ruleSet =>
+                containsMatchingContext([this.context], ruleSet.context)
+            );
 
-                if (value === null || value === undefined) {
-                    if (savedRule !== undefined) {
-                        ruleSetToSubmit[ruleName] = null;
-                    }
+            for (const suffix of ruleSuffixes) {
+                const field = `overdue_${this.triggerNumber}_${suffix}`;
+                const value = this.ruleSetToSubmit[field];
+                const fallback = this.fallbackRuleSet[field]?.value;
+
+                const isMtt = suffix === "mtt";
+                if (isMtt && value !== null && !Array.isArray(value)) {
                     continue;
                 }
 
-                // mtt is zero-to-many and is stored as a comma separated string
-                if (ruleSuffix === "mtt") {
-                    if (
-                        Array.isArray(value) &&
-                        !isEqual(value, savedRule?.value)
-                    ) {
-                        ruleSetToSubmit[ruleName] = value.join(",");
-                    }
+                const isSet = value !== null && value !== undefined;
+                const overrides =
+                    isSet &&
+                    (isMtt ? !isEqual(value, fallback) : value !== fallback);
+
+                if (overrides) {
+                    ruleSetToSubmit[field] = isMtt
+                        ? value.join(",")
+                        : cloneDeep(value);
                     continue;
                 }
 
-                if (value !== savedRule?.value) {
-                    ruleSetToSubmit[ruleName] = value;
+                // Null deletes the stored rule; omitting the field leaves it in place.
+                if (ownRuleSet?.[field] != null) {
+                    ruleSetToSubmit[field] = null;
                 }
             }
 
@@ -296,9 +299,9 @@ export default {
                     ruleSetInDb.context = { ...this.context };
                 }
                 if (
-                    this.hasConflict(
-                        ruleSetInDb,
+                    hasConflict(
                         this.currentRuleSet,
+                        ruleSetInDb,
                         this.triggerNumber
                     )
                 ) {
@@ -348,7 +351,11 @@ export default {
             this.setMaxDelay();
             this.setRuleSetInfo();
             this.effectiveTriggerFilteredRuleSets =
-                this.setEffectiveTriggerFilteredRuleSet(this.context);
+                setEffectiveTriggerFilteredRuleSet(
+                    this.currentAndDefaultRawRuleSets,
+                    this.context,
+                    this.triggerCounts[this.currentLibraryId]
+                );
             this.setFallbackRuleSet();
             this.setFilteredLetters();
             this.setAllowSubmission();
@@ -399,43 +406,17 @@ export default {
                 this.editMode === "edit" ? parseInt(triggerNumber) : null;
         },
         setFallbackRuleSet() {
-            // The fallback is what would apply if this context carried no
-            // explicit rule, so the context's own override is excluded from the
-            // resolution. This is the only caller that wants that.
-            const findFallbackRule = ruleSuffix =>
-                this.findEffectiveRule(
-                    this.context,
-                    ruleSuffix,
-                    this.triggerNumber,
-                    true,
-                    true
-                ).value;
-
-            this.fallbackRuleSet = {
-                [`overdue_${this.triggerNumber}_delay`]:
-                    findFallbackRule("delay"),
-            };
-
-            if (this.editMode === "add") {
-                return;
-            }
-            this.fallbackRuleSet = {
-                [`overdue_${this.triggerNumber}_delay`]:
-                    findFallbackRule("delay"),
-                [`overdue_${this.triggerNumber}_lost`]:
-                    findFallbackRule("lost"),
-                [`overdue_${this.triggerNumber}_charge`]:
-                    findFallbackRule("charge"),
-                [`overdue_${this.triggerNumber}_mark_returned`]:
-                    findFallbackRule("mark_returned"),
-                [`overdue_${this.triggerNumber}_forgive_fine`]:
-                    findFallbackRule("forgive_fine"),
-                [`overdue_${this.triggerNumber}_notice`]:
-                    findFallbackRule("notice"),
-                [`overdue_${this.triggerNumber}_mtt`]: findFallbackRule("mtt"),
-                [`overdue_${this.triggerNumber}_restrict`]:
-                    findFallbackRule("restrict"),
-            };
+            this.fallbackRuleSet = buildProjectedRuleSet(
+                { context: this.context },
+                this.triggerNumber,
+                this.currentAndDefaultRawRuleSets.filter(
+                    ruleSet =>
+                        !containsMatchingContext(
+                            [this.context],
+                            ruleSet.context
+                        )
+                )
+            );
         },
         setMinDelay() {
             if (
@@ -613,10 +594,6 @@ export default {
             }
             this.allowSubmission = false;
         },
-        handleSetDelayToNull() {
-            this.ruleSetToSubmit[`overdue_${this.triggerNumber}_delay`] = null;
-            this.setAllowSubmission();
-        },
         handleNoticeChange() {
             // "No letter" set on this context overrides the transports to
             // none as well.
@@ -647,7 +624,7 @@ export default {
         async editMode(newValue) {
             if (newValue === "add" || newValue === "edit") {
                 await this.$nextTick();
-                await this.scrollToElementById("trigger-table-form");
+                await scrollToElementById("trigger-table-form");
             }
         },
     },
@@ -657,6 +634,7 @@ export default {
         CirculationRulesSummary,
         ConfirmContext,
         EditActions,
+        EditDelay,
         EditNotice,
     },
 };

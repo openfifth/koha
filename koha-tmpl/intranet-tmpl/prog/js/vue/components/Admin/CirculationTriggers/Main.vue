@@ -26,6 +26,7 @@ import Dialog from "../../Dialog.vue";
 import "vue-select/dist/vue-select.css";
 import { inject } from "vue";
 import { $__ } from "@koha-vue/i18n";
+import { compareByProperty } from "@koha-vue/composables/circulation-rules";
 
 export default {
     setup() {
@@ -33,12 +34,10 @@ export default {
         circRulesStore.init(default_view, user_library_id).catch(() => {});
 
         // format letters for display as "name (notice code)" in drop downs.
-        letters
-            .sort(circRulesStore.compareByProperty("name"))
-            .forEach(letter => {
-                letter.name =
-                    letter?.name?.concat(` (${letter.code})`) ?? letter.code;
-            });
+        letters.sort(compareByProperty("name")).forEach(letter => {
+            letter.name =
+                letter?.name?.concat(` (${letter.code})`) ?? letter.code;
+        });
 
         letters.unshift({
             name: $__("No letter"),

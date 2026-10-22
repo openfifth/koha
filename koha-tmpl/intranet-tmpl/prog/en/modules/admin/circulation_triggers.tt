@@ -35,6 +35,8 @@
             const letters = JSON.parse(document.getElementById("letters-data").dataset.letters);
             const default_view = "[%- IF Koha.Preference('DefaultToLoggedInLibraryOverdueTriggers') -%][% Branches.GetLoggedInBranchcode | html %][%- ELSE -%]*[%- END -%]";
             const from_branch = "[% Koha.Preference('OverdueNoticeFrom') | html %]";
+            const lost_charges_control = "[% Koha.Preference('LostChargesControl') | html %]";
+            const home_or_holding_branch = "[% Koha.Preference('HomeOrHoldingBranch') | html %]";
             const user_library_id = "[% logged_in_user.branchcode | html %]";
         </script>
         [% Asset.js("js/vue/dist/admin/circulation_triggers.js") | $raw %]
