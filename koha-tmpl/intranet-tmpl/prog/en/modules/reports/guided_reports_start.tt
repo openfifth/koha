@@ -1840,6 +1840,10 @@
                         <p>The report cannot be executed due to security risks. Please edit this report and ensure no password columns have been selected.</p>
                     [% ELSIF (error.cardnumber) %]
                         <p>Please select a valid owner for this report. If you wish to disown it, you may do so from the main table.</p>
+                    [% ELSIF (error.from) %]
+                        <p>Please select a valid patron to transfer from.</p>
+                    [% ELSIF (error.to) %]
+                        <p>Please select a valid patron to transfer to.</p>
                     [% ELSE %]
 
                     [% END %]

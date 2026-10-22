@@ -776,34 +776,38 @@ if ( !$op ) {
     exit;
 } elsif ( $op eq 'bulk_transfer' ) {
     $template->param( bulk_transfer => 1 );
-} elsif ( $op eq 'cud-bulk_transfer_confirm' ) {
-    my $from_cardnumber = $input->param('from');
-    my $to_cardnumber   = $input->param('to');
-
-    my $from_patron    = Koha::Patrons->find( { cardnumber => $from_cardnumber } );
-    my $transfer_count = Koha::Reports->search( { borrowernumber => $from_patron->borrowernumber } )->count;
-
-    $template->param(
-        bulk_transfer_confirm => 1,
-        from                  => $from_cardnumber,
-        to                    => $to_cardnumber,
-        transfer_count        => $transfer_count
-    );
-} elsif ( $op eq 'cud-bulk_transfer_execute' ) {
+} elsif ( $op eq 'cud-bulk_transfer_confirm' || $op eq 'cud-bulk_transfer_execute' ) {
     my $from_cardnumber = $input->param('from');
     my $to_cardnumber   = $input->param('to');
 
     my $from_patron = Koha::Patrons->find( { cardnumber => $from_cardnumber } );
     my $to_patron   = Koha::Patrons->find( { cardnumber => $to_cardnumber } );
 
-    Koha::Reports->search( { borrowernumber => $from_patron->borrowernumber } )->update(
-        {
-            borrowernumber => $to_patron->borrowernumber,
-        }
-    );
+    push @errors, { 'from' => 1 } unless $from_patron;
+    push @errors, { 'to'   => 1 } unless $to_patron;
 
-    print $input->redirect('/cgi-bin/koha/reports/guided_reports.pl?op=list');
-    exit;
+    if (@errors) {
+        $template->param( 'errors' => \@errors );
+    } elsif ( $op eq 'cud-bulk_transfer_confirm' ) {
+
+        my $transfer_count = Koha::Reports->search( { borrowernumber => $from_patron->borrowernumber } )->count;
+
+        $template->param(
+            bulk_transfer_confirm => 1,
+            from                  => $from_cardnumber,
+            to                    => $to_cardnumber,
+            transfer_count        => $transfer_count
+        );
+    } else {
+        Koha::Reports->search( { borrowernumber => $from_patron->borrowernumber } )->update(
+            {
+                borrowernumber => $to_patron->borrowernumber,
+            }
+        );
+
+        print $input->redirect('/cgi-bin/koha/reports/guided_reports.pl?op=list');
+        exit;
+    }
 } elsif ( $op eq 'cud-share' ) {
     my $lang     = $input->param('mana_language') || '';
     my $reportid = $input->param('reportid');
