@@ -21,7 +21,7 @@ use Modern::Perl;
 
 use Benchmark;
 use Test::NoWarnings;
-use Test::More tests => 11;
+use Test::More tests => 12;
 use Test::Deep qw( cmp_methods );
 use Test::Exception;
 
@@ -1334,6 +1334,41 @@ subtest 'resolve_rule_context_branchcode' => sub {
     );
 
     $schema->storage->txn_rollback;
+};
+
+subtest 'resolve_overdue_notice_branchcode' => sub {
+    plan tests => 4;
+
+    my $context = {
+        patron_branchcode  => 'PATRON_HB',
+        item_homebranch    => 'ITEM_HB',
+        item_holdingbranch => 'ITEM_HD',
+        issue_branchcode   => 'ISSUE_B',
+    };
+
+    t::lib::Mocks::mock_preference( 'OverdueNoticeFrom', 'item-homebranch' );
+    is(
+        Koha::CirculationRules->resolve_overdue_notice_branchcode($context),
+        'ITEM_HB', 'item-homebranch → item home library'
+    );
+
+    t::lib::Mocks::mock_preference( 'OverdueNoticeFrom', 'patron-homebranch' );
+    is(
+        Koha::CirculationRules->resolve_overdue_notice_branchcode($context),
+        'PATRON_HB', 'patron-homebranch → patron home library'
+    );
+
+    t::lib::Mocks::mock_preference( 'OverdueNoticeFrom', 'item-issuebranch' );
+    is(
+        Koha::CirculationRules->resolve_overdue_notice_branchcode($context),
+        'ISSUE_B', 'item-issuebranch → checkout library'
+    );
+
+    t::lib::Mocks::mock_preference( 'OverdueNoticeFrom', 'cron' );
+    is(
+        Koha::CirculationRules->resolve_overdue_notice_branchcode($context),
+        'ISSUE_B', 'cron → checkout library, as overdue_notices.pl without --frombranch'
+    );
 };
 
 sub _is_row_match {

@@ -884,13 +884,13 @@ subtest 'process_overdues notice and charge on one trigger — the letter carrie
     $schema->storage->txn_rollback;
 };
 
-subtest 'process_overdues resolves lost against LostChargesControl and notices against CircControl' => sub {
+subtest 'process_overdues resolves lost against LostChargesControl and notices against OverdueNoticeFrom' => sub {
     plan tests => 2;
 
     $schema->storage->txn_begin;
 
     t::lib::Mocks::mock_preference( 'OverdueTriggersCalendar', 0 );
-    t::lib::Mocks::mock_preference( 'CircControl',             'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'OverdueNoticeFrom',       'patron-homebranch' );
     t::lib::Mocks::mock_preference( 'LostChargesControl',      'ItemHomeLibrary' );
     t::lib::Mocks::mock_preference( 'HomeOrHoldingBranch',     'homebranch' );
 
@@ -957,7 +957,7 @@ subtest 'process_overdues resolves lost against LostChargesControl and notices a
 
     is(
         Koha::Notice::Messages->search( { borrowernumber => $patron->borrowernumber, letter_code => 'OD1' } )->count,
-        1, 'the notice from the CircControl branch\'s trigger is queued'
+        1, 'the notice from the OverdueNoticeFrom branch\'s trigger is queued'
     );
     $item->discard_changes;
     is( $item->itemlost, 1, 'the item is marked lost by the LostChargesControl branch\'s trigger' );
@@ -972,7 +972,7 @@ subtest 'process_overdues calendar-adjusted path — each branch counts its trig
 
     t::lib::Mocks::mock_preference( 'OverdueTriggersCalendar', 1 );
     t::lib::Mocks::mock_preference( 'useDaysMode',             'Calendar' );
-    t::lib::Mocks::mock_preference( 'CircControl',             'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'OverdueNoticeFrom',       'patron-homebranch' );
     t::lib::Mocks::mock_preference( 'LostChargesControl',      'ItemHomeLibrary' );
     t::lib::Mocks::mock_preference( 'HomeOrHoldingBranch',     'homebranch' );
 

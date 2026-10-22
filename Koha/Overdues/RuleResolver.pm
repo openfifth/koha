@@ -35,9 +35,9 @@ Koha::Overdues::RuleResolver - Koha Overdues RuleResolver object set class
 =cut
 
 # Rules for the actions that concern a lost item resolve against the branch named by
-# LostChargesControl; every other rule resolves against the branch named by CircControl.
-my @circ_control_actions = ( 'notice', 'restrict', 'forgive_fine' );
-my @lost_control_actions = ( 'lost',   'charge',   'mark_returned' );
+# LostChargesControl; every other rule resolves against the branch named by OverdueNoticeFrom.
+my @overdue_notice_actions = ( 'notice', 'restrict', 'forgive_fine' );
+my @lost_control_actions   = ( 'lost',   'charge',   'mark_returned' );
 
 =head3 new
 
@@ -60,7 +60,7 @@ Sets the effective (resolved) rule sets for a given run of the circulation trigg
 C<$context_list> is an arrayref of C<"branchcode|lost_branchcode|categorycode|itemtype"> keys:
 the distinct contexts the run's overdue items present, collected in
 L<Koha::Overdues::TriggerProcessor/_dispatch_overdues>. C<branchcode> is the branch
-C<CircControl> names and C<lost_branchcode> the one C<LostChargesControl> names; they are the
+C<OverdueNoticeFrom> names and C<lost_branchcode> the one C<LostChargesControl> names; they are the
 same branch unless the two preferences resolve differently for an item. Crossing the branch,
 category and itemtype lists instead would resolve every combination of the values seen, most
 of which no item ever looks up.
@@ -89,7 +89,7 @@ sub set_effective_overdue_rule_sets {
         my %warned;
 
         for my $action_group (
-            { branchcode => $branchcode,      actions => \@circ_control_actions },
+            { branchcode => $branchcode,      actions => \@overdue_notice_actions },
             { branchcode => $lost_branchcode, actions => \@lost_control_actions },
             )
         {

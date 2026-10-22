@@ -135,8 +135,9 @@ sub route_item_actions_to_queue {
         patron_branchcode  => $overdue_item->{patronhomebranch},
         item_homebranch    => $overdue_item->{itemhomebranch},
         item_holdingbranch => $overdue_item->{itemholdingbranch},
+        issue_branchcode   => $overdue_item->{branchcode},
     };
-    my $branchcode = Koha::CirculationRules->resolve_rule_context_branchcode($branch_params);
+    my $branchcode = Koha::CirculationRules->resolve_overdue_notice_branchcode($branch_params);
     my $lost_branchcode =
         Koha::CirculationRules->resolve_rule_context_branchcode(
         { %$branch_params, control_preference => 'LostChargesControl' } );
@@ -710,11 +711,12 @@ sub _enqueue_letter_for_bucket {
     my $head           = $entries->[0];
     my $borrowernumber = $patron->borrowernumber;
     my $notice_code    = $head->{action}->{notice_code};
-    my $branchcode     = Koha::CirculationRules->resolve_rule_context_branchcode(
+    my $branchcode     = Koha::CirculationRules->resolve_overdue_notice_branchcode(
         {
             patron_branchcode  => $head->{item}->{patronhomebranch},
             item_homebranch    => $head->{item}->{itemhomebranch},
             item_holdingbranch => $head->{item}->{itemholdingbranch},
+            issue_branchcode   => $head->{item}->{branchcode},
         }
     );
     my $library = Koha::Libraries->find($branchcode);

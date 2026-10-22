@@ -55,6 +55,7 @@ subtest 'route_item_actions_to_queue splits notice vs action batch' => sub {
     plan tests => 5;
 
     t::lib::Mocks::mock_preference( 'CircControl',        'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'OverdueNoticeFrom',  'patron-homebranch' );
     t::lib::Mocks::mock_preference( 'LostChargesControl', 'PatronLibrary' );
 
     my $effective_rule_sets = {
@@ -105,6 +106,7 @@ subtest 'route_item_actions_to_queue: an open return claim suppresses a bare rem
     plan tests => 5;
 
     t::lib::Mocks::mock_preference( 'CircControl',        'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'OverdueNoticeFrom',  'patron-homebranch' );
     t::lib::Mocks::mock_preference( 'LostChargesControl', 'PatronLibrary' );
 
     my $reminder_only = {
@@ -363,6 +365,7 @@ subtest 'route_item_actions_to_queue: aggregates multiple items under (borrower|
     plan tests => 4;
 
     t::lib::Mocks::mock_preference( 'CircControl',        'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'OverdueNoticeFrom',  'patron-homebranch' );
     t::lib::Mocks::mock_preference( 'LostChargesControl', 'PatronLibrary' );
 
     my $effective_rule_sets = {
@@ -418,7 +421,8 @@ subtest 'process_notice_queue: digest entry enqueues one Koha::Notice::Message w
 
     $schema->storage->txn_begin;
 
-    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'CircControl',       'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'OverdueNoticeFrom', 'patron-homebranch' );
 
     my $library = $builder->build_object( { class => 'Koha::Libraries' } );
     my $patron =
@@ -509,7 +513,8 @@ subtest 'process_notice_queue: two items at the same trigger render one row' => 
 
     $schema->storage->txn_begin;
 
-    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'CircControl',       'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'OverdueNoticeFrom', 'patron-homebranch' );
 
     my $library = $builder->build_object( { class => 'Koha::Libraries' } );
     my $patron =
@@ -592,7 +597,8 @@ subtest 'process_notice_queue: triggers sharing a letter code send one letter pe
 
     $schema->storage->txn_begin;
 
-    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'CircControl',       'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'OverdueNoticeFrom', 'patron-homebranch' );
 
     my $library = $builder->build_object( { class => 'Koha::Libraries' } );
     my $patron =
@@ -713,7 +719,8 @@ subtest 'process_notice_queue: missing letter template warns and skips' => sub {
 
     $schema->storage->txn_begin;
 
-    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'CircControl',       'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'OverdueNoticeFrom', 'patron-homebranch' );
 
     my $library = $builder->build_object( { class => 'Koha::Libraries' } );
     my $patron =
@@ -765,6 +772,7 @@ subtest 'route_item_actions_to_queue: multi-MTT fans out per-MTT queue entries' 
     plan tests => 4;
 
     t::lib::Mocks::mock_preference( 'CircControl',        'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'OverdueNoticeFrom',  'patron-homebranch' );
     t::lib::Mocks::mock_preference( 'LostChargesControl', 'PatronLibrary' );
 
     my $effective_rule_sets = {
@@ -805,7 +813,8 @@ subtest 'process_notice_queue: email -> print fallback when patron has no email'
 
     $schema->storage->txn_begin;
 
-    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'CircControl',       'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'OverdueNoticeFrom', 'patron-homebranch' );
 
     my $library = $builder->build_object( { class => 'Koha::Libraries' } );
     my $patron  = $builder->build_object(
@@ -881,7 +890,8 @@ subtest 'process_notice_queue: print fallback renders the email template when no
 
     $schema->storage->txn_begin;
 
-    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'CircControl',       'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'OverdueNoticeFrom', 'patron-homebranch' );
 
     my $library = $builder->build_object( { class => 'Koha::Libraries' } );
     my $patron  = $builder->build_object(
@@ -955,7 +965,8 @@ subtest 'process_notice_queue: sms -> print fallback when patron has no smsalert
 
     $schema->storage->txn_begin;
 
-    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'CircControl',       'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'OverdueNoticeFrom', 'patron-homebranch' );
 
     my $library = $builder->build_object( { class => 'Koha::Libraries' } );
     my $patron  = $builder->build_object(
@@ -1029,7 +1040,8 @@ subtest 'process_notice_queue: two buckets degrading to print at one delay send 
 
     $schema->storage->txn_begin;
 
-    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'CircControl',       'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'OverdueNoticeFrom', 'patron-homebranch' );
 
     my $library = $builder->build_object( { class => 'Koha::Libraries' } );
     my $patron  = $builder->build_object(
@@ -1101,7 +1113,8 @@ subtest 'process_notice_queue: a bucket that renders no letter does not suppress
 
     $schema->storage->txn_begin;
 
-    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'CircControl',       'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'OverdueNoticeFrom', 'patron-homebranch' );
 
     my $library = $builder->build_object( { class => 'Koha::Libraries' } );
     my $patron  = $builder->build_object(
@@ -1177,7 +1190,8 @@ subtest 'process_notice_queue: pending print in message_queue blocks fallback sy
 
     $schema->storage->txn_begin;
 
-    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'CircControl',       'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'OverdueNoticeFrom', 'patron-homebranch' );
 
     my $library = $builder->build_object( { class => 'Koha::Libraries' } );
     my $patron  = $builder->build_object(
@@ -1245,7 +1259,8 @@ subtest 'process_notice_queue: existing print entry blocks fallback synthesis' =
 
     $schema->storage->txn_begin;
 
-    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'CircControl',       'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'OverdueNoticeFrom', 'patron-homebranch' );
 
     my $library = $builder->build_object( { class => 'Koha::Libraries' } );
     my $patron  = $builder->build_object(
@@ -1330,7 +1345,8 @@ subtest 'process_notice_queue: processes print -> sms -> email order' => sub {
 
     $schema->storage->txn_begin;
 
-    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'CircControl',       'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'OverdueNoticeFrom', 'patron-homebranch' );
 
     my $library = $builder->build_object( { class => 'Koha::Libraries' } );
     my $patron  = $builder->build_object(
@@ -1449,7 +1465,8 @@ subtest 'process_notice_queue: re-run skips a notice already queued today' => su
 
     $schema->storage->txn_begin;
 
-    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'CircControl',       'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'OverdueNoticeFrom', 'patron-homebranch' );
 
     my $library = $builder->build_object( { class => 'Koha::Libraries' } );
     my $patron  = $builder->build_object(
@@ -1551,7 +1568,8 @@ subtest 'process_notice_queue: a backdated replay is not blocked by later notice
 
     $schema->storage->txn_begin;
 
-    t::lib::Mocks::mock_preference( 'CircControl', 'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'CircControl',       'PatronLibrary' );
+    t::lib::Mocks::mock_preference( 'OverdueNoticeFrom', 'patron-homebranch' );
 
     my $library = $builder->build_object( { class => 'Koha::Libraries' } );
     my $patron  = $builder->build_object(
