@@ -529,7 +529,7 @@
                                                                 ></li
                                                             >
                                                         [% END %]
-                                                        [% IF CAN_user_reports_edit_all_reports || !savedreport.borrowernumber %]
+                                                        [% IF (CAN_user_reports_edit_all_reports && savedreport.borrowernumber != loggedinusernumber) || !savedreport.borrowernumber %]
                                                             <li>
                                                                 <a
                                                                     class="dropdown-item submit-form-link"
@@ -540,6 +540,20 @@
                                                                     data-op="cud-adopt"
                                                                     data-confirmation-msg="[% t('Are you sure you want to adopt this report?') | html %]"
                                                                     ><i class="fa fa-pencil" aria-hidden="true"></i> Adopt</a
+                                                                ></li
+                                                            >
+                                                        [% END %]
+                                                        [% IF (CAN_user_reports_edit_all_reports && savedreport.borrowernumber) || savedreport.borrowernumber == loggedinusernumber %]
+                                                            <li>
+                                                                <a
+                                                                    class="dropdown-item submit-form-link"
+                                                                    href="#"
+                                                                    data-id="[% savedreport.id | html %]"
+                                                                    data-action="guided_reports.pl"
+                                                                    data-method="post"
+                                                                    data-op="cud-disown"
+                                                                    data-confirmation-msg="[% t('Are you sure you want to disown this report?') | html %]"
+                                                                    ><i class="fa fa-pencil" aria-hidden="true"></i> Disown</a
                                                                 ></li
                                                             >
                                                         [% END %]
@@ -1824,6 +1838,8 @@
                     [% ELSIF ( error.passworderr ) %]
                         <p>The column selection in this report includes a password field.</p>
                         <p>The report cannot be executed due to security risks. Please edit this report and ensure no password columns have been selected.</p>
+                    [% ELSIF (error.cardnumber) %]
+                        <p>Please select a valid owner for this report. If you wish to disown it, you may do so from the main table.</p>
                     [% ELSE %]
 
                     [% END %]

@@ -75,6 +75,7 @@ if (
     || $op eq 'save'       #FIXME: This appears to be unused currently. The template also has other unused ops in it...
     || $op eq 'cud-save'
     || $op eq 'cud-adopt'
+    || $op eq 'cud-disown'
     || $op eq
     'cud-share' #FIXME: Sharing with Mana should probably have its own permission but this is the most logical one for now
     || $op eq 'cud-update_sql'
@@ -257,6 +258,11 @@ if ( !$op ) {
         my $new_borrowernumber = $report->borrowernumber;
 
         if ( $logged_in_patron->has_permission( { reports => 'edit_all_reports' } ) ) {
+
+            # Don't allow disowning a report through this form, but allow keeping a report disowned
+            unless ( $new_owner || !$report->borrowernumber ) {
+                push @errors, { cardnumber => 1 };
+            }
 
             # anyone with edit_all_reports can set the owner to anything
             $new_borrowernumber = $new_owner ? $new_owner->borrowernumber : undef;
@@ -744,6 +750,24 @@ if ( !$op ) {
         # Don't do this via update_sql so we can bypass inapplicable
         # permission checks
         $report->borrowernumber( $logged_in_patron->borrowernumber );
+        $report->store();
+        print $input->redirect( "/cgi-bin/koha/reports/guided_reports.pl?op=edit_form&id=" . $report->id );
+    } else {
+        print $input->redirect('/cgi-bin/koha/reports/guided_reports.pl?op=list');
+    }
+    exit;
+} elsif ( $op eq 'cud-disown' ) {
+    my $id               = $input->param('id');
+    my $report           = Koha::Reports->find($id);
+    my $logged_in_patron = Koha::Patrons->find($borrowernumber);
+
+    if (   $report->borrowernumber eq $borrowernumber
+        || $logged_in_patron->has_permission( { reports => 'edit_all_reports' } ) )
+    {
+
+        # Don't do this via update_sql so we can bypass inapplicable
+        # permission checks
+        $report->borrowernumber(undef);
         $report->store();
         print $input->redirect( "/cgi-bin/koha/reports/guided_reports.pl?op=edit_form&id=" . $report->id );
     } else {
