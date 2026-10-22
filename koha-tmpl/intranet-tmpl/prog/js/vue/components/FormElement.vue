@@ -206,6 +206,9 @@
     <span style="margin-left: 5px" class="error" v-if="fieldInputError">
         {{ attr.formErrorMessage }}
     </span>
+    <div v-if="attr.hint" class="hint">
+        {{ attr.hint }}
+    </div>
     <div v-if="attr.breakAfter" class="clear">
         <br />
     </div>
@@ -338,6 +341,16 @@ export default {
 </script>
 
 <style scoped>
+fieldset.rows .hint {
+    margin: 0.3rem 0;
+    margin-left: 11rem;
+    white-space: pre-line;
+}
+
+fieldset.rows li fieldset .hint {
+    margin-left: 7rem;
+}
+
 /* Chrome, Safari, Edge, Opera */
 input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
