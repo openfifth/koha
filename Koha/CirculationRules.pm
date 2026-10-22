@@ -867,6 +867,32 @@ sub resolve_rule_context_branchcode {
         : $params->{item_homebranch};
 }
 
+=head3 resolve_overdue_notice_branchcode
+
+Return the branchcode overdue notices are organised by for a given checkout,
+honouring the C<OverdueNoticeFrom> system preference: the item's home library,
+the patron's home library, or the checkout library. 'cron' (command-line option)
+takes the checkout library, as C<overdue_notices.pl> does when no C<--frombranch>
+is given.
+
+=cut
+
+sub resolve_overdue_notice_branchcode {
+    my ( $class, $params ) = @_;
+
+    my $overdue_notice_from = C4::Context->preference('OverdueNoticeFrom') // q{};
+
+    if ( $overdue_notice_from eq 'item-homebranch' ) {
+        return $params->{item_homebranch};
+    }
+
+    if ( $overdue_notice_from eq 'patron-homebranch' ) {
+        return $params->{patron_branchcode};
+    }
+
+    return $params->{issue_branchcode};
+}
+
 =head3 get_effective_expire_reserves_charge
 
 Return the value for expire_reserves_charge defined in the circulation rules.
