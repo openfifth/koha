@@ -350,8 +350,10 @@ sub _dispatch_overdues {
         # The raw fetch matches each context column on its own, so it needs the union
         # of the values seen. Resolving effective sets does not: only the combinations
         # an item actually presents are ever looked up, and those are a sparse subset
-        # of the three lists crossed together.
-        $seen_contexts{ join( "|", $rule_branchcode, $lost_rule_branchcode, $patron->categorycode, $itemtype ) } = 1;
+        # of the three lists crossed together. Each rule group resolves against its own
+        # branch, so each collects its own contexts.
+        $seen_contexts{notice}{ join( "|", $rule_branchcode, $patron->categorycode, $itemtype ) } = 1;
+        $seen_contexts{lost}{ join( "|", $lost_rule_branchcode, $patron->categorycode, $itemtype ) } = 1;
 
         push @overdue_items, $item_hashref;
     }
@@ -378,7 +380,7 @@ sub _dispatch_overdues {
 
     # resolve the effective set for the contexts this run actually presents
     $rule_resolver->set_effective_overdue_rule_sets(
-        [ keys %seen_contexts ],
+        { map { $_ => [ keys %{ $seen_contexts{$_} } ] } keys %seen_contexts },
         $effective_delay_by_raw_delay
     );
 

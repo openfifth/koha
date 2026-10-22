@@ -63,9 +63,11 @@ subtest '_get_fallback_contexts' => sub {
 };
 
 subtest 'set_raw_overdue_rule_sets' => sub {
-    plan tests => 4;
+    plan tests => 5;
 
     $schema->storage->txn_begin;
+
+    Koha::CirculationRules->search( { rule_name => { -like => 'overdue\_%' } } )->delete;
 
     my $branchcode   = $builder->build( { source => 'Branch' } )->{branchcode};
     my $categorycode = $builder->build( { source => 'Category' } )->{categorycode};
@@ -110,6 +112,11 @@ subtest 'set_raw_overdue_rule_sets' => sub {
     is( $rule_set->{delay},           7, 'cached delay matches the delay rule_value' );
     is( $rule_set->{actions}->{lost}, 1, 'cached actions include the lost rule_value' );
 
+    is_deeply(
+        [ sort { $a <=> $b } keys %{ $resolver->{trigger_numbers} } ],
+        [ 1, 9 ], 'the trigger numbers met while parsing are recorded'
+    );
+
     my $no_delay_key = join( "|", $branchcode, $categorycode, $itemtype, 9 );
     is_deeply(
         $resolver->{raw_overdue_rule_sets}->{$no_delay_key},
@@ -144,7 +151,7 @@ subtest '_find_effective_rule_value walks fallback contexts' => sub {
 };
 
 subtest 'set_effective_overdue_rule_sets' => sub {
-    plan tests => 3;
+    plan tests => 4;
 
     my $resolver = Koha::Overdues::RuleResolver->new;
     $resolver->{raw_overdue_rule_sets} = {
@@ -157,24 +164,29 @@ subtest 'set_effective_overdue_rule_sets' => sub {
             },
         },
     };
+    $resolver->{trigger_numbers} = { 1 => 1 };
 
-    $resolver->set_effective_overdue_rule_sets( ['BR|BR|PC|IT'], { BR => { 7 => 7 } } );
+    $resolver->set_effective_overdue_rule_sets(
+        { notice => ['BR|PC|IT'], lost => ['BR|PC|IT'] },
+        { BR     => { 7 => 7 } }
+    );
 
-    my $key = 'BR|BR|PC|IT|7';
-    my $eff = $resolver->{effective_overdue_rule_sets}->{$key};
-    ok( $eff, "effective rule set cached under $key" );
+    my $key = 'BR|PC|IT|7';
+    ok( $resolver->{effective_overdue_rule_sets}->{notice}->{$key}, "notice group set cached under $key" );
 
-    my %by_type = map { $_->{type} => $_ } @{ $eff->{actions} };
+    my %notice = map { $_->{type} => $_ } @{ $resolver->{effective_overdue_rule_sets}->{notice}->{$key}->{actions} };
+    my %lost   = map { $_->{type} => $_ } @{ $resolver->{effective_overdue_rule_sets}->{lost}->{$key}->{actions} };
     is_deeply(
-        $by_type{notice},
+        $notice{notice},
         { type => 'notice', notice_code => 'OD1', mtts => ['email'] },
         'notice action shape: type/notice_code/mtts'
     );
     is_deeply(
-        $by_type{lost},
+        $lost{lost},
         { type => 'lost', value => 1 },
         'non-notice action shape: type/value'
     );
+    ok( !$notice{lost}, 'the notice group holds no lost-group action' );
 };
 
 subtest 'notice action splits comma-separated mtt rule value' => sub {
@@ -186,14 +198,15 @@ subtest 'notice action splits comma-separated mtt rule value' => sub {
         'BR|PC|IT|2' => { delay => 14, actions => { notice => 'OD2', mtt => '' } },
         'BR|PC|IT|3' => { delay => 21, actions => { notice => 'OD3', mtt => 'sms' } },
     };
+    $resolver->{trigger_numbers} = { 1 => 1, 2 => 1, 3 => 1 };
 
     $resolver->set_effective_overdue_rule_sets(
-        ['BR|BR|PC|IT'],
-        { BR => { 7 => 7, 14 => 14, 21 => 21 } }
+        { notice => ['BR|PC|IT'] },
+        { BR     => { 7 => 7, 14 => 14, 21 => 21 } }
     );
 
-    my %by_type_7 =
-        map { $_->{type} => $_ } @{ $resolver->{effective_overdue_rule_sets}->{'BR|BR|PC|IT|7'}->{actions} };
+    my $notice_sets = $resolver->{effective_overdue_rule_sets}->{notice};
+    my %by_type_7   = map { $_->{type} => $_ } @{ $notice_sets->{'BR|PC|IT|7'}->{actions} };
     is_deeply(
         $by_type_7{notice}->{mtts},
         [ 'email', 'print' ],
@@ -201,12 +214,11 @@ subtest 'notice action splits comma-separated mtt rule value' => sub {
     );
 
     ok(
-        !exists $resolver->{effective_overdue_rule_sets}->{'BR|BR|PC|IT|14'},
+        !exists $notice_sets->{'BR|PC|IT|14'},
         'empty mtt scalar skips the notice action entirely (no rule cached)'
     );
 
-    my %by_type_21 =
-        map { $_->{type} => $_ } @{ $resolver->{effective_overdue_rule_sets}->{'BR|BR|PC|IT|21'}->{actions} };
+    my %by_type_21 = map { $_->{type} => $_ } @{ $notice_sets->{'BR|PC|IT|21'}->{actions} };
     is_deeply(
         $by_type_21{notice}->{mtts},
         ['sms'],
@@ -224,10 +236,12 @@ subtest 'empty mtt resolves to the broader context mtt' => sub {
         'BR|PC|IT|1' => { delay => 7, actions => { notice => 'OD1', mtt => '' } },
         '*|*|*|1'    => { delay => 7, actions => { mtt    => 'email' } },
     };
+    $resolver->{trigger_numbers} = { 1 => 1 };
 
-    $resolver->set_effective_overdue_rule_sets( ['BR|BR|PC|IT'], { BR => { 7 => 7 } } );
+    $resolver->set_effective_overdue_rule_sets( { notice => ['BR|PC|IT'] }, { BR => { 7 => 7 } } );
 
-    my %by_type = map { $_->{type} => $_ } @{ $resolver->{effective_overdue_rule_sets}->{'BR|BR|PC|IT|7'}->{actions} };
+    my %by_type =
+        map { $_->{type} => $_ } @{ $resolver->{effective_overdue_rule_sets}->{notice}->{'BR|PC|IT|7'}->{actions} };
     is_deeply( $by_type{notice}->{mtts}, ['email'], 'empty mtt resolves to the default context mtt' );
 };
 
@@ -239,18 +253,18 @@ subtest 'an override that sets no delay inherits the delay of the same trigger' 
         '*|*|*|1'  => { delay   => 7, actions => { notice => 'OD1', mtt => 'print' } },
         'BR|*|*|1' => { actions => { notice => 'OD2' } },
     };
+    $resolver->{trigger_numbers} = { 1 => 1 };
 
     $resolver->set_effective_overdue_rule_sets(
-        [ 'BR|BR|PC|IT', 'XX|XX|PC|IT' ],
-        { BR => { 7 => 7 }, XX => { 7 => 7 } }
+        { notice => [ 'BR|PC|IT', 'XX|PC|IT' ] },
+        { BR     => { 7 => 7 }, XX => { 7 => 7 } }
     );
 
-    my %overridden =
-        map { $_->{type} => $_ } @{ $resolver->{effective_overdue_rule_sets}->{'BR|BR|PC|IT|7'}->{actions} };
+    my $notice_sets = $resolver->{effective_overdue_rule_sets}->{notice};
+    my %overridden  = map { $_->{type} => $_ } @{ $notice_sets->{'BR|PC|IT|7'}->{actions} };
     is( $overridden{notice}->{notice_code}, 'OD2', 'the library override applies at the inherited delay' );
 
-    my %inherited =
-        map { $_->{type} => $_ } @{ $resolver->{effective_overdue_rule_sets}->{'XX|XX|PC|IT|7'}->{actions} };
+    my %inherited = map { $_->{type} => $_ } @{ $notice_sets->{'XX|PC|IT|7'}->{actions} };
     is( $inherited{notice}->{notice_code}, 'OD1', 'another library still gets the default' );
 };
 
@@ -262,17 +276,16 @@ subtest 'an override that moves a trigger\'s delay does not also fire at the def
         '*|*|*|1'  => { delay => 7,  actions => { lost => 1 } },
         'BR|*|*|1' => { delay => 10, actions => {} },
     };
+    $resolver->{trigger_numbers} = { 1 => 1 };
 
-    $resolver->set_effective_overdue_rule_sets( ['BR|BR|PC|IT'], { BR => { 7 => 7, 10 => 10 } } );
+    $resolver->set_effective_overdue_rule_sets( { lost => ['BR|PC|IT'] }, { BR => { 7 => 7, 10 => 10 } } );
 
-    ok( !exists $resolver->{effective_overdue_rule_sets}->{'BR|BR|PC|IT|7'}, 'nothing fires at the default delay' );
-    ok(
-        exists $resolver->{effective_overdue_rule_sets}->{'BR|BR|PC|IT|10'},
-        'the trigger fires at the overridden delay'
-    );
+    my $lost_sets = $resolver->{effective_overdue_rule_sets}->{lost};
+    ok( !exists $lost_sets->{'BR|PC|IT|7'}, 'nothing fires at the default delay' );
+    ok( exists $lost_sets->{'BR|PC|IT|10'}, 'the trigger fires at the overridden delay' );
 };
 
-subtest 'lost, charge, mark_returned and forgive_fine resolve against the LostChargesControl branch' => sub {
+subtest 'each rule group resolves its own actions against its own branch' => sub {
     plan tests => 4;
 
     my $resolver = Koha::Overdues::RuleResolver->new;
@@ -280,18 +293,19 @@ subtest 'lost, charge, mark_returned and forgive_fine resolve against the LostCh
         'CPL|*|*|1' => { delay => 7, actions => { notice => 'OD1', mtt => 'print', lost => 2, forgive_fine => 0 } },
         'FPL|*|*|1' => { delay => 7, actions => { notice => 'OD2', mtt => 'print', lost => 1, forgive_fine => 1 } },
     };
+    $resolver->{trigger_numbers} = { 1 => 1 };
 
-    $resolver->set_effective_overdue_rule_sets( ['CPL|FPL|PC|IT'], { CPL => { 7 => 7 }, FPL => { 7 => 7 } } );
-
-    my %by_type =
-        map { $_->{type} => $_ } @{ $resolver->{effective_overdue_rule_sets}->{'CPL|FPL|PC|IT|7'}->{actions} };
-    is( $by_type{notice}->{notice_code}, 'OD1', 'the notice comes from the CircControl branch' );
-    is( $by_type{lost}->{value},         1,     'lost comes from the LostChargesControl branch' );
-    is( $by_type{forgive_fine}->{value}, 1,     'forgive_fine comes from the LostChargesControl branch' );
-    is(
-        scalar grep( { $_->{type} eq 'lost' }
-            @{ $resolver->{effective_overdue_rule_sets}->{'CPL|FPL|PC|IT|7'}->{actions} } ),
-        1,
-        'each action is resolved once'
+    $resolver->set_effective_overdue_rule_sets(
+        { notice => ['CPL|PC|IT'], lost => ['FPL|PC|IT'] },
+        { CPL    => { 7 => 7 },    FPL  => { 7 => 7 } }
     );
+
+    my %notice =
+        map { $_->{type} => $_ } @{ $resolver->{effective_overdue_rule_sets}->{notice}->{'CPL|PC|IT|7'}->{actions} };
+    my %lost =
+        map { $_->{type} => $_ } @{ $resolver->{effective_overdue_rule_sets}->{lost}->{'FPL|PC|IT|7'}->{actions} };
+    is( $notice{notice}->{notice_code}, 'OD1', 'the notice comes from the OverdueNoticeFrom branch' );
+    is( $lost{lost}->{value},           1,     'lost comes from the LostChargesControl branch' );
+    is( $lost{forgive_fine}->{value},   1,     'forgive_fine comes from the LostChargesControl branch' );
+    ok( !$notice{lost} && !$lost{notice}, 'each group holds only its own actions' );
 };

@@ -59,13 +59,21 @@ subtest 'route_item_actions_to_queue splits notice vs action batch' => sub {
     t::lib::Mocks::mock_preference( 'LostChargesControl', 'PatronLibrary' );
 
     my $effective_rule_sets = {
-        'LIB|LIB|PC|IT|7' => {
-            actions => [
-                { type => 'notice',   notice_code => 'OD1', mtts => ['email'] },
-                { type => 'lost',     value       => 1 },
-                { type => 'charge',   value       => 1 },
-                { type => 'restrict', value       => '' },    # empty → ignored
-            ],
+        notice => {
+            'LIB|PC|IT|7' => {
+                actions => [
+                    { type => 'notice',   notice_code => 'OD1', mtts => ['email'] },
+                    { type => 'restrict', value => '' },    # empty → ignored
+                ],
+            },
+        },
+        lost => {
+            'LIB|PC|IT|7' => {
+                actions => [
+                    { type => 'lost',   value => 1 },
+                    { type => 'charge', value => 1 },
+                ],
+            },
         },
     };
 
@@ -110,16 +118,22 @@ subtest 'route_item_actions_to_queue: an open return claim suppresses a bare rem
     t::lib::Mocks::mock_preference( 'LostChargesControl', 'PatronLibrary' );
 
     my $reminder_only = {
-        'LIB|LIB|PC|IT|7' => {
-            actions => [ { type => 'notice', notice_code => 'OD1', mtts => ['email'] } ],
+        notice => {
+            'LIB|PC|IT|7' => {
+                actions => [ { type => 'notice', notice_code => 'OD1', mtts => ['email'] } ],
+            },
         },
     };
     my $escalation = {
-        'LIB|LIB|PC|IT|7' => {
-            actions => [
-                { type => 'notice', notice_code => 'OD1', mtts => ['email'] },
-                { type => 'charge', value => 1 },
-            ],
+        notice => {
+            'LIB|PC|IT|7' => {
+                actions => [ { type => 'notice', notice_code => 'OD1', mtts => ['email'] } ],
+            },
+        },
+        lost => {
+            'LIB|PC|IT|7' => {
+                actions => [ { type => 'charge', value => 1 } ],
+            },
         },
     };
 
@@ -369,11 +383,13 @@ subtest 'route_item_actions_to_queue: aggregates multiple items under (borrower|
     t::lib::Mocks::mock_preference( 'LostChargesControl', 'PatronLibrary' );
 
     my $effective_rule_sets = {
-        'LIB|LIB|PC|IT|7' => {
-            actions => [ { type => 'notice', notice_code => 'OD1', mtts => ['email'] } ],
-        },
-        'LIB|LIB|PC|IT|14' => {
-            actions => [ { type => 'notice', notice_code => 'OD1', mtts => ['email'] } ],
+        notice => {
+            'LIB|PC|IT|7' => {
+                actions => [ { type => 'notice', notice_code => 'OD1', mtts => ['email'] } ],
+            },
+            'LIB|PC|IT|14' => {
+                actions => [ { type => 'notice', notice_code => 'OD1', mtts => ['email'] } ],
+            },
         },
     };
 
@@ -563,8 +579,10 @@ subtest 'process_notice_queue: two items at the same trigger render one row' => 
     };
 
     my $effective_rule_sets = {
-        join( '|', $library->branchcode, $library->branchcode, $patron->categorycode, $item_a->itype, 3 ) => {
-            actions => [ { type => 'notice', notice_code => 'OD2', mtts => ['email'] } ],
+        notice => {
+            join( '|', $library->branchcode, $patron->categorycode, $item_a->itype, 3 ) => {
+                actions => [ { type => 'notice', notice_code => 'OD2', mtts => ['email'] } ],
+            },
         },
     };
 
@@ -649,11 +667,13 @@ subtest 'process_notice_queue: triggers sharing a letter code send one letter pe
     # same transport — the shape a site gets when it adds levels without
     # authoring a template per level.
     my $effective_rule_sets = {
-        join( '|', $library->branchcode, $library->branchcode, $patron->categorycode, $item_a->itype, 7 ) => {
-            actions => [ { type => 'notice', notice_code => 'OD3', mtts => ['email'] } ],
-        },
-        join( '|', $library->branchcode, $library->branchcode, $patron->categorycode, $item_a->itype, 14 ) => {
-            actions => [ { type => 'notice', notice_code => 'OD3', mtts => ['email'] } ],
+        notice => {
+            join( '|', $library->branchcode, $patron->categorycode, $item_a->itype, 7 ) => {
+                actions => [ { type => 'notice', notice_code => 'OD3', mtts => ['email'] } ],
+            },
+            join( '|', $library->branchcode, $patron->categorycode, $item_a->itype, 14 ) => {
+                actions => [ { type => 'notice', notice_code => 'OD3', mtts => ['email'] } ],
+            },
         },
     };
 
@@ -776,10 +796,12 @@ subtest 'route_item_actions_to_queue: multi-MTT fans out per-MTT queue entries' 
     t::lib::Mocks::mock_preference( 'LostChargesControl', 'PatronLibrary' );
 
     my $effective_rule_sets = {
-        'LIB|LIB|PC|IT|7' => {
-            actions => [
-                { type => 'notice', notice_code => 'OD1', mtts => [ 'email', 'print' ] },
-            ],
+        notice => {
+            'LIB|PC|IT|7' => {
+                actions => [
+                    { type => 'notice', notice_code => 'OD1', mtts => [ 'email', 'print' ] },
+                ],
+            },
         },
     };
 

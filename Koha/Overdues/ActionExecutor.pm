@@ -146,14 +146,18 @@ sub route_item_actions_to_queue {
     my $days_overdue   = $overdue_item->{days_overdue};
     my $borrowernumber = $overdue_item->{borrowernumber};
 
-    my $actions_hashes =
-        $effective_rule_sets->{"$branchcode|$lost_branchcode|$categorycode|$itemtype|$days_overdue"}->{actions};
+    # Each rule group resolves against its own branch, so a loan is looked up once
+    # per group and its actions are the two halves together.
+    my @actions_hashes = (
+        @{ $effective_rule_sets->{notice}->{"$branchcode|$categorycode|$itemtype|$days_overdue"}->{actions}    // [] },
+        @{ $effective_rule_sets->{lost}->{"$lost_branchcode|$categorycode|$itemtype|$days_overdue"}->{actions} // [] },
+    );
 
-    if ( !$actions_hashes || !@$actions_hashes ) {
+    if ( !@actions_hashes ) {
         return;
     }
 
-    my %actions = map { $_->{type} => $_ } @$actions_hashes;
+    my %actions = map { $_->{type} => $_ } @actions_hashes;
 
     # Build the non-notice action batch first: whether the trigger carries any
     # non-notice action decides how a notice on a loan under an open return
