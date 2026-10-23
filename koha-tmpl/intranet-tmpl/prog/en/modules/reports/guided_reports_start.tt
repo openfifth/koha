@@ -1003,12 +1003,12 @@
             <fieldset class="rows">
                 <ol>
                     <li>
-                        <label for="from_cardnumber"> Transfer from: </label>
-                        <input type="text" name="from" id="from_cardnumber" autocomplete="off" type="text" value="[% from | html %]" />
+                        <label for="from_borrowernumber"> Transfer from: </label>
+                        <input type="text" name="from" id="from_borrowernumber" autocomplete="off" type="text" value="[% from | html %]" />
                     </li>
                     <li>
-                        <label for="to_cardnumber"> Transfer to: </label>
-                        <input type="text" name="to" id="to_cardnumber" autocomplete="off" type="text" value="[% to | html %]" />
+                        <label for="to_borrowernumber"> Transfer to: </label>
+                        <input type="text" name="to" id="to_borrowernumber" autocomplete="off" type="text" value="[% to | html %]" />
                     </li>
                 </ol>
             </fieldset>
@@ -1739,8 +1739,8 @@
                     </li>
                     [% IF CAN_user_reports_edit_all_reports %]
                         <li>
-                            <label for="cardnumber"> Report owner: </label>
-                            <input type="text" name="cardnumber" id="cardnumber" autocomplete="off" type="text" value="[% owner.cardnumber | html %]" />
+                            <label for="borrowernumber"> Report owner: </label>
+                            <input type="text" name="borrowernumber" id="borrowernumber" autocomplete="off" type="text" value="[% owner.borrowernumber | html %]" />
                         </li>
                     [% END %]
                     [% PROCESS group_and_subgroup_selection %]
@@ -1838,7 +1838,7 @@
                     [% ELSIF ( error.passworderr ) %]
                         <p>The column selection in this report includes a password field.</p>
                         <p>The report cannot be executed due to security risks. Please edit this report and ensure no password columns have been selected.</p>
-                    [% ELSIF (error.cardnumber) %]
+                    [% ELSIF (error.borrowernumber) %]
                         <p>Please select a valid owner for this report. If you wish to disown it, you may do so from the main table.</p>
                     [% ELSIF (error.from) %]
                         <p>Please select a valid patron to transfer from.</p>
@@ -2552,9 +2552,9 @@
                     },
                 });
 
-                patron_autocomplete($("#sql_report_form #cardnumber"), {
+                patron_autocomplete($("#sql_report_form #borrowernumber"), {
                     "on-select-callback": function (event, ui) {
-                        $("#sql_report_form #cardnumber").val(ui.item.cardnumber);
+                        $("#sql_report_form #borrowernumber").val(ui.item.patron_id);
                         return false;
                     },
                 });
@@ -2686,16 +2686,16 @@
             }
 
             if (op == "bulk_transfer") {
-                patron_autocomplete($("#from_cardnumber"), {
+                patron_autocomplete($("#from_borrowernumber"), {
                     "on-select-callback": function (event, ui) {
-                        $("#from_cardnumber").val(ui.item.cardnumber);
+                        $("#from_borrowernumber").val(ui.item.patron_id);
                         return false;
                     },
                 });
 
-                patron_autocomplete($("#to_cardnumber"), {
+                patron_autocomplete($("#to_borrowernumber"), {
                     "on-select-callback": function (event, ui) {
-                        $("#to_cardnumber").val(ui.item.cardnumber);
+                        $("#to_borrowernumber").val(ui.item.patron_id);
                         return false;
                     },
                 });

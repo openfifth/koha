@@ -232,17 +232,17 @@ if ( !$op ) {
 
 } elsif ( $op eq 'cud-update_sql' || $op eq 'cud-update_and_run_sql' ) {
     if ($report) {
-        my $id                 = $report_id;
-        my $sql                = $input->param('sql');
-        my $reportname         = $input->param('reportname');
-        my $cardnumber         = $input->param('cardnumber');
-        my $group              = $input->param('group');
-        my $subgroup           = $input->param('subgroup');
-        my $notes              = $input->param('notes');
-        my $cache_expiry       = $input->param('cache_expiry');
-        my $cache_expiry_units = $input->param('cache_expiry_units');
-        my $public             = $input->param('public');
-        my $save_anyway        = $input->param('save_anyway');
+        my $id                   = $report_id;
+        my $sql                  = $input->param('sql');
+        my $reportname           = $input->param('reportname');
+        my $owner_borrowernumber = $input->param('borrowernumber');
+        my $group                = $input->param('group');
+        my $subgroup             = $input->param('subgroup');
+        my $notes                = $input->param('notes');
+        my $cache_expiry         = $input->param('cache_expiry');
+        my $cache_expiry_units   = $input->param('cache_expiry_units');
+        my $public               = $input->param('public');
+        my $save_anyway          = $input->param('save_anyway');
         my @errors;
         my $tables   = get_tables();
         my @branches = grep { $_ ne q{} } $input->multi_param('branches');
@@ -254,14 +254,14 @@ if ( !$op ) {
 
         # validate cardnumber
         my $logged_in_patron   = Koha::Patrons->find($borrowernumber);
-        my $new_owner          = Koha::Patrons->find( { cardnumber => $cardnumber } );
+        my $new_owner          = Koha::Patrons->find( { borrowernumber => $owner_borrowernumber } );
         my $new_borrowernumber = $report->borrowernumber;
 
         if ( $logged_in_patron->has_permission( { reports => 'edit_all_reports' } ) ) {
 
             # Don't allow disowning a report through this form, but allow keeping a report disowned
             unless ( $new_owner || !$report->borrowernumber ) {
-                push @errors, { cardnumber => 1 };
+                push @errors, { borrowernumber => 1 };
             }
 
             # anyone with edit_all_reports can set the owner to anything
@@ -777,11 +777,11 @@ if ( !$op ) {
 } elsif ( $op eq 'bulk_transfer' ) {
     $template->param( bulk_transfer => 1 );
 } elsif ( $op eq 'cud-bulk_transfer_confirm' || $op eq 'cud-bulk_transfer_execute' ) {
-    my $from_cardnumber = $input->param('from');
-    my $to_cardnumber   = $input->param('to');
+    my $from_borrowernumber = $input->param('from');
+    my $to_borrowernumber   = $input->param('to');
 
-    my $from_patron = Koha::Patrons->find( { cardnumber => $from_cardnumber } );
-    my $to_patron   = Koha::Patrons->find( { cardnumber => $to_cardnumber } );
+    my $from_patron = Koha::Patrons->find( { borrowernumber => $from_borrowernumber } );
+    my $to_patron   = Koha::Patrons->find( { borrowernumber => $to_borrowernumber } );
 
     push @errors, { 'from' => 1 } unless $from_patron;
     push @errors, { 'to'   => 1 } unless $to_patron;
@@ -794,8 +794,8 @@ if ( !$op ) {
 
         $template->param(
             bulk_transfer_confirm => 1,
-            from                  => $from_cardnumber,
-            to                    => $to_cardnumber,
+            from                  => $from_borrowernumber,
+            to                    => $to_borrowernumber,
             transfer_count        => $transfer_count
         );
     } else {
