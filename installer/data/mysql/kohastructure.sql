@@ -3185,6 +3185,7 @@ CREATE TABLE `erm_counter_logs` (
   KEY `erm_counter_log_ibfk_2` (`counter_files_id`),
   KEY `erm_counter_log_ibfk_3` (`usage_data_provider_id`),
   KEY `erm_counter_log_ibfk_4` (`background_job_id`),
+  KEY `erm_counter_log_period_idx` (`usage_data_provider_id`,`report_type`,`report_year`,`report_month`),
   KEY `erm_counter_log_status_idx` (`status`),
   CONSTRAINT `erm_counter_log_ibfk_1` FOREIGN KEY (`borrowernumber`) REFERENCES `borrowers` (`borrowernumber`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `erm_counter_log_ibfk_2` FOREIGN KEY (`counter_files_id`) REFERENCES `erm_counter_files` (`erm_counter_files_id`) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -3539,6 +3540,42 @@ CREATE TABLE `erm_usage_yus` (
   CONSTRAINT `erm_usage_yus_ibfk_3` FOREIGN KEY (`platform_id`) REFERENCES `erm_usage_platforms` (`platform_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `erm_usage_yus_ibfk_4` FOREIGN KEY (`database_id`) REFERENCES `erm_usage_databases` (`database_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `erm_usage_yus_ibfk_5` FOREIGN KEY (`item_id`) REFERENCES `erm_usage_items` (`item_id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `erm_counter_log_summary`
+--
+-- One row per usage data provider, report type and harvest year, with the status
+-- of the latest counter log for each month. It is rebuilt from `erm_counter_logs`
+-- by Koha::ERM::EUsage::CounterLogSummaries->rebuild whenever a counter log is
+-- stored or deleted. Logs without a single-month period (multi-month harvests,
+-- uploads over several months) are not included.
+--
+
+DROP TABLE IF EXISTS `erm_counter_log_summary`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `erm_counter_log_summary` (
+  `erm_counter_log_summary_id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'primary key',
+  `usage_data_provider_id` int(11) NOT NULL COMMENT 'foreign key to erm_usage_data_providers',
+  `report_type` varchar(10) NOT NULL COMMENT 'report type of the harvests',
+  `report_year` int(4) NOT NULL COMMENT 'year of the harvested months',
+  `month_1` varchar(16) DEFAULT NULL COMMENT 'status of the latest harvest log for January',
+  `month_2` varchar(16) DEFAULT NULL COMMENT 'status of the latest harvest log for February',
+  `month_3` varchar(16) DEFAULT NULL COMMENT 'status of the latest harvest log for March',
+  `month_4` varchar(16) DEFAULT NULL COMMENT 'status of the latest harvest log for April',
+  `month_5` varchar(16) DEFAULT NULL COMMENT 'status of the latest harvest log for May',
+  `month_6` varchar(16) DEFAULT NULL COMMENT 'status of the latest harvest log for June',
+  `month_7` varchar(16) DEFAULT NULL COMMENT 'status of the latest harvest log for July',
+  `month_8` varchar(16) DEFAULT NULL COMMENT 'status of the latest harvest log for August',
+  `month_9` varchar(16) DEFAULT NULL COMMENT 'status of the latest harvest log for September',
+  `month_10` varchar(16) DEFAULT NULL COMMENT 'status of the latest harvest log for October',
+  `month_11` varchar(16) DEFAULT NULL COMMENT 'status of the latest harvest log for November',
+  `month_12` varchar(16) DEFAULT NULL COMMENT 'status of the latest harvest log for December',
+  PRIMARY KEY (`erm_counter_log_summary_id`),
+  UNIQUE KEY `erm_counter_log_summary_period_idx` (`usage_data_provider_id`,`report_type`,`report_year`),
+  CONSTRAINT `erm_counter_log_summary_ibfk_1` FOREIGN KEY (`usage_data_provider_id`) REFERENCES `erm_usage_data_providers` (`erm_usage_data_provider_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
