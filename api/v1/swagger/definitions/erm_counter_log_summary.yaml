@@ -1,0 +1,81 @@
+---
+type: object
+properties:
+  erm_counter_log_summary_id:
+    type: integer
+    description: internally assigned identifier of the row (the lowest counter log id it summarises)
+    readOnly: true
+  usage_data_provider_id:
+    type: integer
+    description: internally assigned usage data provider identifier
+  provider_name:
+    type: string
+    description: name of the usage data provider
+  report_type:
+    type: string
+    description: COUNTER report type of the harvests
+  report_year:
+    type: integer
+    description: year of the harvested months
+  month_1:
+    description: status of the latest harvest log for January
+    type:
+    - string
+    - "null"
+  month_2:
+    description: status of the latest harvest log for February
+    type:
+    - string
+    - "null"
+  month_3:
+    description: status of the latest harvest log for March
+    type:
+    - string
+    - "null"
+  month_4:
+    description: status of the latest harvest log for April
+    type:
+    - string
+    - "null"
+  month_5:
+    description: status of the latest harvest log for May
+    type:
+    - string
+    - "null"
+  month_6:
+    description: status of the latest harvest log for June
+    type:
+    - string
+    - "null"
+  month_7:
+    description: status of the latest harvest log for July
+    type:
+    - string
+    - "null"
+  month_8:
+    description: status of the latest harvest log for August
+    type:
+    - string
+    - "null"
+  month_9:
+    description: status of the latest harvest log for September
+    type:
+    - string
+    - "null"
+  month_10:
+    description: status of the latest harvest log for October
+    type:
+    - string
+    - "null"
+  month_11:
+    description: status of the latest harvest log for November
+    type:
+    - string
+    - "null"
+  month_12:
+    description: status of the latest harvest log for December
+    type:
+    - string
+    - "null"
+
+additionalProperties: false
