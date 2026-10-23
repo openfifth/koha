@@ -21,6 +21,7 @@ use Getopt::Long qw( GetOptions );
 use Pod::Usage   qw( pod2usage );
 
 use C4::Context;
+use Koha::ERM::EUsage::CounterLogSummaries;
 use Koha::ERM::EUsage::YearlyUsages;
 use Koha::Script;
 
@@ -74,7 +75,7 @@ Without C<--logs> and C<--usage> the script runs both parts.
 Run this script once after the upgrade that adds the report type, the report period
 and the status to C<erm_counter_logs> (Bug 41307). The upgrade changes the tables only.
 
-The summary page of the usage data providers (Bug 38822) reads counter logs that have a
+The summary page of the usage data providers (Bug 38822) shows the counter logs that have a
 period. It skips the logs written before the upgrade until this script has run.
 
 =head2 Counter logs (--logs)
@@ -103,6 +104,9 @@ file was imported.
 
 A log whose file has no reporting period is reported and left without a period. A log
 with a report type of more than 10 characters is reported and left as it is.
+
+When the changes are applied, the counter log summary of the usage data providers is
+then rebuilt from the counter logs, so the summary page shows the old months.
 
 =head2 Monthly usage (--usage)
 
@@ -157,7 +161,13 @@ foreach my $column (qw( report_type report_year report_month status )) {
         unless $exists;
 }
 
-in_transaction( sub { backfill_counter_logs() } )   if $logs;
+in_transaction( sub { backfill_counter_logs() } ) if $logs;
+
+if ( $logs && $confirm ) {
+    my $rows = Koha::ERM::EUsage::CounterLogSummaries->rebuild;
+    say sprintf "Rebuilt the counter log summary: %d rows", $rows;
+}
+
 in_transaction( sub { remove_duplicated_usage() } ) if $usage;
 
 if ( $usage && $confirm ) {

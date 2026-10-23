@@ -23,9 +23,13 @@ use JSON      qw( decode_json );
 use Try::Tiny qw( catch try );
 
 use Koha::BackgroundJob;
+use Koha::Database;
+use Koha::ERM::EUsage::CounterLogSummaries;
 use Koha::Patron;
 
 use base qw(Koha::Object);
+
+my @SUMMARY_KEY_COLUMNS = qw( usage_data_provider_id report_type report_year );
 
 =head1 NAME
 
@@ -137,6 +141,56 @@ sub to_api_mapping {
     };
 }
 
+=head3 store
+
+    $counter_log->store;
+
+Stores the counter log, then rebuilds the row of the counter log summary of its usage
+data provider, report type and year. When the key of a stored counter log changes,
+the row of the old key is rebuilt too. See
+L<Koha::ERM::EUsage::CounterLogSummaries/rebuild>.
+
+=cut
+
+sub store {
+    my ($self) = @_;
+
+    # A counter log that moves to another provider, report type or year leaves a summary behind
+    my $old_key;
+    if ( $self->in_storage ) {
+        my %dirty = $self->_result->get_dirty_columns;
+        if ( grep { exists $dirty{$_} } @SUMMARY_KEY_COLUMNS ) {
+            my $stored = Koha::Database->new->schema->resultset('ErmCounterLog')->find( $self->erm_counter_log_id );
+            $old_key = { map { $_ => $stored->get_column($_) } @SUMMARY_KEY_COLUMNS } if $stored;
+        }
+    }
+
+    $self->SUPER::store;
+    $self->_rebuild_summaries( $self->_summary_key, $old_key );
+
+    return $self;
+}
+
+=head3 delete
+
+    $counter_log->delete;
+
+Deletes the counter log, then rebuilds the row of the counter log summary of its usage
+data provider, report type and year.
+
+=cut
+
+sub delete {
+    my ($self) = @_;
+
+    my $key = $self->_summary_key;
+
+    my $result = $self->SUPER::delete;
+    $self->_rebuild_summaries($key);
+
+    return $result;
+}
+
 =head3 patron
 
 Return the patron for this counter_file
@@ -151,6 +205,41 @@ sub patron {
 }
 
 =head2 Internal methods
+
+=head3 _summary_key
+
+    my $key = $self->_summary_key;
+
+Returns the usage data provider, report type and year of the counter log as a hashref,
+or undef when one of them is missing: such a counter log is not summarised.
+
+=cut
+
+sub _summary_key {
+    my ($self) = @_;
+
+    my $key = { map { $_ => $self->$_ } @SUMMARY_KEY_COLUMNS };
+    return ( grep { !defined $key->{$_} } @SUMMARY_KEY_COLUMNS ) ? undef : $key;
+}
+
+=head3 _rebuild_summaries
+
+    $self->_rebuild_summaries( @keys );
+
+Rebuilds the counter log summary row of each key. Keys that are undef, incomplete or repeated are skipped.
+
+=cut
+
+sub _rebuild_summaries {
+    my ( $self, @keys ) = @_;
+
+    my %seen;
+    for my $key (@keys) {
+        next unless $key && !grep { !defined $key->{$_} } @SUMMARY_KEY_COLUMNS;
+        next if $seen{ join "\0", @{$key}{@SUMMARY_KEY_COLUMNS} }++;
+        Koha::ERM::EUsage::CounterLogSummaries->rebuild($key);
+    }
+}
 
 =head3 _type
 
