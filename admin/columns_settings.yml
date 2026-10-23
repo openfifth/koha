@@ -1122,6 +1122,39 @@ modules:
               columnname: actions
               cannot_be_toggled: 1
               cannot_be_modified: 1
+    counter_log_summary:
+      counter_log_summary:
+        columns:
+            -
+              columnname: report_year
+            -
+              columnname: provider_name
+            -
+              columnname: report_type
+            -
+              columnname: month_1
+            -
+              columnname: month_2
+            -
+              columnname: month_3
+            -
+              columnname: month_4
+            -
+              columnname: month_5
+            -
+              columnname: month_6
+            -
+              columnname: month_7
+            -
+              columnname: month_8
+            -
+              columnname: month_9
+            -
+              columnname: month_10
+            -
+              columnname: month_11
+            -
+              columnname: month_12
     monthly_usages:
       monthly_usages:
         columns:
