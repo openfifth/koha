@@ -15,6 +15,7 @@
         @change="handleValidation"
         @invalid="handleValidation"
     />
+    <span v-if="loading">{{ $__("Loading...") }}</span>
     <span :id="`patron_selection_${id}`"></span>
 </template>
 
@@ -34,6 +35,7 @@ export default {
     emits: ["update:modelValue"],
     setup(props, { emit }) {
         const searchInputRef = ref(null);
+        const loading = ref(false);
 
         const handleValidation = event => {
             const input = event.target;
@@ -86,6 +88,7 @@ export default {
             });
 
             if (props.modelValue) {
+                loading.value = true;
                 const getPatron =
                     props.valueAttr === "patron_id"
                         ? APIClient.patron.patrons.get(props.modelValue)
@@ -105,11 +108,12 @@ export default {
                             () => emit("update:modelValue", null)
                         );
                     })
-                    .catch(err => console.error("Koha API Error:", err));
+                    .catch(err => console.error("Koha API Error:", err))
+                    .finally(() => (loading.value = false));
             }
         });
 
-        return { searchInputRef, handleValidation, handleInput };
+        return { searchInputRef, loading, handleValidation, handleInput };
     },
 };
 </script>
