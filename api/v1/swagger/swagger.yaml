@@ -64,6 +64,8 @@ definitions:
     $ref: ./definitions/erm_counter_registry.yaml
   erm_counter_log:
     $ref: ./definitions/erm_counter_log.yaml
+  erm_counter_log_summary:
+    $ref: ./definitions/erm_counter_log_summary.yaml
   erm_custom_report:
     $ref: ./definitions/erm_custom_report.yaml
   erm_default_usage_report:
@@ -399,6 +401,8 @@ paths:
     $ref: "./paths/erm_counter_files.yaml#/~1erm~1counter_files~1{erm_counter_files_id}~1file~1content"
   /erm/counter_logs:
     $ref: ./paths/erm_counter_logs.yaml#/~1erm~1counter_logs
+  /erm/counter_logs/summary:
+    $ref: ./paths/erm_counter_logs.yaml#/~1erm~1counter_logs~1summary
   /erm/counter_registry:
     $ref: ./paths/erm_counter_registries.yaml#/~1erm~1counter_registry
   /erm/default_usage_reports:
