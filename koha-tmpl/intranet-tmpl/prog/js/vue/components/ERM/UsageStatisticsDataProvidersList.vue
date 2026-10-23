@@ -197,14 +197,6 @@ export default {
                         delete usage_data_provider.erm_usage_data_provider_id;
                         // const counter_files = usage_data_provider.counter_files
                         // delete usage_data_provider.counter_files
-                        delete usage_data_provider.earliest_platform;
-                        delete usage_data_provider.latest_platform;
-                        delete usage_data_provider.earliest_title;
-                        delete usage_data_provider.latest_title;
-                        delete usage_data_provider.earliest_database;
-                        delete usage_data_provider.latest_database;
-                        delete usage_data_provider.earliest_item;
-                        delete usage_data_provider.latest_item;
                         const client = APIClient.erm;
                         client.usage_data_providers
                             .update(usage_data_provider, id)
