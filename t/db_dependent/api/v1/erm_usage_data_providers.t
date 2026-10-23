@@ -67,17 +67,7 @@ subtest 'list() tests' => sub {
     # No usage_data_providers, so empty array should be returned
     $t->get_ok("//$userid:$password@/api/v1/erm/usage_data_providers")->status_is(200)->json_is( [] );
 
-    my %additional_fields = (
-        earliest_title    => '',
-        latest_title      => '',
-        earliest_database => '',
-        latest_database   => '',
-        earliest_item     => '',
-        latest_item       => '',
-        earliest_platform => '',
-        latest_platform   => '',
-        last_run          => ''
-    );
+    my %additional_fields = ( last_run => '' );
 
     my $usage_data_provider = $builder->build_object( { class => 'Koha::ERM::EUsage::UsageDataProviders' } );
     my $udp_result          = { %{ $usage_data_provider->to_api }, %additional_fields };
