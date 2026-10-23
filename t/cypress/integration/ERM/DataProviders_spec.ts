@@ -404,20 +404,25 @@ describe("Data providers summary", () => {
             "/api/v1/erm/config",
             '{"settings":{"ERMModule":"1","ERMProviders":["local"]}}'
         );
-    });
-
-    it("Should navigate to the summary page and back to providers list", () => {
-        const dataProvider = cy.get_usage_data_provider();
-        const dataProviders = [dataProvider];
-
         cy.intercept("GET", "/api/v1/erm/usage_data_providers*", {
             statusCode: 200,
-            body: dataProviders,
+            body: [cy.get_usage_data_provider()],
             headers: {
                 "X-Base-Total-Count": "1",
                 "X-Total-Count": "1",
             },
         });
+        cy.intercept("GET", "/api/v1/erm/counter_logs/summary*", {
+            statusCode: 200,
+            body: [cy.get_counter_log_summary()],
+            headers: {
+                "X-Base-Total-Count": "1",
+                "X-Total-Count": "1",
+            },
+        });
+    });
+
+    it("Should navigate to the summary page and back to providers list", () => {
         cy.visit("/cgi-bin/koha/erm/eusage/usage_data_providers");
 
         cy.contains("Data providers summary").click();
@@ -431,52 +436,22 @@ describe("Data providers summary", () => {
         );
     });
 
-    it("Should correctly display dates", () => {
-        const dataProvider = cy.get_usage_data_provider();
-        const dataProviders = [dataProvider];
+    it("Should display the harvest status of each month", () => {
+        const summary = cy.get_counter_log_summary();
 
-        cy.intercept("GET", "/api/v1/erm/usage_data_providers*", {
-            statusCode: 200,
-            body: dataProviders,
-            headers: {
-                "X-Base-Total-Count": "1",
-                "X-Total-Count": "1",
-            },
-        });
-        cy.visit("/cgi-bin/koha/erm/eusage/usage_data_providers");
+        cy.visit("/cgi-bin/koha/erm/eusage/usage_data_providers/summary");
 
-        cy.contains("Data providers summary").click();
+        const firstRowCells = () =>
+            cy.get("#usage_data_providers_summary table tbody tr:first td");
 
-        // Check provider name
-        cy.get(
-            "#usage_data_providers_summary table tbody tr:first td:first"
-        ).should("have.text", dataProvider.name);
-
-        // Check start and end dates
-        cy.get(
-            "#usage_data_providers_summary table tbody tr:first td:nth-child(2)"
-        ).should("have.text", "2023-01-01");
-        cy.get(
-            "#usage_data_providers_summary table tbody tr:first td:nth-child(3)"
-        ).should("have.text", "2023-01-01");
-        cy.get(
-            "#usage_data_providers_summary table tbody tr:first td:nth-child(4)"
-        ).should("have.text", "2023-01-01");
-        cy.get(
-            "#usage_data_providers_summary table tbody tr:first td:nth-child(5)"
-        ).should("have.text", "2023-01-01");
-        cy.get(
-            "#usage_data_providers_summary table tbody tr:first td:nth-child(6)"
-        ).should("have.text", "N/A");
-        cy.get(
-            "#usage_data_providers_summary table tbody tr:first td:nth-child(7)"
-        ).should("have.text", "N/A");
-        cy.get(
-            "#usage_data_providers_summary table tbody tr:first td:nth-child(8)"
-        ).should("have.text", "N/A");
-        cy.get(
-            "#usage_data_providers_summary table tbody tr:first td:nth-child(9)"
-        ).should("have.text", "N/A");
+        firstRowCells().eq(0).should("have.text", String(summary.report_year));
+        firstRowCells().eq(1).should("contain", summary.provider_name);
+        firstRowCells().eq(1).find("a.show").should("exist");
+        firstRowCells().eq(2).should("have.text", summary.report_type);
+        firstRowCells().eq(3).find(".badge").should("have.text", "Success");
+        firstRowCells().eq(4).find(".badge").should("have.text", "Retry");
+        firstRowCells().eq(5).find(".badge").should("have.text", "No usage");
+        firstRowCells().eq(6).should("have.text", "");
     });
 });
 
@@ -698,7 +673,7 @@ describe("Data provider tab options", () => {
         // Check the harvest columns
         firstRowCells().eq(1).contains("TR_J1");
         firstRowCells().eq(2).contains("2023-06");
-        firstRowCells().eq(3).contains("Retry needed");
+        firstRowCells().eq(3).contains("Retry");
         firstRowCells()
             .eq(4)
             .contains("3031: Usage Not Ready for Requested Dates");

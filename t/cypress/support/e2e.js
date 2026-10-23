@@ -1502,15 +1502,29 @@ cy.get_usage_data_provider = () => {
                 date_uploaded: dates["tomorrow_iso"],
             },
         ],
-        earliest_title: "2023-01-01",
-        latest_title: "2023-01-01",
-        earliest_item: "",
-        latest_item: "",
-        earliest_platform: "2023-01-01",
-        latest_platform: "2023-01-01",
-        earliest_database: "",
-        latest_database: "",
         last_run: "2023-10-01",
+    };
+};
+
+cy.get_counter_log_summary = () => {
+    return {
+        erm_counter_log_summary_id: 1,
+        usage_data_provider_id: 1,
+        provider_name: "Wiley Online Library",
+        report_type: "TR_J1",
+        report_year: 2023,
+        month_1: "success",
+        month_2: "retry",
+        month_3: "no_usage",
+        month_4: null,
+        month_5: null,
+        month_6: null,
+        month_7: null,
+        month_8: null,
+        month_9: null,
+        month_10: null,
+        month_11: null,
+        month_12: null,
     };
 };
 
