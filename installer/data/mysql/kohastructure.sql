@@ -3116,6 +3116,7 @@ CREATE TABLE `erm_counter_logs` (
   KEY `erm_counter_log_ibfk_2` (`counter_files_id`),
   KEY `erm_counter_log_ibfk_3` (`usage_data_provider_id`),
   KEY `erm_counter_log_ibfk_4` (`background_job_id`),
+  KEY `erm_counter_log_period_idx` (`usage_data_provider_id`,`report_type`,`report_year`,`report_month`),
   KEY `erm_counter_log_status_idx` (`status`),
   CONSTRAINT `erm_counter_log_ibfk_1` FOREIGN KEY (`borrowernumber`) REFERENCES `borrowers` (`borrowernumber`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `erm_counter_log_ibfk_2` FOREIGN KEY (`counter_files_id`) REFERENCES `erm_counter_files` (`erm_counter_files_id`) ON DELETE CASCADE ON UPDATE CASCADE,
