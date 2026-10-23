@@ -33,7 +33,7 @@
                                 [% CASE 'no_data' %]
                                     <span class="badge bg-secondary">No data</span>
                                 [% CASE 'retry' %]
-                                    <span class="badge bg-warning text-dark">Retry needed</span>
+                                    <span class="badge bg-warning text-dark">Retry</span>
                                 [% CASE 'error' %]
                                     <span class="badge bg-danger">Error</span>
                                 [% CASE %]

@@ -21,6 +21,7 @@ import { inject, onMounted, ref, useTemplateRef } from "vue";
 import KohaTable from "../KohaTable.vue";
 import { useRoute } from "vue-router";
 import { $__ } from "@koha-vue/i18n";
+import { getHarvestStatus } from "./harvestStatus.js";
 
 export default {
     setup() {
@@ -33,23 +34,8 @@ export default {
         const initialized = ref(false);
         const building_table = ref(false);
 
-        const statusLabels = {
-            success: $__("Success"),
-            no_usage: $__("No usage"),
-            no_data: $__("No data"),
-            retry: $__("Retry needed"),
-            error: $__("Error"),
-        };
-        const statusClasses = {
-            success: "bg-success",
-            no_usage: "bg-success-subtle",
-            no_data: "bg-orange",
-            retry: "bg-warning text-dark",
-            error: "bg-danger",
-        };
-        const statusFilterOptions = Object.entries(statusLabels).map(
-            ([id, label]) => ({ _id: id, _str: label })
-        );
+        const { filterOptions: statusFilterOptions, badge: statusBadge } =
+            getHarvestStatus();
 
         const formatPeriod = (year, month) =>
             year && month ? `${year}-${String(month).padStart(2, "0")}` : "";
@@ -141,15 +127,11 @@ export default {
                     title: $__("Status"),
                     data: "status",
                     dataFilter: "status",
-                    render: (data, type, row, meta) => {
-                        const label = statusLabels[row.status] || row.status;
-                        const badgeClass =
-                            statusClasses[row.status] || "bg-secondary";
-                        const tooltip = logDetailLines(row.logdetails).join(
-                            "\n"
-                        );
-                        return `<span class="badge ${badgeClass}" title="${escape_str(tooltip)}">${escape_str(label)}</span>`;
-                    },
+                    render: (data, type, row, meta) =>
+                        statusBadge(
+                            row.status,
+                            logDetailLines(row.logdetails).join("\n")
+                        ),
                     searchable: true,
                     orderable: true,
                 },

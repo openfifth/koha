@@ -346,6 +346,21 @@ export class ERMAPIClient {
         };
     }
 
+    get counter_log_summaries() {
+        return {
+            count: (query = {}) =>
+                this.httpClient.count({
+                    endpoint:
+                        "counter_logs/summary?" +
+                        new URLSearchParams({
+                            _page: 1,
+                            _per_page: 1,
+                            ...(query && { q: JSON.stringify(query) }),
+                        }),
+                }),
+        };
+    }
+
     get default_usage_reports() {
         return {
             getAll: query =>
