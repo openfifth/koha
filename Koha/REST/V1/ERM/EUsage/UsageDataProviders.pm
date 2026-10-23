@@ -23,7 +23,6 @@ use MIME::Base64 qw( decode_base64 );
 use Mojo::Base 'Mojolicious::Controller';
 
 use Koha::ERM::EUsage::UsageDataProviders;
-use Koha::ERM::EUsage::MonthlyUsages;
 use Koha::ERM::EUsage::CounterFiles;
 
 use Scalar::Util qw( blessed );
@@ -44,56 +43,6 @@ sub list {
         my $usage_data_providers_set = Koha::ERM::EUsage::UsageDataProviders->new;
         my $usage_data_providers     = $c->objects->search($usage_data_providers_set);
         foreach my $provider (@$usage_data_providers) {
-            my $title_dates = _get_earliest_and_latest_dates(
-                'TR',
-                $provider->{erm_usage_data_provider_id}
-            );
-            $provider->{earliest_title} =
-                  $title_dates->{earliest_date}
-                ? $title_dates->{earliest_date}
-                : '';
-            $provider->{latest_title} =
-                  $title_dates->{latest_date}
-                ? $title_dates->{latest_date}
-                : '';
-
-            my $platform_dates = _get_earliest_and_latest_dates(
-                'PR',
-                $provider->{erm_usage_data_provider_id}
-            );
-            $provider->{earliest_platform} =
-                  $platform_dates->{earliest_date}
-                ? $platform_dates->{earliest_date}
-                : '';
-            $provider->{latest_platform} =
-                  $platform_dates->{latest_date}
-                ? $platform_dates->{latest_date}
-                : '';
-
-            my $item_dates = _get_earliest_and_latest_dates(
-                'IR',
-                $provider->{erm_usage_data_provider_id}
-            );
-            $provider->{earliest_item} =
-                  $item_dates->{earliest_date}
-                ? $item_dates->{earliest_date}
-                : '';
-            $provider->{latest_item} =
-                $item_dates->{latest_date} ? $item_dates->{latest_date} : '';
-
-            my $database_dates = _get_earliest_and_latest_dates(
-                'DR',
-                $provider->{erm_usage_data_provider_id}
-            );
-            $provider->{earliest_database} =
-                  $database_dates->{earliest_date}
-                ? $database_dates->{earliest_date}
-                : '';
-            $provider->{latest_database} =
-                  $database_dates->{latest_date}
-                ? $database_dates->{latest_date}
-                : '';
-
             my @last_run = Koha::ERM::EUsage::CounterFiles->search(
                 {
                     usage_data_provider_id => $provider->{erm_usage_data_provider_id},
@@ -422,75 +371,6 @@ sub test_connection {
     } catch {
         $c->unhandled_exception($_);
     };
-}
-
-=head3 _get_earliest_and_latest_dates
-
-=cut
-
-sub _get_earliest_and_latest_dates {
-    my ( $report_type, $id ) = @_;
-
-    my @years = Koha::ERM::EUsage::MonthlyUsages->search(
-        {
-            usage_data_provider_id => $id,
-            report_type            => { -like => "%$report_type%" }
-        },
-        {
-            columns => [
-                { earliestYear => { min => "year" } },
-                { latestYear   => { max => "year" } },
-            ]
-        }
-    )->unblessed;
-    if ( $years[0][0]->{earliestYear} ) {
-        my @earliest_month = Koha::ERM::EUsage::MonthlyUsages->search(
-            {
-                usage_data_provider_id => $id,
-                report_type            => { -like => "%$report_type%" },
-                year                   => $years[0][0]->{earliestYear},
-            },
-            { columns => [ { month => { min => "month" } }, ] }
-        )->unblessed;
-        my @latest_month = Koha::ERM::EUsage::MonthlyUsages->search(
-            {
-                usage_data_provider_id => $id,
-                report_type            => { -like => "%$report_type%" },
-                year                   => $years[0][0]->{latestYear},
-            },
-            { columns => [ { month => { max => "month" } }, ] }
-        )->unblessed;
-
-        $earliest_month[0][0]->{month} =
-            _format_month("0$earliest_month[0][0]->{month}");
-        $latest_month[0][0]->{month} =
-            _format_month("0$latest_month[0][0]->{month}");
-
-        my $earliest_date = "$years[0][0]->{earliestYear}-$earliest_month[0][0]->{month}";
-        my $latest_date   = "$years[0][0]->{latestYear}-$latest_month[0][0]->{month}";
-
-        return {
-            earliest_date => $earliest_date,
-            latest_date   => $latest_date,
-        };
-    } else {
-        return {
-            earliest_date => 0,
-            latest_date   => 0,
-        };
-    }
-}
-
-=head3 _format_month
-
-=cut
-
-sub _format_month {
-    my ($month) = @_;
-
-    $month = length($month) eq 2 ? $month : "0$month";
-
-    return $month;
 }
 
 1;
