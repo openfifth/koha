@@ -72,6 +72,13 @@ properties:
       - array
       - "null"
     description: The linked messages (x-koha-embed)
+  documents:
+    type:
+      - array
+      - "null"
+    description: The linked documents (x-koha-embed)
+    items:
+      $ref: ill_document.yaml
 required:
   - service_type
   - status

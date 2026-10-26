@@ -499,6 +499,8 @@ paths:
     $ref: ./paths/ill_iso18626_requests.yaml#/~1ill~1iso18626_requests
   "/ill/iso18626_requests/{iso18626_request_id}":
     $ref: ./paths/ill_iso18626_requests.yaml#/~1ill~1iso18626_requests~1{iso18626_request_id}
+  "/ill/iso18626_requests/{iso18626_request_id}/documents/{ill_document_id}/file/content":
+    $ref: ./paths/ill_iso18626_requests.yaml#/~1ill~1iso18626_requests~1{iso18626_request_id}~1documents~1{ill_document_id}~1file~1content
   /ill/iso18626_requesting_agencies:
     $ref: ./paths/ill_iso18626_requesting_agencies.yaml#/~1ill~1iso18626_requesting_agencies
   "/ill/iso18626_requesting_agencies/{iso18626_requesting_agency_id}":

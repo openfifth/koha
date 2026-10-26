@@ -23,6 +23,7 @@
           type: string
           enum:
             - messages
+            - documents
             - requesting_agency
             - hold
         collectionFormat: csv
@@ -83,6 +84,7 @@
           type: string
           enum:
             - messages
+            - documents
             - requesting_agency
             - hold
         collectionFormat: csv
@@ -184,6 +186,57 @@
           $ref: "../swagger.yaml#/definitions/error"
       413:
         description: Payload too large
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      500:
+        description: |-
+          Internal server error. Possible `error_code` attribute values:
+          * `internal_server_error`
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      503:
+        description: Under maintenance
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+    x-koha-authorization:
+      permissions:
+        ill: 1
+
+"/ill/iso18626_requests/{iso18626_request_id}/documents/{ill_document_id}/file/content":
+  get:
+    x-mojo-to: ILL::ISO18626::Requests#get_document
+    operationId: downloadIso18626RequestDocument
+    tags:
+      - iso18626_requests
+    summary: Download an ILL document
+    produces:
+      - application/octet-stream
+    parameters:
+      - $ref: "../swagger.yaml#/parameters/iso18626_request_id_pp"
+      - description: Internal ILL document identifier
+        in: path
+        name: ill_document_id
+        required: true
+        type: integer
+    responses:
+      200:
+        description: The document file
+        schema:
+          type: file
+      400:
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      401:
+        description: Authentication required
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      403:
+        description: Access forbidden
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      404:
+        description: Resource not found
         schema:
           $ref: "../swagger.yaml#/definitions/error"
       500:

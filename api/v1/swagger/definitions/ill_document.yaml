@@ -1,0 +1,29 @@
+---
+type: object
+properties:
+  ill_document_id:
+    type: integer
+    description: Internal ILL document identifier
+  iso18626_request_id:
+    type:
+      - integer
+      - "null"
+    description: Internal ISO18626 request identifier, for documents supplied to other libraries
+  ill_request_id:
+    type:
+      - integer
+      - "null"
+    description: Internal ILL request identifier, for documents delivered to patrons
+  file_name:
+    type: string
+    description: Name of the file
+  file_type:
+    type: string
+    description: MIME type of the file
+  uploaded_on:
+    type:
+      - string
+      - "null"
+    format: date-time
+    description: Date and time the document was uploaded
+additionalProperties: false

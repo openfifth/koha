@@ -1073,6 +1073,29 @@ export default {
                     group: "circulation_information",
                 },
                 {
+                    name: "documents",
+                    type: "component",
+                    hideIn: ["List", "Form"],
+                    hidden: iso18626_request =>
+                        !!iso18626_request.documents?.length,
+                    group: "request_details",
+                    showElement: {
+                        componentPath:
+                            "@koha-vue/components/DocumentDisplay.vue",
+                        componentProps: {
+                            resource: {
+                                type: "resource",
+                                value: null,
+                            },
+                            documentUrl: {
+                                type: "object",
+                                value: document =>
+                                    `/api/v1/ill/iso18626_requests/${document.iso18626_request_id}/documents/${document.ill_document_id}/file/content`,
+                            },
+                        },
+                    },
+                },
+                {
                     group: "iso18626_messages",
                     name: "messages",
                     label: "",

@@ -18,7 +18,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 5;
+use Test::More tests => 6;
 
 use Test::MockModule;
 use Test::MockObject;
@@ -694,6 +694,70 @@ XML
         qr{<messageStatus>OK</messageStatus>},
         'Request without ISO18626Message envelope is still accepted'
     );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'get_document() tests' => sub {
+
+    plan tests => 18;
+
+    $schema->storage->txn_begin;
+
+    my $librarian = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { flags => 2**22 }    # 22 => ill
+        }
+    );
+    my $password = 'thePassword123';
+    $librarian->set_password( { password => $password, skip_validation => 1 } );
+    my $userid = $librarian->userid;
+
+    my $patron = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { flags => 0 }
+        }
+    );
+    $patron->set_password( { password => $password, skip_validation => 1 } );
+    my $unauth_userid = $patron->userid;
+
+    my $request       = $builder->build_object( { class => 'Koha::ILL::ISO18626::Requests' } );
+    my $other_request = $builder->build_object( { class => 'Koha::ILL::ISO18626::Requests' } );
+
+    my $document       = $request->add_document( { file_name => 'article.pdf', file_content => 'PDF bytes' } );
+    my $other_document = $other_request->add_document( { file_name => 'other.pdf', file_content => 'Other bytes' } );
+
+    my $url = "//$userid:$password@/api/v1/ill/iso18626_requests/";
+
+    $t->get_ok( $url . $request->id . '/documents/' . $document->id . '/file/content' )
+        ->status_is(200)
+        ->content_is('PDF bytes')
+        ->content_type_like(qr{^application/pdf})
+        ->header_like( 'Content-Disposition' => qr{^attachment;filename="article\.pdf"} );
+
+    $t->get_ok( "//$unauth_userid:$password@/api/v1/ill/iso18626_requests/"
+            . $request->id
+            . '/documents/'
+            . $document->id
+            . '/file/content' )->status_is(403);
+
+    $t->get_ok( $url . $request->id . '/documents/' . $other_document->id . '/file/content' )
+        ->status_is(404)
+        ->json_is( '/error' => 'Document not found' );
+
+    $t->get_ok( $url . $other_request->id . '/documents/' . $document->id . '/file/content' )->status_is(404);
+
+    my $deleted_request_id = $other_request->id;
+    $other_request->delete;
+    $t->get_ok( $url . $deleted_request_id . '/documents/' . $other_document->id . '/file/content' )
+        ->status_is(404)
+        ->json_is( '/error' => 'Iso18626 request not found' );
+
+    $t->get_ok( $url . $request->id => { 'x-koha-embed' => 'documents' } )
+        ->status_is(200)
+        ->json_is( '/documents/0/file_name' => 'article.pdf' );
 
     $schema->storage->txn_rollback;
 };

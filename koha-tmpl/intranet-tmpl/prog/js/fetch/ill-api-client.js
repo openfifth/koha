@@ -20,7 +20,8 @@ export class ILLAPIClient {
                 this.httpClient.get({
                     endpoint: "iso18626_requests/" + id,
                     headers: {
-                        "x-koha-embed": "requesting_agency,messages,hold",
+                        "x-koha-embed":
+                            "requesting_agency,messages,documents,hold",
                     },
                 }),
             getAll: (query, params) =>
