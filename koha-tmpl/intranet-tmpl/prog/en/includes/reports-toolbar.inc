@@ -12,6 +12,12 @@
         </div>
     [% END %]
 
+    [% IF saved1 && CAN_user_reports_edit_all_reports %]
+        <div class="btn-group">
+            <a class="btn btn-default" href="/cgi-bin/koha/reports/guided_reports.pl?op=bulk_transfer"> <i class="fa-solid fa-paper-plane"></i> Bulk transfer </a>
+        </div>
+    [% END %]
+
     [% IF ( showsql || execute || editsql || save_successful ) %]
         [% IF ( CAN_user_reports_delete_all_reports && !CAN_user_reports_create_reports ) %]
             <div class="btn-group">

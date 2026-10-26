@@ -48,6 +48,12 @@
         [% ELSIF ( editsql ) %]
             [% tx("Edit report {reportname} ({id})", { reportname = reportname, id = id }) | html %]
             &rsaquo; [% t("Saved reports") | html %] &rsaquo;
+        [% ELSIF ( bulk_transfer ) %]
+            [% t("Bulk transfer reports") | html %]
+            &rsaquo;
+        [% ELSIF ( bulk_transfer_confirm ) %]
+            [% t("Bulk transfer reports: Confirm") | html %]
+            &rsaquo;
         [% END %]
 
         [% IF ( build1 ) %]
@@ -175,6 +181,10 @@
             [% END %]
             [% WRAPPER breadcrumb_item bc_active= 1 %]
                 <span>Run</span>
+            [% END %]
+        [% ELSIF ( bulk_transfer || bulk_transfer_confirm ) %]
+            [% WRAPPER breadcrumb_item bc_active= 1 %]
+                <span>Bulk transfer</span>
             [% END %]
         [% ELSIF ( build1 || build2 || build3 || build4 || build5 || build6 || showreport ) %]
             [% WRAPPER breadcrumb_item %]
@@ -986,6 +996,47 @@
         </form>
     [% END # /IF( save ) %]
 
+    [% IF ( bulk_transfer ) %]
+        <h1>Bulk Transfer</h1>
+        <form action="/cgi-bin/koha/reports/guided_reports.pl" method="post">
+            [% INCLUDE 'csrf-token.inc' %]
+            <fieldset class="rows">
+                <ol>
+                    <li>
+                        <label for="from_borrowernumber"> Transfer from: </label>
+                        <input type="text" name="from" id="from_borrowernumber" autocomplete="off" type="text" value="[% from | html %]" />
+                        <button type="button" class="btn btn-default my_borrowernumber">Me</button>
+                    </li>
+                    <li>
+                        <label for="to_borrowernumber"> Transfer to: </label>
+                        <input type="text" name="to" id="to_borrowernumber" autocomplete="off" type="text" value="[% to | html %]" />
+                        <button type="button" class="btn btn-default my_borrowernumber">Me</button>
+                    </li>
+                </ol>
+            </fieldset>
+            <fieldset class="action"
+                ><input type="hidden" name="op" value="cud-bulk_transfer_confirm" />
+                <input type="submit" name="submit" class="btn btn-primary" value="Transfer" />
+                <a href="/cgi-bin/koha/reports/guided_reports.pl" class="btn btn-default new">Cancel</a>
+            </fieldset>
+        </form>
+    [% END #/ IF ( bulk_transfer ) %]
+
+    [% IF ( bulk_transfer_confirm ) %]
+        <h1>Bulk Transfer</h1>
+        <p>Please confirm transferring [% transfer_count | html %] reports.</p>
+        <form action="/cgi-bin/koha/reports/guided_reports.pl" method="post">
+            [% INCLUDE 'csrf-token.inc' %]
+            <input type="hidden" name="from" value="[% from | html %]" />
+            <input type="hidden" name="to" value="[% to | html %]" />
+            <fieldset class="action"
+                ><input type="hidden" name="op" value="cud-bulk_transfer_execute" />
+                <input type="submit" name="submit" class="btn btn-primary" value="Confirm" />
+                <a href="/cgi-bin/koha/reports/guided_reports.pl" class="btn btn-default new">Cancel</a>
+            </fieldset>
+        </form>
+    [% END #/ IF ( bulk_transfer_confirm ) %]
+
     [% IF ( warn_authval_problem ) %]
         <div class="alert alert-warning">
             <h3>Errors found when processing parameters for report: [% name | html %]</h3>
@@ -1791,6 +1842,10 @@
                         <p>The report cannot be executed due to security risks. Please edit this report and ensure no password columns have been selected.</p>
                     [% ELSIF (error.borrowernumber) %]
                         <p>Please select a valid author for this report. If you wish to disown it, you may do so from the main table.</p>
+                    [% ELSIF (error.from) %]
+                        <p>Please select a valid patron to transfer from.</p>
+                    [% ELSIF (error.to) %]
+                        <p>Please select a valid patron to transfer to.</p>
                     [% ELSE %]
 
                     [% END %]
@@ -1899,7 +1954,11 @@
             op = "showsql";
         [% ELSIF showreport %]
             op = "showreport";
+        [% ELSIF bulk_transfer  %]
+            op = "bulk_transfer";
         [% END %]
+
+        const logged_in_user_borrowernumber = "[% logged_in_user.borrowernumber | html %]";
 
         let saved1 = [% saved1 ? 1 : 0 | html %];
         const interface = "[% interface | html %]";
@@ -2627,6 +2686,26 @@
 
                 $("#authorised_value").on("change", function () {
                     $("#param_category").val($(this).val());
+                });
+            }
+
+            if (op == "bulk_transfer") {
+                patron_autocomplete($("#from_borrowernumber"), {
+                    "on-select-callback": function (event, ui) {
+                        $("#from_borrowernumber").val(ui.item.patron_id);
+                        return false;
+                    },
+                });
+
+                patron_autocomplete($("#to_borrowernumber"), {
+                    "on-select-callback": function (event, ui) {
+                        $("#to_borrowernumber").val(ui.item.patron_id);
+                        return false;
+                    },
+                });
+
+                $(".my_borrowernumber").on("click", function () {
+                    $(this).prev("input[type=text]").val(logged_in_user_borrowernumber);
                 });
             }
 

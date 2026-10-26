@@ -90,6 +90,8 @@ if (
     $flagsrequired = { 'create_reports' => 1, 'execute_reports' => 1 };            #NOTE: "and" permissions
 } elsif ( $op eq 'cud-delete' ) {
     $flagsrequired = [ 'delete_all_reports', 'delete_own_reports' ];
+} elsif ( $op eq 'bulk_transfer' || $op eq 'cud-bulk_transfer_confirm' || $op eq 'cud-bulk_transfer_execute' ) {
+    $flagsrequired = 'edit_all_reports';
 } else {
 
     #NOTE: You should never get here
@@ -772,6 +774,40 @@ if ( !$op ) {
         print $input->redirect('/cgi-bin/koha/reports/guided_reports.pl?op=list');
     }
     exit;
+} elsif ( $op eq 'bulk_transfer' ) {
+    $template->param( bulk_transfer => 1 );
+} elsif ( $op eq 'cud-bulk_transfer_confirm' || $op eq 'cud-bulk_transfer_execute' ) {
+    my $from_borrowernumber = $input->param('from');
+    my $to_borrowernumber   = $input->param('to');
+
+    my $from_patron = Koha::Patrons->find( { borrowernumber => $from_borrowernumber } );
+    my $to_patron   = Koha::Patrons->find( { borrowernumber => $to_borrowernumber } );
+
+    push @errors, { 'from' => 1 } unless $from_patron;
+    push @errors, { 'to'   => 1 } unless $to_patron;
+
+    if (@errors) {
+        $template->param( 'errors' => \@errors );
+    } elsif ( $op eq 'cud-bulk_transfer_confirm' ) {
+
+        my $transfer_count = Koha::Reports->search( { borrowernumber => $from_patron->borrowernumber } )->count;
+
+        $template->param(
+            bulk_transfer_confirm => 1,
+            from                  => $from_borrowernumber,
+            to                    => $to_borrowernumber,
+            transfer_count        => $transfer_count
+        );
+    } else {
+        Koha::Reports->search( { borrowernumber => $from_patron->borrowernumber } )->update(
+            {
+                borrowernumber => $to_patron->borrowernumber,
+            }
+        );
+
+        print $input->redirect('/cgi-bin/koha/reports/guided_reports.pl?op=list');
+        exit;
+    }
 } elsif ( $op eq 'cud-share' ) {
     my $lang     = $input->param('mana_language') || '';
     my $reportid = $input->param('reportid');
