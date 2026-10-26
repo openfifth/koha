@@ -349,6 +349,21 @@ __PACKAGE__->belongs_to(
   { is_deferrable => 1, on_delete => "CASCADE", on_update => "CASCADE" },
 );
 
+=head2 ill_documents
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::IllDocument>
+
+=cut
+
+__PACKAGE__->has_many(
+  "ill_documents",
+  "Koha::Schema::Result::IllDocument",
+  { "foreign.illrequest_id" => "self.illrequest_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 illcomments
 
 Type: has_many
@@ -400,8 +415,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-05-06 20:57:38
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:g44uJHfnZE/4EcCZzMINIg
+# Created by DBIx::Class::Schema::Loader v0.07053 @ 2026-10-26 15:56:53
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:HkgQao1SPAcr5e4FrOiVMA
 
 __PACKAGE__->has_many(
   "comments",
