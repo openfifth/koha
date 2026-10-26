@@ -18,10 +18,11 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 9;
+use Test::More tests => 10;
 use Test::MockModule;
 use Test::MockObject;
 use Test::Exception;
+use Test::Warn;
 
 use C4::Circulation qw( AddIssue CanBookBeIssued );
 use Koha::CirculationRules;
@@ -546,6 +547,75 @@ subtest 'progress_request() stores the supplied document on CopyCompleted' => su
     is( $request->status,                        'CopyCompleted', 'Request status is updated' );
     is( $request->documents->count,              1,               'The document is stored' );
     is( $request->documents->next->file_content, 'PDF bytes',     'The document content is stored' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'progress_request() sends the document URL on CopyCompleted' => sub {
+
+    plan tests => 8;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'OPACBaseURL', 'https://supplier.example.com' );
+
+    my $sent_message;
+    my $mock_request = Test::MockModule->new('Koha::ILL::ISO18626::Request');
+    $mock_request->mock( 'send_message', sub { $sent_message = $_[2] } );
+
+    my $request = $builder->build_object(
+        {
+            class => 'Koha::ILL::ISO18626::Requests',
+            value => { status => 'RequestReceived', service_type => 'Copy' }
+        }
+    );
+
+    $request->progress_request(
+        'supplyingAgency',
+        { status => 'CopyCompleted', document => { file_name => 'article.pdf', file_content => 'PDF bytes' } }
+    );
+    my $document      = $request->documents->next;
+    my $delivery_info = $sent_message->{supplyingAgencyMessage}->{deliveryInfo};
+    is(
+        $delivery_info->{URL},
+        'https://supplier.example.com/api/v1/public/ill/iso18626/documents/' . $document->token . '/file/content',
+        'deliveryInfo URL points to the public download of the document'
+    );
+    is( $delivery_info->{deliveryMethod}, 'URL', 'deliveryInfo deliveryMethod is URL' );
+    ok( $delivery_info->{dateSent}, 'deliveryInfo dateSent is set' );
+
+    my $request_without_document = $builder->build_object(
+        {
+            class => 'Koha::ILL::ISO18626::Requests',
+            value => { status => 'RequestReceived', service_type => 'Copy' }
+        }
+    );
+    $request_without_document->progress_request( 'supplyingAgency', { status => 'CopyCompleted' } );
+    ok(
+        !exists $sent_message->{supplyingAgencyMessage}->{deliveryInfo},
+        'No deliveryInfo is sent on CopyCompleted without a document'
+    );
+
+    my $rejected_request = $builder->build_object(
+        {
+            class => 'Koha::ILL::ISO18626::Requests',
+            value => { status => 'RequestReceived', service_type => 'Copy' }
+        }
+    );
+    my $mock_validator = Test::MockModule->new('JSON::Validator::Schema::OpenAPIv2');
+    $mock_validator->mock( 'validate', sub { return ('Invalid') } );
+    my $result;
+    warning_like {
+        $result = $rejected_request->progress_request(
+            'supplyingAgency',
+            { status => 'CopyCompleted', document => { file_name => 'article.pdf', file_content => 'PDF bytes' } }
+        );
+    }
+    qr/Schema validation failed/, 'Schema validation failure warns';
+    is( $result,                             0, 'progress_request returns 0 when the message is invalid' );
+    is( $rejected_request->documents->count, 0, 'The document is removed when the message is invalid' );
+    $rejected_request->discard_changes;
+    is( $rejected_request->status, 'RequestReceived', 'Status is not updated when the message is invalid' );
 
     $schema->storage->txn_rollback;
 };

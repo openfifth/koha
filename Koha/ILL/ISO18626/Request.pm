@@ -383,6 +383,12 @@ sub progress_request {
         return;
     }
 
+    my $added_document =
+          $params->{document} && $resulting_status eq 'CopyCompleted'
+        ? $self->add_document( $params->{document} )
+        : undef;
+    my $document = $resulting_status eq 'CopyCompleted' ? $self->documents->next : undef;
+
     my $check_out      = $self->get_checkout;
     my $check_out_item = $self->get_checkout ? $self->get_checkout->item : undef;
 
@@ -452,6 +458,18 @@ sub progress_request {
                 }
                 )
             : (),
+            $document
+            ? (
+                deliveryInfo => {
+                    dateSent => _format_iso_payload_date_param( $document->uploaded_on ),
+                    URL      => C4::Context->preference('OPACBaseURL')
+                        . '/api/v1/public/ill/iso18626/documents/'
+                        . $document->token
+                        . '/file/content',
+                    deliveryMethod => 'URL',
+                }
+                )
+            : (),
 
             # TODO: Implement shippingInfo
             # shippingInfo => {
@@ -480,10 +498,9 @@ sub progress_request {
             $self->iso18626_request_id,
             join( ', ', map { "$_" } @errors )
         );
+        $added_document->delete if $added_document;
         return 0;
     }
-    $self->add_document( $params->{document} )
-        if $params->{document} && $resulting_status eq 'CopyCompleted';
 
     $self->status($resulting_status)->store;
     $self->send_message( 'supplyingAgencyMessage', $json );
