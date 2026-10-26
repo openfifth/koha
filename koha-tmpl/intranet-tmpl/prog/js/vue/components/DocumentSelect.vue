@@ -27,7 +27,7 @@
                 {{ $__("File type") }}:
                 <span>{{ document.file_type }}</span>
             </li>
-            <li v-show="document.file_name">
+            <li v-show="document.file_name && !hideDescription">
                 {{ $__("File description") }}:
                 <input
                     :id="`file_description_${counter}`"
@@ -51,6 +51,7 @@ export default {
     props: {
         counter: String,
         document: Object,
+        hideDescription: Boolean,
     },
     setup(props) {
         const format_date = $date;

@@ -589,7 +589,29 @@ export default {
                     iso18626_request.service_type === "Loan" ||
                     iso18626_request.hold_id,
                 index: -20,
-                action_inputs: [],
+                action_inputs: [
+                    {
+                        name: "file_content",
+                        type: "component",
+                        componentPath:
+                            "@koha-vue/components/DocumentSelect.vue",
+                        label: $__("Document"),
+                        componentProps: {
+                            counter: {
+                                type: "string",
+                                value: "copy_completed",
+                            },
+                            document: {
+                                type: "resource",
+                                value: null,
+                            },
+                            hideDescription: {
+                                type: "boolean",
+                                value: true,
+                            },
+                        },
+                    },
+                ],
             },
             {
                 id: "LoanCompleted",

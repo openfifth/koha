@@ -20,7 +20,9 @@ use Modern::Perl;
 use Mojo::Base 'Mojolicious::Controller';
 
 use Koha::ILL::ISO18626::Requests;
-use Try::Tiny qw( catch try );
+use MIME::Base64 qw( decode_base64 );
+use Scalar::Util qw( blessed );
+use Try::Tiny    qw( catch try );
 
 =head1 NAME
 
@@ -89,6 +91,22 @@ sub edit {
         my $body   = $c->req->json;
         my $status = $body->{status};
 
+        my $file_name    = delete $body->{file_name};
+        my $file_content = delete $body->{file_content};
+        if ( $file_name || $file_content ) {
+            return $c->render(
+                status  => 400,
+                openapi => { error => "file_name and file_content must be supplied together" }
+            ) unless $file_name && $file_content;
+
+            return $c->render(
+                status  => 400,
+                openapi => { error => "A document can only be supplied with the CopyCompleted status" }
+            ) unless $status && $status eq 'CopyCompleted';
+
+            $body->{document} = { file_name => $file_name, file_content => decode_base64($file_content) };
+        }
+
         my $result = $request->progress_request( 'supplyingAgency', $body );
         return $c->render( status => 500, json => { error => "Request could not be progressed" } )
             unless $result;
@@ -98,6 +116,12 @@ sub edit {
             openapi => $request->to_api
         );
     } catch {
+        if ( blessed $_ && $_->isa('Koha::Exceptions::PayloadTooLarge') ) {
+            return $c->render(
+                status  => 413,
+                openapi => { error => $_->error }
+            );
+        }
         return $c->unhandled_exception($_);
     };
 }

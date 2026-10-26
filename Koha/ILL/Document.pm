@@ -19,8 +19,12 @@ package Koha::ILL::Document;
 
 use Modern::Perl;
 
+use MIME::Types;
 use UUID;
 
+use C4::Context;
+
+use Koha::Exceptions;
 use Koha::ILL::Documents;
 
 use base qw(Koha::Object);
@@ -37,14 +41,28 @@ Koha::ILL::Document - Koha ILL document Object class
 
     my $document = Koha::ILL::Document->new( { ... } )->store;
 
-Overloaded I<store> method. Generates the download token on creation.
+Overloaded I<store> method. On creation, derives file_type from file_name when
+not given and generates the download token.
+Throws I<Koha::Exceptions::PayloadTooLarge> if the file exceeds the database's
+max_allowed_packet.
 
 =cut
 
 sub store {
     my ($self) = @_;
 
-    $self->token( $self->_generate_unused_token ) unless $self->in_storage;
+    unless ( $self->in_storage ) {
+        my $max_allowed_packet = C4::Context->dbh->selectrow_array(q{SELECT @@max_allowed_packet});
+        Koha::Exceptions::PayloadTooLarge->throw("File size exceeds limit defined by server")
+            if length( $self->file_content ) > $max_allowed_packet;
+
+        unless ( $self->file_type ) {
+            my $file_type = MIME::Types->new->mimeTypeOf( $self->file_name );
+            $self->file_type( $file_type ? $file_type->type : 'application/octet-stream' );
+        }
+
+        $self->token( $self->_generate_unused_token );
+    }
 
     return $self->SUPER::store;
 }
