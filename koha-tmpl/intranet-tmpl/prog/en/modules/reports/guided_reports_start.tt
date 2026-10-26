@@ -519,6 +519,34 @@
                                                                 ></li
                                                             >
                                                         [% END %]
+                                                        [% IF (CAN_user_reports_edit_all_reports && savedreport.borrowernumber != loggedinusernumber) || !savedreport.borrowernumber %]
+                                                            <li>
+                                                                <a
+                                                                    class="dropdown-item submit-form-link"
+                                                                    href="#"
+                                                                    data-id="[% savedreport.id | html %]"
+                                                                    data-action="guided_reports.pl"
+                                                                    data-method="post"
+                                                                    data-op="cud-adopt"
+                                                                    data-confirmation-msg="[% t('Are you sure you want to adopt this report?') | html %]"
+                                                                    ><i class="fa fa-pencil" aria-hidden="true"></i> Adopt</a
+                                                                ></li
+                                                            >
+                                                        [% END %]
+                                                        [% IF (CAN_user_reports_edit_all_reports && savedreport.borrowernumber) || savedreport.borrowernumber == loggedinusernumber %]
+                                                            <li>
+                                                                <a
+                                                                    class="dropdown-item submit-form-link"
+                                                                    href="#"
+                                                                    data-id="[% savedreport.id | html %]"
+                                                                    data-action="guided_reports.pl"
+                                                                    data-method="post"
+                                                                    data-op="cud-disown"
+                                                                    data-confirmation-msg="[% t('Are you sure you want to disown this report?') | html %]"
+                                                                    ><i class="fa fa-pencil" aria-hidden="true"></i> Disown</a
+                                                                ></li
+                                                            >
+                                                        [% END %]
                                                         [% IF ( CAN_user_reports_create_reports ) %]
                                                             <li
                                                                 ><a class="dropdown-item" title="Duplicate this saved report" href="/cgi-bin/koha/reports/guided_reports.pl?op=duplicate&amp;id=[% savedreport.id | uri %]"
