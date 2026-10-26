@@ -75,6 +75,36 @@ sub get {
     };
 }
 
+=head3 get_document
+
+Controller function that handles downloading the file of a Koha::ILL::Document
+
+=cut
+
+sub get_document {
+    my $c = shift->openapi->valid_input or return;
+
+    return try {
+        my $iso18626_request = Koha::ILL::ISO18626::Requests->find( $c->param('iso18626_request_id') );
+
+        return $c->render_resource_not_found("Iso18626 request")
+            unless $iso18626_request;
+
+        my $document = $iso18626_request->documents->find( $c->param('ill_document_id') );
+
+        return $c->render_resource_not_found("Document")
+            unless $document;
+
+        $c->render_file(
+            'data'         => $document->file_content,
+            'filename'     => $document->file_name,
+            'content_type' => $document->file_type,
+        );
+    } catch {
+        $c->unhandled_exception($_);
+    };
+}
+
 =head3 edit
 
 Controller function that handles editing a single Koha::ILL::ISO18626::Request object
