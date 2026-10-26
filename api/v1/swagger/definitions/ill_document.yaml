@@ -26,4 +26,13 @@ properties:
       - "null"
     format: date-time
     description: Date and time the document was uploaded
+  downloaded_on:
+    type:
+      - string
+      - "null"
+    format: date-time
+    description: Date and time the document was first downloaded by the patron
+  download_count:
+    type: integer
+    description: Number of times the document was downloaded by the patron
 additionalProperties: false

@@ -18,7 +18,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 2;
+use Test::More tests => 3;
 use Test::Exception;
 
 use Koha::Database;
@@ -79,6 +79,32 @@ subtest 'filter_by_purgeable_supplied() tests' => sub {
 
     throws_ok { Koha::ILL::Documents->filter_by_purgeable_supplied( {} ) }
     'Koha::Exceptions::MissingParameter', 'Throws without days';
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'record_download() tests' => sub {
+
+    plan tests => 5;
+
+    $schema->storage->txn_begin;
+
+    my $request  = $builder->build_object( { class     => 'Koha::ILL::Requests' } );
+    my $document = $request->add_document( { file_name => 'article.pdf', file_content => 'PDF bytes' } );
+    $document->discard_changes;
+
+    is( $document->download_count, 0,     'download_count starts at 0' );
+    is( $document->downloaded_on,  undef, 'downloaded_on starts empty' );
+
+    $document->record_download;
+    $document->discard_changes;
+    is( $document->download_count, 1, 'download_count is incremented' );
+    ok( $document->downloaded_on, 'downloaded_on is set on the first download' );
+
+    $document->downloaded_on('2026-01-01 10:00:00')->store;
+    $document->record_download;
+    $document->discard_changes;
+    is( $document->downloaded_on, '2026-01-01 10:00:00', 'downloaded_on keeps the first download' );
 
     $schema->storage->txn_rollback;
 };

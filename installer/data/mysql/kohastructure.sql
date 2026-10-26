@@ -3762,6 +3762,8 @@ CREATE TABLE `ill_documents` (
   `file_content` longblob NOT NULL COMMENT 'File content',
   `token` varchar(36) NOT NULL COMMENT 'Unique token used to download the document without authentication',
   `uploaded_on` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'Date and time the document was uploaded',
+  `downloaded_on` datetime DEFAULT NULL COMMENT 'Date and time the document was first downloaded by the patron',
+  `download_count` int(11) NOT NULL DEFAULT 0 COMMENT 'Number of times the document was downloaded by the patron',
   PRIMARY KEY (`ill_document_id`),
   UNIQUE KEY `token` (`token`),
   KEY `ill_documents_iso18626_request_fk` (`iso18626_request_id`),
