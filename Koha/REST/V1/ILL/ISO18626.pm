@@ -22,6 +22,7 @@ use Mojo::Base 'Mojolicious::Controller';
 use Koha::ILL::ISO18626;
 use Koha::ILL::ISO18626::Request;
 use Koha::ILL::ISO18626::Requests;
+use Koha::ILL::Documents;
 
 use Try::Tiny qw( catch try );
 
@@ -98,6 +99,39 @@ sub message {
             }
         }
 
+        $c->unhandled_exception($_);
+    };
+}
+
+=head3 get_document
+
+Controller function that handles downloading the file of a Koha::ILL::Document
+by its download token
+
+=cut
+
+sub get_document {
+    my $c = shift->openapi->valid_input or return;
+
+    return $c->render(
+        status  => 403,
+        openapi => { error => 'Server unavailable' }
+    ) unless C4::Context->preference('ILLModule');
+
+    return try {
+        my $document =
+            Koha::ILL::Documents->search( { token => $c->param('token'), iso18626_request_id => { '!=' => undef } } )
+            ->next;
+
+        return $c->render_resource_not_found("Document")
+            unless $document;
+
+        $c->render_file(
+            'data'         => $document->file_content,
+            'filename'     => $document->file_name,
+            'content_type' => $document->file_type,
+        );
+    } catch {
         $c->unhandled_exception($_);
     };
 }

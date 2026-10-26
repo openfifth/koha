@@ -18,7 +18,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 6;
+use Test::More tests => 7;
 
 use Test::MockModule;
 use Test::MockObject;
@@ -758,6 +758,50 @@ subtest 'get_document() tests' => sub {
     $t->get_ok( $url . $request->id => { 'x-koha-embed' => 'documents' } )
         ->status_is(200)
         ->json_is( '/documents/0/file_name' => 'article.pdf' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'public get_document() tests' => sub {
+
+    plan tests => 15;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'RESTPublicAPI',               1 );
+    t::lib::Mocks::mock_preference( 'RESTPublicAnonymousRequests', 1 );
+
+    my $request  = $builder->build_object( { class     => 'Koha::ILL::ISO18626::Requests' } );
+    my $document = $request->add_document( { file_name => 'article.pdf', file_content => 'PDF bytes' } );
+
+    my $url = '/api/v1/public/ill/iso18626/documents/' . $document->token . '/file/content';
+
+    $t->get_ok($url)
+        ->status_is(200)
+        ->content_is('PDF bytes')
+        ->content_type_like(qr{^application/pdf})
+        ->header_like( 'Content-Disposition' => qr{^attachment;filename="article\.pdf"} );
+
+    $t->get_ok('/api/v1/public/ill/iso18626/documents/not_a_token/file/content')
+        ->status_is(404)
+        ->json_is( '/error' => 'Document not found' );
+
+    my $patron_document = $builder->build_object(
+        {
+            class => 'Koha::ILL::Documents',
+            value => { iso18626_request_id => undef }
+        }
+    );
+    $t->get_ok( '/api/v1/public/ill/iso18626/documents/' . $patron_document->token . '/file/content' )
+        ->status_is(404)
+        ->json_is( '/error' => 'Document not found' );
+
+    t::lib::Mocks::mock_preference( 'ILLModule', 0 );
+    $t->get_ok($url)->status_is(403);
+    t::lib::Mocks::mock_preference( 'ILLModule', 1 );
+
+    t::lib::Mocks::mock_preference( 'RESTPublicAnonymousRequests', 0 );
+    $t->get_ok($url)->status_is(401);
 
     $schema->storage->txn_rollback;
 };

@@ -635,6 +635,8 @@ paths:
     $ref: ./paths/checkouts.yaml#/~1public~1checkouts~1availability
   "/public/ill/iso18626":
     $ref: ./paths/ill_iso18626.yaml#/~1public~1ill~1iso18626
+  "/public/ill/iso18626/documents/{token}/file/content":
+    $ref: ./paths/ill_iso18626.yaml#/~1public~1ill~1iso18626~1documents~1{token}~1file~1content
   "/public/items":
     $ref: "./paths/items.yaml#/~1public~1items"
   "/public/biblios/{biblio_id}/items":
