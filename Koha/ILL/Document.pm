@@ -24,6 +24,7 @@ use UUID;
 
 use C4::Context;
 
+use Koha::DateUtils qw( dt_from_string );
 use Koha::Exceptions;
 use Koha::ILL::Documents;
 
@@ -65,6 +66,24 @@ sub store {
     }
 
     return $self->SUPER::store;
+}
+
+=head3 record_download
+
+    $document->record_download;
+
+Record that the patron downloaded this document: sets downloaded_on on the first
+download and increments download_count.
+
+=cut
+
+sub record_download {
+    my ($self) = @_;
+
+    $self->downloaded_on( dt_from_string() ) unless $self->downloaded_on;
+    $self->download_count( $self->download_count + 1 );
+
+    return $self->store;
 }
 
 =head3 to_api_mapping

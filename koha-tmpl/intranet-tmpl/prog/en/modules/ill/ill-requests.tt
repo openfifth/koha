@@ -827,6 +827,8 @@
                                     <tr>
                                         <th>File name</th>
                                         <th>Uploaded on</th>
+                                        <th>First downloaded by patron on</th>
+                                        <th>Patron downloads</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -838,6 +840,14 @@
                                                 ></a>
                                             </td>
                                             <td>[% document.uploaded_on | $KohaDates with_hours => 1 %]</td>
+                                            <td>
+                                                [% IF document.downloaded_on %]
+                                                    [% document.downloaded_on | $KohaDates with_hours => 1 %]
+                                                [% ELSE %]
+                                                    <span>Not downloaded yet</span>
+                                                [% END %]
+                                            </td>
+                                            <td>[% document.download_count | html %]</td>
                                         </tr>
                                     [% END %]
                                 </tbody>
