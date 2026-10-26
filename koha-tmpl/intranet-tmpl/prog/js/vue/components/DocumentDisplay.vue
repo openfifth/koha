@@ -4,16 +4,13 @@
         <ul>
             <li
                 v-for="document in resource.documents"
-                v-bind:key="document.document_id"
+                v-bind:key="documentUrl(document)"
             >
                 <div v-if="document.file_name">
                     <span v-if="document.file_description"
                         >{{ document.file_description }} -
                     </span>
-                    <a
-                        download
-                        :href="`/api/v1/erm/documents/${document.document_id}/file/content`"
-                    >
+                    <a download :href="documentUrl(document)">
                         {{ document.file_name }}
                         <i class="fa fa-download"></i>
                     </a>
@@ -39,6 +36,10 @@
 export default {
     props: {
         resource: Object,
+        documentUrl: {
+            type: Function,
+            required: true,
+        },
     },
     setup() {
         const format_date = $date;

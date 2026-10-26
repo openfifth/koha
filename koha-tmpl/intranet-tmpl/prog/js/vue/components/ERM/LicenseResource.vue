@@ -226,6 +226,11 @@ export default {
                                 type: "resource",
                                 value: null,
                             },
+                            documentUrl: {
+                                type: "object",
+                                value: document =>
+                                    `/api/v1/erm/documents/${document.document_id}/file/content`,
+                            },
                         },
                     },
                     componentProps: {
