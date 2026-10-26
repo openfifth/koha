@@ -19,6 +19,8 @@ package Koha::ILL::ISO18626::Request;
 
 use Modern::Perl;
 
+use C4::Context;
+
 use Koha::ILL::ISO18626;
 use Koha::ILL::ISO18626::Messages;
 use Koha::ILL::Documents;
@@ -100,6 +102,28 @@ sub messages {
         { order_by => { -desc => 'timestamp' } }
     );
     return Koha::ILL::ISO18626::Messages->_new_from_dbic($messages);
+}
+
+=head3 add_document
+
+    $iso18626_request->add_document( { file_name => $file_name, file_content => $file_content } );
+
+Add a I<Koha::ILL::Document> to this ISO18626 request.
+Throws I<Koha::Exceptions::PayloadTooLarge> if the file exceeds the database's
+max_allowed_packet.
+
+=cut
+
+sub add_document {
+    my ( $self, $params ) = @_;
+
+    return Koha::ILL::Document->new(
+        {
+            iso18626_request_id => $self->iso18626_request_id,
+            file_name           => $params->{file_name},
+            file_content        => $params->{file_content},
+        }
+    )->store;
 }
 
 =head3 documents
@@ -458,6 +482,9 @@ sub progress_request {
         );
         return 0;
     }
+    $self->add_document( $params->{document} )
+        if $params->{document} && $resulting_status eq 'CopyCompleted';
+
     $self->status($resulting_status)->store;
     $self->send_message( 'supplyingAgencyMessage', $json );
     return 1;

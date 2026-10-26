@@ -149,6 +149,16 @@
               type:
                 - string
                 - "null"
+            file_name:
+              description: Name of the document supplied with a CopyCompleted status
+              type:
+                - string
+                - "null"
+            file_content:
+              description: Base64 encoded content of the document supplied with a CopyCompleted status
+              type:
+                - string
+                - "null"
           additionalProperties: false
       - $ref: "../swagger.yaml#/parameters/iso18626_request_id_pp"
     responses:
@@ -170,6 +180,10 @@
           $ref: "../swagger.yaml#/definitions/error"
       404:
         description: Package not found
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      413:
+        description: Payload too large
         schema:
           $ref: "../swagger.yaml#/definitions/error"
       500:

@@ -279,7 +279,7 @@ XML
 
 subtest 'edit() tests' => sub {
 
-    plan tests => 3;
+    plan tests => 21;
 
     $schema->storage->txn_begin;
 
@@ -307,6 +307,69 @@ subtest 'edit() tests' => sub {
             . $request->iso18626_request_id => json => { status => 'ExpectToSupply' } )
         ->status_is(500)
         ->json_is( '/error' => 'Request could not be progressed' );
+
+    $mock_request->unmock('progress_request');
+
+    my $supplyingAgencyMessageConfirmationXml = <<'XML';
+        <ISO18626Message xmlns="http://illtransactions.org/2013/iso18626" xmlns:ill="http://illtransactions.org/2013/iso18626" ill:version="2021-3">
+          <supplyingAgencyMessageConfirmation>
+            <confirmationHeader>
+              <timestamp>2023-01-01T00:00:00Z</timestamp>
+            </confirmationHeader>
+          </supplyingAgencyMessageConfirmation>
+        </ISO18626Message>
+XML
+
+    my $mock_ua_response = Test::MockObject->new();
+    $mock_ua_response->mock( 'is_success',      sub { return 1; } );
+    $mock_ua_response->mock( 'decoded_content', sub { return $supplyingAgencyMessageConfirmationXml; } );
+    $mock_ua_response->mock( 'status_line',     sub { return '200 OK'; } );
+
+    my $mock_ua = Test::MockModule->new('LWP::UserAgent');
+    $mock_ua->mock( 'post', sub { return $mock_ua_response; } );
+
+    my $copy_request = $builder->build_object(
+        {
+            class => 'Koha::ILL::ISO18626::Requests',
+            value => { status => 'RequestReceived', service_type => 'Copy' }
+        }
+    );
+
+    $t->patch_ok( "//$userid:$password@/api/v1/ill/iso18626_requests/"
+            . $copy_request->iso18626_request_id => json =>
+            { status => 'ExpectToSupply', file_name => 'article.pdf', file_content => encode_base64('PDF bytes') } )
+        ->status_is(400)
+        ->json_is( '/error' => 'A document can only be supplied with the CopyCompleted status' );
+    $copy_request->discard_changes;
+    is( $copy_request->status, 'RequestReceived', 'Status is not updated when a document is sent with another status' );
+
+    $t->patch_ok( "//$userid:$password@/api/v1/ill/iso18626_requests/"
+            . $copy_request->iso18626_request_id => json => { status => 'CopyCompleted', file_name => 'article.pdf' } )
+        ->status_is(400)
+        ->json_is( '/error' => 'file_name and file_content must be supplied together' );
+    $t->patch_ok( "//$userid:$password@/api/v1/ill/iso18626_requests/"
+            . $copy_request->iso18626_request_id => json =>
+            { status => 'CopyCompleted', file_content => encode_base64('PDF bytes') } )
+        ->status_is(400)
+        ->json_is( '/error' => 'file_name and file_content must be supplied together' );
+    $copy_request->discard_changes;
+    is( $copy_request->status, 'RequestReceived', 'Status is not updated when the document is incomplete' );
+
+    $mock_request->mock( 'add_document', sub { Koha::Exceptions::PayloadTooLarge->throw('File too large') } );
+    $t->patch_ok( "//$userid:$password@/api/v1/ill/iso18626_requests/"
+            . $copy_request->iso18626_request_id => json =>
+            { status => 'CopyCompleted', file_name => 'article.pdf', file_content => encode_base64('PDF bytes') } )
+        ->status_is(413)
+        ->json_is( '/error' => 'File too large' );
+    $copy_request->discard_changes;
+    is( $copy_request->status, 'RequestReceived', 'Status is not updated when the document is rejected' );
+    $mock_request->unmock('add_document');
+
+    $t->patch_ok( "//$userid:$password@/api/v1/ill/iso18626_requests/"
+            . $copy_request->iso18626_request_id => json =>
+            { status => 'CopyCompleted', file_name => 'article.pdf', file_content => encode_base64('PDF bytes') } )
+        ->status_is(200);
+    is( $copy_request->documents->next->file_content, 'PDF bytes', 'The decoded document is stored' );
 
     $schema->storage->txn_rollback;
 };

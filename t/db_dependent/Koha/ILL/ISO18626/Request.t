@@ -18,9 +18,10 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 7;
+use Test::More tests => 9;
 use Test::MockModule;
 use Test::MockObject;
+use Test::Exception;
 
 use C4::Circulation qw( AddIssue CanBookBeIssued );
 use Koha::CirculationRules;
@@ -485,6 +486,66 @@ subtest 'documents()' => sub {
         Koha::ILL::Documents->search( { iso18626_request_id => $iso18626_request->id } )->count, 0,
         'Documents are deleted with their request'
     );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'add_document()' => sub {
+
+    plan tests => 6;
+
+    $schema->storage->txn_begin;
+
+    my $iso18626_request = $builder->build_object( { class => 'Koha::ILL::ISO18626::Requests' } );
+
+    my $document = $iso18626_request->add_document( { file_name => 'article.pdf', file_content => 'PDF bytes' } );
+    is( ref($document),          'Koha::ILL::Document', 'Returns a Koha::ILL::Document' );
+    is( $document->file_type,    'application/pdf',     'file_type is derived from the file name' );
+    is( $document->file_content, 'PDF bytes',           'file_content is stored' );
+
+    $document = $iso18626_request->add_document( { file_name => 'article', file_content => 'bytes' } );
+    is( $document->file_type, 'application/octet-stream', 'Unknown file types fall back to application/octet-stream' );
+
+    my $mock_dbh = Test::MockModule->new( 'DBI::db', no_auto => 1 );
+    $mock_dbh->mock( 'selectrow_array', sub { return 4 } );
+
+    throws_ok {
+        $iso18626_request->add_document( { file_name => 'big.pdf', file_content => 'too big' } );
+    }
+    'Koha::Exceptions::PayloadTooLarge', 'Files larger than max_allowed_packet are rejected';
+
+    $mock_dbh->unmock('selectrow_array');
+    is( $iso18626_request->documents->count, 2, 'The rejected file is not stored' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'progress_request() stores the supplied document on CopyCompleted' => sub {
+
+    plan tests => 4;
+
+    $schema->storage->txn_begin;
+
+    my $mock_ua = Test::MockModule->new('LWP::UserAgent');
+    $mock_ua->mock( 'post', sub { return $mock_ua_response; } );
+
+    my $document = { file_name => 'article.pdf', file_content => 'PDF bytes' };
+
+    my $request = $builder->build_object(
+        {
+            class => 'Koha::ILL::ISO18626::Requests',
+            value => { status => 'RequestReceived', service_type => 'Copy' }
+        }
+    );
+
+    $request->progress_request( 'supplyingAgency', { status => 'ExpectToSupply', document => $document } );
+    is( $request->documents->count, 0, 'No document is stored for statuses other than CopyCompleted' );
+
+    $request->progress_request( 'supplyingAgency', { status => 'CopyCompleted', document => $document } );
+    $request->discard_changes;
+    is( $request->status,                        'CopyCompleted', 'Request status is updated' );
+    is( $request->documents->count,              1,               'The document is stored' );
+    is( $request->documents->next->file_content, 'PDF bytes',     'The document content is stored' );
 
     $schema->storage->txn_rollback;
 };

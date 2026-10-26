@@ -241,6 +241,7 @@ export default {
             const componentsNotRequiringVModel = [
                 "PatronSearch",
                 "Documents",
+                "DocumentSelect",
                 "AdditionalFields",
             ];
             componentsNotRequiringVModel.forEach(component => {
