@@ -20,6 +20,7 @@ package Koha::ILL::Documents;
 use Modern::Perl;
 
 use Koha::Database;
+use Koha::Exceptions;
 use Koha::ILL::Document;
 
 use base qw(Koha::Objects);
@@ -29,6 +30,35 @@ use base qw(Koha::Objects);
 Koha::ILL::Documents - Koha ILL documents Object class
 
 =cut
+
+=head2 Class methods
+
+=head3 filter_by_purgeable_supplied
+
+    my $purgeable = Koha::ILL::Documents->filter_by_purgeable_supplied( { days => 30 } );
+
+Returns a I<Koha::ILL::Documents> resultset filtered to documents of
+CopyCompleted requests whose receipt was confirmed more than the specified number of
+days ago.
+
+The caller can then use C<< ->count >> for reporting or C<< ->delete >> to purge.
+
+=cut
+
+sub filter_by_purgeable_supplied {
+    my ( $self, $params ) = @_;
+
+    Koha::Exceptions::MissingParameter->throw( parameter => 'days' )
+        unless defined $params->{days};
+
+    return $self->search(
+        {
+            'iso18626_request.status'      => 'CopyCompleted',
+            'iso18626_request.received_on' => { '<' => \[ 'DATE_SUB(NOW(), INTERVAL ? DAY)', $params->{days} ] },
+        },
+        { join => 'iso18626_request' }
+    );
+}
 
 =head2 Internal methods
 

@@ -19,20 +19,21 @@
 
 use Modern::Perl;
 
-use constant DEFAULT_ZEBRAQ_PURGEDAYS             => 30;
-use constant DEFAULT_MAIL_PURGEDAYS               => 30;
-use constant DEFAULT_IMPORT_PURGEDAYS             => 60;
-use constant DEFAULT_LOGS_PURGEDAYS               => 180;
-use constant DEFAULT_MESSAGES_PURGEDAYS           => 365;
-use constant DEFAULT_SEARCHHISTORY_PURGEDAYS      => 30;
-use constant DEFAULT_SHARE_INVITATION_EXPIRY_DAYS => 14;
-use constant DEFAULT_DEBARMENTS_PURGEDAYS         => 30;
-use constant DEFAULT_JOBS_PURGEDAYS               => 1;
-use constant DEFAULT_JOBS_PURGETYPES              => qw{ update_elastic_index };
-use constant DEFAULT_JOBS_UNFINISHED_PURGEDAYS    => 365;
-use constant DEFAULT_JOBS_UNFINISHED_PURGETYPES   => qw{ update_elastic_index };
-use constant DEFAULT_EDIFACT_MSG_PURGEDAYS        => 365;
-use constant DEFAULT_ILLREQUESTS_PURGEDAYS        => 30;
+use constant DEFAULT_ZEBRAQ_PURGEDAYS                 => 30;
+use constant DEFAULT_MAIL_PURGEDAYS                   => 30;
+use constant DEFAULT_IMPORT_PURGEDAYS                 => 60;
+use constant DEFAULT_LOGS_PURGEDAYS                   => 180;
+use constant DEFAULT_MESSAGES_PURGEDAYS               => 365;
+use constant DEFAULT_SEARCHHISTORY_PURGEDAYS          => 30;
+use constant DEFAULT_SHARE_INVITATION_EXPIRY_DAYS     => 14;
+use constant DEFAULT_DEBARMENTS_PURGEDAYS             => 30;
+use constant DEFAULT_JOBS_PURGEDAYS                   => 1;
+use constant DEFAULT_JOBS_PURGETYPES                  => qw{ update_elastic_index };
+use constant DEFAULT_JOBS_UNFINISHED_PURGEDAYS        => 365;
+use constant DEFAULT_JOBS_UNFINISHED_PURGETYPES       => qw{ update_elastic_index };
+use constant DEFAULT_EDIFACT_MSG_PURGEDAYS            => 365;
+use constant DEFAULT_ILLREQUESTS_PURGEDAYS            => 30;
+use constant DEFAULT_ILL_SUPPLIED_DOCUMENTS_PURGEDAYS => 30;
 
 use Getopt::Long qw( GetOptions );
 use Try::Tiny;
@@ -49,6 +50,7 @@ use Koha::Database;
 use Koha::DateUtils qw( dt_from_string );
 use Koha::Item::Transfers;
 use Koha::ILL::Requests;
+use Koha::ILL::Documents;
 use Koha::Library::Calendar::Exceptions;
 use Koha::Library::Calendar::SingleClosures;
 use Koha::Old::Biblioitems;
@@ -142,6 +144,9 @@ Usage: $0
    --illrequests-status STATUS Specify which ILL request statuses to remove. Repeatable.
    --illrequests-days DAYS   Purge ILL requests older than DAYS days.
                              Defaults to 30 days if omitted. Requires at least one --illrequests-status.
+   --ill-supplied-documents-days DAYS  Purge documents this library supplied to other libraries,
+                             once the requesting library confirmed receipt more than DAYS days ago.
+                             Defaults to 30 days if no days specified.
 USAGE
     exit $_[0];
 }
@@ -194,60 +199,62 @@ my $reports;
 my $edifact_msg_days;
 my $illrequests_days;
 my @illrequests_statuses;
+my $ill_supplied_documents_days;
 
 my $command_line_options = join( " ", @ARGV );
 cronlogaction( { info => $command_line_options } );
 
 GetOptions(
-    'h|help'                     => \$help,
-    'confirm'                    => \$confirm,
-    'sessions'                   => \$sessions,
-    'sessdays:i'                 => \$sess_days,
-    'v|verbose'                  => \$verbose,
-    'm|mail:i'                   => \$mail,
-    'zebraqueue:i'               => \$zebraqueue_days,
-    'merged'                     => \$purge_merged,
-    'import:i'                   => \$pImport,
-    'z3950'                      => \$pZ3950,
-    'logs:i'                     => \$pLogs,
-    'log-module:s'               => \@log_modules,
-    'preserve-log:s'             => \@preserve_logs,
-    'log-action:s'               => \@log_actions,
-    'messages:i'                 => \$pMessages,
-    'fees:i'                     => \$fees_days,
-    'searchhistory:i'            => \$pSearchhistory,
-    'list-invites:i'             => \$pListShareInvites,
-    'restrictions:i'             => \$pDebarments,
-    'all-restrictions'           => \$allDebarments,
-    'del-exp-selfreg'            => \$pExpSelfReg,
-    'del-unv-selfreg:i'          => \$pUnvSelfReg,
-    'unique-holidays:i'          => \$special_holidays_days,
-    'temp-uploads'               => \$temp_uploads,
-    'temp-uploads-days:i'        => \$temp_uploads_days,
-    'uploads-missing:i'          => \$uploads_missing,
-    'oauth-tokens'               => \$oauth_tokens,
-    'statistics:i'               => \$pStatistics,
-    'statistics-type:s'          => \@statistics_types,
-    'statistics-type-pseudo:i'   => \$statistics_type_pseudo,
-    'deleted-catalog:i'          => \$pDeletedCatalog,
-    'deleted-patrons:i'          => \$pDeletedPatrons,
-    'old-issues:i'               => \$pOldIssues,
-    'old-reserves:i'             => \$pOldReserves,
-    'transfers:i'                => \$pTransfers,
-    'pseudo-transactions:i'      => \$pPseudoTransactions,
-    'pseudo-transactions-from:s' => \$pPseudoTransactionsFrom,
-    'pseudo-transactions-to:s'   => \$pPseudoTransactionsTo,
-    'labels:i'                   => \$labels,
-    'cards:i'                    => \$cards,
-    'return-claims'              => \$return_claims,
-    'jobs-unfinished-type:s'     => \@jobs_unfinished_types,
-    'jobs-unfinished-days:i'     => \$jobs_unfinished_days,
-    'jobs-type:s'                => \@jobs_types,
-    'jobs-days:i'                => \$jobs_days,
-    'reports:i'                  => \$reports,
-    'edifact-messages:i'         => \$edifact_msg_days,
-    'illrequests-days:i'         => \$illrequests_days,
-    'illrequests-status:s'       => \@illrequests_statuses,
+    'h|help'                        => \$help,
+    'confirm'                       => \$confirm,
+    'sessions'                      => \$sessions,
+    'sessdays:i'                    => \$sess_days,
+    'v|verbose'                     => \$verbose,
+    'm|mail:i'                      => \$mail,
+    'zebraqueue:i'                  => \$zebraqueue_days,
+    'merged'                        => \$purge_merged,
+    'import:i'                      => \$pImport,
+    'z3950'                         => \$pZ3950,
+    'logs:i'                        => \$pLogs,
+    'log-module:s'                  => \@log_modules,
+    'preserve-log:s'                => \@preserve_logs,
+    'log-action:s'                  => \@log_actions,
+    'messages:i'                    => \$pMessages,
+    'fees:i'                        => \$fees_days,
+    'searchhistory:i'               => \$pSearchhistory,
+    'list-invites:i'                => \$pListShareInvites,
+    'restrictions:i'                => \$pDebarments,
+    'all-restrictions'              => \$allDebarments,
+    'del-exp-selfreg'               => \$pExpSelfReg,
+    'del-unv-selfreg:i'             => \$pUnvSelfReg,
+    'unique-holidays:i'             => \$special_holidays_days,
+    'temp-uploads'                  => \$temp_uploads,
+    'temp-uploads-days:i'           => \$temp_uploads_days,
+    'uploads-missing:i'             => \$uploads_missing,
+    'oauth-tokens'                  => \$oauth_tokens,
+    'statistics:i'                  => \$pStatistics,
+    'statistics-type:s'             => \@statistics_types,
+    'statistics-type-pseudo:i'      => \$statistics_type_pseudo,
+    'deleted-catalog:i'             => \$pDeletedCatalog,
+    'deleted-patrons:i'             => \$pDeletedPatrons,
+    'old-issues:i'                  => \$pOldIssues,
+    'old-reserves:i'                => \$pOldReserves,
+    'transfers:i'                   => \$pTransfers,
+    'pseudo-transactions:i'         => \$pPseudoTransactions,
+    'pseudo-transactions-from:s'    => \$pPseudoTransactionsFrom,
+    'pseudo-transactions-to:s'      => \$pPseudoTransactionsTo,
+    'labels:i'                      => \$labels,
+    'cards:i'                       => \$cards,
+    'return-claims'                 => \$return_claims,
+    'jobs-unfinished-type:s'        => \@jobs_unfinished_types,
+    'jobs-unfinished-days:i'        => \$jobs_unfinished_days,
+    'jobs-type:s'                   => \@jobs_types,
+    'jobs-days:i'                   => \$jobs_days,
+    'reports:i'                     => \$reports,
+    'edifact-messages:i'            => \$edifact_msg_days,
+    'illrequests-days:i'            => \$illrequests_days,
+    'illrequests-status:s'          => \@illrequests_statuses,
+    'ill-supplied-documents-days:i' => \$ill_supplied_documents_days,
 ) || usage(1);
 
 # Use default values
@@ -266,6 +273,8 @@ $jobs_days             = DEFAULT_JOBS_PURGEDAYS               if defined($jobs_d
 @jobs_types            = (DEFAULT_JOBS_PURGETYPES)            if $jobs_days            && @jobs_types == 0;
 $edifact_msg_days      = DEFAULT_EDIFACT_MSG_PURGEDAYS        if defined($edifact_msg_days) && $edifact_msg_days == 0;
 $illrequests_days      = DEFAULT_ILLREQUESTS_PURGEDAYS        if defined($illrequests_days) && $illrequests_days == 0;
+$ill_supplied_documents_days = DEFAULT_ILL_SUPPLIED_DOCUMENTS_PURGEDAYS
+    if defined($ill_supplied_documents_days) && $ill_supplied_documents_days == 0;
 
 @statistics_types = ( @statistics_types, @Koha::Statistic::pseudonymization_types ) if defined($statistics_type_pseudo);
 @statistics_types = keys %{ { map { $_, 1 } @statistics_types } };    # remove duplicate types
@@ -323,7 +332,8 @@ unless ( $sessions
     || $reports
     || $edifact_msg_days
     || $illrequests_days
-    || @illrequests_statuses )
+    || @illrequests_statuses
+    || $ill_supplied_documents_days )
 {
     print "You did not specify any cleanup work for the script to do.\n\n";
     usage(1);
@@ -899,6 +909,19 @@ if ($illrequests_days) {
         say $confirm
             ? sprintf( "Done with purging %d ILL requests.",      $count )
             : sprintf( "%d ILL requests would have been removed", $count );
+    }
+}
+
+if ($ill_supplied_documents_days) {
+    print "Purging supplied ILL documents received more than $ill_supplied_documents_days days ago.\n"
+        if $verbose;
+    my $purgeable = Koha::ILL::Documents->filter_by_purgeable_supplied( { days => $ill_supplied_documents_days } );
+    my $count     = $purgeable->count;
+    $purgeable->delete if $confirm;
+    if ($verbose) {
+        say $confirm
+            ? sprintf( "Done with purging %d supplied ILL documents.",      $count )
+            : sprintf( "%d supplied ILL documents would have been removed", $count );
     }
 }
 
