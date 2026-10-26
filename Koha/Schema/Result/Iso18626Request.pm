@@ -100,6 +100,14 @@ ISO18626 service type
 
 ISO18626 Requesting Agency action that requires a manual response (yes or no)
 
+=head2 received_on
+
+  data_type: 'datetime'
+  datetime_undef_if_invalid: 1
+  is_nullable: 1
+
+Date and time the requesting agency confirmed receipt
+
 =head2 hold_id
 
   data_type: 'integer'
@@ -195,6 +203,12 @@ __PACKAGE__->add_columns(
     extra => { list => ["Cancel", "Renew"] },
     is_nullable => 1,
   },
+  "received_on",
+  {
+    data_type => "datetime",
+    datetime_undef_if_invalid => 1,
+    is_nullable => 1,
+  },
   "hold_id",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
   "issue_id",
@@ -283,6 +297,21 @@ __PACKAGE__->belongs_to(
   },
 );
 
+=head2 ill_documents
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::IllDocument>
+
+=cut
+
+__PACKAGE__->has_many(
+  "ill_documents",
+  "Koha::Schema::Result::IllDocument",
+  { "foreign.iso18626_request_id" => "self.iso18626_request_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 iso18626_messages
 
 Type: has_many
@@ -336,8 +365,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-05-08 18:09:36
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:1Uo2Dytg1I7qv9XNz0up2w
+# Created by DBIx::Class::Schema::Loader v0.07053 @ 2026-10-26 15:56:53
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:/cn42UOSp5vzni0TWCw3tw
 
 =head2 koha_object_class
 
