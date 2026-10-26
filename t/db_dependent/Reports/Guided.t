@@ -223,7 +223,7 @@ subtest 'GetParametersFromSQL+ValidateSQLParameters' => sub {
 };
 
 subtest 'get_saved_reports' => sub {
-    plan tests => 18;
+    plan tests => 19;
     my $dbh = C4::Context->dbh;
     $dbh->do(q|DELETE FROM saved_sql|);
     $dbh->do(q|DELETE FROM saved_reports|);
@@ -264,20 +264,23 @@ subtest 'get_saved_reports' => sub {
 
     ok( 0 < scalar @{ get_saved_reports( { date => dt_from_string->ymd } ) }, "filter takes date" );
 
-    my $r1 = Koha::Reports->find( $report_ids[0] );
+    my $r1                 = Koha::Reports->find( $report_ids[0] );
+    my $new_borrowernumber = $builder->build( { source => 'Borrower' } )->{borrowernumber};
     $r1 = update_sql(
         $r1->id,
         {
-            sql          => $r1->savedsql,
-            name         => 'Just another report',
-            notes        => $r1->notes,
-            group        => $r1->report_group,
-            subgroup     => $r1->report_subgroup,
-            cache_expiry => $r1->cache_expiry,
-            public       => $r1->public,
+            sql            => $r1->savedsql,
+            name           => 'Just another report',
+            borrowernumber => $new_borrowernumber,
+            notes          => $r1->notes,
+            group          => $r1->report_group,
+            subgroup       => $r1->report_subgroup,
+            cache_expiry   => $r1->cache_expiry,
+            public         => $r1->public,
         }
     );
-    is( $r1->cache_expiry, 300, 'cache_expiry has the correct default value, from DBMS' );
+    is( $r1->cache_expiry,   300,                 'cache_expiry has the correct default value, from DBMS' );
+    is( $r1->borrowernumber, $new_borrowernumber, 'update_sql updates borrowernumber' );
 
     #Test delete_report
     is( delete_report(), undef, "Without id delete_report returns undef" );

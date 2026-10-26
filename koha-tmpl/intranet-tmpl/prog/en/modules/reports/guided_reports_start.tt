@@ -1660,6 +1660,12 @@
                         <input type="text" id="reportname" name="reportname" value="[% reportname | html %]" size="50" class="required" required="required" />
                         <span class="required">Required</span>
                     </li>
+                    [% IF CAN_user_reports_edit_all_reports %]
+                        <li>
+                            <label for="borrowernumber"> Author: </label>
+                            <input type="text" name="borrowernumber" id="borrowernumber" autocomplete="off" type="text" value="[% owner.borrowernumber | html %]" />
+                        </li>
+                    [% END %]
                     [% PROCESS group_and_subgroup_selection %]
                     [% IF (public) %]
                         <li>
@@ -1755,6 +1761,8 @@
                     [% ELSIF ( error.passworderr ) %]
                         <p>The column selection in this report includes a password field.</p>
                         <p>The report cannot be executed due to security risks. Please edit this report and ensure no password columns have been selected.</p>
+                    [% ELSIF (error.borrowernumber) %]
+                        <p>Please select a valid author for this report. If you wish to disown it, you may do so from the main table.</p>
                     [% ELSE %]
 
                     [% END %]
@@ -2458,6 +2466,13 @@
                                 return $("#create_group").prop("checked") && $("#group_input").val() != "";
                             },
                         },
+                    },
+                });
+
+                patron_autocomplete($("#sql_report_form #borrowernumber"), {
+                    "on-select-callback": function (event, ui) {
+                        $("#sql_report_form #borrowernumber").val(ui.item.patron_id);
+                        return false;
                     },
                 });
 
