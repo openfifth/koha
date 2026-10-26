@@ -3,7 +3,7 @@ use Koha::Installer::Output qw(say_warning say_success say_info);
 
 return {
     bug_number  => "XXXXX",
-    description => "Add ill_documents table",
+    description => "Add ill_documents table and iso18626_requests.received_on",
     up          => sub {
         my ($args) = @_;
         my ( $dbh, $out ) = @$args{qw(dbh out)};
@@ -30,6 +30,17 @@ return {
             }
             );
             say $out "Added new table 'ill_documents'";
+        }
+
+        unless ( column_exists( 'iso18626_requests', 'received_on' ) ) {
+            $dbh->do(
+                q{
+                ALTER TABLE iso18626_requests
+                ADD COLUMN `received_on` datetime DEFAULT NULL COMMENT 'Date and time the requesting agency confirmed receipt'
+                AFTER `pending_requesting_agency_action`
+            }
+            );
+            say $out "Added column 'iso18626_requests.received_on'";
         }
     },
 };

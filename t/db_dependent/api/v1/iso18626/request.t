@@ -45,7 +45,7 @@ my $t = Test::Mojo->new('Koha::REST::V1');
 
 subtest 'list() tests' => sub {
 
-    plan tests => 29;
+    plan tests => 39;
 
     $schema->storage->txn_begin;
 
@@ -259,6 +259,40 @@ XML
         qr{<messageStatus>OK</messageStatus>},
         'message is okay'
     );
+
+    $last_request->status('CopyCompleted')->store;
+
+    $t->post_ok(
+        "//$userid:$password@/api/v1/public/ill/iso18626",
+        { 'Content-Type' => 'application/xml' },
+        $good_requestingAgencyMessagexml
+    )->status_is(400)->content_like(
+        qr{<errorType>UnsupportedActionType</errorType>},
+        'Only Received is supported on CopyCompleted'
+    );
+
+    my $received_requestingAgencyMessagexml =
+        sprintf( $requestingAgencyMessagexml, $last_request->iso18626_request_id, 'Received' );
+
+    $t->post_ok(
+        "//$userid:$password@/api/v1/public/ill/iso18626",
+        { 'Content-Type' => 'application/xml' },
+        $received_requestingAgencyMessagexml
+    )->status_is(201)->content_like(
+        qr{<messageStatus>OK</messageStatus>},
+        'Received is accepted on CopyCompleted'
+    );
+    $last_request->discard_changes;
+    ok( $last_request->received_on, 'received_on is set on Received' );
+
+    $last_request->received_on('2026-01-01 10:00:00')->store;
+    $t->post_ok(
+        "//$userid:$password@/api/v1/public/ill/iso18626",
+        { 'Content-Type' => 'application/xml' },
+        $received_requestingAgencyMessagexml
+    )->status_is(201);
+    $last_request->discard_changes;
+    is( $last_request->received_on, '2026-01-01 10:00:00', 'received_on keeps the first Received' );
 
     my $nonexistent_supplyingAgency_requestingAgencyMessagexml =
         sprintf( $requestingAgencyMessagexml, $last_request->iso18626_request_id, 'StatusRequest' );

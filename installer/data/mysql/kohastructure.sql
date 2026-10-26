@@ -4172,6 +4172,7 @@ CREATE TABLE `iso18626_requests` (
   `status` enum('RequestReceived','ExpectToSupply','WillSupply','Loaned','Overdue','Recalled','RetryPossible','Unfilled','HoldReturn','ReleaseHoldReturn','CopyCompleted','LoanCompleted','CompletedWithoutReturn','Cancelled') DEFAULT 'RequestReceived' COMMENT 'Current ISO18626 status of request',
   `service_type` enum('Copy','Loan','CopyOrLoan') NOT NULL COMMENT 'ISO18626 service type',
   `pending_requesting_agency_action` enum('Cancel','Renew') DEFAULT NULL COMMENT 'ISO18626 Requesting Agency action that requires a manual response (yes or no)',
+  `received_on` datetime DEFAULT NULL COMMENT 'Date and time the requesting agency confirmed receipt',
   `hold_id` int(11) DEFAULT NULL COMMENT 'ID of the hold related to this ISO18626 request',
   `issue_id` int(11) DEFAULT NULL COMMENT 'ID of the checkout related to this ISO18626 request',
   `biblio_id` int(11) DEFAULT NULL COMMENT 'ID of the biblio related to this ISO18626 request',

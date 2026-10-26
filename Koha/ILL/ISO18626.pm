@@ -181,6 +181,8 @@ sub confirmation_response {
 
         if ( $action eq 'Cancel' || $action eq 'Renew' ) {
             $iso18626_request->pending_requesting_agency_action($action)->store();
+        } elsif ( $action eq 'Received' && !$iso18626_request->received_on ) {
+            $iso18626_request->received_on( dt_from_string() )->store();
         }
 
         # TODO: Only send out supplyingAgencyMessage if $action == statusRequest (?)
@@ -321,15 +323,19 @@ sub message_without_envelope {
 =head3 supported_action_types
 
     Returns an array of supported action types for a given ISO18626 request.
-    Returns an empty array if the request has already been completed.
+    Returns only Received for a CopyCompleted request, and an empty array if
+    the request has otherwise been completed.
 
 =cut
 
 sub supported_action_types {
     my ($iso18626_request) = @_;
 
+    return ['Received']
+        if $iso18626_request->status eq 'CopyCompleted';
+
     return []
-        if $iso18626_request->status =~ /^(?:Cancelled|CopyCompleted|CompletedWithoutReturn|LoanCompleted|Unfilled)$/;
+        if $iso18626_request->status =~ /^(?:Cancelled|CompletedWithoutReturn|LoanCompleted|Unfilled)$/;
 
     return [
         'StatusRequest',

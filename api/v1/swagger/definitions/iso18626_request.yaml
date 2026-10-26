@@ -24,6 +24,12 @@ properties:
       - Renew
       - null
     description: Requesting Agency action that requires an action from the supplying agency
+  received_on:
+    type:
+      - string
+      - "null"
+    format: date-time
+    description: Date and time the requesting agency confirmed receipt
   created_on:
     type:
       - string
