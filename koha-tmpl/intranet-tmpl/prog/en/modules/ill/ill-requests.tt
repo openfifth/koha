@@ -816,6 +816,54 @@
                         </div>
                     </div>
 
+                    <div class="page-section" id="ill-documents">
+                        <h3>Documents</h3>
+                        [% IF document_error == 'too_large' %]
+                            <div class="alert alert-warning">The document was not added because it is too large.</div>
+                        [% END %]
+                        [% IF request.documents.count %]
+                            <table id="ill-documents-table">
+                                <thead>
+                                    <tr>
+                                        <th>File name</th>
+                                        <th>Uploaded on</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    [% FOREACH document IN request.documents %]
+                                        <tr>
+                                            <td>
+                                                <a href="/cgi-bin/koha/ill/ill-requests.pl?op=download_document&amp;illrequest_id=[% request.illrequest_id | uri %]&amp;ill_document_id=[% document.ill_document_id | uri %]"
+                                                    >[% document.file_name | html %] <i class="fa fa-download" aria-hidden="true"></i
+                                                ></a>
+                                            </td>
+                                            <td>[% document.uploaded_on | $KohaDates with_hours => 1 %]</td>
+                                        </tr>
+                                    [% END %]
+                                </tbody>
+                            </table>
+                        [% ELSE %]
+                            <p>There are no documents for this request.</p>
+                        [% END %]
+                        <form method="post" action="/cgi-bin/koha/ill/ill-requests.pl" enctype="multipart/form-data">
+                            <input type="hidden" value="cud-add_document" name="op" />
+                            [% INCLUDE 'csrf-token.inc' %]
+                            <input type="hidden" value="[% request.illrequest_id | html %]" name="illrequest_id" />
+                            <fieldset class="rows">
+                                <ol>
+                                    <li>
+                                        <label class="required" for="ill-document">Document: </label>
+                                        <input type="file" id="ill-document" name="document" required="required" />
+                                        <span class="required">Required</span>
+                                    </li>
+                                </ol>
+                            </fieldset>
+                            <fieldset class="action">
+                                <input type="submit" class="btn btn-primary" value="Add document" />
+                            </fieldset>
+                        </form>
+                    </div>
+
                     <div class="page-section">
                         <h3>[% request.illcomments.count | html %] comments</h3>
                         [% IF request.illcomments.count && request.illcomments.count > 0 %]

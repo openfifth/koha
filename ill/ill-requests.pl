@@ -36,9 +36,10 @@ use Koha::ILL::Request::Workflow::ConfirmAuto;
 use Koha::Libraries;
 use Koha::Plugins;
 
-use Try::Tiny   qw( catch try );
-use URI::Escape qw( uri_escape_utf8 );
-use JSON        qw( encode_json );
+use Scalar::Util qw( blessed );
+use Try::Tiny    qw( catch try );
+use URI::Escape  qw( uri_escape_utf8 );
+use JSON         qw( encode_json );
 
 our $cgi = CGI->new;
 my $illRequests = Koha::ILL::Requests->new;
@@ -117,8 +118,9 @@ if ($backends_available) {
         $template->param(
             notices => $notices,
             request => $request,
-            ( $params->{tran_fail}    ? ( tran_fail    => $params->{tran_fail} )    : () ),
-            ( $params->{tran_success} ? ( tran_success => $params->{tran_success} ) : () ),
+            ( $params->{tran_fail}      ? ( tran_fail      => $params->{tran_fail} )      : () ),
+            ( $params->{tran_success}   ? ( tran_success   => $params->{tran_success} )   : () ),
+            ( $params->{document_error} ? ( document_error => $params->{document_error} ) : () ),
         );
 
         output_and_exit( $cgi, $cookie, $template, 'unknown_ill_request' ) if !$request;
@@ -468,6 +470,41 @@ if ($backends_available) {
         # Redirect to view the whole request
         print $cgi->redirect(
             "/cgi-bin/koha/ill/ill-requests.pl?op=illview&illrequest_id=" . scalar $params->{illrequest_id} );
+        exit;
+
+    } elsif ( $op eq "cud-add_document" ) {
+        my $illrequest_id = $params->{illrequest_id};
+        my $request       = Koha::ILL::Requests->find($illrequest_id);
+        my $file_handle   = $cgi->upload('document');
+        my $append        = '';
+
+        if ( $request && $file_handle ) {
+            my $file_content = do { local $/; <$file_handle> };
+            try {
+                $request->add_document(
+                    { file_name => scalar $cgi->param('document'), file_content => $file_content } );
+            } catch {
+                die $_ unless blessed $_ && $_->isa('Koha::Exceptions::PayloadTooLarge');
+                $append = '&document_error=too_large';
+            };
+        }
+
+        # Redirect to view the whole request
+        print $cgi->redirect(
+            "/cgi-bin/koha/ill/ill-requests.pl?op=illview&illrequest_id=" . $illrequest_id . $append );
+        exit;
+
+    } elsif ( $op eq "download_document" ) {
+        my $request  = Koha::ILL::Requests->find( $params->{illrequest_id} );
+        my $document = $request ? $request->documents->find( $params->{ill_document_id} ) : undef;
+
+        output_and_exit( $cgi, $cookie, $template, 'unknown_ill_request' ) unless $document;
+
+        print $cgi->header(
+            -type       => $document->file_type,
+            -attachment => $document->file_name,
+        );
+        print $document->file_content;
         exit;
 
     } elsif ( $op eq "send_notice" ) {
