@@ -18,7 +18,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 6;
+use Test::More tests => 7;
 use Test::MockModule;
 use Test::MockObject;
 
@@ -415,6 +415,76 @@ subtest 'add_message() and messages()' => sub {
 
     $iso18626_request->add_message( { type => 'supplyingAgencyMessage', message => '{"status":"WillSupply"}' } );
     is( $iso18626_request->messages->count, 2, 'add_message with a string payload adds another message' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'documents()' => sub {
+
+    plan tests => 9;
+
+    $schema->storage->txn_begin;
+
+    my $iso18626_request = $builder->build_object( { class => 'Koha::ILL::ISO18626::Requests' } );
+    my $other_request    = $builder->build_object( { class => 'Koha::ILL::ISO18626::Requests' } );
+
+    is( $iso18626_request->documents->count, 0, 'No documents by default' );
+
+    my $older_document = $builder->build_object(
+        {
+            class => 'Koha::ILL::Documents',
+            value => { iso18626_request_id => $iso18626_request->id, uploaded_on => '2026-01-01 10:00:00' }
+        }
+    );
+    my $newer_document = $builder->build_object(
+        {
+            class => 'Koha::ILL::Documents',
+            value => { iso18626_request_id => $iso18626_request->id, uploaded_on => '2026-01-02 10:00:00' }
+        }
+    );
+    $builder->build_object(
+        {
+            class => 'Koha::ILL::Documents',
+            value => { iso18626_request_id => $other_request->id }
+        }
+    );
+
+    my $documents = $iso18626_request->documents;
+    is(
+        ref($documents), 'Koha::ILL::Documents',
+        'Returns a Koha::ILL::Documents resultset'
+    );
+    is( $documents->count, 2, 'Only the documents of this request are returned' );
+    is_deeply(
+        [ map { $_->id } $documents->as_list ], [ $newer_document->id, $older_document->id ],
+        'Documents are returned newest first'
+    );
+    ok( !exists $newer_document->to_api->{file_content}, 'to_api does not expose file_content' );
+    ok( !exists $newer_document->to_api->{token},        'to_api does not expose token' );
+
+    my $stored_document = Koha::ILL::Document->new(
+        {
+            iso18626_request_id => $iso18626_request->id,
+            file_name           => 'article.pdf',
+            file_type           => 'application/pdf',
+            file_content        => 'PDF bytes',
+            token               => 'chosen_token',
+        }
+    )->store;
+    like(
+        $stored_document->token, qr/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+        'store generates a UUID token, ignoring any given one'
+    );
+
+    my $token = $stored_document->token;
+    $stored_document->file_name('renamed.pdf')->store;
+    is( $stored_document->get_from_storage->token, $token, 'The token is kept on update' );
+
+    $iso18626_request->delete;
+    is(
+        Koha::ILL::Documents->search( { iso18626_request_id => $iso18626_request->id } )->count, 0,
+        'Documents are deleted with their request'
+    );
 
     $schema->storage->txn_rollback;
 };

@@ -21,6 +21,7 @@ use Modern::Perl;
 
 use Koha::ILL::ISO18626;
 use Koha::ILL::ISO18626::Messages;
+use Koha::ILL::Documents;
 use Koha::REST::V1;
 use XML::LibXML;
 use JSON           qw( encode_json decode_json );
@@ -99,6 +100,21 @@ sub messages {
         { order_by => { -desc => 'timestamp' } }
     );
     return Koha::ILL::ISO18626::Messages->_new_from_dbic($messages);
+}
+
+=head3 documents
+
+Return the I<Koha::ILL::Documents> for this ISO18626 request
+
+=cut
+
+sub documents {
+    my ($self) = @_;
+    my $documents = $self->_result->ill_documents->search(
+        {},
+        { order_by => { -desc => 'uploaded_on' } }
+    );
+    return Koha::ILL::Documents->_new_from_dbic($documents);
 }
 
 =head3 send_message
