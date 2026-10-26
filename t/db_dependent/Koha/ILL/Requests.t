@@ -43,7 +43,7 @@ use Test::Deep qw/ cmp_deeply ignore /;
 use Test::Warn;
 
 use Test::NoWarnings;
-use Test::More tests => 18;
+use Test::More tests => 19;
 
 my $schema  = Koha::Database->new->schema;
 my $builder = t::lib::TestBuilder->new;
@@ -2390,6 +2390,35 @@ subtest 'filter_by_purgeable() tests' => sub {
     throws_ok { Koha::ILL::Requests->filter_by_purgeable( { days => 30, statuses => [] } ) }
     'Koha::Exceptions::MissingParameter',
         'Throws with empty statuses array';
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'documents() and add_document() tests' => sub {
+
+    plan tests => 7;
+
+    $schema->storage->txn_begin;
+
+    my $request       = $builder->build_object( { class => 'Koha::ILL::Requests' } );
+    my $other_request = $builder->build_object( { class => 'Koha::ILL::Requests' } );
+
+    is( $request->documents->count, 0, 'No documents by default' );
+
+    my $document = $request->add_document( { file_name => 'article.pdf', file_content => 'PDF bytes' } );
+    is( ref($document),                 'Koha::ILL::Document', 'add_document returns a Koha::ILL::Document' );
+    is( $document->illrequest_id,       $request->id,          'The document is linked to the ILL request' );
+    is( $document->file_type,           'application/pdf',     'file_type is derived from the file name' );
+    is( $document->iso18626_request_id, undef,                 'The document is not linked to an ISO18626 request' );
+
+    $other_request->add_document( { file_name => 'other.pdf', file_content => 'Other bytes' } );
+    is( $request->documents->count, 1, 'Only the documents of this request are returned' );
+
+    $request->delete;
+    is(
+        Koha::ILL::Documents->search( { illrequest_id => $request->id } )->count, 0,
+        'Documents are deleted with their request'
+    );
 
     $schema->storage->txn_rollback;
 };

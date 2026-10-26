@@ -38,6 +38,7 @@ use Koha::I18N qw(__);
 use Koha::ILL::Backend::Standard;
 use Koha::ILL::Batches;
 use Koha::ILL::Comments;
+use Koha::ILL::Documents;
 use Koha::ILL::Request::Attributes;
 use Koha::ILL::Request::Logger;
 use Koha::ItemTypes;
@@ -226,6 +227,43 @@ Returns a I<Koha::ILL::Comments> resultset for the linked comments.
 sub comments {
     my ($self) = @_;
     return Koha::ILL::Comments->_new_from_dbic( scalar $self->_result->comments );
+}
+
+=head3 documents
+
+    my $documents = $req->documents;
+
+Returns a I<Koha::ILL::Documents> resultset for the linked documents, newest first.
+
+=cut
+
+sub documents {
+    my ($self) = @_;
+    my $documents = $self->_result->ill_documents->search(
+        {},
+        { order_by => { -desc => 'uploaded_on' } }
+    );
+    return Koha::ILL::Documents->_new_from_dbic($documents);
+}
+
+=head3 add_document
+
+    $req->add_document( { file_name => $file_name, file_content => $file_content } );
+
+Add a I<Koha::ILL::Document> to this request.
+
+=cut
+
+sub add_document {
+    my ( $self, $params ) = @_;
+
+    return Koha::ILL::Document->new(
+        {
+            illrequest_id => $self->illrequest_id,
+            file_name     => $params->{file_name},
+            file_content  => $params->{file_content},
+        }
+    )->store;
 }
 
 =head3 logs
