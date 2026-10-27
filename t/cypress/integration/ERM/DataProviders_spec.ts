@@ -733,38 +733,77 @@ describe("Data providers action buttons", () => {
         cy.intercept(
             "POST",
             "/api/v1/erm/usage_data_providers/1/process_SUSHI_response*",
-            {
-                statusCode: 200,
-                body: {
-                    jobs: [
-                        {
-                            report_type: "TR_J1",
-                            job_id: 1,
-                            begin_date: "2025-01-01",
-                            end_date: "2025-01-31",
-                        },
-                        {
-                            report_type: "PR",
-                            job_id: 2,
-                            begin_date: "2025-01-01",
-                            end_date: "2025-01-31",
-                        },
-                    ],
-                },
-                headers: {
-                    "X-Base-Total-Count": "2",
-                    "X-Total-Count": "2",
-                },
+            req => {
+                // Begin on the first day and end on the last day of the months
+                expect(req.body.begin_date).to.match(/^\d{4}-\d{2}-01$/);
+                expect(req.body.end_date).to.match(
+                    /^\d{4}-\d{2}-(28|29|30|31)$/
+                );
+                req.reply({
+                    statusCode: 200,
+                    body: {
+                        jobs: [
+                            {
+                                report_type: "TR_J1",
+                                job_id: 1,
+                                begin_date: "2025-01-01",
+                                end_date: "2025-01-31",
+                            },
+                            {
+                                report_type: "PR",
+                                job_id: 2,
+                                begin_date: "2025-01-01",
+                                end_date: "2025-01-31",
+                            },
+                        ],
+                    },
+                });
             }
-        );
-        cy.get("#begin_date+input").click();
-        cy.get(".flatpickr-current-month select")
+        ).as("harvest");
+        // The dialog asks for months, not days: the end month is prefilled
+        cy.get(".modal.confirmation label").contains("Begin month");
+        cy.get(".modal.confirmation label").contains("End month");
+        cy.get("#end_date")
             .invoke("val")
-            .then(month => {
-                cy.get(".flatpickr-current-month > select > option").eq(0);
-                cy.get(".dayContainer").contains(new RegExp("^1$")).click();
-            });
+            .should("match", /^\d{4}-\d{2}$/);
+        cy.get("#begin_date+input").click();
+        // The current month and later cannot be harvested
+        cy.get(
+            ".flatpickr-calendar.open .flatpickr-monthSelect-month.flatpickr-disabled"
+        ).should("have.length.at.least", 1);
+        // March of last year
+        cy.get(".flatpickr-calendar.open .flatpickr-prev-month").click();
+        cy.get(".flatpickr-calendar.open .flatpickr-monthSelect-month")
+            .eq(2)
+            .click();
+        cy.get("#begin_date")
+            .invoke("val")
+            .should("match", /^\d{4}-03$/);
+        // The end picker refuses the months before the begin month
+        const lastYear = new Date().getFullYear() - 1;
+        cy.get("#end_date").should($input => {
+            const minDate = $input[0]._flatpickr.config.minDate;
+            expect(minDate.getFullYear()).to.eq(lastYear);
+            expect(minDate.getMonth()).to.eq(2);
+        });
+        // The end picker opens on the year of the prefilled month: the months
+        // after the previous month are greyed out, or, in January, the two
+        // months of last year before March
+        const today = new Date();
+        const greyedOut = today.getMonth() === 0 ? 2 : 12 - today.getMonth();
+        cy.get("#end_date+input").click();
+        cy.get(
+            ".flatpickr-calendar.open .flatpickr-monthSelect-month.flatpickr-disabled"
+        ).should("have.length", greyedOut);
+        // Keep the prefilled end month
+        cy.get(
+            ".flatpickr-calendar.open .flatpickr-monthSelect-month.selected"
+        ).click();
+        cy.get("#end_date")
+            .invoke("val")
+            .should("match", /^\d{4}-\d{2}$/);
         cy.get("#accept_modal").click();
+        cy.wait("@harvest");
         cy.get("main div[class='alert alert-info']").should(
             "have.text",
             "1 job queued for report type TR_J1: 2025-01" +
@@ -774,6 +813,57 @@ describe("Data providers action buttons", () => {
             .first()
             .should("have.attr", "href")
             .and("include", "background_jobs.pl?op=view&id=1");
+    });
+
+    it("Should harvest whole months from the provider page", () => {
+        const dataProvider = cy.get_usage_data_provider();
+
+        cy.intercept("GET", "/api/v1/erm/usage_data_providers/*", dataProvider);
+        cy.intercept("GET", "/api/v1/erm/counter_files*", []);
+        cy.visit(
+            "/cgi-bin/koha/erm/eusage/usage_data_providers/" +
+                dataProvider.erm_usage_data_provider_id
+        );
+
+        cy.intercept(
+            "POST",
+            "/api/v1/erm/usage_data_providers/1/process_SUSHI_response*",
+            req => {
+                // Begin on the first day and end on the last day of the months
+                expect(req.body.begin_date).to.match(/^\d{4}-\d{2}-01$/);
+                expect(req.body.end_date).to.match(
+                    /^\d{4}-\d{2}-(28|29|30|31)$/
+                );
+                req.reply({
+                    statusCode: 200,
+                    body: {
+                        jobs: [
+                            {
+                                report_type: "TR_J1",
+                                job_id: 1,
+                                begin_date: req.body.begin_date,
+                                end_date: req.body.end_date,
+                            },
+                        ],
+                    },
+                });
+            }
+        ).as("harvest");
+
+        cy.get("#usage_data_providers_show").contains("Run now").click();
+        cy.get(".modal.confirmation p").contains(dataProvider.name);
+        cy.get(".modal.confirmation label").contains("Begin month");
+        cy.get(".modal.confirmation label").contains("End month");
+        cy.get("#begin_date+input").click();
+        cy.get(".flatpickr-calendar.open .flatpickr-prev-month").click();
+        cy.get(".flatpickr-calendar.open .flatpickr-monthSelect-month")
+            .first()
+            .click();
+        cy.get("#accept_modal").click();
+        cy.wait("@harvest");
+        cy.get("main div[class='alert alert-info']").contains(
+            "1 job queued for report type TR_J1"
+        );
     });
 
     it("Should test a provider's SUSHI connection", () => {
