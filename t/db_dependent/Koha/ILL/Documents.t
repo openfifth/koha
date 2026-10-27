@@ -148,11 +148,13 @@ subtest 'filter_by_purgeable_patron() tests' => sub {
 
 subtest 'record_download() tests' => sub {
 
-    plan tests => 5;
+    plan tests => 9;
 
     $schema->storage->txn_begin;
 
-    my $request  = $builder->build_object( { class     => 'Koha::ILL::Requests' } );
+    my $request = $builder->build_object(
+        { class => 'Koha::ILL::Requests', value => { status => 'REQ', status_alias => undef, backend => 'Standard' } }
+    );
     my $document = $request->add_document( { file_name => 'article.pdf', file_content => 'PDF bytes' } );
     $document->discard_changes;
 
@@ -163,11 +165,26 @@ subtest 'record_download() tests' => sub {
     $document->discard_changes;
     is( $document->download_count, 1, 'download_count is incremented' );
     ok( $document->downloaded_on, 'downloaded_on is set on the first download' );
+    is( $request->discard_changes->status, 'DOWNLOADED', 'The first download sets the request to DOWNLOADED' );
+
+    $request->status('REQ');
 
     $document->downloaded_on('2026-01-01 10:00:00')->store;
     $document->record_download;
     $document->discard_changes;
-    is( $document->downloaded_on, '2026-01-01 10:00:00', 'downloaded_on keeps the first download' );
+    is( $document->downloaded_on,          '2026-01-01 10:00:00', 'downloaded_on keeps the first download' );
+    is( $request->discard_changes->status, 'REQ',                 'Later downloads do not change the request status' );
+
+    my $completed = $builder->build_object(
+        { class => 'Koha::ILL::Requests', value => { status => 'COMP', status_alias => undef, backend => 'Standard' } }
+    );
+    $completed->add_document( { file_name => 'article.pdf', file_content => 'PDF bytes' } )->record_download;
+    is( $completed->discard_changes->status, 'COMP', 'The first download does not reopen a completed request' );
+
+    is(
+        $request->capabilities('DOWNLOADED')->{name}, 'Downloaded by patron',
+        'DOWNLOADED is a core status available to every backend'
+    );
 
     $schema->storage->txn_rollback;
 };

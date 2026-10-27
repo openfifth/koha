@@ -762,7 +762,16 @@ sub _core_status_graph {
             method         => 'check_in',
             next_actions   => ['COMP'],
             ui_method_icon => 'fa-download',
-        }
+        },
+        DOWNLOADED => {
+            prev_actions   => [],
+            id             => 'DOWNLOADED',
+            name           => __('Downloaded by patron'),
+            ui_method_name => 0,
+            method         => 0,
+            next_actions   => ['COMP'],
+            ui_method_icon => 0,
+        },
     };
 }
 

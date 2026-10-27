@@ -27,6 +27,7 @@ use C4::Context;
 use Koha::DateUtils qw( dt_from_string );
 use Koha::Exceptions;
 use Koha::ILL::Documents;
+use Koha::ILL::Requests;
 
 use base qw(Koha::Object);
 
@@ -73,17 +74,26 @@ sub store {
     $document->record_download;
 
 Record that the patron downloaded this document: sets downloaded_on on the first
-download and increments download_count.
+download and increments download_count. The first download also sets the ILL
+request's status to DOWNLOADED, unless the request is already completed.
 
 =cut
 
 sub record_download {
     my ($self) = @_;
 
-    $self->downloaded_on( dt_from_string() ) unless $self->downloaded_on;
-    $self->download_count( $self->download_count + 1 );
+    my $first_download = !$self->downloaded_on;
 
-    return $self->store;
+    $self->downloaded_on( dt_from_string() ) if $first_download;
+    $self->download_count( $self->download_count + 1 );
+    $self->store;
+
+    if ( $first_download && $self->illrequest_id ) {
+        my $request = Koha::ILL::Requests->find( $self->illrequest_id );
+        $request->status('DOWNLOADED') if $request->status ne 'COMP';
+    }
+
+    return $self;
 }
 
 =head3 to_api_mapping
