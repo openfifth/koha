@@ -185,6 +185,23 @@ __PACKAGE__->belongs_to(
   },
 );
 
+=head1 RELATIONS
+
+=head2 erm_counter_logs
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::ErmCounterLog>
+
+=cut
+
+__PACKAGE__->has_many(
+  "erm_counter_logs",
+  "Koha::Schema::Result::ErmCounterLog",
+  { "foreign.background_job_id" => "self.id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 
 # Created by DBIx::Class::Schema::Loader v0.07053 @ 2026-08-04 19:49:42
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:BlZ8b9WvE+aqoFRAuDdQlw
