@@ -60,6 +60,37 @@ sub filter_by_purgeable_supplied {
     );
 }
 
+=head3 filter_by_purgeable_patron
+
+    my $purgeable = Koha::ILL::Documents->filter_by_purgeable_patron( { days => 30 } );
+
+Returns a I<Koha::ILL::Documents> resultset filtered to documents delivered to
+patrons that were first downloaded more than the specified number of days ago, or
+uploaded more than the specified number of days ago if never downloaded.
+
+The caller can then use C<< ->count >> for reporting or C<< ->delete >> to purge.
+
+=cut
+
+sub filter_by_purgeable_patron {
+    my ( $self, $params ) = @_;
+
+    Koha::Exceptions::MissingParameter->throw( parameter => 'days' )
+        unless defined $params->{days};
+
+    my $cutoff = \[ 'DATE_SUB(NOW(), INTERVAL ? DAY)', $params->{days} ];
+
+    return $self->search(
+        {
+            illrequest_id => { '!=' => undef },
+            -or           => [
+                downloaded_on => { '<' => $cutoff },
+                -and          => [ downloaded_on => undef, uploaded_on => { '<' => $cutoff } ],
+            ],
+        }
+    );
+}
+
 =head2 Internal methods
 
 =head3 _type

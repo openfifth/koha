@@ -34,6 +34,7 @@ use constant DEFAULT_JOBS_UNFINISHED_PURGETYPES       => qw{ update_elastic_inde
 use constant DEFAULT_EDIFACT_MSG_PURGEDAYS            => 365;
 use constant DEFAULT_ILLREQUESTS_PURGEDAYS            => 30;
 use constant DEFAULT_ILL_SUPPLIED_DOCUMENTS_PURGEDAYS => 30;
+use constant DEFAULT_ILL_PATRON_DOCUMENTS_PURGEDAYS   => 30;
 
 use Getopt::Long qw( GetOptions );
 use Try::Tiny;
@@ -147,6 +148,10 @@ Usage: $0
    --ill-supplied-documents-days DAYS  Purge documents this library supplied to other libraries,
                              once the requesting library confirmed receipt more than DAYS days ago.
                              Defaults to 30 days if no days specified.
+   --ill-patron-documents-days DAYS  Purge documents delivered to patrons, once the patron first
+                             downloaded them more than DAYS days ago, or once they were uploaded
+                             more than DAYS days ago if the patron never downloaded them.
+                             Defaults to 30 days if no days specified.
 USAGE
     exit $_[0];
 }
@@ -200,6 +205,7 @@ my $edifact_msg_days;
 my $illrequests_days;
 my @illrequests_statuses;
 my $ill_supplied_documents_days;
+my $ill_patron_documents_days;
 
 my $command_line_options = join( " ", @ARGV );
 cronlogaction( { info => $command_line_options } );
@@ -255,6 +261,7 @@ GetOptions(
     'illrequests-days:i'            => \$illrequests_days,
     'illrequests-status:s'          => \@illrequests_statuses,
     'ill-supplied-documents-days:i' => \$ill_supplied_documents_days,
+    'ill-patron-documents-days:i'   => \$ill_patron_documents_days,
 ) || usage(1);
 
 # Use default values
@@ -275,6 +282,8 @@ $edifact_msg_days      = DEFAULT_EDIFACT_MSG_PURGEDAYS        if defined($edifac
 $illrequests_days      = DEFAULT_ILLREQUESTS_PURGEDAYS        if defined($illrequests_days) && $illrequests_days == 0;
 $ill_supplied_documents_days = DEFAULT_ILL_SUPPLIED_DOCUMENTS_PURGEDAYS
     if defined($ill_supplied_documents_days) && $ill_supplied_documents_days == 0;
+$ill_patron_documents_days = DEFAULT_ILL_PATRON_DOCUMENTS_PURGEDAYS
+    if defined($ill_patron_documents_days) && $ill_patron_documents_days == 0;
 
 @statistics_types = ( @statistics_types, @Koha::Statistic::pseudonymization_types ) if defined($statistics_type_pseudo);
 @statistics_types = keys %{ { map { $_, 1 } @statistics_types } };    # remove duplicate types
@@ -333,7 +342,8 @@ unless ( $sessions
     || $edifact_msg_days
     || $illrequests_days
     || @illrequests_statuses
-    || $ill_supplied_documents_days )
+    || $ill_supplied_documents_days
+    || $ill_patron_documents_days )
 {
     print "You did not specify any cleanup work for the script to do.\n\n";
     usage(1);
@@ -922,6 +932,20 @@ if ($ill_supplied_documents_days) {
         say $confirm
             ? sprintf( "Done with purging %d supplied ILL documents.",      $count )
             : sprintf( "%d supplied ILL documents would have been removed", $count );
+    }
+}
+
+if ($ill_patron_documents_days) {
+    print
+        "Purging patron ILL documents downloaded, or uploaded and never downloaded, more than $ill_patron_documents_days days ago.\n"
+        if $verbose;
+    my $purgeable = Koha::ILL::Documents->filter_by_purgeable_patron( { days => $ill_patron_documents_days } );
+    my $count     = $purgeable->count;
+    $purgeable->delete if $confirm;
+    if ($verbose) {
+        say $confirm
+            ? sprintf( "Done with purging %d patron ILL documents.",      $count )
+            : sprintf( "%d patron ILL documents would have been removed", $count );
     }
 }
 
