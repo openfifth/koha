@@ -956,8 +956,10 @@ span.flatpickr-weekday {
     }
 }
 
+$flatpickr-calendar-icon: url( "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23369' class='bi bi-calendar3' viewBox='0 0 32 32'%3E%3Cg stroke-width='1.333'%3E%3Cpath d='M25 4H7a3 3 0 0 0-3 3v18a3 3 0 0 0 3 3h18a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3ZM5.5 9.786c0-.71.672-1.286 1.5-1.286h18c.828 0 1.5.576 1.5 1.286v15.428c0 .71-.672 1.286-1.5 1.286H7c-.828 0-1.5-.576-1.5-1.286z'/%3E%3Cpath d='M13.75 14.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm4.5 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm4.5 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM9.25 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm4.5 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm4.5 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm4.5 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm-13.5 4.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm4.5 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm4.5 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z'/%3E%3C/g%3E%3C/svg%3E" );
+
 .flatpickr-input {
-    background-image: url( "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23369' class='bi bi-calendar3' viewBox='0 0 32 32'%3E%3Cg stroke-width='1.333'%3E%3Cpath d='M25 4H7a3 3 0 0 0-3 3v18a3 3 0 0 0 3 3h18a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3ZM5.5 9.786c0-.71.672-1.286 1.5-1.286h18c.828 0 1.5.576 1.5 1.286v15.428c0 .71-.672 1.286-1.5 1.286H7c-.828 0-1.5-.576-1.5-1.286z'/%3E%3Cpath d='M13.75 14.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm4.5 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm4.5 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM9.25 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm4.5 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm4.5 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm4.5 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm-13.5 4.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm4.5 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm4.5 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z'/%3E%3C/g%3E%3C/svg%3E" );
+    background-image: $flatpickr-calendar-icon;
     background-position: 0;
     background-repeat: no-repeat;
     border-style: inset;
@@ -976,6 +978,14 @@ span.flatpickr-weekday {
     &[readonly] {
         cursor: pointer;
     }
+}
+
+// allowInput: false makes flatpickr set the input read-only; it is a
+// picker, not a locked field, so it keeps the calendar icon
+input[type="text"].flatpickr-input:read-only {
+    background: #FFF $flatpickr-calendar-icon 0 no-repeat;
+    cursor: pointer;
+    padding-left: 25px;
 }
 
 .flatpickr-day {

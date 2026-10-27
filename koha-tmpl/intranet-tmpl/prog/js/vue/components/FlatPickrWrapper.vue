@@ -18,6 +18,10 @@ export default {
         modelValue: String,
         required: Boolean,
         date_to: String,
+        config: {
+            type: Object,
+            default: null,
+        },
     },
     emits: ["update:modelValue"],
     setup(props, { emit }) {
@@ -29,8 +33,14 @@ export default {
                 emit("update:modelValue", value);
             },
         });
+        // Callers override single keys of the staff interface defaults, for
+        // example to add a flatpickr plugin; the defaults stay the base.
+        const fp_config = computed(() => ({
+            ...flatpickr_defaults,
+            ...(props.config || {}),
+        }));
         return {
-            fp_config: flatpickr_defaults,
+            fp_config,
             model,
         };
     },
