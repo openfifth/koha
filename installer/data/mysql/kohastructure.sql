@@ -3103,16 +3103,24 @@ CREATE TABLE `erm_counter_logs` (
   `borrowernumber` int(11) DEFAULT NULL COMMENT 'foreign key to borrowers',
   `counter_files_id` int(11) DEFAULT NULL COMMENT 'foreign key to erm_counter_files',
   `usage_data_provider_id` int(11) DEFAULT NULL COMMENT 'foreign key to erm_usage_data_providers',
+  `background_job_id` int(11) DEFAULT NULL COMMENT 'foreign key to background_jobs',
   `importdate` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'counter file import date',
   `filename` varchar(80) DEFAULT NULL COMMENT 'name of the counter file',
   `logdetails` longtext DEFAULT NULL COMMENT 'details from the counter log',
+  `report_type` varchar(10) DEFAULT NULL COMMENT 'report type',
+  `report_year` int(4) DEFAULT NULL COMMENT 'year of the harvested report period',
+  `report_month` int(2) DEFAULT NULL COMMENT 'month of the harvested report period',
+  `status` varchar(16) NOT NULL DEFAULT 'success' COMMENT 'outcome of the harvest or import: success, no_usage, no_data, retry, error',
   PRIMARY KEY (`erm_counter_log_id`),
   KEY `erm_counter_log_ibfk_1` (`borrowernumber`),
   KEY `erm_counter_log_ibfk_2` (`counter_files_id`),
   KEY `erm_counter_log_ibfk_3` (`usage_data_provider_id`),
+  KEY `erm_counter_log_ibfk_4` (`background_job_id`),
+  KEY `erm_counter_log_status_idx` (`status`),
   CONSTRAINT `erm_counter_log_ibfk_1` FOREIGN KEY (`borrowernumber`) REFERENCES `borrowers` (`borrowernumber`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `erm_counter_log_ibfk_2` FOREIGN KEY (`counter_files_id`) REFERENCES `erm_counter_files` (`erm_counter_files_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `erm_counter_log_ibfk_3` FOREIGN KEY (`usage_data_provider_id`) REFERENCES `erm_usage_data_providers` (`erm_usage_data_provider_id`) ON DELETE CASCADE ON UPDATE CASCADE
+  CONSTRAINT `erm_counter_log_ibfk_3` FOREIGN KEY (`usage_data_provider_id`) REFERENCES `erm_usage_data_providers` (`erm_usage_data_provider_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `erm_counter_log_ibfk_4` FOREIGN KEY (`background_job_id`) REFERENCES `background_jobs` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
