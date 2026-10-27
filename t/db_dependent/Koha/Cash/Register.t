@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 16;
+use Test::More tests => 17;
 
 use Test::Exception;
 
@@ -2199,6 +2199,107 @@ subtest 'balanced_reconciliations' => sub {
         )->count,
         0,
         'No surplus or deficit lines, the cashup is balanced'
+    );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'available_cashup_payment_types' => sub {
+    plan tests => 12;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'CashupPaymentTypes', 'CASH,LIMTST' );
+
+    my $library_a = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $library_b = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron    = $builder->build_object( { class => 'Koha::Patrons' } );
+
+    my $register_a =
+        $builder->build_object( { class => 'Koha::Cash::Registers', value => { branch => $library_a->branchcode } } );
+    my $register_b =
+        $builder->build_object( { class => 'Koha::Cash::Registers', value => { branch => $library_b->branchcode } } );
+
+    my $av = $builder->build_object(
+        {
+            class => 'Koha::AuthorisedValues',
+            value => { category => 'PAYMENT_TYPE', authorised_value => 'LIMTST', lib => 'Limited type' }
+        }
+    );
+
+    is_deeply(
+        $register_b->available_cashup_payment_types, [ 'CASH', 'LIMTST' ],
+        'A type with no library limitations is available everywhere'
+    );
+
+    $av->library_limits( [ $library_a->branchcode ] );
+
+    is_deeply(
+        $register_a->available_cashup_payment_types, [ 'CASH', 'LIMTST' ],
+        'A limited type is available at a library it is limited to'
+    );
+    is_deeply(
+        $register_b->available_cashup_payment_types, ['CASH'],
+        'A limited type is not available at any other library'
+    );
+    is_deeply(
+        $register_b->cashup_payment_types, [ 'CASH', 'LIMTST' ],
+        'cashup_payment_types still returns every configured type'
+    );
+    is_deeply(
+        [ map { $_->{payment_type} } @{ $register_b->cashup_payment_types_breakdown } ], ['CASH'],
+        'The breakdown only lists the types available at the register library'
+    );
+    is_deeply(
+        [ map { $_->{payment_type} } @{ $register_b->balanced_reconciliations } ], ['CASH'],
+        'A Quick cashup reconciles only the available types'
+    );
+    is_deeply(
+        [ map { $_->{payment_type} } @{ $register_a->cashup_payment_types_breakdown } ], [ 'CASH', 'LIMTST' ],
+        'The breakdown lists every type at a library the type is limited to'
+    );
+
+    # Takings of a limited-out type must not disappear from the cashup
+    $builder->build_object(
+        {
+            class => 'Koha::Account::Lines',
+            value => {
+                register_id      => $register_b->id,
+                borrowernumber   => $patron->id,
+                amount           => -7.00,
+                credit_type_code => 'PAYMENT',
+                debit_type_code  => undef,
+                payment_type     => 'LIMTST',
+                date             => \'SYSDATE() - INTERVAL 1 MINUTE',
+                timestamp        => \'SYSDATE() - INTERVAL 1 MINUTE',
+            }
+        }
+    );
+
+    is_deeply(
+        $register_b->available_cashup_payment_types, [ 'CASH', 'LIMTST' ],
+        'A limited-out type with outstanding takings is kept'
+    );
+    my ($row) = grep { $_->{payment_type} eq 'LIMTST' } @{ $register_b->cashup_payment_types_breakdown };
+    is( $row->{expected} + 0, 7, 'Its takings are reported as expected' );
+
+    # An empty result would leave nothing to reconcile
+    t::lib::Mocks::mock_preference( 'CashupPaymentTypes', 'LIMTST' );
+    is_deeply(
+        $register_a->available_cashup_payment_types, ['LIMTST'],
+        'Available where the type is limited to the library'
+    );
+    my $register_c =
+        $builder->build_object( { class => 'Koha::Cash::Registers', value => { branch => $library_b->branchcode } } );
+    is_deeply(
+        $register_c->available_cashup_payment_types, ['LIMTST'],
+        'Falls back to the configured list when every type would be limited out'
+    );
+
+    $av->library_limits( [] );
+    is_deeply(
+        $register_c->available_cashup_payment_types, ['LIMTST'],
+        'Removing the limitations makes the type available again'
     );
 
     $schema->storage->txn_rollback;

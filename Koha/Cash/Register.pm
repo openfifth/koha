@@ -345,12 +345,48 @@ sub cashup_payment_types {
     return @types ? \@types : ['CASH'];
 }
 
+=head3 available_cashup_payment_types
+
+    my $payment_types = $cash_register->available_cashup_payment_types;
+
+Returns the subset of L</cashup_payment_types> that applies to this register's
+library, in the same order. A PAYMENT_TYPE authorised value that has library
+limitations is left out when the register's library is not one of the
+libraries it is limited to, matching the payment type drop-downs elsewhere. A
+type with no authorised value, or with no library limitations, is always kept.
+
+A limited-out type is still kept if the register has takings of that type in
+the current cashup period, so that money already taken is never dropped from
+the cashup. If that would leave nothing, the full L</cashup_payment_types> list
+is returned so that a cashup can always be completed.
+
+=cut
+
+sub available_cashup_payment_types {
+    my ($self) = @_;
+
+    my $configured = $self->cashup_payment_types;
+    my $conditions = { category => 'PAYMENT_TYPE', authorised_value => $configured };
+
+    my %restricted = map { $_->authorised_value => 1 } Koha::AuthorisedValues->search($conditions)->as_list;
+    delete $restricted{ $_->authorised_value }
+        for Koha::AuthorisedValues->search_with_library_limits( $conditions, {}, $self->branch )->as_list;
+
+    return $configured unless %restricted;
+
+    my $source    = $self->_cashup_source;
+    my @available = grep { !$restricted{$_} || $source->search( { payment_type => $_ } )->count } @$configured;
+
+    return @available ? \@available : $configured;
+}
+
 =head3 cashup_payment_types_breakdown
 
     my $rows = $cash_register->cashup_payment_types_breakdown;
 
 Returns an arrayref of C<{ payment_type => ..., label => ..., expected => ... }>
-hashes, one per type listed in CashupPaymentTypes, in that order. The expected
+hashes, one per type returned by L</available_cashup_payment_types>, in the
+order listed by CashupPaymentTypes. The expected
 amount is taken from the in-progress cashup if one exists, otherwise from the
 register's outstanding accountlines. Labels come from the PAYMENT_TYPE
 authorised value category, falling back to the code itself if no label is
@@ -361,16 +397,8 @@ defined.
 sub cashup_payment_types_breakdown {
     my ($self) = @_;
 
-    my $configured = $self->cashup_payment_types;
-
-    # When a two-phase cashup is in progress, scope to that session's
-    # accountlines explicitly. Otherwise fall back to the register's
-    # outstanding accountlines (everything since the last completed CASHUP).
-    my $in_progress = $self->cashup_in_progress;
-    my $source =
-          $in_progress
-        ? $in_progress->accountlines
-        : $self->outstanding_accountlines;
+    my $configured = $self->available_cashup_payment_types;
+    my $source     = $self->_cashup_source;
 
     my $av_labels = { map { $_->authorised_value => $_->lib }
             Koha::AuthorisedValues->search( { category => 'PAYMENT_TYPE' } )->as_list };
@@ -618,6 +646,22 @@ sub add_cashup {
     );
 
     return $cashup;
+}
+
+=head3 _cashup_source
+
+Returns the accountlines the current cashup is reconciled against: the
+in-progress cashup's lines when a two-phase cashup is under way, otherwise the
+register's outstanding accountlines (everything since the last completed
+CASHUP).
+
+=cut
+
+sub _cashup_source {
+    my ($self) = @_;
+
+    my $in_progress = $self->cashup_in_progress;
+    return $in_progress ? $in_progress->accountlines : $self->outstanding_accountlines;
 }
 
 =head3 _get_session_start_timestamp
