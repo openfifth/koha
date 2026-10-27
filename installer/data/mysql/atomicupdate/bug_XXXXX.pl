@@ -3,7 +3,7 @@ use Koha::Installer::Output qw(say_warning say_success say_info);
 
 return {
     bug_number  => "XXXXX",
-    description => "Add ill_documents table and iso18626_requests.received_on",
+    description => "Add ill_documents table, iso18626_requests.received_on and the ILL_DOCUMENT_READY notice",
     up          => sub {
         my ($args) = @_;
         my ( $dbh, $out ) = @$args{qw(dbh out)};
@@ -43,6 +43,41 @@ return {
             }
             );
             say $out "Added column 'iso18626_requests.received_on'";
+        }
+
+        my $content = q{[% USE Koha %]Dear [% borrower.firstname %] [% borrower.surname %],
+
+The Interlibrary loans request number [% illrequest.illrequest_id %] you placed for:
+
+- [% ill_bib_title %] - [% ill_bib_author %]
+
+is ready for download:
+
+[% FOREACH document IN illrequest.documents %][% Koha.Preference('OPACBaseURL') %]/cgi-bin/koha/opac-ill-document.pl?token=[% document.token %]
+[% END %]
+Kind regards
+
+[% branch.branchname %]
+[% branch.branchaddress1 %]
+[% branch.branchaddress2 %]
+[% branch.branchaddress3 %]
+[% branch.branchcity %]
+[% branch.branchstate %]
+[% branch.branchzip %]
+[% branch.branchphone %]
+[% branch.branchillemail %]
+[% branch.branchemail %]};
+
+        for my $transport (qw(email sms)) {
+            $dbh->do(
+                q{
+                INSERT IGNORE INTO letter
+                (module, code, branchcode, name, is_html, title, content, message_transport_type, lang)
+                VALUES ('ill', 'ILL_DOCUMENT_READY', '', 'ILL document ready for download', 0,
+                'Interlibrary loan document ready for download', ?, ?, 'default')
+            }, undef, $content, $transport
+                ) == 1
+                && say_success( $out, "Added ILL_DOCUMENT_READY $transport notice" );
         }
     },
 };

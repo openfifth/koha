@@ -43,7 +43,7 @@ use Test::Deep qw/ cmp_deeply ignore /;
 use Test::Warn;
 
 use Test::NoWarnings;
-use Test::More tests => 19;
+use Test::More tests => 20;
 
 my $schema  = Koha::Database->new->schema;
 my $builder = t::lib::TestBuilder->new;
@@ -2418,6 +2418,53 @@ subtest 'documents() and add_document() tests' => sub {
     is(
         Koha::ILL::Documents->search( { illrequest_id => $request->id } )->count, 0,
         'Documents are deleted with their request'
+    );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'send_patron_notice() ILL_DOCUMENT_READY tests' => sub {
+
+    plan tests => 2;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'OPACBaseURL', 'http://opac.example.org' );
+
+    my $patron  = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $request = $builder->build_object(
+        {
+            class => 'Koha::ILL::Requests',
+            value => { borrowernumber => $patron->id, biblio_id => undef, backend => 'Standard' }
+        }
+    );
+    my $document = $request->add_document( { file_name => 'article.pdf', file_content => 'PDF bytes' } );
+
+    my $attr = Koha::Patron::MessagePreference::Attributes->find( { message_name => 'Ill_ready' } );
+    C4::Members::Messaging::SetMessagingPreference(
+        {
+            borrowernumber          => $patron->id,
+            message_attribute_id    => $attr->message_attribute_id,
+            message_transport_types => ['email']
+        }
+    );
+
+    is_deeply(
+        $request->send_patron_notice('ILL_DOCUMENT_READY'),
+        { result => { success => ['email'], fail => [] } },
+        'ILL_DOCUMENT_READY is sent according to the Ill_ready messaging preference'
+    );
+
+    my $message = $schema->resultset('MessageQueue')->search(
+        {
+            letter_code    => 'ILL_DOCUMENT_READY',
+            borrowernumber => $patron->id
+        }
+    )->next;
+    like(
+        $message->content,
+        qr{http://opac\.example\.org/cgi-bin/koha/opac-ill-document\.pl\?token=\Q${\ $document->token }\E},
+        'The notice links to the document download page'
     );
 
     $schema->storage->txn_rollback;

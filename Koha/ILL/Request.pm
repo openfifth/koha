@@ -1949,6 +1949,7 @@ sub send_patron_notice {
     # Map from the notice code to the messaging preference
     my %message_name = (
         ILL_PICKUP_READY    => 'Ill_ready',
+        ILL_DOCUMENT_READY  => 'Ill_ready',
         ILL_REQUEST_UNAVAIL => 'Ill_unavailable',
         ILL_REQUEST_UPDATE  => 'Ill_update'
     );
