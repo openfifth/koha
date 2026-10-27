@@ -20,9 +20,10 @@
 
 use Modern::Perl;
 
-use C4::Auth   qw( get_template_and_user );
-use C4::Output qw( output_and_exit_if_error output_and_exit output_html_with_http_headers );
-use CGI        qw ( -utf8 );
+use C4::Auth     qw( get_template_and_user );
+use C4::Output   qw( output_and_exit_if_error output_and_exit output_html_with_http_headers );
+use CGI          qw ( -utf8 );
+use Scalar::Util qw( looks_like_number );
 use C4::Letters;
 use Koha::Account::Lines;
 
@@ -55,6 +56,23 @@ output_and_exit_if_error(
     }
 );
 
+my $tendered = scalar $input->param('tendered');
+my $change   = scalar $input->param('change');
+
+# The Accounting pages only pass 'change' when opening the receipt, whereas
+# the POS receipt passes both. The amount tendered is the amount paid plus the
+# change given, so work it out here rather than leaving it blank. An explicit
+# 'tendered' parameter always wins, and without a change figure (a reprint,
+# or a payment with no change) there is nothing to derive it from.
+if ( !( defined $tendered && length $tendered ) && defined $change && looks_like_number($change) ) {
+    $tendered = $credit->amount * -1 + $change;
+}
+
+my $substitute = {
+    tendered => $tendered,
+    change   => $change,
+};
+
 my $letter = C4::Letters::GetPreparedLetter(
     module                 => 'circulation',
     letter_code            => 'CREDIT_' . $credit->credit_type_code,
@@ -65,10 +83,7 @@ my $letter = C4::Letters::GetPreparedLetter(
         credits   => $credit_id,
         borrowers => $patron->borrowernumber
     },
-    substitute => {
-        tendered => scalar $input->param('tendered'),
-        change   => scalar $input->param('change')
-    }
+    substitute => $substitute
 );
 
 $letter //= C4::Letters::GetPreparedLetter(
@@ -81,10 +96,7 @@ $letter //= C4::Letters::GetPreparedLetter(
         credits   => $credit_id,
         borrowers => $patron->borrowernumber
     },
-    substitute => {
-        tendered => scalar $input->param('tendered'),
-        change   => scalar $input->param('change')
-    }
+    substitute => $substitute
 );
 
 $template->param(
