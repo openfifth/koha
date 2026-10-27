@@ -218,9 +218,7 @@ if ( $op eq 'cud-cashup_start' ) {
                     # Quick cashup path — JS hasn't supplied any actual amounts.
                     # Build a balanced reconciliations list using each type's
                     # expected outstanding total so the API cashes up cleanly.
-                    $cashup_params{reconciliations} =
-                        [ map { { payment_type => $_->{payment_type}, actual_amount => $_->{expected} } }
-                            @{ $register->cashup_payment_types_breakdown } ];
+                    $cashup_params{reconciliations} = $register->balanced_reconciliations;
                 }
 
                 $last_cashup = $register->add_cashup( \%cashup_params );
