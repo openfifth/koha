@@ -37,8 +37,9 @@
             </button>
             <button
                 @click="
-                    run_harvester(
-                        usage_data_provider.erm_usage_data_provider_id
+                    runHarvester(
+                        usage_data_provider.erm_usage_data_provider_id,
+                        usage_data_provider.name
                     )
                 "
                 class="btn btn-default"
@@ -149,7 +150,8 @@ import UsageStatisticsDataProvidersCounterLogs from "./UsageStatisticsDataProvid
 import UsageStatisticsDataProviderDetails from "./UsageStatisticsDataProviderDetails.vue";
 import UsageStatisticsProviderDataList from "./UsageStatisticsProviderDataList.vue";
 import { useRoute, useRouter } from "vue-router";
-import { $__, $__n } from "@koha-vue/i18n/";
+import { $__ } from "@koha-vue/i18n/";
+import { useSushiHarvester } from "../../composables/sushiHarvester";
 
 export default {
     setup() {
@@ -159,6 +161,7 @@ export default {
         const { get_lib_from_av } = ERMStore;
 
         const { setConfirmationDialog, setMessage } = inject("mainStore");
+        const { runHarvester } = useSushiHarvester();
 
         const usage_data_provider = ref({
             erm_usage_data_provider_id: null,
@@ -271,101 +274,6 @@ export default {
             );
         };
 
-        const run_harvester = usage_data_provider_id => {
-            let date = new Date();
-            setConfirmationDialog(
-                {
-                    title: $__(
-                        "Are you sure you want to run the harvester for this data provider?"
-                    ),
-                    message: name,
-                    accept_label: $__("Yes, run"),
-                    cancel_label: $__("No, do not run"),
-                    inputs: [
-                        {
-                            name: "begin_date",
-                            type: "date",
-                            value: null,
-                            label: $__("Begin date"),
-                            required: true,
-                            componentProps: {
-                                required: {
-                                    type: "boolean",
-                                    value: true,
-                                },
-                            },
-                        },
-                        {
-                            name: "end_date",
-                            type: "date",
-                            value: $date_to_rfc3339($date(date.toString())),
-                            label: $__("End date"),
-                            required: true,
-                            componentProps: {
-                                required: {
-                                    type: "boolean",
-                                    value: true,
-                                },
-                            },
-                        },
-                    ],
-                },
-                (callback_result, inputFields) => {
-                    const client = APIClient.erm;
-                    client.usage_data_providers
-                        .process_SUSHI_response(
-                            usage_data_provider_id,
-                            inputFields
-                        )
-                        .then(
-                            success => {
-                                const jobsByReportType = success.jobs.reduce(
-                                    (acc, job) => {
-                                        (acc[job.report_type] ||= []).push(job);
-                                        return acc;
-                                    },
-                                    {}
-                                );
-                                let message = "";
-                                Object.entries(jobsByReportType).forEach(
-                                    ([reportType, jobs]) => {
-                                        const jobLinks = jobs
-                                            .map(
-                                                job =>
-                                                    '<a href="/cgi-bin/koha/admin/background_jobs.pl?op=view&id=' +
-                                                    job.job_id +
-                                                    '" target="_blank">' +
-                                                    escape_str(
-                                                        job.begin_date.substring(
-                                                            0,
-                                                            7
-                                                        )
-                                                    ) +
-                                                    "</a>"
-                                            )
-                                            .join(", ");
-                                        message +=
-                                            "<li>" +
-                                            $__n(
-                                                "%s job queued for report type <strong>%s</strong>: %s",
-                                                "%s jobs queued for report type <strong>%s</strong>: %s",
-                                                jobs.length
-                                            ).format(
-                                                jobs.length,
-                                                reportType,
-                                                jobLinks
-                                            ) +
-                                            "</li>";
-                                    }
-                                );
-                                setMessage(message, true);
-                            },
-                            error => {}
-                        );
-                }
-            );
-        };
-
         const change_tab_content = e => {
             tab_content.value = e.target.getAttribute("data-content");
         };
@@ -382,7 +290,7 @@ export default {
             available_data_types,
             delete_usage_data_provider,
             test_usage_data_provider,
-            run_harvester,
+            runHarvester,
             change_tab_content,
         };
     },

@@ -339,4 +339,13 @@ export default {
 :deep(.modal-body .flatpickr-input) {
     width: 50%;
 }
+
+/* A static flatpickr calendar wraps its input: the wrapper takes the
+   width of the input and the input fills the wrapper */
+:deep(.modal-body .flatpickr-wrapper) {
+    width: 50%;
+}
+:deep(.modal-body .flatpickr-wrapper .flatpickr-input) {
+    width: 100%;
+}
 </style>

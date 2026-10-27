@@ -40,7 +40,8 @@ import { inject, ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { APIClient } from "../../fetch/api-client.js";
 import KohaTable from "../KohaTable.vue";
-import { $__, $__n } from "@koha-vue/i18n/";
+import { $__ } from "@koha-vue/i18n/";
+import { useSushiHarvester } from "../../composables/sushiHarvester";
 
 export default {
     setup() {
@@ -51,6 +52,7 @@ export default {
 
         const { setConfirmationDialog, setMessage, setWarning } =
             inject("mainStore");
+        const { runHarvester } = useSushiHarvester();
 
         const getTableColumns = () => {
             return [
@@ -217,95 +219,7 @@ export default {
                     }
                 );
             } else {
-                let date = new Date();
-                setConfirmationDialog(
-                    {
-                        title: $__(
-                            "Are you sure you want to run the harvester for this data provider?"
-                        ),
-                        message: name,
-                        accept_label: $__("Yes, run"),
-                        cancel_label: $__("No, do not run"),
-                        inputs: [
-                            {
-                                name: "begin_date",
-                                type: "date",
-                                value: null,
-                                label: $__("Begin date"),
-                                required: true,
-                                componentProps: {
-                                    required: {
-                                        type: "boolean",
-                                        value: true,
-                                    },
-                                },
-                            },
-                            {
-                                name: "end_date",
-                                type: "date",
-                                value: $date_to_rfc3339($date(date.toString())),
-                                label: $__("End date"),
-                                required: true,
-                                componentProps: {
-                                    required: {
-                                        type: "boolean",
-                                        value: true,
-                                    },
-                                },
-                            },
-                        ],
-                    },
-                    (callback_result, inputFields) => {
-                        const client = APIClient.erm;
-                        client.usage_data_providers
-                            .process_SUSHI_response(id, inputFields)
-                            .then(
-                                success => {
-                                    const jobsByReportType =
-                                        success.jobs.reduce((acc, job) => {
-                                            (acc[job.report_type] ||= []).push(
-                                                job
-                                            );
-                                            return acc;
-                                        }, {});
-                                    let message = "";
-                                    Object.entries(jobsByReportType).forEach(
-                                        ([reportType, jobs]) => {
-                                            const jobLinks = jobs
-                                                .map(
-                                                    job =>
-                                                        '<a href="/cgi-bin/koha/admin/background_jobs.pl?op=view&id=' +
-                                                        job.job_id +
-                                                        '" target="_blank">' +
-                                                        escape_str(
-                                                            job.begin_date.substring(
-                                                                0,
-                                                                7
-                                                            )
-                                                        ) +
-                                                        "</a>"
-                                                )
-                                                .join(", ");
-                                            message +=
-                                                "<li>" +
-                                                $__n(
-                                                    "%s job queued for report type <strong>%s</strong>: %s",
-                                                    "%s jobs queued for report type <strong>%s</strong>: %s",
-                                                    jobs.length
-                                                ).format(
-                                                    jobs.length,
-                                                    reportType,
-                                                    jobLinks
-                                                ) +
-                                                "</li>";
-                                        }
-                                    );
-                                    setMessage(message, true);
-                                },
-                                error => {}
-                            );
-                    }
-                );
+                runHarvester(id, name);
             }
         };
         const testHarvesterConnection = (usage_data_provider, dt, event) => {

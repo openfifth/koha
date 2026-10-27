@@ -40,3 +40,9 @@ textarea {
     background-color: #fd7e14;
     color: #000;
 }
+
+/* A flatpickr calendar rendered next to its input (static) inside a
+   confirmation dialog must overlay the dialog footer, not scroll the body */
+#confirmation .modal-body {
+    overflow: visible;
+}
