@@ -224,9 +224,41 @@ function initConfirmCashupModal(modalSelector, options) {
                 noteAvs = [];
             }
         }
-        rowsData.forEach(function (pt) {
-            $tbody.append(buildRow(pt, noteAvs));
+        // Payment types with nothing expected are pre-filled with their
+        // expected amount and tucked behind a toggle, so staff only count the
+        // types that were actually taken. They are still submitted, so the
+        // cashup stays balanced. If nothing at all is expected, show every row.
+        var isZero = function (pt) {
+            return Math.round(Number(pt.expected || 0) * 100) === 0;
+        };
+        var collapseZero = rowsData.some(function (pt) {
+            return !isZero(pt);
         });
+        var zeroCount = 0;
+        rowsData.forEach(function (pt) {
+            var $row = buildRow(pt, noteAvs);
+            if (collapseZero && isZero(pt)) {
+                $row.addClass("cashup-row-zero d-none")
+                    .find(".cashup-amount-input")
+                    .val(Number(pt.expected || 0).format_price());
+                zeroCount++;
+            }
+            $tbody.append($row);
+        });
+        if (zeroCount) {
+            $(
+                '<tr class="cashup-zero-toggle"><td colspan="5"><a href="#" class="cashup-zero-toggle-link" role="button" aria-expanded="false"></a></td></tr>'
+            )
+                .find("a")
+                .data("count", zeroCount)
+                .text(
+                    __("Show payment types with nothing expected (%s)").format(
+                        zeroCount
+                    )
+                )
+                .end()
+                .appendTo($tbody);
+        }
         // Reset totals
         modal.find(".expected-total").text(
             rowsData
@@ -346,6 +378,24 @@ function initConfirmCashupModal(modalSelector, options) {
             .addClass(summaryClass);
         modal.find(".reconciliation-display").show();
     }
+
+    // Show or hide the payment types that have nothing expected
+    $(modalSelector).on("click", ".cashup-zero-toggle-link", function (e) {
+        e.preventDefault();
+        var $link = $(this);
+        var $rows = $link.closest(".modal").find(".cashup-row-zero");
+        var show = $link.attr("aria-expanded") !== "true";
+        $rows.toggleClass("d-none", !show);
+        $link
+            .attr("aria-expanded", show ? "true" : "false")
+            .text(
+                show
+                    ? __("Hide payment types with nothing expected")
+                    : __(
+                          "Show payment types with nothing expected (%s)"
+                      ).format($link.data("count"))
+            );
+    });
 
     // Recalculate on every input
     $(modalSelector).on("input", ".cashup-amount-input", function () {
