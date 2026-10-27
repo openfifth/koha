@@ -25,20 +25,22 @@ cleanup_database.pl - Purge or clean up expired and stale entries from the Koha 
 
 use Modern::Perl;
 
-use constant DEFAULT_ZEBRAQ_PURGEDAYS             => 30;
-use constant DEFAULT_MAIL_PURGEDAYS               => 30;
-use constant DEFAULT_IMPORT_PURGEDAYS             => 60;
-use constant DEFAULT_LOGS_PURGEDAYS               => 180;
-use constant DEFAULT_MESSAGES_PURGEDAYS           => 365;
-use constant DEFAULT_SEARCHHISTORY_PURGEDAYS      => 30;
-use constant DEFAULT_SHARE_INVITATION_EXPIRY_DAYS => 14;
-use constant DEFAULT_DEBARMENTS_PURGEDAYS         => 30;
-use constant DEFAULT_JOBS_PURGEDAYS               => 1;
-use constant DEFAULT_JOBS_PURGETYPES              => qw{ update_elastic_index };
-use constant DEFAULT_JOBS_UNFINISHED_PURGEDAYS    => 365;
-use constant DEFAULT_JOBS_UNFINISHED_PURGETYPES   => qw{ update_elastic_index };
-use constant DEFAULT_EDIFACT_MSG_PURGEDAYS        => 365;
-use constant DEFAULT_ILLREQUESTS_PURGEDAYS        => 30;
+use constant DEFAULT_ZEBRAQ_PURGEDAYS                 => 30;
+use constant DEFAULT_MAIL_PURGEDAYS                   => 30;
+use constant DEFAULT_IMPORT_PURGEDAYS                 => 60;
+use constant DEFAULT_LOGS_PURGEDAYS                   => 180;
+use constant DEFAULT_MESSAGES_PURGEDAYS               => 365;
+use constant DEFAULT_SEARCHHISTORY_PURGEDAYS          => 30;
+use constant DEFAULT_SHARE_INVITATION_EXPIRY_DAYS     => 14;
+use constant DEFAULT_DEBARMENTS_PURGEDAYS             => 30;
+use constant DEFAULT_JOBS_PURGEDAYS                   => 1;
+use constant DEFAULT_JOBS_PURGETYPES                  => qw{ update_elastic_index };
+use constant DEFAULT_JOBS_UNFINISHED_PURGEDAYS        => 365;
+use constant DEFAULT_JOBS_UNFINISHED_PURGETYPES       => qw{ update_elastic_index };
+use constant DEFAULT_EDIFACT_MSG_PURGEDAYS            => 365;
+use constant DEFAULT_ILLREQUESTS_PURGEDAYS            => 30;
+use constant DEFAULT_ILL_SUPPLIED_DOCUMENTS_PURGEDAYS => 30;
+use constant DEFAULT_ILL_PATRON_DOCUMENTS_PURGEDAYS   => 30;
 
 use Try::Tiny;
 
@@ -54,6 +56,7 @@ use Koha::Database;
 use Koha::DateUtils qw( dt_from_string );
 use Koha::Item::Transfers;
 use Koha::ILL::Requests;
+use Koha::ILL::Documents;
 use Koha::Library::Calendar::Exceptions;
 use Koha::Library::Calendar::SingleClosures;
 use Koha::Old::Biblioitems;
@@ -185,6 +188,16 @@ my ( $opt, $usage ) = Koha::Script->describe_options(
         'purge ILL requests with the given status(es) older than this many days (default: '
             . DEFAULT_ILLREQUESTS_PURGEDAYS . ')'
     ],
+    [
+        'ill-supplied-documents-days:i',
+        'purge documents this library supplied to other libraries, once the requesting library confirmed receipt more than this many days ago (default: '
+            . DEFAULT_ILL_SUPPLIED_DOCUMENTS_PURGEDAYS . ')'
+    ],
+    [
+        'ill-patron-documents-days:i',
+        'purge documents delivered to patrons, once the patron first downloaded them more than this many days ago, or once they were uploaded more than this many days ago if never downloaded (default: '
+            . DEFAULT_ILL_PATRON_DOCUMENTS_PURGEDAYS . ')'
+    ],
     {
               epilog => "Examples:\n"
             . "  %c --sessions --verbose\n    Report (without deleting) how many sessions would be purged.\n\n"
@@ -244,6 +257,9 @@ my $edifact_msg_days        = $opt->edifact_messages;
 my $illrequests_days        = $opt->illrequests_days;
 my @illrequests_statuses    = @{ $opt->illrequests_status // [] };
 
+my $ill_supplied_documents_days = $opt->ill_supplied_documents_days;
+my $ill_patron_documents_days   = $opt->ill_patron_documents_days;
+
 # Use default values
 $sessions             = 1                               if $sess_days                && $sess_days > 0;
 $pImport              = DEFAULT_IMPORT_PURGEDAYS        if defined($pImport)         && $pImport == 0;
@@ -260,6 +276,10 @@ $jobs_days             = DEFAULT_JOBS_PURGEDAYS               if defined($jobs_d
 @jobs_types            = (DEFAULT_JOBS_PURGETYPES)            if $jobs_days            && @jobs_types == 0;
 $edifact_msg_days      = DEFAULT_EDIFACT_MSG_PURGEDAYS        if defined($edifact_msg_days) && $edifact_msg_days == 0;
 $illrequests_days      = DEFAULT_ILLREQUESTS_PURGEDAYS        if defined($illrequests_days) && $illrequests_days == 0;
+$ill_supplied_documents_days = DEFAULT_ILL_SUPPLIED_DOCUMENTS_PURGEDAYS
+    if defined($ill_supplied_documents_days) && $ill_supplied_documents_days == 0;
+$ill_patron_documents_days = DEFAULT_ILL_PATRON_DOCUMENTS_PURGEDAYS
+    if defined($ill_patron_documents_days) && $ill_patron_documents_days == 0;
 
 @statistics_types = ( @statistics_types, @Koha::Statistic::pseudonymization_types ) if defined($statistics_type_pseudo);
 @statistics_types = keys %{ { map { $_, 1 } @statistics_types } };    # remove duplicate types
@@ -313,7 +333,9 @@ unless ( $sessions
     || $reports
     || $edifact_msg_days
     || $illrequests_days
-    || @illrequests_statuses )
+    || @illrequests_statuses
+    || $ill_supplied_documents_days
+    || $ill_patron_documents_days )
 {
     $usage->die( { pre_text => "You did not specify any cleanup work for the script to do.\n\n" } );
 }
@@ -883,6 +905,33 @@ if ($illrequests_days) {
         say $confirm
             ? sprintf( "Done with purging %d ILL requests.",      $count )
             : sprintf( "%d ILL requests would have been removed", $count );
+    }
+}
+
+if ($ill_supplied_documents_days) {
+    print "Purging supplied ILL documents received more than $ill_supplied_documents_days days ago.\n"
+        if $verbose;
+    my $purgeable = Koha::ILL::Documents->filter_by_purgeable_supplied( { days => $ill_supplied_documents_days } );
+    my $count     = $purgeable->count;
+    $purgeable->delete if $confirm;
+    if ($verbose) {
+        say $confirm
+            ? sprintf( "Done with purging %d supplied ILL documents.",      $count )
+            : sprintf( "%d supplied ILL documents would have been removed", $count );
+    }
+}
+
+if ($ill_patron_documents_days) {
+    print
+        "Purging patron ILL documents downloaded, or uploaded and never downloaded, more than $ill_patron_documents_days days ago.\n"
+        if $verbose;
+    my $purgeable = Koha::ILL::Documents->filter_by_purgeable_patron( { days => $ill_patron_documents_days } );
+    my $count     = $purgeable->count;
+    $purgeable->delete if $confirm;
+    if ($verbose) {
+        say $confirm
+            ? sprintf( "Done with purging %d patron ILL documents.",      $count )
+            : sprintf( "%d patron ILL documents would have been removed", $count );
     }
 }
 
