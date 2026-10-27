@@ -553,7 +553,16 @@ subtest 'Status Graph tests' => sub {
                 method         => 'check_in',
                 next_actions   => ['COMP'],
                 ui_method_icon => 'fa-download',
-            }
+            },
+            DOWNLOADED => {
+                prev_actions   => [],
+                id             => 'DOWNLOADED',
+                name           => 'Downloaded by patron',
+                ui_method_name => 0,
+                method         => 0,
+                next_actions   => ['COMP'],
+                ui_method_icon => 0,
+            },
         },
         "new node + core_status_graph = bigger status graph"
     ) || diag explain $new_graph;
@@ -675,7 +684,16 @@ subtest 'Status Graph tests' => sub {
                 method         => 'check_in',
                 next_actions   => ['COMP'],
                 ui_method_icon => 'fa-download',
-            }
+            },
+            DOWNLOADED => {
+                prev_actions   => [],
+                id             => 'DOWNLOADED',
+                name           => 'Downloaded by patron',
+                ui_method_name => 0,
+                method         => 0,
+                next_actions   => ['COMP'],
+                ui_method_icon => 0,
+            },
         },
         "new node + core_status_graph = bigger status graph"
     ) || diag explain $dupe_graph;
