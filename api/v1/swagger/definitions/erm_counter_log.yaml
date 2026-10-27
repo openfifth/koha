@@ -34,6 +34,26 @@ properties:
     type: 
     - integer
     - "null"
+  background_job_id:
+    description: internally assigned identifier of the background job that created the counter log
+    type:
+    - integer
+    - "null"
+  report_type:
+    description: COUNTER report type of the harvested report
+    type:
+    - string
+    - "null"
+  report_year:
+    description: year of the month covered by the harvested report
+    type:
+    - integer
+    - "null"
+  report_month:
+    description: month covered by the harvested report
+    type:
+    - integer
+    - "null"
   patron:
     description: patron object for the importer
     type:
