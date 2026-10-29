@@ -1,5 +1,5 @@
 use Modern::Perl;
-use Koha::Installer::Output qw(say_success);
+use Koha::Installer::Output qw(say_success say_info);
 
 return {
     bug_number  => "41307",
@@ -60,5 +60,10 @@ return {
 
             say_success( $out, "Added index 'erm_counter_logs.erm_counter_log_status_idx'" );
         }
+
+        say_info(
+            $out,
+            "Counter logs written before this update have no report type and no period, and re-harvests before Bug 42217 left duplicated monthly usage rows. Run misc/maintenance/erm_migrate_counter_data.pl --confirm to migrate them"
+        );
     },
 };
