@@ -3701,10 +3701,7 @@ subtest 'unparsable interchanges' => sub {
 
     # Unsupported separators parse to nothing
     my $odd = $build_message->( 'INVOICE', qq{UNA;+.? '} . $body->('ODD001') );
-    {
-        local $SIG{__WARN__} = sub { };
-        process_invoice($odd);
-    }
+    process_invoice($odd);
     $odd->discard_changes;
     is( $odd->status,                'error', 'Invoice with unsupported separators is marked error' );
     is( $odd->edifact_errors->count, 1,       'with an error recorded' );
