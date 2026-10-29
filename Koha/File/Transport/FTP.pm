@@ -187,7 +187,7 @@ sub _change_directory {
     my ( $self, $remote_directory ) = @_;
     my $operation = "change_directory";
 
-    $self->{connection}->cwd($remote_directory) or return $self->_abort_operation($operation);
+    $self->{connection}->cwd($remote_directory) or return $self->_abort_operation( $operation, $remote_directory );
 
     $self->add_message(
         {
@@ -417,16 +417,19 @@ sub _is_connected {
 
 =head3 _abort_operation
 
-    return $self->_abort_operation($operation);
+    return $self->_abort_operation( $operation, $path );
 
 Records an error message for the named operation, aborts any in-progress
 transfer on the current connection and returns nothing, so callers can
 C<return $self-E<gt>_abort_operation($operation)> on failure.
 
+The optional C<$path> is recorded in the message payload; when omitted the
+current working directory is used, if there is a connection.
+
 =cut
 
 sub _abort_operation {
-    my ( $self, $operation ) = @_;
+    my ( $self, $operation, $path ) = @_;
 
     $self->add_message(
         {
@@ -434,7 +437,8 @@ sub _abort_operation {
             type    => 'error',
             payload => {
                 detail => $self->{connection} ? $self->{connection}->status  : '',
-                error  => $self->{connection} ? $self->{connection}->message : $@
+                error  => $self->{connection} ? $self->{connection}->message : $@,
+                path   => $path // ( $self->{connection} ? $self->{connection}->pwd : '' ),
             }
         }
     );
