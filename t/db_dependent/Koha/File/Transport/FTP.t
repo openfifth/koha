@@ -17,7 +17,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 9;
+use Test::More tests => 10;
 use Test::Exception;
 use Test::NoWarnings;
 use Test::Warn;
@@ -160,6 +160,55 @@ subtest 'current_directory() tests' => sub {
     $transport->{_user_set_directory} = 1;
 
     is( $transport->current_directory, '/incoming/', 'current_directory() reads pwd(), not cwd()' );
+
+    $transport->{connection} = undef;
+
+    $schema->storage->txn_rollback;
+};
+
+subtest '_abort_operation() path tests' => sub {
+    plan tests => 6;
+
+    $schema->storage->txn_begin;
+
+    my $transport = $builder->build_object(
+        {
+            class => 'Koha::File::Transports',
+            value => { transport => 'ftp', password => 'testpass' }
+        }
+    );
+
+    my $mock_ftp = Test::MockModule->new('Net::FTP');
+    $mock_ftp->mock( 'delete',  sub { return 0; } );
+    $mock_ftp->mock( 'cwd',     sub { return 0; } );
+    $mock_ftp->mock( 'pwd',     sub { return '/incoming'; } );
+    $mock_ftp->mock( 'status',  sub { return 5; } );
+    $mock_ftp->mock( 'message', sub { return 'Permission denied'; } );
+    $mock_ftp->mock( 'abort',   sub { return 1; } );
+
+    # Pretend we are already connected so the call skips (re)connection
+    $transport->{connection}          = bless {}, 'Net::FTP';
+    $transport->{_user_set_directory} = 1;
+
+    my $error = sub {
+        my ($operation) = @_;
+        my ($message) = grep { $_->message eq $operation && $_->type eq 'error' } @{ $transport->object_messages };
+        return $message;
+    };
+
+    ok( !$transport->delete_file('old.txt'), 'delete_file() fails' );
+    is( $error->('delete')->payload->{path}, 'old.txt', 'delete_file() records the remote file as the path' );
+
+    ok( !$transport->change_directory('/nowhere'), 'change_directory() fails' );
+    is( $error->('change_directory')->payload->{path}, '/nowhere', 'change_directory() records the directory as the path' );
+
+    # Without a path, fall back to the working directory
+    $transport->_abort_operation('other');
+    is( $error->('other')->payload->{path}, '/incoming', 'path defaults to the current directory' );
+
+    # No connection at all must not die
+    $transport->{connection} = undef;
+    lives_ok { $transport->_abort_operation('no_connection') } 'no connection does not crash the error handler';
 
     $transport->{connection} = undef;
 
