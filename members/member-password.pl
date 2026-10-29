@@ -13,7 +13,6 @@ use CGI qw ( -utf8 );
 
 use Koha::Patrons;
 use Koha::Patron::Categories;
-use Koha::Policy::Patrons;
 
 use Try::Tiny qw( catch try );
 
@@ -48,7 +47,7 @@ output_and_exit_if_error(
     { module => 'members', logged_in_user => $logged_in_user, current_patron => $patron }
 );
 
-my $can_change = Koha::Policy::Patrons->can_change_password( $logged_in_user, $patron );
+my $can_change = $logged_in_user->can_change_password_of($patron);
 push( @errors, $can_change->messages->[0]->message ) unless $can_change;
 
 push( @errors, 'NOMATCH' ) if ( ( $newpassword && $newpassword2 ) && ( $newpassword ne $newpassword2 ) );

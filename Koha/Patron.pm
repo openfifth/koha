@@ -70,6 +70,7 @@ use Koha::Patron::Restrictions;
 use Koha::Patrons;
 use Koha::Plugins;
 use Koha::Recalls;
+use Koha::Policy::Patrons;
 use Koha::Result::Boolean;
 use Koha::Subscription::Routinglists;
 use Koha::Token;
@@ -2375,6 +2376,23 @@ sub can_see_patrons_from {
             group_feature => 'ft_hide_patron_info',
         }
     );
+}
+
+=head3 can_change_password_of
+
+    my $can_change = $patron->can_change_password_of( $other_patron );
+
+Returns a I<Koha::Result::Boolean> telling whether the patron (usually the logged in user) is
+allowed to change the password of the given I<Koha::Patron>. It is a convenience wrapper around
+I<Koha::Policy::Patrons-E<gt>can_change_password>, see there for the rules and the messages
+carried by the result.
+
+=cut
+
+sub can_change_password_of {
+    my ( $self, $patron ) = @_;
+
+    return Koha::Policy::Patrons->can_change_password( $self, $patron );
 }
 
 =head3 can_edit_items_from

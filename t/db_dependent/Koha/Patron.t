@@ -2735,6 +2735,30 @@ subtest 'get_lists_with_patron() tests' => sub {
     $schema->storage->txn_rollback;
 };
 
+subtest 'can_change_password_of() tests' => sub {
+
+    plan tests => 5;
+
+    $schema->storage->txn_begin;
+
+    my $editor = $builder->build_object( { class => 'Koha::Patrons', value => { flags => 0 } } );
+    $editor->set_permissions( { borrowers => { edit_borrowers => 1 } } );
+    my $ordinary       = $builder->build_object( { class => 'Koha::Patrons', value => { flags => 0 } } );
+    my $superlibrarian = $builder->build_object( { class => 'Koha::Patrons', value => { flags => 1 } } );
+
+    my $can_change = $editor->can_change_password_of($ordinary);
+    isa_ok( $can_change, 'Koha::Result::Boolean', 'The result of the policy is returned' );
+    ok( $can_change, "A patron with edit_borrowers can change an ordinary patron's password" );
+
+    $can_change = $editor->can_change_password_of($superlibrarian);
+    ok( !$can_change, 'Cannot change the password of a superlibrarian without staffaccess' );
+    is( $can_change->messages->[0]->message, 'staffaccess_required', 'The policy message is kept' );
+
+    ok( $editor->can_change_password_of($editor), 'Anyone can change their own password' );
+
+    $schema->storage->txn_rollback;
+};
+
 subtest 'can_be_guaranteed_by() tests' => sub {
 
     plan tests => 5;
