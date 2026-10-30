@@ -413,7 +413,7 @@
                 var ft_local_float_group = $(this).data("groupFt_local_float_group");
                 var ft_reports = $(this).data("groupFt_reports");
                 var ft_record_source_editing = $(this).data("groupFt_record_source_editing");
-                var ft_display_group = this.dataset.groupFt_display_group;
+                var ft_display_group = $(this).data("groupFt_display_group");
                 edit_group(
                     id,
                     parent_id,

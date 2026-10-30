@@ -1815,6 +1815,16 @@ sub searchResults {
     my $display_cache  = {};
     my $item_obj_cache = {};
 
+    # Staff users may only see displays from libraries they are allowed to view
+    # An empty list means the user can see displays from all libraries
+    my %viewable_display_branches;
+    if ( !$is_opac && C4::Context->preference('UseDisplayModule') ) {
+        my $userenv          = C4::Context->userenv;
+        my $logged_in_patron = $userenv && $userenv->{number} ? Koha::Patrons->find( $userenv->{number} ) : undef;
+        %viewable_display_branches = map { $_ => 1 } $logged_in_patron->libraries_where_can_view_displays
+            if $logged_in_patron;
+    }
+
     # Returns a Koha::Item object for the given itemnumber, cached per result set
     my $get_item_obj = sub {
         my ($itemnumber) = @_;
@@ -2175,7 +2185,8 @@ sub searchResults {
                         if defined $display_item->active
                         and $display_item->active == 1
                         and defined $display->active
-                        and $display->active == 1;
+                        and $display->active == 1
+                        and ( !%viewable_display_branches || $viewable_display_branches{ $display->display_branch } );
                 }
 
                 $item->{display_items} = \@display_items if @display_items;

@@ -598,6 +598,9 @@ export default {
             let errors = [];
 
             let display_items = display.display_items;
+            display_items.forEach(display_item => {
+                display_item.barcode = display_item.barcode?.trim();
+            });
             // Do not use display_item.name here! Its name is not the one linked with display_item.barcode
             // At this point display_item is meaningless, form/template only modified display_item.barcode
             const display_items_barcode = display_items.map(
