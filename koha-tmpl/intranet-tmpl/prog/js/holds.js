@@ -1328,7 +1328,13 @@ async function load_patron_holds_table(biblio_id, split_data) {
             ajax: {
                 url: url,
             },
-            embed: ["patron", "item", "item_group", "item_level_holds_count"],
+            embed: [
+                "patron",
+                "patron.library",
+                "item",
+                "item_group",
+                "item_level_holds_count",
+            ],
             columnDefs: [
                 {
                     targets: [2, 3],

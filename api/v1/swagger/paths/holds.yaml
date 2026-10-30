@@ -108,6 +108,7 @@
             - pickup_library
             - item
             - patron
+            - patron.library
             - item_group
             - item_level_holds_count
             - debits
