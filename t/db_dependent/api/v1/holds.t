@@ -17,7 +17,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 21;
+use Test::More tests => 22;
 use Test::NoWarnings;
 use Test::MockModule;
 use Test::Mojo;
@@ -2239,6 +2239,88 @@ subtest 'debits embedding tests' => sub {
         ->status_is(200)
         ->json_has( '/0/debits', 'debits present when embedded' )
         ->json_is( '/0/debits/0/amount', 2.50, 'Account line amount correct' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'patron.library embedding tests' => sub {
+
+    plan tests => 14;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'IndependentBranches', 1 );
+
+    my $password = 'thePassword123';
+
+    my $own_library   = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $other_library = $builder->build_object( { class => 'Koha::Libraries' } );
+
+    my $librarian = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { branchcode => $own_library->branchcode, flags => 0 }
+        }
+    );
+    $builder->build(
+        {
+            source => 'UserPermission',
+            value  => {
+                borrowernumber => $librarian->borrowernumber,
+                module_bit     => 6,
+                code           => 'place_holds',
+            },
+        }
+    );
+    $librarian->set_password( { password => $password, skip_validation => 1 } );
+    my $userid = $librarian->userid;
+
+    my $visible_patron = $builder->build_object(
+        { class => 'Koha::Patrons', value => { branchcode => $own_library->branchcode } } );
+    my $hidden_patron = $builder->build_object(
+        { class => 'Koha::Patrons', value => { branchcode => $other_library->branchcode } } );
+
+    my $biblio = $builder->build_sample_biblio();
+
+    my %hold_id;
+    my $priority = 1;
+    foreach my $patron ( $visible_patron, $hidden_patron ) {
+        $hold_id{ $patron->borrowernumber } = C4::Reserves::AddReserve(
+            {
+                branchcode     => $own_library->branchcode,
+                borrowernumber => $patron->borrowernumber,
+                biblionumber   => $biblio->biblionumber,
+                priority       => $priority++,
+            }
+        );
+    }
+
+    my $embed = { 'x-koha-embed' => 'patron,patron.library' };
+
+    # Patron the librarian cannot see: redacted, but its library is exposed
+    $t->get_ok( "//$userid:$password@/api/v1/holds?hold_id=" . $hold_id{ $hidden_patron->borrowernumber }, $embed )
+        ->status_is(200)
+        ->json_is( '/0/patron/surname', undef, 'Patron details are redacted' )
+        ->json_is( '/0/patron/library_id',   $other_library->branchcode, 'Patron library_id is exposed' )
+        ->json_is( '/0/patron/library/name', $other_library->branchname, 'Patron library is embedded' );
+
+    # Patron the librarian can see
+    $t->get_ok( "//$userid:$password@/api/v1/holds?hold_id=" . $hold_id{ $visible_patron->borrowernumber }, $embed )
+        ->status_is(200)
+        ->json_is( '/0/patron/surname',      $visible_patron->surname,   'Patron details are not redacted' )
+        ->json_is( '/0/patron/library/name', $own_library->branchname, 'Patron library is embedded' );
+
+    # Without the embed there is no library object
+    $t->get_ok(
+        "//$userid:$password@/api/v1/holds?hold_id=" . $hold_id{ $hidden_patron->borrowernumber },
+        { 'x-koha-embed' => 'patron' }
+        )
+        ->status_is(200)
+        ->json_hasnt( '/0/patron/library', 'No patron library without embedding' );
+
+    # Unknown nested embeds are still rejected
+    $t->get_ok( "//$userid:$password@/api/v1/holds", { 'x-koha-embed' => 'patron.nonexistent' } )
+        ->status_is(400);
 
     $schema->storage->txn_rollback;
 };
