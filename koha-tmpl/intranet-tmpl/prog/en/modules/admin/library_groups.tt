@@ -396,7 +396,7 @@
                 var ft_local_hold_group = $(this).data("groupFt_local_hold_group");
                 var ft_local_float_group = $(this).data("groupFt_local_float_group");
                 var ft_reports = $(this).data("groupFt_reports");
-                var ft_display_group = this.dataset.groupFt_display_group;
+                var ft_display_group = $(this).data("groupFt_display_group");
                 edit_group(id, parent_id, title, description, ft_hide_patron_info, ft_search_groups_opac, ft_search_groups_staff, ft_local_hold_group, ft_limit_item_editing, ft_local_float_group, ft_reports, ft_display_group);
             });
 
