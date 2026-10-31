@@ -39,7 +39,7 @@
 [% WRAPPER 'main-container.inc' aside='circ-menu' %]
     [% INCLUDE 'members-toolbar.inc' %]
 
-    <h1>Subscription routing lists for [% INCLUDE 'patron-title.inc' %]</h1>
+    <h1>Subscription routing lists for [% INCLUDE 'patron-title.inc' no_link = 1 %]</h1>
     <!-- Search Bar -->
     <p class="hint">Search subscriptions:</p>
     <form action="/cgi-bin/koha/serials/serials-search.pl" method="get"

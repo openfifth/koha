@@ -41,7 +41,7 @@
 
     [% INCLUDE 'members-toolbar.inc' %]
 
-    <h1>Statistics for [% INCLUDE 'patron-title.inc' %]</h1>
+    <h1>Statistics for [% INCLUDE 'patron-title.inc' no_link = 1 %]</h1>
     [% IF ( datas.size ) %]
         <div class="page-section">
             <table id="statistics">

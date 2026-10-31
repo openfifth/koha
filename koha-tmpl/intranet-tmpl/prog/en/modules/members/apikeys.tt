@@ -34,7 +34,7 @@
 [% WRAPPER 'main-container.inc' aside='circ-menu' %]
     [% INCLUDE 'members-toolbar.inc' %]
 
-    <h1>API keys for [% INCLUDE 'patron-title.inc' %]</h1>
+    <h1>API keys for [% INCLUDE 'patron-title.inc' no_link = 1 %]</h1>
 
     [% IF fresh_api_key %]
         [%# A fresh api key was generated, display the secret, only once %]

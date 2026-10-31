@@ -92,7 +92,7 @@
 
     [% INCLUDE 'members-toolbar.inc' %]
 
-    <h1>Housebound details for [% INCLUDE 'patron-title.inc' %]</h1>
+    <h1>Housebound details for [% INCLUDE 'patron-title.inc' no_link = 1 %]</h1>
 
     [% FOR m IN messages %]
         <div class="alert alert-[% m.type | html %]">

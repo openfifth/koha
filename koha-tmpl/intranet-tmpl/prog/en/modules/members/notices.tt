@@ -40,7 +40,7 @@
 [% WRAPPER 'main-container.inc' aside='circ-menu' %]
 
     [% INCLUDE 'members-toolbar.inc' %]
-    <h1>Sent notices for [% INCLUDE 'patron-title.inc' %]</h1>
+    <h1>Sent notices for [% INCLUDE 'patron-title.inc' no_link = 1 %]</h1>
 
     [% IF ( QUEUED_MESSAGES ) %]
         <div class="page-section">

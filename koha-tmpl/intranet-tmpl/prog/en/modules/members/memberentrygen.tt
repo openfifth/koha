@@ -109,7 +109,7 @@
                         [% ELSE %]
                             <span>Modify patron</span>
                         [% END %]
-                        [% INCLUDE 'patron-title.inc' %]
+                        [% INCLUDE 'patron-title.inc' no_link = 1 %]
                         [% IF patron_category %]([% patron_category.description | html %])[% END %]
                     </h1>
 
