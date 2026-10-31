@@ -36,6 +36,7 @@
     [%- SET data.title          = title -%]
 [%- END -%]
 [%# Parameter no_html - if 1, the html tags are NOT generated -%]
+[%# Parameter no_link - if 1, the patron is NOT linked to their details page, the wrapping spans are kept -%]
 [%- SET display_patron_name = 1 -%]
 [%- SET display_cardnumber = 1 -%]
 [%- IF no_cardnumber -%][%- SET display_cardnumber = 0 -%][%- END -%]
@@ -48,7 +49,7 @@
         [%- SET display_patron_name = 0 -%]
     [%- END -%]
 [%- END -%]
-[%- IF !no_html AND (display_patron_name OR display_cardnumber) -%]
+[%- IF !no_html AND !no_link AND (display_patron_name OR display_cardnumber) -%]
     [%- IF link_to == 'circulation_reserves' -%]
         <a href="/cgi-bin/koha/circ/circulation.pl?borrowernumber=[%- data.borrowernumber | uri -%]#reserves">[%- PROCESS display_patron_name -%]</a>
     [%- ELSIF link_to == 'circulation_recalls' -%]
