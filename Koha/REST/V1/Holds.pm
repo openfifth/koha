@@ -281,8 +281,18 @@ sub edit {
         }
 
         $pickup_library_id //= $hold->branchcode;
-        my $priority        = $body->{priority} // $hold->priority;
-        my $hold_date       = exists $body->{hold_date}       ? $body->{hold_date}       : $hold->reservedate;
+        my $priority  = $body->{priority} // $hold->priority;
+        my $hold_date = exists $body->{hold_date} ? $body->{hold_date} : $hold->reservedate;
+
+        if ( !C4::Context->preference('AllowHoldDateInFuture')
+            && ( $hold_date // '' ) ne ( $hold->reservedate // '' ) )
+        {
+            return $c->render(
+                status  => 400,
+                openapi => { error => "Hold date in future not allowed" }
+            );
+        }
+
         my $expiration_date = exists $body->{expiration_date} ? $body->{expiration_date} : $hold->expirationdate;
         my $item_id         = exists $body->{item_id}         ? $body->{item_id}         : $hold->itemnumber;
         my $item_level =

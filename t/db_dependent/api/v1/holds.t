@@ -1239,9 +1239,11 @@ subtest 'pickup_locations() tests' => sub {
 
 subtest 'edit() tests' => sub {
 
-    plan tests => 63;
+    plan tests => 72;
 
     $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'AllowHoldDateInFuture', 1 );
 
     my $password = 'AbcdEFG123';
 
@@ -1476,6 +1478,33 @@ subtest 'edit() tests' => sub {
     $item_hold->discard_changes;
     is( $item_hold->itemnumber,      $item->itemnumber, 'Item ID set correctly' );
     is( $item_hold->item_level_hold, 1,                 'item_level flag set correctly' );
+
+    # Changing the hold date requires AllowHoldDateInFuture
+    t::lib::Mocks::mock_preference( 'AllowHoldDateInFuture', 0 );
+
+    my $current_hold_date = $item_hold->reservedate;
+
+    $t->patch_ok( "//$userid:$password@/api/v1/holds/" . $item_hold->id => json => { hold_date => '2023-01-02' } )
+        ->status_is(400)
+        ->json_has('/error');
+
+    $item_hold->discard_changes;
+    is( $item_hold->reservedate, $current_hold_date, 'Hold date unchanged when AllowHoldDateInFuture is off' );
+
+    $t->patch_ok(
+        "//$userid:$password@/api/v1/holds/" . $item_hold->id => json => {
+            hold_date       => $current_hold_date,
+            expiration_date => '2023-03-02'
+        }
+    )->status_is(200);
+
+    t::lib::Mocks::mock_preference( 'AllowHoldDateInFuture', 1 );
+
+    $t->patch_ok( "//$userid:$password@/api/v1/holds/" . $item_hold->id => json => { hold_date => '2023-01-02' } )
+        ->status_is(200);
+
+    $item_hold->discard_changes;
+    is( $item_hold->reservedate, '2023-01-02', 'Hold date changed when AllowHoldDateInFuture is on' );
 
     $schema->storage->txn_rollback;
 
