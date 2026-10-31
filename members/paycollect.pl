@@ -41,7 +41,9 @@ my $input = CGI->new();
 my $payment_id          = $input->param('payment_id');
 my $writeoff_individual = $input->param('writeoff_individual');
 my $change_given        = $input->param('change_given');
-my $type                = scalar $input->param('type') || 'PAYMENT';
+my $receipt_channel     = $input->param('receipt_channel') // q{};
+$receipt_channel = q{} unless $receipt_channel =~ /^[A-Za-z0-9_-]{16,64}$/;
+my $type = scalar $input->param('type') || 'PAYMENT';
 
 # get operation
 my $op = $input->param('op') // qw{};
@@ -269,6 +271,17 @@ if ( $total_paid and $total_paid ne '0.00' ) {
 
         $url .= "?borrowernumber=$borrowernumber&payment_id=$payment_id&change_given=${change_given}${append}";
 
+        # The form was submitted to a new tab (see paycollect.tt): send that tab to the receipt,
+        # which tells the original tab where to go next once the payment has been saved
+        if ( $receipt_channel && C4::Context->preference('FinePaymentAutoPopup') ) {
+            my $landing = "$url&receipt_opened=1";
+            $url =
+                  "/cgi-bin/koha/members/printfeercpt.pl?action=print"
+                . "&accountlines_id=$payment_id&change=${change_given}&borrowernumber=$borrowernumber"
+                . "&receipt_channel=$receipt_channel&landing="
+                . uri_escape($landing);
+        }
+
         print $input->redirect($url);
     }
 } else {
@@ -282,6 +295,7 @@ if ( $input->param('error_over') ) {
 $template->param(
     finesview                   => 1,
     payment_id                  => $payment_id,
+    receipt_channel             => $receipt_channel,
     type                        => $type,
     borrowernumber              => $borrowernumber,    # some templates require global
     patron                      => $patron,

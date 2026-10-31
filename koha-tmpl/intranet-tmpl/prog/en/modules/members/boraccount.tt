@@ -610,7 +610,7 @@
     [% Asset.js("js/members-menu.js") | $raw %]
     <script>
         $(document).ready(function() {
-            [% IF payment_id && Koha.Preference('FinePaymentAutoPopup') %]
+            [% IF payment_id && Koha.Preference('FinePaymentAutoPopup') && !receipt_opened %]
                 const receipt_window = window.open('/cgi-bin/koha/members/printfeercpt.pl?action=print&change=[% change_given | html %]&accountlines_id=[% payment_id | html %]', '_blank');
                 // Browsers can block a window opened on page load, so offer the print and email buttons instead
                 if (!receipt_window || receipt_window.closed) {

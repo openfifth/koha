@@ -126,10 +126,11 @@ foreach my $renew_result (@renew_results) {
 }
 
 $template->param(
-    finesview     => 1,
-    payment_id    => $payment_id,
-    change_given  => $change_given,
-    renew_results => $renew_results_display
+    finesview      => 1,
+    payment_id     => $payment_id,
+    change_given   => $change_given,
+    receipt_opened => scalar $input->param('receipt_opened'),
+    renew_results  => $renew_results_display
 );
 
 add_accounts_to_template();

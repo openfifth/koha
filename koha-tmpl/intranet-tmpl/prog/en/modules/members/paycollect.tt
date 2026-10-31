@@ -72,6 +72,8 @@
 [% END #/ WRAPPER sub-header.inc %]
 
 [% WRAPPER 'main-container.inc' aside='circ-menu' %]
+    <div id="receipt-waiting" class="alert alert-info d-none"> <i class="fa fa-spinner fa-spin"></i> Payment in progress. This page will update when the receipt is ready. </div>
+    <div id="receipt-error" class="alert alert-warning d-none"> The payment was not completed. Please check the amounts and try again. </div>
     <h1>
         [% IF ( pay_individual ) %]
             <span>Pay an individual charge</span>
@@ -445,6 +447,59 @@
     [% Asset.js("js/members-menu.js") | $raw %]
     [% Asset.js("js/additional-fields-entry.js") | $raw %]
     <script>
+        const auto_receipt = [% IF Koha.Preference('FinePaymentAutoPopup') %]true[% ELSE %]false[% END %];
+        const receipt_patron_id = "[% patron.borrowernumber | html %]";
+        [% IF receipt_channel && ( error_over || error_under ) %]
+            // This tab was opened by the payment form and the payment was refused:
+            // tell the original tab so that it can offer to try again, then close this one
+            if (typeof BroadcastChannel !== "undefined") {
+                const refused_channel = new BroadcastChannel("koha-payment-[% receipt_channel | html %]");
+                refused_channel.postMessage({ status: "error" });
+                refused_channel.close();
+                window.close();
+            }
+        [% END %]
+
+        // With FinePaymentAutoPopup the receipt is opened by submitting the payment form to a new tab.
+        // That is a direct user action, so it cannot be blocked like a window.open() on page load.
+        // The new tab prints the receipt and tells this tab, over a BroadcastChannel, where to go next.
+        function reset_receipt_form(form) {
+            form.target = "";
+            $(form).find("input[name='receipt_channel']").remove();
+            form.beenSubmitted = false;
+            $("body, form input[type='submit'], form button[type='submit'], form a").removeClass("waiting");
+            $("#receipt-waiting").addClass("d-none");
+        }
+
+        function open_receipt_tab(form) {
+            if (!auto_receipt || typeof BroadcastChannel === "undefined") {
+                return;
+            }
+            const random_bytes = crypto.getRandomValues(new Uint8Array(16));
+            const id = Array.from(random_bytes, b => b.toString(16).padStart(2, "0")).join("");
+            $("<input>").attr({ type: "hidden", name: "receipt_channel", value: id }).appendTo(form);
+            form.target = "_blank";
+
+            const channel = new BroadcastChannel("koha-payment-" + id);
+            const timeout = setTimeout(function () {
+                // No answer: the payment will have been saved, show the account
+                window.location.href = "/cgi-bin/koha/members/boraccount.pl?borrowernumber=" + encodeURIComponent(receipt_patron_id);
+            }, 60000);
+            channel.onmessage = function (event) {
+                clearTimeout(timeout);
+                channel.close();
+                const message = event.data || {};
+                if (message.status === "done" && /^\/cgi-bin\/koha\/members\/(boraccount|pay)\.pl\?/.test(message.landing)) {
+                    window.location.href = message.landing;
+                } else {
+                    reset_receipt_form(form);
+                    $("#receipt-error").removeClass("d-none");
+                }
+            };
+            $("#receipt-error").addClass("d-none");
+            $("#receipt-waiting").removeClass("d-none");
+        }
+
         $(document).ready(function() {
             [% IF payment_id && Koha.Preference('FinePaymentAutoPopup') %]
                 window.open('/cgi-bin/koha/members/printfeercpt.pl?action=print&accountlines_id=[% payment_id | html %]&change=[% change_given | html %]&borrowernumber=[% patron.borrowernumber | html %]', '_blank');
@@ -478,6 +533,7 @@
             });
 
             $('#modal_submit').click(function() {
+                open_receipt_tab(forms[0]);
                 forms[0].submit();
             });
 
@@ -504,6 +560,13 @@
                     event.target.beenSubmitted = false;
                     // remove class added by preventDoubleFormSubmit
                     $("body, form input[type='submit'], form button[type='submit'], form a").removeClass('waiting');
+                }
+            });
+
+            // Registered last, so that it only acts when the form is really being submitted
+            $("#payindivfine, #payfine, #woindivfine").on("submit", function (e) {
+                if (!e.isDefaultPrevented()) {
+                    open_receipt_tab(this);
                 }
             });
         });

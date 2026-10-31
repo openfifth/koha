@@ -99,6 +99,18 @@ $letter //= C4::Letters::GetPreparedLetter(
     substitute => $substitute
 );
 
+# When opened by paycollect.pl, tell the tab that submitted the payment where to go next
+my $receipt_channel = $input->param('receipt_channel') // q{};
+my $landing         = $input->param('landing')         // q{};
+if (   $receipt_channel =~ /^[A-Za-z0-9_-]{16,64}$/
+    && $landing =~ m{^/cgi-bin/koha/members/(?:boraccount|pay)\.pl\?[^\r\n]*$} )
+{
+    $template->param(
+        receipt_channel => $receipt_channel,
+        landing         => $landing,
+    );
+}
+
 $template->param(
     slip   => $letter->{content},
     plain  => !$letter->{is_html},

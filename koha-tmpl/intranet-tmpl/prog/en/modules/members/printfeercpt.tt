@@ -39,7 +39,22 @@
     [% END %]
 </div>
 
+[% IF receipt_channel && landing %]
+    <div id="receipt-channel" hidden data-channel="[% receipt_channel | html %]" data-landing="[% landing | html %]"></div>
+[% END %]
+
 [% MACRO jsinclude BLOCK %]
+    [% IF receipt_channel && landing %]
+        <script nonce="[% Koha.CSPNonce | $raw %]">
+            // The payment has been saved: tell the tab that submitted it to move on, then print
+            if (typeof BroadcastChannel !== "undefined") {
+                const receipt_data = document.getElementById("receipt-channel").dataset;
+                const channel = new BroadcastChannel("koha-payment-" + receipt_data.channel);
+                channel.postMessage({ status: "done", landing: receipt_data.landing });
+                channel.close();
+            }
+        </script>
+    [% END %]
     [% INCLUDE 'slip-print.inc' #printThenClose %]
 [% END %]
 

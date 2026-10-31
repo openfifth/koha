@@ -273,15 +273,16 @@ foreach my $renew_result (@renew_results) {
 }
 
 $template->param(
-    patron        => $patron,
-    finesview     => 1,
-    total         => sprintf( "%.2f", $total ),
-    totalcredit   => $totalcredit,
-    accounts      => $accountlines,
-    payment_id    => $payment_id,
-    change_given  => $change_given,
-    renew_results => $renew_results_display,
-    receipt_sent  => $receipt_sent,
+    patron         => $patron,
+    finesview      => 1,
+    total          => sprintf( "%.2f", $total ),
+    totalcredit    => $totalcredit,
+    accounts       => $accountlines,
+    payment_id     => $payment_id,
+    change_given   => $change_given,
+    receipt_opened => scalar $input->param('receipt_opened'),
+    renew_results  => $renew_results_display,
+    receipt_sent   => $receipt_sent,
 );
 
 output_html_with_http_headers $input, $cookie, $template->output;
