@@ -875,7 +875,7 @@
 
                             [% IF (forceallow) %]<input type="hidden" name="forceallow" value="1" />[% END %]
 
-                            <label class="circ_barcode" for="barcode">Checking out to [% INCLUDE 'patron-title.inc' no_html=1 %]</label>
+                            <label class="circ_barcode" for="barcode">Checking out to [% INCLUDE 'patron-title.inc' no_link=1 %]</label>
 
                             [% IF NEEDSCONFIRMATION %]
                                 <input type="text" name="barcode" id="barcode" class="barcode focus" size="14" disabled="disabled" />
@@ -1041,7 +1041,7 @@
                         [% div_class = 'circmessage attention' %]
                         [% div_id = 'circmessages' %]
                     [% ELSE %]
-                        <h4>Checking out to [% INCLUDE 'patron-title.inc' no_html=1 %]</h4>
+                        <h4>Checking out to [% INCLUDE 'patron-title.inc' no_link=1 %]</h4>
                         [% div_class = 'circmessage warning' %]
                         [% div_id = 'circmessages' %]
                     [% END %]

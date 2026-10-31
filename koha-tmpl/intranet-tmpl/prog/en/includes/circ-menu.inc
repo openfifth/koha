@@ -30,7 +30,7 @@
             [% IF ( patron_is_sci ) %]
                 <i class="fa-solid fa-download fa-fw" title="Self check-in patron"></i>
             [% END %]
-            [% INCLUDE 'patron-title.inc' no_html = 1 %]
+            [% INCLUDE 'patron-title.inc' no_link = 1 %]
         </h5>
 
         [% IF Koha.Preference('showLastPatron') %]
