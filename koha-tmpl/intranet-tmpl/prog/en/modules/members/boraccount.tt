@@ -51,9 +51,13 @@
         <div id="receipt_sent_dialog" class="alert alert-warning"> Receipt not sent, failed to find template. </div>
     [% END %]
 
-    [% IF payment_id && !Koha.Preference('FinePaymentAutoPopup') %]
-        <div class="alert alert-info audio-alert-action">
+    [% IF payment_id %]
+        [% SET alert_class = Koha.Preference('FinePaymentAutoPopup') ? 'd-none' : 'audio-alert-action' %]
+        <div id="payment-received-alert" class="alert alert-info [% alert_class | html %]">
             <p>Payment received</p>
+            [% IF Koha.Preference('FinePaymentAutoPopup') %]
+                <p class="popup-blocked-message">Your browser blocked the receipt window.</p>
+            [% END %]
             <p>
                 <a id="print-payment-receipt-button" target="_blank" href="/cgi-bin/koha/members/printfeercpt.pl?action=print&amp;accountlines_id=[% payment_id | uri %]&amp;change=[% change_given | uri %]" class="btn btn-default"
                     ><i class="fa fa-print"></i> Print receipt</a
@@ -607,7 +611,11 @@
     <script>
         $(document).ready(function() {
             [% IF payment_id && Koha.Preference('FinePaymentAutoPopup') %]
-                window.open('/cgi-bin/koha/members/printfeercpt.pl?action=print&change=[% change_given | html %]&accountlines_id=[% payment_id | html %]', '_blank');
+                const receipt_window = window.open('/cgi-bin/koha/members/printfeercpt.pl?action=print&change=[% change_given | html %]&accountlines_id=[% payment_id | html %]', '_blank');
+                // Browsers can block a window opened on page load, so offer the print and email buttons instead
+                if (!receipt_window || receipt_window.closed) {
+                    $("#payment-received-alert").removeClass("d-none");
+                }
             [% END %]
 
             var txtActivefilter = _("Filter paid transactions");
