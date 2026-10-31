@@ -42,7 +42,7 @@
         [% INCLUDE 'csrf-token.inc' %]
         <input type="hidden" name="member" id="borrowernumber" value="[% patron.borrowernumber | html %]" />
         <input type="hidden" name="op" value="cud-newflags" />
-        <h1>Set permissions for [% INCLUDE 'patron-title.inc' no_html = 1 %]</h1>
+        <h1>Set permissions for [% INCLUDE 'patron-title.inc' no_link = 1 %]</h1>
 
         <div id="permissionstree">
             <div id="permissions_toolbar" class="btn-toolbar sticky">
