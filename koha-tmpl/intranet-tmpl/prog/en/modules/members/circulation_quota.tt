@@ -44,7 +44,7 @@
             <main>
                 [% INCLUDE 'messages.inc' %]
                 [% INCLUDE 'members-toolbar.inc' %]
-                <h1>Circulation quota for [% INCLUDE 'patron-title.inc' %]</h1>
+                <h1>Circulation quota for [% INCLUDE 'patron-title.inc' no_link = 1 %]</h1>
                 [% IF patron.guarantor_relationships.count > 0 %]
                     <div class="page-section">
                         <h2>Guarantors quota</h2>
