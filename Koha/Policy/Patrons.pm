@@ -59,10 +59,8 @@ sub can_change_password {
     return Koha::Result::Boolean->new(0)->add_message( { message => 'edit_borrowers_required' } )
         unless $actor->has_permission( { borrowers => 'edit_borrowers' } );
 
-    my $has_staff_access = $patron->category->category_type eq 'S' || $patron->flags;
-
     return Koha::Result::Boolean->new(1)
-        unless $has_staff_access;
+        unless $patron->has_staff_access;
 
     return Koha::Result::Boolean->new(1)
         if $actor->has_permission( { staffaccess => 1 } );
