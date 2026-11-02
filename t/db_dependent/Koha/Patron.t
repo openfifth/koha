@@ -19,7 +19,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 52;
+use Test::More tests => 53;
 use Test::NoWarnings;
 use Test::Exception;
 use Test::Warn;
@@ -4109,6 +4109,34 @@ subtest "identify_updated_extended_attributes" => sub {
         scalar(@$updated_attributes), 1,
         "Change to one empty attribute is detected even when another attribute also has an empty value"
     );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'has_staff_access' => sub {
+
+    plan tests => 4;
+
+    $schema->storage->txn_begin;
+
+    my $staff_category =
+        $builder->build_object( { class => 'Koha::Patron::Categories', value => { category_type => 'S' } } );
+    my $adult_category =
+        $builder->build_object( { class => 'Koha::Patron::Categories', value => { category_type => 'A' } } );
+
+    my $staff = $builder->build_object(
+        { class => 'Koha::Patrons', value => { categorycode => $staff_category->categorycode, flags => 0 } } );
+    ok( $staff->has_staff_access, 'A patron in a staff category has staff access, even without permissions' );
+
+    my $adult = $builder->build_object(
+        { class => 'Koha::Patrons', value => { categorycode => $adult_category->categorycode, flags => 0 } } );
+    ok( !$adult->has_staff_access, 'A patron in a non-staff category without permissions has no staff access' );
+
+    $adult->flags(4)->store;    # catalogue
+    ok( $adult->has_staff_access, 'A patron with any permission has staff access, whatever their category' );
+
+    $adult->flags(1)->store;    # superlibrarian
+    ok( $adult->has_staff_access, 'A superlibrarian has staff access' );
 
     $schema->storage->txn_rollback;
 };

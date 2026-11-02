@@ -2623,6 +2623,20 @@ sub is_superlibrarian {
     return $self->has_permission( { superlibrarian => 1 } ) ? 1 : 0;
 }
 
+=head3 has_staff_access
+
+    my $has_staff_access = $patron->has_staff_access;
+
+Return true if the patron is a staff account, i.e. it is in a staff category (type S)
+or has any permission set (superlibrarian included).
+
+=cut
+
+sub has_staff_access {
+    my ($self) = @_;
+    return ( $self->category->category_type eq 'S' || $self->flags ) ? 1 : 0;
+}
+
 =head3 is_adult
 
 my $is_adult = $patron->is_adult
