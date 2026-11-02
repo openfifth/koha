@@ -281,13 +281,13 @@ sub add_items {
         # an item.
         my @items = $items->as_list;
         my %unused_item_ids;
-        my %unused_barcodes;
+        my %unused_barcodes;    # case-insensitive
         $unused_item_ids{$_}++ for ( @{$item_ids} );
-        $unused_barcodes{$_}++ for (@barcodes);
+        $unused_barcodes{ lc($_) }++ for (@barcodes);
 
         foreach my $item (@items) {
             delete $unused_item_ids{ $item->itemnumber };
-            delete $unused_barcodes{ $item->barcode };
+            delete $unused_barcodes{ lc( $item->barcode ) };
         }
 
         if ( keys %unused_item_ids || keys %unused_barcodes ) {

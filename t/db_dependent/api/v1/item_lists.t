@@ -376,7 +376,7 @@ subtest 'list_items()' => sub {
 };
 
 subtest 'add_items()' => sub {
-    plan tests => 24;
+    plan tests => 27;
 
     $schema->storage->txn_begin;
 
@@ -390,6 +390,7 @@ subtest 'add_items()' => sub {
     my $item1   = $builder->build_object( { class => 'Koha::Items' } );
     my $item2   = $builder->build_object( { class => 'Koha::Items' } );
     my $item3   = $builder->build_object( { class => 'Koha::Items' } );
+    my $item4   = $builder->build_object( { class => 'Koha::Items', value => { barcode => 'test_BARCODE' } } );
     my $list_id = $list->id;
 
     $t->post_ok( "/api/v1/item-lists/$list_id/items" => json => { external_ids => [ $item1->barcode ] } )
@@ -418,6 +419,12 @@ subtest 'add_items()' => sub {
 
     $t->post_ok( "//$u:$p@/api/v1/item-lists/$list_id/items" => json =>
             { item_ids => [ $item2->itemnumber ], external_ids => [ $item2->barcode ] } )->status_is(201);
+
+    # Test barcode case-insensitivity with $item4
+    $t->post_ok( "//$u:$p@/api/v1/item-lists/$list_id/items" => json => { external_ids => ['TEST_barcode'] } )
+        ->status_is(201);
+
+    is( Koha::Item::ListContents->search( { item_list_id => $list_id } )->count(), 4 );
 
     $t->post_ok( "//$u:$p@/api/v1/item-lists/$list_id/items" => json => { item_ids => [9999] } )
         ->status_is(404)
