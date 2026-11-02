@@ -353,6 +353,10 @@ export default {
             });
             return {
                 ...props.instancedResource.tableOptions,
+                options: {
+                    ...props.instancedResource.tableOptions?.options,
+                    rowId: props.instancedResource.idAttr,
+                },
                 actions: column_actions.value,
             };
         });
