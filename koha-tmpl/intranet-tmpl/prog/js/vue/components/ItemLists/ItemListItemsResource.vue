@@ -55,6 +55,8 @@ export default {
         const route = useRoute();
         const item_list_id = route.params.id;
 
+        const selected_item_ids = new Set();
+
         const resource_ref = useTemplateRef("resource");
 
         const postVirtualForm = (action, data) => {
@@ -234,14 +236,11 @@ export default {
                         onClick: () => {
                             const dt = resource_ref?.value?.useTableObject();
                             if (!dt) return;
-                            batchRemove(
-                                dt
-                                    .rows({ selected: true })
-                                    .data()
-                                    .map(row => row.item_id)
-                                    .toArray(),
-                                () => dt.ajax.reload()
-                            );
+                            batchRemove(Array.from(selected_item_ids), () => {
+                                dt.rows().deselect();
+                                selected_item_ids.clear();
+                                window.location.reload();
+                            });
                         },
                     });
                 }
@@ -253,13 +252,7 @@ export default {
                         onClick: () => {
                             const dt = resource_ref?.value?.useTableObject();
                             if (!dt) return;
-                            batchEdit(
-                                dt
-                                    .rows({ selected: true })
-                                    .data()
-                                    .map(row => row.item_id)
-                                    .toArray()
-                            );
+                            batchEdit(Array.from(selected_item_ids));
                         },
                     });
                 }
@@ -271,13 +264,7 @@ export default {
                         onClick: () => {
                             const dt = resource_ref?.value?.useTableObject();
                             if (!dt) return;
-                            batchDelete(
-                                dt
-                                    .rows({ selected: true })
-                                    .data()
-                                    .map(row => row.item_id)
-                                    .toArray()
-                            );
+                            batchDelete(Array.from(selected_item_ids));
                         },
                     });
                 }
@@ -442,6 +429,18 @@ export default {
             actions: resource => ({
                 "-1": resource?.can_manage ? ["remove"] : [],
             }),
+            additionalEvents: {
+                select: (e, dt, type, indexes) => {
+                    dt.rows(indexes)
+                        .data()
+                        .each(row => selected_item_ids.add(row.item_id));
+                },
+                deselect: (e, dt, type, indexes) => {
+                    dt.rows(indexes)
+                        .data()
+                        .each(row => selected_item_ids.delete(row.item_id));
+                },
+            },
         };
 
         const onFormSave = (e, itemToSave) => {
