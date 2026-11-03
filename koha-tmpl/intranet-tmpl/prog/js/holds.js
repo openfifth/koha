@@ -1544,10 +1544,14 @@ async function load_patron_holds_table(biblio_id, split_data) {
                                 library ? library._str : row.pickup_library_id
                             );
                         }
+                        let patron_library = all_libraries.find(
+                            library => library._id == row.patron.library_id
+                        );
                         return $patron_to_html(row.patron, {
                             url: true,
                             display_cardnumber: true,
                             hide_patron_name: HidePatronName,
+                            library_name: patron_library?._str,
                         });
                     },
                 },

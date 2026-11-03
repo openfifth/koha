@@ -400,3 +400,62 @@ describe("Display patron - no search", () => {
         });
     });
 });
+
+describe("$patron_to_html - hidden patron name", () => {
+    beforeEach(() => {
+        cy.login();
+        cy.visit("/cgi-bin/koha/members/members-home.pl");
+    });
+
+    const patron = {
+        patron_id: 42,
+        surname: "Smith",
+        preferred_name: "Jo",
+        cardnumber: "CARD42",
+        library: { name: "Centerville" },
+    };
+    const config = {
+        url: true,
+        display_cardnumber: true,
+        hide_patron_name: true,
+    };
+
+    it("shows the cardnumber as a link", () => {
+        cy.window().then(win => {
+            const $el = Cypress.$("<div>").html(
+                win.$patron_to_html(patron, config)
+            );
+            expect($el.find("a").text()).to.eq("CARD42");
+            expect($el.find("a").attr("href")).to.contain(
+                "moremember.pl?borrowernumber=42"
+            );
+        });
+    });
+
+    [null, ""].forEach(cardnumber => {
+        it(`never renders an empty link when cardnumber is ${JSON.stringify(cardnumber)}`, () => {
+            cy.window().then(win => {
+                const $el = Cypress.$("<div>").html(
+                    win.$patron_to_html({ ...patron, cardnumber }, config)
+                );
+                expect($el.find("a").text()).to.eq("A patron from Centerville");
+                expect($el.find("a").attr("href")).to.contain(
+                    "moremember.pl?borrowernumber=42"
+                );
+            });
+        });
+    });
+
+    it("uses config.library_name when the patron has no embedded library", () => {
+        cy.window().then(win => {
+            const { library, ...p } = patron;
+            const $el = Cypress.$("<div>").html(
+                win.$patron_to_html(
+                    { ...p, cardnumber: "" },
+                    { ...config, library_name: "Fairview" }
+                )
+            );
+            expect($el.find("a").text()).to.eq("A patron from Fairview");
+        });
+    });
+});

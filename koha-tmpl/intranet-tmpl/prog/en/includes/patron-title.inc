@@ -89,8 +89,10 @@
         [%- IF display_cardnumber AND data.cardnumber -%][%- WRAPPER maybe_span field_name='cardnumber' -%][%- ' (' _ data.cardnumber _ ')' | html -%][%- END -%][%- END -%]
     [%- ELSIF display_cardnumber -%]
         [%- IF data.cardnumber -%]
-            [%# FIXME Cardnumber should always be defined, right? -%]
             [%- WRAPPER maybe_span field_name='cardnumber' -%][%- data.cardnumber | html -%][%- END -%]
+        [%- ELSE -%]
+            [%# No cardnumber to show instead of the name: never render an empty link -%]
+            <span>A patron from library [%- Branches.GetName( patron.branchcode ) | html -%]</span>
         [%- END -%]
     [%- ELSE -%]
         <span>A patron from library [%- Branches.GetName( patron.branchcode ) | html -%]</span>

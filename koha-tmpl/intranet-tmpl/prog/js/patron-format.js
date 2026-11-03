@@ -3,8 +3,9 @@
      * Format the patron response from a Koha RESTful API request.
      * @param  {Object}  patron  The patron json object as returned from the Koha RESTful API
      * @param  {Object}  config  A configuration object
-     *                           Valid keys are: `invert_name`, `display_cardnumber', `url`
-     *                           and `showDiffFirstname`
+     *                           Valid keys are: `invert_name`, `display_cardnumber', `url`,
+     *                           `showDiffFirstname` and `library_name` (fallback label
+     *                           used when names are hidden and there is no cardnumber)
      * @return {string}          The formatted HTML string
      */
     window.$patron_to_html = function (patron, config) {
@@ -75,8 +76,16 @@
         if (config?.display_cardnumber) {
             if (name.length > 0) {
                 name = name + " (" + escape_str(patron.cardnumber) + ")";
-            } else {
+            } else if (patron.cardnumber) {
                 name = escape_str(patron.cardnumber);
+            } else {
+                // Names are hidden and there is no cardnumber to show instead:
+                // never render an empty (invisible, unclickable) link
+                const library_name =
+                    patron.library?.name || config.library_name;
+                name = library_name
+                    ? __("A patron from %s").format(escape_str(library_name))
+                    : __("A patron from another library");
             }
         }
 
