@@ -389,13 +389,10 @@ export default {
                                 props.instancedResource.parentResource.idAttr
                             ]
                         )
-                        .then(
-                            resource => {
-                                breadcrumbMetadata.value = resource;
-                                parentResource.value = resource;
-                            },
-                            error => {}
-                        )
+                        .then(resource => {
+                            breadcrumbMetadata.value = resource;
+                            parentResource.value = resource;
+                        })
                 );
             }
 
@@ -413,9 +410,12 @@ export default {
                 );
             }
 
-            Promise.all(loading_promises).then(() => {
-                initialized.value = true;
-            });
+            Promise.all(loading_promises).then(
+                () => {
+                    initialized.value = true;
+                },
+                error => {}
+            );
         });
         return {
             table,
