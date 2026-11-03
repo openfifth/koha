@@ -1,7 +1,7 @@
 <template>
     <BaseResource :routeAction="routeAction" :instancedResource="this">
         <template v-slot:list-header>
-            <h1>{{ $__("Item Lists") }}</h1>
+            <h1>{{ $__("Item lists") }}</h1>
         </template>
     </BaseResource>
 </template>

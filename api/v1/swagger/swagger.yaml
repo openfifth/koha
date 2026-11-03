@@ -1488,7 +1488,7 @@ tags:
     name: record_sources
     x-displayName: Record source
   - description: "Manage item lists\n"
-    x-displayName: Item Lists
+    x-displayName: Item lists
     name: item_lists
   - description: "Manage items\n"
     name: items
