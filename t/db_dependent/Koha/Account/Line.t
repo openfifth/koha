@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 18;
+use Test::More tests => 19;
 use Test::Exception;
 use Test::MockModule;
 
@@ -1236,6 +1236,102 @@ subtest "payout() tests" => sub {
         -10, 'Credit has an new amount outstanding of -10'
     );
     is( $credit1->status(), 'PAID', "Credit has a new status of PAID" );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'refund flow (reduce() then payout()) with and without cash registers' => sub {
+
+    plan tests => 9;
+
+    $schema->storage->txn_begin;
+
+    my $patron  = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $staff   = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $account = $patron->account;
+
+    t::lib::Mocks::mock_userenv( { patron => $staff, branchcode => $library->branchcode } );
+
+    my $register =
+        $builder->build_object( { class => 'Koha::Cash::Registers', value => { branch => $library->branchcode } } );
+
+    # Mirrors what members/boraccount.pl does for 'cud-refund'
+    my $refund = sub {
+        my ( $type, $register_id ) = @_;
+
+        my $debit = $account->add_debit(
+            {
+                amount     => 5,
+                type       => 'OVERDUE',
+                interface  => 'intranet',
+                library_id => $library->branchcode,
+                user_id    => $staff->borrowernumber,
+            }
+        );
+        $account->pay(
+            {
+                amount     => 5,
+                interface  => 'intranet',
+                library_id => $library->branchcode,
+                user_id    => $staff->borrowernumber,
+            }
+        );
+        $debit->discard_changes;
+
+        my $payout;
+        $schema->txn_do(
+            sub {
+                my $reduction = $debit->reduce(
+                    {
+                        reduction_type => 'REFUND',
+                        branch         => $library->branchcode,
+                        staff_id       => $staff->borrowernumber,
+                        interface      => 'intranet',
+                        amount         => 5,
+                    }
+                );
+                unless ( $type eq 'AC' ) {
+                    $payout = $reduction->payout(
+                        {
+                            payout_type   => $type,
+                            branch        => $library->branchcode,
+                            staff_id      => $staff->borrowernumber,
+                            cash_register => $register_id,
+                            interface     => 'intranet',
+                            amount        => 5,
+                        }
+                    );
+                }
+            }
+        );
+        return ( $debit->discard_changes, $payout );
+    };
+
+    for my $use_registers ( 0, 1 ) {
+        t::lib::Mocks::mock_preference( 'UseCashRegisters', $use_registers );
+        my $label = "UseCashRegisters=$use_registers";
+
+        my ( $debit, $payout ) = $refund->('AC');
+        is( $debit->status, 'REFUNDED', "$label: AC refund succeeds without a register" );
+        is( $payout,        undef,      "$label: AC refund does not create a payout" );
+
+        ( $debit, $payout ) = $refund->( 'CASH', $register->id );
+        is( $payout->register_id, $register->id, "$label: CASH refund with a register is recorded against it" );
+
+        if ($use_registers) {
+            throws_ok { $refund->('CASH') }
+            'Koha::Exceptions::Account::RegisterRequired',
+                "$label: CASH refund without a register throws RegisterRequired";
+        } else {
+            ( $debit, $payout ) = $refund->('CASH');
+            is( $payout->register_id, undef, "$label: CASH refund without a register is allowed" );
+        }
+    }
+
+    is( $account->lines->search( { debit_type_code => 'PAYOUT' } )->count, 3, 'Only the valid payouts exist' );
+
+    t::lib::Mocks::mock_preference( 'UseCashRegisters', 0 );
 
     $schema->storage->txn_rollback;
 };

@@ -34,6 +34,8 @@ use Koha::Patrons;
 use Koha::Patron::Categories;
 use Koha::Items;
 use Koha::Token;
+use Scalar::Util qw( blessed );
+use Try::Tiny    qw( catch try );
 
 my $input = CGI->new;
 
@@ -86,16 +88,19 @@ if ( $op eq 'cud-void' ) {
     );
 }
 
+my $account_error;
+
 if ( $op eq 'cud-payout' ) {
     output_and_exit_if_error( $input, $cookie, $template, { check => 'csrf_token' } );
     my $payment_id  = scalar $input->param('accountlines_id');
-    my $payment     = Koha::Account::Lines->find($payment_id);
     my $amount      = scalar $input->param('amount');
     my $payout_type = scalar $input->param('payout_type');
     my $note        = scalar $input->param('payout_note');
-    if ( $payment_id eq "" ) {
-        $schema->txn_do(
-            sub {
+
+    $account_error = _try_account_action(
+        $schema,
+        sub {
+            if ( $payment_id eq "" ) {
                 $patron->account->payout_amount(
                     {
                         payout_type   => $payout_type,
@@ -106,13 +111,9 @@ if ( $op eq 'cud-payout' ) {
                         amount        => $amount,
                     }
                 );
-            }
-        );
-    } else {
-        my $payment = Koha::Account::Lines->find($payment_id);
-        $schema->txn_do(
-            sub {
-                my $payout = $payment->payout(
+            } else {
+                my $payment = Koha::Account::Lines->find($payment_id);
+                $payment->payout(
                     {
                         payout_type   => $payout_type,
                         branch        => $library_id,
@@ -124,8 +125,8 @@ if ( $op eq 'cud-payout' ) {
                     }
                 );
             }
-        );
-    }
+        }
+    );
 }
 
 if ( $op eq 'cud-refund' ) {
@@ -136,9 +137,9 @@ if ( $op eq 'cud-refund' ) {
     my $refund_type = scalar $input->param('refund_type');
     my $note        = scalar $input->param('refund_note');
 
-    $schema->txn_do(
+    $account_error = _try_account_action(
+        $schema,
         sub {
-
             my $refund = $charge->reduce(
                 {
                     reduction_type => 'REFUND',
@@ -150,7 +151,7 @@ if ( $op eq 'cud-refund' ) {
                 }
             );
             unless ( $refund_type eq 'AC' ) {
-                my $payout = $refund->payout(
+                $refund->payout(
                     {
                         payout_type   => $refund_type,
                         branch        => $library_id,
@@ -283,6 +284,28 @@ $template->param(
     receipt_opened => scalar $input->param('receipt_opened'),
     renew_results  => $renew_results_display,
     receipt_sent   => $receipt_sent,
+    account_error  => $account_error,
 );
 
 output_html_with_http_headers $input, $cookie, $template->output;
+
+# Run a refund/payout inside a transaction. Expected account exceptions roll
+# the transaction back and are returned as a code for the template to show,
+# rather than ending up as a bare 500 error page.
+sub _try_account_action {
+    my ( $schema, $action ) = @_;
+
+    my $error;
+    try {
+        $schema->txn_do($action);
+    } catch {
+        my $e = $_;
+        if ( blessed $e && $e->isa('Koha::Exceptions::Account::RegisterRequired') ) {
+            $error = 'register_required';
+        } else {
+            $e->rethrow if blessed $e && $e->can('rethrow');
+            die $e;
+        }
+    };
+    return $error;
+}

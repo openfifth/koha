@@ -44,6 +44,9 @@
 [% END #/ WRAPPER sub-header.inc %]
 
 [% WRAPPER 'main-container.inc' aside='circ-menu' %]
+    [% IF account_error == 'register_required' %]
+        <div id="account_error_dialog" class="alert alert-warning"> A cash register is required to record a cash refund or payout. Select a cash register and try again; nothing was recorded. </div>
+    [% END %]
     [% IF receipt_sent == '1' %]
         <div id="receipt_sent_dialog" class="alert alert-info"> Receipt sent. </div>
     [% END %]
