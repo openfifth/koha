@@ -285,16 +285,27 @@
         </div>
     [% END %]
 
+    [%# The selected patron is identified on this page by card number, so when their name is hidden the alerts below can simply say 'This patron' -%]
+    [% IF patron %]
+        [% SET patron_name_hidden = Koha.Preference('HidePatronName') || !logged_in_user.can_see_patrons_from(patron.branchcode) %]
+        [% patron_label = BLOCK %]
+            [%- IF patron_name_hidden -%]
+                This patron
+            [%- ELSE -%]
+                [% INCLUDE 'patron-title.inc' patron = patron no_title = 1 no_cardnumber = 1 hide_patron_infos_if_needed = 1 %]
+            [%- END -%]
+        [% END %]
+    [% END %]
+
     [% UNLESS ( multi_hold ) %]
         <h2>Place hold on [% INCLUDE 'biblio-title.inc' link = 1 %] [% IF biblio.author %]by [% biblio.author | html %][% END %]</h2>
 
         [% IF ( patron && reserve_charge ) %]
             <div class="alert alert-warning" id="reserve_fee">
                 [% IF Koha.Preference('HoldFeeMode') == 'any_time_is_collected' %]
-                    <strong>Note:</strong> [% INCLUDE 'patron-title.inc' patron = patron no_title = 1 no_cardnumber = 1 hide_patron_infos_if_needed = 1 %] will be charged a hold fee of [% reserve_charge | $Price %] when they collect this
-                    item
+                    <strong>Note:</strong> <span class="patron-identifier">[% patron_label | $raw %]</span> will be charged a hold fee of [% reserve_charge | $Price %] when they collect this item
                 [% ELSE %]
-                    <strong>Note:</strong> [% INCLUDE 'patron-title.inc' patron = patron no_title = 1 no_cardnumber = 1 hide_patron_infos_if_needed = 1 %] will be charged a hold fee of [% reserve_charge | $Price %] for placing this hold
+                    <strong>Note:</strong> <span class="patron-identifier">[% patron_label | $raw %]</span> will be charged a hold fee of [% reserve_charge | $Price %] for placing this hold
                 [% END %]
             </div>
         [% END %]
@@ -410,7 +421,8 @@
                     [% FOREACH member IN members %]
                         [% SET patron = member.patron %]
                         <li style="padding: 0.5em 1em;">
-                            <div>[% INCLUDE 'patron-title.inc' patron => patron no_title => 1 no_cardnumber => 1 hide_patron_infos_if_needed => 1 %]</div>
+                            [%# With names hidden show the card number, so members of the same library can be told apart -%]
+                            <div class="patron-identifier">[% INCLUDE 'patron-title.inc' patron => patron no_title => 1 no_cardnumber => ( Koha.Preference('HidePatronName') ? 0 : 1 ) hide_patron_infos_if_needed => 1 %]</div>
                             [% IF member.exceeded_maxreserves %]
                                 <div>
                                     <i class="fa fa-error"></i>
@@ -437,9 +449,9 @@
                             [% END %]
 
                             [% IF ( member.diffbranch ) %]
-                                <div>
+                                <div class="pickup-library-mismatch">
                                     <i class="fa-solid fa-triangle-exclamation"></i>
-                                    <strong>Pickup library is different.</strong> Patron's home library: ([% Branches.GetName(patron.branchcode) | html %] / [% patron.branchcode | html %] )
+                                    <strong>Pickup library is different.</strong> Patron's home library: <span class="patron-home-library">[% Branches.GetName(patron.branchcode) | html %] / [% patron.branchcode | html %]</span>
                                 </div>
                             [% END %]
                         </li>
@@ -615,12 +627,12 @@
                     [% END %]
 
                     [% IF ( diffbranch ) %]
-                        <li>
+                        <li id="pickup_library_mismatch" class="pickup-library-mismatch">
                             <strong>Pickup library is different. </strong>
-                            [% UNLESS Koha.Preference('HidePatronName') %]
-                                Patron: [% INCLUDE 'patron-title.inc' patron => patron no_title => 1 no_cardnumber => 1 hide_patron_infos_if_needed => 1 %]
+                            [% UNLESS patron_name_hidden %]
+                                Patron: <span class="patron-identifier">[% patron_label | $raw %]</span>.
                             [% END %]
-                            Patron's home library: [% Branches.GetName(patron.branchcode) | html %] / [% patron.branchcode | html %]
+                            Patron's home library: <span class="patron-home-library">[% Branches.GetName(patron.branchcode) | html %] / [% patron.branchcode | html %]</span>
                         </li>
                     [% END %]
                 </ul>
