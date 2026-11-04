@@ -48,7 +48,7 @@ output_and_exit_if_error(
 );
 
 my $can_change = $logged_in_user->can_change_password_of($patron);
-push( @errors, $can_change->messages->[0]->message ) unless $can_change;
+push( @errors, map { $_->message } @{ $can_change->messages } ) unless $can_change;
 
 push( @errors, 'NOMATCH' ) if ( ( $newpassword && $newpassword2 ) && ( $newpassword ne $newpassword2 ) );
 

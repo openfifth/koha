@@ -172,14 +172,24 @@ subtest 'set() (staffaccess tests)' => sub {
             . $staff_target->id
             . "/password" => json => { password => $new_password, password_2 => $new_password } )
         ->status_is(403)
-        ->json_is( { error => "Changing another staff account's password requires the staffaccess permission" } );
+        ->json_is(
+        {
+            error      => "Changing another staff account's password requires the staffaccess permission",
+            error_code => 'staffaccess_required'
+        }
+        );
 
     foreach my $target ( $superlibrarian_target, $permissions_target ) {
         $t->post_ok( "//$userid:$password@/api/v1/patrons/"
                 . $target->id
                 . "/password" => json => { password => $new_password, password_2 => $new_password } )
             ->status_is( 403, 'An account with permissions is protected whatever its category' )
-            ->json_is( { error => "Changing another staff account's password requires the staffaccess permission" } );
+            ->json_is(
+            {
+                error      => "Changing another staff account's password requires the staffaccess permission",
+                error_code => 'staffaccess_required'
+            }
+            );
     }
 
     $t->post_ok( "//$userid:$password@/api/v1/patrons/"

@@ -52,11 +52,17 @@ sub set {
 
     my $can_change = $c->stash('koha.user')->can_change_password_of($patron);
     unless ($can_change) {
-        my $error =
-            $can_change->messages->[0]->message eq 'staffaccess_required'
-            ? "Changing another staff account's password requires the staffaccess permission"
-            : "Changing another patron's password requires the edit_borrowers permission";
-        return $c->render( status => 403, openapi => { error => $error } );
+        my %error_for = (
+            staffaccess_required    => "Changing another staff account's password requires the staffaccess permission",
+            edit_borrowers_required => "Changing another patron's password requires the edit_borrowers permission",
+        );
+        my ($error_code) = grep { exists $error_for{$_} } map { $_->message } @{ $can_change->messages };
+        $error_code //= 'edit_borrowers_required';
+
+        return $c->render(
+            status  => 403,
+            openapi => { error => $error_for{$error_code}, error_code => $error_code }
+        );
     }
 
     my $password   = $body->{password}   // "";
