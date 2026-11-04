@@ -94,7 +94,7 @@ if ( $op eq 'cud-payout' ) {
     output_and_exit_if_error( $input, $cookie, $template, { check => 'csrf_token' } );
     my $payment_id  = scalar $input->param('accountlines_id');
     my $amount      = scalar $input->param('amount');
-    my $payout_type = scalar $input->param('payout_type');
+    my $payout_type = scalar $input->param('payout_type') // '';
     my $note        = scalar $input->param('payout_note');
 
     $account_error = _try_account_action(
@@ -134,7 +134,7 @@ if ( $op eq 'cud-refund' ) {
     my $charge_id   = scalar $input->param('accountlines_id');
     my $charge      = Koha::Account::Lines->find($charge_id);
     my $amount      = scalar $input->param('amount');
-    my $refund_type = scalar $input->param('refund_type');
+    my $refund_type = scalar $input->param('refund_type') // '';
     my $note        = scalar $input->param('refund_note');
 
     $account_error = _try_account_action(
@@ -302,6 +302,8 @@ sub _try_account_action {
         my $e = $_;
         if ( blessed $e && $e->isa('Koha::Exceptions::Account::RegisterRequired') ) {
             $error = 'register_required';
+        } elsif ( blessed $e && $e->isa('Koha::Exceptions::Account::PaymentTypeRequired') ) {
+            $error = 'payment_type_required';
         } else {
             $e->rethrow if blessed $e && $e->can('rethrow');
             die $e;

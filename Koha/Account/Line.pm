@@ -756,6 +756,10 @@ sub payout {
         }
     }
 
+    # A payout must say how the money was handed back
+    Koha::Exceptions::Account::PaymentTypeRequired->throw()
+        if $params->{payout_type} eq '';
+
     # Make sure there is outstanding credit to pay out
     my $outstanding = -1 * $self->amountoutstanding;
     my $amount      = $params->{amount} ? $params->{amount} : $outstanding;

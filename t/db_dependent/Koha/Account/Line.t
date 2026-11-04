@@ -1095,7 +1095,7 @@ subtest "void() tests" => sub {
 
 subtest "payout() tests" => sub {
 
-    plan tests => 18;
+    plan tests => 19;
 
     $schema->storage->txn_begin;
 
@@ -1181,6 +1181,12 @@ subtest "payout() tests" => sub {
     }
 
     throws_ok {
+        $credit1->payout( { %$pay_params, payout_type => '' } );
+    }
+    'Koha::Exceptions::Account::PaymentTypeRequired',
+        '->payout() requires a non-empty payout_type';
+
+    throws_ok {
         $credit1->payout(
             {
                 interface   => 'intranet',
@@ -1242,7 +1248,7 @@ subtest "payout() tests" => sub {
 
 subtest 'refund flow (reduce() then payout()) with and without cash registers' => sub {
 
-    plan tests => 9;
+    plan tests => 12;
 
     $schema->storage->txn_begin;
 
@@ -1327,8 +1333,16 @@ subtest 'refund flow (reduce() then payout()) with and without cash registers' =
             ( $debit, $payout ) = $refund->('CASH');
             is( $payout->register_id, undef, "$label: CASH refund without a register is allowed" );
         }
+
+        throws_ok { $refund->( '', undef ) }
+        'Koha::Exceptions::Account::PaymentTypeRequired',
+            "$label: refund with an empty type throws PaymentTypeRequired";
     }
 
+    is(
+        $account->lines->search( { payment_type => '' } )->count, 0,
+        'No payout line was recorded with an empty payment type'
+    );
     is( $account->lines->search( { debit_type_code => 'PAYOUT' } )->count, 3, 'Only the valid payouts exist' );
 
     t::lib::Mocks::mock_preference( 'UseCashRegisters', 0 );
