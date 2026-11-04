@@ -602,6 +602,28 @@ sub reduce {
     return $reduction;
 }
 
+=head3 refundable_amount
+
+    my $amount = $debit->refundable_amount;
+
+Returns the amount of a debit that has actually been paid and could still be
+refunded: the original amount, less what is outstanding, less any discounts
+and refunds already applied to it. Discounts are reductions, not payments, so
+they are never refundable. Never negative.
+
+Throws L<Koha::Exceptions::Account::IsNotDebit> if called on a credit.
+
+=cut
+
+sub refundable_amount {
+    my ($self) = @_;
+
+    my $reduced    = abs( $self->credits( { credit_type_code => [ 'DISCOUNT', 'REFUND' ] } )->total // 0 );
+    my $refundable = $self->amount - $self->amountoutstanding - $reduced;
+
+    return $refundable > 0 ? $refundable : 0;
+}
+
 =head3 apply
 
     my $debits = $account->outstanding_debits;

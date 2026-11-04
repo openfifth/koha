@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 19;
+use Test::More tests => 20;
 use Test::Exception;
 use Test::MockModule;
 
@@ -1346,6 +1346,101 @@ subtest 'refund flow (reduce() then payout()) with and without cash registers' =
     is( $account->lines->search( { debit_type_code => 'PAYOUT' } )->count, 3, 'Only the valid payouts exist' );
 
     t::lib::Mocks::mock_preference( 'UseCashRegisters', 0 );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'refundable_amount() tests' => sub {
+
+    plan tests => 7;
+
+    $schema->storage->txn_begin;
+
+    my $patron  = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $staff   = $builder->build_object( { class => 'Koha::Patrons' } );
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $account = $patron->account;
+
+    t::lib::Mocks::mock_userenv( { patron => $staff, branchcode => $library->branchcode } );
+
+    my $new_debit = sub {
+        return $account->add_debit(
+            {
+                amount     => 5,
+                type       => 'OVERDUE',
+                interface  => 'intranet',
+                library_id => $library->branchcode,
+                user_id    => $staff->borrowernumber,
+            }
+        );
+    };
+    my $pay = sub {
+        my ($amount) = @_;
+        return $account->pay(
+            {
+                amount     => $amount,
+                interface  => 'intranet',
+                library_id => $library->branchcode,
+                user_id    => $staff->borrowernumber,
+            }
+        );
+    };
+    my $discount = sub {
+        my ( $debit, $amount ) = @_;
+        return $debit->reduce(
+            {
+                reduction_type => 'DISCOUNT',
+                amount         => $amount,
+                interface      => 'intranet',
+                staff_id       => $staff->borrowernumber,
+                branch         => $library->branchcode,
+            }
+        );
+    };
+
+    my $credit = $account->add_credit(
+        { amount => 1, interface => 'intranet', library_id => $library->branchcode, user_id => $staff->borrowernumber }
+    );
+    throws_ok { $credit->refundable_amount }
+    'Koha::Exceptions::Account::IsNotDebit', 'Only debits can be refunded';
+
+    my $debit = $new_debit->();
+    is( $debit->refundable_amount + 0, 0, 'Nothing is refundable on an unpaid debit' );
+
+    $pay->(3);
+    $debit->discard_changes;
+    is( $debit->refundable_amount + 0, 3, 'A partially paid debit can refund what was paid' );
+
+    $pay->(2);
+    $debit->discard_changes;
+    is( $debit->refundable_amount + 0, 5, 'A fully paid debit can refund its full amount' );
+
+    my $discounted = $new_debit->();
+    $discount->( $discounted, 1 );
+    $discounted->discard_changes;
+    is( $discounted->refundable_amount + 0, 0, 'A discount is not something that was paid' );
+
+    $pay->(4);
+    $discounted->discard_changes;
+    is(
+        $discounted->refundable_amount + 0, 4,
+        'A discounted and paid debit refunds the paid amount only, not the discount'
+    );
+
+    my $refunded = $new_debit->();
+    $pay->(5);
+    $refunded->discard_changes;
+    $refunded->reduce(
+        {
+            reduction_type => 'REFUND',
+            amount         => 5,
+            interface      => 'intranet',
+            staff_id       => $staff->borrowernumber,
+            branch         => $library->branchcode,
+        }
+    );
+    $refunded->discard_changes;
+    is( $refunded->refundable_amount + 0, 0, 'A fully refunded debit has nothing left to refund' );
 
     $schema->storage->txn_rollback;
 };

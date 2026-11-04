@@ -304,6 +304,13 @@ sub _try_account_action {
             $error = 'register_required';
         } elsif ( blessed $e && $e->isa('Koha::Exceptions::Account::PaymentTypeRequired') ) {
             $error = 'payment_type_required';
+        } elsif (
+            blessed $e
+            && (   $e->isa('Koha::Exceptions::ParameterTooHigh')
+                || $e->isa('Koha::Exceptions::Account::AmountNotPositive') )
+            )
+        {
+            $error = 'amount_invalid';
         } else {
             $e->rethrow if blessed $e && $e->can('rethrow');
             die $e;
