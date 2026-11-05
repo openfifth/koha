@@ -118,4 +118,25 @@ __PACKAGE__->belongs_to(
 
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration
+
+=head2 koha_object_class
+
+The associated object class.
+
+=cut
+
+sub koha_object_class {
+    'Koha::ILL::TypeDisclaimer';
+}
+
+=head2 koha_objects_class
+
+The associated objects class.
+
+=cut
+
+sub koha_objects_class {
+    'Koha::ILL::TypeDisclaimers';
+}
+
 1;
