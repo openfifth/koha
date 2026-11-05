@@ -40,6 +40,7 @@ use Koha::ILL::Batches;
 use Koha::ILL::Comments;
 use Koha::ILL::Request::Attributes;
 use Koha::ILL::Request::Logger;
+use Koha::ILL::TypeDisclaimers;
 use Koha::ILL::TypeDisclaimerPrompts;
 use Koha::ItemTypes;
 use Koha::Items;
@@ -268,6 +269,20 @@ sub library {
     my ($self) = @_;
 
     return Koha::Library->_new_from_dbic( scalar $self->_result->library );
+}
+
+=head3 type_disclaimers
+
+    my $disclaimers = $request->type_disclaimers;
+
+Returns the linked I<Koha::ILL::TypeDisclaimers> objects.
+
+=cut
+
+sub type_disclaimers {
+    my ($self) = @_;
+
+    return Koha::ILL::TypeDisclaimers->_new_from_dbic( scalar $self->_result->ill_type_disclaimers );
 }
 
 =head3 type_disclaimer_prompts
@@ -1350,12 +1365,9 @@ Return the values submitted in the type disclaimer workflow stage
 =cut
 
 sub get_type_disclaimer_values {
-    my ($self) = @_;
-    my $attrs = $self->extended_attributes->search(
-        { type     => { 'LIKE', 'type_disclaimer_value%' } },
-        { order_by => ['type'] }
-    );
-    my @values = $attrs->get_column('value');
+    my ($self)      = @_;
+    my $disclaimers = $self->type_disclaimers->search();
+    my @values      = $disclaimers->get_column('value');
     return @values;
 }
 
@@ -1443,19 +1455,19 @@ sub get_copyright_clearance_confirmed {
     return $attr ? ( $attr->value ? 1 : 0 ) : 0;
 }
 
-=head3 get_type_disclaimer_date
+=head3 get_type_disclaimer_dates
 
-    my $type = $abstract->type_disclaimer_date();
+    my @dates = $abstract->type_disclaimer_date();
 
-Return the time the disclaimer was submitted in the type disclaimer workflow stage
+Return the times the disclaimers were submitted in the type disclaimer workflow stage
 
 =cut
 
-sub get_type_disclaimer_date {
-    my ($self) = @_;
-    my $attr = $self->extended_attributes->find( { type => 'type_disclaimer_date' } );
-    return if !$attr;
-    return $attr->value;
+sub get_type_disclaimer_dates {
+    my ($self)      = @_;
+    my $disclaimers = $self->type_disclaimers->search();
+    my @dates       = $disclaimers->get_column('date');
+    return @dates;
 }
 
 =head3 get_type_disclaimer_texts
@@ -1467,11 +1479,10 @@ Return the text of the disclaimer submitted in the type disclaimer workflow stag
 =cut
 
 sub get_type_disclaimer_texts {
-    my ($self) = @_;
-    my $attrs =
-        $self->extended_attributes->search( { type => { 'LIKE', 'type_disclaimer_text%' } }, { order_by => ['type'] } );
-    my @values = $attrs->get_column('value');
-    return @values;
+    my ($self)      = @_;
+    my $disclaimers = $self->type_disclaimers->search();
+    my @texts       = $disclaimers->get_column('text');
+    return @texts;
 }
 
 =head3 manager

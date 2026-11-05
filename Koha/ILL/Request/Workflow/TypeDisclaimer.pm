@@ -19,6 +19,8 @@ package Koha::ILL::Request::Workflow::TypeDisclaimer;
 
 use Modern::Perl;
 
+use Koha::ILL::TypeDisclaimers;
+
 use POSIX qw( strftime );
 
 use base qw(Koha::ILL::Request::Workflow);
@@ -137,15 +139,6 @@ sub after_request_created {
     return 0
         unless $params->{type_disclaimer_value} && @{ $disc_info->{fields} };
 
-    # Store type disclaimer date and value
-    my $type_disclaimer_date = {
-        illrequest_id => $request->illrequest_id,
-        type          => "type_disclaimer_date",
-        value         => strftime( "%Y-%m-%dT%H:%M:%S", localtime( time() ) ),
-        readonly      => 0
-    };
-    Koha::ILL::Request::Attribute->new($type_disclaimer_date)->store;
-
     my @values = split( "\0", $params->{type_disclaimer_value} );
 
     my $i = 0;
@@ -153,21 +146,15 @@ sub after_request_created {
         my $suffix = '_' . $i;
         $suffix = '' unless @{ $disc_info->{fields} };
 
-        my $type_disclaimer_value = {
+        my $type_disclaimer = {
             illrequest_id => $request->illrequest_id,
-            type          => "type_disclaimer_value" . $suffix,
+            code          => 'TODO' . $suffix,                                      # TODO
+            text          => $field->{text},
             value         => $values[$i],
-            readonly      => 0
+            date          => strftime( "%Y-%m-%dT%H:%M:%S", localtime( time() ) )
         };
-        Koha::ILL::Request::Attribute->new($type_disclaimer_value)->store;
 
-        my $type_disclaimer_text = {
-            illrequest_id => $request->illrequest_id,
-            type          => "type_disclaimer_text" . $suffix,
-            value         => $field->{text},
-            readonly      => 0
-        };
-        Koha::ILL::Request::Attribute->new($type_disclaimer_text)->store;
+        Koha::ILL::TypeDisclaimer->new($type_disclaimer)->store;
 
         $i++;
     }
@@ -186,12 +173,7 @@ Clears the record of the type disclaimer for the given request.
 sub clear_type_disclaimer {
     my ( $self, $request ) = @_;
 
-    Koha::ILL::Request::Attributes->search(
-        {
-            illrequest_id => $request->illrequest_id,
-            type          => { 'LIKE', "type_disclaimer_%" },
-        }
-    )->delete();
+    $request->type_disclaimers->delete();
 }
 
 =head3 _get_type_disclaimer_info

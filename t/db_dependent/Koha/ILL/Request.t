@@ -120,7 +120,7 @@ subtest 'extended_attributes() tests' => sub {
 
 subtest 'get_type_disclaimer_values() tests' => sub {
 
-    plan tests => 6;
+    plan tests => 5;
 
     $schema->storage->txn_begin;
 
@@ -134,10 +134,9 @@ subtest 'get_type_disclaimer_values() tests' => sub {
 
     $builder->build_object(
         {
-            class => 'Koha::ILL::Request::Attributes',
+            class => 'Koha::ILL::TypeDisclaimers',
             value => {
                 illrequest_id => $request->illrequest_id,
-                type          => 'type_disclaimer_value_1',
                 value         => 'Yes'
             }
         }
@@ -152,64 +151,72 @@ subtest 'get_type_disclaimer_values() tests' => sub {
 
     $builder->build_object(
         {
-            class => 'Koha::ILL::Request::Attributes',
+            class => 'Koha::ILL::TypeDisclaimers',
             value => {
                 illrequest_id => $request->illrequest_id,
-                type          => 'type_disclaimer_value_2',
                 value         => 'No'
             }
         }
     );
 
-    @values = $request->get_type_disclaimer_values;
+    @values = sort $request->get_type_disclaimer_values;
     is( @values, 2, 'get_type_disclaimer_values() returns multiple values' );
-    is(
-        $values[0], "Yes",
-        'get_type_disclaimer_values() returns multiple values'
-    );
-    is(
-        $values[1], "No",
-        'get_type_disclaimer_values() returns multiple values'
-    );
+    is_deeply( \@values, [ 'No', 'Yes' ], 'get_type_disclaimer_values() returns multiple values' );
 
     $schema->storage->txn_rollback;
 };
 
-subtest 'get_type_disclaimer_date() tests' => sub {
+subtest 'get_type_disclaimer_dates() tests' => sub {
 
-    plan tests => 2;
+    plan tests => 5;
 
     $schema->storage->txn_begin;
 
     my $request = $builder->build_object( { class => 'Koha::ILL::Requests' } );
 
+    my @dates = $request->get_type_disclaimer_dates;
     is(
-        $request->get_type_disclaimer_date, undef,
-        'get_type_disclaimer_date() returns undef if no get_type_disclaimer_date is set'
+        scalar @dates, 0,
+        'get_type_disclaimer_dates() returns empty list if no type_disclaimer_value is set'
     );
 
     $builder->build_object(
         {
-            class => 'Koha::ILL::Request::Attributes',
+            class => 'Koha::ILL::TypeDisclaimers',
             value => {
                 illrequest_id => $request->illrequest_id,
-                type          => 'type_disclaimer_date',
-                value         => '2023-11-27T14:27:01'
+                date          => 'Yes'
             }
         }
     );
 
+    @dates = $request->get_type_disclaimer_dates;
+    is( @dates, 1, 'get_type_disclaimer_dates() returns single value if is set' );
     is(
-        $request->get_type_disclaimer_date, "2023-11-27T14:27:01",
-        'get_type_disclaimer_date() returns the value if is set'
+        $dates[0], "Yes",
+        'get_type_disclaimer_dates() returns single value if is set'
     );
+
+    $builder->build_object(
+        {
+            class => 'Koha::ILL::TypeDisclaimers',
+            value => {
+                illrequest_id => $request->illrequest_id,
+                date          => 'No'
+            }
+        }
+    );
+
+    @dates = sort $request->get_type_disclaimer_dates;
+    is( @dates, 2, 'get_type_disclaimer_dates() returns multiple dates' );
+    is_deeply( \@dates, [ 'No', 'Yes' ], 'get_type_disclaimer_dates() returns multiple dates' );
 
     $schema->storage->txn_rollback;
 };
 
 subtest 'get_type_disclaimer_texts() tests' => sub {
 
-    plan tests => 6;
+    plan tests => 5;
 
     $schema->storage->txn_begin;
 
@@ -218,48 +225,39 @@ subtest 'get_type_disclaimer_texts() tests' => sub {
     my @texts = $request->get_type_disclaimer_texts;
     is(
         scalar @texts, 0,
-        'get_type_disclaimer_texts() returns empty list if no type_disclaimer_text is set'
+        'get_type_disclaimer_texts() returns empty list if no type_disclaimer_value is set'
     );
 
     $builder->build_object(
         {
-            class => 'Koha::ILL::Request::Attributes',
+            class => 'Koha::ILL::TypeDisclaimers',
             value => {
                 illrequest_id => $request->illrequest_id,
-                type          => 'type_disclaimer_text_1',
-                value         => 'Example text'
+                text          => 'Yes'
             }
         }
     );
 
     @texts = $request->get_type_disclaimer_texts;
-    is( @texts, 1, 'get_type_disclaimer_texts() returns single text if is set' );
+    is( @texts, 1, 'get_type_disclaimer_texts() returns single value if is set' );
     is(
-        $texts[0], "Example text",
-        'get_type_disclaimer_texts() returns single text if is set'
+        $texts[0], "Yes",
+        'get_type_disclaimer_texts() returns single value if is set'
     );
 
     $builder->build_object(
         {
-            class => 'Koha::ILL::Request::Attributes',
+            class => 'Koha::ILL::TypeDisclaimers',
             value => {
                 illrequest_id => $request->illrequest_id,
-                type          => 'type_disclaimer_text_2',
-                value         => 'Another example text'
+                text          => 'No'
             }
         }
     );
 
-    @texts = $request->get_type_disclaimer_texts;
+    @texts = sort $request->get_type_disclaimer_texts;
     is( @texts, 2, 'get_type_disclaimer_texts() returns multiple texts' );
-    is(
-        $texts[0], "Example text",
-        'get_type_disclaimer_texts() returns multiple texts'
-    );
-    is(
-        $texts[1], "Another example text",
-        'get_type_disclaimer_texts() returns multiple texts'
-    );
+    is_deeply( \@texts, [ 'No', 'Yes' ], 'get_type_disclaimer_texts() returns multiple texts' );
 
     $schema->storage->txn_rollback;
 };

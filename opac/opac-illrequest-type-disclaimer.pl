@@ -93,7 +93,7 @@ unless ( DateTime->compare( dt_from_string(), dt_from_string( $prompt->valid_unt
 
 # If the request already has a type disclaimer filled out or this prompt has
 # been used, don't let it be reused.
-if ( $request->get_type_disclaimer_date || $prompt->date_replied ) {
+if ( $request->get_type_disclaimer_dates || $prompt->date_replied ) {
     $template->param( op => 'typedisclaimer_confirmed' );
     output_html_with_http_headers $query, $cookie, $template->output, undef, { force_no_caching => 1 };
     exit;

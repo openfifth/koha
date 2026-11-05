@@ -718,7 +718,7 @@
                                 [% IF Koha.Preference('ILLModuleDisclaimerByType') %]
                                     <li class="type_disclaimer_modal">
                                         <span class="label type_disclaimer_value">Type disclaimer:</span>
-                                        [% IF !request.get_type_disclaimer_date %]
+                                        [% IF !request.get_type_disclaimer_dates %]
                                             <a href="/cgi-bin/koha/ill/ill-requests.pl?op=fill_in_disclaimer&amp;illrequest_id=[% request.illrequest_id | uri %]">Fill in disclaimer for patron</a>
                                         [% ELSE %]
                                             <a id="typeDisclaimerModalOpen" href="#">View details</a>
@@ -876,11 +876,16 @@
                                             [% END %]
                                         </ol>
                                     [% END %]
-                                    [% type_disclaimer_date = request.get_type_disclaimer_date %]
-                                    [% IF type_disclaimer_date %]
-                                        <h2>Date</h2>
-                                        [% type_disclaimer_date | $KohaDates with_hours => 1 %]
+                                    [% type_disclaimer_dates = request.get_type_disclaimer_dates %]
+                                    [% IF type_disclaimer_dates %]
+                                        <h2>Dates</h2>
+                                        <ol>
+                                            [% FOREACH type_disclaimer_date IN type_disclaimer_dates %]
+                                                <li>[% type_disclaimer_date | html %]</li>
+                                            [% END %]
+                                        </ol>
                                     [% END %]
+
                                     [% type_disclaimer_texts = request.get_type_disclaimer_texts %]
                                     [% IF type_disclaimer_texts %]
                                         <h2>Texts</h2>
