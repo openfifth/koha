@@ -3822,6 +3822,24 @@ CREATE TABLE `ill_type_disclaimer_prompts` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `ill_type_disclaimers`
+--
+
+DROP TABLE IF EXISTS `ill_type_disclaimers`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `ill_type_disclaimers` (
+  `illrequest_id` bigint(20) unsigned NOT NULL COMMENT 'ILL request this disclaimer prompt is for',
+  `code` varchar(200) NOT NULL COMMENT 'unique code identifying this disclaimer question',
+  `text` mediumtext DEFAULT NULL COMMENT 'question text for this disclaimer',
+  `value` mediumtext NOT NULL COMMENT 'response text for this disclaimer',
+  `date` mediumtext NOT NULL COMMENT 'date this disclaimer was filled out',
+  PRIMARY KEY (`illrequest_id`,`code`),
+  CONSTRAINT `ill_type_disclaimers_fk_illrequest_id` FOREIGN KEY (`illrequest_id`) REFERENCES `illrequests` (`illrequest_id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `illbatch_statuses`
 --
 

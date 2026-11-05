@@ -37,6 +37,25 @@ INSERT IGNORE INTO systempreferences(variable, value, type) VALUES ('ILLModuleDi
             say_success( $out, 'Created ill_type_disclaimer_prompts table' );
         }
 
+        unless ( TableExists('ill_type_disclaimers') ) {
+            $dbh->do(
+                q{
+                CREATE TABLE IF NOT EXISTS ill_type_disclaimers (
+                  `illrequest_id` bigint(20) unsigned NOT NULL COMMENT 'ILL request this disclaimer prompt is for',
+                  `code` varchar(200) NOT NULL COMMENT 'unique code identifying this disclaimer question',
+                  `text` mediumtext NULL COMMENT 'question text for this disclaimer',
+                  `value` mediumtext NOT NULL COMMENT 'response text for this disclaimer',
+                  `date` mediumtext NOT NULL COMMENT 'date this disclaimer was filled out',
+                  PRIMARY KEY (`illrequest_id`, `code`),
+                  CONSTRAINT `ill_type_disclaimers_fk_illrequest_id` FOREIGN KEY (`illrequest_id`) REFERENCES `illrequests` (`illrequest_id`) ON DELETE CASCADE ON UPDATE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            }
+            );
+            say_success( $out, 'Created ill_type_disclaimers table' );
+
+            # TODO: migrate existing type disclaimer data
+        }
+
         $dbh->do(
             q{
         INSERT IGNORE INTO letter(module, code, branchcode, name, is_html, title, content, message_transport_type, lang) VALUES ('ill', 'ILL_DISCLAIMER', '', 'ILL request requires accepting disclaimer', 0, "Interlibrary loan request requires accepting disclaimer", "Dear [% borrower.firstname %] [% borrower.surname %],\n\nThe Interlibrary loans request number [% illrequest.illrequest_id %] you placed for:\n\n- [% ill_bib_title %] - [% ill_bib_author %]\n\nrequires accepting a disclaimer.\n\nYou may access the disclaimer at the following URL:\n  [% type_disclaimer_prompt_url %]\n\nKind regards\n\n[% branch.branchname %]\n[% branch.branchaddress1 %]\n[% branch.branchaddress2 %]\n[% branch.branchaddress3 %]\n[% branch.branchcity %]\n[% branch.branchstate %]\n[% branch.branchzip %]\n[% branch.branchphone %]\n[% branch.branchillemail %]\n[% branch.branchemail %]", 'email', 'default');
