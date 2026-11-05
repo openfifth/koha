@@ -182,7 +182,7 @@ The associated object class.
 =cut
 
 sub koha_object_class {
-    'Koha::ILL:TypeDisclaimerPrompt';
+    'Koha::ILL::TypeDisclaimerPrompt';
 }
 
 =head2 koha_objects_class
@@ -192,7 +192,7 @@ The associated objects class.
 =cut
 
 sub koha_objects_class {
-    'Koha::ILL:TypeDisclaimerPrompts';
+    'Koha::ILL::TypeDisclaimerPrompts';
 }
 
 1;
