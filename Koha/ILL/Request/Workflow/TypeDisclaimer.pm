@@ -148,7 +148,7 @@ sub after_request_created {
 
         my $type_disclaimer = {
             illrequest_id => $request->illrequest_id,
-            code          => 'TODO' . $suffix,                                      # TODO
+            code          => $field->{code} // 'unlabelled' . $suffix,
             text          => $field->{text},
             value         => $values[$i],
             date          => strftime( "%Y-%m-%dT%H:%M:%S", localtime( time() ) )
@@ -205,13 +205,17 @@ sub _get_type_disclaimer_info {
     if ( exists $matched_type->{fields} ) {
         $fields = $matched_type->{fields};
     } else {
-        $fields = [ { text => $matched_type->{text}, av_category_code => $matched_type->{av_category_code} } ];
+        $fields = [
+            {
+                text => $matched_type->{text}, av_category_code => $matched_type->{av_category_code},
+                code => $matched_type->{code}
+            }
+        ];
     }
 
-    $disc_info->{fields} = [ map { { text => $_->{text}, av_cat => $_->{av_category_code} } } @{$fields} ];
+    $disc_info->{fields} =
+        [ map { { text => $_->{text}, av_cat => $_->{av_category_code}, code => $_->{code} } } @{$fields} ];
 
-    #$disc_info->{text}      = $matched_type->{text};
-    #$disc_info->{av_cat}    = $matched_type->{av_category_code};
     $disc_info->{interface} //= $matched_type->{interface};
 
     return $disc_info;
