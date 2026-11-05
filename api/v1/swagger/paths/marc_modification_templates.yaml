@@ -77,6 +77,10 @@
         description: A MARC modification template
         schema:
           $ref: "../swagger.yaml#/definitions/marc_modification_template"
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
       "401":
         description: Authentication required
         schema:
