@@ -364,6 +364,21 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 ill_type_disclaimers
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::IllTypeDisclaimer>
+
+=cut
+
+__PACKAGE__->has_many(
+  "ill_type_disclaimers",
+  "Koha::Schema::Result::IllTypeDisclaimer",
+  { "foreign.illrequest_id" => "self.illrequest_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 illcomments
 
 Type: has_many
@@ -415,8 +430,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07053 @ 2026-07-20 09:28:37
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:hmlu+1bgjxQOGYM9oeRTVA
+# Created by DBIx::Class::Schema::Loader v0.07053 @ 2026-11-05 14:16:52
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:jYveBzdPv3Yi49ApzChi4g
 
 __PACKAGE__->has_many(
   "comments",
