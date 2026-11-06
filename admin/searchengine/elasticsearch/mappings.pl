@@ -37,6 +37,8 @@ use Koha::SearchFieldValueBoosts;
 use Try::Tiny                 qw( catch try );
 use Module::Load::Conditional qw( can_load );
 
+=head1 FUNCTIONS
+
 =head2 output_ajax_response
 
     output_ajax_response( $input, $data );
