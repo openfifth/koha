@@ -53,7 +53,15 @@ INSERT IGNORE INTO systempreferences(variable, value, type) VALUES ('ILLModuleDi
             );
             say_success( $out, 'Created ill_type_disclaimers table' );
 
-            # TODO: migrate existing type disclaimer data
+            # We do not delete the old ILL request attributes in case of migration issues
+            $dbh->do(
+                q{
+INSERT INTO ill_type_disclaimers (illrequest_id, code, value, date)
+SELECT r1.illrequest_id, 'unlabelled', r1.value, r2.value FROM illrequestattributes r1 INNER JOIN illrequestattributes r2 ON r1.illrequest_id = r2.illrequest_id AND r2.type = 'type_disclaimer_date' WHERE r1.type = 'type_disclaimer_value'
+}
+            );
+
+            say_success( $out, 'Migrated existing type disclaimers' );
         }
 
         $dbh->do(
