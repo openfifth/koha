@@ -203,7 +203,7 @@
                                             <label for="medium">Request type:</label>
                                             [% IF type %][% type | html %][% ELSE %]<span>N/A</span>[% END %]
                                         </li>
-                                        [% IF Koha.Preference('ILLModuleDisclaimerByType') && request.get_type_disclaimer_dates %]
+                                        [% IF Koha.Preference('ILLModuleDisclaimerByType') && request.type_disclaimers.count %]
                                             <li class="type_disclaimer_modal">
                                                 <label for="type_disclaimer_modal_open">Type disclaimer:</label>
                                                 <a id="type_disclaimer_modal_open" href="#">View details</a>
@@ -258,33 +258,24 @@
                                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                         </div>
                                         <div class="modal-body">
-                                            [% type_disclaimer_values = request.get_type_disclaimer_values %]
-                                            [% IF type_disclaimer_values %]
-                                                <h2>Values</h2>
-                                                <ol>
-                                                    [% FOREACH type_disclaimer_value IN type_disclaimer_values %]
-                                                        <li>[% type_disclaimer_value | html %]</li>
+                                            <table class="table table-bordered table-striped">
+                                                <thead>
+                                                    <tr>
+                                                        <td>Text</td>
+                                                        <td>Value</td>
+                                                        <td>Date</td>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    [% FOREACH type_disclaimer IN request.type_disclaimers %]
+                                                        <tr>
+                                                            <td>[% type_disclaimer.text | $raw %]</td>
+                                                            <td>[% type_disclaimer.value | html %]</td>
+                                                            <td>[% type_disclaimer.date | html %]</td>
+                                                        </tr>
                                                     [% END %]
-                                                </ol>
-                                            [% END %]
-                                            [% type_disclaimer_dates = request.get_type_disclaimer_dates %]
-                                            [% IF type_disclaimer_dates %]
-                                                <h2>Dates</h2>
-                                                <ol>
-                                                    [% FOREACH type_disclaimer_date IN type_disclaimer_dates %]
-                                                        <li>[% type_disclaimer_date | html %]</li>
-                                                    [% END %]
-                                                </ol>
-                                            [% END %]
-                                            [% type_disclaimer_texts = request.get_type_disclaimer_texts %]
-                                            [% IF type_disclaimer_texts %]
-                                                <h2>Texts</h2>
-                                                <ol>
-                                                    [% FOREACH type_disclaimer_text IN type_disclaimer_texts %]
-                                                        <li>[% type_disclaimer_text | $raw %]</li>
-                                                    [% END %]
-                                                </ol>
-                                            [% END %]
+                                                </tbody>
+                                            </table>
                                         </div>
                                         <div class="modal-footer">
                                             <button class="btn btn-default" data-bs-dismiss="modal">Close</button>
