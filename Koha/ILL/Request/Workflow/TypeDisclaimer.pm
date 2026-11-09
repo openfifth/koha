@@ -65,10 +65,17 @@ sub show_type_disclaimer {
             && $disc_info->{interface} ne $self->{ui_context} );
     }
 
+    if ($request) {
+        $disc_info = $self->_filter_uncompleted_fields( $disc_info, $request );
+    }
+
     return
 
         # ILLModuleDisclaimerByType was parsed correctly
         $disc_info
+
+        # There are fields remaining to fill out
+        && $disc_info->{fields}
 
         # Type disclaimer has not yet been submitted
         && !$self->{metadata}->{type_disclaimer_submitted};
@@ -85,9 +92,13 @@ Given $params, return true if type disclaimer should be rendered
 =cut
 
 sub type_disclaimer_template_params {
-    my ( $self, $params ) = @_;
+    my ( $self, $params, $request ) = @_;
 
     my $disc_info = $self->get_type_disclaimer_info( $params->{type} );
+
+    if ($request) {
+        $disc_info = $self->_filter_uncompleted_fields( $disc_info, $request );
+    }
 
     $params->{method} = 'typedisclaimer' if $self->{ui_context} eq 'staff';
     delete $params->{stage}              if $self->{ui_context} eq 'staff';
@@ -121,11 +132,14 @@ sub after_request_created {
 
     my $disc_info = $self->get_type_disclaimer_info( $params->{type} );
 
+    if ($request) {
+        $disc_info = $self->_filter_uncompleted_fields( $disc_info, $request );
+    }
+
     # Validate required parameters before creating record of disclaimer
     return 0
         unless @{ $disc_info->{fields} };
 
-    my $i = 0;
     foreach my $field ( @{ $disc_info->{fields} } ) {
         my $value = $params->{ 'type_disclaimer_value_' . $field->{code} };
 
@@ -218,6 +232,28 @@ sub get_type_disclaimer_info {
     }
 
     return $disc_info;
+}
+
+=head3 _filter_uncompleted_fields
+
+    my $disc_info = $self->_filter_uncompleted_fields($disc_info, $request);
+
+Filters disclaimer fields to only those that haven't yet been completed.
+
+=cut
+
+sub _filter_uncompleted_fields {
+    my ( $self, $disc_info, $request ) = @_;
+    return $disc_info unless $request;
+
+    my %completed_codes;
+    $completed_codes{$_} = 1 for ( $request->type_disclaimers->get_column('code') );
+
+    my $result   = {%$disc_info};
+    my @filtered = grep { !exists $completed_codes{ $_->{code} } } @{ $disc_info->{fields} };
+    $result->{fields} = \@filtered;
+
+    return $result;
 }
 
 =head3 _get_type_disclaimer_sys_pref

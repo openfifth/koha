@@ -498,10 +498,11 @@ if ($backends_available) {
             "/cgi-bin/koha/ill/ill-requests.pl?op=illview&illrequest_id=" . scalar $params->{illrequest_id} . $append );
         exit;
     } elsif ( $op eq 'fill_in_disclaimer' || $op eq 'cud-fill_in_disclaimer' ) {
-        my $illrequest_id   = $params->{illrequest_id};
-        my $request         = Koha::ILL::Requests->find($illrequest_id);
-        my $type_disclaimer = Koha::ILL::Request::Workflow::TypeDisclaimer->new( $params, 'staff' );
-        $template->param( $type_disclaimer->type_disclaimer_template_params($params) );
+        my $illrequest_id = $params->{illrequest_id};
+        my $request       = Koha::ILL::Requests->find($illrequest_id);
+        my $type_disclaimer =
+            Koha::ILL::Request::Workflow::TypeDisclaimer->new( $params, 'staff' );    # TODO: should be opac here?
+        $template->param( $type_disclaimer->type_disclaimer_template_params( $params, $request ) );
 
         if ( $op eq 'cud-fill_in_disclaimer' && $params->{type_disclaimer_submitted} && $request->illrequest_id ) {
             $type_disclaimer->after_request_created( $params, $request );

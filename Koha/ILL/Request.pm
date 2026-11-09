@@ -42,7 +42,6 @@ use Koha::ILL::Request::Attributes;
 use Koha::ILL::Request::Logger;
 use Koha::ILL::TypeDisclaimers;
 use Koha::ILL::TypeDisclaimerPrompts;
-use Koha::ILL::Request::Workflow::TypeDisclaimer;
 use Koha::ItemTypes;
 use Koha::Items;
 use Koha::Libraries;
@@ -1371,6 +1370,8 @@ sub get_type_disclaimers_ordered {
     my @disclaimers = $self->type_disclaimers->as_list;
     my $type        = $self->get_type;
     return unless $type;
+
+    require Koha::ILL::Request::Workflow::TypeDisclaimer;
 
     my $disclaimer_info = Koha::ILL::Request::Workflow::TypeDisclaimer->get_type_disclaimer_info($type);
 

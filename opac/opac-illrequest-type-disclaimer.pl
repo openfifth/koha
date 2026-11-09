@@ -91,14 +91,6 @@ unless ( DateTime->compare( dt_from_string(), dt_from_string( $prompt->valid_unt
     exit;
 }
 
-# If the request already has a type disclaimer filled out or this prompt has
-# been used, don't let it be reused.
-if ( $request->get_type_disclaimer_dates || $prompt->date_replied ) {
-    $template->param( op => 'typedisclaimer_confirmed' );
-    output_html_with_http_headers $query, $cookie, $template->output, undef, { force_no_caching => 1 };
-    exit;
-}
-
 my $type_disclaimer = Koha::ILL::Request::Workflow::TypeDisclaimer->new( $params, 'opac' );
 
 if ( $params->{type_disclaimer_submitted} ) {
@@ -106,10 +98,10 @@ if ( $params->{type_disclaimer_submitted} ) {
         $prompt->update( { date_replied => dt_from_string } );
         $template->param( op => 'typedisclaimer_confirmed' );
     } else {
-        $template->param( $type_disclaimer->type_disclaimer_template_params($params) );
+        $template->param( $type_disclaimer->type_disclaimer_template_params( $params, $request ) );
     }
 } elsif ( $type_disclaimer->show_type_disclaimer($request) ) {
-    $template->param( $type_disclaimer->type_disclaimer_template_params($params) );
+    $template->param( $type_disclaimer->type_disclaimer_template_params( $params, $request ) );
 }
 
 output_html_with_http_headers $query, $cookie, $template->output, undef, { force_no_caching => 1 };
