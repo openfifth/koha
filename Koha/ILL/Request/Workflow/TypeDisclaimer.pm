@@ -227,7 +227,7 @@ sub get_type_disclaimer_info {
     # Check for duplicate codes
     my %codes;
     foreach my $field ( @{ $disc_info->{fields} } ) {
-        return undef if exists $codes{ $field->{code} };
+        return if exists $codes{ $field->{code} };
         $codes{ $field->{code} } = 1;
     }
 
