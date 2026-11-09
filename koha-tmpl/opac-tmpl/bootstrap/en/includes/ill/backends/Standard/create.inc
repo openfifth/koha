@@ -117,7 +117,7 @@
                         [% SET disc_av_category_code = AuthorisedValues.GetAuthValueDropbox(field.av_cat) %]
                         [% IF disc_av_category_code.count %]
                             <br />
-                            <select name="type_disclaimer_value_[% field.code %]">
+                            <select name="type_disclaimer_value_[% field.code | $raw %]">
                                 [% FOR av_option IN disc_av_category_code %]
                                     <option value="[% av_option.lib_opac | html %]">[% av_option.lib_opac | html %]</option>
                                 [% END %]
