@@ -323,9 +323,9 @@ if ($patron) {
         $template->param( limited_category => 1 );
     }
 
-    # Add quota details
-    my $quotas = $patron->all_quotas;
-    $template->param( quotas => $quotas );
+    if ( C4::Context->preference('EnableCirculationQuotas') ) {
+        $template->param( quotas => $patron->all_quotas );
+    }
 }
 
 #

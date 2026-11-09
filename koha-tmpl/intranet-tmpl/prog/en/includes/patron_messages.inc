@@ -192,7 +192,7 @@
     </ul>
 [% END # /F ( has_modifications || warndeparture... %]
 
-[% IF quotas %]
+[% IF quotas && quotas.count %]
     <div id="quota" class="circmessage">
         <h4>Quota details</h4>
         <ul>
