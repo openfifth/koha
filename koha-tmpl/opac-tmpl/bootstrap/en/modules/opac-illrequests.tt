@@ -267,7 +267,7 @@
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    [% FOREACH type_disclaimer IN request.type_disclaimers %]
+                                                    [% FOREACH type_disclaimer IN request.get_type_disclaimers_ordered %]
                                                         <tr>
                                                             <td>[% type_disclaimer.text | $raw %]</td>
                                                             <td>[% type_disclaimer.value | html %]</td>

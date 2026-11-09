@@ -42,6 +42,7 @@ use Koha::ILL::Request::Attributes;
 use Koha::ILL::Request::Logger;
 use Koha::ILL::TypeDisclaimers;
 use Koha::ILL::TypeDisclaimerPrompts;
+use Koha::ILL::Request::Workflow::TypeDisclaimer;
 use Koha::ItemTypes;
 use Koha::Items;
 use Koha::Libraries;
@@ -1354,6 +1355,33 @@ sub get_type {
     my $attr = $self->extended_attributes->find( { type => 'type' } );
     return if !$attr;
     return $attr->value;
+}
+
+=head3 get_type_disclaimers_ordered
+
+    my @disclaimers = $request->get_type_disclaimers_ordered;
+
+Get a list of completed type disclaimers, in the same order as specified in the
+ILLModuleDisclaimerByType system preference.
+
+=cut
+
+sub get_type_disclaimers_ordered {
+    my ($self)      = @_;
+    my @disclaimers = $self->type_disclaimers->as_list;
+    my $type        = $self->get_type;
+    return unless $type;
+
+    my $disclaimer_info = Koha::ILL::Request::Workflow::TypeDisclaimer->get_type_disclaimer_info($type);
+
+    my %code_indexes;
+    while ( my ( $i, $field ) = each @{ $disclaimer_info->{fields} } ) {
+        $code_indexes{ $field->{code} } = $i;
+    }
+
+    @disclaimers = sort { $code_indexes{ $a->code } <=> $code_indexes{ $b->code } } @disclaimers;
+
+    return @disclaimers;
 }
 
 =head3 get_type_disclaimer_values
