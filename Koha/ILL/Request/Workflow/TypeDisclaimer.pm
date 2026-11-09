@@ -143,12 +143,9 @@ sub after_request_created {
 
     my $i = 0;
     foreach my $field ( @{ $disc_info->{fields} } ) {
-        my $suffix = '_' . $i;
-        $suffix = '' unless @{ $disc_info->{fields} };
-
         my $type_disclaimer = {
             illrequest_id => $request->illrequest_id,
-            code          => $field->{code} // 'unlabelled' . $suffix,
+            code          => $field->{code},
             text          => $field->{text},
             value         => $values[$i],
             date          => strftime( "%Y-%m-%dT%H:%M:%S", localtime( time() ) )
@@ -213,8 +210,14 @@ sub _get_type_disclaimer_info {
         ];
     }
 
-    $disc_info->{fields} =
-        [ map { { text => $_->{text}, av_cat => $_->{av_category_code}, code => $_->{code} } } @{$fields} ];
+    $disc_info->{fields} = [
+        map {
+            {
+                text => $fields->[$_]->{text}, av_cat => $fields->[$_]->{av_category_code},
+                code => $fields->[$_]->{code} // 'unlabelled_' . $_
+            }
+        } 0 .. @{$fields} - 1
+    ];
 
     $disc_info->{interface} //= $matched_type->{interface};
 
