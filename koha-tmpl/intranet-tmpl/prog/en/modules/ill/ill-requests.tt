@@ -974,7 +974,7 @@
                                     [% SET disc_av_category_code = AuthorisedValues.GetAuthValueDropbox(field.av_cat) %]
                                     [% IF disc_av_category_code.count %]
                                         <br />
-                                        <select name="type_disclaimer_value">
+                                        <select name="type_disclaimer_value_[% field.code %]">
                                             [% IF op == 'fill_in_disclaimer' %]
                                                 <option value="">Leave blank</option>
                                             [% END %]

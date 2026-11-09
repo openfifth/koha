@@ -137,13 +137,11 @@ sub after_request_created {
 
     # Validate required parameters before creating record of disclaimer
     return 0
-        unless $params->{type_disclaimer_value} && @{ $disc_info->{fields} };
-
-    my @values = split( "\0", $params->{type_disclaimer_value} );
+        unless @{ $disc_info->{fields} };
 
     my $i = 0;
     foreach my $field ( @{ $disc_info->{fields} } ) {
-        my $value = $values[ $i++ ];
+        my $value = $params->{ 'type_disclaimer_value_' . $field->{code} };
 
         # TODO: only for fill-in?
         next unless $value;
