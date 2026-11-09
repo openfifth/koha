@@ -143,17 +143,20 @@ sub after_request_created {
 
     my $i = 0;
     foreach my $field ( @{ $disc_info->{fields} } ) {
+        my $value = $values[ $i++ ];
+
+        # TODO: only for fill-in?
+        next unless $value;
+
         my $type_disclaimer = {
             illrequest_id => $request->illrequest_id,
             code          => $field->{code},
             text          => $field->{text},
-            value         => $values[$i],
+            value         => $value,
             date          => strftime( "%Y-%m-%dT%H:%M:%S", localtime( time() ) )
         };
 
         Koha::ILL::TypeDisclaimer->new($type_disclaimer)->store;
-
-        $i++;
     }
 
     return 1;
