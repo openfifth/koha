@@ -56,12 +56,7 @@ sub show_type_disclaimer {
 
     return 0 unless $self->{metadata}->{type};
 
-    my $disc_sys_pref = $self->_get_type_disclaimer_sys_pref;
-
-    my $disc_info = $self->_get_type_disclaimer_info(
-        $self->_get_type_disclaimer_sys_pref,
-        $self->{metadata}->{type}
-    );
+    my $disc_info = $self->get_type_disclaimer_info( $self->{metadata}->{type} );
 
     if ( $disc_info->{interface} ) {
         return 0 if $disc_info->{interface} eq 'none';
@@ -72,11 +67,8 @@ sub show_type_disclaimer {
 
     return
 
-        # ILLModuleDisclaimerByType contains correct YAML
-        %{$disc_sys_pref}
-
-        # ILLModuleDisclaimerByType contains at least 'all'
-        && $disc_sys_pref->{all}
+        # ILLModuleDisclaimerByType was parsed correctly
+        $disc_info
 
         # Type disclaimer has not yet been submitted
         && !$self->{metadata}->{type_disclaimer_submitted};
@@ -95,10 +87,7 @@ Given $params, return true if type disclaimer should be rendered
 sub type_disclaimer_template_params {
     my ( $self, $params ) = @_;
 
-    my $disc_info = $self->_get_type_disclaimer_info(
-        $self->_get_type_disclaimer_sys_pref,
-        $params->{type}
-    );
+    my $disc_info = $self->get_type_disclaimer_info( $params->{type} );
 
     $params->{method} = 'typedisclaimer' if $self->{ui_context} eq 'staff';
     delete $params->{stage}              if $self->{ui_context} eq 'staff';
@@ -130,10 +119,7 @@ Returns 1 on success, 0 on failure.
 sub after_request_created {
     my ( $self, $params, $request ) = @_;
 
-    my $disc_info = $self->_get_type_disclaimer_info(
-        $self->_get_type_disclaimer_sys_pref,
-        $params->{type}
-    );
+    my $disc_info = $self->get_type_disclaimer_info( $params->{type} );
 
     # Validate required parameters before creating record of disclaimer
     return 0
@@ -174,18 +160,20 @@ sub clear_type_disclaimer {
     $request->type_disclaimers->delete();
 }
 
-=head3 _get_type_disclaimer_info
+=head3 get_type_disclaimer_info
 
     my $type_disclaimer_info =
-      $self->_get_type_disclaimer_info( $type_disclaimer_sys_pref, $request_type );
+      Koha::ILL::Request::Workflow::TypeDisclaimer->get_type_disclaimer_info( $request_type );
 
-Given ILLModuleDisclaimerByType sys pref and type, returns the respective
+Given request type, returns the respective
 type disclaimer info
 Returns undef if sys pref is empty or malformed
 =cut
 
-sub _get_type_disclaimer_info {
-    my ( $self, $disc_sys_pref, $type ) = @_;
+sub get_type_disclaimer_info {
+    my ( $class, $type ) = @_;
+
+    my $disc_sys_pref = $class->_get_type_disclaimer_sys_pref;
 
     my @matching_request_type =
         map ( $_ eq $type ? $_ : (), keys %$disc_sys_pref );
