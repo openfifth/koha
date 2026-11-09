@@ -221,6 +221,13 @@ sub _get_type_disclaimer_info {
 
     $disc_info->{interface} //= $matched_type->{interface};
 
+    # Check for duplicate codes
+    my %codes;
+    foreach my $field ( @{ $disc_info->{fields} } ) {
+        return undef if exists $codes{ $field->{code} };
+        $codes{ $field->{code} } = 1;
+    }
+
     return $disc_info;
 }
 
