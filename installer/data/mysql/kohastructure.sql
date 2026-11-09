@@ -3835,6 +3835,7 @@ CREATE TABLE `ill_type_disclaimers` (
   `value` mediumtext NOT NULL COMMENT 'response text for this disclaimer',
   `date` mediumtext NOT NULL COMMENT 'date this disclaimer was filled out',
   PRIMARY KEY (`illrequest_id`,`code`),
+  UNIQUE KEY `ill_type_disclaimer_code_uniq` (`illrequest_id`,`code`),
   CONSTRAINT `ill_type_disclaimers_fk_illrequest_id` FOREIGN KEY (`illrequest_id`) REFERENCES `illrequests` (`illrequest_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
