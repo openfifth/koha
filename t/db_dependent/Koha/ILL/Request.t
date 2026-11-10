@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 10;
+use Test::More tests => 8;
 use Test::MockModule;
 
 use Koha::ILL::Requests;
@@ -118,114 +118,35 @@ subtest 'extended_attributes() tests' => sub {
     $schema->storage->txn_rollback;
 };
 
-subtest 'get_type_disclaimer_values() tests' => sub {
+subtest 'get_type_disclaimers_ordered() tests' => sub {
 
-    plan tests => 5;
-
-    $schema->storage->txn_begin;
-
-    my $request = $builder->build_object( { class => 'Koha::ILL::Requests' } );
-
-    my @values = $request->get_type_disclaimer_values;
-    is(
-        scalar @values, 0,
-        'get_type_disclaimer_values() returns empty list if no type_disclaimer_value is set'
-    );
-
-    $builder->build_object(
-        {
-            class => 'Koha::ILL::TypeDisclaimers',
-            value => {
-                illrequest_id => $request->illrequest_id,
-                value         => 'Yes'
-            }
-        }
-    );
-
-    @values = $request->get_type_disclaimer_values;
-    is( @values, 1, 'get_type_disclaimer_values() returns single value if is set' );
-    is(
-        $values[0], "Yes",
-        'get_type_disclaimer_values() returns single value if is set'
-    );
-
-    $builder->build_object(
-        {
-            class => 'Koha::ILL::TypeDisclaimers',
-            value => {
-                illrequest_id => $request->illrequest_id,
-                value         => 'No'
-            }
-        }
-    );
-
-    @values = sort $request->get_type_disclaimer_values;
-    is( @values, 2, 'get_type_disclaimer_values() returns multiple values' );
-    is_deeply( \@values, [ 'No', 'Yes' ], 'get_type_disclaimer_values() returns multiple values' );
-
-    $schema->storage->txn_rollback;
-};
-
-subtest 'get_type_disclaimer_dates() tests' => sub {
-
-    plan tests => 5;
+    plan tests => 14;
 
     $schema->storage->txn_begin;
 
-    my $request = $builder->build_object( { class => 'Koha::ILL::Requests' } );
-
-    my @dates = $request->get_type_disclaimer_dates;
-    is(
-        scalar @dates, 0,
-        'get_type_disclaimer_dates() returns empty list if no type_disclaimer_value is set'
+    t::lib::Mocks::mock_preference(
+        'ILLModuleDisclaimerByType', "all:
+ fields:
+   - code: one
+     text: Question One
+     av_category_code: YES_NO
+   - code: two
+     text: Question Two
+     av_category_code: YES_NO"
     );
-
-    $builder->build_object(
-        {
-            class => 'Koha::ILL::TypeDisclaimers',
-            value => {
-                illrequest_id => $request->illrequest_id,
-                date          => 'Yes'
-            }
-        }
-    );
-
-    @dates = $request->get_type_disclaimer_dates;
-    is( @dates, 1, 'get_type_disclaimer_dates() returns single value if is set' );
-    is(
-        $dates[0], "Yes",
-        'get_type_disclaimer_dates() returns single value if is set'
-    );
-
-    $builder->build_object(
-        {
-            class => 'Koha::ILL::TypeDisclaimers',
-            value => {
-                illrequest_id => $request->illrequest_id,
-                date          => 'No'
-            }
-        }
-    );
-
-    @dates = sort $request->get_type_disclaimer_dates;
-    is( @dates, 2, 'get_type_disclaimer_dates() returns multiple dates' );
-    is_deeply( \@dates, [ 'No', 'Yes' ], 'get_type_disclaimer_dates() returns multiple dates' );
-
-    $schema->storage->txn_rollback;
-};
-
-subtest 'get_type_disclaimer_texts() tests' => sub {
-
-    plan tests => 5;
-
-    $schema->storage->txn_begin;
 
     my $request = $builder->build_object( { class => 'Koha::ILL::Requests' } );
 
-    my @texts = $request->get_type_disclaimer_texts;
+    $request->extended_attributes(
+        [
+            { type => 'type', value => 'book' },
+        ]
+    );
+
+    my @disclaimers = $request->get_type_disclaimers_ordered;
     is(
-        scalar @texts, 0,
-        'get_type_disclaimer_texts() returns empty list if no type_disclaimer_value is set'
+        scalar @disclaimers, 0,
+        'get_type_disclaimers_ordered() returns empty list if no disclaimers have been filled'
     );
 
     $builder->build_object(
@@ -233,16 +154,18 @@ subtest 'get_type_disclaimer_texts() tests' => sub {
             class => 'Koha::ILL::TypeDisclaimers',
             value => {
                 illrequest_id => $request->illrequest_id,
-                text          => 'Yes'
+                text          => 'Question Two',
+                code          => 'two',
+                value         => 'Yes',
             }
         }
     );
 
-    @texts = $request->get_type_disclaimer_texts;
-    is( @texts, 1, 'get_type_disclaimer_texts() returns single value if is set' );
+    @disclaimers = $request->get_type_disclaimers_ordered;
+    is( scalar @disclaimers, 1, 'get_type_disclaimers_ordered() returns single disclaimer' );
     is(
-        $texts[0], "Yes",
-        'get_type_disclaimer_texts() returns single value if is set'
+        $disclaimers[0]->text, "Question Two",
+        'get_type_disclaimers_ordered() returns correct single disclaimer'
     );
 
     $builder->build_object(
@@ -250,14 +173,76 @@ subtest 'get_type_disclaimer_texts() tests' => sub {
             class => 'Koha::ILL::TypeDisclaimers',
             value => {
                 illrequest_id => $request->illrequest_id,
-                text          => 'No'
+                text          => 'Question Nine',
+                code          => 'nine',
+                value         => 'Yes',
             }
         }
     );
 
-    @texts = sort $request->get_type_disclaimer_texts;
-    is( @texts, 2, 'get_type_disclaimer_texts() returns multiple texts' );
-    is_deeply( \@texts, [ 'No', 'Yes' ], 'get_type_disclaimer_texts() returns multiple texts' );
+    @disclaimers = $request->get_type_disclaimers_ordered;
+    is( scalar @disclaimers, 2, 'get_type_disclaimers_ordered() returns unrecognised disclaimers' );
+    is(
+        $disclaimers[0]->text, "Question Nine",
+        'get_type_disclaimers_ordered() returns unrecognised disclaimers first'
+    );
+    is(
+        $disclaimers[1]->text, "Question Two",
+        'get_type_disclaimers_ordered() returns recognised disclaimers last'
+    );
+
+    $builder->build_object(
+        {
+            class => 'Koha::ILL::TypeDisclaimers',
+            value => {
+                illrequest_id => $request->illrequest_id,
+                text          => 'Question One',
+                code          => 'one',
+                value         => 'Yes',
+            }
+        }
+    );
+
+    @disclaimers = $request->get_type_disclaimers_ordered;
+    is( scalar @disclaimers, 3, 'get_type_disclaimers_ordered() returns all disclaimers' );
+    is(
+        $disclaimers[0]->text, "Question Nine",
+        'get_type_disclaimers_ordered() returns unrecognised disclaimers first'
+    );
+    is(
+        $disclaimers[1]->text, "Question One",
+        'get_type_disclaimers_ordered() returns recognised disclaimers last'
+    );
+    is(
+        $disclaimers[2]->text, "Question Two",
+        'get_type_disclaimers_ordered() returns recognised disclaimers last'
+    );
+
+    t::lib::Mocks::mock_preference(
+        'ILLModuleDisclaimerByType', "all:
+ fields:
+   - code: two
+     text: Question Two
+     av_category_code: YES_NO
+   - code: one
+     text: Question One
+     av_category_code: YES_NO"
+    );
+
+    @disclaimers = $request->get_type_disclaimers_ordered;
+    is( scalar @disclaimers, 3, 'get_type_disclaimers_ordered() returns all disclaimers' );
+    is(
+        $disclaimers[0]->text, "Question Nine",
+        'get_type_disclaimers_ordered() returns unrecognised disclaimers first'
+    );
+    is(
+        $disclaimers[1]->text, "Question Two",
+        'get_type_disclaimers_ordered() responds to system preference order'
+    );
+    is(
+        $disclaimers[2]->text, "Question One",
+        'get_type_disclaimers_ordered() responds to system preference order'
+    );
 
     $schema->storage->txn_rollback;
 };

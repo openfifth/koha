@@ -1380,24 +1380,9 @@ sub get_type_disclaimers_ordered {
         $code_indexes{ $field->{code} } = $i;
     }
 
-    @disclaimers = sort { $code_indexes{ $a->code } <=> $code_indexes{ $b->code } } @disclaimers;
+    @disclaimers = sort { ( $code_indexes{ $a->code } // -1 ) <=> ( $code_indexes{ $b->code } // -1 ) } @disclaimers;
 
     return @disclaimers;
-}
-
-=head3 get_type_disclaimer_values
-
-    my @values = $abstract->get_type_disclaimer_values();
-
-Return the values submitted in the type disclaimer workflow stage
-
-=cut
-
-sub get_type_disclaimer_values {
-    my ($self)      = @_;
-    my $disclaimers = $self->type_disclaimers->search();
-    my @values      = $disclaimers->get_column('value');
-    return @values;
 }
 
 =head3 set_copyright_clearance_confirmed
@@ -1482,36 +1467,6 @@ sub get_copyright_clearance_confirmed {
     my ($self) = @_;
     my $attr = $self->extended_attributes->find( { type => 'copyrightclearance_confirmed' } );
     return $attr ? ( $attr->value ? 1 : 0 ) : 0;
-}
-
-=head3 get_type_disclaimer_dates
-
-    my @dates = $abstract->type_disclaimer_date();
-
-Return the times the disclaimers were submitted in the type disclaimer workflow stage
-
-=cut
-
-sub get_type_disclaimer_dates {
-    my ($self)      = @_;
-    my $disclaimers = $self->type_disclaimers->search();
-    my @dates       = $disclaimers->get_column('date');
-    return @dates;
-}
-
-=head3 get_type_disclaimer_texts
-
-    my @texts = $abstract->type_disclaimer_texts();
-
-Return the text of the disclaimer submitted in the type disclaimer workflow stage
-
-=cut
-
-sub get_type_disclaimer_texts {
-    my ($self)      = @_;
-    my $disclaimers = $self->type_disclaimers->search();
-    my @texts       = $disclaimers->get_column('text');
-    return @texts;
 }
 
 =head3 manager
