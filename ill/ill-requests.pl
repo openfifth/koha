@@ -500,8 +500,9 @@ if ($backends_available) {
     } elsif ( $op eq 'fill_in_disclaimer' || $op eq 'cud-fill_in_disclaimer' ) {
         my $illrequest_id = $params->{illrequest_id};
         my $request       = Koha::ILL::Requests->find($illrequest_id);
-        my $type_disclaimer =
-            Koha::ILL::Request::Workflow::TypeDisclaimer->new( $params, 'staff' );    # TODO: should be opac here?
+
+        # We pass undef as the UI context to show all type disclaimers regardless of interface restriction
+        my $type_disclaimer = Koha::ILL::Request::Workflow::TypeDisclaimer->new( $params, undef );
         $template->param( $type_disclaimer->type_disclaimer_template_params( $params, $request ) );
 
         if ( $op eq 'cud-fill_in_disclaimer' && $params->{type_disclaimer_submitted} && $request->illrequest_id ) {
