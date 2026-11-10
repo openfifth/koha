@@ -107,7 +107,7 @@ if ( $params->{type_disclaimer_submitted} ) {
     } else {
         $template->param( $type_disclaimer->type_disclaimer_template_params( $params, $request ) );
     }
-} elsif ( $type_disclaimer->show_type_disclaimer($request) ) {
+} else {
     $template->param( $type_disclaimer->type_disclaimer_template_params( $params, $request ) );
 }
 

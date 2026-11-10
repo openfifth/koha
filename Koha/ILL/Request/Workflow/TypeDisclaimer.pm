@@ -66,7 +66,7 @@ sub show_type_disclaimer {
         $disc_info
 
         # There are fields remaining to fill out
-        && $disc_info->{fields}
+        && @{ $disc_info->{fields} }
 
         # Type disclaimer has not yet been submitted
         && !$self->{metadata}->{type_disclaimer_submitted};

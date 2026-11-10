@@ -489,7 +489,7 @@
                         [% IF error == 'migrate_target' %]
                             <div class="alert alert-warning"> The backend you tried to migrate to does not yet support migrations, please try again with an alternative target. </div>
                         [% ELSIF error == 'no_type_disclaimer' %]
-                            <div class="alert alert-warning"> There is no associated type disclaimer with this request type. </div>
+                            <div class="alert alert-warning"> There is no remaining type disclaimers for this request. </div>
                         [% END %]
                     [% END %]
 
