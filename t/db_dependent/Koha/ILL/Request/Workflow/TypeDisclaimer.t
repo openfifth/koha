@@ -18,7 +18,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 11;
+use Test::More tests => 21;
 
 use Test::MockModule;
 use Test::MockObject;
@@ -111,6 +111,31 @@ is(
     1, 'able to show type disclaimer form'
 );
 
+t::lib::Mocks::mock_preference(
+    'ILLModuleDisclaimerByType', "all:
+ fields:
+   - text: |
+      <h2>HTML title</h2>
+      <p>This is an HTML paragraph</p>
+      <p>This is another HTML paragraph</p>
+     av_category_code: YES_NO
+   - text: |
+      <h2>HTML title</h2>
+      <p>This is an HTML paragraph</p>
+      <p>This is another HTML paragraph</p>
+     av_category_code: YES_NO
+     bypass: 1
+article:
+ text: copyright text for all article type requests
+ av_category_code: YES_NO
+ bypass: 1"
+);
+
+is(
+    $type_disclaimer->show_type_disclaimer($request),
+    1, 'able to show type disclaimer form with some fields bypassed'
+);
+
 # Mock ILLModuleDisclaimerByType to test bypass
 t::lib::Mocks::mock_preference(
     'ILLModuleDisclaimerByType', "all:
@@ -128,6 +153,25 @@ journal:
 ok(
     !$type_disclaimer->show_type_disclaimer($request),
     'can bypass type disclaimer form'
+);
+
+t::lib::Mocks::mock_preference(
+    'ILLModuleDisclaimerByType', "all:
+ text: |
+  <h2>HTML title</h2>
+  <p>This is an HTML paragraph</p>
+  <p>This is another HTML paragraph</p>
+ av_category_code: YES_NO
+journal:
+ fields:
+   - text: text
+     av_category_code: YES_NO
+     bypass: 1"
+);
+
+ok(
+    !$type_disclaimer->show_type_disclaimer($request),
+    'can bypass type disclaimer form in fields'
 );
 
 # Mock ILLModuleDisclaimerByType to test interface
@@ -151,6 +195,46 @@ journal:
         $type_disclaimer->show_type_disclaimer($request),
         $expected,
         'type disclaimer form ' . ( $expected ? 'shown' : 'not shown' ) . " for interface $interface"
+    );
+
+    t::lib::Mocks::mock_preference(
+        'ILLModuleDisclaimerByType', "all:
+ text: |
+  <h2>HTML title</h2>
+  <p>This is an HTML paragraph</p>
+  <p>This is another HTML paragraph</p>
+ av_category_code: YES_NO
+journal:
+ fields:
+   - text: text
+     av_category_code: YES_NO
+     interface: " . $interface
+    );
+
+    is(
+        $type_disclaimer->show_type_disclaimer($request),
+        $expected,
+        'type disclaimer form ' . ( $expected ? 'shown' : 'not shown' ) . " for interface $interface in field"
+    );
+
+    t::lib::Mocks::mock_preference(
+        'ILLModuleDisclaimerByType', "all:
+ text: |
+  <h2>HTML title</h2>
+  <p>This is an HTML paragraph</p>
+  <p>This is another HTML paragraph</p>
+ av_category_code: YES_NO
+journal:
+ text: text
+ av_category_code: YES_NO
+ bypass: 1
+ interface: " . $interface
+    );
+
+    is(
+        $type_disclaimer->show_type_disclaimer($request),
+        0,
+        "type disclaimer not shown when bypassing interface $interface"
     );
 }
 
