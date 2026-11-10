@@ -51,7 +51,7 @@
                 [% END %]
             [% ELSIF op == 'typedisclaimer' %]
                 [% WRAPPER breadcrumb_item bc_active= 1 %]
-                    <span>Ill request disclaimer</span>
+                    <span>ILL request disclaimer</span>
                 [% END %]
             [% ELSIF op == 'confirmautoill' %]
                 [% WRAPPER breadcrumb_item bc_active= 1 %]
