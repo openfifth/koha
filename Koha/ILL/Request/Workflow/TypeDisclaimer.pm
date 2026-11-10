@@ -202,12 +202,14 @@ sub get_type_disclaimer_info {
 
     $disc_info->{fields} = [
         map {
-            {
+            $fields->[$_]->{text} && $fields->[$_]->{av_category_code}
+                ? {
                 text      => $fields->[$_]->{text}, av_cat => $fields->[$_]->{av_category_code},
                 code      => $fields->[$_]->{code} // 'unlabelled_' . $_,
                 interface => ( $fields->[$_]->{bypass} ? 'none' : undef ) // $fields->[$_]->{interface}
-                    // ( $matched_type->{bypass} ? 'none' : undef ) // $matched_type->{interface},
-            }
+                    // ( $matched_type->{bypass} ? 'none' : undef ) // $matched_type->{interface} // 'both',
+                }
+                : ()
         } 0 .. @{$fields} - 1
     ];
 

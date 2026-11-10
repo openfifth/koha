@@ -120,6 +120,8 @@ t::lib::Mocks::mock_preference(
   <p>This is another HTML paragraph</p>
  av_category_code: YES_NO
 journal:
+ text: text
+ av_category_code: YES_NO
  bypass: 1"
 );
 
@@ -140,6 +142,8 @@ while ( my ( $interface, $expected ) = each %cases ) {
   <p>This is another HTML paragraph</p>
  av_category_code: YES_NO
 journal:
+ text: text
+ av_category_code: YES_NO
  interface: " . $interface
     );
 
