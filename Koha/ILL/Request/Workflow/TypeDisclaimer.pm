@@ -183,7 +183,6 @@ sub get_type_disclaimer_info {
     my $matched_type;
     if ( scalar @matching_request_type ) {
         $matched_type = $disc_sys_pref->{$type};
-        $disc_info->{interface} = 'none' if $disc_sys_pref->{$type}->{bypass};
     } elsif ( $disc_sys_pref->{all} ) {
         $matched_type = $disc_sys_pref->{all};
     }
@@ -194,8 +193,9 @@ sub get_type_disclaimer_info {
     } else {
         $fields = [
             {
-                text => $matched_type->{text}, av_category_code => $matched_type->{av_category_code},
-                code => $matched_type->{code}, interface        => $matched_type->{interface},
+                text   => $matched_type->{text}, av_category_code => $matched_type->{av_category_code},
+                code   => $matched_type->{code}, interface        => $matched_type->{interface},
+                bypass => $matched_type->{bypass},
             }
         ];
     }
@@ -204,8 +204,9 @@ sub get_type_disclaimer_info {
         map {
             {
                 text      => $fields->[$_]->{text}, av_cat => $fields->[$_]->{av_category_code},
-                code      => $fields->[$_]->{code}      // 'unlabelled_' . $_,
-                interface => $fields->[$_]->{interface} // $matched_type->{interface},
+                code      => $fields->[$_]->{code} // 'unlabelled_' . $_,
+                interface => ( $fields->[$_]->{bypass} ? 'none' : undef ) // $fields->[$_]->{interface}
+                    // ( $matched_type->{bypass} ? 'none' : undef ) // $matched_type->{interface},
             }
         } 0 .. @{$fields} - 1
     ];
@@ -240,6 +241,7 @@ sub _filter_uncompleted_fields {
         @fields = grep { !exists $completed_codes{ $_->{code} } } @fields;
     }
 
+    @fields = grep { $_->{interface} ne 'none' } @fields;
     if ( $self->{ui_context} ) {
         @fields =
             grep { !defined $_->{interface} || $_->{interface} eq 'both' || $_->{interface} eq $self->{ui_context} }
