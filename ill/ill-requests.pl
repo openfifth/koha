@@ -525,19 +525,19 @@ if ($backends_available) {
             exit;
         }
 
-        # If a type_disclaimer_prompt already exists, use it to send another email without creating
-        # another one. Always reset the expiration date.
+        # If an unused type_disclaimer_prompt already exists, use it to send another email without
+        # creating another one. Always reset the expiration date to allow it to be used.
 
         my $expiration_days = C4::Context->preference('ILLModuleDisclaimerPromptExpiry');
         $expiration_days = 7 unless $expiration_days;
 
         my $expiration = dt_from_string->add( days => $expiration_days );
-        my $prompt     = $request->type_disclaimer_prompts->find(
+        my $prompt     = $request->type_disclaimer_prompts->search(
             {
-                patron_id => $request->borrowernumber,
-            },
-            { key => 'ill_type_disclaimer_uniq' }
-        );
+                patron_id    => $request->borrowernumber,
+                date_replied => undef,
+            }
+        )->next;
 
         unless ($prompt) {
             $prompt = Koha::ILL::TypeDisclaimerPrompt->new(

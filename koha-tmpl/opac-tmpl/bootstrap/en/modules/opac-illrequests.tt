@@ -570,7 +570,7 @@
                     sortable: false,
                     render: (data, type, row, meta) => {
                         let result = `<a href="/cgi-bin/koha/opac-illrequests.pl?op=view&amp;illrequest_id=${row.ill_request_id}" class="btn btn-primary btn-sm">View</a>`;
-                        if (!row.extended_attributes.find(x => x.type == "type_disclaimer_date") && row.uncompleted_type_disclaimer_prompts.length) {
+                        if (row.uncompleted_type_disclaimer_prompts.length) {
                             const prompt = row.uncompleted_type_disclaimer_prompts[0];
                             result += `<a href="/cgi-bin/koha/opac-illrequest-type-disclaimer.pl?illrequest_id=${row.ill_request_id}&uuid=${prompt.uuid}" class="btn btn-primary btn-sm">Complete type disclaimer</a>`;
                         }

@@ -3814,7 +3814,6 @@ CREATE TABLE `ill_type_disclaimer_prompts` (
   `date_replied` timestamp NULL DEFAULT NULL COMMENT 'if non-null, when this prompt was replied to',
   `valid_until` timestamp NOT NULL COMMENT 'when this prompt expires',
   PRIMARY KEY (`uuid`),
-  UNIQUE KEY `ill_type_disclaimer_uniq` (`patron_id`,`illrequest_id`),
   KEY `ill_type_disclaimer_prompts_fk_illrequest_id` (`illrequest_id`),
   CONSTRAINT `ill_type_disclaimer_prompts_fk_illrequest_id` FOREIGN KEY (`illrequest_id`) REFERENCES `illrequests` (`illrequest_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `ill_type_disclaimer_prompts_fk_patron_id` FOREIGN KEY (`patron_id`) REFERENCES `borrowers` (`borrowernumber`) ON DELETE CASCADE ON UPDATE CASCADE

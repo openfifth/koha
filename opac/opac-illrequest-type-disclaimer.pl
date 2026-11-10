@@ -91,6 +91,13 @@ unless ( DateTime->compare( dt_from_string(), dt_from_string( $prompt->valid_unt
     exit;
 }
 
+# Don't let prompts be reused
+if ( $prompt->date_replied ) {
+    $template->param( op => 'typedisclaimer_confirmed' );
+    output_html_with_http_headers $query, $cookie, $template->output, undef, { force_no_caching => 1 };
+    exit;
+}
+
 my $type_disclaimer = Koha::ILL::Request::Workflow::TypeDisclaimer->new( $params, 'opac' );
 
 if ( $params->{type_disclaimer_submitted} ) {

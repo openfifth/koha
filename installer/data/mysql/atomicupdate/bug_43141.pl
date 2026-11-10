@@ -28,7 +28,6 @@ INSERT IGNORE INTO systempreferences(variable, value, type) VALUES ('ILLModuleDi
                   `valid_until` timestamp NOT NULL COMMENT 'when this prompt expires',
 
                   PRIMARY KEY (`uuid`),
-                  UNIQUE KEY `ill_type_disclaimer_uniq` (`patron_id`, `illrequest_id`),
                   CONSTRAINT `ill_type_disclaimer_prompts_fk_patron_id` FOREIGN KEY (`patron_id`) REFERENCES `borrowers` (`borrowernumber`) ON DELETE CASCADE ON UPDATE CASCADE,
                   CONSTRAINT `ill_type_disclaimer_prompts_fk_illrequest_id` FOREIGN KEY (`illrequest_id`) REFERENCES `illrequests` (`illrequest_id`) ON DELETE CASCADE ON UPDATE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

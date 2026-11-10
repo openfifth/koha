@@ -120,22 +120,6 @@ __PACKAGE__->add_columns(
 
 __PACKAGE__->set_primary_key("uuid");
 
-=head1 UNIQUE CONSTRAINTS
-
-=head2 C<ill_type_disclaimer_uniq>
-
-=over 4
-
-=item * L</patron_id>
-
-=item * L</illrequest_id>
-
-=back
-
-=cut
-
-__PACKAGE__->add_unique_constraint("ill_type_disclaimer_uniq", ["patron_id", "illrequest_id"]);
-
 =head1 RELATIONS
 
 =head2 illrequest
@@ -169,8 +153,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07053 @ 2026-07-20 09:28:37
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:P47sC+esHzgZbg4DThMddQ
+# Created by DBIx::Class::Schema::Loader v0.07053 @ 2026-11-10 11:24:44
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:W/wrJIejvo3Dm89rqSXeew
 
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration
