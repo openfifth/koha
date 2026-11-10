@@ -58,16 +58,7 @@ sub show_type_disclaimer {
 
     my $disc_info = $self->get_type_disclaimer_info( $self->{metadata}->{type} );
 
-    if ( $disc_info->{interface} ) {
-        return 0 if $disc_info->{interface} eq 'none';
-        return 0
-            if ( $disc_info->{interface} ne 'both'
-            && $disc_info->{interface} ne $self->{ui_context} );
-    }
-
-    if ($request) {
-        $disc_info = $self->_filter_uncompleted_fields( $disc_info, $request );
-    }
+    $disc_info = $self->_filter_uncompleted_fields( $disc_info, $request );
 
     return
 
@@ -96,9 +87,7 @@ sub type_disclaimer_template_params {
 
     my $disc_info = $self->get_type_disclaimer_info( $params->{type} );
 
-    if ($request) {
-        $disc_info = $self->_filter_uncompleted_fields( $disc_info, $request );
-    }
+    $disc_info = $self->_filter_uncompleted_fields( $disc_info, $request );
 
     $params->{method} = 'typedisclaimer' if $self->{ui_context} eq 'staff';
     delete $params->{stage}              if $self->{ui_context} eq 'staff';
@@ -132,9 +121,7 @@ sub after_request_created {
 
     my $disc_info = $self->get_type_disclaimer_info( $params->{type} );
 
-    if ($request) {
-        $disc_info = $self->_filter_uncompleted_fields( $disc_info, $request );
-    }
+    $disc_info = $self->_filter_uncompleted_fields( $disc_info, $request );
 
     # Validate required parameters before creating record of disclaimer
     return 0
@@ -208,7 +195,7 @@ sub get_type_disclaimer_info {
         $fields = [
             {
                 text => $matched_type->{text}, av_category_code => $matched_type->{av_category_code},
-                code => $matched_type->{code}
+                code => $matched_type->{code}, interface        => $matched_type->{interface},
             }
         ];
     }
@@ -216,13 +203,12 @@ sub get_type_disclaimer_info {
     $disc_info->{fields} = [
         map {
             {
-                text => $fields->[$_]->{text}, av_cat => $fields->[$_]->{av_category_code},
-                code => $fields->[$_]->{code} // 'unlabelled_' . $_
+                text      => $fields->[$_]->{text}, av_cat => $fields->[$_]->{av_category_code},
+                code      => $fields->[$_]->{code}      // 'unlabelled_' . $_,
+                interface => $fields->[$_]->{interface} // $matched_type->{interface},
             }
         } 0 .. @{$fields} - 1
     ];
-
-    $disc_info->{interface} //= $matched_type->{interface};
 
     # Check for duplicate codes
     my %codes;
@@ -244,15 +230,23 @@ Filters disclaimer fields to only those that haven't yet been completed.
 
 sub _filter_uncompleted_fields {
     my ( $self, $disc_info, $request ) = @_;
-    return $disc_info unless $request;
 
-    my %completed_codes;
-    $completed_codes{$_} = 1 for ( $request->type_disclaimers->get_column('code') );
+    my $result = {%$disc_info};
+    my @fields = @{ $disc_info->{fields} };
 
-    my $result   = {%$disc_info};
-    my @filtered = grep { !exists $completed_codes{ $_->{code} } } @{ $disc_info->{fields} };
-    $result->{fields} = \@filtered;
+    if ($request) {
+        my %completed_codes;
+        $completed_codes{$_} = 1 for ( $request->type_disclaimers->get_column('code') );
+        @fields = grep { !exists $completed_codes{ $_->{code} } } @fields;
+    }
 
+    if ( $self->{ui_context} ) {
+        @fields =
+            grep { !defined $_->{interface} || $_->{interface} eq 'both' || $_->{interface} eq $self->{ui_context} }
+            @fields;
+    }
+
+    $result->{fields} = \@fields;
     return $result;
 }
 
