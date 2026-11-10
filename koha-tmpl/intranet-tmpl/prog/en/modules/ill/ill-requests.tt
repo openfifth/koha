@@ -896,6 +896,10 @@
                                         <span class="fa-solid fa-file-contract"></span>
                                         Clear disclaimer information
                                     </a>
+                                    <a title="Fill in disclaimer" id="ill-request-fill-disclaimer" class="btn btn-default" href="/cgi-bin/koha/ill/ill-requests.pl?op=fill_in_disclaimer&amp;illrequest_id=[% request.illrequest_id | uri %]"
+                                        ><span class="fa-solid fa-file-signature"></span> Fill in disclaimer</a
+                                    >
+
                                     <button class="btn btn-default" data-bs-dismiss="modal">Close</button>
                                 </div>
                             </div>
@@ -1012,7 +1016,11 @@
                                     <input type="hidden" name="stage" value="form" />
                                     <input type="hidden" name="type_disclaimer_submitted" value="1" />
                                     <input type="submit" value="Submit" />
-                                    <a class="cancel" href="ill-requests.pl">Cancel</a>
+                                    [% IF op == 'fill_in_disclaimer' %]
+                                        <a class="cancel" href="/cgi-bin/koha/ill/ill-requests.pl?op=illview&amp;illrequest_id=[% whole.illrequest_id | html %]">Cancel</a>
+                                    [% ELSE %]
+                                        <a class="cancel" href="ill-requests.pl">Cancel</a>
+                                    [% END %]
                                 </fieldset>
                             </form>
                         [% END %]
