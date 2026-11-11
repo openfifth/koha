@@ -118,9 +118,9 @@ subtest 'extended_attributes() tests' => sub {
     $schema->storage->txn_rollback;
 };
 
-subtest 'get_type_disclaimers_ordered() tests' => sub {
+subtest 'type disclaimers' => sub {
 
-    plan tests => 14;
+    plan tests => 19;
 
     $schema->storage->txn_begin;
 
@@ -149,6 +149,12 @@ subtest 'get_type_disclaimers_ordered() tests' => sub {
         'get_type_disclaimers_ordered() returns empty list if no disclaimers have been filled'
     );
 
+    my @uncompleted = sort $request->get_uncompleted_type_disclaimers;
+    is_deeply(
+        \@uncompleted, [ 'one', 'two' ],
+        'get_uncompleted_type_disclaimers returns all codes if no disclaimers have been filled'
+    );
+
     $builder->build_object(
         {
             class => 'Koha::ILL::TypeDisclaimers',
@@ -167,6 +173,9 @@ subtest 'get_type_disclaimers_ordered() tests' => sub {
         $disclaimers[0]->text, "Question Two",
         'get_type_disclaimers_ordered() returns correct single disclaimer'
     );
+
+    @uncompleted = sort $request->get_uncompleted_type_disclaimers;
+    is_deeply( \@uncompleted, ['one'], 'get_uncompleted_type_disclaimers excludes completed disclaimer code' );
 
     $builder->build_object(
         {
@@ -190,6 +199,9 @@ subtest 'get_type_disclaimers_ordered() tests' => sub {
         $disclaimers[1]->text, "Question Two",
         'get_type_disclaimers_ordered() returns recognised disclaimers last'
     );
+
+    @uncompleted = sort $request->get_uncompleted_type_disclaimers;
+    is_deeply( \@uncompleted, ['one'], 'get_uncompleted_type_disclaimers ignores unrecognised codes' );
 
     $builder->build_object(
         {
@@ -218,6 +230,9 @@ subtest 'get_type_disclaimers_ordered() tests' => sub {
         'get_type_disclaimers_ordered() returns recognised disclaimers last'
     );
 
+    @uncompleted = sort $request->get_uncompleted_type_disclaimers;
+    is_deeply( \@uncompleted, [], 'get_uncompleted_type_disclaimers returns empty when all disclaimers completed' );
+
     t::lib::Mocks::mock_preference(
         'ILLModuleDisclaimerByType', "all:
  fields:
@@ -243,6 +258,9 @@ subtest 'get_type_disclaimers_ordered() tests' => sub {
         $disclaimers[2]->text, "Question One",
         'get_type_disclaimers_ordered() responds to system preference order'
     );
+
+    @uncompleted = sort $request->get_uncompleted_type_disclaimers;
+    is_deeply( \@uncompleted, [] );
 
     $schema->storage->txn_rollback;
 };

@@ -1385,6 +1385,22 @@ sub get_type_disclaimers_ordered {
     return @disclaimers;
 }
 
+sub get_uncompleted_type_disclaimers {
+    my ($self) = @_;
+    my $type = $self->get_type;
+    return unless $type;
+
+    require Koha::ILL::Request::Workflow::TypeDisclaimer;
+
+    my $disclaimer_info = Koha::ILL::Request::Workflow::TypeDisclaimer->get_type_disclaimer_info($type);
+
+    my %codes;
+    $codes{ $_->{code} } = 1 for @{ $disclaimer_info->{fields} };
+    delete $codes{$_} for $self->type_disclaimers->get_column('code');
+
+    return keys %codes;
+}
+
 =head3 set_copyright_clearance_confirmed
 
     $request->set_copyright_clearance_confirmed(1);
