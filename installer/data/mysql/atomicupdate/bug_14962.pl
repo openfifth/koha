@@ -71,11 +71,20 @@ return {
         # Add UseDisplayModule system preference
         $dbh->do(
             q{
-            INSERT IGNORE INTO systempreferences (variable, value, options, explanation, type)
-            VALUES ('UseDisplayModule', '0', NULL, 'Enable the display module for managing item displays.', 'YesNo')
+            INSERT IGNORE INTO systempreferences (variable, value)
+            VALUES ('UseDisplayModule', '0')
         }
         );
         say $out "Added UseDisplayModule system preference";
+
+        # Add DisplayItemsLog system preference
+        $dbh->do(
+            q{
+            INSERT IGNORE INTO systempreferences (variable, value)
+            VALUES ('DisplayItemsLog', '1')
+        }
+        );
+        say $out "Added DisplayItemsLog system preference";
 
         # Add displays user flag
         $dbh->do(
