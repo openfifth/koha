@@ -218,7 +218,7 @@ subtest 'get() tests' => sub {
 
 subtest 'add() tests' => sub {
 
-    plan tests => 20;
+    plan tests => 25;
 
     $schema->storage->txn_begin;
 
@@ -312,6 +312,43 @@ subtest 'add() tests' => sub {
             }
         ]
     );
+
+    # A library-restricted user must not leave a display behind when rejected
+    my $own_library   = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $other_library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $restricted    = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { flags => 0, branchcode => $own_library->branchcode }
+        }
+    );
+    $restricted->set_password( { password => $password, skip_validation => 1 } );
+    $builder->build(
+        {
+            source => 'UserPermission',
+            value  => {
+                borrowernumber => $restricted->borrowernumber,
+                module_bit     => 34,
+                code           => 'add_displays',
+            }
+        }
+    );
+    my $restricted_userid = $restricted->userid;
+
+    my $rejected_display = {
+        %{$display},
+        display_name   => 'Rejected display',
+        display_branch => $other_library->branchcode,
+    };
+    delete $rejected_display->{display_id};
+
+    $t->post_ok( "//$restricted_userid:$password@/api/v1/displays" => json => $rejected_display )->status_is(403);
+    is(
+        Koha::Displays->search( { display_name => 'Rejected display' } )->count, 0,
+        'A rejected display is not stored'
+    );
+    $t->post_ok( "//$restricted_userid:$password@/api/v1/displays" => json =>
+            { %{$rejected_display}, display_branch => $own_library->branchcode } )->status_is(201);
 
     $schema->storage->txn_rollback;
 };
