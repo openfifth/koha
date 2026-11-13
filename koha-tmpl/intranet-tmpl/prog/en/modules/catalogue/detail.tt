@@ -2553,12 +2553,13 @@
             // Load displays on page load
             document.addEventListener('DOMContentLoaded', async () => {
                 // Load available displays for dropdown
-                fetch("/api/v1/displays", {
+                fetch("/api/v1/displays?_per_page=-1", {
                     method: "GET",
                     headers: { "x-koha-embed": "display_items" },
                 })
-                .then(data => {
-                    return data.json();
+                .then(response => {
+                    if (!response.ok) throw new Error(response.statusText);
+                    return response.json();
                 })
                 .then(json => {
                     availableDisplays = json.filter(display => display.enabled);
@@ -2567,33 +2568,49 @@
                 })
                 .catch(error => {
                     console.error(error);
-                    document.querySelector("#display-dropdown").innerHTML = '<li class="text-center text-muted">Failed to load displays</li>';
+                    const li = document.createElement("li");
+                    li.className = "text-center text-muted";
+                    li.textContent = _("Failed to load displays");
+                    document.querySelector("#display-dropdown").replaceChildren(li);
                 });
             });
         }
 
         const updateDisplayDropdown = (() => {
             const dropdown = document.querySelector("#display-dropdown");
+            dropdown.replaceChildren();
 
             if (availableDisplays.length === 0) {
-                dropdown.innerHTML('<li class="dropdown-item text-muted">No active displays available</li>');
+                const li = document.createElement("li");
+                li.className = "dropdown-item text-muted";
+                li.textContent = _("No active displays available");
+                dropdown.appendChild(li);
                 return;
             }
 
+            // Build nodes rather than HTML strings: display names are user-entered
             availableDisplays.forEach(display => {
-                dropdown.innerHTML = '<li><a class="dropdown-item" href="#" data-display-id="%s" onclick="openDisplayModal(%s)">%s</a></li>'.format(display.display_id, display.display_id, display.display_name);
+                const li = document.createElement("li");
+                const a = document.createElement("a");
+                a.className = "dropdown-item";
+                a.href = "#";
+                a.dataset.displayId = display.display_id;
+                a.textContent = display.display_name;
+                a.addEventListener("click", event => {
+                    event.preventDefault();
+                    openDisplayModal(display.display_id);
+                });
+                li.appendChild(a);
+                dropdown.appendChild(li);
             });
         });
 
         const updateDisplaySelect = (() => {
-            // Update display select
             const displaySelect = document.querySelector("#display-select");
-
-            let selectHtml = '<option value="">Select a display</option>';
+            displaySelect.replaceChildren(new Option(_("Select a display"), ""));
             availableDisplays.forEach(display => {
-                selectHtml += '<option value="%s">%s</option>'.format(display.display_id, display.display_name);
+                displaySelect.appendChild(new Option(display.display_name, display.display_id));
             });
-            displaySelect.innerHTML = selectHtml;
         });
 
         const initializeDisplayItemsTable = (() => {

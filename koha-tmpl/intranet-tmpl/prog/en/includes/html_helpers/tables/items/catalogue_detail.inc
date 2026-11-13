@@ -419,17 +419,25 @@
             };
 
             let displays = [];
-            if (Koha.prefs.UseDisplayModule) {
-                fetch("/api/v1/displays", {
+            if (Koha.prefs.UseDisplayModule && Koha.permissions.CAN_user_displays) {
+                fetch("/api/v1/displays?_per_page=-1", {
                     method: "GET",
                     headers: { "x-koha-embed": "display_items" },
                 })
-                    .then(data => {
-                        return data.json();
+                    .then(response => {
+                        if (!response.ok) throw new Error(response.statusText);
+                        return response.json();
                     })
                     .then(json => {
                         displays = json;
-                    });
+
+                        // The table may already have rendered without the display data
+                        const table_selector = "#" + tab_id + "_table";
+                        if ($.fn.dataTable.isDataTable(table_selector)) {
+                            $(table_selector).DataTable().rows().invalidate().draw(false);
+                        }
+                    })
+                    .catch(error => console.error(error));
             }
 
             let group_by_status = function () {
@@ -826,7 +834,7 @@
                             displays.forEach(display => {
                                 display.display_items.forEach(display_item => {
                                     if (display.active != false && display_item.active != false && display_item.itemnumber === row.item_id) {
-                                        const link = '<a href="/cgi-bin/koha/display/displays/%s">%s</a>'.format(display.display_id, display.display_name);
+                                        const link = '<a href="/cgi-bin/koha/display/displays/%s">%s</a>'.format(encodeURIComponent(display.display_id), escape_str(display.display_name));
                                         nodes += '<li><span class="on_display">%s</span></li>'.format(link);
                                     }
                                 });
@@ -978,7 +986,7 @@
                             displays.forEach(display => {
                                 display.display_items.forEach(display_item => {
                                     if (display.public_note && display.active != false && display_item.active != false && display_item.itemnumber === row.item_id)
-                                        nodes += '<p><span class="public_note on_display">%s</span></p>'.format(display.public_note).replaceAll("\n", "<br />");
+                                        nodes += '<p><span class="public_note on_display">%s</span></p>'.format(escape_str(display.public_note).replaceAll("\n", "<br />"));
                                 });
                             });
                         }
@@ -1000,7 +1008,7 @@
                             displays.forEach(display => {
                                 display.display_items.forEach(display_item => {
                                     if (display.staff_note && display.active != false && display_item.active != false && display_item.itemnumber === row.item_id)
-                                        nodes += '<p><span class="internal_note on_display">%s</span></p>'.format(display.staff_note).replaceAll("\n", "<br />");
+                                        nodes += '<p><span class="internal_note on_display">%s</span></p>'.format(escape_str(display.staff_note).replaceAll("\n", "<br />"));
                                 });
                             });
                         }

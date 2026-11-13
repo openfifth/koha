@@ -1530,7 +1530,7 @@
                         <td class="notes" property="description">
                             [% ITEM_RESULT.itemnotes | $raw %]
                             [% IF ( ITEM_RESULT.display_itemnotes) %]
-                                <p><span class="on_display public_note">[% ITEM_RESULT.display_itemnotes | $raw %]</span></p>
+                                <p><span class="on_display public_note">[% ITEM_RESULT.display_itemnotes | html | html_line_break %]</span></p>
                             [% END %]
                         </td>
                     [% ELSE %]
