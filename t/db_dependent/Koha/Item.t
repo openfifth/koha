@@ -21,7 +21,7 @@ use Modern::Perl;
 use utf8;
 
 use Test::NoWarnings;
-use Test::More tests => 47;
+use Test::More tests => 48;
 use Test::Exception;
 use Test::MockModule;
 use Test::Warn;
@@ -871,6 +871,61 @@ subtest "as_marc_field() tests" => sub {
 
     $schema->storage->txn_rollback;
     Koha::Caches->get_instance->clear_from_cache("MarcStructure-1-");
+};
+
+subtest 'as_marc_field() stored values without an active display' => sub {
+
+    plan tests => 3;
+
+    $schema->storage->txn_begin;
+
+    my ($notforloan_tag_subfield) = ( C4::Biblio::GetMarcFromKohaField('items.notforloan') )[1];
+    my ($itype_tag_subfield)      = ( C4::Biblio::GetMarcFromKohaField('items.itype') )[1];
+
+    my $itemtype = $builder->build_object( { class => 'Koha::ItemTypes', value => { notforloan => 1 } } );
+    my $item     = $builder->build_sample_item( { itype => $itemtype->itemtype, notforloan => 0 } );
+
+    my $check = sub {
+        my ($message) = @_;
+        my $field = $item->get_from_storage->as_marc_field;
+        is_deeply(
+            [ $field->subfield($notforloan_tag_subfield), $field->subfield($itype_tag_subfield) ],
+            [ $item->notforloan,                          $item->itype ],
+            $message
+        );
+    };
+
+    t::lib::Mocks::mock_preference( 'UseDisplayModule', 0 );
+    $check->('Module off: stored notforloan (not the itemtype fallback) and itype are exported');
+
+    # An enabled display exists, but the module is off
+    my $display = $builder->build_object(
+        {
+            class => 'Koha::Displays',
+            value =>
+                { enabled => 1, display_itype => $builder->build_object( { class => 'Koha::ItemTypes' } )->itemtype }
+        }
+    );
+    $builder->build_object(
+        {
+            class => 'Koha::Display::Items',
+            value => {
+                display_id   => $display->display_id,
+                itemnumber   => $item->itemnumber,
+                biblionumber => $item->biblionumber,
+                date_added   => undef,
+                date_remove  => undef,
+            }
+        }
+    );
+    $check->('Module off, item on a display: stored values are still exported');
+
+    t::lib::Mocks::mock_preference( 'UseDisplayModule',  1 );
+    t::lib::Mocks::mock_preference( 'item-level_itypes', 0 );
+    Koha::Display::Items->search( { itemnumber => $item->itemnumber } )->delete;
+    $check->('Module on, item not on a display, item-level itypes off: stored values are exported');
+
+    $schema->storage->txn_rollback;
 };
 
 subtest 'pickup_locations() tests' => sub {

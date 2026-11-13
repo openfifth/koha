@@ -1625,7 +1625,7 @@ sub as_marc_field {
             $value = $self
                 ->$attribute # This call may fail if a kohafield is not a DB column but we don't want to add extra work for that there
                 if defined $self->$attribute and $self->$attribute ne '';
-            $value = $self->effective_kohafield_substitution($kohafield) || $value;
+            $value = $self->effective_kohafield_substitution($kohafield) // $value;
         } else {
             $value = $more_subfields->{$tagsubfield};
         }
@@ -2834,8 +2834,12 @@ sub _after_item_action_hooks {
 
     my $effective_ccode = $self->effective_kohafield_substitution( 'items.ccode' );
 
-Returns the value of an effective field based on the regular kohafield, or undef
-if there is no effective matching kohafield
+Returns the display-overridden value for the given kohafield, or undef if there
+is no override. Overrides only exist while the item is on an active display, so
+with UseDisplayModule off, or for an item not on a display, this always returns
+undef and callers must fall back to the stored value.
+
+Fields a display cannot override (for example notforloan) also return undef.
 
 =cut
 
@@ -2844,21 +2848,23 @@ sub effective_kohafield_substitution {
 
     return unless $kohafield;
 
-    if ( $kohafield eq 'items.itype' ) {
-        return $self->effective_itemtype;
-    } elsif ( $kohafield eq 'items.ccode' ) {
-        return $self->effective_collection_code;
-    } elsif ( $kohafield eq 'items.location' ) {
-        return $self->effective_location;
-    } elsif ( $kohafield eq 'items.homebranch' ) {
-        return $self->effective_homebranch;
-    } elsif ( $kohafield eq 'items.holdingbranch' ) {
-        return $self->effective_holdingbranch;
-    } elsif ( $kohafield eq 'items.notforloan' ) {
-        return $self->effective_not_for_loan_status;
-    }
+    my $display = $self->active_display;
+    return unless $display;
 
-    return;
+    my %display_attribute = (
+        'items.itype'         => 'display_itype',
+        'items.ccode'         => 'display_code',
+        'items.location'      => 'display_location',
+        'items.homebranch'    => 'display_home_branch',
+        'items.holdingbranch' => 'display_holding_branch',
+    );
+
+    my $attribute = $display_attribute{$kohafield};
+    return unless $attribute;
+
+    # A display that does not set the attribute does not override it
+    my $value = $display->$attribute;
+    return ( defined $value && $value ne q{} ) ? $value : undef;
 }
 
 =head3 recall

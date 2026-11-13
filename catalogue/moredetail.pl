@@ -149,7 +149,9 @@ foreach my $item (@items) {
     $item_info->{object} = $item;
     $item_info->{itype}  = $itemtypes->{ $item->effective_itemtype }->{'translated_description'}
         if exists $itemtypes->{ $item->effective_itemtype };
-    $item_info->{'ccode'} = $ccodes->{ $item->effective_collection_code }
+    $item_info->{effective_itemtype} = $itemtypes->{ $item->effective_itemtype };
+    $item_info->{effective_location} = $item->effective_location;
+    $item_info->{'ccode'}            = $ccodes->{ $item->effective_collection_code }
         if $ccodes && $item->effective_collection_code && exists $ccodes->{ $item->effective_collection_code };
     if ( defined $item->copynumber ) {
         $item_info->{'displaycopy'} = 1;
