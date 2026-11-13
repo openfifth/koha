@@ -199,7 +199,11 @@ sub delete {
     my ($self) = @_;
 
     my $display_item_id = $self->display_item_id;
+    my $item            = $self->item;
     my $result          = $self->SUPER::delete;
+
+    # The item no longer has the display's values: its record must be indexed again
+    $self->_reindex_item($item);
 
     logaction( "DISPLAYS", "REMOVE_ITEM", $display_item_id, $self, undef, $self )
         if ( C4::Context->preference("DisplayItemsLog") );
@@ -319,9 +323,9 @@ sub public_read_list {
 =cut
 
 sub _reindex_item {
-    my ($self) = @_;
+    my ( $self, $item ) = @_;
 
-    my $item = $self->item;
+    $item //= $self->item;
     return unless $item;
 
     my $indexer = Koha::SearchEngine::Indexer->new( { index => $Koha::SearchEngine::BIBLIOS_INDEX } );

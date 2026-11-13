@@ -20,14 +20,17 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 15;
+use Test::More tests => 16;
 use Test::Exception;
+use Test::MockModule;
 
 use C4::Context;
 use Koha::DateUtils qw( dt_from_string );
 use Koha::Displays;
 use Koha::Display::Items;
 use Koha::Database;
+use Koha::SearchEngine;
+use Koha::SearchEngine::Indexer;
 
 use t::lib::Mocks;
 use t::lib::TestBuilder;
@@ -278,6 +281,96 @@ subtest 'store() validation' => sub {
     # Leave the shared counts as we found them
     $later->delete;
     $stored->delete;
+};
+
+subtest 'the search index follows the display' => sub {
+    plan tests => 8;
+
+    t::lib::Mocks::mock_preference( 'UseDisplayModule', 1 );
+
+    my @indexed;
+
+    # The engine decides the class that does the work
+    my $indexer_class = ref Koha::SearchEngine::Indexer->new( { index => $Koha::SearchEngine::BIBLIOS_INDEX } );
+    my $mock          = Test::MockModule->new($indexer_class);
+    $mock->mock(
+        index_records => sub {
+            my ( $self, $records, $op ) = @_;
+            push @indexed, [ sort( ref $records ? @{$records} : $records ) ];
+            return;
+        }
+    );
+
+    my $display = $builder->build_object(
+        {
+            class => 'Koha::Displays',
+            value => {
+                enabled          => 1, start_date => '2000-01-01', end_date => '2100-01-01', display_days => 7,
+                display_location => 'A'
+            }
+        }
+    );
+    my $item         = $builder->build_sample_item;
+    my $biblionumber = $item->biblionumber;
+
+    @indexed = ();
+    my $display_item = Koha::Display::Item->new(
+        {
+            display_id  => $display->display_id, itemnumber => $item->itemnumber, date_added => '2000-01-01',
+            date_remove => '2100-01-01'
+        }
+    )->store;
+    is_deeply( \@indexed, [ [$biblionumber] ], 'Adding an item to a display indexes its record' );
+
+    @indexed = ();
+    $display_item->date_remove('2099-01-01')->store;
+    is_deeply( \@indexed, [ [$biblionumber] ], 'Changing a display item indexes its record' );
+
+    @indexed = ();
+    $display->display_location('B')->store;
+    is_deeply( \@indexed, [ [$biblionumber] ], 'Changing the display indexes the records of its items' );
+
+    @indexed = ();
+    $display->store;
+    is_deeply( \@indexed, [], 'Saving a display without a change indexes nothing' );
+
+    @indexed = ();
+    $display_item->delete;
+    is_deeply(
+        \@indexed, [ [$biblionumber] ],
+        'Removing an item from a display indexes its record, so it loses the display\'s values'
+    );
+
+    # Deleting a display releases its items
+    my $other_item = $builder->build_sample_item;
+    my $second     = $builder->build_sample_item( { biblionumber => $other_item->biblionumber } );
+    for my $i ( $other_item, $second ) {
+        Koha::Display::Item->new(
+            {
+                display_id  => $display->display_id, itemnumber => $i->itemnumber, date_added => '2000-01-01',
+                date_remove => '2100-01-01'
+            }
+        )->store;
+    }
+    @indexed = ();
+    $display->delete;
+    is_deeply(
+        \@indexed, [ [ $other_item->biblionumber ] ],
+        'Deleting a display indexes the records of its items, once each'
+    );
+
+    @indexed = ();
+    my $empty = $builder->build_object(
+        {
+            class => 'Koha::Displays',
+            value => { enabled => 1, start_date => '2000-01-01', end_date => '2100-01-01', display_days => 7 }
+        }
+    );
+    $empty->display_name('Renamed')->store;
+    $empty->delete;
+    is_deeply( \@indexed, [], 'A display without items indexes nothing' );
+
+    ok( !$item->active_display, 'The item is no longer on a display' );
 };
 
 # Test delete

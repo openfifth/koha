@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 14;
+use Test::More tests => 15;
 use Test::MockModule;
 use Test::Exception;
 
@@ -30,6 +30,7 @@ use Koha::ActionLogs;
 use Koha::Display;
 use Koha::Display::Item;
 use Koha::Displays;
+use Koha::Library::Group;
 
 use t::lib::Mocks;
 
@@ -336,6 +337,73 @@ subtest 'action logging' => sub {
     # Leave the shared counts as we found them
     $display->delete;
     $other->delete;
+};
+
+subtest 'can_be_accessed_by()' => sub {
+    plan tests => 17;
+
+    my $own     = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $sibling = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $other   = $builder->build_object( { class => 'Koha::Libraries' } );
+
+    my $make_patron = sub {
+        my (@codes) = @_;
+        my $patron = $builder->build_object(
+            { class => 'Koha::Patrons', value => { flags => 0, branchcode => $own->branchcode } } );
+        $builder->build(
+            {
+                source => 'UserPermission',
+                value  => { borrowernumber => $patron->borrowernumber, module_bit => 34, code => $_ }
+            }
+        ) for @codes;
+        return $patron;
+    };
+    my $display_at = sub {
+        my ($library) = @_;
+        return Koha::Display->new( { display_branch => $library ? $library->branchcode : undef } );
+    };
+    my $can = sub { $display_at->( $_[1] )->can_be_accessed_by( { patron => $_[0], action => $_[2] } ) };
+
+    t::lib::Mocks::mock_userenv( { branchcode => $own->branchcode } );
+
+    my $restricted = $make_patron->(qw( view_displays edit_displays ));
+
+    # No library group: only their own library
+    ok( $can->( $restricted,  $own,   'view' ), 'A restricted user can view a display of their library' );
+    ok( !$can->( $restricted, $other, 'view' ), 'but not one of another library' );
+    ok( !$can->( $restricted, undef,  'view' ), 'nor one that has no library' );
+
+    # A library group with the display feature shares displays between its libraries
+    my $group = Koha::Library::Group->new( { title => 'Displays', ft_display_group => 1 } )->store;
+    Koha::Library::Group->new( { parent_id => $group->id, branchcode => $own->branchcode } )->store;
+    Koha::Library::Group->new( { parent_id => $group->id, branchcode => $sibling->branchcode } )->store;
+    my $in_group = $make_patron->(qw( view_displays edit_displays ));
+    ok( $can->( $in_group,  $own,     'view' ), 'A user in a display group can view a display of their library' );
+    ok( $can->( $in_group,  $sibling, 'view' ), 'and one of another library in the group' );
+    ok( !$can->( $in_group, $other,   'view' ), 'but not one outside it' );
+    ok( $can->( $in_group,  $sibling, 'edit' ), 'The group applies to every action' );
+
+    # A group that is not a display group does not
+    $group->ft_display_group(0)->store;
+    my $no_feature = $make_patron->(qw( view_displays ));
+    ok( !$can->( $no_feature, $sibling, 'view' ), 'A group without the display feature does not share displays' );
+    ok( $can->( $no_feature,  $own,     'view' ), 'The user keeps their own library' );
+
+    # The _from_any_libraries permissions lift the restriction, for that action only
+    my $any = $make_patron->(qw( view_displays_from_any_libraries view_displays edit_displays ));
+    ok( $can->( $any,  $other, 'view' ), 'view_displays_from_any_libraries allows every library' );
+    ok( $can->( $any,  undef,  'view' ), '...including a display with no library' );
+    ok( !$can->( $any, $other, 'edit' ), '...but only for viewing' );
+
+    throws_ok { $display_at->($own)->can_be_accessed_by( { patron => $restricted, action => 'explode' } ) }
+    'Koha::Exceptions::BadParameter', 'An unknown action is refused';
+    throws_ok { $display_at->($own)->can_be_accessed_by( { action => 'view' } ) }
+    'Koha::Exceptions::MissingParameter', 'A patron is required';
+
+    my $deleter = $make_patron->(qw( delete_displays ));
+    ok( $can->( $deleter,  $own,   'delete' ), 'delete follows the same rule' );
+    ok( !$can->( $deleter, $other, 'delete' ), '...and refuses other libraries' );
+    ok( 1, 'done' );
 };
 
 # Test delete

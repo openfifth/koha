@@ -30,6 +30,8 @@ use Koha::Displays;
 use Koha::Display::Items;
 use Koha::ItemType;
 use Koha::Library;
+use Koha::SearchEngine;
+use Koha::SearchEngine::Indexer;
 
 use base qw(Koha::Object);
 
@@ -194,6 +196,38 @@ sub item_type {
     return Koha::ItemType->_new_from_dbic($rs);
 }
 
+=head3 _display_biblionumbers
+
+Returns the distinct biblionumbers of the items on this display.
+
+=cut
+
+sub _display_biblionumbers {
+    my ($self) = @_;
+
+    my %seen;
+    return grep { !$seen{$_}++ } $self->display_items->get_column('biblionumber');
+}
+
+=head3 _reindex_items
+
+    $display->_reindex_items;
+    $display->_reindex_items(@biblionumbers);
+
+Indexes the records of the items on this display (or the given records) again.
+
+=cut
+
+sub _reindex_items {
+    my ( $self, @biblionumbers ) = @_;
+
+    @biblionumbers = $self->_display_biblionumbers unless @biblionumbers;
+    return                                         unless @biblionumbers;
+
+    my $indexer = Koha::SearchEngine::Indexer->new( { index => $Koha::SearchEngine::BIBLIOS_INDEX } );
+    return $indexer->index_records( \@biblionumbers, "specialUpdate", "biblioserver" );
+}
+
 =head3 can_be_accessed_by
 
     my $allowed = $display->can_be_accessed_by( { patron => $patron, action => 'edit' } );
@@ -284,6 +318,10 @@ sub store {
                 if grep { $_ ne 'enabled' } @changed;
         }
 
+        # What the items of a display show depends on the display
+        $self->_reindex_items
+            if grep { ( $original->{$_} // q{} ) ne ( $self->unblessed->{$_} // q{} ) } keys %{$original};
+
         return $self;
     }
 }
@@ -299,8 +337,12 @@ Overloaded delete method to add action logging.
 sub delete {
     my ($self) = @_;
 
-    my $display_id = $self->display_id;
-    my $result     = $self->SUPER::delete;
+    my $display_id    = $self->display_id;
+    my @biblionumbers = $self->_display_biblionumbers;
+    my $result        = $self->SUPER::delete;
+
+    # Its items are released along with it
+    $self->_reindex_items(@biblionumbers);
 
     logaction( "DISPLAYS", "DELETE", $display_id, $self, undef, $self )
         if ( C4::Context->preference("DisplayItemsLog") );

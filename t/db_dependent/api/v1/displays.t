@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 9;
+use Test::More tests => 10;
 use Test::Mojo;
 use JSON;
 
@@ -645,6 +645,53 @@ subtest 'public embeds' => sub {
     $t->get_ok( '/api/v1/public/displays/' . $display->display_id => { 'x-koha-embed' => 'display_items' } )
         ->status_is(400);
     $t->get_ok( '/api/v1/public/displays/' . $display->display_id => { 'x-koha-embed' => 'library' } )->status_is(400);
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'public list visibility' => sub {
+
+    plan tests => 14;
+
+    $schema->storage->txn_begin;
+
+    my $make = sub {
+        my (%values) = @_;
+        return $builder->build_object(
+            {
+                class => 'Koha::Displays',
+                value => {
+                    enabled     => 1,
+                    start_date  => '2000-01-01',
+                    end_date    => '2100-01-01',
+                    staff_note  => 'Staff only',
+                    public_note => 'For everyone',
+                    %values,
+                }
+            }
+        );
+    };
+    my $running  = $make->();
+    my $disabled = $make->( enabled    => 0 );
+    my $ended    = $make->( end_date   => '2001-01-01' );
+    my $future   = $make->( start_date => '2099-01-01' );
+
+    t::lib::Mocks::mock_preference( 'UseDisplayModule', 0 );
+    $t->get_ok('/api/v1/public/displays')->status_is(200)->json_is( [] );
+    $t->get_ok( '/api/v1/public/displays/' . $running->display_id )->status_is(404);
+
+    t::lib::Mocks::mock_preference( 'UseDisplayModule', 1 );
+    $t->get_ok('/api/v1/public/displays?_per_page=-1')->status_is(200);
+    my %listed = map { $_->{display_id} => $_ } @{ $t->tx->res->json };
+    ok( $listed{ $running->display_id }, 'A running display is listed' );
+    ok(
+        !( grep { $listed{ $_->display_id } } ( $disabled, $ended, $future ) ),
+        'Disabled, ended and not yet started displays are not'
+    );
+    ok( !exists $listed{ $running->display_id }->{staff_note}, 'The staff note is never exposed' );
+
+    $t->get_ok( '/api/v1/public/displays/' . $disabled->display_id )->status_is(404);
+    $t->get_ok( '/api/v1/public/displays/' . $ended->display_id )->status_is(404);
 
     $schema->storage->txn_rollback;
 };

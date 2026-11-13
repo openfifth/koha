@@ -2523,6 +2523,38 @@ sub libraries_where_can_see_patrons {
     );
 }
 
+=head3 _libraries_where_can_display
+
+    my @branchcodes = $patron->_libraries_where_can_display('edit_displays_from_any_libraries');
+
+Shared by the libraries_where_can_*_displays methods. Returns the libraries the
+patron may act on, or an empty list when the C<$any_libraries_permission> lifts
+the restriction.
+
+C<libraries_where_can_see_things> also returns an empty list for a patron whose
+library is in library groups, none of which is a display group. Callers read an
+empty list as "all libraries", so without the permission that would show every
+display to a patron who should only see those of their own library: fall back
+to their own library.
+
+=cut
+
+sub _libraries_where_can_display {
+    my ( $self, $any_libraries_permission ) = @_;
+
+    my @branchcodes = $self->libraries_where_can_see_things(
+        {
+            permission    => 'displays',
+            subpermission => $any_libraries_permission,
+            group_feature => 'ft_display_group',
+        }
+    );
+
+    return @branchcodes if @branchcodes;
+    return ()           if $self->has_permission( { displays => $any_libraries_permission } );
+    return ( $self->branchcode );
+}
+
 =head3 libraries_where_can_add_displays
 
     my $libraries = $patron->libraries_where_can_add_displays;
@@ -2538,13 +2570,7 @@ an empty list is returned as a signal they have access to all libraries.
 sub libraries_where_can_add_displays {
     my ($self) = @_;
 
-    return $self->libraries_where_can_see_things(
-        {
-            permission    => 'displays',
-            subpermission => 'add_displays_to_any_libraries',
-            group_feature => 'ft_display_group',
-        }
-    );
+    return $self->_libraries_where_can_display('add_displays_to_any_libraries');
 }
 
 =head3 libraries_where_can_view_displays
@@ -2562,13 +2588,7 @@ list is returned as a signal they have access to all libraries.
 sub libraries_where_can_view_displays {
     my ($self) = @_;
 
-    return $self->libraries_where_can_see_things(
-        {
-            permission    => 'displays',
-            subpermission => 'view_displays_from_any_libraries',
-            group_feature => 'ft_display_group',
-        }
-    );
+    return $self->_libraries_where_can_display('view_displays_from_any_libraries');
 }
 
 =head3 libraries_where_can_edit_displays
@@ -2586,13 +2606,7 @@ an empty list is returned as a signal they have access to all libraries.
 sub libraries_where_can_edit_displays {
     my ($self) = @_;
 
-    return $self->libraries_where_can_see_things(
-        {
-            permission    => 'displays',
-            subpermission => 'edit_displays_from_any_libraries',
-            group_feature => 'ft_display_group',
-        }
-    );
+    return $self->_libraries_where_can_display('edit_displays_from_any_libraries');
 }
 
 =head3 libraries_where_can_delete_displays
@@ -2610,13 +2624,7 @@ an empty list is returned as a signal they have access to all libraries.
 sub libraries_where_can_delete_displays {
     my ($self) = @_;
 
-    return $self->libraries_where_can_see_things(
-        {
-            permission    => 'displays',
-            subpermission => 'delete_displays_from_any_libraries',
-            group_feature => 'ft_display_group',
-        }
-    );
+    return $self->_libraries_where_can_display('delete_displays_from_any_libraries');
 }
 
 =head3 can_see_things_from
