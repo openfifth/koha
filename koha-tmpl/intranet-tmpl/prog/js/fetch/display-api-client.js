@@ -95,9 +95,9 @@ export class DisplayAPIClient {
                     endpoint: "",
                     body: displayItem,
                 }),
-            get: (display_id, itemnumber) =>
+            get: (display_id, item_id) =>
                 this.httpClientDisplayItems.get({
-                    endpoint: "" + display_id + "/" + itemnumber,
+                    endpoint: "" + display_id + "/" + item_id,
                 }),
             getAll: (query, params) =>
                 this.httpClientDisplayItems.getAll({
@@ -105,14 +105,14 @@ export class DisplayAPIClient {
                     query,
                     params,
                 }),
-            update: (displayItem, display_id, itemnumber) =>
+            update: (displayItem, display_id, item_id) =>
                 this.httpClientDisplayItems.put({
-                    endpoint: "" + display_id + "/" + itemnumber,
+                    endpoint: "" + display_id + "/" + item_id,
                     body: displayItem,
                 }),
-            delete: (display_id, itemnumber) =>
+            delete: (display_id, item_id) =>
                 this.httpClientDisplayItems.delete({
-                    endpoint: "" + display_id + "/" + itemnumber,
+                    endpoint: "" + display_id + "/" + item_id,
                 }),
             batchAdd: displayItems =>
                 this.httpClientDisplayItems.post({

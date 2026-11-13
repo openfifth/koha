@@ -12,19 +12,19 @@ properties:
     type: boolean
     description: Whether or not the display is enabled, and the display dates are in range
     readOnly: true
-  itemnumber:
+  item_id:
     type: integer
-    description: items.itemnumber for the item on display
-  biblionumber:
+    description: Internal identifier of the item on display
+  biblio_id:
     type: integer
-    description: biblio.biblionumber for the bibliographic record on display
-  date_added:
-    description: the date the item was added to the display
+    description: Internal identifier of the bibliographic record of the item on display. Always the item's own
+  added_date:
+    description: The date the item was added to the display
     type:
       - string
     format: date
-  date_remove:
-    description: the date the item should be removed from the display
+  removal_date:
+    description: The date the item is to be removed from the display
     type:
       - string
       - "null"
@@ -32,6 +32,6 @@ properties:
 additionalProperties: false
 required:
   - display_id
-  - itemnumber
-  - date_added
-  - date_remove
+  - item_id
+  - added_date
+  - removal_date

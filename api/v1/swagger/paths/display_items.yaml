@@ -19,25 +19,25 @@
         description: Filter by display ID
         required: false
         type: integer
-      - name: itemnumber
+      - name: item_id
         in: query
-        description: Filter by item number
+        description: Filter by item identifier
         required: false
         type: integer
-      - name: biblionumber
+      - name: biblio_id
         in: query
-        description: Filter by bibliographic record number
+        description: Filter by bibliographic record identifier
         required: false
         type: integer
-      - name: date_added
+      - name: added_date
         in: query
-        description: Filter by date added
+        description: Filter by the date the item was added
         required: false
         type: string
         format: date
-      - name: date_remove
+      - name: removal_date
         in: query
-        description: Filter by date to remove
+        description: Filter by the date the item is to be removed
         required: false
         type: string
         format: date
@@ -286,11 +286,11 @@
               items:
                 type: string
               minItems: 1
-            date_added:
+            added_date:
               description: Optional date when items should be added to display
               type: string
               format: date
-            date_remove:
+            removal_date:
               description: Optional date when items should be removed from display
               type: string
               format: date

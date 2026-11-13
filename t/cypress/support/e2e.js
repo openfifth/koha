@@ -2243,12 +2243,12 @@ cy.getDisplay = () => {
         display_id: 1,
         display_items: [
             {
-                biblionumber: 58,
-                date_added: dates.yesterday_iso,
-                date_remove: dates.tomorrow_iso,
+                biblio_id: 58,
+                added_date: dates.yesterday_iso,
+                removal_date: dates.tomorrow_iso,
                 display_id: 1,
                 display_item_id: 1,
-                itemnumber: 125,
+                item_id: 125,
             },
         ],
         display_itype: "MX",

@@ -14,14 +14,14 @@
         description: Filter by display ID
         required: false
         type: integer
-      - name: itemnumber
+      - name: item_id
         in: query
-        description: Filter by item number
+        description: Filter by item identifier
         required: false
         type: integer
-      - name: biblionumber
+      - name: biblio_id
         in: query
-        description: Filter by bibliographic record number
+        description: Filter by bibliographic record identifier
         required: false
         type: integer
       - $ref: "../swagger.yaml#/parameters/match"

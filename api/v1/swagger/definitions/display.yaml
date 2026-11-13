@@ -83,7 +83,42 @@ properties:
     type:
       - array
       - "null"
-    description: The objects representing the display items
+    description: The items on the display
+    items:
+      type: object
+      properties:
+        display_item_id:
+          type: integer
+          description: Internal identifier of the display item
+          readOnly: true
+        display_id:
+          type: integer
+          description: Internal identifier of the display. Always this display's
+        active:
+          type: boolean
+          description: Whether or not the display is enabled, and the display dates are in range
+          readOnly: true
+        item_id:
+          type: integer
+          description: Internal identifier of the item on display
+        biblio_id:
+          type: integer
+          description: Internal identifier of the bibliographic record of the item on display. Always the item's own
+        added_date:
+          description: The date the item was added to the display
+          type: string
+          format: date
+        removal_date:
+          description: The date the item is to be removed from the display
+          type:
+            - string
+            - "null"
+          format: date
+      additionalProperties: false
+      required:
+        - item_id
+        - added_date
+        - removal_date
   display_library:
     type:
       - object

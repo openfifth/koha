@@ -54,8 +54,8 @@ export default {
         const emptyResource = () => ({
             barcodes: null,
             display_id: null,
-            date_added: null,
-            date_remove: null,
+            added_date: null,
+            removal_date: null,
         });
         const resource = ref(emptyResource());
 
@@ -79,7 +79,7 @@ export default {
                 breakAfter: true,
             },
             {
-                name: "date_added",
+                name: "added_date",
                 label: $__("To add on this date"),
                 type: "date",
                 required: true,
@@ -88,7 +88,7 @@ export default {
                 },
             },
             {
-                name: "date_remove",
+                name: "removal_date",
                 label: $__("To remove on this date"),
                 type: "date",
             },
@@ -107,10 +107,10 @@ export default {
                 display_id: resource.value.display_id,
                 barcodes: barcodeList,
             };
-            if (resource.value.date_added != null)
-                importData.date_added = resource.value.date_added;
-            if (resource.value.date_remove != null)
-                importData.date_remove = resource.value.date_remove;
+            if (resource.value.added_date != null)
+                importData.added_date = resource.value.added_date;
+            if (resource.value.removal_date != null)
+                importData.removal_date = resource.value.removal_date;
 
             client.displayItems.batchAdd(importData).then(
                 success => {

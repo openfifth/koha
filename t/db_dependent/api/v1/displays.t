@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 10;
+use Test::More tests => 11;
 use Test::Mojo;
 use JSON;
 
@@ -582,8 +582,8 @@ subtest 'library restrictions and round trips' => sub {
             display_name  => 'Written before the check',
             display_items => [
                 {
-                    itemnumber  => $item->itemnumber, biblionumber => $item->biblionumber, date_added => '2000-01-01',
-                    date_remove => '2100-01-01'
+                    item_id      => $item->itemnumber, biblio_id => $item->biblionumber, added_date => '2000-01-01',
+                    removal_date => '2100-01-01'
                 }
             ],
         }
@@ -692,6 +692,74 @@ subtest 'public list visibility' => sub {
 
     $t->get_ok( '/api/v1/public/displays/' . $disabled->display_id )->status_is(404);
     $t->get_ok( '/api/v1/public/displays/' . $ended->display_id )->status_is(404);
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'display items use the API field names' => sub {
+
+    plan tests => 19;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'UseDisplayModule', 1 );
+
+    my $librarian = $builder->build_object( { class => 'Koha::Patrons', value => { flags => 2**34 } } );
+    my $password  = 'thePassword123';
+    $librarian->set_password( { password => $password, skip_validation => 1 } );
+    my $url = sub { "//" . $librarian->userid . ":$password@/api/v1/displays" . ( shift // '' ) };
+
+    my $item = $builder->build_sample_item;
+    my $new  = {
+        display_name        => 'With items',
+        display_days        => 7,
+        display_return_over => 'no',
+        start_date          => '2000-01-01',
+        end_date            => '2100-01-01',
+        enabled             => JSON::true,
+        display_items => [ { item_id => $item->itemnumber, added_date => '2000-01-01', removal_date => '2100-01-01' } ],
+    };
+
+    $t->post_ok( $url->() => json => $new )->status_is(201);
+    my $display_id = $t->tx->res->json->{display_id};
+
+    my $stored = Koha::Display::Items->search( { display_id => $display_id } )->next;
+    ok( $stored, 'The item was stored through the display' );
+    is( $stored->itemnumber,   $item->itemnumber,   'item_id is the item' );
+    is( $stored->biblionumber, $item->biblionumber, 'The record is the item\'s own' );
+    is( $stored->date_added,   '2000-01-01',        'added_date is the date added' );
+    is( $stored->date_remove,  '2100-01-01',        'removal_date is the date to remove' );
+
+    # Read back, embedded, with the API names only
+    $t->get_ok( $url->("/$display_id") => { 'x-koha-embed' => 'display_items' } )->status_is(200);
+    my $embedded = $t->tx->res->json->{display_items}->[0];
+    is( $embedded->{item_id},      $item->itemnumber,   'The embedded item uses item_id' );
+    is( $embedded->{biblio_id},    $item->biblionumber, 'and biblio_id' );
+    is( $embedded->{added_date},   '2000-01-01',        'and added_date' );
+    is( $embedded->{removal_date}, '2100-01-01',        'and removal_date' );
+    ok(
+        !( grep { exists $embedded->{$_} } qw( itemnumber biblionumber date_added date_remove ) ),
+        'The old names are gone'
+    );
+
+    # The old names are refused rather than silently ignored
+    $t->put_ok(
+        $url->("/$display_id") => json => {
+            %{$new},
+            display_items =>
+                [ { itemnumber => $item->itemnumber, date_added => '2000-01-01', date_remove => '2100-01-01' } ]
+        }
+    )->status_is(400);
+
+    # Updating through the display moves the dates
+    $t->put_ok(
+        $url->("/$display_id") => json => {
+            %{$new},
+            display_items =>
+                [ { item_id => $item->itemnumber, added_date => '2000-01-01', removal_date => '2099-01-01' } ]
+        }
+    )->status_is(200);
+    is( $stored->get_from_storage->date_remove, '2099-01-01', 'removal_date is updated' );
 
     $schema->storage->txn_rollback;
 };

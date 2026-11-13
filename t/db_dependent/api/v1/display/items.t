@@ -137,7 +137,7 @@ subtest 'list() tests' => sub {
         ]
         );
 
-    $t->get_ok( "//$userid:$password@/api/v1/display/items?itemnumber=" . $item->itemnumber )
+    $t->get_ok( "//$userid:$password@/api/v1/display/items?item_id=" . $item->itemnumber )
         ->status_is(200)
         ->json_is( [ $displayitem->to_api ] );
 
@@ -266,10 +266,10 @@ subtest 'add() tests' => sub {
 
     my $displayitem = {
         display_id   => $display->display_id,
-        itemnumber   => $item->itemnumber,
-        biblionumber => $biblio->biblionumber,
-        date_added   => "2024-01-15",
-        date_remove  => "2024-02-15"
+        item_id      => $item->itemnumber,
+        biblio_id    => $biblio->biblionumber,
+        added_date   => "2024-01-15",
+        removal_date => "2024-02-15"
     };
 
     # Unauthorized attempt to write
@@ -277,10 +277,10 @@ subtest 'add() tests' => sub {
 
     # Authorized attempt to write invalid data
     my $displayitem_with_invalid_field = {
-        blah         => "DisplayItem Blah",
-        display_id   => $display->display_id,
-        itemnumber   => $item->itemnumber,
-        biblionumber => $biblio->biblionumber
+        blah       => "DisplayItem Blah",
+        display_id => $display->display_id,
+        item_id    => $item->itemnumber,
+        biblio_id  => $biblio->biblionumber
     };
 
     $t->post_ok( "//$userid:$password@/api/v1/display/items" => json => $displayitem_with_invalid_field )
@@ -301,15 +301,15 @@ subtest 'add() tests' => sub {
         Location => qr|^\/api\/v1\/display/items/\d+/\d+|,
         'REST3.4.1'
         )
-        ->json_is( '/display_id'   => $displayitem->{display_id} )
-        ->json_is( '/itemnumber'   => $displayitem->{itemnumber} )
-        ->json_is( '/biblionumber' => $displayitem->{biblionumber} )
-        ->json_is( '/date_added'   => $displayitem->{date_added} );
+        ->json_is( '/display_id' => $displayitem->{display_id} )
+        ->json_is( '/item_id'    => $displayitem->{item_id} )
+        ->json_is( '/biblio_id'  => $displayitem->{biblio_id} )
+        ->json_is( '/added_date' => $displayitem->{added_date} );
 
     # Test missing required field (display_id is required)
     my $displayitem_missing_field = {
-        itemnumber   => $item->itemnumber,
-        biblionumber => $biblio->biblionumber
+        item_id   => $item->itemnumber,
+        biblio_id => $biblio->biblionumber
 
         # Missing display_id (required field)
     };
@@ -323,10 +323,10 @@ subtest 'add() tests' => sub {
     $t->post_ok(
         "//$userid:$password@/api/v1/display/items" => json => {
             display_id   => $display->display_id,
-            itemnumber   => $item_unstored->itemnumber,
-            biblionumber => $biblio->biblionumber,
-            date_added   => "2024-03-01",
-            date_remove  => "2024-02-01",                 # before date_added
+            item_id      => $item_unstored->itemnumber,
+            biblio_id    => $biblio->biblionumber,
+            added_date   => "2024-03-01",
+            removal_date => "2024-02-01",                 # before date_added
         }
     )->status_is(400)->json_is( '/error_code' => 'bad_parameter' );
     is(
@@ -338,19 +338,19 @@ subtest 'add() tests' => sub {
     $t->post_ok(
         "//$userid:$password@/api/v1/display/items" => json => {
             display_id   => $display->display_id,
-            itemnumber   => 999999999,
-            biblionumber => $biblio->biblionumber,
-            date_added   => "2024-03-01",
-            date_remove  => "2024-04-01",
+            item_id      => 999999999,
+            biblio_id    => $biblio->biblionumber,
+            added_date   => "2024-03-01",
+            removal_date => "2024-04-01",
         }
     )->status_is(400)->json_is( '/error_code' => 'bad_parameter' );
     $t->post_ok(
         "//$userid:$password@/api/v1/display/items" => json => {
             display_id   => 999999999,
-            itemnumber   => $item_unstored->itemnumber,
-            biblionumber => $biblio->biblionumber,
-            date_added   => "2024-03-01",
-            date_remove  => "2024-04-01",
+            item_id      => $item_unstored->itemnumber,
+            biblio_id    => $biblio->biblionumber,
+            added_date   => "2024-03-01",
+            removal_date => "2024-04-01",
         }
     )->status_is(400)->json_is( '/error_code' => 'bad_parameter' );
 
@@ -358,10 +358,10 @@ subtest 'add() tests' => sub {
     my $item2        = $builder->build_sample_item( { biblionumber => $biblio->biblionumber } );
     my $displayitem2 = {
         display_id   => $display->display_id,
-        itemnumber   => $item2->itemnumber,
-        biblionumber => $biblio->biblionumber,
-        date_added   => "2024-01-16",
-        date_remove  => "2024-02-16"
+        item_id      => $item2->itemnumber,
+        biblio_id    => $biblio->biblionumber,
+        added_date   => "2024-01-16",
+        removal_date => "2024-02-16"
     };
     $t->post_ok( "//$userid:$password@/api/v1/display/items" => json => $displayitem2 )->status_is(201);
 
@@ -414,13 +414,13 @@ subtest 'update() tests' => sub {
     # Unauthorized attempt to update
     $t->put_ok( "//$unauth_userid:$password@/api/v1/display/items/"
             . $displayitem->display_id . "/"
-            . $displayitem->itemnumber => json => { date_added => '2024-01-20' } )->status_is(403);
+            . $displayitem->itemnumber => json => { added_date => '2024-01-20' } )->status_is(403);
 
     # Attempt partial update on a PUT (missing required field)
     my $displayitem_with_missing_field = {
-        biblionumber => $biblio->biblionumber
+        biblio_id => $biblio->biblionumber
 
-            # Missing display_id and itemnumber (required fields)
+            # Missing display_id and item_id (required fields)
     };
 
     $t->put_ok( "//$userid:$password@/api/v1/display/items/"
@@ -432,24 +432,24 @@ subtest 'update() tests' => sub {
     # Full object update on PUT
     my $displayitem_with_updated_field = {
         display_id   => $display->display_id,
-        itemnumber   => $item->itemnumber,
-        biblionumber => $biblio->biblionumber,
-        date_added   => "2024-01-20",
-        date_remove  => "2024-03-20"
+        item_id      => $item->itemnumber,
+        biblio_id    => $biblio->biblionumber,
+        added_date   => "2024-01-20",
+        removal_date => "2024-03-20"
     };
 
     $t->put_ok( "//$userid:$password@/api/v1/display/items/"
             . $displayitem->display_id . "/"
             . $displayitem->itemnumber => json => $displayitem_with_updated_field )
         ->status_is(200)
-        ->json_is( '/date_added' => '2024-01-20' );
+        ->json_is( '/added_date' => '2024-01-20' );
 
     # Authorized attempt to write invalid data
     my $displayitem_with_invalid_field = {
-        blah         => "DisplayItem Blah",
-        display_id   => $display->display_id,
-        itemnumber   => $item->itemnumber,
-        biblionumber => $biblio->biblionumber
+        blah       => "DisplayItem Blah",
+        display_id => $display->display_id,
+        item_id    => $item->itemnumber,
+        biblio_id  => $biblio->biblionumber
     };
 
     $t->put_ok( "//$userid:$password@/api/v1/display/items/"
@@ -631,7 +631,7 @@ subtest 'list_public() and get_public() tests' => sub {
 
     my $returned = $t->tx->res->json;
     is_deeply(
-        [ sort map { $_->{itemnumber} } @{$returned} ],
+        [ sort map { $_->{item_id} } @{$returned} ],
         [ sort $visible1->itemnumber, $visible2->itemnumber ],
         'Items hidden by OpacHiddenItems or on suppressed records are not returned'
     );
@@ -708,10 +708,10 @@ subtest 'library restrictions' => sub {
 
     my $another_item = $builder->build_sample_item;
     my $new          = {
-        itemnumber   => $another_item->itemnumber,
-        biblionumber => $another_item->biblionumber,
-        date_added   => '2000-01-01',
-        date_remove  => '2100-01-01',
+        item_id      => $another_item->itemnumber,
+        biblio_id    => $another_item->biblionumber,
+        added_date   => '2000-01-01',
+        removal_date => '2100-01-01',
     };
     $t->post_ok( $url->('') => json => { %{$new}, display_id => $foreign_display->display_id } )->status_is(403);
     is(
@@ -723,10 +723,10 @@ subtest 'library restrictions' => sub {
     $t->put_ok(
         $url->( '/' . $own_display->display_id . '/' . $own_item->itemnumber ) => json => {
             display_id   => $foreign_display->display_id,
-            itemnumber   => $own_item->itemnumber,
-            biblionumber => $own_item->biblionumber,
-            date_added   => '2000-01-01',
-            date_remove  => '2099-01-01',
+            item_id      => $own_item->itemnumber,
+            biblio_id    => $own_item->biblionumber,
+            added_date   => '2000-01-01',
+            removal_date => '2099-01-01',
         }
     )->status_is(200);
     is(
@@ -742,10 +742,10 @@ subtest 'library restrictions' => sub {
     $t->put_ok(
         $url->( '/' . $foreign_display->display_id . '/' . $foreign_item->itemnumber ) => json => {
             display_id   => $foreign_display->display_id,
-            itemnumber   => $foreign_item->itemnumber,
-            biblionumber => $foreign_item->biblionumber,
-            date_added   => '2000-01-01',
-            date_remove  => '2098-01-01',
+            item_id      => $foreign_item->itemnumber,
+            biblio_id    => $foreign_item->biblionumber,
+            added_date   => '2000-01-01',
+            removal_date => '2098-01-01',
         }
     )->status_is(403);
 

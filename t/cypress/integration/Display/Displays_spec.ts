@@ -87,13 +87,13 @@ describe("Displays - CRUD operations", () => {
         // Display item
         cy.contains("Add new display item").click();
         cy.get("#display_items_barcode_0").type(item.external_id);
-        cy.get("#display_items_date_added_0+input").click();
+        cy.get("#display_items_added_date_0+input").click();
         cy.get(".flatpickr-calendar")
             .eq(2)
             .find("span.today")
             .prev("span")
             .click();
-        cy.get("#display_items_date_remove_0+input").click();
+        cy.get("#display_items_removal_date_0+input").click();
         cy.get(".flatpickr-calendar")
             .eq(3)
             .find("span.today")
@@ -248,11 +248,11 @@ describe("Displays - CRUD operations", () => {
             "have.value",
             item.external_id
         );
-        cy.get("#display_items_date_added_0").should(
+        cy.get("#display_items_added_date_0").should(
             "have.value",
             dates.yesterday_iso
         );
-        cy.get("#display_items_date_remove_0").should(
+        cy.get("#display_items_removal_date_0").should(
             "have.value",
             dates.tomorrow_iso
         );
@@ -406,13 +406,13 @@ describe("Displays - CRUD operations", () => {
                 force: true,
             }
         );
-        cy.get("#date_added+input").click();
+        cy.get("#added_date+input").click();
         cy.get(".flatpickr-calendar")
             .eq(0)
             .find("span.today")
             .prev("span")
             .click();
-        cy.get("#date_remove+input").click();
+        cy.get("#removal_date+input").click();
         cy.get(".flatpickr-calendar")
             .eq(1)
             .find("span.today")

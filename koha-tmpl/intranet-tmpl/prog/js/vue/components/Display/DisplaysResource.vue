@@ -388,7 +388,7 @@ export default {
                                 link: {
                                     href: "/cgi-bin/koha/catalogue/detail.pl",
                                     params: {
-                                        biblionumber: "biblionumber",
+                                        biblionumber: "biblio_id",
                                     },
                                 },
                             },
@@ -398,18 +398,18 @@ export default {
                                 link: {
                                     href: "/cgi-bin/koha/catalogue/moredetail.pl",
                                     params: {
-                                        itemnumber: "itemnumber",
+                                        itemnumber: "item_id",
                                     },
                                 },
                             },
                             {
                                 name: $__("Date added"),
-                                value: "date_added",
+                                value: "added_date",
                                 format: $date,
                             },
                             {
                                 name: $__("Date to remove"),
-                                value: "date_remove",
+                                value: "removal_date",
                                 format: $date,
                             },
                         ],
@@ -430,11 +430,11 @@ export default {
                         newRelationshipDefaultAttrs: {
                             type: "object",
                             value: {
-                                biblionumber: null,
-                                itemnumber: null,
+                                biblio_id: null,
+                                item_id: null,
                                 barcode: null,
-                                date_added: null,
-                                date_remove: null,
+                                added_date: null,
+                                removal_date: null,
                             },
                         },
                     },
@@ -453,7 +453,7 @@ export default {
                             },
                         },
                         {
-                            name: "date_added",
+                            name: "added_date",
                             label: $__("Date added"),
                             type: "date",
                             toolTip: $__("Date item becomes active on display"),
@@ -467,7 +467,7 @@ export default {
                             },
                         },
                         {
-                            name: "date_remove",
+                            name: "removal_date",
                             label: $__("Date to remove"),
                             type: "date",
                             toolTip: $__(
@@ -586,8 +586,8 @@ export default {
                         $__("The barcode entered does not match an item")
                     );
                 } else {
-                    const dtAdded = Date.parse(display_item.date_added);
-                    const dtRemove = Date.parse(display_item.date_remove);
+                    const dtAdded = Date.parse(display_item.added_date);
+                    const dtRemove = Date.parse(display_item.removal_date);
 
                     if (dtRemove < dtAdded)
                         errors.push(
@@ -610,17 +610,17 @@ export default {
                             "The item entered is already on another active display. Set a date added for this item after the date added of the active display, or remove the item from the other display."
                         );
 
-                        if (display_item.date_added == undefined)
+                        if (display_item.added_date == undefined)
                             errors.push(errorStr);
 
                         for (const active_display_item of active_display.display_items) {
-                            if (active_display_item.itemnumber != item.item_id)
+                            if (active_display_item.item_id != item.item_id)
                                 continue;
 
                             const dtOld = Date.parse(
-                                active_display_item.date_added
+                                active_display_item.added_date
                             );
-                            const dtNew = Date.parse(display_item.date_added);
+                            const dtNew = Date.parse(display_item.added_date);
 
                             if (dtNew < dtOld) errors.push(errorStr);
                         }
@@ -668,7 +668,7 @@ export default {
                     display_item_id,
                     active,
                     barcode,
-                    biblionumber,
+                    biblio_id,
                     title,
                     ...keepAttrs
                 }) => keepAttrs
@@ -682,8 +682,8 @@ export default {
                     const item = display_item.item;
                     delete display_item.item;
 
-                    display_item.biblionumber = item.biblio_id;
-                    display_item.itemnumber = item.item_id;
+                    display_item.biblio_id = item.biblio_id;
+                    display_item.item_id = item.item_id;
 
                     await display.display_items.push(display_item);
                 }
@@ -784,7 +784,7 @@ export default {
                     componentData.resource.value.display_items[idx].barcode =
                         __("Loading");
 
-                    getItemFromId(display_item.itemnumber)
+                    getItemFromId(display_item.item_id)
                         .then(item => {
                             componentData.resource.value.display_items[
                                 idx

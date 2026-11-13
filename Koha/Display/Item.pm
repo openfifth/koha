@@ -316,6 +316,22 @@ sub public_read_list {
     ];
 }
 
+=head3 to_api_mapping
+
+This method returns the mapping for representing a Koha::Display::Item object
+on the API.
+
+=cut
+
+sub to_api_mapping {
+    return {
+        itemnumber   => 'item_id',
+        biblionumber => 'biblio_id',
+        date_added   => 'added_date',
+        date_remove  => 'removal_date',
+    };
+}
+
 =head2 Internal methods
 
 =head3 _reindex_item

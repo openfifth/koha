@@ -148,9 +148,9 @@ sub update {
 
         # The URL identifies the display item: the body cannot move it elsewhere
         my $body = $c->req->json;
-        $body->{display_id}   = $displayitem->display_id;
-        $body->{itemnumber}   = $displayitem->itemnumber;
-        $body->{biblionumber} = $displayitem->biblionumber if exists $body->{biblionumber};
+        $body->{display_id} = $displayitem->display_id;
+        $body->{item_id}    = $displayitem->itemnumber;
+        $body->{biblio_id}  = $displayitem->biblionumber if exists $body->{biblio_id};
 
         $displayitem->set_from_api($body);
         $displayitem->store();
@@ -293,8 +293,8 @@ sub batch_add {
         my $job_id = Koha::BackgroundJob::BatchAddDisplayItems->new->enqueue(
             {
                 barcodes    => $body->{barcodes},
-                date_added  => $body->{date_added}  // undef,
-                date_remove => $body->{date_remove} // undef,
+                date_added  => $body->{added_date}   // undef,
+                date_remove => $body->{removal_date} // undef,
                 display_id  => $body->{display_id},
             }
         );

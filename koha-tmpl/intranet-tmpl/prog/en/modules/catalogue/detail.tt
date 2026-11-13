@@ -38,7 +38,7 @@
 
 [% Asset.css("lib/Chocolat/css/chocolat.css") | $raw %]
 [% INCLUDE 'doc-head-close.inc' %]
-<!--</head>-->
+<!--<!--</head>-->-->
 [% BLOCK acq_status %]
     <span
         title="The status 'Unlinked' means: no linked orders. Cancelled means that all orders are cancelled. Processing implies any active or new order lines. Status 'acquired' implies any completely received lines (with remaining lines cancelled)."
@@ -56,7 +56,7 @@
     </span>
 [% END %]
 
-<!--<body id="catalog_detail" class="catalog">-->
+<!--<!--<body id="catalog_detail" class="catalog">-->-->
 [% WRAPPER 'header.inc' %]
     [% INCLUDE 'cat-search.inc' %]
 [% END %]
@@ -2784,13 +2784,12 @@
                 const biblionumber = [% biblionumber | html %];
                 const data = {
                     display_id: parseInt(displayId),
-                    itemnumber: parseInt(itemId),
-                    biblionumber: biblionumber,
-                    date_added: new Date().toISOString().split('T')[0]
+                    item_id: parseInt(itemId),
+                    biblio_id: biblionumber,
+                    added_date: new Date().toISOString().split('T')[0],
+                    // Required, but may be null: the display's duration then applies
+                    removal_date: removeDate || null
                 };
-                if (removeDate) {
-                    data.date_remove = removeDate;
-                }
 
                 return fetch("/api/v1/display/items", {
                     method: "POST",

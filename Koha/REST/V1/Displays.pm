@@ -26,6 +26,7 @@ use C4::Context;
 use Koha::Auth::Permissions;
 use Koha::Database;
 use Koha::Display;
+use Koha::Display::Item;
 use Koha::Displays;
 use Koha::Exceptions::REST;
 use Koha::DateUtils qw( dt_from_string );
@@ -316,6 +317,12 @@ sub _writable_body {
     my $body          = $c->req->json;
     my $display_items = delete $body->{display_items} || undef;
     delete @{$body}{qw( display_library home_library holding_library item_type _strings )};
+
+    # The items are given with their API names: the display works with the model's
+    if ($display_items) {
+        my $display_item = Koha::Display::Item->new;
+        $display_items = [ map { $display_item->attributes_from_api($_) } @{$display_items} ];
+    }
 
     return ( $body, $display_items );
 }
