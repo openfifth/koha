@@ -271,6 +271,27 @@ sub to_api {
     return $json_display_item;
 }
 
+=head2 Public API methods
+
+=head3 public_read_list
+
+Returns the list of fields that are allowed to be read by the public API.
+
+=cut
+
+sub public_read_list {
+    return [
+        qw(
+            display_item_id
+            display_id
+            itemnumber
+            biblionumber
+            date_added
+            date_remove
+        )
+    ];
+}
+
 =head2 Internal methods
 
 =head3 _reindex_item

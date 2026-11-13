@@ -20,11 +20,14 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 12;
+use Test::More tests => 13;
 
 use Koha::Database;
 use Koha::DateUtils qw( dt_from_string );
+use Koha::ActionLogs;
 use Koha::Displays;
+
+use t::lib::Mocks;
 
 use t::lib::TestBuilder;
 
@@ -203,6 +206,20 @@ subtest 'active method' => sub {
 
     # Clean up the inactive display
     $inactive_display->delete;
+};
+
+subtest 'delete() is logged as DELETE' => sub {
+    plan tests => 2;
+
+    t::lib::Mocks::mock_preference( 'DisplayItemsLog', 1 );
+
+    my $display = $builder->build_object( { class => 'Koha::Displays', value => { enabled => 1 } } );
+    my $id      = $display->display_id;
+    $display->delete;
+
+    my $logs = Koha::ActionLogs->search( { module => 'DISPLAYS', object => $id } );
+    is( $logs->search( { action => 'DELETE' } )->count,      1, 'Deleting a display logs DELETE' );
+    is( $logs->search( { action => 'REMOVE_ITEM' } )->count, 0, 'It is not confused with removing an item' );
 };
 
 # Test delete

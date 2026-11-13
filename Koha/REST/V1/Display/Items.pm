@@ -24,7 +24,9 @@ use Mojo::Base 'Mojolicious::Controller';
 use Koha::DateUtils qw( dt_from_string );
 use Koha::Display::Item;
 use Koha::Display::Items;
+use Koha::Biblios;
 use Koha::Displays;
+use Koha::Items;
 
 use Try::Tiny    qw( catch try );
 use Scalar::Util qw( blessed );
@@ -87,7 +89,18 @@ sub add {
 
     return try {
         my $displayitem = Koha::Display::Item->new_from_api( $c->req->json );
-        $displayitem->store;
+
+        # store() declines (returns false) rather than throwing when the display
+        # or item is missing, the dates are invalid, or a later addition exists
+        my $stored = $displayitem->store;
+        return $c->render(
+            status  => 400,
+            openapi => {
+                error      => 'The display item could not be stored',
+                error_code => 'display_item_not_stored',
+            }
+        ) unless $stored && $displayitem->in_storage;
+
         $c->res->headers->location(
             $c->req->url->to_string . '/' . $displayitem->display_id . '/' . $displayitem->itemnumber );
         return $c->render(
@@ -163,22 +176,8 @@ sub list_public {
         return $c->render_resource_not_found("Display item")
             unless C4::Context->preference('UseDisplayModule');
 
-        my $today = dt_from_string()->truncate( to => 'day' )->ymd;
-
-        my $displayitems_set = Koha::Display::Items->search(
-            {
-                'display.enabled' => 1,
-                -and              => [
-                    -or => [ { 'display.start_date' => undef }, { 'display.start_date' => { '<=' => $today } } ],
-                    -or => [ { 'display.end_date'   => undef }, { 'display.end_date'   => { '>=' => $today } } ],
-                ],
-                -or => [ { 'me.date_remove' => undef }, { 'me.date_remove' => { '>=' => $today } } ],
-            },
-            { join => 'display' }
-        );
-
-        my $displayitems = $c->objects->search($displayitems_set);
-        return $c->render( openapi => $displayitems_set );
+        my $displayitems = $c->objects->search( _public_display_items() );
+        return $c->render( openapi => $displayitems );
     } catch {
         $c->unhandled_exception($_);
     };
@@ -195,31 +194,58 @@ sub get_public {
         return $c->render_resource_not_found("Display item")
             unless C4::Context->preference('UseDisplayModule');
 
-        my $today = dt_from_string->truncate( to => 'day' )->ymd;
-
-        my $displayitems_set = Koha::Display::Items->search(
+        my $displayitem = _public_display_items()->search(
             {
-                'me.display_id'   => $c->param('display_id'),
-                'me.itemnumber'   => $c->param('item_id'),
-                'display.enabled' => 1,
-                -and              => [
-                    -or => [ { 'display.start_date' => undef }, { 'display.start_date' => { '<=' => $today } } ],
-                    -or => [ { 'display.end_date'   => undef }, { 'display.end_date'   => { '>=' => $today } } ],
-                ],
-                -or => [ { 'me.date_remove' => undef }, { 'me.date_remove' => { '>=' => $today } } ],
-            },
-            { join => 'display' }
+                'me.display_id' => $c->param('display_id'),
+                'me.itemnumber' => $c->param('item_id'),
+            }
         )->next;
 
         return $c->render_resource_not_found("Display item")
-            unless $displayitems_set;
-
-        my $displayitem = Koha::Display::Items->find( $displayitems_set->display_item_id );
+            unless $displayitem;
 
         return $c->render( openapi => $displayitem->to_api );
     } catch {
         $c->unhandled_exception($_);
     };
+}
+
+=head3 _public_display_items
+
+Returns the display items that may be exposed publicly: on an enabled display
+that is currently running, not past its removal date, and whose item and
+record are not hidden or suppressed in the OPAC.
+
+=cut
+
+sub _public_display_items {
+    my $today = dt_from_string()->truncate( to => 'day' )->ymd;
+
+    my $visible_items = Koha::Items->filter_by_visible_in_opac->_resultset->get_column('itemnumber')->as_query;
+
+    my $running_displays = Koha::Displays->search(
+        {
+            enabled => 1,
+            -and    => [
+                -or => [ { start_date => undef }, { start_date => { '<=' => $today } } ],
+                -or => [ { end_date   => undef }, { end_date   => { '>=' => $today } } ],
+            ],
+        }
+    )->_resultset->get_column('display_id')->as_query;
+
+    my %conditions = (
+        'me.display_id' => { -in => $running_displays },
+        'me.itemnumber' => { -in => $visible_items },
+        -or             => [ { 'me.date_remove' => undef }, { 'me.date_remove' => { '>=' => $today } } ],
+    );
+
+    if ( C4::Context->is_opac_suppressed ) {
+        $conditions{'me.biblionumber'} =
+            { -in =>
+                Koha::Biblios->search( { opac_suppressed => 0 } )->_resultset->get_column('biblionumber')->as_query };
+    }
+
+    return Koha::Display::Items->search( \%conditions );
 }
 
 =head3 batch_add

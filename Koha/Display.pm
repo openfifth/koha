@@ -254,7 +254,7 @@ Overloaded delete method to add action logging.
 sub delete {
     my ($self) = @_;
 
-    logaction( "DISPLAYS", "REMOVE_ITEM", $self->display_id, $self, undef, $self )
+    logaction( "DISPLAYS", "DELETE", $self->display_id, $self, undef, $self )
         if ( C4::Context->preference("DisplayItemsLog") );
 
     return $self->SUPER::delete;

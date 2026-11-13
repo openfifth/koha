@@ -90,7 +90,7 @@ sub process {
         my $schema = Koha::Database->new->schema;
         $schema->txn_do(
             sub {
-                for my $barcode ( sort { $a <=> $b } @barcodes ) {
+                for my $barcode ( sort { $a cmp $b } @barcodes ) {
 
                     last if $self->get_from_storage->status eq 'cancelled';
 

@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 6;
+use Test::More tests => 8;
 use Test::Mojo;
 use JSON;
 
@@ -235,7 +235,7 @@ subtest 'get() tests' => sub {
 
 subtest 'add() tests' => sub {
 
-    plan tests => 17;
+    plan tests => 21;
 
     $schema->storage->txn_begin;
 
@@ -317,6 +317,22 @@ subtest 'add() tests' => sub {
     $t->post_ok( "//$userid:$password@/api/v1/display/items" => json => $displayitem_missing_field )
         ->status_is(400)
         ->json_has('/errors');
+
+    # A display item the model declines to store must not report success
+    my $item_unstored = $builder->build_sample_item( { biblionumber => $biblio->biblionumber } );
+    $t->post_ok(
+        "//$userid:$password@/api/v1/display/items" => json => {
+            display_id   => $display->display_id,
+            itemnumber   => $item_unstored->itemnumber,
+            biblionumber => $biblio->biblionumber,
+            date_added   => "2024-03-01",
+            date_remove  => "2024-02-01",                 # before date_added
+        }
+    )->status_is(400)->json_is( '/error_code' => 'display_item_not_stored' );
+    is(
+        Koha::Display::Items->search( { itemnumber => $item_unstored->itemnumber } )->count, 0,
+        'Nothing was stored'
+    );
 
     # Test successful creation with different item
     my $item2        = $builder->build_sample_item( { biblionumber => $biblio->biblionumber } );
@@ -495,6 +511,111 @@ subtest 'delete() tests' => sub {
     $t->delete_ok(
         "//$userid:$password@/api/v1/display/items/" . $displayitem->display_id . "/" . $displayitem->itemnumber )
         ->status_is(404);
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'batch_add() and batch_delete() barcodes' => sub {
+
+    plan tests => 6;
+
+    $schema->storage->txn_begin;
+
+    my $librarian = $builder->build_object(
+        {
+            class => 'Koha::Patrons',
+            value => { flags => 2**34 }
+        }
+    );
+    my $password = 'thePassword123';
+    $librarian->set_password( { password => $password, skip_validation => 1 } );
+    my $userid = $librarian->userid;
+
+    my $display = $builder->build_object( { class => 'Koha::Displays' } );
+
+    # Barcodes are strings and may contain letters
+    $t->post_ok(
+        "//$userid:$password@/api/v1/display/items/batch" => json => {
+            display_id => $display->display_id,
+            barcodes   => [ 'ABC123', '0012345' ],
+        }
+    )->status_is(202);
+
+    $t->delete_ok(
+        "//$userid:$password@/api/v1/display/items/batch" => json => {
+            barcodes => [ 'ABC123', '0012345' ],
+        }
+    )->status_is(202);
+
+    $t->post_ok(
+        "//$userid:$password@/api/v1/display/items/batch" => json => {
+            display_id => $display->display_id,
+            barcodes   => [],
+        }
+    )->status_is(400);
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'list_public() and get_public() tests' => sub {
+
+    plan tests => 11;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'UseDisplayModule', 1 );
+    t::lib::Mocks::mock_preference( 'OpacSuppression',  1 );
+    t::lib::Mocks::mock_preference( 'OpacHiddenItems',  'withdrawn: [1]' );
+    t::lib::Mocks::mock_preference( 'hidelostitems',    0 );
+
+    my $display = $builder->build_object(
+        {
+            class => 'Koha::Displays',
+            value => { enabled => 1, start_date => '2000-01-01', end_date => '2100-01-01' },
+        }
+    );
+
+    my $make = sub {
+        my ( $item_params, $suppress ) = @_;
+        my $biblio = $builder->build_sample_biblio;
+        $biblio->opac_suppressed(1)->store if $suppress;
+        my $item = $builder->build_sample_item( { biblionumber => $biblio->biblionumber, %{ $item_params // {} } } );
+        $builder->build_object(
+            {
+                class => 'Koha::Display::Items',
+                value => {
+                    display_id   => $display->display_id,
+                    itemnumber   => $item->itemnumber,
+                    biblionumber => $biblio->biblionumber,
+                    date_added   => '2000-01-01',
+                    date_remove  => '2100-01-01',
+                },
+            }
+        );
+        return $item;
+    };
+
+    my $visible1   = $make->();
+    my $visible2   = $make->();
+    my $hidden     = $make->( { withdrawn => 1 } );
+    my $suppressed = $make->( undef, 1 );
+
+    $t->get_ok( '/api/v1/public/display/items?display_id=' . $display->display_id )
+        ->status_is(200)
+        ->json_has( '/0', 'there is a first result' );
+
+    my $returned = $t->tx->res->json;
+    is_deeply(
+        [ sort map { $_->{itemnumber} } @{$returned} ],
+        [ sort $visible1->itemnumber, $visible2->itemnumber ],
+        'Items hidden by OpacHiddenItems or on suppressed records are not returned'
+    );
+
+    $t->get_ok( '/api/v1/public/display/items?_per_page=1&display_id=' . $display->display_id )->status_is(200);
+    is( scalar @{ $t->tx->res->json }, 1, 'Public list is paginated' );
+
+    $t->get_ok( '/api/v1/public/display/items/' . $display->display_id . '/' . $visible1->itemnumber )->status_is(200);
+    $t->get_ok( '/api/v1/public/display/items/' . $display->display_id . '/' . $hidden->itemnumber )->status_is(404);
 
     $schema->storage->txn_rollback;
 };

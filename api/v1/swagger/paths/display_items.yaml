@@ -277,7 +277,7 @@
               description: Array of item barcodes to add to the display
               type: array
               items:
-                type: integer
+                type: string
               minItems: 1
             date_added:
               description: Optional date when items should be added to display
@@ -351,7 +351,7 @@
               description: Array of item barcodes to remove from displays
               type: array
               items:
-                type: integer
+                type: string
               minItems: 1
             display_id:
               description: Optional display ID - if specified, only remove items from this display
