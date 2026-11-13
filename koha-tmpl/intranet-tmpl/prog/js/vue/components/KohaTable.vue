@@ -214,11 +214,11 @@ export default {
                                         });
                                     }
                                 } else if (action == "show") {
-                                    content.push(
-                                        '<a class="show btn btn-default btn-xs" role="button"><i class="fa fa-eye"></i> ' +
-                                            $__("Show") +
-                                            "</a>"
-                                    );
+                                    content.push({
+                                        action_name: "show",
+                                        icon: "fa fa-eye",
+                                        text: $__("Show"),
+                                    });
                                 } else if (action == "edit") {
                                     content.push({
                                         action_name: "edit",
