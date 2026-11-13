@@ -575,7 +575,7 @@
         <span class="sub_permission delete_displays_from_any_libraries_subpermission"> Delete displays from any libraries </span>
         <span class="permissioncode">([% name | html %])</span>
     [%- CASE 'manage_display_items' -%]
-        <span class="sub_permission manage_display_items_subpermission"> Create, edit, and delete display items </span>
+        <span class="sub_permission manage_display_items_subpermission"> Create, view, edit, and delete display items </span>
         <span class="permissioncode">([% name | html %])</span>
     [%- CASE 'configure' -%]
         <span class="sub_permission configure_subpermission"> Configure plugins </span>

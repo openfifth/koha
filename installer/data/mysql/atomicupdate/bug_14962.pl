@@ -1,4 +1,5 @@
 use Modern::Perl;
+use Koha::Installer::Output qw(say_warning say_failure say_success say_info);
 
 return {
     bug_number  => "14962",
@@ -39,7 +40,9 @@ return {
             }
             );
 
-            say $out "Added new table 'displays'";
+            say_success( $out, "Added new table 'displays'" );
+        } else {
+            say_info( $out, "Table 'displays' already exists, skipping" );
         }
 
         # Create display_items table
@@ -49,8 +52,8 @@ return {
                 CREATE TABLE IF NOT EXISTS `display_items` (
                     `display_item_id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'primary key',
                     `display_id` int(11) NOT NULL COMMENT 'foreign key to link to displays.display_id',
-                    `itemnumber` int(11) DEFAULT NULL COMMENT 'items.itemnumber for the item on display',
-                    `biblionumber` int(11) DEFAULT NULL COMMENT 'biblio.biblionumber for the bibliographic record on display',
+                    `itemnumber` int(11) NOT NULL COMMENT 'items.itemnumber for the item on display',
+                    `biblionumber` int(11) NOT NULL COMMENT 'biblio.biblionumber for the bibliographic record on display',
                     `date_added` date DEFAULT NULL COMMENT 'the date the item was added to the display',
                     `date_remove` date DEFAULT NULL COMMENT 'the date the item should be removed from the display',
                     PRIMARY KEY (`display_item_id`),
@@ -65,38 +68,52 @@ return {
             }
             );
 
-            say $out "Added new table 'display_items'";
+            say_success( $out, "Added new table 'display_items'" );
+        } else {
+            say_info( $out, "Table 'display_items' already exists, skipping" );
         }
 
         # Add UseDisplayModule system preference
-        $dbh->do(
+        my $inserted = $dbh->do(
             q{
             INSERT IGNORE INTO systempreferences (variable, value)
             VALUES ('UseDisplayModule', '0')
         }
         );
-        say $out "Added UseDisplayModule system preference";
+        if ( $inserted > 0 ) {
+            say_success( $out, "Added UseDisplayModule system preference" );
+        } else {
+            say_info( $out, "UseDisplayModule system preference already exists, skipping" );
+        }
 
         # Add DisplayItemsLog system preference
-        $dbh->do(
+        $inserted = $dbh->do(
             q{
             INSERT IGNORE INTO systempreferences (variable, value)
             VALUES ('DisplayItemsLog', '1')
         }
         );
-        say $out "Added DisplayItemsLog system preference";
+        if ( $inserted > 0 ) {
+            say_success( $out, "Added DisplayItemsLog system preference" );
+        } else {
+            say_info( $out, "DisplayItemsLog system preference already exists, skipping" );
+        }
 
         # Add displays user flag
-        $dbh->do(
+        $inserted = $dbh->do(
             q{
             INSERT IGNORE INTO userflags (bit, flag, flagdesc, defaulton) VALUES
                 (34, 'displays', 'Display module', 0)
         }
         );
-        say $out "Added displays user flag";
+        if ( $inserted > 0 ) {
+            say_success( $out, "Added displays user flag" );
+        } else {
+            say_info( $out, "Displays user flag already exists, skipping" );
+        }
 
         # Add display permissions
-        $dbh->do(
+        $inserted = $dbh->do(
             q{
             INSERT IGNORE INTO permissions (module_bit, code, description) VALUES
                 (34, 'add_displays', 'Create displays'),
@@ -110,26 +127,38 @@ return {
                 (34, 'manage_display_items', 'Create, view, edit, and delete display items')
         }
         );
-        say $out "Added display permissions";
+        if ( $inserted > 0 ) {
+            say_success( $out, "Added display permissions" );
+        } else {
+            say_info( $out, "Display permissions already exists, skipping" );
+        }
 
         # Add AV category and entries for displays
-        $dbh->do(
+        $inserted = $dbh->do(
             q{
             INSERT IGNORE INTO authorised_value_categories( category_name, is_system ) VALUES ('DISPLAY_RETURN_OVER', 1);
         }
         );
-        say $out "Added DISPLAY_RETURN_OVER authorised_value_category";
+        if ( $inserted > 0 ) {
+            say_success( $out, "Added DISPLAY_RETURN_OVER authorised_value_category" );
+        } else {
+            say_info( $out, "DISPLAY_RETURN_OVER authorised_value_category already exists, skipping" );
+        }
 
-        $dbh->do(
+        $inserted = $dbh->do(
             q{
             INSERT IGNORE INTO authorised_values (category, authorised_value, lib)
             VALUES
-                ('DISPLAY_RETURN_OVER', 'any', 'Remove from display when checked-in at any library'),
-                ('DISPLAY_RETURN_OVER', 'any_except_homebranch', 'Remove from display when checked-in at any library, except permanent home library'),
+                ('DISPLAY_RETURN_OVER', 'any', 'Remove from display at any library'),
+                ('DISPLAY_RETURN_OVER', 'any_except_homebranch', 'Remove from display at any library, except permanent home library'),
                 ('DISPLAY_RETURN_OVER', 'no', 'Do nothing')
         }
         );
-        say $out "Added default authorised values for DISPLAY_RETURN_OVER";
+        if ( $inserted > 0 ) {
+            say_success( $out, "Added default authorised values for DISPLAY_RETURN_OVER" );
+        } else {
+            say_info( $out, "Default authorised values for DISPLAY_RETURN_OVER already exists, skipping" );
+        }
 
         # Add ft_display_group column to library_groups table
         unless ( column_exists( 'library_groups', 'ft_display_group' ) ) {
@@ -139,7 +168,9 @@ return {
                 ADD COLUMN `ft_display_group` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Use this group to identify libraries that can share display items' AFTER `ft_local_float_group`
             }
             );
-            say $out "Added ft_display_group column to library_groups table";
+            say_success( $out, "Added ft_display_group column to library_groups table" );
+        } else {
+            say_info( $out, "Column 'library_groups.ft_display_group' already exists, skipping" );
         }
     },
 };

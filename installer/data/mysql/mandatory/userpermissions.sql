@@ -194,5 +194,5 @@ INSERT INTO permissions (module_bit, code, description) VALUES
    (34, 'edit_displays_from_any_libraries', 'Edit displays from any libraries'),
    (34, 'delete_displays', 'Delete displays'),
    (34, 'delete_displays_from_any_libraries', 'Delete displays from any libraries'),
-   (34, 'manage_display_items', 'Create, edit, and delete display items')
+   (34, 'manage_display_items', 'Create, view, edit, and delete display items')
 ;

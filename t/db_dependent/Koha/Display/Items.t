@@ -220,7 +220,7 @@ subtest 'due_for_removal method' => sub {
 };
 
 subtest 'store() validation' => sub {
-    plan tests => 7;
+    plan tests => 8;
 
     t::lib::Mocks::mock_preference( 'UseDisplayModule', 1 );
 
@@ -254,7 +254,12 @@ subtest 'store() validation' => sub {
     }
     'Koha::Exceptions::BadParameter', 'date_remove before date_added is refused';
 
-    my $stored = Koha::Display::Item->new( { %base, date_added => '2000-03-01', date_remove => '2100-01-01' } )->store;
+    # The record is always the item's own, whatever was passed
+    my $other_biblio = $builder->build_sample_biblio;
+    my $stored       = Koha::Display::Item->new(
+        { %base, biblionumber => $other_biblio->biblionumber, date_added => '2000-03-01', date_remove => '2100-01-01' }
+    )->store;
+    is( $stored->biblionumber, $item->biblionumber, 'The biblionumber is taken from the item' );
     ok( $stored->in_storage, 'A valid display item is stored' );
 
     # The item is on an active display added on 2000-03-01: an earlier addition elsewhere is refused

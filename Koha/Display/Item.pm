@@ -121,6 +121,9 @@ sub store {
         error     => sprintf( 'Item %s does not exist', $self->itemnumber // q{} ),
     ) unless $item;
 
+    # The record is always the item's own
+    $self->biblionumber( $item->biblionumber );
+
     Koha::Exceptions::BadParameter->throw(
         parameter => 'date_added',
         error     => 'A display item requires a date_added',
