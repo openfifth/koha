@@ -90,17 +90,9 @@ sub add {
     return try {
         my $displayitem = Koha::Display::Item->new_from_api( $c->req->json );
 
-        # store() declines (returns false) rather than throwing when the display
-        # or item is missing, the dates are invalid, or a later addition exists
-        my $stored = $displayitem->store;
-        return $c->render(
-            status  => 400,
-            openapi => {
-                error      => 'The display item could not be stored',
-                error_code => 'display_item_not_stored',
-            }
-        ) unless $stored && $displayitem->in_storage;
-
+        # store() throws Koha::Exceptions::BadParameter (rendered as a 400)
+        # when the display or item does not exist or the dates are invalid
+        $displayitem->store;
         $c->res->headers->location(
             $c->req->url->to_string . '/' . $displayitem->display_id . '/' . $displayitem->itemnumber );
         return $c->render(

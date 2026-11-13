@@ -26,8 +26,13 @@ use C4::Log qw( logaction );
 use Koha::Database;
 use Koha::DateUtils qw( dt_from_string );
 use Koha::Display;
+use Koha::Displays;
+use Koha::Exceptions;
 use Koha::Item;
+use Koha::Items;
 use Koha::Biblio;
+use Koha::SearchEngine;
+use Koha::SearchEngine::Indexer;
 
 use base qw(Koha::Object);
 
@@ -53,6 +58,7 @@ Returns the related Koha::Display object for this display item.
 sub display {
     my ($self) = @_;
     my $rs = $self->_result->display;
+    return unless $rs;
     return Koha::Display->_new_from_dbic($rs);
 }
 
@@ -90,23 +96,40 @@ sub biblio {
 
     $display_item->store;
 
-Overloaded store method to add action logging.
+Overloaded store method to validate the display item and add action logging.
+
+Throws a L<Koha::Exceptions::BadParameter> when the display or item does not
+exist, C<date_added> is missing, C<date_remove> is before C<date_added>, or the
+item is already on an active display that was added later.
 
 =cut
 
 sub store {
-    my ($self)         = @_;
-    my $display        = $self->display;
-    my $item           = $self->item;
-    my $active_display = $item->active_display;
+    my ($self) = @_;
 
-    return unless ( $display && $item );
+    # Look the records up by id: for an unsaved row the relationship accessors
+    # return a placeholder object, even when the id does not exist
+    my $display = defined $self->display_id ? Koha::Displays->find( $self->display_id ) : undef;
+    Koha::Exceptions::BadParameter->throw(
+        parameter => 'display_id',
+        error     => sprintf( 'Display %s does not exist', $self->display_id // q{} ),
+    ) unless $display;
 
-    return
-        unless ( defined $self->date_added );
+    my $item = defined $self->itemnumber ? Koha::Items->find( $self->itemnumber ) : undef;
+    Koha::Exceptions::BadParameter->throw(
+        parameter => 'itemnumber',
+        error     => sprintf( 'Item %s does not exist', $self->itemnumber // q{} ),
+    ) unless $item;
 
-    return
-        if ( defined $self->date_remove && ( $self->date_remove lt $self->date_added ) );
+    Koha::Exceptions::BadParameter->throw(
+        parameter => 'date_added',
+        error     => 'A display item requires a date_added',
+    ) unless defined $self->date_added;
+
+    Koha::Exceptions::BadParameter->throw(
+        parameter => 'date_remove',
+        error     => 'date_remove cannot be before date_added',
+    ) if defined $self->date_remove && $self->date_remove lt $self->date_added;
 
     unless ( $self->in_storage ) {
         if ( defined $display->start_date && defined $display->display_days && not defined $self->date_remove ) {
@@ -122,17 +145,13 @@ sub store {
             }
         }
 
-        if ($active_display) {
-            my $active_display_items = Koha::Display::Items->search( { display_id => $active_display->display_id } );
-
-            for my $active_display_item ( $active_display_items->next ) {
-                next unless $active_display_item->itemnumber == $self->itemnumber;
-
-                my $dt_old = dt_from_string( $active_display_item->date_added );
-                my $dt_new = dt_from_string( $self->date_added );
-
-                return if $dt_new < $dt_old;
-            }
+        # An item that is already on an active display cannot be added to another
+        # one with an earlier date than the one it is currently on
+        if ( my $current = $item->active_display_item ) {
+            Koha::Exceptions::BadParameter->throw(
+                parameter => 'date_added',
+                error     => 'The item is already on an active display that was added later',
+            ) if dt_from_string( $self->date_added ) < dt_from_string( $current->date_added );
         }
 
         $self->display_item_id(undef);
@@ -176,10 +195,13 @@ Overloaded delete method to add action logging.
 sub delete {
     my ($self) = @_;
 
-    logaction( "DISPLAYS", "REMOVE_ITEM", $self->display_item_id, $self, undef, $self )
+    my $display_item_id = $self->display_item_id;
+    my $result          = $self->SUPER::delete;
+
+    logaction( "DISPLAYS", "REMOVE_ITEM", $display_item_id, $self, undef, $self )
         if ( C4::Context->preference("DisplayItemsLog") );
 
-    return $self->SUPER::delete;
+    return $result;
 }
 
 =head3 active

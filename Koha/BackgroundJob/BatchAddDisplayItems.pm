@@ -18,13 +18,16 @@ package Koha::BackgroundJob::BatchAddDisplayItems;
 # along with Koha; if not, see <https://www.gnu.org/licenses>.
 
 use Modern::Perl;
-use Try::Tiny qw( catch try );
+use Scalar::Util qw( blessed );
+use Try::Tiny    qw( catch try );
 use C4::Context;
 
+use Koha::Database;
 use Koha::DateUtils qw(dt_from_string);
 use Koha::Display::Item;
 use Koha::Display::Items;
 use Koha::Items;
+use Koha::Logger;
 use Koha::Displays;
 
 use base 'Koha::BackgroundJob';
@@ -76,6 +79,8 @@ sub process {
     my @messages;
     my @added_items;
     my @failed_items;
+    my $cancelled = 0;
+    my $failed    = 0;
 
     # Validate display exists
     my $display = Koha::Displays->find($display_id);
@@ -85,6 +90,7 @@ sub process {
             code       => 'display_not_found',
             display_id => $display_id,
         };
+        $self->status('failed');
         $self->finish( { messages => \@messages, report => $report } );
         return;
     }
@@ -95,7 +101,11 @@ sub process {
             sub {
                 for my $barcode ( sort { $a cmp $b } @barcodes ) {
 
-                    last if $self->get_from_storage->status eq 'cancelled';
+                    if ( $self->get_from_storage->status eq 'cancelled' ) {
+                        $cancelled = 1;
+                        last;
+                    }
+                    $self->step;
 
                     my $item = Koha::Items->find( { barcode => $barcode } );
                     unless ($item) {
@@ -126,16 +136,29 @@ sub process {
                         next;
                     }
 
-                    # Create display item
-                    my $display_item = Koha::Display::Item->new(
-                        {
-                            display_id   => $display_id,
-                            itemnumber   => $itemnumber,
-                            biblionumber => $item->biblionumber,
-                            date_added   => $date_added,
-                            date_remove  => $date_remove,
-                        }
-                    )->store;
+                    # Create display item. A display item the model refuses is a
+                    # failure of that barcode, not of the whole batch
+                    my $display_item = try {
+                        Koha::Display::Item->new(
+                            {
+                                display_id   => $display_id,
+                                itemnumber   => $itemnumber,
+                                biblionumber => $item->biblionumber,
+                                date_added   => $date_added,
+                                date_remove  => $date_remove,
+                            }
+                        )->store;
+                    } catch {
+                        die $_ unless blessed($_) && $_->isa('Koha::Exceptions::BadParameter');
+                        push @failed_items, {
+                            itemnumber => $itemnumber,
+                            barcode    => $barcode,
+                            error      => $_->error,
+                        };
+                        $report->{total_errors}++;
+                        undef;
+                    };
+                    next unless $display_item;
 
                     push @added_items, {
                         display_item_id => $display_item->display_item_id,
@@ -145,19 +168,28 @@ sub process {
                     };
 
                     $report->{total_success}++;
-                    $self->step;
                 }
             }
         );
     } catch {
-        warn $_;
-        push @messages, {
-            type  => 'error',
-            code  => 'unknown',
-            error => $_,
-        };
+        Koha::Logger->get->error( "Job " . $self->id . " (" . $self->job_type . ") failed and was rolled back: $_" );
+
+        # The transaction was rolled back, so nothing the loop counted was kept
+        $failed                  = 1;
+        @added_items             = ();
+        $report->{total_success} = 0;
+        $report->{total_errors}  = $report->{total_records};
+        @messages                = (
+            {
+                type  => 'error',
+                code  => 'unknown',
+                error => "$_",
+            }
+        );
         die "Something terrible has happened!" if ( $_ =~ /Rollback failed/ );
     };
+
+    push @messages, { type => 'warning', code => 'cancelled' } if $cancelled;
 
     $report->{display_id}   = $display_id;
     $report->{display_name} = $display->display_name || q{};
@@ -168,6 +200,7 @@ sub process {
     $data->{messages} = \@messages;
     $data->{report}   = $report;
 
+    $self->status('failed') if $failed;
     $self->finish($data);
 }
 

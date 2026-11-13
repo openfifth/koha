@@ -24,6 +24,7 @@ use Carp;
 use C4::Context;
 use C4::Log qw( logaction );
 use Koha::Database;
+use Koha::Exceptions;
 use Koha::DateUtils qw( dt_from_string );
 use Koha::Displays;
 use Koha::Display::Items;
@@ -88,8 +89,9 @@ sub display_items {
                         if ($existing_item) {
                             my $has_changed = 0;
 
-                            foreach my $key ( keys(%$display_item) ) {
-                                if ( $display_item->{$key} ne $existing_item->$key ) {
+                            foreach my $key (qw( biblionumber date_added date_remove )) {
+                                next unless exists $display_item->{$key};
+                                if ( ( $display_item->{$key} // q{} ) ne ( $existing_item->$key // q{} ) ) {
                                     $has_changed = 1;
                                     last;
                                 }
@@ -193,19 +195,21 @@ sub item_type {
 
     $display->store;
 
-Overloaded store method to add action logging.
+Overloaded store method to validate the display and add action logging.
+
+Throws a L<Koha::Exceptions::BadParameter> if a required attribute is missing.
 
 =cut
 
 sub store {
     my ($self) = @_;
 
-    return
-        unless ( defined $self->display_name
-        && defined $self->display_days
-        && defined $self->start_date
-        && defined $self->display_return_over
-        && defined $self->enabled );
+    for my $required (qw( display_name display_days start_date display_return_over enabled )) {
+        Koha::Exceptions::BadParameter->throw(
+            parameter => $required,
+            error     => "A display requires a $required",
+        ) unless defined $self->$required;
+    }
 
     ## if no end_date is supplied, set it to a really distant date
     ## so that start<->end calculations can be made elsewhere
@@ -254,10 +258,13 @@ Overloaded delete method to add action logging.
 sub delete {
     my ($self) = @_;
 
-    logaction( "DISPLAYS", "DELETE", $self->display_id, $self, undef, $self )
+    my $display_id = $self->display_id;
+    my $result     = $self->SUPER::delete;
+
+    logaction( "DISPLAYS", "DELETE", $display_id, $self, undef, $self )
         if ( C4::Context->preference("DisplayItemsLog") );
 
-    return $self->SUPER::delete;
+    return $result;
 }
 
 =head3 active

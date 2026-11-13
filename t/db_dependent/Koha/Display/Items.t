@@ -20,7 +20,8 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 14;
+use Test::More tests => 15;
+use Test::Exception;
 
 use C4::Context;
 use Koha::DateUtils qw( dt_from_string );
@@ -28,6 +29,7 @@ use Koha::Displays;
 use Koha::Display::Items;
 use Koha::Database;
 
+use t::lib::Mocks;
 use t::lib::TestBuilder;
 
 my $schema = Koha::Database->new->schema;
@@ -215,6 +217,62 @@ subtest 'due_for_removal method' => sub {
     # Clean up the additional display items
     $new_display_1_item_due->delete;
     $new_display_1_item_future->delete;
+};
+
+subtest 'store() validation' => sub {
+    plan tests => 7;
+
+    t::lib::Mocks::mock_preference( 'UseDisplayModule', 1 );
+
+    my $display = $builder->build_object(
+        {
+            class => 'Koha::Displays',
+            value => { enabled => 1, start_date => '2000-01-01', end_date => '2100-01-01', display_days => 7 }
+        }
+    );
+    my $display2 = $builder->build_object(
+        {
+            class => 'Koha::Displays',
+            value => { enabled => 1, start_date => '2000-01-01', end_date => '2100-01-01', display_days => 7 }
+        }
+    );
+    my $item = $builder->build_sample_item;
+    my %base =
+        ( display_id => $display->display_id, itemnumber => $item->itemnumber, biblionumber => $item->biblionumber );
+
+    throws_ok { Koha::Display::Item->new( { %base, date_added => '2000-01-01', itemnumber => 999999999 } )->store }
+    'Koha::Exceptions::BadParameter', 'An unknown item is refused';
+
+    throws_ok { Koha::Display::Item->new( { %base, date_added => '2000-01-01', display_id => 999999999 } )->store }
+    'Koha::Exceptions::BadParameter', 'An unknown display is refused';
+
+    throws_ok { Koha::Display::Item->new( {%base} )->store } 'Koha::Exceptions::BadParameter',
+        'A missing date_added is refused';
+
+    throws_ok {
+        Koha::Display::Item->new( { %base, date_added => '2000-02-01', date_remove => '2000-01-01' } )->store
+    }
+    'Koha::Exceptions::BadParameter', 'date_remove before date_added is refused';
+
+    my $stored = Koha::Display::Item->new( { %base, date_added => '2000-03-01', date_remove => '2100-01-01' } )->store;
+    ok( $stored->in_storage, 'A valid display item is stored' );
+
+    # The item is on an active display added on 2000-03-01: an earlier addition elsewhere is refused
+    throws_ok {
+        Koha::Display::Item->new(
+            { %base, display_id => $display2->display_id, date_added => '2000-02-01', date_remove => '2100-01-01' } )
+            ->store
+    }
+    'Koha::Exceptions::BadParameter', 'An earlier addition to another display is refused';
+
+    my $later = Koha::Display::Item->new(
+        { %base, display_id => $display2->display_id, date_added => '2000-04-01', date_remove => '2100-01-01' } )
+        ->store;
+    ok( $later->in_storage, 'A later addition to another display is accepted' );
+
+    # Leave the shared counts as we found them
+    $later->delete;
+    $stored->delete;
 };
 
 # Test delete

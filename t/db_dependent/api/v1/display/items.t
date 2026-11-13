@@ -235,7 +235,7 @@ subtest 'get() tests' => sub {
 
 subtest 'add() tests' => sub {
 
-    plan tests => 21;
+    plan tests => 27;
 
     $schema->storage->txn_begin;
 
@@ -328,11 +328,31 @@ subtest 'add() tests' => sub {
             date_added   => "2024-03-01",
             date_remove  => "2024-02-01",                 # before date_added
         }
-    )->status_is(400)->json_is( '/error_code' => 'display_item_not_stored' );
+    )->status_is(400)->json_is( '/error_code' => 'bad_parameter' );
     is(
         Koha::Display::Items->search( { itemnumber => $item_unstored->itemnumber } )->count, 0,
         'Nothing was stored'
     );
+
+    # Unknown item and unknown display are client errors, not server errors
+    $t->post_ok(
+        "//$userid:$password@/api/v1/display/items" => json => {
+            display_id   => $display->display_id,
+            itemnumber   => 999999999,
+            biblionumber => $biblio->biblionumber,
+            date_added   => "2024-03-01",
+            date_remove  => "2024-04-01",
+        }
+    )->status_is(400)->json_is( '/error_code' => 'bad_parameter' );
+    $t->post_ok(
+        "//$userid:$password@/api/v1/display/items" => json => {
+            display_id   => 999999999,
+            itemnumber   => $item_unstored->itemnumber,
+            biblionumber => $biblio->biblionumber,
+            date_added   => "2024-03-01",
+            date_remove  => "2024-04-01",
+        }
+    )->status_is(400)->json_is( '/error_code' => 'bad_parameter' );
 
     # Test successful creation with different item
     my $item2        = $builder->build_sample_item( { biblionumber => $biblio->biblionumber } );
