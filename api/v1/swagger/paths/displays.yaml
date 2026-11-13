@@ -164,6 +164,10 @@
         description: Bad request
         schema:
           $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden, the display belongs to a library outside the user's library group
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
       "404":
         description: Display not found
         schema:

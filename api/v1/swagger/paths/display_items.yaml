@@ -101,7 +101,10 @@
         schema:
           $ref: "../swagger.yaml#/definitions/display_item"
       "400":
-        description: Bad request
+        description: |
+          Bad request. Possible `error_code` attribute values:
+
+          * `bad_parameter` - the display or item does not exist, or the dates are invalid
         schema:
           $ref: "../swagger.yaml#/definitions/error"
       "401":
@@ -145,6 +148,10 @@
           $ref: "../swagger.yaml#/definitions/display_item"
       "400":
         description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
+      "403":
+        description: Access forbidden, the display belongs to a library outside the user's library group
         schema:
           $ref: "../swagger.yaml#/definitions/error"
       "404":
@@ -354,9 +361,10 @@
                 type: string
               minItems: 1
             display_id:
-              description: Optional display ID - if specified, only remove items from this display
+              description: ID of the display to remove the items from
               type: integer
           required:
+            - display_id
             - barcodes
           additionalProperties: false
     produces:

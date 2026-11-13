@@ -23,8 +23,10 @@ use Mojo::Base 'Mojolicious::Controller';
 
 use C4::Auth qw( haspermission );
 use C4::Context;
+use Koha::Database;
 use Koha::Display;
 use Koha::Displays;
+use Koha::Exceptions::REST;
 use Koha::DateUtils qw( dt_from_string );
 
 use JSON;
@@ -72,13 +74,10 @@ sub list {
         my $patron = $c->stash('koha.user');
         if ($patron) {
             my @restricted_branchcodes = $patron->libraries_where_can_view_displays;
-            if (@restricted_branchcodes) {
-
-                # User can only see displays from specific libraries
-                $displays_set = $displays_set->search( { 'me.display_branch' => { -in => \@restricted_branchcodes } } );
-            }
 
             # If @restricted_branchcodes is empty, user has access to all displays
+            $displays_set = $displays_set->search( { 'me.display_branch' => { -in => \@restricted_branchcodes } } )
+                if @restricted_branchcodes;
         }
 
         my $displays = $c->objects->search($displays_set);
@@ -101,22 +100,7 @@ sub get {
         return $c->render_resource_not_found("Display")
             unless $display;
 
-        # Check if user has permission to view this display
-        my $patron = $c->stash('koha.user');
-        if ($patron) {
-            my @restricted_branchcodes = $patron->libraries_where_can_view_displays;
-            if (@restricted_branchcodes) {
-
-                # User can only see displays from specific libraries
-                unless ( grep { $_ eq $display->display_branch } @restricted_branchcodes ) {
-                    return Koha::Exceptions::REST::Public::Unauthorized->throw(
-                        error => "This display exists in a branch outside your library group" );
-
-                }
-            }
-
-            # If @restricted_branchcodes is empty, user has access to all displays
-        }
+        _check_access( $c, $display, 'view' );
 
         return $c->render( openapi => $c->objects->to_api($display), );
     } catch {
@@ -132,39 +116,20 @@ sub add {
     my $c = shift->openapi->valid_input or return;
 
     return try {
-        my $body = $c->req->json;
+        my ( $body, $display_items ) = _writable_body($c);
 
-        my $display_items = delete $body->{display_items} || undef;
-
-        # Check permissions before anything is written to the database
-        my $patron  = $c->stash('koha.user');
         my $display = Koha::Display->new_from_api($body);
 
-        if ($patron) {
-            my @restricted_branchcodes = $patron->libraries_where_can_add_displays;
-            if (@restricted_branchcodes) {
+        # Check everything before anything is written to the database
+        _check_access( $c, $display, 'add' );
+        _check_can_manage_display_items($c) if $display_items;
 
-                # User can only add displays in specific libraries
-                unless ( defined $display->display_branch
-                    && grep { $_ eq $display->display_branch } @restricted_branchcodes )
-                {
-                    return Koha::Exceptions::REST::Public::Unauthorized->throw(
-                        error => "This display exists in a branch outside your library group" );
-                }
+        Koha::Database->new->schema->txn_do(
+            sub {
+                $display->store;
+                $display->display_items($display_items) if $display_items;
             }
-
-            # If @restricted_branchcodes is empty, user has access to all displays
-        }
-
-        if ( $display_items
-            && !haspermission( $patron->userid, { displays => 'manage_display_items' } ) )
-        {
-            return Koha::Exceptions::REST::Public::Unauthorized->throw(
-                error => "You do not have permission to manage display items" );
-        }
-
-        $display->store;
-        $display->display_items($display_items) if $display_items;
+        );
 
         $c->res->headers->location( $c->req->url->to_string . '/' . $display->display_id );
         return $c->render(
@@ -184,39 +149,27 @@ sub update {
     my $c = shift->openapi->valid_input or return;
 
     return try {
-        my $body = $c->req->json;
-
-        my $display_items = delete $body->{display_items} || undef;
+        my ( $body, $display_items ) = _writable_body($c);
 
         my $display = Koha::Displays->find( $c->param('display_id') );
         return $c->render_resource_not_found("Display")
             unless $display;
 
-        # Check if user has permission to view this display
-        my $patron = $c->stash('koha.user');
-        if ($patron) {
-            my @restricted_branchcodes = $patron->libraries_where_can_edit_displays;
-            if (@restricted_branchcodes) {
+        # The display must be editable as it is now...
+        _check_access( $c, $display, 'edit' );
+        _check_can_manage_display_items($c) if $display_items;
 
-                # User can only see displays from specific libraries
-                unless ( grep { $_ eq $display->display_branch } @restricted_branchcodes ) {
-                    return Koha::Exceptions::REST::Public::Unauthorized->throw(
-                        error => "This display exists in a branch outside your library group" );
-                }
+        $display->set_from_api($body);
+
+        # ...and as it will be, so it cannot be moved out of the user's libraries
+        _check_access( $c, $display, 'edit' );
+
+        Koha::Database->new->schema->txn_do(
+            sub {
+                $display->store;
+                $display->display_items($display_items) if $display_items;
             }
-
-            # If @restricted_branchcodes is empty, user has access to all displays
-        }
-
-        $display->set_from_api($body)->store;
-
-        if ($display_items) {
-            unless ( haspermission( $c->stash('koha.user')->userid, { displays => 'manage_display_items' } ) ) {
-                return Koha::Exceptions::REST::Public::Unauthorized->throw(
-                    error => "You do not have permission to manage display items" );
-            }
-            $display->display_items($display_items);
-        }
+        );
 
         return $c->render( openapi => $c->objects->to_api($display), );
     } catch {
@@ -236,21 +189,7 @@ sub delete {
         return $c->render_resource_not_found("Display")
             unless $display;
 
-        # Check if user has permission to view this display
-        my $patron = $c->stash('koha.user');
-        if ($patron) {
-            my @restricted_branchcodes = $patron->libraries_where_can_delete_displays;
-            if (@restricted_branchcodes) {
-
-                # User can only see displays from specific libraries
-                unless ( grep { $_ eq $display->display_branch } @restricted_branchcodes ) {
-                    return Koha::Exceptions::REST::Public::Unauthorized->throw(
-                        error => "This display exists in a branch outside your library group" );
-                }
-            }
-
-            # If @restricted_branchcodes is empty, user has access to all displays
-        }
+        _check_access( $c, $display, 'delete' );
 
         $display->delete;
         return $c->render_resource_deleted;
@@ -274,10 +213,10 @@ sub list_public {
 
         my $displays_set = Koha::Displays->search(
             {
-                enabled => 1,
-                -and    => [
-                    -or => [ { start_date => undef }, { start_date => { '<=' => $today } } ],
-                    -or => [ { end_date   => undef }, { end_date   => { '>=' => $today } } ],
+                'me.enabled' => 1,
+                -and         => [
+                    -or => [ { 'me.start_date' => undef }, { 'me.start_date' => { '<=' => $today } } ],
+                    -or => [ { 'me.end_date'   => undef }, { 'me.end_date'   => { '>=' => $today } } ],
                 ],
             }
         );
@@ -304,11 +243,11 @@ sub get_public {
 
         my $display = Koha::Displays->search(
             {
-                display_id => $c->param('display_id'),
-                enabled    => 1,
-                -and       => [
-                    -or => [ { start_date => undef }, { start_date => { '<=' => $today } } ],
-                    -or => [ { end_date   => undef }, { end_date   => { '>=' => $today } } ],
+                'me.display_id' => $c->param('display_id'),
+                'me.enabled'    => 1,
+                -and            => [
+                    -or => [ { 'me.start_date' => undef }, { 'me.start_date' => { '<=' => $today } } ],
+                    -or => [ { 'me.end_date'   => undef }, { 'me.end_date'   => { '>=' => $today } } ],
                 ],
             }
         )->next;
@@ -320,6 +259,64 @@ sub get_public {
     } catch {
         $c->unhandled_exception($_);
     };
+}
+
+=head3 _check_access
+
+    _check_access( $c, $display, 'edit' );
+
+Throws a 403 (Koha::Exceptions::REST::Public::Unauthorized) if the logged in
+user may not perform the action on the display, because of the library
+restrictions of their permission.
+
+=cut
+
+sub _check_access {
+    my ( $c, $display, $action ) = @_;
+
+    my $patron = $c->stash('koha.user');
+    return unless $patron;
+
+    return if $display->can_be_accessed_by( { patron => $patron, action => $action } );
+
+    Koha::Exceptions::REST::Public::Unauthorized->throw(
+        error => "This display exists in a library outside your library group" );
+}
+
+=head3 _check_can_manage_display_items
+
+Throws a 403 unless the logged in user has the manage_display_items permission.
+
+=cut
+
+sub _check_can_manage_display_items {
+    my ($c) = @_;
+
+    return if haspermission( $c->stash('koha.user')->userid, { displays => 'manage_display_items' } );
+
+    Koha::Exceptions::REST::Public::Unauthorized->throw(
+        error => "You do not have permission to manage display items" );
+}
+
+=head3 _writable_body
+
+    my ( $body, $display_items ) = _writable_body($c);
+
+Returns the request body without the embedded objects, which a client sends
+back when it sends what it received (the read-only C<active> and C<display_id>
+are already refused by the OpenAPI validation). The display items are returned
+separately.
+
+=cut
+
+sub _writable_body {
+    my ($c) = @_;
+
+    my $body          = $c->req->json;
+    my $display_items = delete $body->{display_items} || undef;
+    delete @{$body}{qw( display_library home_library holding_library item_type _strings )};
+
+    return ( $body, $display_items );
 }
 
 1;

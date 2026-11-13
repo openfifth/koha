@@ -191,6 +191,42 @@ sub item_type {
     return Koha::ItemType->_new_from_dbic($rs);
 }
 
+=head3 can_be_accessed_by
+
+    my $allowed = $display->can_be_accessed_by( { patron => $patron, action => 'edit' } );
+
+Returns true if the patron may perform the action (C<view>, C<add>, C<edit> or
+C<delete>) on this display, according to the library restrictions of the
+matching C<*_displays> permission.
+
+A patron whose permission is not limited to certain libraries may access every
+display. A restricted patron may only access displays of their libraries, and
+never a display that has no library.
+
+=cut
+
+sub can_be_accessed_by {
+    my ( $self, $params ) = @_;
+
+    my $patron = $params->{patron};
+    my $action = $params->{action};
+
+    Koha::Exceptions::MissingParameter->throw( parameter => 'patron' ) unless $patron;
+    Koha::Exceptions::BadParameter->throw( parameter => 'action' )
+        unless defined $action && $action =~ m/^(?:view|add|edit|delete)$/;
+
+    my $method   = "libraries_where_can_${action}_displays";
+    my @branches = $patron->$method;
+
+    # An empty list means the permission is not restricted to certain libraries
+    return 1 unless @branches;
+
+    my $branch = $self->display_branch;
+    return 0 unless defined $branch;
+
+    return ( grep { $_ eq $branch } @branches ) ? 1 : 0;
+}
+
 =head3 store
 
     $display->store;

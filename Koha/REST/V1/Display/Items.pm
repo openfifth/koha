@@ -21,15 +21,16 @@ use Modern::Perl;
 
 use Mojo::Base 'Mojolicious::Controller';
 
+use C4::Context;
 use Koha::DateUtils qw( dt_from_string );
 use Koha::Display::Item;
 use Koha::Display::Items;
 use Koha::Biblios;
 use Koha::Displays;
+use Koha::Exceptions::REST;
 use Koha::Items;
 
-use Try::Tiny    qw( catch try );
-use Scalar::Util qw( blessed );
+use Try::Tiny qw( catch try );
 
 use Koha::BackgroundJob::BatchAddDisplayItems;
 use Koha::BackgroundJob::BatchDeleteDisplayItems;
@@ -47,6 +48,21 @@ sub list {
 
     return try {
         my $displayitems = Koha::Display::Items->new;
+
+        # Only the items of the displays the user may view
+        my $patron = $c->stash('koha.user');
+        if ($patron) {
+            my @branches = $patron->libraries_where_can_view_displays;
+            $displayitems = $displayitems->search(
+                {
+                    'me.display_id' => {
+                        -in => Koha::Displays->search( { display_branch => { -in => \@branches } } )
+                            ->_resultset->get_column('display_id')->as_query
+                    }
+                }
+            ) if @branches;
+        }
+
         return $c->render( openapi => $c->objects->search($displayitems) );
     } catch {
         $c->unhandled_exception($_);
@@ -62,7 +78,7 @@ sub get {
     my $c = shift->openapi->valid_input or return;
 
     return try {
-        my $displayitems_set = Koha::Display::Items->search(
+        my $displayitem = Koha::Display::Items->search(
             {
                 display_id => $c->param('display_id'),
                 itemnumber => $c->param('item_id')
@@ -70,11 +86,11 @@ sub get {
         )->next;
 
         return $c->render_resource_not_found("Display item")
-            unless $displayitems_set;
+            unless $displayitem;
 
-        my $displayitem = Koha::Display::Items->find( $displayitems_set->display_item_id );
+        _check_access( $c, $displayitem->display, 'view' );
 
-        return $c->render( openapi => $displayitem->to_api );
+        return $c->render( openapi => $c->objects->to_api($displayitem) );
     } catch {
         $c->unhandled_exception($_);
     };
@@ -88,7 +104,13 @@ sub add {
     my $c = shift->openapi->valid_input or return;
 
     return try {
-        my $displayitem = Koha::Display::Item->new_from_api( $c->req->json );
+        my $body = $c->req->json;
+
+        my $displayitem = Koha::Display::Item->new_from_api($body);
+
+        # The user must be allowed to edit the display the item is added to
+        my $display = Koha::Displays->find( $displayitem->display_id );
+        _check_access( $c, $display, 'edit' ) if $display;
 
         # store() throws Koha::Exceptions::BadParameter (rendered as a 400)
         # when the display or item does not exist or the dates are invalid
@@ -111,19 +133,26 @@ sub add {
 sub update {
     my $c = shift->openapi->valid_input or return;
 
-    my $displayitem = Koha::Display::Items->find(
+    my $displayitem = Koha::Display::Items->search(
         {
-            display_item_id => $c->param('display_item_id'),
-            display_id      => $c->param('display_id'),
-            itemnumber      => $c->param('item_id')
+            display_id => $c->param('display_id'),
+            itemnumber => $c->param('item_id')
         }
-    );
+    )->next;
 
     return $c->render_resource_not_found("Display item")
         unless $displayitem;
 
     return try {
-        $displayitem->set_from_api( $c->req->json );
+        _check_access( $c, $displayitem->display, 'edit' );
+
+        # The URL identifies the display item: the body cannot move it elsewhere
+        my $body = $c->req->json;
+        $body->{display_id}   = $displayitem->display_id;
+        $body->{itemnumber}   = $displayitem->itemnumber;
+        $body->{biblionumber} = $displayitem->biblionumber if exists $body->{biblionumber};
+
+        $displayitem->set_from_api($body);
         $displayitem->store();
         return $c->render( openapi => $c->objects->to_api($displayitem) );
     } catch {
@@ -138,18 +167,19 @@ sub update {
 sub delete {
     my $c = shift->openapi->valid_input or return;
 
-    my $displayitem = Koha::Display::Items->find(
+    my $displayitem = Koha::Display::Items->search(
         {
-            display_item_id => $c->param('display_item_id'),
-            display_id      => $c->param('display_id'),
-            itemnumber      => $c->param('item_id')
+            display_id => $c->param('display_id'),
+            itemnumber => $c->param('item_id')
         }
-    );
+    )->next;
 
     return $c->render_resource_not_found("Display item")
         unless $displayitem;
 
     return try {
+        _check_access( $c, $displayitem->display, 'edit' );
+
         $displayitem->delete;
         return $c->render_resource_deleted;
     } catch {
@@ -165,7 +195,7 @@ sub list_public {
     my $c = shift->openapi->valid_input or return;
 
     return try {
-        return $c->render_resource_not_found("Display item")
+        return $c->render( openapi => [] )
             unless C4::Context->preference('UseDisplayModule');
 
         my $displayitems = $c->objects->search( _public_display_items() );
@@ -257,6 +287,8 @@ sub batch_add {
         return $c->render_resource_not_found("Display")
             unless $display;
 
+        _check_access( $c, $display, 'edit' );
+
         # Enqueue background job for batch processing
         my $job_id = Koha::BackgroundJob::BatchAddDisplayItems->new->enqueue(
             {
@@ -281,7 +313,7 @@ sub batch_add {
 
 =head3 batch_delete
 
-Remove multiple items from displays
+Remove multiple items from a display
 
 =cut
 
@@ -291,11 +323,17 @@ sub batch_delete {
     return try {
         my $body = $c->req->json;
 
+        my $display = Koha::Displays->find( $body->{display_id} );
+        return $c->render_resource_not_found("Display")
+            unless $display;
+
+        _check_access( $c, $display, 'edit' );
+
         # Enqueue background job for batch processing
         my $job_id = Koha::BackgroundJob::BatchDeleteDisplayItems->new->enqueue(
             {
                 barcodes   => $body->{barcodes},
-                display_id => $body->{display_id} // undef,
+                display_id => $body->{display_id},
             }
         );
 
@@ -309,6 +347,29 @@ sub batch_delete {
     } catch {
         $c->unhandled_exception($_);
     };
+}
+
+=head3 _check_access
+
+    _check_access( $c, $display, 'edit' );
+
+Throws a 403 (Koha::Exceptions::REST::Public::Unauthorized) if the logged in
+user may not perform the action on the display, because of the library
+restrictions of their permission. Managing the items of a display requires
+being able to edit that display.
+
+=cut
+
+sub _check_access {
+    my ( $c, $display, $action ) = @_;
+
+    my $patron = $c->stash('koha.user');
+    return unless $patron;
+
+    return if $display->can_be_accessed_by( { patron => $patron, action => $action } );
+
+    Koha::Exceptions::REST::Public::Unauthorized->throw(
+        error => "This display exists in a library outside your library group" );
 }
 
 1;

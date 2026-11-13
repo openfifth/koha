@@ -34,10 +34,9 @@
         items:
           type: string
           enum:
-            - display_items
-            - library
-            - item_type
-            - +strings
+            - display_library
+            - home_library
+            - holding_library
         collectionFormat: csv
     responses:
       "200":
@@ -81,10 +80,9 @@
         items:
           type: string
           enum:
-            - display_items
-            - library
-            - item_type
-            - +strings
+            - display_library
+            - home_library
+            - holding_library
         collectionFormat: csv
     produces:
       - application/json

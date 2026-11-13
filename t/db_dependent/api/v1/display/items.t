@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 8;
+use Test::More tests => 9;
 use Test::Mojo;
 use JSON;
 
@@ -537,7 +537,7 @@ subtest 'delete() tests' => sub {
 
 subtest 'batch_add() and batch_delete() barcodes' => sub {
 
-    plan tests => 6;
+    plan tests => 8;
 
     $schema->storage->txn_begin;
 
@@ -563,9 +563,14 @@ subtest 'batch_add() and batch_delete() barcodes' => sub {
 
     $t->delete_ok(
         "//$userid:$password@/api/v1/display/items/batch" => json => {
-            barcodes => [ 'ABC123', '0012345' ],
+            display_id => $display->display_id,
+            barcodes   => [ 'ABC123', '0012345' ],
         }
     )->status_is(202);
+
+    # The display is required to remove items
+    $t->delete_ok( "//$userid:$password@/api/v1/display/items/batch" => json => { barcodes => ['ABC123'] } )
+        ->status_is(400);
 
     $t->post_ok(
         "//$userid:$password@/api/v1/display/items/batch" => json => {
@@ -636,6 +641,119 @@ subtest 'list_public() and get_public() tests' => sub {
 
     $t->get_ok( '/api/v1/public/display/items/' . $display->display_id . '/' . $visible1->itemnumber )->status_is(200);
     $t->get_ok( '/api/v1/public/display/items/' . $display->display_id . '/' . $hidden->itemnumber )->status_is(404);
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'library restrictions' => sub {
+
+    plan tests => 22;
+
+    $schema->storage->txn_begin;
+
+    my $password = 'thePassword123';
+    my $own      = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $foreign  = $builder->build_object( { class => 'Koha::Libraries' } );
+
+    # May manage display items, but only for the displays of their own library
+    my $restricted =
+        $builder->build_object( { class => 'Koha::Patrons', value => { flags => 0, branchcode => $own->branchcode } } );
+    $restricted->set_password( { password => $password, skip_validation => 1 } );
+    for my $code (qw( view_displays edit_displays manage_display_items )) {
+        $builder->build(
+            {
+                source => 'UserPermission',
+                value  => { borrowernumber => $restricted->borrowernumber, module_bit => 34, code => $code }
+            }
+        );
+    }
+    my $userid = $restricted->userid;
+
+    my $make = sub {
+        my ($library) = @_;
+        my $display = $builder->build_object(
+            {
+                class => 'Koha::Displays',
+                value => {
+                    display_branch => $library->branchcode, enabled => 1, start_date => '2000-01-01', display_days => 7
+                }
+            }
+        );
+        my $item         = $builder->build_sample_item;
+        my $display_item = Koha::Display::Item->new(
+            {
+                display_id   => $display->display_id,
+                itemnumber   => $item->itemnumber,
+                biblionumber => $item->biblionumber,
+                date_added   => '2000-01-01',
+                date_remove  => '2100-01-01',
+            }
+        )->store;
+        return ( $display, $item, $display_item );
+    };
+
+    my ( $own_display,     $own_item )     = $make->($own);
+    my ( $foreign_display, $foreign_item ) = $make->($foreign);
+    my $url = sub { "//$userid:$password@/api/v1/display/items" . shift };
+
+    # list only shows the items of the displays the user can view
+    $t->get_ok( $url->('') )->status_is(200);
+    is_deeply(
+        [ map { $_->{display_id} } @{ $t->tx->res->json } ],
+        [ $own_display->display_id ], 'Only the items of the user\'s libraries are listed'
+    );
+
+    $t->get_ok( $url->( '/' . $foreign_display->display_id . '/' . $foreign_item->itemnumber ) )->status_is(403);
+    $t->get_ok( $url->( '/' . $own_display->display_id . '/' . $own_item->itemnumber ) )->status_is(200);
+
+    my $another_item = $builder->build_sample_item;
+    my $new          = {
+        itemnumber   => $another_item->itemnumber,
+        biblionumber => $another_item->biblionumber,
+        date_added   => '2000-01-01',
+        date_remove  => '2100-01-01',
+    };
+    $t->post_ok( $url->('') => json => { %{$new}, display_id => $foreign_display->display_id } )->status_is(403);
+    is(
+        Koha::Display::Items->search( { itemnumber => $another_item->itemnumber } )->count, 0,
+        'Nothing was added to the other library\'s display'
+    );
+
+    # The URL identifies the row: the body cannot re-point it to another display
+    $t->put_ok(
+        $url->( '/' . $own_display->display_id . '/' . $own_item->itemnumber ) => json => {
+            display_id   => $foreign_display->display_id,
+            itemnumber   => $own_item->itemnumber,
+            biblionumber => $own_item->biblionumber,
+            date_added   => '2000-01-01',
+            date_remove  => '2099-01-01',
+        }
+    )->status_is(200);
+    is(
+        Koha::Display::Items->find( { display_id => $own_display->display_id, itemnumber => $own_item->itemnumber } )
+            ->date_remove,
+        '2099-01-01', 'The row was updated where the URL said'
+    );
+    is(
+        Koha::Display::Items->search( { display_id => $foreign_display->display_id } )->count,
+        1, 'Nothing was moved to the other display'
+    );
+
+    $t->put_ok(
+        $url->( '/' . $foreign_display->display_id . '/' . $foreign_item->itemnumber ) => json => {
+            display_id   => $foreign_display->display_id,
+            itemnumber   => $foreign_item->itemnumber,
+            biblionumber => $foreign_item->biblionumber,
+            date_added   => '2000-01-01',
+            date_remove  => '2098-01-01',
+        }
+    )->status_is(403);
+
+    $t->delete_ok( $url->( '/' . $foreign_display->display_id . '/' . $foreign_item->itemnumber ) )->status_is(403);
+    $t->post_ok( $url->('/batch') => json => { display_id => $foreign_display->display_id, barcodes => ['A'] } )
+        ->status_is(403);
+    $t->delete_ok( $url->('/batch') => json => { display_id => $foreign_display->display_id, barcodes => ['A'] } )
+        ->status_is(403);
 
     $schema->storage->txn_rollback;
 };

@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 7;
+use Test::More tests => 9;
 use Test::Mojo;
 use JSON;
 
@@ -489,6 +489,162 @@ subtest 'delete() tests' => sub {
         ->content_is( '', 'REST3.3.4' );
 
     $t->delete_ok("//$userid:$password@/api/v1/displays/$display_id")->status_is(404);
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'library restrictions and round trips' => sub {
+
+    plan tests => 28;
+
+    $schema->storage->txn_begin;
+
+    my $password = 'thePassword123';
+    my $own      = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $foreign  = $builder->build_object( { class => 'Koha::Libraries' } );
+
+    my $make_user = sub {
+        my (@codes) = @_;
+        my $patron = $builder->build_object(
+            { class => 'Koha::Patrons', value => { flags => 0, branchcode => $own->branchcode } } );
+        $patron->set_password( { password => $password, skip_validation => 1 } );
+        for my $code (@codes) {
+            $builder->build(
+                {
+                    source => 'UserPermission',
+                    value  => { borrowernumber => $patron->borrowernumber, module_bit => 34, code => $code }
+                }
+            );
+        }
+        return $patron->userid;
+    };
+
+    # Restricted to the displays of their own library
+    my $userid = $make_user->(qw( view_displays edit_displays delete_displays ));
+    my $url    = sub { "//$userid:$password@/api/v1/displays" . ( shift // '' ) };
+
+    my $make = sub {
+        my ($library) = @_;
+        return $builder->build_object(
+            {
+                class => 'Koha::Displays',
+                value => {
+                    display_branch      => $library->branchcode,
+                    enabled             => 1,
+                    start_date          => '2000-01-01',
+                    end_date            => '2100-01-01',
+                    display_days        => 7,
+                    display_return_over => 'no',
+                    display_name        => 'Original name',
+                }
+            }
+        );
+    };
+    my $own_display     = $make->($own);
+    my $foreign_display = $make->($foreign);
+
+    $t->get_ok( $url->() )->status_is(200);
+    ok(
+        !( grep { $_->{display_id} == $foreign_display->display_id } @{ $t->tx->res->json } ),
+        'The other library\'s display is not listed'
+    );
+    $t->get_ok( $url->( '/' . $foreign_display->display_id ) )->status_is(403);
+
+    # What a client GETs can be PUT back: computed and embedded keys are ignored
+    $t->get_ok( $url->( '/' . $own_display->display_id ) => { 'x-koha-embed' => 'display_library' } )->status_is(200);
+    my $received = $t->tx->res->json;
+    ok( exists $received->{display_library}, 'The embedded library is part of the representation' );
+    delete @{$received}{qw( active display_id )};    # read-only: a client does not send these back
+    $t->put_ok( $url->( '/' . $own_display->display_id ) => json => { %{$received}, display_name => 'Round trip' } )
+        ->status_is(200);
+    is( $own_display->get_from_storage->display_name, 'Round trip', 'The display was updated' );
+
+    # A restricted user cannot edit another library's display...
+    $t->put_ok( $url->( '/' . $foreign_display->display_id ) => json => { %{$received}, display_name => 'Hijacked' } )
+        ->status_is(403);
+    is( $foreign_display->get_from_storage->display_name, 'Original name', '...and it was not changed' );
+
+    # ...nor move their own out of their libraries
+    $t->put_ok(
+        $url->( '/' . $own_display->display_id ) => json => { %{$received}, display_branch => $foreign->branchcode } )
+        ->status_is(403);
+    is( $own_display->get_from_storage->display_branch, $own->branchcode, '...the display stayed in its library' );
+
+    # Delete
+    $t->delete_ok( $url->( '/' . $foreign_display->display_id ) )->status_is(403);
+    ok( $foreign_display->get_from_storage, 'The other library\'s display still exists' );
+
+    # Permission to manage the items is checked before anything is written
+    my $item = $builder->build_sample_item;
+    $t->put_ok(
+        $url->( '/' . $own_display->display_id ) => json => {
+            %{$received},
+            display_name  => 'Written before the check',
+            display_items => [
+                {
+                    itemnumber  => $item->itemnumber, biblionumber => $item->biblionumber, date_added => '2000-01-01',
+                    date_remove => '2100-01-01'
+                }
+            ],
+        }
+    )->status_is(403);
+    is(
+        $own_display->get_from_storage->display_name, 'Round trip',
+        'Nothing was written when the items permission was missing'
+    );
+
+    $t->delete_ok( $url->( '/' . $own_display->display_id ) )->status_is(204);
+
+    # A user who can add displays only to their own library
+    my $adder = $make_user->(qw( add_displays ));
+    my $new   = {
+        display_name        => 'New',
+        display_days        => 7,
+        display_return_over => 'no',
+        start_date          => '2000-01-01',
+        end_date            => '2100-01-01',
+        enabled             => JSON::true,
+        display_branch      => $foreign->branchcode,
+    };
+    $t->post_ok( "//$adder:$password@/api/v1/displays" => json => $new )->status_is(403);
+    is( Koha::Displays->search( { display_name => 'New' } )->count, 0, 'Nothing was stored' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'public embeds' => sub {
+
+    plan tests => 9;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'UseDisplayModule', 1 );
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $display = $builder->build_object(
+        {
+            class => 'Koha::Displays',
+            value => {
+                enabled        => 1,
+                start_date     => '2000-01-01',
+                end_date       => '2100-01-01',
+                display_branch => $library->branchcode,
+                staff_note     => 'Staff only',
+                public_note    => 'For everyone',
+            }
+        }
+    );
+
+    $t->get_ok( '/api/v1/public/displays/' . $display->display_id => { 'x-koha-embed' => 'display_library' } )
+        ->status_is(200)
+        ->json_is( '/display_library/library_id' => $library->branchcode )
+        ->json_hasnt( '/staff_note', 'staff_note is not exposed' )
+        ->json_is( '/public_note' => 'For everyone' );
+
+    # The embeds that were not safe for anonymous users are no longer accepted
+    $t->get_ok( '/api/v1/public/displays/' . $display->display_id => { 'x-koha-embed' => 'display_items' } )
+        ->status_is(400);
+    $t->get_ok( '/api/v1/public/displays/' . $display->display_id => { 'x-koha-embed' => 'library' } )->status_is(400);
 
     $schema->storage->txn_rollback;
 };
