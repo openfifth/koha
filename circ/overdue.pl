@@ -393,8 +393,9 @@ if ($noreport) {
             overdue                 => $data->{overdue},
             location                => $data->{location},
             effective_location      => do {
-                my $item = Koha::Items->find( $data->{itemnumber} );
-                $item ? $item->effective_location : '';
+                my $item =
+                    C4::Context->preference('UseDisplayModule') ? Koha::Items->find( $data->{itemnumber} ) : undef;
+                $item ? $item->effective_location : $data->{location};
             },
         };
     }

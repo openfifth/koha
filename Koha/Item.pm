@@ -424,6 +424,8 @@ sub move_to_deleted {
 
 =head3 effective_itype
 
+Alias of L</effective_itemtype>.
+
 =cut
 
 sub effective_itype {
@@ -910,38 +912,58 @@ sub checkin_availability {
     return Koha::Item::Availability::Checkin->check( $self, $params );
 }
 
+=head3 active_display_items
+
+    my @display_items = $item->active_display_items;
+
+Returns the active L<Koha::Display::Item> objects of this item, most recently
+added first. A display item is active when its display is enabled and running
+and the current date is within the dates of the display item. Returns an empty
+list unless UseDisplayModule is enabled.
+
+=cut
+
+sub active_display_items {
+    my ($self) = @_;
+
+    return unless C4::Context->preference('UseDisplayModule');
+
+    return grep { $_->active } Koha::Display::Items->search(
+        { itemnumber => $self->itemnumber },
+        { order_by   => { -desc => 'date_added' } }
+    )->as_list;
+}
+
+=head3 active_displays
+
+    my @displays = $item->active_displays;
+
+Returns the L<Koha::Display> objects the item is currently on, most recently
+added first.
+
+=cut
+
+sub active_displays {
+    my ($self) = @_;
+
+    return map { $_->display } $self->active_display_items;
+}
+
 =head3 active_display_item
 
     my $display_item = $item->active_display_item;
 
-Returns the Koha::Display::Item object if this item is part of an active display, undef otherwise.
-An active display is one where enabled = 1 and the current date falls within the start_date and end_date range (if set).
+Returns the L<Koha::Display::Item> of the display the item was most recently
+added to and is currently on, or undef if it is not on an active display.
 
 =cut
 
 sub active_display_item {
     my ($self) = @_;
 
-    return
-        unless C4::Context->preference('UseDisplayModule');
+    my ($display_item) = $self->active_display_items;
 
-    my $display_items = Koha::Display::Items->search(
-        {
-            itemnumber        => $self->itemnumber,
-            'display.enabled' => 1,
-        },
-        {
-            join     => 'display',
-            order_by => { -desc => 'date_added' },
-        }
-    );
-
-    if ( my $display_item = $display_items->next ) {
-        return $display_item
-            if ( $display_item->active );
-    }
-
-    return;
+    return $display_item;
 }
 
 =head3 active_display
@@ -953,24 +975,18 @@ currently in an active display.
 
 An active display is one that:
 - Is enabled
-- Has a date_added on the display_item that is today or in the past (or no date_added)
-- Has a date_remove on the display_item that is today or in the future (or no date_remove)
+- Has started and has not ended
+- Contains the item, with a date_added that is today or in the past and a
+  date_remove that is today or in the future
 
 =cut
 
 sub active_display {
     my ($self) = @_;
 
-    return
-        unless C4::Context->preference('UseDisplayModule');
+    my $display_item = $self->active_display_item;
 
-    if ( my $display_item = $self->active_display_item ) {
-        if ( my $display = $display_item->active_display ) {
-            return $display;
-        }
-    }
-
-    return;
+    return $display_item ? $display_item->display : undef;
 }
 
 =head3 request_transfer
@@ -2430,6 +2446,8 @@ sub effective_collection_code {
 
 =head3 effective_home_library
 
+Returns the L<Koha::Library> that is the effective home library of the item, see L</effective_homebranch>.
+
 =cut
 
 sub effective_home_library {
@@ -2439,6 +2457,8 @@ sub effective_home_library {
 }
 
 =head3 effective_home_branch
+
+Alias of L</effective_home_library>.
 
 =cut
 
@@ -2467,6 +2487,8 @@ sub effective_homebranch {
 
 =head3 effective_holding_library
 
+Returns the L<Koha::Library> that is the effective holding library of the item, see L</effective_holdingbranch>.
+
 =cut
 
 sub effective_holding_library {
@@ -2476,6 +2498,8 @@ sub effective_holding_library {
 }
 
 =head3 effective_holding_branch
+
+Alias of L</effective_holding_library>.
 
 =cut
 
@@ -3247,7 +3271,7 @@ sub strings_map {
             my $holding_library = $self->effective_holding_library;
 
             if ($holding_library) {
-                my $description = $holding_library->branchname ? $holding_library->branchname : $holding_library;
+                my $description = $holding_library->branchname || $holding_library->branchcode;
 
                 $strings->{$col} = {
                     str  => $description,
@@ -3262,7 +3286,7 @@ sub strings_map {
             my $home_library = $self->effective_home_library;
 
             if ($home_library) {
-                my $description = $home_library->branchname ? $home_library->branchname : $home_library;
+                my $description = $home_library->branchname || $home_library->branchcode;
 
                 $strings->{$col} = {
                     str  => $description,
@@ -3277,7 +3301,7 @@ sub strings_map {
             my $itemtype = Koha::ItemTypes->find( $self->effective_itemtype );
 
             if ($itemtype) {
-                my $description = $itemtype->translated_description ? $itemtype->translated_description : $itemtype;
+                my $description = $itemtype->translated_description || $itemtype->itemtype;
 
                 $strings->{$col} = {
                     str  => $description,

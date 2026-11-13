@@ -173,8 +173,10 @@ if ($use_display_module) {
           FROM display_items di
           JOIN displays d ON di.display_id = d.display_id
           WHERE d.enabled = 1
-            AND (di.date_added IS NULL OR di.date_added <= CURDATE())
-            AND (di.date_remove IS NULL OR di.date_remove >= CURDATE())
+            AND d.start_date <= CURDATE()
+            AND d.end_date >= CURDATE()
+            AND di.date_added <= CURDATE()
+            AND di.date_remove >= CURDATE()
         ) active_display ON ( items.itemnumber = active_display.itemnumber AND active_display.rn = 1 )
         LEFT JOIN branches effective_homebranches ON ( active_display.display_home_branch = effective_homebranches.branchcode )
         LEFT JOIN branches effective_holdingbranches ON ( active_display.display_holding_branch = effective_holdingbranches.branchcode )';

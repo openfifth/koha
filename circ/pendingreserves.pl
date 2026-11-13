@@ -318,27 +318,8 @@ foreach my $bibnum (@biblionumbers) {
     $hold_info->{item_group} = $res_info->item_group;
 
     if ( C4::Context->preference('UseDisplayModule') ) {
-        my $display_items = Koha::Display::Items->search(
-            { itemnumber => $hold_info->{item}->itemnumber },
-            {
-                order_by => { '-desc' => 'date_added' },
-            }
-        );
-        my @display_items;
-        my @displays;
-
-        while ( my $display_item = $display_items->next ) {
-            my $display = $display_item->display;
-
-            push @display_items, $display_item
-                if defined $display_item->active and $display_item->active == 1;
-
-            push @displays, $display
-                if defined $display_item->active
-                and $display_item->active == 1
-                and defined $display->active
-                and $display->active == 1;
-        }
+        my @display_items = $hold_info->{item}->active_display_items;
+        my @displays      = map { $_->display } @display_items;
 
         $hold_info->{display_items} = \@display_items if @display_items;
         $hold_info->{displays}      = \@displays      if @displays;

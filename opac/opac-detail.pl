@@ -770,30 +770,15 @@ if ( not $viewallitems and $items->count > $max_items_to_display ) {
         if ( $item_info->{checkout} && $item_info->{checkout} > 0 ) { $item_checkouts = 1; }
 
         if ( C4::Context->preference('UseDisplayModule') ) {
-            my $display_items = Koha::Display::Items->search(
-                { itemnumber => $item->itemnumber },
-                {
-                    order_by => { '-desc' => 'date_added' },
-                }
-            );
-            my @display_items;
-            my @displays;
+            my @display_items = $item->active_display_items;
+            my @displays      = map { $_->display } @display_items;
 
-            while ( my $display_item = $display_items->next ) {
-                my $display = $display_item->display;
+            # Only public notes are shown to patrons, one per line
+            my @public_notes = grep { defined $_ && $_ ne q{} } map { $_->public_note } @displays;
 
-                push @display_items, $display_item
-                    if $display_item->active and $display_item->active;
-
-                push @displays, $display
-                    if $display_item->active and $display_item->active;
-
-                $item_info->{display_itemnotes} .= $display->public_note
-                    if $display_item->active and $display_item->active;
-            }
-
-            $item_info->{display_items} = \@display_items if @display_items;
-            $item_info->{displays}      = \@displays      if @displays;
+            $item_info->{display_items}     = \@display_items if @display_items;
+            $item_info->{displays}          = \@displays      if @displays;
+            $item_info->{display_itemnotes} = join "\n", @public_notes if @public_notes;
         }
 
         foreach my $field (

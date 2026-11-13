@@ -356,13 +356,7 @@ foreach my $biblioNumber (@biblionumbers) {
         { prefetch => [ 'issue', 'homebranch', 'holdingbranch' ] }
     )->filter_by_visible_in_opac( { patron => $patron } );
 
-    foreach my $item ( $items->as_list ) {
-        $item->{'ccode'} = $item->effective_collection_code;
-        $item->holdingbranch( $item->effective_holdingbranch );
-        $item->homebranch( $item->effective_homebranch );
-
-        push @{ $biblioData->{items} }, $item;    # FIXME Potentially a lot in memory here!
-    }
+    $biblioData->{items} = [ $items->as_list ];    # FIXME Potentially a lot in memory here!
 
     # Compute the priority rank.
     $biblioData->{object} = $biblio;

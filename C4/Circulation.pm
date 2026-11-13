@@ -112,6 +112,7 @@ use Koha::Policy::Biblio::AgeRestriction;
 use Koha::Patron::Debarments qw( DelUniqueDebarment AddUniqueDebarment );
 use Koha::Database;
 use Koha::Libraries;
+use Koha::Logger;
 use Koha::Account::Lines;
 use Koha::Holds;
 use Koha::Account::Lines;
@@ -2426,30 +2427,24 @@ sub AddReturn {
     my $validate_float =
         Koha::Libraries->find( $item->homebranch )->validate_float_sibling( { branchcode => $branch } );
 
-    # act to remove item from display
+    # Decide whether the check-in takes the item off its display. It is only removed
+    # once the check-in is accepted, but the library it goes to is worked out as if
+    # it had already left the display
+    my $display_item_to_remove;
     if ( my $display_item = $item->active_display_item ) {
-        my $display             = $display_item->display;
-        my $return_over         = $display->display_return_over;
-        my $display_item_active = $display_item->active;
-        my $should_remove       = 0;
+        my $return_over = $display_item->display->display_return_over;
 
-        if ( $display_item_active && $return_over eq 'any' ) {
-            $should_remove = 1;
-        } elsif ( $display_item_active && $return_over eq 'any_except_homebranch' ) {
-            my $homebranch = $item->homebranch;
-
-            $should_remove = 1
-                if $branch ne $homebranch;
-        }
-
-        if ($should_remove) {
-            $display_item->delete;
-            $messages->{RemovedFromDisplay} = {
-                display_id   => $display->display_id,
-                display_name => $display->display_name,
-            };
+        if ( $return_over eq 'any' ) {
+            $display_item_to_remove = $display_item;
+        } elsif ( $return_over eq 'any_except_homebranch' ) {
+            $display_item_to_remove = $display_item if $branch ne $item->homebranch;
+        } elsif ( $return_over ne 'no' ) {
+            Koha::Logger->get->warn(
+                "Unknown display_return_over '$return_over' on display " . $display_item->display_id );
         }
     }
+    my $effective_homebranch    = $display_item_to_remove ? $item->homebranch    : $item->effective_homebranch;
+    my $effective_holdingbranch = $display_item_to_remove ? $item->holdingbranch : $item->effective_holdingbranch;
 
     # get the proper branch to which to return the item
     my $returnbranch;
@@ -2459,11 +2454,11 @@ sub AddReturn {
 
         # if library isn't in same the float group, transfer item to homebranch
         $hbr          = 'homebranch';
-        $returnbranch = $validate_float ? $branch : $item->effective_homebranch;
+        $returnbranch = $validate_float ? $branch : $effective_homebranch;
     } elsif ( $hbr eq 'homebranch' ) {
-        $returnbranch = $item->effective_homebranch;
+        $returnbranch = $effective_homebranch;
     } elsif ( $hbr eq 'holdingbranch' ) {
-        $returnbranch = $item->effective_holdingbranch;
+        $returnbranch = $effective_holdingbranch;
     } else {
         $returnbranch = $item->$hbr;
     }
@@ -2473,11 +2468,12 @@ sub AddReturn {
 
     # check library float limits if enabled if the item isn't being transferred away
     if ( ( $returnbranch eq $branch ) && C4::Context->preference('UseLibraryFloatLimits') ) {
-        my $effective_itemtype = $item->effective_itemtype;
+        my $effective_itemtype =
+            $display_item_to_remove ? $item->_result->effective_itemtype : $item->effective_itemtype;
         my $limit = Koha::Library::FloatLimits->find( { itemtype => $effective_itemtype, branchcode => $branch } );
         if ($limit) {
             my $transfer_library =
-                Koha::Library::FloatLimits->lowest_ratio_library( $item, $branch, $item->effective_holdingbranch );
+                Koha::Library::FloatLimits->lowest_ratio_library( $item, $branch, $effective_holdingbranch );
             if ( $transfer_library && $transfer_library->branchcode ne $branch ) {
                 $returnbranch     = $transfer_library->branchcode;
                 $transfer_trigger = 'LibraryFloatLimit';
@@ -2627,6 +2623,16 @@ sub AddReturn {
     # case of a return of document (deal with issues and holdingbranch)
     if ($doreturn) {
         die "The item is not issed and cannot be returned" unless $issue;    # Just in case...
+
+        # The check-in is accepted: take the item off its display
+        if ($display_item_to_remove) {
+            my $display = $display_item_to_remove->display;
+            $display_item_to_remove->delete;
+            $messages->{RemovedFromDisplay} = {
+                display_id   => $display->display_id,
+                display_name => $display->display_name,
+            };
+        }
         $patron or warn "AddReturn without current borrower";
 
         if ($patron) {
@@ -5124,9 +5130,10 @@ sub GetPendingOnSiteCheckouts {
           FROM display_items di
           JOIN displays d ON di.display_id = d.display_id
           WHERE d.enabled = 1
-            AND (d.start_date IS NULL OR d.start_date <= CURDATE())
-            AND (d.end_date IS NULL OR d.end_date >= CURDATE())
-            AND (di.date_remove IS NULL OR di.date_remove >= CURDATE())
+            AND d.start_date <= CURDATE()
+            AND d.end_date >= CURDATE()
+            AND di.date_added <= CURDATE()
+            AND di.date_remove >= CURDATE()
         ) active_display ON items.itemnumber = active_display.itemnumber AND active_display.rn = 1|;
     }
 

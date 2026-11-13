@@ -19,7 +19,7 @@
 
 use Modern::Perl;
 
-use Test::More tests => 3;
+use Test::More tests => 5;
 use Test::NoWarnings;
 
 use C4::Circulation qw( AddIssue AddReturn );
@@ -218,6 +218,127 @@ subtest 'display_return_over - any_except_homebranch' => sub {
 
     # Clean up
     $display_item2->delete;
+};
+
+subtest 'removal from a display only happens when the check-in is accepted' => sub {
+    plan tests => 9;
+
+    my $library1 = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $library2 = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron =
+        $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $library1->branchcode } } );
+    t::lib::Mocks::mock_userenv( { branchcode => $library1->branchcode } );
+
+    my $make = sub {
+        my ( $return_over, %display_values ) = @_;
+        my $item = $builder->build_sample_item(
+            { homebranch => $library1->branchcode, holdingbranch => $library1->branchcode } );
+        my $display = $builder->build_object(
+            {
+                class => 'Koha::Displays',
+                value => {
+                    display_days        => 30,
+                    display_return_over => $return_over,
+                    start_date          => $yesterday->ymd,
+                    end_date            => $tomorrow->ymd,
+                    enabled             => 1,
+                    %display_values,
+                }
+            }
+        );
+        $builder->build_object(
+            {
+                class => 'Koha::Display::Items',
+                value => {
+                    display_id   => $display->display_id,
+                    itemnumber   => $item->itemnumber,
+                    biblionumber => $item->biblionumber,
+                    date_added   => $yesterday->ymd,
+                    date_remove  => $tomorrow->ymd,
+                }
+            }
+        );
+        return ( $item, $display );
+    };
+
+    # A scan of an item that is not checked out is refused: it stays on its display
+    my ($not_issued) = $make->('any');
+    my ( $doreturn, $messages ) = AddReturn( $not_issued->barcode, $library1->branchcode );
+    is( $doreturn, 0, 'The check-in of an item that is not checked out is refused' );
+    ok( $not_issued->active_display_item,        'A refused check-in leaves the item on its display' );
+    ok( !exists $messages->{RemovedFromDisplay}, 'And does not say it was removed' );
+
+    # 'no' never removes it
+    my ($stays) = $make->('no');
+    AddIssue( $patron, $stays->barcode );
+    ( $doreturn, $messages ) = AddReturn( $stays->barcode, $library1->branchcode );
+    is( $doreturn, 1, 'The item is checked in' );
+    ok( $stays->active_display_item && !exists $messages->{RemovedFromDisplay}, "'no' leaves the item on its display" );
+
+    # With the module off the display is ignored altogether
+    my ($ignored) = $make->('any');
+    t::lib::Mocks::mock_preference( 'UseDisplayModule', 0 );
+    AddIssue( $patron, $ignored->barcode );
+    ( $doreturn, $messages ) = AddReturn( $ignored->barcode, $library1->branchcode );
+    t::lib::Mocks::mock_preference( 'UseDisplayModule', 1 );
+    is( $doreturn, 1, 'The item is checked in' );
+    ok( !exists $messages->{RemovedFromDisplay}, 'With the module off nothing is removed from a display' );
+    ok( $ignored->active_display_item,           '...and the item is still on its display' );
+    is( $ignored->get_from_storage->homebranch, $library1->branchcode, 'The item is unchanged' );
+};
+
+subtest 'an item leaving its display goes to its real home library' => sub {
+    plan tests => 4;
+
+    t::lib::Mocks::mock_preference( 'HomeOrHoldingBranchReturn', 'homebranch' );
+
+    my $home         = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $display_home = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $elsewhere    = $builder->build_object( { class => 'Koha::Libraries' } );
+    my $patron =
+        $builder->build_object( { class => 'Koha::Patrons', value => { branchcode => $elsewhere->branchcode } } );
+    t::lib::Mocks::mock_userenv( { branchcode => $elsewhere->branchcode } );
+
+    my $item = $builder->build_sample_item( { homebranch => $home->branchcode, holdingbranch => $home->branchcode } );
+    my $display = $builder->build_object(
+        {
+            class => 'Koha::Displays',
+            value => {
+                display_days        => 30,
+                display_return_over => 'any',
+                display_home_branch => $display_home->branchcode,
+                start_date          => $yesterday->ymd,
+                end_date            => $tomorrow->ymd,
+                enabled             => 1,
+            }
+        }
+    );
+    $builder->build_object(
+        {
+            class => 'Koha::Display::Items',
+            value => {
+                display_id   => $display->display_id,
+                itemnumber   => $item->itemnumber,
+                biblionumber => $item->biblionumber,
+                date_added   => $yesterday->ymd,
+                date_remove  => $tomorrow->ymd,
+            }
+        }
+    );
+    is(
+        $item->effective_homebranch, $display_home->branchcode,
+        'While on display the effective home library is the display\'s'
+    );
+
+    AddIssue( $patron, $item->barcode );
+    my ( $doreturn, $messages ) = AddReturn( $item->barcode, $elsewhere->branchcode );
+    is( $doreturn, 1, 'Checked in' );
+    ok( exists $messages->{RemovedFromDisplay}, 'It left its display' );
+    my $transfer = $item->get_from_storage->get_transfer;
+    is(
+        $transfer ? $transfer->tobranch : undef, $home->branchcode,
+        'and is sent to its real home library, not the display\'s'
+    );
 };
 
 $schema->storage->txn_rollback;

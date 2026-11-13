@@ -2530,7 +2530,7 @@ sub libraries_where_can_see_patrons {
 Return the list of branchcodes(!) of libraries the patron is allowed to add
 displays for. The branchcodes are arbitrarily returned sorted.
 
-If the patron has the 'add_display_to_any_libraries' permission,
+If the patron has the 'add_displays_to_any_libraries' permission,
 an empty list is returned as a signal they have access to all libraries.
 
 =cut

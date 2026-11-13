@@ -167,7 +167,7 @@ sub store {
     } else {
         ## if no date_remove is supplied, set it to a really distant date
         ## so that added<->remove calculations can be made elsewhere
-        $self->date_remove("2106-02-07")
+        $self->date_remove( Koha::Display::DISTANT_DATE() )
             unless ( defined $self->date_remove );
 
         my $original = Koha::Display::Items->find( $self->display_item_id )->unblessed;
@@ -246,15 +246,10 @@ sub active {
 
 =head3 active_display
 
-    my $display = $item->active_display;
+    my $display = $display_item->active_display;
 
-Returns the active display for this item, if any. Returns undef if the item is not
-currently in an active display.
-
-An active display is one that:
-- Is enabled
-- Has a date_added on the display_item that is today or in the past (or no date_added)
-- Has a date_remove on the display_item that is today or in the future (or no date_remove)
+Returns the display of this display item if the display item is active (see
+L</active>), undef otherwise.
 
 =cut
 

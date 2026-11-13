@@ -20,11 +20,15 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 13;
+use Test::More tests => 14;
+use Test::MockModule;
+use Test::Exception;
 
 use Koha::Database;
 use Koha::DateUtils qw( dt_from_string );
 use Koha::ActionLogs;
+use Koha::Display;
+use Koha::Display::Item;
 use Koha::Displays;
 
 use t::lib::Mocks;
@@ -220,6 +224,118 @@ subtest 'delete() is logged as DELETE' => sub {
     my $logs = Koha::ActionLogs->search( { module => 'DISPLAYS', object => $id } );
     is( $logs->search( { action => 'DELETE' } )->count,      1, 'Deleting a display logs DELETE' );
     is( $logs->search( { action => 'REMOVE_ITEM' } )->count, 0, 'It is not confused with removing an item' );
+};
+
+subtest 'action logging' => sub {
+    plan tests => 12;
+
+    my $actions = sub {
+        my ( $object, $id ) = @_;
+        return [ map { $_->action }
+                Koha::ActionLogs->search( { module => 'DISPLAYS', object => $id }, { order_by => 'action_id' } )
+                ->as_list ];
+    };
+
+    t::lib::Mocks::mock_preference( 'UseDisplayModule', 1 );
+    t::lib::Mocks::mock_preference( 'DisplayItemsLog',  1 );
+
+    my $display = Koha::Display->new(
+        {
+            display_name        => 'Logged',
+            display_days        => 7,
+            start_date          => $yesterday->ymd,
+            display_return_over => 'no',
+            enabled             => 1,
+        }
+    )->store;
+    my $id = $display->display_id;
+    is_deeply( $actions->( $display, $id ), ['CREATE'], 'Creating is logged' );
+
+    $display->store;
+    is_deeply( $actions->( $display, $id ), ['CREATE'], 'Saving without a change logs nothing' );
+
+    $display->display_name('Renamed')->store;
+    is_deeply( $actions->( $display, $id ), [ 'CREATE', 'MODIFY' ], 'Modifying is logged' );
+
+    $display->enabled(0)->store;
+    is_deeply(
+        $actions->( $display, $id ), [ 'CREATE', 'MODIFY', 'DISABLED' ],
+        'Disabling is logged as DISABLED only'
+    );
+
+    $display->enabled(1)->store;
+    is_deeply(
+        $actions->( $display, $id ), [ 'CREATE', 'MODIFY', 'DISABLED', 'ENABLED' ],
+        'Enabling is logged as ENABLED only'
+    );
+
+    $display->enabled(0)->display_name('Both')->store;
+    is_deeply(
+        $actions->( $display, $id ), [ 'CREATE', 'MODIFY', 'DISABLED', 'ENABLED', 'DISABLED', 'MODIFY' ],
+        'A change to both is logged as both'
+    );
+
+    # Display items
+    my $item         = $builder->build_sample_item;
+    my $display_item = Koha::Display::Item->new(
+        {
+            display_id   => $id,
+            itemnumber   => $item->itemnumber,
+            biblionumber => $item->biblionumber,
+            date_added   => $yesterday->ymd,
+            date_remove  => $tomorrow->ymd,
+        }
+    )->store;
+    my $di_id = $display_item->display_item_id;
+    $display_item->date_remove( $tomorrow->clone->add( days => 1 )->ymd )->store;
+    $display_item->delete;
+    is_deeply(
+        $actions->( $display_item, $di_id ), [ 'ADD_ITEM', 'MODIFY_ITEM', 'REMOVE_ITEM' ],
+        'Display item actions are logged'
+    );
+
+    # A delete that fails is not logged
+    my $other = Koha::Display->new(
+        {
+            display_name => 'Unlogged', display_days => 7, start_date => $yesterday->ymd, display_return_over => 'no',
+            enabled      => 1
+        }
+    )->store;
+    my $other_id = $other->display_id;
+    {
+        my $mock = Test::MockModule->new('Koha::Object');
+        $mock->mock( delete => sub { die "cannot delete\n" } );
+        eval { $other->delete };
+    }
+    is_deeply( $actions->( $other, $other_id ), ['CREATE'], 'A failed delete is not logged' );
+
+    # With the log disabled nothing is written
+    t::lib::Mocks::mock_preference( 'DisplayItemsLog', 0 );
+    my $quiet = Koha::Display->new(
+        {
+            display_name => 'Quiet', display_days => 7, start_date => $yesterday->ymd, display_return_over => 'no',
+            enabled      => 1
+        }
+    )->store;
+    $quiet->display_name('Still quiet')->store;
+    $quiet->enabled(0)->store;
+    my $quiet_id = $quiet->display_id;
+    $quiet->delete;
+    is_deeply( $actions->( $quiet, $quiet_id ), [], 'Nothing is logged with DisplayItemsLog off' );
+
+    throws_ok { Koha::Display->new( { display_name => 'Incomplete' } )->store } 'Koha::Exceptions::BadParameter',
+        'A display missing required attributes is refused';
+    throws_ok {
+        Koha::Display->new(
+            { display_name => 'x', display_days => 1, start_date => $yesterday->ymd, display_return_over => 'no' } )
+            ->store
+    }
+    'Koha::Exceptions::BadParameter', 'A display with no enabled flag is refused';
+    is( Koha::Display::DISTANT_DATE, '2106-02-07', 'The no-end date is a named constant' );
+
+    # Leave the shared counts as we found them
+    $display->delete;
+    $other->delete;
 };
 
 # Test delete

@@ -19,8 +19,9 @@ package Koha::Display::Items;
 
 use Modern::Perl;
 
+use Koha::DateUtils qw( dt_from_string );
+
 use Carp;
-use DateTime;
 
 use Koha::Database;
 use Koha::Display::Item;
@@ -87,7 +88,7 @@ Returns display items that are due for removal based on date_remove.
 
 sub due_for_removal {
     my ($self) = @_;
-    my $today = DateTime->today->ymd;
+    my $today = dt_from_string()->truncate( to => 'day' )->ymd;
 
     return $self->search( { date_remove => { '<=' => $today } } );
 }

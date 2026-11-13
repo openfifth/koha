@@ -23,6 +23,7 @@ use Mojo::Base 'Mojolicious::Controller';
 
 use C4::Auth qw( haspermission );
 use C4::Context;
+use Koha::Auth::Permissions;
 use Koha::Database;
 use Koha::Display;
 use Koha::Displays;

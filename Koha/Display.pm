@@ -33,6 +33,9 @@ use Koha::Library;
 
 use base qw(Koha::Object);
 
+# Stands in for "no end" so that start <-> end calculations can always be made
+use constant DISTANT_DATE => '2106-02-07';
+
 =head1 NAME
 
 Koha::Display - Koha Display Object class
@@ -249,7 +252,7 @@ sub store {
 
     ## if no end_date is supplied, set it to a really distant date
     ## so that start<->end calculations can be made elsewhere
-    $self->end_date("2106-02-07")
+    $self->end_date(DISTANT_DATE)
         unless ( defined $self->end_date );
 
     unless ( $self->in_storage ) {
@@ -268,15 +271,17 @@ sub store {
         $self->discard_changes;
 
         if ( C4::Context->preference("DisplayItemsLog") ) {
-            my $enabled_before = $original ? $original->{enabled} : undef;
-            my $enabled_after  = $self->enabled;
+            my $current = $self->unblessed;
+            my @changed = grep { ( $original->{$_} // q{} ) ne ( $current->{$_} // q{} ) } keys %{$current};
 
-            if ( defined $enabled_before && defined $enabled_after && $enabled_before != $enabled_after ) {
-                my $enable_action = $enabled_after ? "ENABLED" : "DISABLED";
+            # Enabling or disabling is logged as such, and is not also a modification
+            if ( grep { $_ eq 'enabled' } @changed ) {
+                my $enable_action = $self->enabled ? "ENABLED" : "DISABLED";
                 logaction( "DISPLAYS", $enable_action, $self->display_id, $self, undef, $self );
             }
 
-            logaction( "DISPLAYS", "MODIFY", $self->display_id, $self, undef, $original );
+            logaction( "DISPLAYS", "MODIFY", $self->display_id, $self, undef, $original )
+                if grep { $_ ne 'enabled' } @changed;
         }
 
         return $self;

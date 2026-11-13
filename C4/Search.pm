@@ -48,7 +48,6 @@ use C4::Charset  qw( SetUTF8Flag );
 use C4::Matcher;
 use Koha::AuthorisedValues;
 use Koha::BiblioFrameworkMarcMatchers;
-use Koha::Displays;
 use Koha::Items;
 use Koha::ItemTypes;
 use Koha::Libraries;
@@ -1811,19 +1810,24 @@ sub searchResults {
     my $itemtypes = Koha::ItemTypes->search_with_localization;
     my %itemtypes = map { $_->{itemtype} => $_ } @{ $itemtypes->unblessed };
 
-    # Caches shared across all display-aware helper closures
-    my $display_cache  = {};
-    my $item_obj_cache = {};
-
-    # Staff users may only see displays from libraries they are allowed to view
-    # An empty list means the user can see displays from all libraries
+    # Staff users may only see displays from libraries they are allowed to view.
+    # An empty list from the permission means they can see displays from all libraries;
+    # if we cannot tell who the user is, show no restricted displays rather than all of them
+    my $use_display_module        = C4::Context->preference('UseDisplayModule');
+    my $restrict_display_branches = 0;
     my %viewable_display_branches;
-    if ( !$is_opac && C4::Context->preference('UseDisplayModule') ) {
+    if ( !$is_opac && $use_display_module ) {
         my $userenv          = C4::Context->userenv;
         my $logged_in_patron = $userenv && $userenv->{number} ? Koha::Patrons->find( $userenv->{number} ) : undef;
-        %viewable_display_branches = map { $_ => 1 } $logged_in_patron->libraries_where_can_view_displays
-            if $logged_in_patron;
+        my @branches         = $logged_in_patron ? $logged_in_patron->libraries_where_can_view_displays   : ();
+        if ( !$logged_in_patron || @branches ) {
+            $restrict_display_branches = 1;
+            %viewable_display_branches = map { $_ => 1 } @branches;
+        }
     }
+
+    # Koha::Item objects of this result set, by itemnumber
+    my $item_obj_cache = {};
 
     # Returns a Koha::Item object for the given itemnumber, cached per result set
     my $get_item_obj = sub {
@@ -1834,130 +1838,46 @@ sub searchResults {
         return $item_obj_cache->{$itemnumber};
     };
 
-    # Helper function to get effective location for search results
-    my $get_effective_collection_code = sub {
-        my ($item) = @_;
-        return $collections->{ $item->{ccode} } unless C4::Context->preference('UseDisplayModule');
-
-        my $item_obj = $get_item_obj->( $item->{itemnumber} );
-        return $collections->{ $item->{ccode} } unless $item_obj;
-
-        my $effective_collection_code = $item_obj->effective_collection_code;
-
-        # If it starts with "Display:", validate against displays table
-        if ( $effective_collection_code =~ /^Display:\s*(.+)$/ ) {
-            my $display_name = $1;
-
-            # Use cache to avoid repeated database queries
-            if ( !exists $display_cache->{$display_name} ) {
-                my $display = Koha::Displays->search( { display_name => $display_name } )->next;
-                $display_cache->{$display_name} = $display ? $display->display_name : undef;
-            }
-            return $display_cache->{$display_name}
-                ? "Display: " . $display_cache->{$display_name}
-                : $effective_collection_code;
-        } else {
-            return $collections->{$effective_collection_code};
+    # The active display of an item, looked up once per item. The display-aware values
+    # below are the display's own, or the item's when there is no display or it does not set them
+    my %active_display_cache;
+    my $get_active_display = sub {
+        my ($itemnumber) = @_;
+        unless ( exists $active_display_cache{$itemnumber} ) {
+            my $item_obj = $get_item_obj->($itemnumber);
+            $active_display_cache{$itemnumber} = $item_obj ? $item_obj->active_display : undef;
         }
+        return $active_display_cache{$itemnumber};
+    };
+    my %display_attribute = (
+        ccode         => 'display_code',
+        itype         => 'display_itype',
+        location      => 'display_location',
+        homebranch    => 'display_home_branch',
+        holdingbranch => 'display_holding_branch',
+    );
+    my $get_effective_value = sub {
+        my ( $item, $field ) = @_;
+        return $item->{$field} unless $use_display_module;
+
+        my $display  = $get_active_display->( $item->{itemnumber} );
+        my $override = $display ? $display->${ \$display_attribute{$field} } : undef;
+        return ( defined $override && $override ne q{} ) ? $override : $item->{$field};
+    };
+    my $get_effective_collection_code = sub {
+        my $code = $get_effective_value->( $_[0], 'ccode' );
+        return defined $code ? $collections->{$code} : undef;
     };
     my $get_effective_itemtype = sub {
-        my ($item) = @_;
-        return $itemtypes{ $item->{itype} }{translated_description} unless C4::Context->preference('UseDisplayModule');
-
-        my $item_obj = $get_item_obj->( $item->{itemnumber} );
-        return $itemtypes{ $item->{itype} }{translated_description} unless $item_obj;
-
-        my $effective_itemtype = $item_obj->effective_itemtype;
-
-        # If it starts with "Display:", validate against displays table
-        if ( $effective_itemtype =~ /^Display:\s*(.+)$/ ) {
-            my $display_name = $1;
-
-            # Use cache to avoid repeated database queries
-            if ( !exists $display_cache->{$display_name} ) {
-                my $display = Koha::Displays->search( { display_name => $display_name } )->next;
-                $display_cache->{$display_name} = $display ? $display->display_name : undef;
-            }
-            return $display_cache->{$display_name}
-                ? "Display: " . $display_cache->{$display_name}
-                : $effective_itemtype;
-        } else {
-            return $itemtypes{$effective_itemtype}{translated_description};
-        }
+        my $code = $get_effective_value->( $_[0], 'itype' );
+        return defined $code ? $itemtypes{$code}{translated_description} : undef;
     };
     my $get_effective_location = sub {
-        my ($item) = @_;
-        return $shelflocations->{ $item->{location} } unless C4::Context->preference('UseDisplayModule');
-
-        my $item_obj = $get_item_obj->( $item->{itemnumber} );
-        return $shelflocations->{ $item->{location} } unless $item_obj;
-
-        my $effective_loc = $shelflocations->{ $item_obj->effective_location };
-
-        # If it starts with "Display:", validate against displays table
-        if ( $effective_loc =~ /^Display:\s*(.+)$/ ) {
-            my $display_name = $1;
-
-            # Use cache to avoid repeated database queries
-            if ( !exists $display_cache->{$display_name} ) {
-                my $display = Koha::Displays->search( { display_name => $display_name } )->next;
-                $display_cache->{$display_name} = $display ? $display->display_name : undef;
-            }
-            return $display_cache->{$display_name} ? "Display: " . $display_cache->{$display_name} : $effective_loc;
-        } else {
-            return $effective_loc;
-        }
+        my $code = $get_effective_value->( $_[0], 'location' );
+        return defined $code ? $shelflocations->{$code} : undef;
     };
-    my $get_effective_homebranch = sub {
-        my ($item) = @_;
-        return $item->{homebranch} unless C4::Context->preference('UseDisplayModule');
-
-        my $item_obj = $get_item_obj->( $item->{itemnumber} );
-        return $item->{homebranch} unless $item_obj;
-
-        my $effective_homebranch = $item_obj->effective_homebranch;
-
-        # If it starts with "Display:", validate against displays table
-        if ( $effective_homebranch =~ /^Display:\s*(.+)$/ ) {
-            my $display_name = $1;
-
-            # Use cache to avoid repeated database queries
-            if ( !exists $display_cache->{$display_name} ) {
-                my $display = Koha::Displays->search( { display_name => $display_name } )->next;
-                $display_cache->{$display_name} = $display ? $display->display_name : undef;
-            }
-            return $display_cache->{$display_name}
-                ? "Display: " . $display_cache->{$display_name}
-                : $effective_homebranch;
-        } else {
-            return $effective_homebranch;
-        }
-    };
-    my $get_effective_holdingbranch = sub {
-        my ($item) = @_;
-        return $item->{holdingbranch} unless C4::Context->preference('UseDisplayModule');
-
-        my $item_obj = $get_item_obj->( $item->{itemnumber} );
-        return $item->{holdingbranch} unless $item_obj;
-
-        my $effective_holdingbranch = $item_obj->effective_holdingbranch;
-
-        # If it starts with "Display:", validate against displays table
-        if ( $effective_holdingbranch =~ /^Display:\s*(.+)$/ ) {
-            my $display_name = $1;
-
-            # Use cache to avoid repeated database queries
-            if ( !exists $display_cache->{$display_name} ) {
-                my $display = Koha::Displays->search( { display_name => $display_name } )->next;
-                $display_cache->{$display_name} = $display ? $display->display_name : undef;
-            }
-            return $display_cache->{$display_name}
-                ? "Display: " . $display_cache->{$display_name}
-                : $effective_holdingbranch;
-        } else {
-            return $effective_holdingbranch;
-        }
-    };
+    my $get_effective_homebranch    = sub { $get_effective_value->( $_[0], 'homebranch' ) };
+    my $get_effective_holdingbranch = sub { $get_effective_value->( $_[0], 'holdingbranch' ) };
 
     # get notforloan authorised value list (see $shelflocations  FIXME)
     my $av = Koha::MarcSubfieldStructures->search(
@@ -2165,29 +2085,15 @@ sub searchResults {
                 $item->{'branchcode'} = $item->{$otherbranch};
             }
 
-            if ( C4::Context->preference('UseDisplayModule') ) {
-                my $display_items = Koha::Display::Items->search(
-                    { itemnumber => $item->{itemnumber} },
-                    {
-                        order_by => { '-desc' => 'date_added' },
-                    }
-                );
-                my @display_items;
-                my @displays;
+            if ($use_display_module) {
+                my $item_obj      = $get_item_obj->( $item->{itemnumber} );
+                my @display_items = $item_obj ? $item_obj->active_display_items : ();
+                my @displays      = map { $_->display } @display_items;
 
-                while ( my $display_item = $display_items->next ) {
-                    my $display = $display_item->display;
-
-                    push @display_items, $display_item
-                        if defined $display_item->active and $display_item->active == 1;
-
-                    push @displays, $display
-                        if defined $display_item->active
-                        and $display_item->active == 1
-                        and defined $display->active
-                        and $display->active == 1
-                        and ( !%viewable_display_branches || $viewable_display_branches{ $display->display_branch } );
-                }
+                # Staff may be limited to the displays of some libraries
+                @displays =
+                    grep { defined $_->display_branch && $viewable_display_branches{ $_->display_branch } } @displays
+                    if $restrict_display_branches;
 
                 $item->{display_items} = \@display_items if @display_items;
                 $item->{displays}      = \@displays      if @displays;

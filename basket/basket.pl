@@ -30,7 +30,6 @@ use C4::Output qw( output_html_with_http_headers );
 use Koha::AuthorisedValues;
 use Koha::Biblios;
 use Koha::CsvProfiles;
-use Koha::Items;
 
 my $query = CGI->new;
 
@@ -89,15 +88,7 @@ foreach my $biblionumber (@bibs) {
 
     $num++;
     $dat->{biblionumber} = $biblionumber;
-    my $items = $biblio->items->search_ordered;
-
-    # Add effective_location for display module support
-    if ( C4::Context->preference('UseDisplayModule') ) {
-        foreach my $item ( $items->as_list ) {
-            $item->{effective_location} = $item->effective_location;
-        }
-    }
-    $dat->{ITEM_RESULTS} = $items;
+    $dat->{ITEM_RESULTS} = $biblio->items->search_ordered;
     $dat->{MARCNOTES}    = $marcnotesarray;
     $dat->{MARCSUBJCTS}  = $marcsubjctsarray;
     $dat->{MARCAUTHORS}  = $marcauthorsarray;

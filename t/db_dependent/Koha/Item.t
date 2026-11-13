@@ -21,7 +21,7 @@ use Modern::Perl;
 use utf8;
 
 use Test::NoWarnings;
-use Test::More tests => 48;
+use Test::More tests => 49;
 use Test::Exception;
 use Test::MockModule;
 use Test::Warn;
@@ -924,6 +924,72 @@ subtest 'as_marc_field() stored values without an active display' => sub {
     t::lib::Mocks::mock_preference( 'item-level_itypes', 0 );
     Koha::Display::Items->search( { itemnumber => $item->itemnumber } )->delete;
     $check->('Module on, item not on a display, item-level itypes off: stored values are exported');
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'active_display_items() and friends' => sub {
+
+    plan tests => 11;
+
+    $schema->storage->txn_begin;
+
+    my $item         = $builder->build_sample_item;
+    my $make_display = sub {
+        my (%params) = @_;
+        return $builder->build_object(
+            {
+                class => 'Koha::Displays',
+                value =>
+                    { enabled => 1, start_date => '2000-01-01', end_date => '2100-01-01', display_days => 7, %params }
+            }
+        );
+    };
+    my $put = sub {
+        my ( $display, %dates ) = @_;
+        return Koha::Display::Item->new(
+            {
+                display_id   => $display->display_id,
+                itemnumber   => $item->itemnumber,
+                biblionumber => $item->biblionumber,
+                %dates,
+            }
+        )->store;
+    };
+
+    my $older    = $make_display->( display_location => 'OLDER' );
+    my $expired  = $make_display->( display_location => 'EXPIRED' );
+    my $disabled = $make_display->( display_location => 'OFF', enabled => 0 );
+
+    $put->( $older, date_added => '2000-01-01', date_remove => '2100-01-01' );
+
+    # Added later but already past its removal date: it must not hide the older active one
+    my $expired_item = $put->( $expired, date_added => '2000-02-01', date_remove => '2100-01-01' );
+    $expired_item->date_remove('2000-03-01')->store;
+    $put->( $disabled, date_added => '2000-04-01', date_remove => '2100-01-01' );
+
+    t::lib::Mocks::mock_preference( 'UseDisplayModule', 0 );
+    is_deeply( [ $item->active_display_items ], [], 'No active display items with the module off' );
+    is( $item->active_display,      undef, 'No active display with the module off' );
+    is( $item->active_display_item, undef, 'No active display item with the module off' );
+
+    t::lib::Mocks::mock_preference( 'UseDisplayModule', 1 );
+    my @display_items = $item->active_display_items;
+    is( scalar @display_items,         1,                  'Only the active display item is returned' );
+    is( $display_items[0]->display_id, $older->display_id, 'It is the one on the running, enabled display' );
+    is(
+        $item->active_display->display_id, $older->display_id,
+        'An expired newer entry does not hide the active display'
+    );
+    is( $item->active_display_item->display_id, $older->display_id, 'Same for the display item' );
+    is_deeply( [ map { $_->display_id } $item->active_displays ], [ $older->display_id ], 'active_displays' );
+    is( $item->effective_location, 'OLDER', 'The effective values come from the active display' );
+
+    # Two active displays: the most recently added wins
+    my $newer = $make_display->( display_location => 'NEWER' );
+    $put->( $newer, date_added => '2000-05-01', date_remove => '2100-01-01' );
+    is( $item->active_display->display_id,  $newer->display_id, 'The most recently added active display wins' );
+    is( scalar $item->active_display_items, 2,                  'Both active display items are listed' );
 
     $schema->storage->txn_rollback;
 };
