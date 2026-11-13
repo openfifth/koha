@@ -185,6 +185,13 @@ if ( $item && !$patron->can_edit_items_from( $item->homebranch ) ) {
     exit;
 }
 
+# An item on an active display is managed through its display: the template
+# hides the edit and delete actions, so refuse them here too
+if ( $item && ( $op eq 'cud-saveitem' || $op eq 'cud-delitem' ) && $item->active_display ) {
+    print $input->redirect("/cgi-bin/koha/catalogue/detail.pl?biblionumber=$biblionumber");
+    exit;
+}
+
 my $uid               = $patron->userid;
 my $restrictededition = $uid ? haspermission( $uid, { 'editcatalogue' => 'edit_items_restricted' } ) : undef;
 

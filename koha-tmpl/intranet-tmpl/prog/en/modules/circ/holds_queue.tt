@@ -28,9 +28,9 @@
         width: 300px;
     }
 </style>
-</head>
+<!--</head>-->
 
-<body id="circ_holds_queue" class="circ">
+<!--<body id="circ_holds_queue" class="circ">-->
 [% WRAPPER 'header.inc' %]
     [% INCLUDE 'circ-search.inc' %]
 [% END %]
@@ -266,7 +266,7 @@
                             searchable: true,
                             render: function (data, type, row) {
                                 if (!row.item || !row.item.holding_library) return "";
-                                return (row.item.effective_holding_library.name || row.item.holding_library || "").escapeHtml();
+                                return (row.item.effective_holding_library.name || row.item.holding_library.name || "").escapeHtml();
                             },
                         },
                         {
@@ -347,7 +347,7 @@
                                 if (!row.item || !row.item.active_display) return nodes;
 
                                 if (row.item.active_display.display_name) {
-                                    nodes = '<li><a href="/cgi-bin/koha/display/displays/%s">%s</a></li>'.format(row.item.active_display.display_id, row.item.active_display.display_name);
+                                    nodes = '<li><a href="/cgi-bin/koha/display/displays/%s">%s</a></li>'.format(encodeURIComponent(row.item.active_display.display_id), row.item.active_display.display_name.escapeHtml());
                                 }
 
                                 if (nodes != "") nodes = "<ul>" + nodes + "</ul>";

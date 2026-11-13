@@ -167,7 +167,8 @@
             otherholdings: "[% PROCESS 'build_table' tab="otherholdings" | collapse | $tojson %]",
         };
 
-        const dtNow = new Date(Date.now());
+        // escape_str() does not escape quotes, so it is not safe inside a double-quoted attribute
+        const escape_attr = s => escape_str(s).replaceAll('"', "&quot;");
     </script>
     <script nonce="[% Koha.CSPNonce | $raw %]">
         let items_selection = {};
@@ -514,21 +515,21 @@
                             if (!Koha.prefs.noItemTypeImages) {
                                 let effective_image_location = item_type_image_locations[row.effective_item_type_id];
                                 nodes += effective_image_location
-                                    ? '<img class="itemtype-image" src="%s" alt="" /> '.format(escape_str(effective_image_location), escape_str(effective_item_type_description), escape_str(effective_item_type_description))
+                                    ? '<img class="itemtype-image" src="%s" alt="" /> '.format(escape_attr(effective_image_location), escape_attr(effective_item_type_description), escape_attr(effective_item_type_description))
                                     : "";
                             }
 
                             nodes += '<span class="itypedesc itypetext descriptor" tabindex="0" data-bs-toggle="tooltip" data-bs-title="%s">%s</span>'.format(
-                                _("Usual item type: %s").format(escape_str(item_type_description)),
-                                escape_str(effective_item_type_description)
+                                _("Usual item type: %s").format(escape_attr(item_type_description)),
+                                escape_attr(effective_item_type_description)
                             );
                         } else {
                             if (!Koha.prefs.noItemTypeImages) {
                                 let image_location = item_type_image_locations[row.item_type_id];
-                                nodes += image_location ? '<img class="itemtype-image" src="%s" alt="" /> '.format(escape_str(image_location), escape_str(item_type_description), escape_str(item_type_description)) : "";
+                                nodes += image_location ? '<img class="itemtype-image" src="%s" alt="" /> '.format(escape_attr(image_location), escape_attr(item_type_description), escape_attr(item_type_description)) : "";
                             }
 
-                            nodes += '<span class="itypedesc itypetext">%s</span>'.format(escape_str(item_type_description));
+                            nodes += '<span class="itypedesc itypetext">%s</span>'.format(escape_attr(item_type_description));
                         }
 
                         return nodes;
@@ -551,11 +552,11 @@
                             let effective_holding_library_id_str = row._strings.effective_holding_library_id ? row._strings.effective_holding_library_id.str : row.effective_holding_library_id;
 
                             nodes += '<span class="descriptor" tabindex="0" data-bs-toggle="tooltip" data-bs-title="%s">%s</span>'.format(
-                                _("Usual holding library: %s").format(escape_str(holding_library_id_str)),
-                                escape_str(effective_holding_library_id_str)
+                                _("Usual holding library: %s").format(escape_attr(holding_library_id_str)),
+                                escape_attr(effective_holding_library_id_str)
                             );
                         } else {
-                            nodes += "<span>%s</span>".format(escape_str(holding_library_id_str));
+                            nodes += "<span>%s</span>".format(escape_attr(holding_library_id_str));
                         }
 
                         return nodes;
@@ -569,7 +570,7 @@
                     searchable: true,
                     orderable: true,
                     render: function (data, type, row, meta) {
-                        let nodes = "<span>";
+                        let nodes = "";
 
                         // If effective or permanent home branch is defined, show description or
                         // code and display current location in modal accessible via hyperlink.
@@ -578,11 +579,11 @@
                             let effective_home_library_id_str = row._strings.effective_home_library_id ? row._strings.effective_home_library_id.str : row.effective_home_library_id;
 
                             nodes += '<span class="descriptor" tabindex="0" data-bs-toggle="tooltip" data-bs-title="%s">%s</span>'.format(
-                                _("Usual home library: %s").format(escape_str(home_library_id_str)),
-                                escape_str(effective_home_library_id_str)
+                                _("Usual home library: %s").format(escape_attr(home_library_id_str)),
+                                escape_attr(effective_home_library_id_str)
                             );
                         } else {
-                            nodes += "<span>%s</span>".format(escape_str(home_library_id_str));
+                            nodes += "<span>%s</span>".format(escape_attr(home_library_id_str));
                         }
 
                         return nodes;
@@ -608,18 +609,18 @@
                             let effective_loc_str = row._strings.effective_location ? row._strings.effective_location.str : row.effective_location;
 
                             nodes += '<span class="shelvingloc descriptor" tabindex="0" data-bs-toggle="tooltip" data-bs-title="%s">%s</span>'.format(
-                                _("Usual shelving location: %s").format(escape_str(loc_str)),
-                                escape_str(effective_loc_str)
+                                _("Usual shelving location: %s").format(escape_attr(loc_str)),
+                                escape_attr(effective_loc_str)
                             );
                         } else if (row.permanent_location && row.permanent_location != row.location) {
                             let permanent_loc_str = av_loc.get(row.permanent_location);
 
                             nodes += '<span class="shelvingloc descriptor" tabindex="0" data-bs-toggle="tooltip" data-bs-title="%s">%s</span>'.format(
-                                _("Usual shelving location: %s").format(escape_str(loc_str)),
-                                escape_str(permanent_loc_str)
+                                _("Usual shelving location: %s").format(escape_attr(loc_str)),
+                                escape_attr(permanent_loc_str)
                             );
                         } else {
-                            nodes += '<span class="shelvingloc">%s</span>'.format(escape_str(loc_str));
+                            nodes += '<span class="shelvingloc">%s</span>'.format(escape_attr(loc_str));
                         }
 
                         return nodes;
@@ -632,7 +633,7 @@
                     searchable: true,
                     orderable: true,
                     render: function (data, type, row, meta) {
-                        let nodes = "<span>";
+                        let nodes = "";
 
                         // If effective ccode is defined, show description or code and display current
                         // ccode in modal accessible via hyperlink.
@@ -640,12 +641,11 @@
                         if (row.effective_collection_code && row.effective_collection_code != row.collection_code) {
                             let effective_ccode_str = row._strings.effective_collection_code ? row._strings.effective_collection_code.str : row.effective_collection_code;
 
-                            nodes += '<span class="descriptor" tabindex="0" data-bs-toggle="tooltip" data-bs-title="%s">%s</span>'.format(_("Usual collection: %s").format(escape_str(ccode_str)), escape_str(effective_ccode_str));
+                            nodes += '<span class="descriptor" tabindex="0" data-bs-toggle="tooltip" data-bs-title="%s">%s</span>'.format(_("Usual collection: %s").format(escape_attr(ccode_str)), escape_attr(effective_ccode_str));
                         } else {
-                            nodes += "<span>%s</span>".format(escape_str(ccode_str));
+                            nodes += "<span>%s</span>".format(escape_attr(ccode_str));
                         }
 
-                        nodes += "</span>";
                         return nodes;
                     },
                 },
@@ -1121,12 +1121,17 @@
                     columns,
                     initComplete: function (settings, json) {
                         itemSelectionBuildActionLinks(tab_id);
-
-                        const tooltipElements = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-                        [...tooltipElements].map(element => new bootstrap.Tooltip(element));
                     },
                     drawCallback: function (settings) {
                         let api = this.api();
+
+                        // Rows are replaced on every draw, so the tooltips must be set up every time
+                        $(this)
+                            .find('[data-bs-toggle="tooltip"]')
+                            .each(function () {
+                                bootstrap.Tooltip.getOrCreateInstance(this);
+                            });
+
                         $.each($(this).find("tbody tr"), function (index, e) {
                             let row = api.row(this).data();
                             if (!row) return; // Happen if the table is empty

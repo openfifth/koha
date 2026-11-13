@@ -313,10 +313,8 @@ export default {
                     label: $__("End of display"),
                     type: "date",
                     toolTip: $__("When the display's effectiveness ends"),
-                    hint: $__(
-                        "Defaults to %s when left blank".format(
-                            format_date("2106-02-07")
-                        )
+                    hint: $__("Defaults to %s when left blank").format(
+                        format_date("2106-02-07")
                     ),
                     breakAfter: true,
                     showElement: {
@@ -476,10 +474,8 @@ export default {
                                 "Date item becomes inactive on display"
                             ),
                             hint: $__(
-                                'Defaults to either today, or "Start of display" (whichever is later) plus the value of "Duration of display", when left blank on new display items\nDefaults to %s, when left blank on existing display items'.format(
-                                    format_date("2106-02-07")
-                                )
-                            ),
+                                'Defaults to either today, or "Start of display" (whichever is later) plus the value of "Duration of display", when left blank on new display items\nDefaults to %s, when left blank on existing display items'
+                            ).format(format_date("2106-02-07")),
                             required: false,
                             indexRequired: true,
                         },
@@ -648,11 +644,10 @@ export default {
 
                     if (dtRemove < dtAdded)
                         errors.push(
+                            // The warning is rendered as HTML, and the barcode is typed by the user
                             $__(
-                                "Display item %s cannot have a date to remove before the date added".format(
-                                    display_item.barcode
-                                )
-                            )
+                                "Display item %s cannot have a date to remove before the date added"
+                            ).format(escape_str(display_item.barcode))
                         );
 
                     if (
