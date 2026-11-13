@@ -5,48 +5,12 @@
             <fieldset class="rows" id="display_list">
                 <h3>{{ $__("Specify items to remove") }}:</h3>
                 <ol>
-                    <li>
-                        <label for="barcodes"
-                            >{{ $__("Item barcodes") }}:</label
-                        >
-                        <textarea
-                            id="barcodes"
-                            v-model="barcodes"
-                            label="barcodes"
-                            :cols="`25`"
-                            :rows="`10`"
-                            :required="!barcodes"
-                        />
-                        <span class="required">{{ $__("Required") }}</span>
-                        <ToolTip
-                            :toolTip="
-                                $__('List of item barcodes, one per line')
-                            "
-                        ></ToolTip>
-                    </li>
-                    <li>
-                        <label for="display_id"
-                            >{{ $__("From the following display") }}:</label
-                        >
-                        <v-select
-                            id="display_id"
-                            v-model="display_id"
-                            label="display_name"
-                            :reduce="d => d.display_id"
+                    <li v-for="attr in formFields" :key="attr.name">
+                        <FormElement
+                            :resource="resource"
+                            :attr="attr"
                             :options="displays"
-                            :clearable="false"
-                            :required="!display_id"
-                        >
-                            <template #search="{ attributes, events }">
-                                <input
-                                    :required="!display_id"
-                                    class="vs__search"
-                                    v-bind="attributes"
-                                    v-on="events"
-                                />
-                            </template>
-                        </v-select>
-                        <span class="required">{{ $__("Required") }}</span>
+                        />
                     </li>
                 </ol>
             </fieldset>
@@ -68,7 +32,7 @@
 <script>
 import { ref, inject, onBeforeMount } from "vue";
 import ButtonSubmit from "../ButtonSubmit.vue";
-import ToolTip from "../ToolTip.vue";
+import FormElement from "../FormElement.vue";
 import { APIClient } from "../../fetch/api-client.js";
 import { $__ } from "@koha-vue/i18n";
 
@@ -82,20 +46,43 @@ export default {
         const { setMessage, setError } = inject("mainStore");
 
         const displays = ref([]);
-        const display_id = ref(null);
-        const barcodes = ref(null);
+        const emptyResource = () => ({
+            barcodes: null,
+            display_id: null,
+        });
+        const resource = ref(emptyResource());
+
+        const formFields = [
+            {
+                name: "barcodes",
+                label: $__("Item barcodes"),
+                type: "textarea",
+                required: true,
+                textAreaRows: 10,
+                textAreaCols: 25,
+                toolTip: $__("List of item barcodes, one per line"),
+            },
+            {
+                name: "display_id",
+                label: $__("From the following display"),
+                type: "select",
+                required: true,
+                selectLabel: "display_name",
+                requiredKey: "display_id",
+            },
+        ];
 
         const batchRemove = event => {
             event.preventDefault();
 
-            const barcodeList = barcodes.value
+            const barcodeList = resource.value.barcodes
                 .split("\n")
                 .map(n => n.trim())
                 .filter(n => n !== "");
 
             const client = APIClient.display;
             const importData = {
-                display_id: display_id.value,
+                display_id: resource.value.display_id,
                 barcodes: barcodeList,
             };
 
@@ -152,8 +139,7 @@ export default {
                 });
         };
         const clearForm = () => {
-            display_id.value = null;
-            barcodes.value = null;
+            resource.value = emptyResource();
         };
 
         onBeforeMount(() => {
@@ -168,15 +154,15 @@ export default {
         return {
             setMessage,
             displays,
-            display_id,
-            barcodes,
+            resource,
+            formFields,
             batchRemove,
             clearForm,
         };
     },
     components: {
         ButtonSubmit,
-        ToolTip,
+        FormElement,
     },
     name: "DisplaysBatchRemoveItems",
 };

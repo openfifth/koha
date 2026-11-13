@@ -5,74 +5,11 @@
             <fieldset class="rows" id="display_list">
                 <h3>{{ $__("Specify items to add") }}:</h3>
                 <ol>
-                    <li>
-                        <label for="barcodes"
-                            >{{ $__("Item barcodes") }}:</label
-                        >
-                        <textarea
-                            id="barcodes"
-                            v-model="barcodes"
-                            label="barcodes"
-                            :cols="`25`"
-                            :rows="`10`"
-                            :required="!barcodes"
-                        />
-                        <span class="required">{{ $__("Required") }}</span>
-                        <ToolTip
-                            :toolTip="
-                                $__('List of item barcodes, one per line')
-                            "
-                        ></ToolTip>
-                    </li>
-                    <li>
-                        <label for="display_id"
-                            >{{ $__("To the following display") }}:</label
-                        >
-                        <v-select
-                            id="display_id"
-                            v-model="display_id"
-                            label="display_name"
-                            :reduce="d => d.display_id"
+                    <li v-for="attr in formFields" :key="attr.name">
+                        <FormElement
+                            :resource="resource"
+                            :attr="attr"
                             :options="displays"
-                            :clearable="false"
-                            :required="!display_id"
-                        >
-                            <template #search="{ attributes, events }">
-                                <input
-                                    :required="!display_id"
-                                    class="vs__search"
-                                    v-bind="attributes"
-                                    v-on="events"
-                                />
-                            </template>
-                        </v-select>
-                        <span class="required">{{ $__("Required") }}</span>
-                        <div class="clear">
-                            <br />
-                        </div>
-                    </li>
-                    <li>
-                        <label for="date_added"
-                            >{{ $__("To add on this date") }}:</label
-                        >
-                        <FlatPickrWrapper
-                            :id="`date_added`"
-                            :name="`date_added`"
-                            v-model="date_added"
-                            label="date_added"
-                            :required="!date_added"
-                        />
-                        <span class="required">{{ $__("Required") }}</span>
-                    </li>
-                    <li>
-                        <label for="date_remove"
-                            >{{ $__("To remove on this date") }}:</label
-                        >
-                        <FlatPickrWrapper
-                            :id="`date_remove`"
-                            :name="`date_remove`"
-                            v-model="date_remove"
-                            label="date_remove"
                         />
                     </li>
                 </ol>
@@ -95,8 +32,7 @@
 <script>
 import { ref, inject, onBeforeMount } from "vue";
 import ButtonSubmit from "../ButtonSubmit.vue";
-import FlatPickrWrapper from "@koha-vue/components/FlatPickrWrapper.vue";
-import ToolTip from "../ToolTip.vue";
+import FormElement from "../FormElement.vue";
 import { storeToRefs } from "pinia";
 import { APIClient } from "../../fetch/api-client.js";
 import { $__ } from "@koha-vue/i18n";
@@ -115,28 +51,66 @@ export default {
         const { setMessage, setWarning, setError } = inject("mainStore");
 
         const displays = ref([]);
-        const display_id = ref(null);
-        const barcodes = ref(null);
-        const date_added = ref(null);
-        const date_remove = ref(null);
+        const emptyResource = () => ({
+            barcodes: null,
+            display_id: null,
+            date_added: null,
+            date_remove: null,
+        });
+        const resource = ref(emptyResource());
+
+        const formFields = [
+            {
+                name: "barcodes",
+                label: $__("Item barcodes"),
+                type: "textarea",
+                required: true,
+                textAreaRows: 10,
+                textAreaCols: 25,
+                toolTip: $__("List of item barcodes, one per line"),
+            },
+            {
+                name: "display_id",
+                label: $__("To the following display"),
+                type: "select",
+                required: true,
+                selectLabel: "display_name",
+                requiredKey: "display_id",
+                breakAfter: true,
+            },
+            {
+                name: "date_added",
+                label: $__("To add on this date"),
+                type: "date",
+                required: true,
+                componentProps: {
+                    required: { type: "boolean", value: true },
+                },
+            },
+            {
+                name: "date_remove",
+                label: $__("To remove on this date"),
+                type: "date",
+            },
+        ];
 
         const batchAdd = event => {
             event.preventDefault();
 
-            const barcodeList = barcodes.value
+            const barcodeList = resource.value.barcodes
                 .split("\n")
                 .map(n => n.trim())
                 .filter(n => n !== "");
 
             const client = APIClient.display;
             const importData = {
-                display_id: display_id.value,
+                display_id: resource.value.display_id,
                 barcodes: barcodeList,
             };
-            if (date_added.value != null)
-                importData.date_added = date_added.value;
-            if (date_remove.value != null)
-                importData.date_remove = date_remove.value;
+            if (resource.value.date_added != null)
+                importData.date_added = resource.value.date_added;
+            if (resource.value.date_remove != null)
+                importData.date_remove = resource.value.date_remove;
 
             client.displayItems.batchAdd(importData).then(
                 success => {
@@ -167,10 +141,7 @@ export default {
             );
         };
         const clearForm = () => {
-            display_id.value = null;
-            barcodes.value = null;
-            date_added.value = null;
-            date_remove.value = null;
+            resource.value = emptyResource();
         };
 
         onBeforeMount(() => {
@@ -186,18 +157,15 @@ export default {
             setMessage,
             setWarning,
             displays,
-            display_id,
-            barcodes,
-            date_added,
-            date_remove,
+            resource,
+            formFields,
             batchAdd,
             clearForm,
         };
     },
     components: {
         ButtonSubmit,
-        FlatPickrWrapper,
-        ToolTip,
+        FormElement,
     },
     name: "DisplaysBatchAddItems",
 };

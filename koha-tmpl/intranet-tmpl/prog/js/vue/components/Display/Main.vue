@@ -99,4 +99,12 @@ form .v-select {
     background-color: white;
     width: 30%;
 }
+
+/* Let long display names wrap in the vue-select dropdowns of this app */
+.vs__dropdown-option {
+    white-space: wrap;
+}
+.vs__selected-options {
+    flex-wrap: nowrap;
+}
 </style>
