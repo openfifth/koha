@@ -48,7 +48,7 @@ export default {
     setup(props) {
         const displayStore = inject("displayStore");
         const { config } = storeToRefs(displayStore);
-        const { setMessage, setWarning, setError } = inject("mainStore");
+        const { setMessage, setWarning } = inject("mainStore");
 
         const displays = ref([]);
         const emptyResource = () => ({
@@ -129,15 +129,7 @@ export default {
                         );
                     clearForm();
                 },
-                error => {
-                    setError(
-                        $__(
-                            "Internal Server Error. Please check the browser console for diagnostic information."
-                        ),
-                        true
-                    );
-                    console.error(error);
-                }
+                error => console.error(error)
             );
         };
         const clearForm = () => {
@@ -150,7 +142,7 @@ export default {
                 result => {
                     displays.value = result;
                 },
-                error => {}
+                error => console.error(error)
             );
         });
         return {

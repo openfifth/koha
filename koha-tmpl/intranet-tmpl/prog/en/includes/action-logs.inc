@@ -173,12 +173,14 @@
         <span>Modify card number</span>
     [% CASE 'RESET 2FA' %]
         <span>Reset 2FA</span>
-    [% CASE 'ENABLE' %]
-        <span>Enable</span>
-    [% CASE 'DISABLE' %]
-        <span>Disable</span>
+    [% CASE 'ENABLED' %]
+        <span>Enabled</span>
+    [% CASE 'DISABLED' %]
+        <span>Disabled</span>
     [% CASE 'ADD_ITEM' %]
         <span>Add item</span>
+    [% CASE 'MODIFY_ITEM' %]
+        <span>Modify item</span>
     [% CASE 'REMOVE_ITEM' %]
         <span>Remove item</span>
     [% CASE %]

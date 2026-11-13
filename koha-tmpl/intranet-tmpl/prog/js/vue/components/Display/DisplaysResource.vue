@@ -526,71 +526,18 @@ export default {
             },
         };
 
-        const getDisplayFromId = async id => {
-            const displaysApiClient = APIClient.display.displays;
-            let display = undefined;
+        // These let API errors propagate: the callers must not mistake a failure for "not found"
+        const getDisplayFromId = id => APIClient.display.displays.get(id);
 
-            await displaysApiClient
-                .get(id)
-                .then(data => {
-                    display = data;
-                })
-                .catch(error => {
-                    console.error(error);
-                });
-
-            return display;
-        };
-
-        const getBiblioFromId = async id => {
-            const bibliosApiClient = APIClient.biblio.biblios;
-            let biblio = undefined;
-
-            await bibliosApiClient
-                .get(id)
-                .then(data => {
-                    biblio = data;
-                })
-                .catch(error => {
-                    console.error(error);
-                });
-
-            return biblio;
-        };
-
-        const getItemFromId = async id => {
-            const itemsApiClient = APIClient.item.items;
-            let item = undefined;
-
-            await itemsApiClient
-                .get(id)
-                .then(data => {
-                    item = data;
-                })
-                .catch(error => {
-                    console.error(error);
-                });
-
-            return item;
-        };
+        const getItemFromId = id => APIClient.item.items.get(id);
 
         const getItemFromExternalId = async external_id => {
-            const itemsApiClient = APIClient.item.items;
-            let item = undefined;
-
-            await itemsApiClient
-                .getByExternalId(external_id)
-                .then(data => {
-                    if (data.length > 0) item = data[0];
-                })
-                .catch(error => {
-                    console.error(error);
-                });
-
-            return item;
+            const items =
+                await APIClient.item.items.getByExternalId(external_id);
+            return items.length > 0 ? items[0] : undefined;
         };
 
-        const checkForm = async display => {
+        const validateForm = async display => {
             let errors = [];
 
             let display_items = display.display_items;
@@ -683,6 +630,20 @@ export default {
 
             baseResource.setWarning(errors.join("<br>"));
             return !errors.length;
+        };
+        const checkForm = async display => {
+            try {
+                return await validateForm(display);
+            } catch (error) {
+                console.error(error);
+                baseResource.setError(
+                    $__(
+                        "The display could not be checked. Please check the browser console for diagnostic information."
+                    ),
+                    true
+                );
+                return false;
+            }
         };
         const onFormSave = async (e, displayToSave) => {
             e.preventDefault();
@@ -835,6 +796,12 @@ export default {
                         })
                         .catch(error => {
                             console.error(error);
+                            componentData.resource.value.display_items[
+                                idx
+                            ].title = __("Unknown biblio");
+                            componentData.resource.value.display_items[
+                                idx
+                            ].barcode = __("Unknown item");
                         });
                 });
             }

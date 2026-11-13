@@ -43,7 +43,7 @@ export default {
         embedEvent: Function,
     },
     setup(props) {
-        const { setMessage, setError } = inject("mainStore");
+        const { setMessage, setWarning } = inject("mainStore");
 
         const displays = ref([]);
         const emptyResource = () => ({
@@ -86,57 +86,25 @@ export default {
                 barcodes: barcodeList,
             };
 
-            client.displayItems
-                .batchDelete(importData)
-                .then(success => success.body)
-                .then(body => {
-                    const reader = body.getReader();
-
-                    return new ReadableStream({
-                        start(controller) {
-                            return pump();
-
-                            function pump() {
-                                return reader.read().then(({ done, value }) => {
-                                    // When no more data needs to be consumed, close the stream
-                                    if (done) {
-                                        controller.close();
-                                        return;
-                                    }
-
-                                    // Enqueue the next data chunk into our target stream
-                                    controller.enqueue(value);
-                                    return pump();
-                                });
-                            }
-                        },
-                    });
-                })
-                .then(stream => new Response(stream))
-                .then(response => response.text())
-                .then(data => {
-                    const body = JSON.parse(data);
-                    if (body.job_id)
+            // The HTTP client already shows the reason when a request fails
+            client.displayItems.batchDelete(importData).then(
+                success => {
+                    if (success.job_id)
                         setMessage(
-                            `${$__("Batch job successfully queued.")} <a href="/cgi-bin/koha/admin/background_jobs.pl?op=view&id=${body.job_id}" target="_blank">${$__("Click here to view job progress")}</a>`,
+                            `${$__("Batch job successfully queued.")} <a href="/cgi-bin/koha/admin/background_jobs.pl?op=view&id=${success.job_id}" target="_blank">${$__("Click here to view job progress")}</a>`,
                             true
                         );
                     else
-                        setMessage(
-                            `${$__("Batch job successfully queued.")} <a href="/cgi-bin/koha/admin/background_jobs.pl" target="_blank">${$__("Click here to view job progress")}</a>`,
+                        setWarning(
+                            $__(
+                                "Batch job failed to queue. Please check your list, and try again."
+                            ),
                             true
                         );
                     clearForm();
-                })
-                .catch(error => {
-                    setError(
-                        $__(
-                            "Internal Server Error. Please check the browser console for diagnostic information."
-                        ),
-                        true
-                    );
-                    console.error(error);
-                });
+                },
+                error => console.error(error)
+            );
         };
         const clearForm = () => {
             resource.value = emptyResource();
@@ -148,11 +116,12 @@ export default {
                 result => {
                     displays.value = result;
                 },
-                error => {}
+                error => console.error(error)
             );
         });
         return {
             setMessage,
+            setWarning,
             displays,
             resource,
             formFields,

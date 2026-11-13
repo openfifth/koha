@@ -38,8 +38,7 @@
 
 [% Asset.css("lib/Chocolat/css/chocolat.css") | $raw %]
 [% INCLUDE 'doc-head-close.inc' %]
-</head>
-
+<!--</head>-->
 [% BLOCK acq_status %]
     <span
         title="The status 'Unlinked' means: no linked orders. Cancelled means that all orders are cancelled. Processing implies any active or new order lines. Status 'acquired' implies any completely received lines (with remaining lines cancelled)."
@@ -57,7 +56,7 @@
     </span>
 [% END %]
 
-<body id="catalog_detail" class="catalog">
+<!--<body id="catalog_detail" class="catalog">-->
 [% WRAPPER 'header.inc' %]
     [% INCLUDE 'cat-search.inc' %]
 [% END %]
@@ -1054,27 +1053,6 @@
     <!-- /#elasticPreview.modal -->
 [% END %]
 
-<div class="modal" id="permanent_location_modal" tabindex="-1" aria-labelledby="permanent_location_modal_label" aria-modal="true" role="dialog">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h1 class="modal-title" id="permanent_location_modal_label"></h1>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <ul>
-                    <li><span id="permanent_location_modal_body"></span></li>
-                </ul>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-        <!-- /.modal-content -->
-    </div>
-    <!-- /.modal-dialog -->
-</div>
-
 <div class="modal" id="modal-item-group-create" tabindex="-1" role="dialog" aria-labelledby="modal-item-group-create-label">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -1216,27 +1194,6 @@
     <!-- /.modal-dialog -->
 </div>
 <!-- /#.modal -->
-
-<!-- Permanent Location Modal -->
-<div class="modal" id="permanant_location_modal" tabindex="-1" aria-labelledby="permanant_location_modal_label" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h1 class="modal-title" id="permanant_location_modal_label"></h1>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div id="permanant_location_modal_body"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-        <!-- /.modal-content -->
-    </div>
-    <!-- /.modal-dialog -->
-</div>
-<!-- /.modal -->
 
 [% IF bundlesEnabled %]
     <div class="modal" id="addToBundleModal" tabindex="-1" role="dialog" aria-labelledby="addToBundleLabel">
@@ -2647,7 +2604,7 @@
                         searchable: true,
                         orderable: true,
                         render: function (data, type, row, meta) {
-                            return escape_str(row.external_id || 'No barcode');
+                            return escape_str(row.external_id || _("No barcode"));
                         }
                     },
                     {
@@ -2703,7 +2660,7 @@
                             if (row._status && row._status.length > 0) {
                                 status = row._status.map(s => s.replace(/_/g, ' ')).join(', ');
                             } else {
-                                status = 'Available';
+                                status = _("Available");
                             }
                             return escape_str(status);
                         }
@@ -2809,12 +2766,12 @@
             const removeDate = document.querySelector("#date-remove").value;
 
             if (!displayId) {
-                alert('Please select a display');
+                alert(_("Please select a display"));
                 return;
             }
 
             if (selectedDisplayItems.length === 0) {
-                alert('Please select at least one item');
+                alert(_("Please select at least one item"));
                 return;
             }
 
@@ -2844,41 +2801,74 @@
                 });
             });
 
-            Promise.all(promises).then(() => {
-                const addToDisplayModal = bootstrap.Modal.getOrCreateInstance(document.querySelector("#addToDisplayModal"));
-                const addToDisplayForm = document.querySelector("#addToDisplayForm");
+            // fetch() only rejects on network errors: check each response before reporting success
+            Promise.allSettled(promises)
+                .then(async results => {
+                    let added = 0;
+                    const failures = [];
 
-                alert('Successfully added %s item(s) to display'.format(selectedDisplayItems.length));
-                addToDisplayModal.hide();
-                addToDisplayForm.reset();
-                selectedDisplayItems = [];
+                    for (const [index, result] of results.entries()) {
+                        if (result.status === "fulfilled" && result.value.ok) {
+                            added++;
+                            continue;
+                        }
 
-                // Safely refresh modal table
-                try {
-                    if (displayItemsTable && displayItemsTable.DataTable) {
-                        displayItemsTable.DataTable().draw();
+                        let reason = _("Network error");
+                        if (result.status === "fulfilled") {
+                            reason = result.value.statusText;
+                            try {
+                                const body = await result.value.json();
+                                reason = body.error || (body.errors || []).map(e => e.message).join(", ") || reason;
+                            } catch (e) {
+                                // Not JSON: keep the status text
+                            }
+                        }
+                        failures.push("%s: %s".format(selectedDisplayItems[index], reason));
                     }
-                } catch (e) {
-                    // Modal table refresh failed - not critical
-                }
 
-                // Safely refresh the main items table to show updated locations
-                try {
-                    if (typeof build_items_table === 'function') {
-                        const itemsTables = document.querySelectorAll(".items_table");
-                        itemsTables.forEach(itemsTable => {
-                            const tableId = itemsTable.id.replace("_table", "");
-                            build_items_table(tableId, false, { destroy: true });
-                        });
+                    if (failures.length) {
+                        alert(_("Some items could not be added to the display:\n%s").format(failures.join("\n")));
                     }
-                } catch (e) {
-                    // Main table refresh failed - reload page as fallback
-                    window.location.reload();
-                }
-            }).catch((error) => {
-                console.error('Error adding items to display:', error);
-                alert('Failed to add some items to display. Please try again.');
-            }).finally(() => {
+
+                    // Nothing was added: leave the form as it is so it can be corrected
+                    if (!added) return;
+
+                    const addToDisplayModal = bootstrap.Modal.getOrCreateInstance(document.querySelector("#addToDisplayModal"));
+                    const addToDisplayForm = document.querySelector("#addToDisplayForm");
+
+                    if (!failures.length) alert(_("Successfully added %s item(s) to the display").format(added));
+                    addToDisplayModal.hide();
+                    addToDisplayForm.reset();
+                    selectedDisplayItems = [];
+
+                    // Refresh the modal table
+                    try {
+                        if (displayItemsTable && displayItemsTable.DataTable) {
+                            displayItemsTable.DataTable().draw();
+                        }
+                    } catch (e) {
+                        console.warn("Could not refresh the display items table:", e);
+                    }
+
+                    // Refresh the main items table to show updated locations
+                    try {
+                        if (typeof build_items_table === "function") {
+                            const itemsTables = document.querySelectorAll(".items_table");
+                            itemsTables.forEach(itemsTable => {
+                                const tableId = itemsTable.id.replace("_table", "");
+                                build_items_table(tableId, false, { destroy: true });
+                            });
+                        }
+                    } catch (e) {
+                        // Main table refresh failed - reload page as fallback
+                        window.location.reload();
+                    }
+                })
+                .catch(error => {
+                    console.error("Error adding items to display:", error);
+                    alert(_("Failed to add items to the display. Please try again."));
+                })
+                .finally(() => {
                 const addToDisplayBtn = document.querySelector("#add-to-display-btn");
 
                 addToDisplayBtn.disabled = false;

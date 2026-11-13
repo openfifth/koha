@@ -51,26 +51,34 @@ export default {
             loading();
 
             const client = APIClient.display;
-            client.config.get().then(result => {
-                userPermissions.value = result.settings.permissions;
-                config.value.settings.enabled = result.settings.enabled;
-                if (config.value.settings.enabled != 1) {
-                    loaded();
-                    return setError(
-                        $__(
-                            'The displays module is disabled, turn on <a href="/cgi-bin/koha/admin/preferences.pl?tab=&op=search&searchfield=UseDisplayModule">UseDisplayModule</a> to use it'
-                        ),
-                        false
-                    );
-                }
+            client.config
+                .get()
+                .then(result => {
+                    userPermissions.value = result.settings.permissions;
+                    config.value.settings.enabled = result.settings.enabled;
+                    if (config.value.settings.enabled != 1) {
+                        loaded();
+                        return setError(
+                            $__(
+                                'The displays module is disabled, turn on <a href="/cgi-bin/koha/admin/preferences.pl?tab=&op=search&searchfield=UseDisplayModule">UseDisplayModule</a> to use it'
+                            ),
+                            false
+                        );
+                    }
 
-                loadAuthorisedValues(authorisedValues.value, displayStore).then(
-                    () => {
+                    return loadAuthorisedValues(
+                        authorisedValues.value,
+                        displayStore
+                    ).then(() => {
                         loaded();
                         initialized.value = true;
-                    }
-                );
-            });
+                    });
+                })
+                // The HTTP client already shows the reason: just stop the spinner
+                .catch(error => {
+                    console.error(error);
+                    loaded();
+                });
         });
 
         return {

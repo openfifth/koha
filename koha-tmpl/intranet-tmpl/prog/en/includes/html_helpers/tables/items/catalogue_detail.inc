@@ -507,7 +507,7 @@
                         if (!Koha.prefs.item_level_itypes) return nodes;
 
                         // If effective or permanent holding branch is defined, show description or
-                        // code and display current location in modal accessible via hyperlink.
+                        // code, and show the usual value in a tooltip.
                         let item_type_description = row._strings.item_type_id ? row._strings.item_type_id.str : row.item_type_id;
                         if (row.effective_item_type_id && row.effective_item_type_id != row.item_type_id) {
                             let effective_item_type_description = row._strings.effective_item_type_id ? row._strings.effective_item_type_id.str : row.effective_item_type_id;
@@ -546,7 +546,7 @@
                         let nodes = "";
 
                         // If effective or permanent holding branch is defined, show description or
-                        // code and display current location in modal accessible via hyperlink.
+                        // code, and show the usual value in a tooltip.
                         let holding_library_id_str = row._strings.holding_library_id ? row._strings.holding_library_id.str : row.holding_library_id;
                         if (row.effective_holding_library_id && row.effective_holding_library_id != row.holding_library_id) {
                             let effective_holding_library_id_str = row._strings.effective_holding_library_id ? row._strings.effective_holding_library_id.str : row.effective_holding_library_id;
@@ -573,7 +573,7 @@
                         let nodes = "";
 
                         // If effective or permanent home branch is defined, show description or
-                        // code and display current location in modal accessible via hyperlink.
+                        // code, and show the usual value in a tooltip.
                         let home_library_id_str = row._strings.home_library_id ? row._strings.home_library_id.str : row.home_library_id;
                         if (row.effective_home_library_id && row.effective_home_library_id != row.home_library_id) {
                             let effective_home_library_id_str = row._strings.effective_home_library_id ? row._strings.effective_home_library_id.str : row.effective_home_library_id;
@@ -598,7 +598,7 @@
                         let nodes = "";
 
                         // If effective or permanent location is defined, show description or code and
-                        // display current location in modal accessible via hyperlink.
+                        // show the usual value in a tooltip.
                         // Note that permanent location is a code, and location may be an authval.
                         let loc_str = row._strings.location ? row._strings.location.str : row.location;
                         if (!loc_str) {
@@ -636,7 +636,7 @@
                         let nodes = "";
 
                         // If effective ccode is defined, show description or code and display current
-                        // ccode in modal accessible via hyperlink.
+                        // ccode, and show the usual value in a tooltip.
                         let ccode_str = row._strings.collection_code ? row._strings.collection_code.str : row.collection_code;
                         if (row.effective_collection_code && row.effective_collection_code != row.collection_code) {
                             let effective_ccode_str = row._strings.effective_collection_code ? row._strings.effective_collection_code.str : row.effective_collection_code;

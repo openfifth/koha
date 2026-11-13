@@ -1,4 +1,10 @@
+/**
+ * Client for the Display module's REST API: the displays, and the items on them.
+ */
 export class DisplayAPIClient {
+    /**
+     * @param {Function} HttpClient - The HTTP client class used to build one client per endpoint
+     */
     constructor(HttpClient) {
         this.httpClientDisplaysConfig = new HttpClient({
             baseURL: "/api/v1/displays/config/",
@@ -13,6 +19,10 @@ export class DisplayAPIClient {
         });
     }
 
+    /**
+     * The configuration of the Display module
+     * @returns {{get: function(): Promise<Object>}}
+     */
     get config() {
         return {
             get: () =>
@@ -22,6 +32,10 @@ export class DisplayAPIClient {
         };
     }
 
+    /**
+     * The displays. Reading them embeds their items, libraries and item type.
+     * @returns {{create: function(Object): Promise<Object>, get: function(number): Promise<Object>, getAll: function(Object=, Object=): Promise<Object[]>, update: function(Object, number): Promise<Object>, delete: function(number): Promise<*>, count: function(Object=): Promise<*>}}
+     */
     get displays() {
         return {
             create: display =>
@@ -69,6 +83,11 @@ export class DisplayAPIClient {
         };
     }
 
+    /**
+     * The items on displays, identified by the display and the item number.
+     * Items can also be added to, or removed from, a display in batches by barcode.
+     * @returns {{create: function(Object): Promise<Object>, get: function(number, number): Promise<Object>, getAll: function(Object=, Object=): Promise<Object[]>, update: function(Object, number, number): Promise<Object>, delete: function(number, number): Promise<*>, batchAdd: function(Object): Promise<Object>, batchDelete: function(Object): Promise<*>, count: function(Object=): Promise<*>}}
+     */
     get displayItems() {
         return {
             create: displayItem =>
@@ -104,7 +123,8 @@ export class DisplayAPIClient {
                 this.httpClientDisplayItems.delete({
                     endpoint: "batch",
                     body: displayItems,
-                    parseResponse: true,
+                    // DELETE returns the raw response unless told otherwise: we need the job
+                    return_response: false,
                 }),
             count: (query = {}) =>
                 this.httpClientDisplayItems.count({

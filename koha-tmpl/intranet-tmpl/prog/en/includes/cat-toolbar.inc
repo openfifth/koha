@@ -337,7 +337,7 @@
 
     [% IF Koha.Preference('UseDisplayModule') && CAN_user_displays %]
         <div class="btn-group">
-            <button type="button" class="btn btn-default dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="fa fa-tv"></i> Add to display</button>
+            <button type="button" class="btn btn-default dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="fa-solid fa-image-portrait"></i> Add to display</button>
             <ul class="dropdown-menu" id="display-dropdown">
                 <li class="text-center"><i class="fa fa-spinner fa-spin"></i> Loading displays...</li>
             </ul>
@@ -370,7 +370,7 @@
                             <div class="col-md-6">
                                 <label for="date-remove" class="form-label">Remove date:</label>
                                 <div class="input-group">
-                                    <input type="date" id="date-remove" class="form-control" required="required" />
+                                    <input type="date" id="date-remove" class="form-control" />
                                     <button class="btn btn-outline-secondary" type="button" id="clear-date" title="Clear date">
                                         <i class="fa fa-times"></i>
                                     </button>

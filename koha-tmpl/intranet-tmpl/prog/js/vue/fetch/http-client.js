@@ -11,7 +11,7 @@ const _calculateMissingPerms = permissions => {
     if (typeof permissions != "object") return;
 
     let text = JSON.stringify(permissions, null, 2);
-    let pre = $("<pre>").addClass("my-3").append(text);
+    let pre = $("<pre>").addClass("my-3").text(text);
 
     return pre.prop("outerHTML");
 };
