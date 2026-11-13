@@ -136,34 +136,35 @@ sub add {
 
         my $display_items = delete $body->{display_items} || undef;
 
-        my $display = Koha::Display->new_from_api($body)->store;
-        return $c->render_resource_not_found("Display")
-            unless $display;
+        # Check permissions before anything is written to the database
+        my $patron  = $c->stash('koha.user');
+        my $display = Koha::Display->new_from_api($body);
 
-        # Check if user has permission to view this display
-        my $patron = $c->stash('koha.user');
         if ($patron) {
             my @restricted_branchcodes = $patron->libraries_where_can_add_displays;
             if (@restricted_branchcodes) {
 
-                # User can only see displays from specific libraries
-                unless ( grep { $_ eq $display->display_branch } @restricted_branchcodes ) {
+                # User can only add displays in specific libraries
+                unless ( defined $display->display_branch
+                    && grep { $_ eq $display->display_branch } @restricted_branchcodes )
+                {
                     return Koha::Exceptions::REST::Public::Unauthorized->throw(
                         error => "This display exists in a branch outside your library group" );
-
                 }
             }
 
             # If @restricted_branchcodes is empty, user has access to all displays
         }
 
-        if ($display_items) {
-            unless ( haspermission( $c->stash('koha.user')->userid, { displays => 'manage_display_items' } ) ) {
-                return Koha::Exceptions::REST::Public::Unauthorized->throw(
-                    error => "You do not have permission to manage display items" );
-            }
-            $display->display_items($display_items);
+        if ( $display_items
+            && !haspermission( $patron->userid, { displays => 'manage_display_items' } ) )
+        {
+            return Koha::Exceptions::REST::Public::Unauthorized->throw(
+                error => "You do not have permission to manage display items" );
         }
+
+        $display->store;
+        $display->display_items($display_items) if $display_items;
 
         $c->res->headers->location( $c->req->url->to_string . '/' . $display->display_id );
         return $c->render(

@@ -204,6 +204,7 @@ sub to_api_mapping {
         ft_local_hold_group      => 'is_local_hold_group',
         ft_local_float_group     => 'is_local_float_group',
         ft_record_source_editing => 'is_record_source_editing_group',
+        ft_display_group         => 'is_display_group',
     };
 }
 

@@ -49,6 +49,9 @@ properties:
   is_record_source_editing_group:
     type: boolean
     description: If the group is used for record source editing
+  is_display_group:
+    type: boolean
+    description: If the group is used to share display items between libraries
   created_on:
     description: Date and time of creation
     type:
