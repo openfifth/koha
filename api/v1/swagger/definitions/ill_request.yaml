@@ -94,6 +94,11 @@ properties:
   ill_backend_id:
     type: string
     description: The ILL backend identifier string
+  source:
+    type:
+      - string
+      - "null"
+    description: The interface the request was created from (opac, intranet, api, cron, commandline)
   ill_backend_request_id:
     type:
       - string

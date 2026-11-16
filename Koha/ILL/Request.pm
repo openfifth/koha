@@ -2242,6 +2242,8 @@ sub store {
             if $old_illreq;
     }
 
+    $self->source( C4::Context->interface ) unless $self->in_storage || defined $self->source;
+
     my $ret = $self->SUPER::store;
 
     if ( scalar @holds ) {

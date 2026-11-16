@@ -3912,6 +3912,7 @@ CREATE TABLE `illrequests` (
   `notesstaff` mediumtext DEFAULT NULL COMMENT 'Staff notes attached to request',
   `orderid` varchar(50) DEFAULT NULL COMMENT 'Backend id attached to request',
   `backend` varchar(20) DEFAULT NULL COMMENT 'The backend used to create request',
+  `source` varchar(20) DEFAULT NULL COMMENT 'The interface the request was created from (opac, intranet, api, cron, commandline)',
   `batch_id` int(11) DEFAULT NULL COMMENT 'Optional ID of batch that this request belongs to',
   PRIMARY KEY (`illrequest_id`),
   KEY `illrequests_bnfk` (`borrowernumber`),
