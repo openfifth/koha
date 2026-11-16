@@ -1188,6 +1188,9 @@ modules:
             -
               columnname: backend
             -
+              columnname: source
+              is_hidden: 1
+            -
               columnname: action
               cannot_be_toggled: 1
               cannot_be_modified: 1

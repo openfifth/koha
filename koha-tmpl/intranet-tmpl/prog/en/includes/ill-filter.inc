@@ -18,6 +18,17 @@
                 </select>
             </li>
             <li>
+                <label for="illfilter_source">Source:</label>
+                <select name="illfilter_source" id="illfilter_source">
+                    <option value="">All sources</option>
+                    <option value="opac">OPAC</option>
+                    <option value="intranet">Staff interface</option>
+                    <option value="api">API</option>
+                    <option value="cron">Cron</option>
+                    <option value="commandline">Command line</option>
+                </select>
+            </li>
+            <li>
                 <label for="illfilter_status">Status:</label>
                 <select name="illfilter_status" id="illfilter_status" multiple="multiple"> </select>
             </li>

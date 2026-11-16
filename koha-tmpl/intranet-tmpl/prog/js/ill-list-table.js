@@ -146,6 +146,11 @@ $(document).ready(function () {
             if (!backend) return "";
             return { "=": backend };
         },
+        "me.source": function () {
+            let source = $("#illfilter_source").val();
+            if (!source) return "";
+            return { "=": source };
+        },
         "me.branchcode": function () {
             let branchcode = $("#illfilter_branchname").val();
             if (!branchcode) return "";
@@ -271,6 +276,7 @@ $(document).ready(function () {
     let external_filter_nodes = {
         illfilter_keyword: "#illfilter_keyword",
         illfilter_backend: "#illfilter_backend",
+        illfilter_source: "#illfilter_source",
         illfilter_status: "#illfilter_status",
         illfilter_dateplaced_start: "#illfilter_dateplaced_start",
         illfilter_dateplaced_end: "#illfilter_dateplaced_end",
@@ -548,6 +554,20 @@ $(document).ready(function () {
                     },
                 },
                 {
+                    data: "source",
+                    orderable: true,
+                    render: function (data, type, row, meta) {
+                        const sources = {
+                            opac: __("OPAC"),
+                            intranet: __("Staff interface"),
+                            api: __("API"),
+                            cron: __("Cron"),
+                            commandline: __("Command line"),
+                        };
+                        return escape_str(sources[data] ?? data);
+                    },
+                },
+                {
                     data: "ill_request_id",
                     orderable: false,
                     searchable: false,
@@ -593,6 +613,7 @@ $(document).ready(function () {
     function clearSearch() {
         let filters = [
             "illfilter_backend",
+            "illfilter_source",
             "illfilter_branchname",
             "illfilter_patron",
             "illfilter_managed_by",

@@ -34,6 +34,7 @@
             <th scope="col">OPAC notes</th>
             <th scope="col">Staff notes</th>
             <th scope="col">Backend</th>
+            <th scope="col">Source</th>
             <th scope="col" class="actions"></th>
         </tr>
     </thead>
