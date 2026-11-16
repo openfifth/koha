@@ -212,6 +212,12 @@
                                             <label for="updated">Last updated:</label>
                                             [% request.updated | $KohaDates %]
                                         </li>
+                                        [% IF request.accessurl %]
+                                            <li class="accessurl">
+                                                <label for="accessurl">Access URL:</label>
+                                                <a href="[% request.accessurl | url %]" target="_blank" title="[% request.accessurl | html %]"><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> View document</a>
+                                            </li>
+                                        [% END %]
                                         <li>
                                             <label for="notesopac">Notes:</label>
                                             [% IF !request.completed %]
@@ -459,7 +465,11 @@
                     data: 'title',
                     sortable: false,
                     render: (data, type, row, meta) => {
-                        return display_extended_attribute(row, 'title');
+                        let title = display_extended_attribute(row, "title");
+                        if (!row.access_url) {
+                            return title;
+                        }
+                        return `<a href="${escape_str(row.access_url)}" target="_blank">${title || _("View document")}</a>`;
                     },
                 },
                 {
