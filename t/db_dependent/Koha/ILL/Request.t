@@ -20,7 +20,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 10;
+use Test::More tests => 11;
 use Test::MockModule;
 
 use Koha::ILL::Requests;
@@ -413,6 +413,33 @@ subtest 'auto_set_manager' => sub {
     t::lib::Mocks::mock_userenv( { patron => $librarian } );
     my $no_manager_ill_request = $builder->build_sample_ill_request( { managedby => undef } );
     is( undef, $no_manager_ill_request->managedby, 'Managed by correctly undef' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'store() source tests' => sub {
+
+    plan tests => 4;
+
+    $schema->storage->txn_begin;
+
+    my $library = $builder->build_object( { class => 'Koha::Libraries' } );
+
+    C4::Context->interface('opac');
+    my $request = Koha::ILL::Request->new( { branchcode => $library->branchcode, backend => 'Standard' } )->store;
+    is( $request->get_from_storage->source, 'opac', 'source set from the interface on creation' );
+
+    C4::Context->interface('intranet');
+    $request->status('REQ')->store;
+    is( $request->get_from_storage->source, 'opac', 'source not changed on update' );
+
+    $request = Koha::ILL::Request->new( { branchcode => $library->branchcode, backend => 'Standard' } )->store;
+    is( $request->get_from_storage->source, 'intranet', 'source set from a different interface' );
+
+    $request =
+        Koha::ILL::Request->new( { branchcode => $library->branchcode, backend => 'Standard', source => 'api' } )
+        ->store;
+    is( $request->get_from_storage->source, 'api', 'explicitly set source is kept' );
 
     $schema->storage->txn_rollback;
 };
