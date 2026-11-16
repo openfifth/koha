@@ -683,6 +683,7 @@ export default {
                 bundle_missing_items: $__("Bundle had missing items"),
                 bundle_unexpected_items: $__("Bundle had unexpected items"),
                 item_type_checkinmsg: $__("Item type message"),
+                removed_from_display: $__("Removed from display"),
             };
             return labels[msg.message] || msg.message.replace(/_/g, " ");
         }

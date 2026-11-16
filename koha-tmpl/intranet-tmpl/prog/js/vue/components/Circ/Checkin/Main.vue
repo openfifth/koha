@@ -307,8 +307,6 @@ export default {
             const messages = entry.messages || [];
             const transferred = messages.find(m => m.message === "transferred");
             const toLibrary = transferred?.payload?.to_library;
-            const removedFromDisplay = messages.find(m => m.message === "removed_from_display");
-            const displayName = removedFromDisplay?.payload?.display_name;
             switch (entry._outcome) {
                 case "confirm_hold": {
                     const hold = messages.find(m => m.message === "hold_found");
@@ -343,13 +341,6 @@ export default {
                     return $__("Recall confirmed.");
                 case "resolve_claim":
                     return $__("The return claim was resolved.");
-                case "removed_from_display":
-                    return displayName
-                        ? $__("The item has been removed from display: %s").replace(
-                              "%s",
-                              () => displayName
-                          )
-                        : $__("Item removed from display.");
                 default:
                     return "";
             }
@@ -672,6 +663,17 @@ export default {
                         text: $__(
                             "Previously claimed returned item has been checked in. Claim automatically resolved."
                         ),
+                        alertClass: "alert-info",
+                    });
+                }
+                if (msg.message === "removed_from_display") {
+                    const displayName = msg?.payload?.display_name;
+                    detailed.push({
+                        text: displayName
+                            ? $__(
+                                  "The item has been removed from display: %s"
+                              ).replace("%s", () => displayName)
+                            : $__("Item removed from display."),
                         alertClass: "alert-info",
                     });
                 }

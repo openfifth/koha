@@ -300,6 +300,10 @@ There is no item in the catalog with the given barcode. The value is C<$barcode>
 
 The item is already at the branch to which it is being transferred. The transfer is nonetheless considered to have failed. The value should be ignored.
 
+=item C<RemovedFromDisplay>
+
+The item was on an active display, and has now been removed. The value is the display's id and name.
+
 =item C<WasReturned>
 
 The item was on loan, and C<&transferbook> automatically returned it before transferring it. The value is the borrower number of the patron who had the item.
@@ -5590,6 +5594,15 @@ sub _attach_messages_to_checkin {
     }
     if ( $messages->{WasReturned} ) {
         $checkin->add_message( { message => 'was_returned', type => 'info' } );
+    }
+    if ( $messages->{RemovedFromDisplay} ) {
+        $checkin->add_message(
+            {
+                message => 'removed_from_display',
+                type    => 'info',
+                payload => $messages->{RemovedFromDisplay}
+            }
+        );
     }
 
     # Patron restriction messages
