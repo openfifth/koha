@@ -190,6 +190,14 @@ Backend id attached to request
 
 The backend used to create request
 
+=head2 source
+
+  data_type: 'varchar'
+  is_nullable: 1
+  size: 20
+
+The interface the request was created from (opac, intranet, api, cron, commandline)
+
 =head2 batch_id
 
   data_type: 'integer'
@@ -256,6 +264,8 @@ __PACKAGE__->add_columns(
   "orderid",
   { data_type => "varchar", is_nullable => 1, size => 50 },
   "backend",
+  { data_type => "varchar", is_nullable => 1, size => 20 },
+  "source",
   { data_type => "varchar", is_nullable => 1, size => 20 },
   "batch_id",
   { data_type => "integer", is_foreign_key => 1, is_nullable => 1 },
@@ -421,8 +431,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07051 @ 2026-06-30 13:24:41
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:OrX9dpZTHCInfQixzG8d4A
+# Created by DBIx::Class::Schema::Loader v0.07053 @ 2026-11-16 11:50:24
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:bqaTB5C18r4RjpSYNh93hA
 
 __PACKAGE__->has_many(
   "comments",
