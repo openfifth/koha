@@ -8207,7 +8207,7 @@ subtest 'Tests for Wrongbranch blocker (AllowReturnToBranch)' => sub {
 };
 subtest '_attach_messages_to_checkin() tests' => sub {
 
-    plan tests => 40;
+    plan tests => 41;
 
     $schema->storage->txn_begin;
 
@@ -8275,6 +8275,7 @@ subtest '_attach_messages_to_checkin() tests' => sub {
         Wrongbranch                 => { Wrongbranch => 'CPL', Rightbranch => 'MPL' },
         RecallPlacedAtHoldingBranch => 1,
         InBundle                    => $mock_host_item,
+        RemovedFromDisplay          => { display_id => 12, display_name => 'Test display' },
     };
 
     C4::Circulation::_attach_messages_to_checkin( $checkin, $messages );
@@ -8282,7 +8283,7 @@ subtest '_attach_messages_to_checkin() tests' => sub {
     my @m       = @{ $checkin->object_messages };
     my %by_code = map { $_->message => $_ } @m;
 
-    is( scalar(@m), 27, 'One message attached per recognised key' );
+    is( scalar(@m), 28, 'One message attached per recognised key' );
 
     ok( $by_code{data_corrupted}, 'data_corrupted attached' );
     is( $by_code{data_corrupted}->payload->{error}, 'boom', 'data_corrupted payload' );
@@ -8306,11 +8307,12 @@ subtest '_attach_messages_to_checkin() tests' => sub {
     ok( $by_code{lost_item_payment_not_refunded}, 'lost_item_payment_not_refunded attached' );
     ok( $by_code{processing_fee_refunded},        'processing_fee_refunded attached' );
 
-    ok( $by_code{not_issued},   'not_issued attached' );
-    ok( $by_code{local_use},    'local_use attached' );
-    ok( $by_code{was_lost},     'was_lost attached' );
-    ok( $by_code{withdrawn},    'withdrawn attached' );
-    ok( $by_code{was_returned}, 'was_returned attached' );
+    ok( $by_code{not_issued},           'not_issued attached' );
+    ok( $by_code{local_use},            'local_use attached' );
+    ok( $by_code{was_lost},             'was_lost attached' );
+    ok( $by_code{withdrawn},            'withdrawn attached' );
+    ok( $by_code{was_returned},         'was_returned attached' );
+    ok( $by_code{removed_from_display}, 'removed_from_display attached' );
 
     ok( $by_code{debarred},              'debarred attached' );
     ok( $by_code{previously_debarred},   'previously_debarred attached' );
