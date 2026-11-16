@@ -127,6 +127,14 @@ Use this group to limit report access by library group
 
 Use this group to identify libraries allowed to edit records from locked record sources
 
+=head2 ft_display_group
+
+  data_type: 'tinyint'
+  default_value: 0
+  is_nullable: 0
+
+Use this group to identify libraries that can share display items
+
 =head2 created_on
 
   data_type: 'timestamp'
@@ -172,6 +180,8 @@ __PACKAGE__->add_columns(
   "ft_reports",
   { data_type => "tinyint", default_value => 0, is_nullable => 0 },
   "ft_record_source_editing",
+  { data_type => "tinyint", default_value => 0, is_nullable => 0 },
+  "ft_display_group",
   { data_type => "tinyint", default_value => 0, is_nullable => 0 },
   "created_on",
   {
@@ -315,8 +325,8 @@ __PACKAGE__->many_to_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07053 @ 2026-11-05 13:12:06
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:9pt7JDTMO7b/Y2D7KD21YA
+# Created by DBIx::Class::Schema::Loader v0.07053 @ 2026-11-16 10:47:23
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:JRrXPPg9fPXh1O99gyPOVQ
 
 =head2 koha_object_class
 
@@ -344,9 +354,10 @@ __PACKAGE__->add_columns(
     '+ft_local_float_group'     => { is_boolean => 1 },
     '+ft_local_hold_group'      => { is_boolean => 1 },
     '+ft_record_source_editing' => { is_boolean => 1 },
-    '+ft_reports'              => { is_boolean => 1 },
+    '+ft_reports'               => { is_boolean => 1 },
     '+ft_search_groups_opac'    => { is_boolean => 1 },
     '+ft_search_groups_staff'   => { is_boolean => 1 },
+    '+ft_display_group'         => { is_boolean => 1 },
 );
 
 1;
