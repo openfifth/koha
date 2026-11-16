@@ -14,6 +14,8 @@
     Adding content to this region will enable the copyright clearance stage in request creation. The content will appear on the OPAC during the process of placing an ILL request.
 </div>
 
+<div id="ILLStandardRequestOPACForm_notes" class="hint customization_note"> Show this content at the top of the OPAC form for creating a 'Standard' ILL request. </div>
+
 <div id="IntranetmainUserblock_notes" class="hint customization_note"> Include this content in its own section on the main page of the staff interface </div>
 
 <div id="StaffReportsHome_notes" class="hint customization_note"> Include this content in its own section on the reports home page</div>

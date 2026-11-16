@@ -24,6 +24,9 @@
 
 [% IF whole.stage == "form" %]
     <h2>Create an ILL request</h2>
+    [% IF ( ILLStandardRequestOPACForm ) %]
+        <div id="ILLStandardRequestOPACForm"> [% PROCESS koha_news_block news => ILLStandardRequestOPACForm %] </div>
+    [% END %]
     <form id="create_form" method="POST" action="">
         [% INCLUDE 'csrf-token.inc' %]
         <fieldset class="rows">

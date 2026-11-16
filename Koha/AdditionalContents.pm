@@ -186,7 +186,7 @@ sub get_html_customizations_options {
             'OPACResultsSidebar',            'OpacSuppressionMessage', 'SCOMainUserBlock',
             'SelfCheckInMainUserBlock',      'SelfCheckHelpMessage',   'CatalogConcernHelp', 'CatalogConcernTemplate',
             'CookieConsentBar',              'CookieConsentPopup',     'PatronSelfRegistrationAdditionalInstructions',
-            'ILLModuleCopyrightClearance'
+            'ILLModuleCopyrightClearance',   'ILLStandardRequestOPACForm'
         ];
     }
 
