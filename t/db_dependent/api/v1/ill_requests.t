@@ -275,7 +275,7 @@ subtest 'list() tests' => sub {
 
 subtest 'public_patron_list() tests' => sub {
 
-    plan tests => 13;
+    plan tests => 14;
 
     $schema->storage->txn_begin;
 
@@ -337,7 +337,8 @@ subtest 'public_patron_list() tests' => sub {
                     batch_id       => undef,
                     status         => 'NEW',
                     backend        => $backend->name,
-                    notesstaff     => 'secret staff notes'
+                    notesstaff     => 'secret staff notes',
+                    accessurl      => 'https://example.org/article'
                 }
             }
         );
@@ -353,7 +354,7 @@ subtest 'public_patron_list() tests' => sub {
         ->status_is(200)
         ->json_is(
         '/0/staff_notes' => undef,
-        );
+        )->json_is( '/0/access_url' => 'https://example.org/article' );
 
     my $reqs = $t->tx->res->json;
     is( scalar @{$reqs}, 26, 'All ILL requests returned for the patron' );
