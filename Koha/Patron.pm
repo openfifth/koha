@@ -2646,13 +2646,17 @@ sub is_superlibrarian {
     my $is_staff_account = $patron->is_staff_account;
 
 Return true if the patron is a staff account, i.e. it is in a staff category (type S)
-or has any permission set (superlibrarian included).
+or has been granted any permission (superlibrarian included), either a whole module
+(borrowers.flags) or a single subpermission (user_permissions).
 
 =cut
 
 sub is_staff_account {
     my ($self) = @_;
-    return ( $self->category->category_type eq 'S' || $self->flags ) ? 1 : 0;
+    return 1 if $self->category->category_type eq 'S';
+    return 1 if $self->flags;
+
+    return $self->_result->user_permissions->count ? 1 : 0;
 }
 
 =head3 is_adult

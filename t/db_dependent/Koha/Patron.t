@@ -4139,7 +4139,7 @@ subtest "identify_updated_extended_attributes" => sub {
 
 subtest 'is_staff_account() tests' => sub {
 
-    plan tests => 4;
+    plan tests => 5;
 
     $schema->storage->txn_begin;
 
@@ -4155,6 +4155,15 @@ subtest 'is_staff_account() tests' => sub {
     my $adult = $builder->build_object(
         { class => 'Koha::Patrons', value => { categorycode => $adult_category->categorycode, flags => 0 } } );
     ok( !$adult->is_staff_account, 'A patron in a non-staff category without permissions has no staff access' );
+
+    $builder->build(
+        {
+            source => 'UserPermission',
+            value  => { borrowernumber => $adult->id, module_bit => 4, code => 'list_borrowers' }
+        }
+    );
+    ok( $adult->is_staff_account, 'A patron with only a subpermission has staff access, whatever their category' );
+    $adult->_result->user_permissions->delete;
 
     $adult->flags(4)->store;    # catalogue
     ok( $adult->is_staff_account, 'A patron with any permission has staff access, whatever their category' );
