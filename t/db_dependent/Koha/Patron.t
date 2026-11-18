@@ -2741,10 +2741,16 @@ subtest 'can_change_credentials_of() tests' => sub {
 
     $schema->storage->txn_begin;
 
+    # The category type decides who is staff, so do not leave it to chance
+    my $adult_category =
+        $builder->build_object( { class => 'Koha::Patron::Categories', value => { category_type => 'A' } } );
+
     my $editor = $builder->build_object( { class => 'Koha::Patrons', value => { flags => 0 } } );
     $editor->set_permissions( { borrowers => { edit_borrowers => 1 } } );
-    my $ordinary       = $builder->build_object( { class => 'Koha::Patrons', value => { flags => 0 } } );
-    my $superlibrarian = $builder->build_object( { class => 'Koha::Patrons', value => { flags => 1 } } );
+    my $ordinary = $builder->build_object(
+        { class => 'Koha::Patrons', value => { flags => 0, categorycode => $adult_category->categorycode } } );
+    my $superlibrarian = $builder->build_object(
+        { class => 'Koha::Patrons', value => { flags => 1, categorycode => $adult_category->categorycode } } );
 
     my $can_change = $editor->can_change_credentials_of($ordinary);
     isa_ok( $can_change, 'Koha::Result::Boolean', 'The result of the policy is returned' );
