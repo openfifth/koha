@@ -50,7 +50,7 @@ sub set {
     return $c->render_resource_not_found("Patron")
         unless $patron;
 
-    my $can_change = $c->stash('koha.user')->can_change_password_of($patron);
+    my $can_change = $c->stash('koha.user')->can_change_credentials_of($patron);
     unless ($can_change) {
         my %error_for = (
             staffaccess_required    => "Changing another staff account's password requires the staffaccess permission",

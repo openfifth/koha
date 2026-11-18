@@ -29,15 +29,15 @@ Koha::Policy::Patrons - module to deal with patrons policies
 
 =head2 Class Methods
 
-=head3 can_change_password
+=head3 can_change_credentials
 
-    my $can = Koha::Policy::Patrons->can_change_password( $actor, $patron );
+    my $can = Koha::Policy::Patrons->can_change_credentials( $actor, $patron );
 
-Returns whether the I<Koha::Patron> $actor is allowed to change the password of the
-I<Koha::Patron> $patron.
+Returns whether the I<Koha::Patron> $actor is allowed to change the credentials (password and
+userid) of the I<Koha::Patron> $patron.
 
-Anybody can change their own password (other checks, e.g. on the current password, are
-not the concern of this policy). Changing the password of another account requires the
+Anybody can change their own credentials (other checks, e.g. on the current password, are
+not the concern of this policy). Changing the credentials of another account requires the
 I<edit_borrowers> permission and, if that account has staff access, i.e. is in a staff
 category or has any permission set (superlibrarian included), the I<staffaccess> permission
 as well. Otherwise anyone who can edit patrons could take over a staff account, whatever
@@ -50,7 +50,7 @@ I<staffaccess_required> message when the answer is no.
 
 =cut
 
-sub can_change_password {
+sub can_change_credentials {
     my ( $class, $actor, $patron ) = @_;
 
     return Koha::Result::Boolean->new(1)
@@ -60,7 +60,7 @@ sub can_change_password {
         unless $actor->has_permission( { borrowers => 'edit_borrowers' } );
 
     return Koha::Result::Boolean->new(1)
-        unless $patron->has_staff_access;
+        unless $patron->is_staff_account;
 
     return Koha::Result::Boolean->new(1)
         if $actor->has_permission( { staffaccess => 1 } );

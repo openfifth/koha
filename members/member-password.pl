@@ -47,7 +47,7 @@ output_and_exit_if_error(
     { module => 'members', logged_in_user => $logged_in_user, current_patron => $patron }
 );
 
-my $can_change = $logged_in_user->can_change_password_of($patron);
+my $can_change = $logged_in_user->can_change_credentials_of($patron);
 push( @errors, map { $_->message } @{ $can_change->messages } ) unless $can_change;
 
 push( @errors, 'NOMATCH' ) if ( ( $newpassword && $newpassword2 ) && ( $newpassword ne $newpassword2 ) );

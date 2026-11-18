@@ -2735,7 +2735,7 @@ subtest 'get_lists_with_patron() tests' => sub {
     $schema->storage->txn_rollback;
 };
 
-subtest 'can_change_password_of() tests' => sub {
+subtest 'can_change_credentials_of() tests' => sub {
 
     plan tests => 5;
 
@@ -2746,15 +2746,15 @@ subtest 'can_change_password_of() tests' => sub {
     my $ordinary       = $builder->build_object( { class => 'Koha::Patrons', value => { flags => 0 } } );
     my $superlibrarian = $builder->build_object( { class => 'Koha::Patrons', value => { flags => 1 } } );
 
-    my $can_change = $editor->can_change_password_of($ordinary);
+    my $can_change = $editor->can_change_credentials_of($ordinary);
     isa_ok( $can_change, 'Koha::Result::Boolean', 'The result of the policy is returned' );
     ok( $can_change, "A patron with edit_borrowers can change an ordinary patron's password" );
 
-    $can_change = $editor->can_change_password_of($superlibrarian);
+    $can_change = $editor->can_change_credentials_of($superlibrarian);
     ok( !$can_change, 'Cannot change the password of a superlibrarian without staffaccess' );
     is( $can_change->messages->[0]->message, 'staffaccess_required', 'The policy message is kept' );
 
-    ok( $editor->can_change_password_of($editor), 'Anyone can change their own password' );
+    ok( $editor->can_change_credentials_of($editor), 'Anyone can change their own password' );
 
     $schema->storage->txn_rollback;
 };
@@ -4137,7 +4137,7 @@ subtest "identify_updated_extended_attributes" => sub {
     $schema->storage->txn_rollback;
 };
 
-subtest 'has_staff_access' => sub {
+subtest 'is_staff_account() tests' => sub {
 
     plan tests => 4;
 
@@ -4150,17 +4150,17 @@ subtest 'has_staff_access' => sub {
 
     my $staff = $builder->build_object(
         { class => 'Koha::Patrons', value => { categorycode => $staff_category->categorycode, flags => 0 } } );
-    ok( $staff->has_staff_access, 'A patron in a staff category has staff access, even without permissions' );
+    ok( $staff->is_staff_account, 'A patron in a staff category has staff access, even without permissions' );
 
     my $adult = $builder->build_object(
         { class => 'Koha::Patrons', value => { categorycode => $adult_category->categorycode, flags => 0 } } );
-    ok( !$adult->has_staff_access, 'A patron in a non-staff category without permissions has no staff access' );
+    ok( !$adult->is_staff_account, 'A patron in a non-staff category without permissions has no staff access' );
 
     $adult->flags(4)->store;    # catalogue
-    ok( $adult->has_staff_access, 'A patron with any permission has staff access, whatever their category' );
+    ok( $adult->is_staff_account, 'A patron with any permission has staff access, whatever their category' );
 
     $adult->flags(1)->store;    # superlibrarian
-    ok( $adult->has_staff_access, 'A superlibrarian has staff access' );
+    ok( $adult->is_staff_account, 'A superlibrarian has staff access' );
 
     $schema->storage->txn_rollback;
 };

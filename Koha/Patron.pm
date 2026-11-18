@@ -2378,21 +2378,21 @@ sub can_see_patrons_from {
     );
 }
 
-=head3 can_change_password_of
+=head3 can_change_credentials_of
 
-    my $can_change = $patron->can_change_password_of( $other_patron );
+    my $can_change = $patron->can_change_credentials_of( $other_patron );
 
 Returns a I<Koha::Result::Boolean> telling whether the patron (usually the logged in user) is
-allowed to change the password of the given I<Koha::Patron>. It is a convenience wrapper around
-I<Koha::Policy::Patrons-E<gt>can_change_password>, see there for the rules and the messages
+allowed to change the credentials (password and userid) of the given I<Koha::Patron>. It is a convenience wrapper around
+I<Koha::Policy::Patrons-E<gt>can_change_credentials>, see there for the rules and the messages
 carried by the result.
 
 =cut
 
-sub can_change_password_of {
+sub can_change_credentials_of {
     my ( $self, $patron ) = @_;
 
-    return Koha::Policy::Patrons->can_change_password( $self, $patron );
+    return Koha::Policy::Patrons->can_change_credentials( $self, $patron );
 }
 
 =head3 can_edit_items_from
@@ -2641,16 +2641,16 @@ sub is_superlibrarian {
     return $self->has_permission( { superlibrarian => 1 } ) ? 1 : 0;
 }
 
-=head3 has_staff_access
+=head3 is_staff_account
 
-    my $has_staff_access = $patron->has_staff_access;
+    my $is_staff_account = $patron->is_staff_account;
 
 Return true if the patron is a staff account, i.e. it is in a staff category (type S)
 or has any permission set (superlibrarian included).
 
 =cut
 
-sub has_staff_access {
+sub is_staff_account {
     my ($self) = @_;
     return ( $self->category->category_type eq 'S' || $self->flags ) ? 1 : 0;
 }

@@ -27,7 +27,7 @@ use t::lib::TestBuilder;
 my $schema  = Koha::Database->new->schema;
 my $builder = t::lib::TestBuilder->new;
 
-subtest 'can_change_password' => sub {
+subtest 'can_change_credentials' => sub {
 
     plan tests => 28;
 
@@ -65,73 +65,73 @@ subtest 'can_change_password' => sub {
 
     my $policy = 'Koha::Policy::Patrons';
 
-    ok( $policy->can_change_password( $editor,           $editor ),           'Anyone can change their own password' );
-    ok( $policy->can_change_password( $adult_super,      $adult_super ),      'Including a superlibrarian' );
-    ok( $policy->can_change_password( $staff_category_p, $staff_category_p ), 'Including a staff category account' );
+    ok( $policy->can_change_credentials( $editor,           $editor ),      'Anyone can change their own password' );
+    ok( $policy->can_change_credentials( $adult_super,      $adult_super ), 'Including a superlibrarian' );
+    ok( $policy->can_change_credentials( $staff_category_p, $staff_category_p ), 'Including a staff category account' );
 
-    ok( $policy->can_change_password( $editor, $ordinary ), "Can change an ordinary patron's password" );
+    ok( $policy->can_change_credentials( $editor, $ordinary ), "Can change an ordinary patron's password" );
 
-    my $result = $policy->can_change_password( $editor, $staff_category_p );
+    my $result = $policy->can_change_credentials( $editor, $staff_category_p );
     ok( !$result, "Cannot change a staff category account's password without staffaccess" );
     is( scalar @{ $result->messages },   1,                      'One message' );
     is( $result->messages->[0]->message, 'staffaccess_required', 'The message says what is missing' );
 
-    $result = $policy->can_change_password( $editor, $adult_with_flags );
+    $result = $policy->can_change_credentials( $editor, $adult_with_flags );
     ok( !$result, "Cannot change the password of an account with permissions, whatever its category" );
     is( $result->messages->[0]->message, 'staffaccess_required', 'The message says what is missing' );
 
-    $result = $policy->can_change_password( $editor, $adult_super );
+    $result = $policy->can_change_credentials( $editor, $adult_super );
     ok( !$result, "Cannot change the password of a superlibrarian, whatever its category" );
     is( $result->messages->[0]->message, 'staffaccess_required', 'The message says what is missing' );
 
     ok(
-        $policy->can_change_password( $staffaccess, $staff_category_p ),
+        $policy->can_change_credentials( $staffaccess, $staff_category_p ),
         "staffaccess allows changing a staff category account's password"
     );
     ok(
-        $policy->can_change_password( $staffaccess, $adult_with_flags ),
+        $policy->can_change_credentials( $staffaccess, $adult_with_flags ),
         "staffaccess allows changing the password of an account with permissions"
     );
     ok(
-        $policy->can_change_password( $staffaccess, $adult_super ),
+        $policy->can_change_credentials( $staffaccess, $adult_super ),
         "staffaccess allows changing a superlibrarian's password"
     );
-    ok( $policy->can_change_password( $staffaccess, $ordinary ), "And an ordinary patron's, of course" );
+    ok( $policy->can_change_credentials( $staffaccess, $ordinary ), "And an ordinary patron's, of course" );
 
     ok(
-        $policy->can_change_password( $superlibrarian, $staff_category_p ),
+        $policy->can_change_credentials( $superlibrarian, $staff_category_p ),
         "A superlibrarian can change a staff category account's password"
     );
     ok(
-        $policy->can_change_password( $superlibrarian, $adult_super ),
+        $policy->can_change_credentials( $superlibrarian, $adult_super ),
         "A superlibrarian can change another superlibrarian's password"
     );
-    ok( $policy->can_change_password( $superlibrarian, $ordinary ), "And an ordinary patron's" );
+    ok( $policy->can_change_credentials( $superlibrarian, $ordinary ), "And an ordinary patron's" );
 
-    $result = $policy->can_change_password( $ordinary, $staff_category_p );
+    $result = $policy->can_change_credentials( $ordinary, $staff_category_p );
     ok( !$result, "A patron without any permission cannot change a staff account's password" );
     is( $result->messages->[0]->message, 'edit_borrowers_required', 'The missing permission is edit_borrowers' );
 
-    $result = $policy->can_change_password( $ordinary, $new_patron->( $adult_category, 0 ) );
+    $result = $policy->can_change_credentials( $ordinary, $new_patron->( $adult_category, 0 ) );
     ok( !$result, "A patron without any permission cannot change an ordinary patron's password either" );
     is( $result->messages->[0]->message, 'edit_borrowers_required', 'The missing permission is edit_borrowers' );
 
-    ok( !$policy->can_change_password( $sub_viewer, $ordinary ), 'Another borrowers sub-permission is not enough' );
+    ok( !$policy->can_change_credentials( $sub_viewer, $ordinary ), 'Another borrowers sub-permission is not enough' );
 
     ok(
-        $policy->can_change_password( $sub_editor, $ordinary ),
+        $policy->can_change_credentials( $sub_editor, $ordinary ),
         'The edit_borrowers sub-permission is enough for an ordinary patron'
     );
-    $result = $policy->can_change_password( $sub_editor, $staff_category_p );
+    $result = $policy->can_change_credentials( $sub_editor, $staff_category_p );
     ok( !$result, '... but not for a staff account' );
     is( $result->messages->[0]->message, 'staffaccess_required', 'The message says what is missing' );
     ok(
-        $policy->can_change_password( $sub_staffaccess, $adult_super ),
+        $policy->can_change_credentials( $sub_staffaccess, $adult_super ),
         'edit_borrowers sub-permission plus staffaccess allows changing a superlibrarian'
     );
 
     ok(
-        !$policy->can_change_password( $new_patron->( $adult_category, 2**17 ), $ordinary ),
+        !$policy->can_change_credentials( $new_patron->( $adult_category, 2**17 ), $ordinary ),
         'staffaccess alone is not enough: edit_borrowers is still required'
     );
 

@@ -203,7 +203,7 @@ if ( $op eq 'cud-insert' || $op eq 'edit_form' || $op eq 'cud-save' || $op eq 'd
 
     # check permission to modify login info.
     if (   ref($borrower_data)
-        && $patron->has_staff_access
+        && $patron->is_staff_account
         && !( C4::Auth::haspermission( $userenv->{'id'}, { 'staffaccess' => 1 } ) ) )
     {
         $NoUpdateLogin = 1;
