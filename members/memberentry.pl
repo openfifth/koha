@@ -202,10 +202,7 @@ if ( $op eq 'cud-insert' || $op eq 'edit_form' || $op eq 'cud-save' || $op eq 'd
     }
 
     # check permission to modify login info.
-    if (   ref($borrower_data)
-        && $patron->is_staff_account
-        && !( C4::Auth::haspermission( $userenv->{'id'}, { 'staffaccess' => 1 } ) ) )
-    {
+    if ( ref($borrower_data) && !$logged_in_user->can_change_credentials_of($patron) ) {
         $NoUpdateLogin = 1;
         $newdata{'categorycode'} = $borrower_data->{'categorycode'};
     }

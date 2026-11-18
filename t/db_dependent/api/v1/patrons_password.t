@@ -110,7 +110,7 @@ subtest 'set() (authorized user tests)' => sub {
 
 subtest 'set() (staffaccess tests)' => sub {
 
-    plan tests => 18;
+    plan tests => 21;
 
     $schema->storage->txn_begin;
 
@@ -179,18 +179,27 @@ subtest 'set() (staffaccess tests)' => sub {
         }
         );
 
-    foreach my $target ( $superlibrarian_target, $permissions_target ) {
-        $t->post_ok( "//$userid:$password@/api/v1/patrons/"
-                . $target->id
-                . "/password" => json => { password => $new_password, password_2 => $new_password } )
-            ->status_is( 403, 'An account with permissions is protected whatever its category' )
-            ->json_is(
-            {
-                error      => "Changing another staff account's password requires the staffaccess permission",
-                error_code => 'staffaccess_required'
-            }
-            );
-    }
+    $t->post_ok( "//$userid:$password@/api/v1/patrons/"
+            . $permissions_target->id
+            . "/password" => json => { password => $new_password, password_2 => $new_password } )
+        ->status_is( 403, 'An account with permissions is protected whatever its category' )
+        ->json_is(
+        {
+            error      => "Changing another staff account's password requires the staffaccess permission",
+            error_code => 'staffaccess_required'
+        }
+        );
+
+    $t->post_ok( "//$userid:$password@/api/v1/patrons/"
+            . $superlibrarian_target->id
+            . "/password" => json => { password => $new_password, password_2 => $new_password } )
+        ->status_is( 403, 'A superlibrarian is protected whatever its category' )
+        ->json_is(
+        {
+            error      => "Changing a superlibrarian's password requires the superlibrarian permission",
+            error_code => 'superlibrarian_required'
+        }
+        );
 
     $t->post_ok( "//$userid:$password@/api/v1/patrons/"
             . $ordinary_target->id
@@ -200,11 +209,23 @@ subtest 'set() (staffaccess tests)' => sub {
 
     # 'borrowers' + 'staffaccess'
     $unprivileged_patron->set( { flags => 16 + 2**17 } )->store;
-    foreach my $target ( $staff_target, $superlibrarian_target, $permissions_target ) {
+    foreach my $target ( $staff_target, $permissions_target ) {
         $t->post_ok( "//$userid:$password@/api/v1/patrons/"
                 . $target->id
                 . "/password" => json => { password => $new_password, password_2 => $new_password } )->status_is(200);
     }
+
+    $t->post_ok( "//$userid:$password@/api/v1/patrons/"
+            . $superlibrarian_target->id
+            . "/password" => json => { password => $new_password, password_2 => $new_password } )
+        ->status_is( 403, 'staffaccess is not enough to change a superlibrarian' )
+        ->json_is( '/error_code' => 'superlibrarian_required' );
+
+    # A superlibrarian can
+    $unprivileged_patron->set( { flags => 1 } )->store;
+    $t->post_ok( "//$userid:$password@/api/v1/patrons/"
+            . $superlibrarian_target->id
+            . "/password" => json => { password => $new_password, password_2 => $new_password } )->status_is(200);
 
     $schema->storage->txn_rollback;
 };

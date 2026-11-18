@@ -29,7 +29,7 @@ my $builder = t::lib::TestBuilder->new;
 
 subtest 'can_change_credentials' => sub {
 
-    plan tests => 28;
+    plan tests => 29;
 
     $schema->storage->txn_begin;
 
@@ -82,7 +82,7 @@ subtest 'can_change_credentials' => sub {
 
     $result = $policy->can_change_credentials( $editor, $adult_super );
     ok( !$result, "Cannot change the password of a superlibrarian, whatever its category" );
-    is( $result->messages->[0]->message, 'staffaccess_required', 'The message says what is missing' );
+    is( $result->messages->[0]->message, 'superlibrarian_required', 'The message says what is missing' );
 
     ok(
         $policy->can_change_credentials( $staffaccess, $staff_category_p ),
@@ -92,10 +92,9 @@ subtest 'can_change_credentials' => sub {
         $policy->can_change_credentials( $staffaccess, $adult_with_flags ),
         "staffaccess allows changing the password of an account with permissions"
     );
-    ok(
-        $policy->can_change_credentials( $staffaccess, $adult_super ),
-        "staffaccess allows changing a superlibrarian's password"
-    );
+    $result = $policy->can_change_credentials( $staffaccess, $adult_super );
+    ok( !$result, "staffaccess does not allow changing a superlibrarian's password" );
+    is( $result->messages->[0]->message, 'superlibrarian_required', 'The message says what is missing' );
     ok( $policy->can_change_credentials( $staffaccess, $ordinary ), "And an ordinary patron's, of course" );
 
     ok(
@@ -126,8 +125,8 @@ subtest 'can_change_credentials' => sub {
     ok( !$result, '... but not for a staff account' );
     is( $result->messages->[0]->message, 'staffaccess_required', 'The message says what is missing' );
     ok(
-        $policy->can_change_credentials( $sub_staffaccess, $adult_super ),
-        'edit_borrowers sub-permission plus staffaccess allows changing a superlibrarian'
+        !$policy->can_change_credentials( $sub_staffaccess, $adult_super ),
+        'edit_borrowers sub-permission plus staffaccess does not allow changing a superlibrarian'
     );
 
     ok(

@@ -38,15 +38,16 @@ userid) of the I<Koha::Patron> $patron.
 
 Anybody can change their own credentials (other checks, e.g. on the current password, are
 not the concern of this policy). Changing the credentials of another account requires the
-I<edit_borrowers> permission and, if that account has staff access, i.e. is in a staff
-category or has any permission set (superlibrarian included), the I<staffaccess> permission
-as well. Otherwise anyone who can edit patrons could take over a staff account, whatever
-the category it belongs to.
+I<edit_borrowers> permission and, if that account is a staff account (see
+I<Koha::Patron-E<gt>is_staff_account>), the I<staffaccess> permission as well. Only a
+superlibrarian can change the credentials of a superlibrarian: I<staffaccess> alone would
+let anybody holding it take over a superlibrarian account. Otherwise anyone who can edit
+patrons could take over a staff account, whatever the category it belongs to.
 
 Checks on the patron's library (e.g. I<IndependentBranches>) are not part of this policy.
 
-The I<Koha::Result::Boolean> returned carries the I<edit_borrowers_required> or the
-I<staffaccess_required> message when the answer is no.
+The I<Koha::Result::Boolean> returned carries the I<edit_borrowers_required>,
+I<superlibrarian_required> or I<staffaccess_required> message when the answer is no.
 
 =cut
 
@@ -58,6 +59,9 @@ sub can_change_credentials {
 
     return Koha::Result::Boolean->new(0)->add_message( { message => 'edit_borrowers_required' } )
         unless $actor->has_permission( { borrowers => 'edit_borrowers' } );
+
+    return Koha::Result::Boolean->new(0)->add_message( { message => 'superlibrarian_required' } )
+        if $patron->is_superlibrarian && !$actor->is_superlibrarian;
 
     return Koha::Result::Boolean->new(1)
         unless $patron->is_staff_account;

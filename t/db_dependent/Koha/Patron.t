@@ -2751,8 +2751,8 @@ subtest 'can_change_credentials_of() tests' => sub {
     ok( $can_change, "A patron with edit_borrowers can change an ordinary patron's password" );
 
     $can_change = $editor->can_change_credentials_of($superlibrarian);
-    ok( !$can_change, 'Cannot change the password of a superlibrarian without staffaccess' );
-    is( $can_change->messages->[0]->message, 'staffaccess_required', 'The policy message is kept' );
+    ok( !$can_change, 'Cannot change the password of a superlibrarian' );
+    is( $can_change->messages->[0]->message, 'superlibrarian_required', 'The policy message is kept' );
 
     ok( $editor->can_change_credentials_of($editor), 'Anyone can change their own password' );
 

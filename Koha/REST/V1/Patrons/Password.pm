@@ -54,6 +54,7 @@ sub set {
     unless ($can_change) {
         my %error_for = (
             staffaccess_required    => "Changing another staff account's password requires the staffaccess permission",
+            superlibrarian_required => "Changing a superlibrarian's password requires the superlibrarian permission",
             edit_borrowers_required => "Changing another patron's password requires the edit_borrowers permission",
         );
         my ($error_code) = grep { exists $error_for{$_} } map { $_->message } @{ $can_change->messages };
