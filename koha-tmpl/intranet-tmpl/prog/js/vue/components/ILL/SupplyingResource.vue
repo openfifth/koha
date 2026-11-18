@@ -20,7 +20,7 @@ export default {
 
     setup(props) {
         const router = useRouter();
-        const { getCodesForElement } = ISO18626();
+        const { getCodesForElement, getCodeDescription } = ISO18626();
 
         const {
             setConfirmationDialog,
@@ -1051,6 +1051,21 @@ export default {
                     type: "text",
                     hideIn: ["Form"],
                     group: "request_details",
+                    format: value =>
+                        value ? getCodeDescription("status", value) : value,
+                    tableColumnDefinition: {
+                        title: $__("Status"),
+                        data: "status",
+                        searchable: true,
+                        orderable: true,
+                        render(data, type, row, meta) {
+                            return escape_str(
+                                row.status
+                                    ? getCodeDescription("status", row.status)
+                                    : ""
+                            );
+                        },
+                    },
                 },
                 {
                     name: "service_type",
@@ -1058,6 +1073,26 @@ export default {
                     type: "text",
                     hideIn: ["Form"],
                     group: "specified_by_the_requesting_agency",
+                    format: value =>
+                        value
+                            ? getCodeDescription("serviceType", value)
+                            : value,
+                    tableColumnDefinition: {
+                        title: $__("Service type"),
+                        data: "service_type",
+                        searchable: true,
+                        orderable: true,
+                        render(data, type, row, meta) {
+                            return escape_str(
+                                row.service_type
+                                    ? getCodeDescription(
+                                          "serviceType",
+                                          row.service_type
+                                      )
+                                    : ""
+                            );
+                        },
+                    },
                 },
                 {
                     name: "pending_requesting_agency_action",
@@ -1185,23 +1220,13 @@ export default {
                 status: statuses.value
                     .map(status => ({
                         _id: status.id,
-                        _str: $__(status.id),
+                        _str: getCodeDescription("status", status.id),
                     }))
                     .sort((a, b) => a._str.localeCompare(b._str)),
-                service_type: [
-                    {
-                        _id: "Copy",
-                        _str: $__("Copy"),
-                    },
-                    {
-                        _id: "CopyOrLoan",
-                        _str: $__("CopyOrLoan"),
-                    },
-                    {
-                        _id: "Loan",
-                        _str: $__("Loan"),
-                    },
-                ],
+                service_type: getCodesForElement("serviceType").map(code => ({
+                    _id: code.value,
+                    _str: code.description,
+                })),
             },
             actions: {
                 0: ["show"],

@@ -88,7 +88,8 @@ describe("Supplying ILL Requests operations", () => {
             .should("contain", "Test article")
             .and("contain", "Test author")
             .and("contain", "Test publisher")
-            .and("contain", "2024");
+            .and("contain", "2024")
+            .and("contain", "Request received");
     });
 
     it("Show supplying request", () => {
@@ -145,8 +146,21 @@ describe("Supplying ILL Requests operations", () => {
         const confirmationMsg = get_message(
             2,
             "requestingAgencyMessageConfirmation",
-            { requestingAgencyMessageConfirmation: {} }
+            {
+                requestingAgencyMessageConfirmation: {
+                    confirmationHeader: { messageStatus: "OK" },
+                },
+            }
         );
+        const supplyingAgencyMsg = get_message(3, "supplyingAgencyMessage", {
+            supplyingAgencyMessage: {
+                messageInfo: {
+                    reasonForMessage: "StatusChange",
+                    note: "Test note",
+                },
+                statusInfo: { status: "CopyCompleted" },
+            },
+        });
 
         cy.intercept("GET", "/api/v1/ill/iso18626_requests*", {
             statusCode: 200,
@@ -159,7 +173,7 @@ describe("Supplying ILL Requests operations", () => {
         cy.intercept("GET", "/api/v1/ill/iso18626_requests/*", {
             ...request,
             hold: null,
-            messages: [statusChangeMsg, confirmationMsg],
+            messages: [statusChangeMsg, confirmationMsg, supplyingAgencyMsg],
         }).as("getRequest");
 
         cy.visit("/cgi-bin/koha/ill/iso18626_requests");
@@ -170,7 +184,7 @@ describe("Supplying ILL Requests operations", () => {
         cy.wait("@getRequest");
 
         // By default, confirmation messages are hidden
-        cy.get("#iso18626_messages tbody tr").should("have.length", 1);
+        cy.get("#iso18626_messages tbody tr").should("have.length", 2);
 
         // Information column shows parsed message action
         cy.get("#iso18626_messages tbody tr:first td:nth-child(2)").should(
@@ -179,11 +193,27 @@ describe("Supplying ILL Requests operations", () => {
         );
 
         // View message button exists in each row
-        cy.get("#iso18626_messages tbody tr:first").contains("View message");
+        cy.get("#iso18626_messages tbody tr:first button")
+            .should("have.attr", "title", "View message")
+            .contains("View");
+
+        // Type column shows a readable message type
+        cy.get("#iso18626_messages tbody tr:last td:first").should(
+            "contain",
+            "Supplying agency message"
+        );
+
+        // Information column summarises the message and lists its details
+        cy.get("#iso18626_messages tbody tr:last td:nth-child(2)")
+            .should("contain", "Status changed to Copy completed")
+            .and("contain", "Note: Test note");
 
         // Checking "Show confirmations" reveals the confirmation message
         cy.get("#showConfirmationRows").click();
-        cy.get("#iso18626_messages tbody tr").should("have.length", 2);
+        cy.get("#iso18626_messages tbody tr").should("have.length", 3);
+        cy.get(
+            "#iso18626_messages tbody tr:nth-child(2) td:nth-child(2)"
+        ).should("contain", "Message acknowledged");
     });
 
     it("Shows correct action buttons for Loan service type", () => {

@@ -22,28 +22,45 @@
                 v-bind:key="message.iso18626_message_id"
             >
                 <td>
-                    <i
-                        v-if="message.type.includes('request')"
-                        class="fas fa-download"
-                        aria-hidden="true"
-                    ></i>
-                    <i v-else class="fas fa-upload" aria-hidden="true"></i>
-                    &nbsp;
-                    {{ message.type }}
+                    <div class="d-flex gap-2">
+                        <i
+                            v-if="message.type.includes('request')"
+                            class="fas fa-download mt-1"
+                            aria-hidden="true"
+                        ></i>
+                        <i
+                            v-else
+                            class="fas fa-upload mt-1"
+                            aria-hidden="true"
+                        ></i>
+                        <span>{{
+                            getCodeDescription("messageType", message.type)
+                        }}</span>
+                    </div>
                 </td>
                 <td>
-                    {{ getMessageData(message.content) }}
+                    <div class="fw-bold">
+                        {{ getMessageSummary(message.content) }}
+                    </div>
+                    <div
+                        v-for="(line, index) in getMessageData(message.content)"
+                        v-bind:key="index"
+                        class="text-muted"
+                    >
+                        {{ line }}
+                    </div>
                 </td>
                 <td>
                     {{ format_datetime(message.timestamp) }}
                 </td>
                 <td>
                     <button
-                        class="btn btn-default"
+                        class="btn btn-default btn-xs"
+                        :title="$__('View message')"
                         @click="openModal(message.content)"
                     >
                         <i class="fas fa-envelope" aria-hidden="true"></i>
-                        &nbsp; {{ $__("View message") }}
+                        {{ $__("View") }}
                     </button>
                 </td>
             </tr>
@@ -55,6 +72,7 @@
 import FormElement from "../FormElement.vue";
 import { inject, ref, computed } from "vue";
 import { $__ } from "@koha-vue/i18n";
+import { ISO18626 } from "./ISO18626.js";
 
 export default {
     props: {
@@ -62,6 +80,7 @@ export default {
     },
     setup(props) {
         const format_datetime = $datetime;
+        const { getCodeDescription } = ISO18626();
 
         const modalVisible = ref(false);
         const messageFilterOptions = ref({
@@ -80,28 +99,143 @@ export default {
             });
         });
 
-        const getMessageData = (message, type) => {
-            const parsedMessage = Object.values(JSON.parse(message))[0];
-            let message_data;
-            message_data =
-                parsedMessage?.action !== undefined &&
-                parsedMessage?.action !== null
-                    ? parsedMessage?.action
-                    : null;
-            if (message_data === null) {
-                message_data =
-                    parsedMessage?.messageInfo?.reasonForMessage !==
-                        undefined &&
-                    parsedMessage?.messageInfo?.reasonForMessage !== null
-                        ? parsedMessage?.messageInfo?.reasonForMessage
-                        : null;
-                if (message_data !== null) {
-                    message_data = $__("Reason: %s").format(message_data);
-                }
-            } else {
-                message_data = $__("Action: %s").format(message_data);
+        const parseMessage = message => {
+            const parsedMessage = JSON.parse(message);
+            return {
+                messageType: Object.keys(parsedMessage)[0],
+                content: Object.values(parsedMessage)[0] || {},
+            };
+        };
+
+        const getMessageSummary = message => {
+            const { messageType, content } = parseMessage(message);
+            const messageInfo = content.messageInfo || {};
+            const status = content.statusInfo?.status
+                ? getCodeDescription("status", content.statusInfo.status)
+                : null;
+            const reasonForMessage =
+                messageInfo.reasonForMessage || content.reasonForMessage;
+
+            if (messageType === "request") {
+                return $__("Request received");
             }
-            return message_data;
+
+            if (messageType === "requestingAgencyMessage") {
+                const actions = {
+                    StatusRequest: $__(
+                        "Requesting agency asked for a status update"
+                    ),
+                    Received: $__("Requesting agency confirmed receipt"),
+                    Cancel: $__("Requesting agency asked to cancel"),
+                    Renew: $__("Requesting agency asked to renew"),
+                    ShippedReturn: $__("Requesting agency returned the item"),
+                    ShippedForward: $__("Requesting agency forwarded the item"),
+                    Notification: $__("Requesting agency sent a notification"),
+                };
+                return (
+                    actions[content.action] ||
+                    $__("Action: %s").format(content.action)
+                );
+            }
+
+            if (messageType === "supplyingAgencyMessage") {
+                if (reasonForMessage === "CancelResponse") {
+                    return messageInfo.answerYesNo === "Y"
+                        ? $__("Cancellation accepted")
+                        : $__("Cancellation declined");
+                }
+                if (reasonForMessage === "RenewResponse") {
+                    return messageInfo.answerYesNo === "Y"
+                        ? $__("Renewal accepted")
+                        : $__("Renewal declined");
+                }
+                if (reasonForMessage === "Notification") {
+                    return $__("Notification sent");
+                }
+                if (reasonForMessage === "StatusChange" && status) {
+                    return $__("Status changed to %s").format(status);
+                }
+                if (reasonForMessage === "RequestResponse" && status) {
+                    return $__("Replied to request: %s").format(status);
+                }
+                if (reasonForMessage === "StatusRequestResponse" && status) {
+                    return $__("Replied to status update request: %s").format(
+                        status
+                    );
+                }
+            }
+
+            if (content.confirmationHeader) {
+                return content.confirmationHeader.messageStatus === "ERROR"
+                    ? $__("Message rejected")
+                    : $__("Message acknowledged");
+            }
+
+            if (content.action) {
+                return $__("Action: %s").format(content.action);
+            }
+            if (reasonForMessage) {
+                return $__("Reason: %s").format(reasonForMessage);
+            }
+            return "";
+        };
+
+        const getMessageData = message => {
+            const { content } = parseMessage(message);
+            const messageInfo = content.messageInfo || {};
+            const statusInfo = content.statusInfo || {};
+            const errorData = content.errorData || {};
+            const lines = [];
+            const addLine = (label, value) => {
+                if (value !== undefined && value !== null && value !== "") {
+                    lines.push(label.format(value));
+                }
+            };
+
+            addLine($__("Title: %s"), content.bibliographicInfo?.title);
+            addLine(
+                $__("Service type: %s"),
+                content.serviceInfo?.serviceType
+                    ? getCodeDescription(
+                          "serviceType",
+                          content.serviceInfo.serviceType
+                      )
+                    : null
+            );
+            addLine(
+                $__("Reason unfilled: %s"),
+                messageInfo.reasonUnfilled
+                    ? getCodeDescription(
+                          "reasonUnfilled",
+                          messageInfo.reasonUnfilled
+                      )
+                    : null
+            );
+            addLine(
+                $__("Reason for retry: %s"),
+                messageInfo.reasonRetry
+                    ? getCodeDescription("reasonRetry", messageInfo.reasonRetry)
+                    : null
+            );
+            addLine(
+                $__("Expected delivery date: %s"),
+                statusInfo.expectedDeliveryDate
+                    ? format_datetime(statusInfo.expectedDeliveryDate)
+                    : null
+            );
+            addLine(
+                $__("Due date: %s"),
+                statusInfo.dueDate ? format_datetime(statusInfo.dueDate) : null
+            );
+            addLine($__("Item: %s"), content.deliveryInfo?.itemId);
+            addLine(
+                $__("Note: %s"),
+                messageInfo.note || content.note || content.serviceInfo?.note
+            );
+            addLine($__("Error: %s"), errorData.errorType);
+            addLine($__("Error details: %s"), errorData.errorValue);
+
+            return lines;
         };
 
         function openModal(message) {
@@ -231,6 +365,8 @@ export default {
             filteredMessages,
             messageFilterOptions,
             getMessageData,
+            getMessageSummary,
+            getCodeDescription,
             format_datetime,
         };
     },

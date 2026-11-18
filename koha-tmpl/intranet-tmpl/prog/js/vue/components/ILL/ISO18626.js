@@ -365,12 +365,123 @@ export function ISO18626() {
                     },
                 ],
             },
+            {
+                element: "messageType",
+                values: [
+                    {
+                        value: "request",
+                        description: $__("Request"),
+                    },
+                    {
+                        value: "requestConfirmation",
+                        description: $__("Request confirmation"),
+                    },
+                    {
+                        value: "requestingAgencyMessage",
+                        description: $__("Requesting agency message"),
+                    },
+                    {
+                        value: "requestingAgencyMessageConfirmation",
+                        description: $__(
+                            "Requesting agency message confirmation"
+                        ),
+                    },
+                    {
+                        value: "supplyingAgencyMessage",
+                        description: $__("Supplying agency message"),
+                    },
+                    {
+                        value: "supplyingAgencyMessageConfirmation",
+                        description: $__(
+                            "Supplying agency message confirmation"
+                        ),
+                    },
+                ],
+            },
+            {
+                element: "serviceType",
+                values: [
+                    {
+                        value: "Copy",
+                        description: $__("Copy"),
+                    },
+                    {
+                        value: "CopyOrLoan",
+                        description: $__("Copy or loan"),
+                    },
+                    {
+                        value: "Loan",
+                        description: $__("Loan"),
+                    },
+                ],
+            },
+            {
+                element: "status",
+                values: [
+                    {
+                        value: "Cancelled",
+                        description: $__("Cancelled"),
+                    },
+                    {
+                        value: "CompletedWithoutReturn",
+                        description: $__("Completed without return"),
+                    },
+                    {
+                        value: "CopyCompleted",
+                        description: $__("Copy completed"),
+                    },
+                    {
+                        value: "ExpectToSupply",
+                        description: $__("Expect to supply"),
+                    },
+                    {
+                        value: "Loaned",
+                        description: $__("Loaned"),
+                    },
+                    {
+                        value: "LoanCompleted",
+                        description: $__("Loan completed"),
+                    },
+                    {
+                        value: "Overdue",
+                        description: $__("Overdue"),
+                    },
+                    {
+                        value: "Recalled",
+                        description: $__("Recalled"),
+                    },
+                    {
+                        value: "RequestReceived",
+                        description: $__("Request received"),
+                    },
+                    {
+                        value: "RetryPossible",
+                        description: $__("Retry possible"),
+                    },
+                    {
+                        value: "Unfilled",
+                        description: $__("Unfilled"),
+                    },
+                    {
+                        value: "WillSupply",
+                        description: $__("Will supply"),
+                    },
+                ],
+            },
         ];
 
         return codes.find(code => code.element === element).values;
     };
 
+    const getCodeDescription = (element, value) => {
+        const code = getCodesForElement(element).find(
+            code => code.value === value
+        );
+        return code ? code.description : value;
+    };
+
     return {
         getCodesForElement,
+        getCodeDescription,
     };
 }
