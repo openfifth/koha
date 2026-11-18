@@ -123,6 +123,7 @@ if ( $op eq 'cud-import' && $uploadborrowers && length($uploadborrowers) > 0 ) {
             update_dateexpiry_from_today    => $update_dateexpiry eq "now"        ? 1 : 0,
             update_dateexpiry_from_existing => $update_dateexpiry eq "dateexpiry" ? 1 : 0,
             send_welcome                    => $welcome_new,
+            logged_in_user                  => Koha::Patrons->find($loggedinuser),
         }
     );
 

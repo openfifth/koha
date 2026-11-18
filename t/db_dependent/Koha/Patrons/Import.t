@@ -18,7 +18,7 @@
 # along with Koha; if not, see <https://www.gnu.org/licenses>.
 
 use Modern::Perl;
-use Test::More tests => 181;
+use Test::More tests => 182;
 use Test::NoWarnings;
 use Test::Warn;
 use Test::Exception;
@@ -1832,6 +1832,110 @@ sub compare_patron_attributes {
     }
     is_deeply( $got, $expected );
 }
+
+subtest 'staffaccess rules on userid and password' => sub {
+
+    plan tests => 13;
+
+    $schema->storage->txn_begin;
+
+    my $csv_headers = 'cardnumber,surname,userid,password,branchcode,categorycode';
+    t::lib::Mocks::mock_preference( 'RequireStrongPassword', 0 );
+    t::lib::Mocks::mock_preference( 'minPasswordLength',     3 );
+
+    my $adult_category =
+        $builder->build_object( { class => 'Koha::Patron::Categories', value => { category_type => 'A' } } );
+    my $staff_category =
+        $builder->build_object( { class => 'Koha::Patron::Categories', value => { category_type => 'S' } } );
+
+    my $count      = 0;
+    my $new_patron = sub {
+        my ($flags) = @_;
+        my $patron = $builder->build_object(
+            {
+                class => 'Koha::Patrons',
+                value => {
+                    flags  => $flags, categorycode => $adult_category->categorycode,
+                    userid => 'creds_test_' . $$ . '_' . ++$count
+                }
+            }
+        );
+        $patron->set_password( { password => 'oldPassword1', skip_validation => 1 } );
+        return $patron->get_from_storage;
+    };
+    my $run = sub {
+        my ( $patron, $categorycode, $logged_in_user ) = @_;
+        my $csv = join(
+            ',', $patron->cardnumber, 'Imported', 'new_' . $patron->userid, 'newPassword1', $patron->branchcode,
+            $categorycode
+        );
+        my $filename = make_csv( $temp_dir, $csv_headers, $csv );
+        open( my $handle, "<", $filename ) or die "cannot open < $filename: $!";
+        return $patrons_import->import_patrons(
+            {
+                file                => $handle, matchpoint     => 'cardnumber', overwrite_cardnumber => 1,
+                overwrite_passwords => 1,       logged_in_user => $logged_in_user,
+            }
+        );
+    };
+
+    my $editor           = $builder->build_object( { class => 'Koha::Patrons', value => { flags => 2**4 } } );
+    my $staffaccess_user = $builder->build_object( { class => 'Koha::Patrons', value => { flags => 2**4 + 2**17 } } );
+
+    # A user without staffaccess
+    my $staff = $new_patron->( 2**2 );    # permissions, but not in a staff category
+    my ( $userid, $password ) = ( $staff->userid, $staff->password );
+    my $result = $run->( $staff, $adult_category->categorycode, $editor );
+    $staff->discard_changes;
+    is( $staff->surname,  'Imported', 'The other fields are imported' );
+    is( $staff->userid,   $userid,    'The userid of an account with permissions is kept' );
+    is( $staff->password, $password,  'The password of an account with permissions is kept' );
+    is_deeply(
+        [
+            map { $_->{userid_no_permission} ? 'userid' : $_->{passwd_no_permission} ? 'password' : () }
+                @{ $result->{errors} }
+        ],
+        [ 'userid', 'password' ],
+        'Both are reported'
+    );
+
+    my $ordinary = $new_patron->(undef);
+    ( $userid, $password ) = ( $ordinary->userid, $ordinary->password );
+    $run->( $ordinary, $adult_category->categorycode, $editor );
+    $ordinary->discard_changes;
+    is( $ordinary->userid, 'new_' . $userid, 'The userid of an ordinary patron is changed' );
+
+    my $to_staff = $new_patron->(undef);
+    ( $userid, $password ) = ( $to_staff->userid, $to_staff->password );
+    $run->( $to_staff, $staff_category->categorycode, $editor );
+    $to_staff->discard_changes;
+    is( $to_staff->categorycode, $staff_category->categorycode, 'A patron can be moved to a staff category' );
+    is( $to_staff->userid,       $userid,                       '... but their userid is kept' );
+    is( $to_staff->password,     $password,                     '... and their password' );
+
+    # A user with staffaccess
+    my $staff_2 = $new_patron->( 2**2 );
+    ( $userid, $password ) = ( $staff_2->userid, $staff_2->password );
+    $run->( $staff_2, $adult_category->categorycode, $staffaccess_user );
+    $staff_2->discard_changes;
+    is( $staff_2->userid, 'new_' . $userid, 'staffaccess allows changing the userid of a staff account' );
+    isnt( $staff_2->password, $password, 'and its password' );
+
+    my $super = $new_patron->(1);
+    $userid = $super->userid;
+    $run->( $super, $adult_category->categorycode, $staffaccess_user );
+    is( $super->get_from_storage->userid, $userid, 'but not the userid of a superlibrarian' );
+
+    # No user: the command line
+    my $staff_3 = $new_patron->( 2**2 );
+    ( $userid, $password ) = ( $staff_3->userid, $staff_3->password );
+    $run->( $staff_3, $adult_category->categorycode );
+    $staff_3->discard_changes;
+    is( $staff_3->userid,   'new_' . $userid, 'Run without a user, the userid can be changed' );
+    is( $staff_3->password, $password,        '... but the password of a staff account is never overwritten' );
+
+    $schema->storage->txn_rollback;
+};
 
 # ###### Test utility ###########
 sub make_csv {

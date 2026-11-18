@@ -173,6 +173,12 @@
                                 [% IF e.passwd_unknown_err %]
                                     <li class="line_error"> Password error for patron with borrowernumber [% e.borrowernumber | html %]. </li>
                                 [% END %]
+                                [% IF e.passwd_no_permission %]
+                                    <li class="line_error"> Password not overwritten for patron with borrowernumber [% e.borrowernumber | html %]: you do not have permission to change this patron's password. </li>
+                                [% END %]
+                                [% IF e.userid_no_permission %]
+                                    <li class="line_error"> Username not changed for patron with borrowernumber [% e.borrowernumber | html %]: you do not have permission to change this patron's username. </li>
+                                [% END %]
                                 [% IF e.patron_attribute_unique_id_constraint %]
                                     <li class="line_error">
                                         [% IF e.borrowernumber %]

@@ -85,6 +85,7 @@ sub import_patrons {
     my $update_dateexpiry               = $params->{update_dateexpiry};
     my $update_dateexpiry_from_today    = $params->{update_dateexpiry_from_today};
     my $update_dateexpiry_from_existing = $params->{update_dateexpiry_from_existing};
+    my $logged_in_user                  = $params->{logged_in_user};
 
     my $extended            = C4::Context->preference('ExtendedPatronAttributes');
     my $set_messaging_prefs = C4::Context->preference('EnhancedMessagingPreferences');
@@ -317,6 +318,31 @@ LINE: while ( my $borrowerline = <$handle> ) {
                 }
             }
 
+            # The staffaccess rules apply to the credentials (userid and password) of existing patrons.
+            # Run by a user (staff interface) they are the ones of that user, run without one
+            # (command line) the userid can be changed but the password of a staff account never is.
+            my $stored_patron = $patron->get_from_storage;
+            my $new_category  = Koha::Patron::Categories->find( $borrower{categorycode} );
+            my $to_staff = $new_category && $new_category->category_type eq 'S' && !$stored_patron->is_staff_account;
+            my ( $can_change_userid, $can_change_password );
+            if ($logged_in_user) {
+                $can_change_userid = $logged_in_user->can_change_credentials_of($stored_patron)
+                    && !( $to_staff && !$logged_in_user->has_permission( { staffaccess => 1 } ) );
+                $can_change_password = $can_change_userid;
+            } else {
+                $can_change_userid   = 1;
+                $can_change_password = !$stored_patron->is_staff_account && !$to_staff;
+            }
+
+            if ( !$can_change_userid && defined $borrower{userid} && $borrower{userid} ne $stored_patron->userid ) {
+                $borrower{userid} = $stored_patron->userid;
+                push @errors, { userid_no_permission => 1, borrowernumber => $borrowernumber };
+            }
+            my $wants_password = $overwrite_passwords && defined $borrower{password} && $borrower{password} ne '';
+            if ( $wants_password && !$can_change_password && $logged_in_user ) {
+                push @errors, { passwd_no_permission => 1, borrowernumber => $borrowernumber };
+            }
+
             try {
                 $schema->storage->txn_do(
                     sub {
@@ -349,11 +375,7 @@ LINE: while ( my $borrowerline = <$handle> ) {
                                 );
                             }
                         }
-                        if (   $patron->category->category_type ne 'S'
-                            && $overwrite_passwords
-                            && defined $borrower{password}
-                            && $borrower{password} ne '' )
-                        {
+                        if ( $wants_password && $can_change_password ) {
                             try {
                                 $patron->set_password( { password => $borrower{password} } );
                             } catch {
