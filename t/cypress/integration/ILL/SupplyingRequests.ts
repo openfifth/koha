@@ -58,6 +58,20 @@ describe("Supplying ILL Requests operations", () => {
 
         // GET supplying requests returns populated list
         let request = get_supplying_request();
+        request.messages = [
+            get_message(1, "request", {
+                request: {
+                    bibliographicInfo: {
+                        title: "Test article",
+                        author: "Test author",
+                    },
+                    publicationInfo: {
+                        publisher: "Test publisher",
+                        publicationDate: "2024",
+                    },
+                },
+            }),
+        ];
         cy.intercept("GET", "/api/v1/ill/iso18626_requests*", {
             statusCode: 200,
             body: [request],
@@ -70,6 +84,11 @@ describe("Supplying ILL Requests operations", () => {
         cy.get("#iso18626_requests_list").contains(
             "Showing 1 to 1 of 1 entries"
         );
+        cy.get("#iso18626_requests_list table tbody tr:first")
+            .should("contain", "Test article")
+            .and("contain", "Test author")
+            .and("contain", "Test publisher")
+            .and("contain", "2024");
     });
 
     it("Show supplying request", () => {
@@ -85,7 +104,13 @@ describe("Supplying ILL Requests operations", () => {
         }).as("getRequests");
         cy.intercept("GET", "/api/v1/ill/iso18626_requests/*", {
             ...request,
-            messages: [],
+            messages: [
+                get_message(1, "request", {
+                    request: {
+                        bibliographicInfo: { title: "Test article" },
+                    },
+                }),
+            ],
             hold: null,
         }).as("getRequest");
 
@@ -99,6 +124,16 @@ describe("Supplying ILL Requests operations", () => {
         cy.get("#iso18626_requests_show h2").contains(
             "Supplying ILL #" + request.iso18626_request_id
         );
+
+        // Only non-empty bibliographic details are displayed
+        cy.get("#iso18626_requests_show")
+            .contains("legend", "Bibliographic details")
+            .parent()
+            .should("contain", "Title:")
+            .and("contain", "Test article")
+            .and("not.contain", "Author:")
+            .and("not.contain", "Publisher:")
+            .and("not.contain", "Publication date:");
     });
 
     it("Displays ISO18626 messages", () => {

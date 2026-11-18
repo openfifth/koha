@@ -1203,6 +1203,14 @@ modules:
             -
               columnname: iso18626_requesting_agency_id
             -
+              columnname: title
+            -
+              columnname: author
+            -
+              columnname: publisher
+            -
+              columnname: publication_date
+            -
               columnname: status
             -
               columnname: service_type

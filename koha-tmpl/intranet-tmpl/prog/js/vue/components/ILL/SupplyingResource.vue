@@ -924,6 +924,40 @@ export default {
             `;
         };
 
+        const getRequestMessagePayload = resource => {
+            const requestMessage = resource?.messages?.find(
+                message => message.type === "request"
+            );
+            if (!requestMessage) return {};
+            try {
+                return JSON.parse(requestMessage.content)?.request || {};
+            } catch (e) {
+                return {};
+            }
+        };
+
+        const requestMessageAttr = (name, label, getValue) => ({
+            name,
+            label,
+            type: "text",
+            hideIn: ["Form"],
+            group: "bibliographic_details",
+            format: (value, resource) =>
+                getValue(getRequestMessagePayload(resource)),
+            hidden: resource => getValue(getRequestMessagePayload(resource)),
+            tableColumnDefinition: {
+                title: label,
+                data: "messages",
+                searchable: false,
+                orderable: false,
+                render(data, type, row, meta) {
+                    return escape_str(
+                        getValue(getRequestMessagePayload(row)) || ""
+                    );
+                },
+            },
+        });
+
         const baseResource = useBaseResource({
             resourceName: "iso18626_request",
             nameAttr: "iso18626_request_id",
@@ -952,12 +986,14 @@ export default {
             showGroupsDisplayMode: "splitScreen",
             splitScreenGroupings: [
                 { name: "request_details", pane: 1 },
+                { name: "bibliographic_details", pane: 1 },
                 { name: "iso18626_messages", pane: 1 },
                 { name: "circulation_information", pane: 2 },
                 { name: "specified_by_the_requesting_agency", pane: 2 },
             ],
             groupLabels: {
                 request_details: $__("Request details"),
+                bibliographic_details: $__("Bibliographic details"),
                 iso18626_messages: $__("ISO18626 messages"),
                 circulation_information: $__("Circulation information"),
                 specified_by_the_requesting_agency: $__(
@@ -989,6 +1025,26 @@ export default {
                     relationshipRequiredKey: "iso18626_requesting_agency_id",
                     group: "request_details",
                 },
+                requestMessageAttr(
+                    "title",
+                    $__("Title"),
+                    payload => payload.bibliographicInfo?.title
+                ),
+                requestMessageAttr(
+                    "author",
+                    $__("Author"),
+                    payload => payload.bibliographicInfo?.author
+                ),
+                requestMessageAttr(
+                    "publisher",
+                    $__("Publisher"),
+                    payload => payload.publicationInfo?.publisher
+                ),
+                requestMessageAttr(
+                    "publication_date",
+                    $__("Publication date"),
+                    payload => payload.publicationInfo?.publicationDate
+                ),
                 {
                     name: "status",
                     label: $__("Status"),
