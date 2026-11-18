@@ -18,7 +18,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 8;
+use Test::More tests => 9;
 use Test::MockModule;
 use Test::Mojo;
 use Test::Warn;
@@ -1042,10 +1042,13 @@ subtest 'update() tests' => sub {
         $authorized_patron->set_password( { password => $password, skip_validation => 1 } );
         my $userid = $authorized_patron->userid;
 
+        # Not a staff category: changing the userid of staff accounts is restricted
+        my $adult_category =
+            $builder->build_object( { class => 'Koha::Patron::Categories', value => { category_type => 'A' } } );
         my $unauthorized_patron = $builder->build_object(
             {
                 class => 'Koha::Patrons',
-                value => { flags => 0 }
+                value => { flags => 0, categorycode => $adult_category->categorycode }
             }
         );
         $unauthorized_patron->set_password( { password => $password, skip_validation => 1 } );
@@ -1380,6 +1383,58 @@ subtest 'update() tests' => sub {
 
         $schema->storage->txn_rollback;
     };
+};
+
+subtest 'update() userid of staff accounts tests' => sub {
+
+    plan tests => 11;
+
+    $schema->storage->txn_begin;
+
+    my $password = 'thePassword123';
+
+    my $editor = $builder->build_object( { class => 'Koha::Patrons', value => { flags => 0 } } );
+    $editor->set_permissions( { borrowers => { edit_borrowers => 1, list_borrowers => 1 } } );
+    $editor->set_password( { password => $password, skip_validation => 1 } );
+    my $userid = $editor->userid;
+
+    my $superlibrarian = $builder->build_object( { class => 'Koha::Patrons', value => { flags => 1 } } );
+    my $staff_target   = $builder->build_object( { class => 'Koha::Patrons', value => { flags => 2**2 } } );
+    my $super_target   = $builder->build_object( { class => 'Koha::Patrons', value => { flags => 1 } } );
+    my $category = $builder->build_object( { class => 'Koha::Patron::Categories', value => { category_type => 'A' } } );
+    my $ordinary_target = $builder->build_object(
+        { class => 'Koha::Patrons', value => { flags => 0, categorycode => $category->categorycode } } );
+
+    my $body_for = sub {
+        my ( $target, $new_userid ) = @_;
+        my $body = $target->to_api( { user => $superlibrarian } );
+        delete @{$body}{qw(patron_id restricted expired anonymized self_renewal_available)};
+        delete @{$body}{qw(email secondary_email altaddress_email)};    # not what these tests are about
+        $body->{userid} = $new_userid if defined $new_userid;
+        return $body;
+    };
+
+    $t->put_ok( "//$userid:$password@/api/v1/patrons/"
+            . $staff_target->id => json => $body_for->( $staff_target, 'new_staff_userid' ) )
+        ->status_is( 403, "Cannot change the userid of a staff account without staffaccess" )
+        ->json_is( '/error_code' => 'staffaccess_required' );
+    is( $staff_target->get_from_storage->userid, $staff_target->userid, 'The userid is unchanged' );
+
+    $t->put_ok( "//$userid:$password@/api/v1/patrons/" . $staff_target->id => json => $body_for->($staff_target) )
+        ->status_is( 200, 'Other changes to a staff account are not affected' );
+
+    $t->put_ok( "//$userid:$password@/api/v1/patrons/"
+            . $ordinary_target->id => json => $body_for->( $ordinary_target, 'new_ordinary_userid' ) )
+        ->status_is( 200, "Can change the userid of an ordinary patron" );
+
+    $editor->set( { flags => 2**17 } )->store;    # staffaccess, on top of the edit_borrowers subpermission
+
+    $t->put_ok( "//$userid:$password@/api/v1/patrons/"
+            . $super_target->id => json => $body_for->( $super_target, 'new_super_userid' ) )
+        ->status_is( 403, 'staffaccess is not enough to change the userid of a superlibrarian' )
+        ->json_is( '/error_code' => 'superlibrarian_required' );
+
+    $schema->storage->txn_rollback;
 };
 
 subtest 'delete() tests' => sub {

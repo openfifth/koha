@@ -287,6 +287,22 @@ sub update {
             }
         }
 
+        # Changing the userid is a credentials change, the staffaccess rules apply
+        if ( exists $body->{userid} && ( $body->{userid} // q{} ) ne ( $patron->userid // q{} ) ) {
+            my $can_change = $user->can_change_credentials_of($patron);
+            unless ($can_change) {
+                my ($error_code) = map { $_->message } @{ $can_change->messages };
+
+                return $c->render(
+                    status  => 403,
+                    openapi => {
+                        error      => "Not enough privileges to change this patron's userid",
+                        error_code => $error_code,
+                    }
+                );
+            }
+        }
+
         $patron->_result->result_source->schema->txn_do(
             sub {
                 # Remove `extended_attributes` before storing
