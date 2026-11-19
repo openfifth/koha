@@ -140,5 +140,24 @@ __PACKAGE__->add_unique_constraint("uniq_agency_id", ["type", "agency_id"]);
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:BVhv8J8ucdaqPjQoFZMC8g
 
 
-# You can replace this text with custom code or comments, and it will be preserved on regeneration
+=head2 koha_object_class
+
+Missing POD for koha_object_class.
+
+=cut
+
+sub koha_object_class {
+    'Koha::ILL::ISO18626::SupplyingAgency';
+}
+
+=head2 koha_objects_class
+
+Missing POD for koha_objects_class.
+
+=cut
+
+sub koha_objects_class {
+    'Koha::ILL::ISO18626::SupplyingAgencies';
+}
+
 1;
