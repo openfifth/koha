@@ -394,6 +394,21 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 iso18626_messages
+
+Type: has_many
+
+Related object: L<Koha::Schema::Result::Iso18626Message>
+
+=cut
+
+__PACKAGE__->has_many(
+  "iso18626_messages",
+  "Koha::Schema::Result::Iso18626Message",
+  { "foreign.illrequest_id" => "self.illrequest_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 managedby
 
 Type: belongs_to
@@ -415,8 +430,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07053 @ 2026-10-26 15:56:53
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:HkgQao1SPAcr5e4FrOiVMA
+# Created by DBIx::Class::Schema::Loader v0.07053 @ 2026-11-20 12:08:13
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:iOzqoHXxE8eUkspkExQ/QQ
 
 __PACKAGE__->has_many(
   "comments",
