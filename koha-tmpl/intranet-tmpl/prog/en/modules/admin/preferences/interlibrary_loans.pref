@@ -115,3 +115,15 @@ Interlibrary loans:
             - "If no backend is selected, automatic backend selection will not take place."
             - pref: AutoILLBackendPriority
               type: ill-backends
+    ISO18626:
+        -
+            - "Use"
+            - pref: ISO18626AgencyId
+            - "of type"
+            - pref: ISO18626AgencyIdType
+              default: ISIL
+              choices:
+                  ISIL: ISIL
+                  ICOLC: ICOLC
+                  DNUCNI: DNUCNI
+            - "as this Koha's ISO 18626 agency ID. If empty, supplying agency messages use the supplying agency ID from the incoming request, or UNKNOWN if the request has none."
