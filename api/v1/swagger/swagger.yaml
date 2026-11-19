@@ -138,6 +138,8 @@ definitions:
     $ref: ./definitions/iso18626_request.yaml
   iso18626_requesting_agency:
     $ref: ./definitions/iso18626_requesting_agency.yaml
+  iso18626_supplying_agency:
+    $ref: ./definitions/iso18626_supplying_agency.yaml
   ISO18626request:
     $ref: ./definitions/ISO18626/request.yaml
   ISO18626requestingAgencyMessage:
@@ -547,6 +549,10 @@ paths:
     $ref: ./paths/ill_iso18626_requesting_agencies.yaml#/~1ill~1iso18626_requesting_agencies
   "/ill/iso18626_requesting_agencies/{iso18626_requesting_agency_id}":
     $ref: ./paths/ill_iso18626_requesting_agencies.yaml#/~1ill~1iso18626_requesting_agencies~1{iso18626_requesting_agency_id}
+  /ill/iso18626_supplying_agencies:
+    $ref: ./paths/ill_iso18626_supplying_agencies.yaml#/~1ill~1iso18626_supplying_agencies
+  "/ill/iso18626_supplying_agencies/{iso18626_supplying_agency_id}":
+    $ref: ./paths/ill_iso18626_supplying_agencies.yaml#/~1ill~1iso18626_supplying_agencies~1{iso18626_supplying_agency_id}
   /ill/requests:
     $ref: ./paths/ill_requests.yaml#/~1ill~1requests
   /ill/batches:
@@ -1050,6 +1056,12 @@ parameters:
     description: ISO18626 ILL requesting agency internal identifier
     in: path
     name: iso18626_requesting_agency_id
+    required: true
+    type: integer
+  iso18626_supplying_agency_id_pp:
+    description: ISO18626 ILL supplying agency internal identifier
+    in: path
+    name: iso18626_supplying_agency_id
     required: true
     type: integer
   import_batch_profile_id_pp:
@@ -1589,6 +1601,9 @@ tags:
   - description: "Manage ISO18626 requesting agencies\n"
     name: iso18626_requesting_agencies
     x-displayName: ISO18626 requesting agencies
+  - description: "Manage ISO18626 supplying agencies\n"
+    name: iso18626_supplying_agencies
+    x-displayName: ISO18626 supplying agencies
   - description: "Manage import batches\n"
     name: import_batches
     x-displayName: Import batches
