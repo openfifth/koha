@@ -189,6 +189,8 @@ sub confirmation_response {
     my $confirmation_message_type = $message_type . 'Confirmation';
     my ( $iso18626_request, $response, $action );
 
+    return _supplying_agency_message_response($json) if $message_type eq 'supplyingAgencyMessage';
+
     if ( $message_type eq 'request' ) {
         #
         # Handle incoming request message
@@ -283,9 +285,6 @@ sub confirmation_response {
         };
     }
 
-    #TODO: Handle supplyingAgencyMessage ?
-    # IF a supplyingAgencyMessage is received, it means this Koha is acting as a requesting agency and we need to handle Koha::ILL::Request instead of Koha::ILL::ISO18626::Request (?)
-
     # Ensure the produced confirmation message is ISO18626 conformant
     my $validation_errors = is_invalid( $confirmation_message_type, $response );
     if ($validation_errors) {
@@ -308,6 +307,86 @@ sub confirmation_response {
     );
     return { status => 201, openapi => $response };
 
+}
+
+=head3 _supplying_agency_message_response
+
+    my $response = _supplying_agency_message_response($json);
+
+Handles a C<supplyingAgencyMessage> received for an ILL request this Koha sent as the
+requesting agency. The sender must be the supplying agency the request was sent to.
+The message is logged and passed on to the request's backend through its
+C<iso18626_supplying_agency_message> capability. Returns the confirmation response.
+
+=cut
+
+sub _supplying_agency_message_response {
+    my ($json) = @_;
+
+    require Koha::ILL::Requests;
+    require Koha::ILL::ISO18626::Requester;
+
+    my $message           = $json->{supplyingAgencyMessage};
+    my $header            = $message->{header};
+    my $confirmation_type = 'supplyingAgencyMessageConfirmation';
+
+    my $illrequest       = Koha::ILL::Requests->find( $header->{requestingAgencyRequestId} );
+    my $supplying_agency = $illrequest ? Koha::ILL::ISO18626::Requester->supplying_agency($illrequest) : undef;
+
+    return {
+        status  => 400,
+        openapi => error_response(
+            $confirmation_type,
+            [
+                {
+                    errorType  => 'UnrecognisedDataValue',
+                    errorValue => 'requestingAgencyRequestId: ' . ( $header->{requestingAgencyRequestId} // '' )
+                }
+            ]
+        )
+        }
+        unless $supplying_agency;
+
+    my $sender = $header->{supplyingAgencyId} // {};
+    return {
+        status  => 400,
+        openapi => error_response(
+            $confirmation_type,
+            [
+                {
+                    errorType  => 'UnrecognisedDataValue',
+                    errorValue => 'supplyingAgencyId: ' . ( $sender->{agencyIdValue} // '' )
+                }
+            ]
+        )
+        }
+        unless ( $sender->{agencyIdType} // '' ) eq $supplying_agency->type
+        && ( $sender->{agencyIdValue} // '' ) eq $supplying_agency->agency_id;
+
+    Koha::ILL::ISO18626::Requester->log_message( $illrequest, 'supplyingAgencyMessage', $json );
+
+    $illrequest->add_or_update_attributes(
+        { iso18626_supplying_agency_request_id => $header->{supplyingAgencyRequestId} } )
+        if defined $header->{supplyingAgencyRequestId};
+
+    $illrequest->_backend_capability(
+        'iso18626_supplying_agency_message',
+        { request => $illrequest, message => $message }
+    );
+
+    my $response = {
+        $confirmation_type => {
+            confirmationHeader => {
+                timestamp         => format_date_time('now'),
+                timestampReceived => format_date_time('now'),
+                messageStatus     => 'OK',
+            },
+            reasonForMessage => $message->{messageInfo}->{reasonForMessage},
+        }
+    };
+    Koha::ILL::ISO18626::Requester->log_message( $illrequest, $confirmation_type, $response );
+
+    return { status => 201, openapi => $response };
 }
 
 =head3 format_date_time

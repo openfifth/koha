@@ -157,6 +157,26 @@ sub supplying_agency {
     return Koha::ILL::ISO18626::SupplyingAgencies->find( $attribute->value );
 }
 
+=head3 log_message
+
+    Koha::ILL::ISO18626::Requester->log_message( $illrequest, $type, $message );
+
+Stores C<$message> of C<$type> in the ISO 18626 message log of C<$illrequest>.
+
+=cut
+
+sub log_message {
+    my ( $class, $illrequest, $type, $message ) = @_;
+
+    return Koha::ILL::ISO18626::Message->new(
+        {
+            illrequest_id => $illrequest->illrequest_id,
+            type          => $type,
+            content       => encode_json($message),
+        }
+    )->store;
+}
+
 =head2 Internal methods
 
 =head3 _send
@@ -174,7 +194,7 @@ sub _send {
         error   => sprintf( 'Invalid %s: %s', $type, join( ', ', map { $_->{errorValue} } @$errors ) )
     } if $errors;
 
-    _log_message( $illrequest, $type, $message );
+    $class->log_message( $illrequest, $type, $message );
 
     my $ua = LWP::UserAgent->new(
         agent   => 'Koha ' . $Koha::VERSION,
@@ -205,7 +225,7 @@ sub _send {
         }
         unless ref $confirmation eq 'HASH' && $confirmation->{$confirmation_type};
 
-    _log_message( $illrequest, $confirmation_type, $confirmation );
+    $class->log_message( $illrequest, $confirmation_type, $confirmation );
 
     my $message_status = $confirmation->{$confirmation_type}->{confirmationHeader}->{messageStatus} // '';
     unless ( $message_status eq 'OK' ) {
@@ -248,24 +268,6 @@ sub _own_agency_id {
         agencyIdType  => C4::Context->preference('ISO18626AgencyIdType') || 'ISIL',
         agencyIdValue => $agency_id_value,
     };
-}
-
-=head3 _log_message
-
-Stores C<$message> of C<$type> in the ISO 18626 message log of C<$illrequest>.
-
-=cut
-
-sub _log_message {
-    my ( $illrequest, $type, $message ) = @_;
-
-    return Koha::ILL::ISO18626::Message->new(
-        {
-            illrequest_id => $illrequest->illrequest_id,
-            type          => $type,
-            content       => encode_json($message),
-        }
-    )->store;
 }
 
 =head3 _spec_file
