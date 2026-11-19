@@ -27,6 +27,27 @@ Koha::ILL::ISO18626::SupplyingAgency - Koha ILL ISO18626 Supplying Agency Object
 
 =cut
 
+=head1 API
+
+=head2 Class methods
+
+=head3 iso18626_agency_id
+
+    my $agency_id = $supplying_agency->iso18626_agency_id;
+
+Returns the agency ID of this supplying agency as an ISO 18626 C<agencyId>.
+
+=cut
+
+sub iso18626_agency_id {
+    my ($self) = @_;
+
+    return {
+        agencyIdType  => $self->type,
+        agencyIdValue => $self->agency_id,
+    };
+}
+
 =head2 Internal methods
 
 =head3 _type
