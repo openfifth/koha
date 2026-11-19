@@ -67,7 +67,8 @@ sub message {
     }
 
     # 3) Handle authentication
-    my $requesting_agency = Koha::ILL::ISO18626::is_auth_ok( $messageType, $json );
+    my $requesting_agency =
+        $messageType eq 'supplyingAgencyMessage' ? 1 : Koha::ILL::ISO18626::is_auth_ok( $messageType, $json );
     if ( !$requesting_agency ) {
         $response = Koha::ILL::ISO18626::error_response(
             $messageType . 'Confirmation',

@@ -18,7 +18,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 7;
+use Test::More tests => 8;
 
 use Test::MockModule;
 use Test::MockObject;
@@ -845,6 +845,114 @@ subtest 'public get_document() tests' => sub {
 
     t::lib::Mocks::mock_preference( 'RESTPublicAnonymousRequests', 0 );
     $t->get_ok($url)->status_is(401);
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'supplyingAgencyMessage tests' => sub {
+
+    plan tests => 21;
+
+    $schema->storage->txn_begin;
+
+    t::lib::Mocks::mock_preference( 'RESTPublicAPI',               1 );
+    t::lib::Mocks::mock_preference( 'RESTPublicAnonymousRequests', 1 );
+
+    my $supplying_agency = $builder->build_object(
+        { class => 'Koha::ILL::ISO18626::SupplyingAgencies', value => { type => 'ISIL', agency_id => 'GB-SUP' } } );
+    my $illrequest = $builder->build_object( { class => 'Koha::ILL::Requests' } );
+    $illrequest->add_or_update_attributes( { iso18626_supplying_agency_id => $supplying_agency->id } );
+
+    my $backend_calls = [];
+    my $mock_request  = Test::MockModule->new('Koha::ILL::Request');
+    $mock_request->mock(
+        '_backend_capability',
+        sub {
+            my ( $self, $name, $args ) = @_;
+            push @$backend_calls, [ $name, $args ];
+            return 1;
+        }
+    );
+
+    my $message_xml = sub {
+        my ( $requesting_agency_request_id, $supplying_agency_id ) = @_;
+        return
+            qq{<ISO18626Message xmlns="http://illtransactions.org/2013/iso18626" xmlns:ill="http://illtransactions.org/2013/iso18626" ill:version="2021-3">
+  <supplyingAgencyMessage>
+    <header>
+      <supplyingAgencyId>
+        <agencyIdType>ISIL</agencyIdType>
+        <agencyIdValue>$supplying_agency_id</agencyIdValue>
+      </supplyingAgencyId>
+      <requestingAgencyId>
+        <agencyIdType>ISIL</agencyIdType>
+        <agencyIdValue>GB-REQ</agencyIdValue>
+      </requestingAgencyId>
+      <timestamp>2026-11-19T10:00:00Z</timestamp>
+      <requestingAgencyRequestId>$requesting_agency_request_id</requestingAgencyRequestId>
+      <supplyingAgencyRequestId>42</supplyingAgencyRequestId>
+    </header>
+    <messageInfo>
+      <reasonForMessage>StatusChange</reasonForMessage>
+    </messageInfo>
+    <statusInfo>
+      <status>WillSupply</status>
+      <lastChange>2026-11-19T10:00:00Z</lastChange>
+    </statusInfo>
+  </supplyingAgencyMessage>
+</ISO18626Message>};
+    };
+
+    $t->post_ok(
+        '/api/v1/public/ill/iso18626', { 'Content-Type' => 'application/xml' },
+        $message_xml->( $illrequest->illrequest_id + 1000, 'GB-SUP' )
+        )
+        ->status_is(400)
+        ->content_like( qr{<messageStatus>ERROR</messageStatus>},         'Unknown ILL request is rejected' )
+        ->content_like( qr{<errorType>UnrecognisedDataValue</errorType>}, 'errorType is UnrecognisedDataValue' )
+        ->content_like( qr{requestingAgencyRequestId:}, 'errorValue names requestingAgencyRequestId' );
+
+    my $illrequest_not_iso18626 = $builder->build_object( { class => 'Koha::ILL::Requests' } );
+    $t->post_ok(
+        '/api/v1/public/ill/iso18626', { 'Content-Type' => 'application/xml' },
+        $message_xml->( $illrequest_not_iso18626->illrequest_id, 'GB-SUP' )
+    )->status_is(400)->content_like(
+        qr{<messageStatus>ERROR</messageStatus>},
+        'ILL request not sent to a supplying agency is rejected'
+    );
+
+    $t->post_ok(
+        '/api/v1/public/ill/iso18626', { 'Content-Type' => 'application/xml' },
+        $message_xml->( $illrequest->illrequest_id, 'GB-OTHER' )
+        )
+        ->status_is(400)
+        ->content_like( qr{<messageStatus>ERROR</messageStatus>}, 'Message from another supplying agency is rejected' )
+        ->content_like( qr{supplyingAgencyId: GB-OTHER},          'errorValue names the supplyingAgencyId' );
+
+    is( scalar @$backend_calls, 0, 'Rejected messages are not passed on to the backend' );
+
+    $t->post_ok(
+        '/api/v1/public/ill/iso18626', { 'Content-Type' => 'application/xml' },
+        $message_xml->( $illrequest->illrequest_id, 'GB-SUP' )
+        )
+        ->status_is(201)
+        ->content_like( qr{<messageStatus>OK</messageStatus>}, 'Message from the supplying agency is accepted' )
+        ->content_like( qr{<reasonForMessage>StatusChange</reasonForMessage>}, 'reasonForMessage is echoed' );
+
+    is_deeply(
+        [ sort map { $_->type } $illrequest->_result->iso18626_messages->all ],
+        [ 'supplyingAgencyMessage', 'supplyingAgencyMessageConfirmation' ],
+        'Message and confirmation are logged against the ILL request'
+    );
+    is(
+        $illrequest->extended_attributes->search( { type => 'iso18626_supplying_agency_request_id' } )->next->value,
+        '42', 'supplyingAgencyRequestId is stored'
+    );
+    is( $backend_calls->[0]->[0], 'iso18626_supplying_agency_message', 'The backend capability is called' );
+    is(
+        $backend_calls->[0]->[1]->{message}->{statusInfo}->{status}, 'WillSupply',
+        'The backend gets the message'
+    );
 
     $schema->storage->txn_rollback;
 };
