@@ -4183,12 +4183,15 @@ DROP TABLE IF EXISTS `iso18626_messages`;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `iso18626_messages` (
   `iso18626_message_id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'Internal message number',
-  `iso18626_request_id` int(11) NOT NULL COMMENT 'Associated ISO18626 request',
+  `iso18626_request_id` int(11) DEFAULT NULL COMMENT 'Associated ISO18626 request (when this Koha is the supplying agency)',
+  `illrequest_id` bigint(20) unsigned DEFAULT NULL COMMENT 'Associated ILL request (when this Koha is the requesting agency)',
   `content` mediumtext NOT NULL COMMENT 'Message content (XML)',
   `type` enum('request','requestConfirmation','supplyingAgencyMessage','supplyingAgencyMessageConfirmation','requestingAgencyMessage','requestingAgencyMessageConfirmation') NOT NULL COMMENT 'ISO18626 message type',
   `timestamp` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`iso18626_message_id`),
   KEY `iso18626_messages_rfk` (`iso18626_request_id`),
+  KEY `iso18626_messages_illfk` (`illrequest_id`),
+  CONSTRAINT `iso18626_messages_illfk` FOREIGN KEY (`illrequest_id`) REFERENCES `illrequests` (`illrequest_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `iso18626_messages_rfk` FOREIGN KEY (`iso18626_request_id`) REFERENCES `iso18626_requests` (`iso18626_request_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -4246,6 +4249,26 @@ CREATE TABLE `iso18626_requests` (
   CONSTRAINT `iso18626_rafk` FOREIGN KEY (`iso18626_requesting_agency_id`) REFERENCES `iso18626_requesting_agencies` (`iso18626_requesting_agency_id`) ON UPDATE CASCADE,
   CONSTRAINT `uniq_issue_id` FOREIGN KEY (`issue_id`) REFERENCES `issues` (`issue_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `uniq_reserve_id` FOREIGN KEY (`hold_id`) REFERENCES `reserves` (`reserve_id`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `iso18626_supplying_agencies`
+--
+
+DROP TABLE IF EXISTS `iso18626_supplying_agencies`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `iso18626_supplying_agencies` (
+  `iso18626_supplying_agency_id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'Internal supplying agency number',
+  `name` varchar(80) DEFAULT NULL COMMENT 'Supplying agency name',
+  `type` enum('DNUCNI','ICOLC','ISIL') NOT NULL COMMENT 'ISO18626 agency ID type',
+  `agency_id` varchar(80) NOT NULL COMMENT 'ISO18626 agency ID of the supplying agency',
+  `account_id` varchar(80) NOT NULL COMMENT 'Authentication: account ID this Koha uses with the supplying agency',
+  `securityCode` varchar(80) NOT NULL COMMENT 'Authentication: security code this Koha uses with the supplying agency',
+  `endpoint` mediumtext NOT NULL COMMENT 'ISO18626 endpoint of the supplying agency',
+  PRIMARY KEY (`iso18626_supplying_agency_id`),
+  UNIQUE KEY `uniq_agency_id` (`type`,`agency_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
