@@ -1,0 +1,40 @@
+---
+type: object
+properties:
+  iso18626_supplying_agency_id:
+    type: integer
+    description: Internal supplying agency number
+    readOnly: true
+  name:
+    type:
+      - string
+      - "null"
+    description: Supplying agency name
+  type:
+    type: string
+    enum:
+      - DNUCNI # Danish National Union Catalogue Non-ISIL Identifier
+      - ICOLC  # https://icolc.net/consortia
+      - ISIL   # ISO 15511
+    description: ISO18626 agency ID type of the supplying agency
+  agency_id:
+    type: string
+    description: ISO18626 agency ID of the supplying agency
+  account_id:
+    type: string
+    description: 'Authentication: account ID this Koha uses with the supplying agency'
+  securityCode:
+    type: string
+    description: 'Authentication: security code this Koha uses with the supplying agency'
+  endpoint:
+    type: string
+    description: ISO18626 endpoint of the supplying agency
+required:
+  - iso18626_supplying_agency_id
+  - name
+  - type
+  - agency_id
+  - account_id
+  - securityCode
+  - endpoint
+additionalProperties: false

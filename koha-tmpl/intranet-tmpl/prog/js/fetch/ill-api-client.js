@@ -89,6 +89,45 @@ export class ILLAPIClient {
                 }),
         };
     }
+
+    get supplying_agencies() {
+        return {
+            get: id =>
+                this.httpClient.get({
+                    endpoint: "iso18626_supplying_agencies/" + id,
+                }),
+            getAll: (query, params) =>
+                this.httpClient.getAll({
+                    endpoint: "iso18626_supplying_agencies",
+                    query,
+                    params,
+                }),
+            delete: id =>
+                this.httpClient.delete({
+                    endpoint: "iso18626_supplying_agencies/" + id,
+                }),
+            create: iso18626_supplying_agency =>
+                this.httpClient.post({
+                    endpoint: "iso18626_supplying_agencies",
+                    body: iso18626_supplying_agency,
+                }),
+            update: (iso18626_supplying_agency, id) =>
+                this.httpClient.put({
+                    endpoint: "iso18626_supplying_agencies/" + id,
+                    body: iso18626_supplying_agency,
+                }),
+            count: (query = {}) =>
+                this.httpClient.count({
+                    endpoint:
+                        "iso18626_supplying_agencies?" +
+                        new URLSearchParams({
+                            _page: 1,
+                            _per_page: 1,
+                            ...(query && { q: JSON.stringify(query) }),
+                        }),
+                }),
+        };
+    }
 }
 
 export default ILLAPIClient;

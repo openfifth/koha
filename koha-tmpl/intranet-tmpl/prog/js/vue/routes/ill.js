@@ -40,6 +40,52 @@ export const routes = [
                         is_external: true,
                         is_navigation_item: true,
                     },
+                    {
+                        path: "/cgi-bin/koha/ill/iso18626_supplying_agencies",
+                        title: $__("Supplying agencies"),
+                        icon: "fa fa-building-columns",
+                        is_end_node: true,
+                        resource: "ILL/SupplyingAgencyResource.vue",
+                        children: [
+                            {
+                                path: "",
+                                name: "SupplyingAgenciesList",
+                                component: markRaw(ResourceWrapper),
+                            },
+                            {
+                                path: ":iso18626_supplying_agency_id",
+                                name: "SupplyingAgenciesShow",
+                                component: markRaw(ResourceWrapper),
+                                title: "{name}",
+                            },
+                            {
+                                path: "add",
+                                name: "SupplyingAgenciesFormAdd",
+                                component: markRaw(ResourceWrapper),
+                                title: $__("Add supplying agency"),
+                            },
+                            {
+                                path: "edit/:iso18626_supplying_agency_id",
+                                name: "SupplyingAgenciesFormAddEdit",
+                                component: markRaw(ResourceWrapper),
+                                title: "{name}",
+                                breadcrumbFormat: ({
+                                    match,
+                                    params,
+                                    query,
+                                }) => {
+                                    match.name = "SupplyingAgenciesShow";
+                                    return match;
+                                },
+                                additionalBreadcrumbs: [
+                                    {
+                                        title: $__("Modify supplying agency"),
+                                        disabled: true,
+                                    },
+                                ],
+                            },
+                        ],
+                    },
                 ],
             },
             {
