@@ -18,7 +18,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 2;
+use Test::More tests => 4;
 
 use Test::MockModule;
 use Test::MockObject;
@@ -80,6 +80,67 @@ subtest 'list() tests' => sub {
             . $requesting_agency_1->iso18626_requesting_agency_id )->status_is(200)->json_is(
         $requesting_agency_1->to_api,
             );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'update() tests' => sub {
+
+    plan tests => 5;
+
+    $schema->storage->txn_begin;
+
+    my $password = 'thePassword123';
+
+    my $librarian = $builder->build_object( { class => 'Koha::Patrons', value => { flags => 2**22 } } );    # 22 => ill
+    $librarian->set_password( { password => $password, skip_validation => 1 } );
+    my $userid = $librarian->userid;
+
+    my $patron = $builder->build_object( { class => 'Koha::Patrons', value => { flags => 0 } } );
+    $patron->set_password( { password => $password, skip_validation => 1 } );
+    my $unauth_userid = $patron->userid;
+
+    my $requesting_agency = $builder->build_object( { class => 'Koha::ILL::ISO18626::RequestingAgencies' } );
+    my $id                = $requesting_agency->iso18626_requesting_agency_id;
+
+    my $body = $requesting_agency->to_api;
+    delete $body->{iso18626_requesting_agency_id};
+    $body->{name} = 'New name';
+
+    $t->put_ok( "//$unauth_userid:$password@/api/v1/ill/iso18626_requesting_agencies/$id" => json => $body )
+        ->status_is(403);
+
+    $t->put_ok( "//$userid:$password@/api/v1/ill/iso18626_requesting_agencies/$id" => json => $body )
+        ->status_is(200)
+        ->json_is( '/name' => 'New name' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'delete() tests' => sub {
+
+    plan tests => 5;
+
+    $schema->storage->txn_begin;
+
+    my $password = 'thePassword123';
+
+    my $librarian = $builder->build_object( { class => 'Koha::Patrons', value => { flags => 2**22 } } );    # 22 => ill
+    $librarian->set_password( { password => $password, skip_validation => 1 } );
+    my $userid = $librarian->userid;
+
+    my $patron = $builder->build_object( { class => 'Koha::Patrons', value => { flags => 0 } } );
+    $patron->set_password( { password => $password, skip_validation => 1 } );
+    my $unauth_userid = $patron->userid;
+
+    my $requesting_agency = $builder->build_object( { class => 'Koha::ILL::ISO18626::RequestingAgencies' } );
+    my $id                = $requesting_agency->iso18626_requesting_agency_id;
+
+    $t->delete_ok("//$unauth_userid:$password@/api/v1/ill/iso18626_requesting_agencies/$id")->status_is(403);
+
+    $t->delete_ok("//$userid:$password@/api/v1/ill/iso18626_requesting_agencies/$id")->status_is(204);
+
+    ok( !Koha::ILL::ISO18626::RequestingAgencies->find($id), 'Requesting agency deleted' );
 
     $schema->storage->txn_rollback;
 };

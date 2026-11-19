@@ -232,7 +232,7 @@
           $ref: "../swagger.yaml#/definitions/error"
     x-koha-authorization:
       permissions:
-        erm: 1
+        ill: "1"
   delete:
     x-mojo-to: ILL::ISO18626::RequestingAgencies#delete
     operationId: deleteIso18626IllrequestingAgency
@@ -278,4 +278,4 @@
           $ref: "../swagger.yaml#/definitions/error"
     x-koha-authorization:
       permissions:
-        erm: 1
+        ill: "1"
