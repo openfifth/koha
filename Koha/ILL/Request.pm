@@ -39,6 +39,7 @@ use Koha::ILL::Backend::Standard;
 use Koha::ILL::Batches;
 use Koha::ILL::Comments;
 use Koha::ILL::Documents;
+use Koha::ILL::ISO18626::Messages;
 use Koha::ILL::Request::Attributes;
 use Koha::ILL::Request::Logger;
 use Koha::ItemTypes;
@@ -264,6 +265,25 @@ sub add_document {
             file_content  => $params->{file_content},
         }
     )->store;
+}
+
+=head3 iso18626_messages
+
+    my $messages = $req->iso18626_messages;
+
+Returns a I<Koha::ILL::ISO18626::Messages> resultset for the ISO 18626 messages logged
+for this request, newest first.
+
+=cut
+
+sub iso18626_messages {
+    my ($self) = @_;
+    return Koha::ILL::ISO18626::Messages->_new_from_dbic(
+        scalar $self->_result->iso18626_messages->search(
+            {},
+            { order_by => [ { -desc => 'timestamp' }, { -desc => 'iso18626_message_id' } ] }
+        )
+    );
 }
 
 =head3 logs

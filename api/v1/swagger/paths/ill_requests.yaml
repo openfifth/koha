@@ -28,6 +28,7 @@
             - comments+count
             - extended_attributes
             - ill_batch
+            - iso18626_messages
             - library
             - id_prefix
             - patron

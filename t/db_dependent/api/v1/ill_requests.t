@@ -30,6 +30,7 @@ use t::lib::TestBuilder;
 use t::lib::Mocks;
 
 use Koha::AuthorisedValueCategories;
+use Koha::ILL::ISO18626::Message;
 use Koha::ILL::Requests;
 use Koha::Statistics;
 use Koha::DateUtils qw( format_sqldatetime );
@@ -43,7 +44,7 @@ my $t = Test::Mojo->new('Koha::REST::V1');
 
 subtest 'list() tests' => sub {
 
-    plan tests => 34;
+    plan tests => 37;
 
     # Mock ILLBackend (as object)
     my $backend = Test::MockObject->new;
@@ -242,6 +243,14 @@ subtest 'list() tests' => sub {
     $t->get_ok( "//$userid:$password@/api/v1/ill/requests" => { "x-koha-embed" => "id_prefix" } )
         ->status_is(200)
         ->json_has( '/0/id_prefix', $id_prefix );
+
+    # x-koha-embed: iso18626_messages
+    Koha::ILL::ISO18626::Message->new(
+        { illrequest_id => $req_1->illrequest_id, type => 'request', content => '{"request":{}}' } )->store;
+    my $req_1_query = encode_json( { "me.ill_request_id" => $req_1->illrequest_id } );
+    $t->get_ok( "//$userid:$password@/api/v1/ill/requests?q=$req_1_query" => { "x-koha-embed" => "iso18626_messages" } )
+        ->status_is(200)
+        ->json_is( '/0/iso18626_messages/0/type' => 'request' );
 
     # ILLHiddenRequestStatuses syspref
     # Hide 'REQ', expect to return just 1 'RET'
