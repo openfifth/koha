@@ -19,8 +19,7 @@
 use Modern::Perl;
 
 use Archive::Extract;
-use CGI        qw ( -utf8 );
-use List::Util qw( any );
+use CGI qw ( -utf8 );
 use Mojo::UserAgent;
 use File::Temp;
 
@@ -83,24 +82,12 @@ if ( ( $op eq 'cud-Upload' ) && ( $uploadfile || $uploadlocation ) ) {
     $errors{'NOWRITEPLUGINS'} = 1 unless ( -w $plugins_dir );
 
     if ($uploadlocation) {
-        my $do_get = 1;
-        if ($plugins_restricted) {
-            my $repos = C4::Context->config('plugin_repos');
-
-            # Fix data structure if only one repo defined
-            if ( ref( $repos->{repo} ) eq 'HASH' ) {
-                $repos = { repo => [ $repos->{repo} ] };
-            }
-
-            $do_get = any { index( $uploadlocation, $_->{org_name} ) != -1 } @{ $repos->{repo} };
-        }
-
-        if ($do_get) {
+        if ( Koha::Plugins->is_uploadlocation_allowed($uploadlocation) ) {
             my $ua = Mojo::UserAgent->new( max_redirects => 5 );
             my $tx = $ua->get($uploadlocation);
             $tx->result->content->asset->move_to($tempfile);
         } else {
-            $errors{'RESTRICTED'} = 1;
+            $errors{'UNKNOWNSOURCE'} = 1;
         }
     } else {
         $errors{'RESTRICTED'}  = 1 unless ( !$plugins_restricted );

@@ -21,11 +21,12 @@ use Modern::Perl;
 
 use Array::Utils qw( array_minus );
 use Class::Inspector;
-use List::MoreUtils           qw( any none );
+use List::MoreUtils           qw( any first_index none );
 use Module::Load::Conditional qw( can_load );
 use Module::Load;
 use Module::Pluggable search_path => ['Koha::Plugin'],
     except                        => qr/::Edifact(|::Line|::Message|::Order|::Segment|::Transport)$/;
+use Mojo::URL;
 use Try::Tiny;
 use POSIX qw(getpid);
 
@@ -505,6 +506,64 @@ sub get_valuebuilders_installed {
     }
 
     return @valuebuilders;
+}
+
+=head2 is_uploadlocation_allowed
+
+    my $allowed = Koha::Plugins->is_uploadlocation_allowed( $url );
+
+Returns 1 if the url is a release asset of one of the repositories listed in plugin_repos, 0 if not.
+It does not depend on plugins_restricted: the url is fetched server side, so it is always checked.
+
+=cut
+
+sub is_uploadlocation_allowed {
+    my ( $class, $location ) = @_;
+
+    return 0 unless $location;
+
+    my $repos = C4::Context->config('plugin_repos');
+    return 0 unless ref($repos) eq 'HASH' && $repos->{repo};
+
+    my @repos = ref( $repos->{repo} ) eq 'ARRAY' ? @{ $repos->{repo} } : ( $repos->{repo} );
+
+    my $url = Mojo::URL->new($location);
+    return 0 unless lc( $url->scheme // q{} ) eq 'https';
+    return 0 if defined $url->userinfo || defined $url->port;
+
+    my $host  = lc( $url->host // q{} );
+    my @parts = @{ $url->path->parts };
+    return 0 unless @parts && $parts[-1] =~ m/\.kpz$/i;
+    return 0 if any { $_ eq q{} || $_ eq '.' || $_ eq '..' } @parts;
+
+    my %service_host = ( github => 'github.com', gitlab => 'gitlab.com' );
+
+    foreach my $repo (@repos) {
+        my $service = $repo->{service} // q{};
+        next unless $service_host{$service} && $host eq $service_host{$service};
+
+        # A GitLab org_name can be a group and subgroups, compare whole path segments only
+        my @org_parts = split m{/}, $repo->{org_name} // q{};
+        next unless @org_parts && @parts > @org_parts + 1;
+        next if any { lc( $org_parts[$_] ) ne lc( $parts[$_] ) } 0 .. $#org_parts;
+
+        if ( $service eq 'github' ) {
+            next unless @parts >= 6 && $parts[2] eq 'releases' && $parts[3] eq 'download';
+        }
+
+        # Anybody can attach a file to an issue of a public GitLab project, so only release assets are allowed there too,
+        # the direct_asset_url is <group>/<project>/-/releases/<tag>/downloads/<file>
+        if ( $service eq 'gitlab' ) {
+            my @project_parts = @parts[ scalar(@org_parts) .. $#parts ];
+            my $dash          = first_index { $_ eq '-' } @project_parts;
+            next unless $dash >= 1                                && @project_parts >= $dash + 5;
+            next unless $project_parts[ $dash + 1 ] eq 'releases' && $project_parts[ $dash + 3 ] eq 'downloads';
+        }
+
+        return 1;
+    }
+
+    return 0;
 }
 
 1;

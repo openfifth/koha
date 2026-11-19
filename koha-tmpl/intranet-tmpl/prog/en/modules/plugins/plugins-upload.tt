@@ -47,6 +47,10 @@
                     <li
                         ><strong>Cannot unpack file to the plugins directory.<br />Please verify that the Apache user can write to the plugins directory.</strong></li
                     >
+                [% ELSIF ( ERROR.UNKNOWNSOURCE ) %]
+                    <li
+                        ><strong>Cannot install plugin from unknown source. Plugins can only be installed from the releases of the repositories listed in plugin_repos.<br /></strong
+                    ></li>
                 [% ELSIF ( ERROR.RESTRICTED ) %]
                     <li
                         ><strong>Cannot install plugin from unknown source whilst plugins_restricted is enabled.<br /></strong
