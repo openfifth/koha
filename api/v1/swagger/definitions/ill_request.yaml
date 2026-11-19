@@ -129,6 +129,11 @@ properties:
       - object
       - "null"
     description: The linked ill batch object (x-koha-embed)
+  iso18626_messages:
+    type:
+      - array
+      - "null"
+    description: The ISO 18626 messages logged for this request (x-koha-embed)
   library:
     type:
       - object
