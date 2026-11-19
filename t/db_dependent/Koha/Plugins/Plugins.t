@@ -26,7 +26,7 @@ use List::MoreUtils           qw(none);
 use Module::Load::Conditional qw(can_load);
 use Test::MockModule;
 use Test::NoWarnings;
-use Test::More tests => 22;
+use Test::More tests => 23;
 use Test::Warn;
 use Test::Exception;
 
@@ -722,6 +722,182 @@ subtest 'new() tests' => sub {
 
     $result = Koha::Plugins->new( { enable_plugins => 1 } );
     is( ref($result), 'Koha::Plugins', 'calling new with enable_plugins makes it override the config' );
+};
+
+subtest 'is_uploadlocation_allowed() tests' => sub {
+
+    plan tests => 31;
+
+    t::lib::Mocks::mock_config(
+        'plugin_repos',
+        {
+            repo => [
+                { name => 'ByWater Solutions', org_name => 'bywatersolutions',       service => 'github' },
+                { name => 'Koha Community',    org_name => 'koha-community/plugins', service => 'gitlab' },
+            ]
+        }
+    );
+
+    my $release = 'koha-plugin-coverflow/releases/download/v2.4.37/koha-coverflow-plugin-v2.4.37.kpz';
+
+    is(
+        Koha::Plugins->is_uploadlocation_allowed("https://github.com/bywatersolutions/$release"), 1,
+        'GitHub release asset of a listed organization is allowed'
+    );
+    is(
+        Koha::Plugins->is_uploadlocation_allowed("https://github.com/ByWaterSolutions/$release"), 1,
+        'Organization names are compared without regard to case'
+    );
+    is(
+        Koha::Plugins->is_uploadlocation_allowed(
+            'https://gitlab.com/koha-community/plugins/koha-plugin-test/-/releases/v1.0/downloads/koha-plugin-test.kpz'
+        ),
+        1,
+        'GitLab release asset of a listed group and subgroup is allowed'
+    );
+
+    is(
+        Koha::Plugins->is_uploadlocation_allowed('https://www.iambadguy.com/bywatersolutions/bad.kpz'), 0,
+        'URL on another host that contains the organization name is refused'
+    );
+    is(
+        Koha::Plugins->is_uploadlocation_allowed("https://github.com/evil/bywatersolutions/$release"), 0,
+        'GitHub URL of another organization that contains the organization name is refused'
+    );
+    is(
+        Koha::Plugins->is_uploadlocation_allowed("https://github.com/bywatersolutions-evil/$release"), 0,
+        'Organization whose name starts with a listed organization name is refused'
+    );
+    is(
+        Koha::Plugins->is_uploadlocation_allowed("https://github.com.evil.example/bywatersolutions/$release"), 0,
+        'Host that starts with the service host is refused'
+    );
+    is(
+        Koha::Plugins->is_uploadlocation_allowed("https://github.com\@evil.example/bywatersolutions/$release"), 0,
+        'Service host given as userinfo of another host is refused'
+    );
+    is(
+        Koha::Plugins->is_uploadlocation_allowed("https://evil.example/github.com/bywatersolutions/$release"), 0,
+        'Service host in the path of another host is refused'
+    );
+    is(
+        Koha::Plugins->is_uploadlocation_allowed("ftp://github.com/bywatersolutions/$release"), 0,
+        'Scheme other than https is refused'
+    );
+    is(
+        Koha::Plugins->is_uploadlocation_allowed("https://github.com:8443/bywatersolutions/$release"), 0,
+        'Explicit port is refused'
+    );
+    is(
+        Koha::Plugins->is_uploadlocation_allowed("//github.com/bywatersolutions/$release"), 0,
+        'URL without a scheme is refused'
+    );
+    is(
+        Koha::Plugins->is_uploadlocation_allowed("https://github.com/bywatersolutions/../evil/$release"), 0,
+        'Path that climbs out of the organization is refused'
+    );
+    is(
+        Koha::Plugins->is_uploadlocation_allowed("https://github.com/bywatersolutions/%2e%2e/evil/$release"), 0,
+        'Encoded path that climbs out of the organization is refused'
+    );
+    is(
+        Koha::Plugins->is_uploadlocation_allowed("https://github.com/bywatersolutions//evil/$release"), 0,
+        'Path with an empty segment is refused'
+    );
+    is(
+        Koha::Plugins->is_uploadlocation_allowed(
+            'https://github.com/bywatersolutions/koha-plugin-coverflow/releases/download/v2.4.37/coverflow.zip'),
+        0,
+        'File that is not a kpz is refused'
+    );
+    is(
+        Koha::Plugins->is_uploadlocation_allowed(
+            'https://github.com/bywatersolutions/koha-plugin-coverflow/raw/main/koha-coverflow-plugin.kpz'),
+        0,
+        'GitHub file that is not a release asset is refused'
+    );
+    is(
+        Koha::Plugins->is_uploadlocation_allowed(
+            'https://gitlab.com/bywatersolutions/koha-plugin-coverflow/-/releases/v1/downloads/coverflow.kpz'),
+        0,
+        'GitHub organization on gitlab.com is refused'
+    );
+    is(
+        Koha::Plugins->is_uploadlocation_allowed(
+            'https://gitlab.com/koha-community/plugins-evil/koha-plugin-test/-/releases/v1/downloads/test.kpz'),
+        0,
+        'GitLab subgroup whose name starts with a listed subgroup name is refused'
+    );
+    is(
+        Koha::Plugins->is_uploadlocation_allowed('https://gitlab.com/koha-community/plugins/test.kpz'),
+        0,
+        'GitLab file directly under the group is refused'
+    );
+    is(
+        Koha::Plugins->is_uploadlocation_allowed(
+            'https://gitlab.com/koha-community/plugins/koha-plugin-test/uploads/4b676c8ad6161896045fdd8f38c7b09f/test.kpz'
+        ),
+        0,
+        'GitLab issue attachment is refused'
+    );
+    is(
+        Koha::Plugins->is_uploadlocation_allowed(
+            'https://gitlab.com/koha-community/plugins/koha-plugin-test/-/raw/main/test.kpz'),
+        0,
+        'GitLab repository file is refused'
+    );
+    is(
+        Koha::Plugins->is_uploadlocation_allowed(
+            'https://gitlab.com/koha-community/plugins/koha-plugin-test/-/jobs/artifacts/main/raw/test.kpz'),
+        0,
+        'GitLab job artifact is refused'
+    );
+    is(
+        Koha::Plugins->is_uploadlocation_allowed(
+            'https://gitlab.com/koha-community/plugins/-/releases/v1.0/downloads/test.kpz'),
+        0,
+        'GitLab release path without a project is refused'
+    );
+    is(
+        Koha::Plugins->is_uploadlocation_allowed(
+            'https://gitlab.com/koha-community/plugins/koha-plugin-test/-/raw/main/-/releases/v1.0/downloads/test.kpz'),
+        0,
+        'GitLab repository file in a directory named like a release path is refused'
+    );
+    is( Koha::Plugins->is_uploadlocation_allowed(q{}),   0, 'Empty location is refused' );
+    is( Koha::Plugins->is_uploadlocation_allowed(undef), 0, 'Undefined location is refused' );
+
+    t::lib::Mocks::mock_config(
+        'plugin_repos',
+        { repo => { name => 'ByWater Solutions', org_name => 'bywatersolutions', service => 'github' } }
+    );
+    is(
+        Koha::Plugins->is_uploadlocation_allowed("https://github.com/bywatersolutions/$release"), 1,
+        'A single listed repository is handled'
+    );
+
+    t::lib::Mocks::mock_config(
+        'plugin_repos',
+        { repo => { name => 'Unknown', org_name => 'bywatersolutions', service => 'bitbucket' } }
+    );
+    is(
+        Koha::Plugins->is_uploadlocation_allowed("https://github.com/bywatersolutions/$release"), 0,
+        'Repository with an unknown service allows nothing'
+    );
+
+    t::lib::Mocks::mock_config( 'plugin_repos', undef );
+    is(
+        Koha::Plugins->is_uploadlocation_allowed("https://github.com/bywatersolutions/$release"), 0,
+        'Nothing is allowed when no repositories are listed'
+    );
+
+    t::lib::Mocks::mock_config( 'plugin_repos', q{} );
+    is(
+        Koha::Plugins->is_uploadlocation_allowed("https://github.com/bywatersolutions/$release"), 0,
+        'Nothing is allowed when plugin_repos is empty'
+    );
+
+    t::lib::Mocks::mock_config( 'plugin_repos', undef );
 };
 
 $schema->storage->txn_rollback;
