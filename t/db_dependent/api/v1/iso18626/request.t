@@ -38,8 +38,9 @@ use Koha::DateUtils qw( format_sqldatetime );
 my $schema  = Koha::Database->new->schema;
 my $builder = t::lib::TestBuilder->new;
 
-t::lib::Mocks::mock_preference( 'RESTBasicAuth', 1 );
-t::lib::Mocks::mock_preference( 'ILLModule',     1 );
+t::lib::Mocks::mock_preference( 'RESTBasicAuth',    1 );
+t::lib::Mocks::mock_preference( 'ILLModule',        1 );
+t::lib::Mocks::mock_preference( 'ISO18626AgencyId', 'SUP' );
 
 my $t = Test::Mojo->new('Koha::REST::V1');
 
@@ -366,6 +367,14 @@ XML
         {
             class => 'Koha::ILL::ISO18626::Requests',
             value => { status => 'RequestReceived', service_type => 'Copy' }
+        }
+    );
+    $copy_request->add_message(
+        {
+            type    => 'request',
+            message => {
+                request => { header => { requestingAgencyId => { agencyIdType => 'ISIL', agencyIdValue => 'REQ' } } }
+            }
         }
     );
 

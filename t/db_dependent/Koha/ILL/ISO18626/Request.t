@@ -18,7 +18,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 11;
+use Test::More tests => 12;
 use Test::MockModule;
 use Test::MockObject;
 use Test::Exception;
@@ -51,6 +51,23 @@ my $mock_ua_response = Test::MockObject->new();
 $mock_ua_response->mock( 'is_success',      sub { return 1; } );
 $mock_ua_response->mock( 'decoded_content', sub { return $supplyingAgencyMessageConfirmationXml; } );
 $mock_ua_response->mock( 'status_line',     sub { return '200 OK'; } );
+
+t::lib::Mocks::mock_preference( 'ISO18626AgencyId', 'SUP' );
+
+# Build an ISO18626 request with the original request message, needed to echo the requestingAgencyId
+my $build_iso18626_request = sub {
+    my ($value) = @_;
+    my $request = $builder->build_object( { class => 'Koha::ILL::ISO18626::Requests', value => $value } );
+    $request->add_message(
+        {
+            type    => 'request',
+            message => {
+                request => { header => { requestingAgencyId => { agencyIdType => 'ISIL', agencyIdValue => 'REQ' } } }
+            }
+        }
+    );
+    return $request;
+};
 
 subtest 'CanBookBeIssued() SUPPLY_ILL detection' => sub {
 
@@ -250,14 +267,11 @@ subtest 'AddIssue() ISO18626 request status update on checkout' => sub {
             }
         }
     );
-    my $iso18626_request = $builder->build_object(
+    my $iso18626_request = $build_iso18626_request->(
         {
-            class => 'Koha::ILL::ISO18626::Requests',
-            value => {
-                hold_id   => $biblio_hold->reserve_id,
-                biblio_id => $item->biblionumber,
-                status    => 'WillSupply',
-            }
+            hold_id   => $biblio_hold->reserve_id,
+            biblio_id => $item->biblionumber,
+            status    => 'WillSupply',
         }
     );
 
@@ -305,14 +319,11 @@ subtest 'Koha::Hold::progress_iso18626_request() state machine' => sub {
                 }
             }
         );
-        my $request = $builder->build_object(
+        my $request = $build_iso18626_request->(
             {
-                class => 'Koha::ILL::ISO18626::Requests',
-                value => {
-                    hold_id   => $hold->reserve_id,
-                    biblio_id => $item->biblionumber,
-                    status    => $status,
-                }
+                hold_id   => $hold->reserve_id,
+                biblio_id => $item->biblionumber,
+                status    => $status,
             }
         );
         return ( $hold, $request );
@@ -449,12 +460,7 @@ subtest 'progress_request() sends date-times as ISO 18626 UTC date-times' => sub
             value => { issuedate => '2026-09-30 10:23:41', date_due => '2026-12-06 23:59:00' }
         }
     );
-    my $request = $builder->build_object(
-        {
-            class => 'Koha::ILL::ISO18626::Requests',
-            value => { status => 'WillSupply', issue_id => $checkout->issue_id }
-        }
-    );
+    my $request = $build_iso18626_request->( { status => 'WillSupply', issue_id => $checkout->issue_id } );
     $request->progress_request( 'supplyingAgency', { status => 'Loaned' } );
     my $message = $sent_message->($request);
 
@@ -463,8 +469,7 @@ subtest 'progress_request() sends date-times as ISO 18626 UTC date-times' => sub
     is( $message->{deliveryInfo}->{dateSent}, '2026-09-30T09:23:41Z', 'dateSent is converted from BST to UTC' );
     is( $message->{statusInfo}->{dueDate},    '2026-12-06T23:59:00Z', 'dueDate is converted from GMT to UTC' );
 
-    $request = $builder->build_object(
-        { class => 'Koha::ILL::ISO18626::Requests', value => { status => 'RequestReceived' } } );
+    $request = $build_iso18626_request->( { status => 'RequestReceived' } );
     $request->progress_request(
         'supplyingAgency',
         { status => 'ExpectToSupply', expectedDeliveryDate => '2026-10-10 12:00:00' }
@@ -474,8 +479,7 @@ subtest 'progress_request() sends date-times as ISO 18626 UTC date-times' => sub
         'expectedDeliveryDate is converted to UTC'
     );
 
-    $request = $builder->build_object(
-        { class => 'Koha::ILL::ISO18626::Requests', value => { status => 'RequestReceived' } } );
+    $request = $build_iso18626_request->( { status => 'RequestReceived' } );
     $request->progress_request(
         'supplyingAgency',
         {
@@ -601,12 +605,7 @@ subtest 'progress_request() stores the supplied document on CopyCompleted' => su
 
     my $document = { file_name => 'article.pdf', file_content => 'PDF bytes' };
 
-    my $request = $builder->build_object(
-        {
-            class => 'Koha::ILL::ISO18626::Requests',
-            value => { status => 'RequestReceived', service_type => 'Copy' }
-        }
-    );
+    my $request = $build_iso18626_request->( { status => 'RequestReceived', service_type => 'Copy' } );
 
     $request->progress_request( 'supplyingAgency', { status => 'ExpectToSupply', document => $document } );
     is( $request->documents->count, 0, 'No document is stored for statuses other than CopyCompleted' );
@@ -632,12 +631,7 @@ subtest 'progress_request() sends the document URL on CopyCompleted' => sub {
     my $mock_request = Test::MockModule->new('Koha::ILL::ISO18626::Request');
     $mock_request->mock( 'send_message', sub { $sent_message = $_[2] } );
 
-    my $request = $builder->build_object(
-        {
-            class => 'Koha::ILL::ISO18626::Requests',
-            value => { status => 'RequestReceived', service_type => 'Copy' }
-        }
-    );
+    my $request = $build_iso18626_request->( { status => 'RequestReceived', service_type => 'Copy' } );
 
     $request->progress_request(
         'supplyingAgency',
@@ -653,25 +647,15 @@ subtest 'progress_request() sends the document URL on CopyCompleted' => sub {
     is( $delivery_info->{deliveryMethod}, 'URL', 'deliveryInfo deliveryMethod is URL' );
     ok( $delivery_info->{dateSent}, 'deliveryInfo dateSent is set' );
 
-    my $request_without_document = $builder->build_object(
-        {
-            class => 'Koha::ILL::ISO18626::Requests',
-            value => { status => 'RequestReceived', service_type => 'Copy' }
-        }
-    );
+    my $request_without_document = $build_iso18626_request->( { status => 'RequestReceived', service_type => 'Copy' } );
     $request_without_document->progress_request( 'supplyingAgency', { status => 'CopyCompleted' } );
     ok(
         !exists $sent_message->{supplyingAgencyMessage}->{deliveryInfo},
         'No deliveryInfo is sent on CopyCompleted without a document'
     );
 
-    my $rejected_request = $builder->build_object(
-        {
-            class => 'Koha::ILL::ISO18626::Requests',
-            value => { status => 'RequestReceived', service_type => 'Copy' }
-        }
-    );
-    my $mock_validator = Test::MockModule->new('JSON::Validator::Schema::OpenAPIv2');
+    my $rejected_request = $build_iso18626_request->( { status => 'RequestReceived', service_type => 'Copy' } );
+    my $mock_validator   = Test::MockModule->new('JSON::Validator::Schema::OpenAPIv2');
     $mock_validator->mock( 'validate', sub { return ('Invalid') } );
     my $result;
     warning_like {
@@ -685,6 +669,117 @@ subtest 'progress_request() sends the document URL on CopyCompleted' => sub {
     is( $rejected_request->documents->count, 0, 'The document is removed when the message is invalid' );
     $rejected_request->discard_changes;
     is( $rejected_request->status, 'RequestReceived', 'Status is not updated when the message is invalid' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'progress_request() agency IDs' => sub {
+
+    plan tests => 10;
+
+    $schema->storage->txn_begin;
+
+    my $mock_ua = Test::MockModule->new('LWP::UserAgent');
+    $mock_ua->mock( 'post', sub { return $mock_ua_response; } );
+
+    my $sent_header = sub {
+        my ($request) = @_;
+        my ($message) = grep { $_->type eq 'supplyingAgencyMessage' } $request->messages->as_list;
+        return decode_json( $message->content )->{supplyingAgencyMessage}->{header};
+    };
+
+    my $request = $build_iso18626_request->( { status => 'RequestReceived' } );
+    $request->progress_request( 'supplyingAgency', { status => 'ExpectToSupply' } );
+    my $header = $sent_header->($request);
+
+    is_deeply(
+        $header->{supplyingAgencyId}, { agencyIdType => 'ISIL', agencyIdValue => 'SUP' },
+        'supplyingAgencyId comes from ISO18626AgencyId'
+    );
+    is_deeply(
+        $header->{requestingAgencyId}, { agencyIdType => 'ISIL', agencyIdValue => 'REQ' },
+        'requestingAgencyId is echoed from the original request'
+    );
+
+    t::lib::Mocks::mock_preference( 'ISO18626AgencyIdType', 'ICOLC' );
+    $request = $build_iso18626_request->( { status => 'RequestReceived' } );
+    $request->progress_request( 'supplyingAgency', { status => 'ExpectToSupply' } );
+    is_deeply(
+        $sent_header->($request)->{supplyingAgencyId}, { agencyIdType => 'ICOLC', agencyIdValue => 'SUP' },
+        'supplyingAgencyId type comes from ISO18626AgencyIdType'
+    );
+    t::lib::Mocks::mock_preference( 'ISO18626AgencyIdType', 'ISIL' );
+
+    t::lib::Mocks::mock_preference( 'ISO18626AgencyId', '' );
+
+    $request = $builder->build_object(
+        { class => 'Koha::ILL::ISO18626::Requests', value => { status => 'RequestReceived' } } );
+    $request->add_message(
+        {
+            type    => 'request',
+            message => {
+                request => {
+                    header => {
+                        supplyingAgencyId  => { agencyIdType => 'ISIL', agencyIdValue => 'REQUESTED_SUP' },
+                        requestingAgencyId => { agencyIdType => 'ISIL', agencyIdValue => 'REQ' },
+                    }
+                }
+            }
+        }
+    );
+    $request->progress_request( 'supplyingAgency', { status => 'ExpectToSupply' } );
+
+    is_deeply(
+        $sent_header->($request)->{supplyingAgencyId}, { agencyIdType => 'ISIL', agencyIdValue => 'REQUESTED_SUP' },
+        'supplyingAgencyId falls back to the one in the original request'
+    );
+
+    $request = $build_iso18626_request->( { status => 'RequestReceived' } );
+    my @warnings;
+    my $result;
+    {
+        local $SIG{__WARN__} = sub { push @warnings, @_ };
+        $result = $request->progress_request( 'supplyingAgency', { status => 'ExpectToSupply' } );
+    }
+
+    is( $result, 1, 'progress_request still sends the message without a supplying agency ID' );
+    is_deeply(
+        $sent_header->($request)->{supplyingAgencyId}, { agencyIdType => 'ISIL', agencyIdValue => 'UNKNOWN' },
+        'supplyingAgencyId is UNKNOWN when there is no other source'
+    );
+    like(
+        $warnings[0], qr/No supplying agency ID for request .*ISO18626AgencyId/,
+        'Warns about the missing supplying agency ID'
+    );
+
+    t::lib::Mocks::mock_preference( 'ISO18626AgencyId', 'SUP' );
+
+    my $requesting_agency =
+        $builder->build_object( { class => 'Koha::ILL::ISO18626::RequestingAgencies', value => { type => 'ICOLC' } } );
+    $request = $builder->build_object(
+        {
+            class => 'Koha::ILL::ISO18626::Requests',
+            value => {
+                status                        => 'RequestReceived',
+                iso18626_requesting_agency_id => $requesting_agency->iso18626_requesting_agency_id
+            }
+        }
+    );
+    @warnings = ();
+    {
+        local $SIG{__WARN__} = sub { push @warnings, @_ };
+        $result = $request->progress_request( 'supplyingAgency', { status => 'ExpectToSupply' } );
+    }
+
+    is( $result, 1, 'progress_request still sends the message without a requesting agency ID' );
+    is_deeply(
+        $sent_header->($request)->{requestingAgencyId}, { agencyIdType => 'ICOLC', agencyIdValue => 'UNKNOWN' },
+        'requestingAgencyId is UNKNOWN, with the requesting agency type, when the original request has none'
+    );
+    like(
+        $warnings[0], qr/No requesting agency ID in the original request/,
+        'Warns about the missing requesting agency ID'
+    );
 
     $schema->storage->txn_rollback;
 };

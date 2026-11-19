@@ -9102,10 +9102,20 @@ subtest 'Bug 41728: AddReturn marks the linked ISO18626 request as LoanCompleted
     t::lib::Mocks::mock_userenv( { patron => $patron, branchcode => $library->branchcode } );
     my $checkout = AddIssue( $patron, $item->barcode );
 
+    t::lib::Mocks::mock_preference( 'ISO18626AgencyId', 'SUP' );
+
     my $iso18626_request = $builder->build_object(
         {
             class => 'Koha::ILL::ISO18626::Requests',
             value => { status => 'Loaned', issue_id => $checkout->id },
+        }
+    );
+    $iso18626_request->add_message(
+        {
+            type    => 'request',
+            message => {
+                request => { header => { requestingAgencyId => { agencyIdType => 'ISIL', agencyIdValue => 'REQ' } } }
+            }
         }
     );
 
@@ -9123,7 +9133,10 @@ subtest 'Bug 41728: AddReturn marks the linked ISO18626 request as LoanCompleted
 
     $iso18626_request->discard_changes;
     is( $iso18626_request->status, 'LoanCompleted', 'AddReturn marks the linked ISO18626 request as LoanCompleted' );
-    ok( $iso18626_request->messages->count > 0, 'AddReturn sends a supplyingAgencyMessage for the completed loan' );
+    ok(
+        $iso18626_request->messages->search( { type => 'supplyingAgencyMessage' } )->count > 0,
+        'AddReturn sends a supplyingAgencyMessage for the completed loan'
+    );
 };
 
 subtest 'AddReturn checkin record user_id' => sub {
