@@ -20,7 +20,6 @@ package Koha::ILL::ISO18626::Request;
 use Modern::Perl;
 
 use C4::Context;
-
 use Koha::ILL::ISO18626;
 use Koha::ILL::ISO18626::Messages;
 use Koha::ILL::Documents;
@@ -397,20 +396,47 @@ sub progress_request {
     my $check_out      = $self->get_checkout;
     my $check_out_item = $self->get_checkout ? $self->get_checkout->item : undef;
 
+    my $request_header      = $self->_request_message_header;
+    my $supplying_agency_id = $request_header->{supplyingAgencyId};
+    if ( my $agency_id_value = C4::Context->preference('ISO18626AgencyId') ) {
+        $supplying_agency_id = {
+            agencyIdType  => C4::Context->preference('ISO18626AgencyIdType') || 'ISIL',
+            agencyIdValue => $agency_id_value,
+        };
+    }
+
+    unless ($supplying_agency_id) {
+        warn sprintf(
+            "ISO18626: No supplying agency ID for request %s, sending UNKNOWN. Set the ISO18626AgencyId system preference",
+            $self->iso18626_request_id
+        );
+        $supplying_agency_id = {
+            agencyIdType  => C4::Context->preference('ISO18626AgencyIdType') || 'ISIL',
+            agencyIdValue => 'UNKNOWN',
+        };
+    }
+
+    my $requesting_agency_id = $request_header->{requestingAgencyId};
+    unless ($requesting_agency_id) {
+        warn sprintf(
+            "ISO18626: No requesting agency ID in the original request for request %s, sending UNKNOWN",
+            $self->iso18626_request_id
+        );
+        my $requesting_agency = $self->requesting_agency;
+        $requesting_agency_id = {
+            agencyIdType  => $requesting_agency ? $requesting_agency->type : 'ISIL',
+            agencyIdValue => 'UNKNOWN',
+        };
+    }
+
     my $json = {
         supplyingAgencyMessage => {
             header => {
-                supplyingAgencyId => {
-                    agencyIdType  => 'ISIL',
-                    agencyIdValue => 'sup_agency_value',
-                },
+                supplyingAgencyId         => $supplying_agency_id,
                 requestingAgencyRequestId => $self->requestingAgencyRequestId,
                 supplyingAgencyRequestId  => $self->iso18626_request_id,
                 timestamp                 => Koha::ILL::ISO18626::format_date_time('now'),
-                requestingAgencyId        => {
-                    agencyIdType  => 'ISIL',
-                    agencyIdValue => 'req_agency_value',
-                },
+                requestingAgencyId        => $requesting_agency_id,
             },
             messageInfo => {
                 reasonForMessage => $reasonForMessage,
@@ -510,6 +536,25 @@ sub progress_request {
     $self->status($resulting_status)->store;
     $self->send_message( 'supplyingAgencyMessage', $json );
     return 1;
+}
+
+=head3 _request_message_header
+
+    my $header = $self->_request_message_header;
+
+Returns the header of the original ISO18626 request message, or an empty hashref
+if there is none.
+
+=cut
+
+sub _request_message_header {
+    my ($self) = @_;
+
+    my $message = $self->messages->search( { type => 'request' } )->next;
+    return {} unless $message;
+
+    my $content = eval { decode_json( $message->content ) } // {};
+    return $content->{request}->{header} // {};
 }
 
 =head3 _type
