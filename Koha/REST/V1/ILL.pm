@@ -20,6 +20,7 @@ use Modern::Perl;
 use Mojo::Base 'Mojolicious::Controller';
 
 use C4::Context;
+use Koha::ILL::ISO18626::Requester;
 use Koha::Patrons;
 
 use Try::Tiny qw( catch try );
@@ -45,8 +46,9 @@ sub config {
         status  => 200,
         openapi => {
             settings => {
-                ILLModule      => C4::Context->preference('ILLModule'),
-                ILLPartnerCode => C4::Context->preference('ILLPartnerCode'),
+                ILLModule                  => C4::Context->preference('ILLModule'),
+                ILLPartnerCode             => C4::Context->preference('ILLPartnerCode'),
+                ISO18626RequestingBackends => Koha::ILL::ISO18626::Requester->backends,
             },
         },
     );

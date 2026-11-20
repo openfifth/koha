@@ -13,7 +13,10 @@
                     </main>
                 </div>
 
-                <LeftMenu :title="$__('Interlibrary loans')"></LeftMenu>
+                <LeftMenu
+                    :title="$__('Interlibrary loans')"
+                    :condition="filterSupplyingAgencies"
+                ></LeftMenu>
             </div>
         </div>
     </div>
@@ -43,6 +46,21 @@ export default {
 
         const { config } = storeToRefs(ILLStore);
 
+        const filterSupplyingAgencies = navigationTree => {
+            if (config.value.settings.ISO18626RequestingBackends?.length) {
+                return navigationTree;
+            }
+            const borrowing = navigationTree.find(
+                element => element.path === "/cgi-bin/koha/ill"
+            );
+            borrowing.children = borrowing.children.filter(
+                element =>
+                    element.path !==
+                    "/cgi-bin/koha/ill/iso18626_supplying_agencies"
+            );
+            return navigationTree;
+        };
+
         onBeforeMount(() => {
             loading();
             const client = APIClient.ill;
@@ -68,6 +86,7 @@ export default {
             loading,
             loaded,
             initialized,
+            filterSupplyingAgencies,
         };
     },
     components: {

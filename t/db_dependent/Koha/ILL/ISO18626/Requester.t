@@ -18,7 +18,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 4;
+use Test::More tests => 5;
 use Test::MockModule;
 use Test::MockObject;
 
@@ -233,4 +233,30 @@ subtest 'requestingAgencyId without ISO18626AgencyId' => sub {
     like( $warnings[0], qr/No requesting agency ID.*ISO18626AgencyId/, 'Warns about the missing agency ID' );
 
     $schema->storage->txn_rollback;
+};
+
+subtest 'backends() tests' => sub {
+
+    plan tests => 1;
+
+    my $mock_config = Test::MockModule->new('Koha::ILL::Request::Config');
+    $mock_config->mock( 'available_backends', sub { return [ 'Standard', 'Requesting' ] } );
+
+    my $mock_request = Test::MockModule->new('Koha::ILL::Request');
+    $mock_request->mock(
+        'load_backend',
+        sub { my ( $self, $backend ) = @_; $self->{_test_backend} = $backend; return $self }
+    );
+    $mock_request->mock(
+        '_backend_capability',
+        sub {
+            my ( $self, $name ) = @_;
+            return $name eq 'iso18626_requesting' && $self->{_test_backend} eq 'Requesting' ? 1 : 0;
+        }
+    );
+
+    is_deeply(
+        Koha::ILL::ISO18626::Requester->backends, ['Requesting'],
+        'Only backends with the iso18626_requesting capability are returned'
+    );
 };
