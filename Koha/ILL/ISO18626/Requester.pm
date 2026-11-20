@@ -27,6 +27,8 @@ use XML::LibXML;
 use C4::Context;
 use Koha::ILL::ISO18626;
 use Koha::ILL::ISO18626::Message;
+use Koha::ILL::Request;
+use Koha::ILL::Request::Config;
 use Koha::ILL::ISO18626::SupplyingAgencies;
 use Koha::REST::V1;
 
@@ -138,6 +140,22 @@ sub send_requesting_agency_message {
     };
 
     return $class->_send( $illrequest, $supplying_agency, 'requestingAgencyMessage', $message );
+}
+
+=head3 backends
+
+    my $backends = Koha::ILL::ISO18626::Requester->backends;
+
+Returns the names of the ILL backends that send ISO 18626 requests, i.e. those with the
+C<iso18626_requesting> capability.
+
+=cut
+
+sub backends {
+    my ($class) = @_;
+
+    return [ grep { Koha::ILL::Request->new->load_backend($_)->_backend_capability('iso18626_requesting') }
+            @{ Koha::ILL::Request::Config->new->available_backends } ];
 }
 
 =head3 supplying_agency

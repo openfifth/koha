@@ -12,6 +12,16 @@ function get_supplying_agency() {
     };
 }
 
+function get_ill_config(requesting_backends) {
+    return {
+        settings: {
+            ILLModule: 1,
+            ILLPartnerCode: "IL",
+            ISO18626RequestingBackends: requesting_backends,
+        },
+    };
+}
+
 describe("Supplying agencies CRUD operations", () => {
     beforeEach(() => {
         cy.login();
@@ -19,11 +29,23 @@ describe("Supplying agencies CRUD operations", () => {
         cy.set_syspref("ILLModule", 1);
     });
 
+    it("Supplying agencies menu item", () => {
+        cy.intercept("GET", "/api/v1/ill/config", get_ill_config([]));
+        cy.visit("/cgi-bin/koha/ill/ill.pl");
+        cy.get(".sidebar_menu").contains("Requests");
+        cy.get(".sidebar_menu").should("not.contain", "Supplying agencies");
+
+        cy.intercept("GET", "/api/v1/ill/config", get_ill_config(["ISO18626"]));
+        cy.visit("/cgi-bin/koha/ill/ill.pl");
+        cy.get(".sidebar_menu").contains("Supplying agencies");
+    });
+
     it("List supplying agencies", () => {
         // GET supplying agencies returns 500
         cy.intercept("GET", "/api/v1/ill/iso18626_supplying_agencies*", {
             statusCode: 500,
         });
+        cy.intercept("GET", "/api/v1/ill/config", get_ill_config(["ISO18626"]));
         cy.visit("/cgi-bin/koha/ill/ill.pl");
         cy.get(".sidebar_menu").contains("Supplying agencies").click();
         cy.get("main div[class='alert alert-warning']").contains(

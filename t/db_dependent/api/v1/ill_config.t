@@ -19,6 +19,7 @@ use Modern::Perl;
 
 use Test::NoWarnings;
 use Test::More tests => 2;
+use Test::MockModule;
 use Test::Mojo;
 
 use t::lib::Mocks;
@@ -34,12 +35,15 @@ t::lib::Mocks::mock_preference( 'RESTBasicAuth', 1 );
 
 subtest 'config() tests' => sub {
 
-    plan tests => 8;
+    plan tests => 9;
 
     $schema->storage->txn_begin;
 
     t::lib::Mocks::mock_preference( 'ILLModule',      1 );
     t::lib::Mocks::mock_preference( 'ILLPartnerCode', 'IL' );
+
+    my $mock_requester = Test::MockModule->new('Koha::ILL::ISO18626::Requester');
+    $mock_requester->mock( 'backends', sub { return ['ISO18626'] } );
 
     my $librarian = $builder->build_object(
         {
@@ -64,8 +68,9 @@ subtest 'config() tests' => sub {
 
     $t->get_ok("//$userid:$password@/api/v1/ill/config")
         ->status_is(200)
-        ->json_is( '/settings/ILLModule'      => '1' )
-        ->json_is( '/settings/ILLPartnerCode' => 'IL' );
+        ->json_is( '/settings/ILLModule'                  => '1' )
+        ->json_is( '/settings/ILLPartnerCode'             => 'IL' )
+        ->json_is( '/settings/ISO18626RequestingBackends' => ['ISO18626'] );
 
     $t->get_ok("//$userid:$password@/api/v1/sysprefs")->status_is(403);
 
