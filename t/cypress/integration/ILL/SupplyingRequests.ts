@@ -64,6 +64,7 @@ describe("Supplying ILL Requests operations", () => {
                     bibliographicInfo: {
                         title: "Test article",
                         author: "Test author",
+                        informationSource: "IncDocs",
                     },
                     publicationInfo: {
                         publisher: "Test publisher",
@@ -90,6 +91,10 @@ describe("Supplying ILL Requests operations", () => {
             .and("contain", "Test publisher")
             .and("contain", "2024")
             .and("contain", "Request received");
+        cy.get("#iso18626_requests_list table thead").should(
+            "not.contain",
+            "Source"
+        );
     });
 
     it("Show supplying request", () => {
@@ -108,7 +113,10 @@ describe("Supplying ILL Requests operations", () => {
             messages: [
                 get_message(1, "request", {
                     request: {
-                        bibliographicInfo: { title: "Test article" },
+                        bibliographicInfo: {
+                            title: "Test article",
+                            informationSource: "IncDocs",
+                        },
                     },
                 }),
             ],
@@ -132,6 +140,8 @@ describe("Supplying ILL Requests operations", () => {
             .parent()
             .should("contain", "Title:")
             .and("contain", "Test article")
+            .and("contain", "Information source:")
+            .and("contain", "IncDocs")
             .and("not.contain", "Author:")
             .and("not.contain", "Publisher:")
             .and("not.contain", "Publication date:");

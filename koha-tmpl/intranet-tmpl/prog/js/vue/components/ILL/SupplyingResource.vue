@@ -1046,6 +1046,14 @@ export default {
                     payload => payload.publicationInfo?.publicationDate
                 ),
                 {
+                    ...requestMessageAttr(
+                        "information_source",
+                        $__("Information source"),
+                        payload => payload.bibliographicInfo?.informationSource
+                    ),
+                    hideIn: ["Form", "List"],
+                },
+                {
                     name: "status",
                     label: $__("Status"),
                     type: "text",
