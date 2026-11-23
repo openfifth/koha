@@ -180,6 +180,10 @@
         description: A batch import profile
         schema:
           $ref: "../swagger.yaml#/definitions/import_batch_profile"
+      "400":
+        description: Bad request
+        schema:
+          $ref: "../swagger.yaml#/definitions/error"
       "401":
         description: Authentication required
         schema:
