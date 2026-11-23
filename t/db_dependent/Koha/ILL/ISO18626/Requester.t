@@ -18,7 +18,7 @@
 use Modern::Perl;
 
 use Test::NoWarnings;
-use Test::More tests => 5;
+use Test::More tests => 6;
 use Test::MockModule;
 use Test::MockObject;
 
@@ -259,4 +259,22 @@ subtest 'backends() tests' => sub {
         Koha::ILL::ISO18626::Requester->backends, ['Requesting'],
         'Only backends with the iso18626_requesting capability are returned'
     );
+};
+
+subtest 'status_graph() tests' => sub {
+
+    plan tests => 3;
+
+    my $status_graph = Koha::ILL::ISO18626::Requester->status_graph;
+
+    is_deeply(
+        [ sort keys %{$status_graph} ],
+        [
+            sort qw( WillSupply ExpectToSupply RetryPossible Loaned CopyCompleted LoanCompleted CompletedWithoutReturn
+                Unfilled Cancelled )
+        ],
+        'One status per ISO 18626 status a supplying agency reports'
+    );
+    is( $status_graph->{ExpectToSupply}->{name}, 'Supplier expects to supply', 'Statuses have a name' );
+    ok( !$status_graph->{ExpectToSupply}->{method}, 'Statuses are set by the backend, not by a method' );
 };

@@ -25,6 +25,7 @@ use LWP::UserAgent;
 use XML::LibXML;
 
 use C4::Context;
+use Koha::I18N qw( __ );
 use Koha::ILL::ISO18626;
 use Koha::ILL::ISO18626::Message;
 use Koha::ILL::Request;
@@ -140,6 +141,46 @@ sub send_requesting_agency_message {
     };
 
     return $class->_send( $illrequest, $supplying_agency, 'requestingAgencyMessage', $message );
+}
+
+=head3 status_graph
+
+    my $status_graph = Koha::ILL::ISO18626::Requester->status_graph;
+
+Returns the ILL request statuses for the ISO 18626 statuses a supplying agency reports. Koha adds
+them to the status graph of backends with the C<iso18626_requesting> capability, and the backend
+sets them when it handles a supplyingAgencyMessage.
+
+=cut
+
+sub status_graph {
+    my ($class) = @_;
+
+    my %names = (
+        WillSupply             => __('Supplier will supply'),
+        ExpectToSupply         => __('Supplier expects to supply'),
+        RetryPossible          => __('Retry possible'),
+        Loaned                 => __('In transit'),
+        CopyCompleted          => __('Copy completed'),
+        LoanCompleted          => __('Loan completed'),
+        CompletedWithoutReturn => __('Completed without return'),
+        Unfilled               => __('Unable to fulfil'),
+        Cancelled              => __('Cancelled'),
+    );
+
+    return {
+        map {
+            $_ => {
+                prev_actions   => [],
+                id             => $_,
+                name           => $names{$_},
+                ui_method_name => 0,
+                method         => 0,
+                next_actions   => [],
+                ui_method_icon => 0,
+            }
+        } keys %names
+    };
 }
 
 =head3 backends

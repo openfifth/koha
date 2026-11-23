@@ -874,6 +874,10 @@ sub _status_graph_union {
 Return a hashref mapping methods to operation names supported by the queried
 backend.
 
+The status graph is the core one, plus the ISO 18626 statuses
+(Koha::ILL::ISO18626::Requester->status_graph) for backends with the
+C<iso18626_requesting> capability, plus the backend's own.
+
 Example return value:
 
     { create => "Create Request", confirm => "Progress Request" }
@@ -895,8 +899,14 @@ sub capabilities {
     my ( $self, $status ) = @_;
 
     # Generate up to date status_graph
+    my $core_status_graph = $self->_core_status_graph;
+    if ( $self->_backend_capability('iso18626_requesting') ) {
+        require Koha::ILL::ISO18626::Requester;
+        $core_status_graph =
+            $self->_status_graph_union( $core_status_graph, Koha::ILL::ISO18626::Requester->status_graph );
+    }
     my $status_graph = $self->_status_graph_union(
-        $self->_core_status_graph,
+        $core_status_graph,
         $self->_backend->status_graph(
             {
                 request => $self,

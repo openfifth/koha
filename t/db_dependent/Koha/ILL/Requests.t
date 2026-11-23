@@ -23,6 +23,7 @@ use C4::Circulation qw( AddIssue AddReturn );
 
 use Koha::Database;
 use Koha::DateUtils qw( dt_from_string );
+use Koha::ILL::ISO18626::Requester;
 use Koha::ILL::Request::Attributes;
 use Koha::ILL::Request::Config;
 use Koha::Biblios;
@@ -703,7 +704,7 @@ subtest 'Status Graph tests' => sub {
 
 subtest 'Backend testing (mocks)' => sub {
 
-    plan tests => 13;
+    plan tests => 14;
 
     $schema->storage->txn_begin;
 
@@ -781,6 +782,7 @@ subtest 'Backend testing (mocks)' => sub {
     # capabilities:
 
     # No backend graph extension
+    $backend->set_always( 'capabilities', undef );
     $backend->set_always( 'status_graph', {} );
     is_deeply(
         $illrq->capabilities('COMP'),
@@ -843,6 +845,30 @@ subtest 'Backend testing (mocks)' => sub {
         ),
         "Simple full status graph."
     );
+
+    # ISO 18626 statuses for backends that send ISO 18626 requests
+    $backend->mock(
+        'capabilities',
+        sub {
+            my ( $self, $name ) = @_;
+            return $name eq 'iso18626_requesting' ? sub { return 1 } : undef;
+        }
+    );
+    is_deeply(
+        $illrq->capabilities(),
+        $illrq->_status_graph_union(
+            $illrq->_status_graph_union( $illrq->_core_status_graph, Koha::ILL::ISO18626::Requester->status_graph ),
+            {
+                QER => {
+                    prev_actions => ['REQ'],
+                    id           => 'QER',
+                    next_actions => ['REQ'],
+                },
+            }
+        ),
+        "ISO 18626 statuses are added for backends with iso18626_requesting."
+    );
+    $backend->set_always( 'capabilities', undef );
 
     # custom_capability:
 
