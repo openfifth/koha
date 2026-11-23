@@ -191,6 +191,10 @@ tables:
           authorised_value: "3"
           lib: "Added to bundle"
 
+        - category: "NOT_LOAN"
+          authorised_value: "4"
+          lib: "Order cancelled"
+
         # restricted status of an item,linked to items.restricted
         - category: "RESTRICTED"
           authorised_value: "1"

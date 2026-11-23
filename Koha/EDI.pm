@@ -238,6 +238,7 @@ sub process_ordrsp {
     my $logger = Koha::Logger->get( { interface => 'edi' } );
     my $vendor_acct;
     my $has_errors = 0;
+    my $nfl_value  = C4::Context->preference('EdifactCancelledItemNotForLoanValue');
     my $edi        = _edifact_parser($response_message) or return;
     my $messages   = $edi->message_array();
 
@@ -288,6 +289,16 @@ sub process_ordrsp {
                                 $item ? ' for itemnumber ' . $item->itemnumber : q{}
                             );
                             $logger->warn("EDI ORDRSP: $issue");
+
+                            # An item that cannot be deleted would otherwise stay "on order"
+                            # and keep attracting holds, so give it the configured not for loan
+                            # status. Only values above zero stop holds, and an item that has
+                            # already left the on order status was changed by hand, so leave it.
+                            my $marked = q{};
+                            if ( $item and $nfl_value and $nfl_value > 0 and $item->notforloan < 0 ) {
+                                $item->notforloan($nfl_value)->store;
+                                $marked = ", marked as not for loan status $nfl_value";
+                            }
                             $response_message->add_to_edifact_errors(
                                 {
                                     section => 'RFF+LI:' . $ordernumber,
@@ -295,7 +306,8 @@ sub process_ordrsp {
                                         . $issue
                                         . (
                                         $message->payload->{reason} ? ' (' . $message->payload->{reason} . ')' : q{}
-                                        ),
+                                        )
+                                        . $marked,
                                 }
                             );
                             $has_errors = 1;

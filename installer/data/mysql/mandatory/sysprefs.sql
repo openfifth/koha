@@ -242,6 +242,7 @@ INSERT INTO systempreferences ( `variable`, `value`, `options`, `explanation`, `
 ('DumpTemplateVarsOpac', '0', NULL, 'If enabled, dump all Template Toolkit variable to a comment in the html source for the opac.', 'YesNo'),
 ('EasyAnalyticalRecords','0',NULL,'If on, display in the catalogue screens tools to easily setup analytical record relationships','YesNo'),
 ('EDIFACT','0',NULL,'Enables EDIFACT acquisitions functions','YesNo'),
+('EdifactCancelledItemNotForLoanValue', '', NULL, 'Sets the NOT_LOAN AV value given to an on-order item that cannot be deleted when a supplier cancels an order line by EDIFACT ORDRSP', 'Choice'),
 ('EdifactInvoiceImport', 'automatic', 'automatic|manual', 'If on, don\'t auto-import EDI invoices, just keep them in the database with the status \'new\'', 'Choice'),
 ('EdifactInvoiceImportBlockDuplicates', '0', NULL, 'Block automatic processing of EDIFACT invoices when a duplicate invoice number is detected for the same supplier. Similar to AcqWarnOnDuplicateInvoice for manually created invoices, but applies to invoices received via EDI.', 'YesNo'),
 ('EdifactInvoiceImportBlockDuplicatesEmailAddresses', '', NULL, 'Comma-separated list of acquisitions staff email addresses to use when EdifactInvoiceImportBlockDuplicatesEmailNotice is set to specific email addresses.', 'Textarea'),

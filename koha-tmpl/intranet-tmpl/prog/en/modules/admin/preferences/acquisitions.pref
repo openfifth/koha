@@ -185,6 +185,13 @@ Acquisitions:
                 0:  Disable
             - EDIFACT message exchange for acquisitions.
         -
+            - "When a supplier cancels an order line by EDIFACT and the on-order item cannot be deleted (for example because of a hold), set it to the "
+            - pref: EdifactCancelledItemNotForLoanValue
+              choices: authval
+              source: NOT_LOAN
+            - " not for loan status."
+            - <span class="hint">Leave empty to keep the item unchanged. Choose a value greater than zero from the <a href="/cgi-bin/koha/admin/authorised_values.pl?searchfield=NOT_LOAN">NOT_LOAN</a> authorized values, as only those stop holds being placed. An item that no longer has the on order status is not changed.</span>
+        -
             - pref: EdifactInvoiceImport
               default: no
               choices:

@@ -3409,7 +3409,7 @@ subtest 'process_message' => sub {
 };
 
 subtest 'process_ordrsp' => sub {
-    plan tests => 6;
+    plan tests => 7;
 
     $schema->storage->txn_begin;
 
@@ -3621,6 +3621,88 @@ subtest 'process_ordrsp' => sub {
             qr/Order cancelled but order \d+ cancellation issue: error_delitem for itemnumber \d+ \(item_has_holds\)/,
             'Error says which item could not be removed and why'
         );
+    };
+
+    subtest 'item that cannot be deleted gets the configured not for loan status' => sub {
+        plan tests => 6;
+
+        my $bookseller    = $builder->build_object( { class => 'Koha::Acquisition::Booksellers' } );
+        my $budget_period = $builder->build( { source => 'Aqbudgetperiod', value => { budget_period_active => 1 } } );
+        my $budget        = $builder->build(
+            { source => 'Aqbudget', value => { budget_period_id => $budget_period->{budget_period_id} } } );
+        my $basket = $builder->build_object(
+            {
+                class => 'Koha::Acquisition::Baskets',
+                value => { booksellerid => $bookseller->id, is_standing => 0 },
+            }
+        );
+
+        # Cancel a line whose only item has a hold, so it cannot be deleted
+        my $cancel_line_with_held_item = sub {
+            my ($item_params) = @_;
+            my $biblio        = $builder->build_sample_biblio();
+            my $item  = $builder->build_sample_item( { biblionumber => $biblio->biblionumber, %{$item_params} } );
+            my $order = $builder->build_object(
+                {
+                    class => 'Koha::Acquisition::Orders',
+                    value => {
+                        basketno         => $basket->basketno,
+                        biblionumber     => $biblio->biblionumber,
+                        budget_id        => $budget->{budget_id},
+                        orderstatus      => 'ordered',
+                        quantityreceived => 0,
+                        invoiceid        => undef,
+                    },
+                }
+            );
+            $order->add_item( $item->itemnumber );
+            $builder->build_object(
+                {
+                    class => 'Koha::Holds',
+                    value => {
+                        biblionumber => $biblio->biblionumber,
+                        itemnumber   => $item->itemnumber,
+                        found        => undef,
+                    },
+                }
+            );
+            my $edi_msg = $schema->resultset('EdifactMessage')->create(
+                {
+                    message_type => 'ORDRSP',
+                    raw_msg      => _build_ordrsp_msg( $order->ordernumber, 2, 'OP' ),
+                    status       => 'new',
+                }
+            );
+            process_ordrsp($edi_msg);
+            return ( $item->get_from_storage, $edi_msg );
+        };
+
+        # An item still "on order" (-1) that cannot be deleted is given the configured status
+        t::lib::Mocks::mock_preference( 'EdifactCancelledItemNotForLoanValue', 5 );
+        my ( $item, $edi_msg ) = $cancel_line_with_held_item->( { notforloan => -1 } );
+        is( $item->notforloan, 5, 'Item that could not be deleted is given the configured not for loan status' );
+        like(
+            $edi_msg->edifact_errors->next->details,
+            qr/marked as not for loan status 5/,
+            'The librarian is told the status was set'
+        );
+
+        # An item whose status was already changed by hand is left alone
+        ($item) = $cancel_line_with_held_item->( { notforloan => 2 } );
+        is( $item->notforloan, 2, 'An item that is no longer on order is left alone' );
+
+        # Only values above zero stop holds, anything else is ignored
+        t::lib::Mocks::mock_preference( 'EdifactCancelledItemNotForLoanValue', 0 );
+        ($item) = $cancel_line_with_held_item->( { notforloan => -1 } );
+        is( $item->notforloan, -1, 'A value of zero is ignored' );
+        t::lib::Mocks::mock_preference( 'EdifactCancelledItemNotForLoanValue', -2 );
+        ($item) = $cancel_line_with_held_item->( { notforloan => -1 } );
+        is( $item->notforloan, -1, 'A negative value is ignored' );
+
+        # Default: nothing configured, current behaviour
+        t::lib::Mocks::mock_preference( 'EdifactCancelledItemNotForLoanValue', q{} );
+        ($item) = $cancel_line_with_held_item->( { notforloan => -1 } );
+        is( $item->notforloan, -1, 'Item is unchanged when the preference is empty' );
     };
 
     subtest 'cancellation of a received or invoiced line is refused' => sub {
