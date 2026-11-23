@@ -874,6 +874,10 @@
                         </form>
                     </div>
 
+                    [% IF request.iso18626_messages.count %]
+                        <ill-iso18626-messages illrequest-id="[% request.illrequest_id | html %]"></ill-iso18626-messages>
+                    [% END %]
+
                     <div class="page-section">
                         <h3>[% request.illcomments.count | html %] comments</h3>
                         [% IF request.illcomments.count && request.illcomments.count > 0 %]

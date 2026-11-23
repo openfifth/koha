@@ -24,7 +24,9 @@
                 <td>
                     <div class="d-flex gap-2">
                         <i
-                            v-if="message.type.includes('request')"
+                            v-if="
+                                message.type.includes('request') !== requesting
+                            "
                             class="fas fa-download mt-1"
                             aria-hidden="true"
                         ></i>
@@ -91,6 +93,14 @@ import { ISO18626 } from "./ISO18626.js";
 export default {
     props: {
         iso18626_request: Object,
+        messages: {
+            type: Array,
+            default: null,
+        },
+        requesting: {
+            type: Boolean,
+            default: false,
+        },
     },
     setup(props) {
         const format_datetime = $datetime;
@@ -105,7 +115,8 @@ export default {
             inject("mainStore");
 
         const filteredMessages = computed(() => {
-            return props.iso18626_request.messages.filter(message => {
+            const messages = props.messages ?? props.iso18626_request.messages;
+            return messages.filter(message => {
                 if (messageFilterOptions.value.showConfirmationRows) {
                     return true;
                 }
@@ -131,7 +142,9 @@ export default {
                 messageInfo.reasonForMessage || content.reasonForMessage;
 
             if (messageType === "request") {
-                return $__("Request received");
+                return props.requesting
+                    ? $__("Request sent")
+                    : $__("Request received");
             }
 
             if (messageType === "requestingAgencyMessage") {

@@ -61,6 +61,21 @@ const islands: Map<string, WebComponentDynamicImport> = new Map([
         },
     ],
     [
+        "ill-iso18626-messages",
+        {
+            importFn: async () => {
+                const module = await import(
+                    /* webpackChunkName: "ill-iso18626-messages" */
+                    "../components/Islands/ILLISO18626Messages.vue"
+                );
+                return module.default;
+            },
+            config: {
+                stores: ["mainStore"],
+            },
+        },
+    ],
+    [
         "admin-menu",
         {
             importFn: async () => {

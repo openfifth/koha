@@ -14,6 +14,18 @@ export class ILLAPIClient {
         };
     }
 
+    get requests() {
+        return {
+            getAll: (query, params, headers) =>
+                this.httpClient.getAll({
+                    endpoint: "requests",
+                    query,
+                    params,
+                    headers,
+                }),
+        };
+    }
+
     get supplying() {
         return {
             get: id =>
