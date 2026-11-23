@@ -461,8 +461,8 @@ export function useBaseResource(resourceConfig) {
      * field objects that belong to that group.
      *
      * It first filters the resource attributes to only include those that are not hidden
-     * in the given component. Then it groups the attributes by the group name
-     * (or "noGroupFound" if there is no group name). If the component is 'Show', it also
+     * in the given component, nor hidden for the resource in 'Show'. Then it groups the
+     * attributes by the group name (or "noGroupFound" if there is no group name). If the component is 'Show', it also
      * checks if the resource object has data to display in each group. If not,
      * the group is not included.
      *
@@ -477,6 +477,14 @@ export function useBaseResource(resourceConfig) {
                     ra.relationshipFields.forEach(relationshipField => {
                         relationshipField.relationshipName = ra.name;
                     });
+                }
+                if (
+                    component === "Show" &&
+                    resource &&
+                    typeof ra.hidden === "function" &&
+                    !ra.hidden(resource)
+                ) {
+                    return acc;
                 }
                 const shouldFieldBeHidden =
                     ra.hideIn && typeof ra.hideIn === "function"

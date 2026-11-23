@@ -137,6 +137,46 @@ describe("Supplying ILL Requests operations", () => {
             .and("not.contain", "Publication date:");
     });
 
+    it("Doesn't leave empty rows for hidden bibliographic details", () => {
+        let request = get_supplying_request();
+
+        cy.intercept("GET", "/api/v1/ill/iso18626_requests*", {
+            statusCode: 200,
+            body: [request],
+            headers: {
+                "X-Base-Total-Count": "1",
+                "X-Total-Count": "1",
+            },
+        }).as("getRequests");
+        cy.intercept("GET", "/api/v1/ill/iso18626_requests/*", {
+            ...request,
+            messages: [
+                get_message(1, "request", {
+                    request: {
+                        bibliographicInfo: { title: "Test article" },
+                        publicationInfo: { publicationDate: "2024" },
+                    },
+                }),
+            ],
+            hold: null,
+        }).as("getRequest");
+
+        cy.visit("/cgi-bin/koha/ill/iso18626_requests");
+        cy.wait("@getRequests");
+        cy.get(
+            "#iso18626_requests_list table tbody tr:first td:first a"
+        ).click();
+        cy.wait("@getRequest");
+
+        // Only Title and Publication date are displayed, with no rows for
+        // the empty fields in between
+        cy.get("#iso18626_requests_show")
+            .contains("legend", "Bibliographic details")
+            .parent()
+            .find("li")
+            .should("have.length", 2);
+    });
+
     it("Displays ISO18626 messages", () => {
         let request = get_supplying_request();
 
