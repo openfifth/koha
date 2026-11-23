@@ -47,7 +47,21 @@
                         v-bind:key="index"
                         class="text-muted"
                     >
-                        {{ line }}
+                        <template
+                            v-for="(part, partIndex) in line.links
+                                ? splitLinks(line.text)
+                                : [{ text: line.text }]"
+                            v-bind:key="partIndex"
+                        >
+                            <a
+                                v-if="part.url"
+                                :href="part.url"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                >{{ part.text }}</a
+                            >
+                            <template v-else>{{ part.text }}</template>
+                        </template>
                     </div>
                 </td>
                 <td>
@@ -186,9 +200,9 @@ export default {
             const statusInfo = content.statusInfo || {};
             const errorData = content.errorData || {};
             const lines = [];
-            const addLine = (label, value) => {
+            const addLine = (label, value, { links = false } = {}) => {
                 if (value !== undefined && value !== null && value !== "") {
-                    lines.push(label.format(value));
+                    lines.push({ text: label.format(value), links });
                 }
             };
 
@@ -230,12 +244,30 @@ export default {
             addLine($__("Item: %s"), content.deliveryInfo?.itemId);
             addLine(
                 $__("Note: %s"),
-                messageInfo.note || content.note || content.serviceInfo?.note
+                messageInfo.note || content.note || content.serviceInfo?.note,
+                { links: true }
             );
             addLine($__("Error: %s"), errorData.errorType);
             addLine($__("Error details: %s"), errorData.errorValue);
 
             return lines;
+        };
+
+        const splitLinks = text => {
+            const parts = [];
+            const urlPattern = /https?:\/\/[^\s<>"']*[^\s<>"'.,;:!?)]/g;
+            let lastIndex = 0;
+            for (const match of text.matchAll(urlPattern)) {
+                if (match.index > lastIndex) {
+                    parts.push({ text: text.slice(lastIndex, match.index) });
+                }
+                parts.push({ text: match[0], url: match[0] });
+                lastIndex = match.index + match[0].length;
+            }
+            if (lastIndex < text.length) {
+                parts.push({ text: text.slice(lastIndex) });
+            }
+            return parts;
         };
 
         function openModal(message) {
@@ -365,6 +397,7 @@ export default {
             filteredMessages,
             messageFilterOptions,
             getMessageData,
+            splitLinks,
             getMessageSummary,
             getCodeDescription,
             format_datetime,

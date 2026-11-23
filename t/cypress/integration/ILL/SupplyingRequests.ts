@@ -206,7 +206,7 @@ describe("Supplying ILL Requests operations", () => {
             supplyingAgencyMessage: {
                 messageInfo: {
                     reasonForMessage: "StatusChange",
-                    note: "Test note",
+                    note: "Test note, see https://example.org/article.",
                 },
                 statusInfo: { status: "CopyCompleted" },
             },
@@ -256,7 +256,16 @@ describe("Supplying ILL Requests operations", () => {
         // Information column summarises the message and lists its details
         cy.get("#iso18626_messages tbody tr:last td:nth-child(2)")
             .should("contain", "Status changed to Copy completed")
-            .and("contain", "Note: Test note");
+            .and(
+                "contain",
+                "Note: Test note, see https://example.org/article."
+            );
+
+        // URLs in the note are links
+        cy.get("#iso18626_messages tbody tr:last td:nth-child(2) a")
+            .should("have.attr", "href", "https://example.org/article")
+            .and("have.attr", "target", "_blank")
+            .and("have.text", "https://example.org/article");
 
         // Checking "Show confirmations" reveals the confirmation message
         cy.get("#showConfirmationRows").click();
