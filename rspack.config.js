@@ -103,6 +103,7 @@ const islandsExport = application => {
                 __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: false,
             }),
         ],
+        externalsType: "window",
         externals: {
             jquery: "jQuery",
             "datatables.net": "DataTable",
